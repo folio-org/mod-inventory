@@ -89,7 +89,7 @@ class Items {
     itemCollection.findByCql("barcode=${newItem.barcode}",
       PagingParameters.defaults(), {
 
-      if(it.result.size() == 0) {
+      if(it.result.items.size() == 0) {
         itemCollection.add(newItem, { Success success ->
           RedirectResponse.created(routingContext.response(),
             context.absoluteUrl(
@@ -124,7 +124,7 @@ class Items {
           itemCollection.findByCql("barcode=${updatedItem.barcode}",
             PagingParameters.defaults(), {
 
-            if(it.result.size() == 1 && it.result.first().id == updatedItem.id) {
+            if(it.result.items.size() == 1 && it.result.items.first().id == updatedItem.id) {
               itemCollection.update(updatedItem, {
                 SuccessResponse.noContent(routingContext.response()) },
                 { Failure failure -> ServerErrorResponse.internalError(
@@ -265,7 +265,7 @@ class Items {
   private respondWithManyItems(
     RoutingContext routingContext,
     WebContext context,
-    List<Item> items) {
+    Map wrappedItems) {
 
     def materialTypesClient = createMaterialTypesClient(routingContext, context)
     def loanTypesClient = createLoanTypesClient(routingContext, context)
@@ -274,7 +274,7 @@ class Items {
     def allLoanTypeFutures = new ArrayList<CompletableFuture<Response>>()
     def allFutures = new ArrayList<CompletableFuture<Response>>()
 
-    def materialTypeIds = items.stream()
+    def materialTypeIds = wrappedItems.items.stream()
       .map({ it?.materialTypeId })
       .filter({ it != null })
       .distinct()
@@ -289,11 +289,11 @@ class Items {
       materialTypesClient.get(id, { response -> newFuture.complete(response) })
     }
 
-    def permanentLoanTypeIds = items.stream()
+    def permanentLoanTypeIds = wrappedItems.items.stream()
       .map({ it?.permanentLoanTypeId })
       .filter({ it != null })
 
-    def temporaryLoanTypeIds = items.stream()
+    def temporaryLoanTypeIds = wrappedItems.items.stream()
       .map({ it?.temporaryLoanTypeId })
       .filter({ it != null })
 
@@ -331,7 +331,7 @@ class Items {
 
       JsonResponse.success(routingContext.response(),
         new ItemRepresentation(relativeItemsPath())
-          .toJson(items, foundMaterialTypes, foundLoanTypes, context))
+          .toJson(wrappedItems, foundMaterialTypes, foundLoanTypes, context))
     })
   }
 }
