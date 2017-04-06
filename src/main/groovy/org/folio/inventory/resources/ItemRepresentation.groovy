@@ -90,7 +90,9 @@ class ItemRepresentation {
       results.add(toJson(item, materialType, permanentLoanType, temporaryLoanType, context))
     }
 
-    representation.put("items", results)
+    representation
+      .put("items", results)
+      .put("totalRecords", wrappedItems.totalRecords)
 
     representation
   }
@@ -106,7 +108,9 @@ class ItemRepresentation {
       results.add(toJson(item, context))
     }
 
-    representation.put("items", results)
+    representation
+      .put("items", results)
+      .put("totalRecords", wrappedItems.totalRecords)
 
     representation
   }
