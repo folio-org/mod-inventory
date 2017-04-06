@@ -57,6 +57,7 @@ abstract class InstanceCollectionExamples {
     def allInstances = allInstancesWrapped.instances
 
     assert allInstances.size() == 0
+    assert allInstancesWrapped.totalRecords == 0
   }
 
   @Test
@@ -75,6 +76,7 @@ abstract class InstanceCollectionExamples {
     def allInstances = allInstancesWrapped.instances
 
     assert allInstances.size() == 3
+    assert allInstancesWrapped.totalRecords == 3
 
     assert allInstances.every { it.id != null }
     assert allInstances.every { it.title != null }
@@ -192,6 +194,9 @@ abstract class InstanceCollectionExamples {
 
     assert firstPageInstances.size() == 3
     assert secondPageInstances.size() == 2
+
+    assert firstPage.totalRecords == 5
+    assert secondPage.totalRecords == 5
   }
 
   @Test
@@ -230,6 +235,7 @@ abstract class InstanceCollectionExamples {
     def allInstances = allInstancesWrapped.instances
 
     assert allInstances.size() == 3
+    assert allInstancesWrapped.totalRecords == 3
   }
 
   @Test
@@ -293,6 +299,8 @@ abstract class InstanceCollectionExamples {
     def findByNameResults = findByNameResultsWrapped.instances
 
     assert findByNameResults.size() == 1
+    assert findByNameResultsWrapped.totalRecords == 1
+
     assert findByNameResults[0].id == addedSmallAngryPlanet.id
   }
 
