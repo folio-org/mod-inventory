@@ -1,0 +1,6 @@
+{
+  "srvcId" : "inventory",
+  "descriptor" : {
+    "exec" : "java -Dport=%p -jar ../mod-inventory/build/libs/inventory.jar"
+  }
+}
