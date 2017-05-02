@@ -30,6 +30,9 @@ class ApiTestSuite {
   private static String bookMaterialTypeId
   private static String dvdMaterialTypeId
 
+  private static String canCirculateLoanTypeId
+  private static String courseReserveLoanTypeId
+
   private static VertxAssistant vertxAssistant = new VertxAssistant();
   private static String inventoryModuleDeploymentId
   private static String fakeModulesDeploymentId
@@ -49,6 +52,7 @@ class ApiTestSuite {
     startVertx()
     startFakeModules()
     createMaterialTypes()
+    createLoanTypes()
     startInventoryVerticle()
   }
 
@@ -152,7 +156,19 @@ class ApiTestSuite {
     def materialTypePreparation = new ControlledVocabularyPreparation(client,
       materialTypesUrl, "mtypes")
 
-    bookMaterialTypeId = materialTypePreparation.createOrReference("Book")
-    dvdMaterialTypeId = materialTypePreparation.createOrReference("DVD")
+    bookMaterialTypeId = materialTypePreparation.createOrReferenceTerm("Book")
+    dvdMaterialTypeId = materialTypePreparation.createOrReferenceTerm("DVD")
+  }
+
+  private static def createLoanTypes() {
+    def client = createHttpClient()
+
+    def materialTypesUrl = new URL("${storageOkapiUrl()}/loan-types")
+
+    def loanTypePreparation = new ControlledVocabularyPreparation(client,
+      materialTypesUrl, "loantypes")
+
+    canCirculateLoanTypeId = loanTypePreparation.createOrReferenceTerm("Can Circulate")
+    courseReserveLoanTypeId = loanTypePreparation.createOrReferenceTerm("Course Reserves")
   }
 }

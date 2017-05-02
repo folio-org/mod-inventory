@@ -19,7 +19,7 @@ class ControlledVocabularyPreparation {
     this.collectionWrapperProperty = collectionWrapperProperty
   }
 
-  String createOrReference(String name) {
+  String createOrReferenceTerm(String name) {
     def (getResponse, wrappedEntries) = client.get(controlledVocabularyRoot)
 
     if(getResponse.status != 200) {
@@ -27,9 +27,9 @@ class ControlledVocabularyPreparation {
       assert false
     }
 
-    def existingEntries = wrappedEntries[this.collectionWrapperProperty]
+    def existingTerms = wrappedEntries[this.collectionWrapperProperty]
 
-    if (existingEntries.stream().noneMatch({ it.name == name })) {
+    if (existingTerms.stream().noneMatch({ it.name == name })) {
       def vocabularyEntryRequest = new JsonObject().put("name", name);
 
       def (postResponse, createdMaterialType) = client.post(
@@ -39,7 +39,7 @@ class ControlledVocabularyPreparation {
 
       createdMaterialType.id
     } else {
-      existingEntries.stream()
+      existingTerms.stream()
         .filter({ it.name == name })
         .findFirst().get().id
     }
