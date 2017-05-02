@@ -1,7 +1,6 @@
 package api
 
-import io.vertx.core.json.Json
-import io.vertx.core.json.JsonObject
+import api.support.ControlledVocabularyPreparation
 import org.folio.inventory.InventoryVerticle
 import org.folio.inventory.common.VertxAssistant
 import org.folio.inventory.common.testing.HttpClient
@@ -49,7 +48,7 @@ class ApiTestSuite {
 
     startVertx()
     startFakeModules()
-    createBookMaterialType()
+    createMaterialTypes()
     startInventoryVerticle()
   }
 
@@ -145,49 +144,15 @@ class ApiTestSuite {
     }
   }
 
-  private static def createBookMaterialType() {
+  private static def createMaterialTypes() {
     def client = createHttpClient()
 
     def materialTypesUrl = new URL("${storageOkapiUrl()}/material-types")
 
-    def (getResponse, wrappedMaterialTypes) = client.get(materialTypesUrl)
+    def materialTypePreparation = new ControlledVocabularyPreparation(client,
+      materialTypesUrl, "mtypes")
 
-    if(getResponse.status != 200) {
-      println("Material Type API unavailable")
-      assert false
-    }
-
-    def existingMaterialTypes = wrappedMaterialTypes.mtypes
-
-    bookMaterialTypeId = createMaterialType(existingMaterialTypes, client,
-      materialTypesUrl, "Book")
-
-    dvdMaterialTypeId = createMaterialType(existingMaterialTypes, client,
-      materialTypesUrl, "DVD")
-  }
-
-  private static String createMaterialType(
-    existingMaterialTypes,
-    HttpClient client,
-    URL materialTypesUrl,
-    String materialTypeName) {
-
-    if (existingMaterialTypes.stream()
-      .noneMatch({ it.name == materialTypeName })) {
-
-      def bookMaterialType = new JsonObject()
-        .put("name", materialTypeName);
-
-      def (postResponse, createdMaterialType) = client.post(materialTypesUrl,
-        Json.encodePrettily(bookMaterialType))
-
-      assert postResponse.status == 201
-
-      createdMaterialType.id
-    } else {
-      existingMaterialTypes.stream()
-        .filter({ it.name == materialTypeName })
-        .findFirst().get().id
-    }
+    bookMaterialTypeId = materialTypePreparation.createOrReference("Book")
+    dvdMaterialTypeId = materialTypePreparation.createOrReference("DVD")
   }
 }
