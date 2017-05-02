@@ -1,7 +1,7 @@
 package org.folio.inventory.storage.external.failure
 
+import org.folio.inventory.common.VertxAssistant
 import org.folio.inventory.storage.external.support.FailureInventoryStorageModule
-import org.folio.metadata.common.VertxAssistant
 import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.runner.RunWith

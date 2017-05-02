@@ -1,9 +1,9 @@
 package org.folio.inventory.domain.ingest
 
 import io.vertx.core.json.JsonObject
+import org.folio.inventory.common.Context
+import org.folio.inventory.common.messaging.JsonMessage
 import org.folio.inventory.domain.Messages
-import org.folio.metadata.common.Context
-import org.folio.metadata.common.messaging.JsonMessage
 
 class IngestMessages {
   static start(records, Map materialTypes, jobId, Context context) {

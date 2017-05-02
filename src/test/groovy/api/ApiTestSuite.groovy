@@ -3,8 +3,8 @@ package api
 import io.vertx.core.json.Json
 import io.vertx.core.json.JsonObject
 import org.folio.inventory.InventoryVerticle
-import org.folio.metadata.common.VertxAssistant
-import org.folio.metadata.common.testing.HttpClient
+import org.folio.inventory.common.VertxAssistant
+import org.folio.inventory.common.testing.HttpClient
 import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.runner.RunWith

@@ -1,4 +1,4 @@
-package org.folio.metadata.common.domain
+package org.folio.inventory.common.domain
 
 class Failure {
   final String reason

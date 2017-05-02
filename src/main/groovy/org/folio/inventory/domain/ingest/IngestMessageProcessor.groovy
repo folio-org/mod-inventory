@@ -2,15 +2,15 @@ package org.folio.inventory.domain.ingest
 
 import io.vertx.groovy.core.eventbus.EventBus
 import io.vertx.groovy.core.eventbus.Message
+import org.folio.inventory.common.CollectAll
+import org.folio.inventory.common.MessagingContext
+import org.folio.inventory.common.domain.Failure
 import org.folio.inventory.domain.Instance
 import org.folio.inventory.domain.Item
 import org.folio.inventory.domain.Messages
 import org.folio.inventory.resources.ingest.IngestJob
 import org.folio.inventory.resources.ingest.IngestJobState
 import org.folio.inventory.storage.Storage
-import org.folio.metadata.common.CollectAll
-import org.folio.metadata.common.MessagingContext
-import org.folio.metadata.common.domain.Failure
 
 class IngestMessageProcessor {
   private final Storage storage

@@ -1,6 +1,6 @@
 package api.support
 
-import org.folio.metadata.common.testing.HttpClient
+import org.folio.inventory.common.testing.HttpClient
 
 class Preparation {
   private final HttpClient client

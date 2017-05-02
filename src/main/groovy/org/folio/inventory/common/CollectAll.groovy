@@ -1,11 +1,10 @@
-package org.folio.metadata.common
+package org.folio.inventory.common
 
-import org.folio.metadata.common.domain.Success
-
+import org.folio.inventory.common.domain.Success
 import java.util.concurrent.CompletableFuture
 import java.util.function.Consumer
 
-import static org.folio.metadata.common.FutureAssistance.succeed
+import static org.folio.inventory.common.FutureAssistance.succeed
 
 class CollectAll<T> {
 

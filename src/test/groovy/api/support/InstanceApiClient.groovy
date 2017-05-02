@@ -2,7 +2,7 @@ package api.support
 
 import io.vertx.core.json.Json
 import io.vertx.core.json.JsonObject
-import org.folio.metadata.common.testing.HttpClient
+import org.folio.inventory.common.testing.HttpClient
 
 class InstanceApiClient {
   static def createInstance(HttpClient client, JsonObject newInstanceRequest) {

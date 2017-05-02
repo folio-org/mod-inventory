@@ -1,15 +1,18 @@
 package org.folio.inventory.storage
 
-import org.folio.inventory.domain.*
-import org.folio.metadata.common.WaitForAllFutures
-import org.folio.metadata.common.api.request.PagingParameters
-import org.folio.metadata.common.domain.Success
+import org.folio.inventory.common.WaitForAllFutures
+import org.folio.inventory.common.api.request.PagingParameters
+import org.folio.inventory.common.domain.Success
+import org.folio.inventory.domain.CollectionProvider
+import org.folio.inventory.domain.Instance
+import org.folio.inventory.domain.InstanceCollection
+import org.folio.inventory.domain.Item
 import org.junit.Before
 import org.junit.Test
 
 import java.util.concurrent.CompletableFuture
 
-import static org.folio.metadata.common.FutureAssistance.*
+import static org.folio.inventory.common.FutureAssistance.*
 
 abstract class InstanceCollectionExamples {
   private static final String firstTenantId = "test_tenant_1"

@@ -1,11 +1,12 @@
-package org.folio.metadata.common.storage.memory
+package org.folio.inventory.common.storage.memory
 
-import org.folio.metadata.common.api.request.PagingParameters
-import org.folio.metadata.common.cql.CqlFilter
-import org.folio.metadata.common.cql.CqlParser
-import org.folio.metadata.common.domain.Success
+import org.folio.inventory.common.api.request.PagingParameters
+import org.folio.inventory.common.domain.Success
+import org.folio.inventory.common.cql.CqlFilter
+import org.folio.inventory.common.cql.CqlParser
 
 import java.util.function.Consumer
+
 //TODO: truly asynchronous implementation
 class InMemoryCollection<T> {
 

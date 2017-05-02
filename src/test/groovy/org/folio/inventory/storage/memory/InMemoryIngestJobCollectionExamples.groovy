@@ -1,15 +1,15 @@
 package org.folio.inventory.storage.memory
 
+import org.folio.inventory.common.api.request.PagingParameters
 import org.folio.inventory.domain.ingest.IngestJobCollection
 import org.folio.inventory.resources.ingest.IngestJob
 import org.folio.inventory.resources.ingest.IngestJobState
-import org.folio.metadata.common.api.request.PagingParameters
 import org.junit.Before
 import org.junit.Test
 
 import java.util.concurrent.CompletableFuture
 
-import static org.folio.metadata.common.FutureAssistance.*
+import static org.folio.inventory.common.FutureAssistance.*
 
 class InMemoryIngestJobCollectionExamples {
 

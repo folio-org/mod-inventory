@@ -4,15 +4,15 @@ import io.vertx.groovy.ext.web.Router
 import io.vertx.groovy.ext.web.RoutingContext
 import io.vertx.groovy.ext.web.handler.BodyHandler
 import org.folio.inventory.CollectionResourceClient
+import org.folio.inventory.common.WebContext
+import org.folio.inventory.common.api.response.*
+import org.folio.inventory.common.domain.Success
 import org.folio.inventory.domain.ingest.IngestMessages
 import org.folio.inventory.parsing.ModsParser
 import org.folio.inventory.parsing.UTF8LiteralCharacterEncoding
 import org.folio.inventory.storage.Storage
 import org.folio.inventory.support.JsonArrayHelper
 import org.folio.inventory.support.http.client.OkapiHttpClient
-import org.folio.metadata.common.WebContext
-import org.folio.metadata.common.api.response.*
-import org.folio.metadata.common.domain.Success
 
 class ModsIngestion {
   private final Storage storage

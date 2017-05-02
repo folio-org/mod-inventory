@@ -1,4 +1,4 @@
-package org.folio.metadata.common.domain
+package org.folio.inventory.common.domain
 
 interface BatchCollection<T> {
   List<T> add(List<T> items)

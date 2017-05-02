@@ -9,11 +9,11 @@ import io.vertx.groovy.ext.web.Router
 import io.vertx.groovy.ext.web.RoutingContext
 import io.vertx.groovy.ext.web.handler.BodyHandler
 import io.vertx.lang.groovy.GroovyVerticle
-import org.folio.metadata.common.WebContext
-import org.folio.metadata.common.WebRequestDiagnostics
-import org.folio.metadata.common.api.response.ClientErrorResponse
-import org.folio.metadata.common.api.response.JsonResponse
-import org.folio.metadata.common.api.response.SuccessResponse
+import org.folio.inventory.common.WebContext
+import org.folio.inventory.common.WebRequestDiagnostics
+import org.folio.inventory.common.api.response.ClientErrorResponse
+import org.folio.inventory.common.api.response.JsonResponse
+import org.folio.inventory.common.api.response.SuccessResponse
 
 class FakeInventoryStorageModule extends GroovyVerticle {
   private static final int PORT_TO_USE = 9492

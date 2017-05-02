@@ -1,8 +1,8 @@
-package org.folio.metadata.common.api.response
+package org.folio.inventory.common.api.response
 
 import io.vertx.groovy.core.http.HttpServerResponse
 import org.apache.http.entity.ContentType
-import org.folio.metadata.common.domain.Failure
+import org.folio.inventory.common.domain.Failure
 
 import java.util.function.Consumer
 

@@ -1,7 +1,7 @@
-package org.folio.metadata.common.api.request
+package org.folio.inventory.common.api.request
 
 import org.apache.commons.lang.StringUtils
-import org.folio.metadata.common.WebContext
+import org.folio.inventory.common.WebContext
 
 class PagingParameters {
 

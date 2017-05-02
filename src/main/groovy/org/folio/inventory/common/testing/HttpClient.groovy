@@ -1,6 +1,9 @@
-package org.folio.metadata.common.testing
+package org.folio.inventory.common.testing
 
-import groovyx.net.http.*
+import groovyx.net.http.HTTPBuilder
+import groovyx.net.http.HttpResponseException
+import groovyx.net.http.Method
+import groovyx.net.http.ResponseParseException
 import org.apache.commons.io.IOUtils
 import org.apache.http.entity.mime.MultipartEntityBuilder
 

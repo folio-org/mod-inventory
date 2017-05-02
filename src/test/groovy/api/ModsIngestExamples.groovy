@@ -1,7 +1,7 @@
 package api
 
 import api.support.Preparation
-import org.folio.metadata.common.testing.HttpClient
+import org.folio.inventory.common.testing.HttpClient
 import spock.lang.Specification
 import spock.util.concurrent.PollingConditions
 

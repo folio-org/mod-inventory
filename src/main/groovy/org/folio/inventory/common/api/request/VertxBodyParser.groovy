@@ -1,4 +1,4 @@
-package org.folio.metadata.common.api.request
+package org.folio.inventory.common.api.request
 
 import io.vertx.groovy.ext.web.RoutingContext
 

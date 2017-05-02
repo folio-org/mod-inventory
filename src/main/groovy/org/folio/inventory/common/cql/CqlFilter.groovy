@@ -1,4 +1,4 @@
-package org.folio.metadata.common.cql
+package org.folio.inventory.common.cql
 
 class CqlFilter {
   Closure filterBy(field, searchTerm) {

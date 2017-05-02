@@ -1,14 +1,14 @@
 package org.folio.inventory.storage.external
 
-import org.folio.metadata.common.VertxAssistant
+import org.folio.inventory.common.VertxAssistant
+import org.folio.inventory.storage.external.support.FakeInventoryStorageModule
 import org.junit.AfterClass
 import org.junit.BeforeClass
-import org.junit.runner.RunWith;
+import org.junit.runner.RunWith
 import org.junit.runners.Suite
-import org.folio.inventory.storage.external.support.FakeInventoryStorageModule
 
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeUnit
 
 @RunWith(Suite.class)
 

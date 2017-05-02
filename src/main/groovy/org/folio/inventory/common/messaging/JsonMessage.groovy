@@ -1,4 +1,4 @@
-package org.folio.metadata.common.messaging
+package org.folio.inventory.common.messaging
 
 import io.vertx.core.json.JsonObject
 import io.vertx.groovy.core.Vertx

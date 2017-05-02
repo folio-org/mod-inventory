@@ -1,11 +1,11 @@
 package org.folio.inventory.storage.memory
 
-import org.folio.inventory.resources.ingest.IngestJob
+import org.folio.inventory.common.api.request.PagingParameters
+import org.folio.inventory.common.domain.Failure
+import org.folio.inventory.common.domain.Success
+import org.folio.inventory.common.storage.memory.InMemoryCollection
 import org.folio.inventory.domain.ingest.IngestJobCollection
-import org.folio.metadata.common.api.request.PagingParameters
-import org.folio.metadata.common.domain.Failure
-import org.folio.metadata.common.domain.Success
-import org.folio.metadata.common.storage.memory.InMemoryCollection
+import org.folio.inventory.resources.ingest.IngestJob
 
 import java.util.function.Consumer
 

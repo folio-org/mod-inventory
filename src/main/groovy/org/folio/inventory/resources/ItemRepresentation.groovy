@@ -2,8 +2,8 @@ package org.folio.inventory.resources
 
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
+import org.folio.inventory.common.WebContext
 import org.folio.inventory.domain.Item
-import org.folio.metadata.common.WebContext
 
 class ItemRepresentation {
   private final String relativeItemsPath

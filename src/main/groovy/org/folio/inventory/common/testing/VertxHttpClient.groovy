@@ -1,4 +1,4 @@
-package org.folio.metadata.common.testing
+package org.folio.inventory.common.testing
 
 import groovyx.net.http.HTTPBuilder
 import groovyx.net.http.HttpResponseException

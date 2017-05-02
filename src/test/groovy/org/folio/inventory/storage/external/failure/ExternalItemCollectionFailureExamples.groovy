@@ -1,11 +1,11 @@
 package org.folio.inventory.storage.external.failure
 
+import org.folio.inventory.common.api.request.PagingParameters
+import org.folio.inventory.common.domain.Failure
+import org.folio.inventory.common.domain.Success
 import org.folio.inventory.domain.CollectionProvider
 import org.folio.inventory.domain.Item
 import org.folio.inventory.domain.ItemCollection
-import org.folio.metadata.common.api.request.PagingParameters
-import org.folio.metadata.common.domain.Failure
-import org.folio.metadata.common.domain.Success
 import org.junit.Test
 
 import java.util.concurrent.CompletableFuture

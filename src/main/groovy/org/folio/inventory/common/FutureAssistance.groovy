@@ -1,7 +1,7 @@
-package org.folio.metadata.common
+package org.folio.inventory.common
 
-import org.folio.metadata.common.domain.Failure
-import org.folio.metadata.common.domain.Success
+import org.folio.inventory.common.domain.Failure
+import org.folio.inventory.common.domain.Success
 
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit

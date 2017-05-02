@@ -1,6 +1,7 @@
-package org.folio.metadata.common
+package org.folio.inventory.common
 
 import io.vertx.groovy.core.Vertx
+
 import java.util.concurrent.CompletableFuture
 
 class VertxAssistant {

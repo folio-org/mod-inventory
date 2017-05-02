@@ -6,11 +6,11 @@ import io.vertx.core.json.Json
 import io.vertx.core.json.JsonObject
 import io.vertx.groovy.core.Vertx
 import io.vertx.groovy.core.http.HttpClientResponse
+import org.folio.inventory.common.api.request.PagingParameters
+import org.folio.inventory.common.domain.Failure
+import org.folio.inventory.common.domain.Success
 import org.folio.inventory.domain.Item
 import org.folio.inventory.domain.ItemCollection
-import org.folio.metadata.common.api.request.PagingParameters
-import org.folio.metadata.common.domain.Failure
-import org.folio.metadata.common.domain.Success
 
 import java.util.function.Consumer
 

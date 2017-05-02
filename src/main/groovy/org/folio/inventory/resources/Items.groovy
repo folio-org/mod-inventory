@@ -4,16 +4,16 @@ import io.vertx.groovy.ext.web.Router
 import io.vertx.groovy.ext.web.RoutingContext
 import io.vertx.groovy.ext.web.handler.BodyHandler
 import org.folio.inventory.CollectionResourceClient
+import org.folio.inventory.common.WebContext
+import org.folio.inventory.common.api.request.PagingParameters
+import org.folio.inventory.common.api.request.VertxBodyParser
+import org.folio.inventory.common.api.response.*
+import org.folio.inventory.common.domain.Failure
+import org.folio.inventory.common.domain.Success
 import org.folio.inventory.domain.Item
 import org.folio.inventory.storage.Storage
 import org.folio.inventory.support.http.client.OkapiHttpClient
 import org.folio.inventory.support.http.client.Response
-import org.folio.metadata.common.WebContext
-import org.folio.metadata.common.api.request.PagingParameters
-import org.folio.metadata.common.api.request.VertxBodyParser
-import org.folio.metadata.common.api.response.*
-import org.folio.metadata.common.domain.Failure
-import org.folio.metadata.common.domain.Success
 
 import java.util.concurrent.CompletableFuture
 import java.util.stream.Collectors

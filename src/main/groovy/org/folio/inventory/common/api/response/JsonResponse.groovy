@@ -1,4 +1,4 @@
-package org.folio.metadata.common.api.response
+package org.folio.inventory.common.api.response
 
 import io.vertx.core.json.Json
 import io.vertx.groovy.core.buffer.Buffer

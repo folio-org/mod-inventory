@@ -5,9 +5,9 @@ import io.vertx.groovy.core.http.HttpServer
 import io.vertx.groovy.ext.web.Router
 import io.vertx.groovy.ext.web.RoutingContext
 import io.vertx.lang.groovy.GroovyVerticle
-import org.folio.metadata.common.WebRequestDiagnostics
-import org.folio.metadata.common.api.response.ClientErrorResponse
-import org.folio.metadata.common.api.response.ServerErrorResponse
+import org.folio.inventory.common.WebRequestDiagnostics
+import org.folio.inventory.common.api.response.ClientErrorResponse
+import org.folio.inventory.common.api.response.ServerErrorResponse
 
 class FailureInventoryStorageModule extends GroovyVerticle {
   private static final int PORT_TO_USE = 9493

@@ -1,6 +1,6 @@
 package org.folio.inventory
 
-import org.folio.metadata.common.VertxAssistant
+import org.folio.inventory.common.VertxAssistant
 
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit

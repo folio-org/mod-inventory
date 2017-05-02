@@ -10,7 +10,7 @@ import io.vertx.core.json.Json
 import io.vertx.core.json.JsonObject
 import org.apache.http.impl.client.cache.CachingHttpClientBuilder
 import org.apache.http.message.BasicHeader
-import org.folio.metadata.common.testing.HttpClient
+import org.folio.inventory.common.testing.HttpClient
 import spock.lang.Specification
 
 import static api.support.InstanceSamples.*
