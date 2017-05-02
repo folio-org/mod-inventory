@@ -8,7 +8,7 @@ Version 2.0. See the file "[LICENSE](LICENSE)" for more information.
 
 FOLIO compatible inventory module.
 
-Provides basic physical item inventory management, currently limited to basic representations of local instances and items, which can only be created via a MODS import. 
+Provides basic physical item inventory management, currently limited to basic representations of local instances and items, which can only be created via a MODS import.
 
 Written in Groovy and uses Gradle as its build system.
 
@@ -44,7 +44,7 @@ If sdkman is installed, run `source ./setup-environment.sh` to setup the shell w
 
 # Building
 
-run `gradle build` from the root directory. 
+run `gradle build` from the root directory.
 
 In order to build an executable Jar (e.g. for Okapi to deploy), run `gradle fatJar`.
 
