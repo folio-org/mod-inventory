@@ -86,7 +86,7 @@ abstract class ItemCollectionExamples {
     assert smallAngry != null
     assert smallAngry.barcode == "036000291452"
     assert smallAngry.status == "Available"
-    assert smallAngry.materialType?.id == "${bookMaterialTypeId}"
+    assert smallAngry.materialTypeId == "${bookMaterialTypeId}"
     assert smallAngry.location == "Main Library"
 
     def nod = allItems.find({ it.title == "Nod" })
@@ -94,7 +94,7 @@ abstract class ItemCollectionExamples {
     assert nod != null
     assert nod.barcode == "565578437802"
     assert nod.status == "Available"
-    assert nod.materialType?.id == "${bookMaterialTypeId}"
+    assert nod.materialTypeId == "${bookMaterialTypeId}"
     assert nod.location == "Main Library"
 
     def uprooted = allItems.find({ it.title == "Uprooted"})
@@ -102,7 +102,7 @@ abstract class ItemCollectionExamples {
     assert uprooted != null
     assert uprooted.barcode == "657670342075"
     assert uprooted.status == "Available"
-    assert uprooted.materialType?.id == "${bookMaterialTypeId}"
+    assert uprooted.materialTypeId == "${bookMaterialTypeId}"
     assert uprooted.location == "Main Library"
   }
 
@@ -153,7 +153,7 @@ abstract class ItemCollectionExamples {
     assert updated.title == added.title
     assert updated.barcode == added.barcode
     assert updated.location == added.location
-    assert updated.materialType == added.materialType
+    assert updated.materialTypeId == added.materialTypeId
     assert updated.status == "Checked Out"
   }
 
@@ -348,14 +348,14 @@ abstract class ItemCollectionExamples {
     assert foundItem.title == "Long Way to a Small Angry Planet"
     assert foundItem.barcode == "036000291452"
     assert foundItem.status == "Available"
-    assert foundItem.materialType?.id == "${bookMaterialTypeId}"
+    assert foundItem.materialTypeId == "${bookMaterialTypeId}"
     assert foundItem.location == "Main Library"
 
     assert otherFoundItem.title == "Nod"
     assert otherFoundItem.instanceId == nod.instanceId
     assert otherFoundItem.barcode == "565578437802"
     assert otherFoundItem.status == "Available"
-    assert otherFoundItem.materialType?.id == "${bookMaterialTypeId}"
+    assert otherFoundItem.materialTypeId == "${bookMaterialTypeId}"
     assert otherFoundItem.location == "Main Library"
   }
 
@@ -379,36 +379,33 @@ abstract class ItemCollectionExamples {
 
   private Item smallAngryPlanet() {
     new Item("Long Way to a Small Angry Planet", "036000291452",
-      UUID.randomUUID().toString(), "Available", bookMaterialType(),
+      UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
       "Main Library")
   }
 
 
   private Item nod() {
     new Item("Nod", "565578437802",
-      UUID.randomUUID().toString(), "Available", bookMaterialType(),
+      UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
       "Main Library")
   }
 
   private Item uprooted() {
     new Item("Uprooted", "657670342075",
-      UUID.randomUUID().toString(), "Available", bookMaterialType(),
+      UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
       "Main Library")
   }
 
   private Item temeraire() {
     new Item("Temeraire", "232142443432",
-      UUID.randomUUID().toString(), "Available", bookMaterialType(),
+      UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
       "Main Library")
   }
 
   private Item interestingTimes() {
     new Item("Interesting Times", "56454543534",
-      UUID.randomUUID().toString(), "Available", bookMaterialType(),
+      UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
       "Main Library")
   }
 
-  private Map<String, String> bookMaterialType() {
-    ["id": "${bookMaterialTypeId}" ]
-  }
 }

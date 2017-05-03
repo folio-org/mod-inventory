@@ -34,9 +34,9 @@ class ItemRepresentation {
       representation.put("status", new JsonObject().put("name", item.status))
     }
 
-    if(item.materialType != null) {
+    if(item.materialTypeId != null) {
       representation.put("materialType", new JsonObject()
-        .put("id", item.materialType.id))
+        .put("id", item.materialTypeId))
     }
 
     if(item.location != null) {
@@ -61,7 +61,7 @@ class ItemRepresentation {
     def results = new JsonArray()
 
     items.each { item ->
-      def materialType = materialTypes.get(item?.materialType?.id)
+      def materialType = materialTypes.get(item?.materialTypeId)
 
       results.add(toJson(item, materialType, context))
     }

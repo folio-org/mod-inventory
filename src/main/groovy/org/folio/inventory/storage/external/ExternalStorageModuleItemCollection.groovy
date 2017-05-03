@@ -280,7 +280,7 @@ class ExternalStorageModuleItemCollection
       itemFromServer.getString("barcode"),
       itemFromServer.getString("instanceId"),
       itemFromServer?.getJsonObject("status")?.getString("name"),
-      ["id": itemFromServer?.getString("materialTypeId")],
+      itemFromServer?.getString("materialTypeId"),
       itemFromServer?.getJsonObject("location")?.getString("name"))
   }
 
@@ -294,12 +294,12 @@ class ExternalStorageModuleItemCollection
     itemToSend.put("instanceId", item.instanceId)
     itemToSend.put("status", new JsonObject().put("name", item.status))
 
-    if(item?.materialType?.id != null) {
-      itemToSend.put("materialTypeId", item.materialType.id.toString())
+    if(item?.materialTypeId != null) {
+      itemToSend.put("materialTypeId", item.materialTypeId)
     }
 
-    itemToSend.put("location",
-      new JsonObject().put("name", item.location))
+    itemToSend.put("location", new JsonObject().put("name", item.location))
+
     itemToSend
   }
 

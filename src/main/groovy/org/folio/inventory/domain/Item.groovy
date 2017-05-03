@@ -6,39 +6,39 @@ class Item {
   final String barcode
   final String instanceId
   final String status
-  final Map materialType
+  final String materialTypeId
   final String location
 
   def Item(String id, String title, String barcode,
-           String instanceId, String status, Map materialType,
+           String instanceId, String status, String materialTypeId,
            String location) {
     this.id = id
     this.title = title
     this.barcode = barcode
     this.instanceId = instanceId
     this.status = status
-    this.materialType = materialType
+    this.materialTypeId = materialTypeId
     this.location = location
   }
 
-  def Item(String title, String barcode,
-           String instanceId, String status, Map materialType,
-           String location) {
-    this(null, title, barcode, instanceId, status, materialType, location)
+  Item(String title, String barcode,
+       String instanceId, String status, String materialTypeId,
+       String location) {
+    this(null, title, barcode, instanceId, status, materialTypeId, location)
   }
 
-  def Item copyWithNewId(String newId) {
+  Item copyWithNewId(String newId) {
     new Item(newId, this.title, this.barcode,
-      this.instanceId, this.status, this.materialType, this.location)
+      this.instanceId, this.status, this.materialTypeId, this.location)
   }
 
   def changeStatus(String newStatus) {
     new Item(this.id, this.title, this.barcode,
-      this.instanceId, newStatus, this.materialType, this.location)
+      this.instanceId, newStatus, this.materialTypeId, this.location)
   }
 
   @Override
-  public String toString() {
+  String toString() {
     println ("Item ID: ${id}, Title: ${title}, Barcode: ${barcode}")
   }
 

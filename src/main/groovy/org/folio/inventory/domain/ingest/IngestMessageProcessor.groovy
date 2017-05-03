@@ -54,7 +54,7 @@ class IngestMessageProcessor {
             record.title,
             record.barcode,
             instances.find({ it.title == record.title })?.id,
-            "Available", ["id": materialTypes.book], "Main Library")
+            "Available", materialTypes.book, "Main Library")
       })
       .forEach({ itemCollection.add(it, allItems.receive(),
         { Failure failure -> println("Ingest Creation Failed: ${failure.reason}") })

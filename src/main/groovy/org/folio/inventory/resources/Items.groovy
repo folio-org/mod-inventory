@@ -162,8 +162,8 @@ class Items {
         def item = itemResponse.result
 
         if(item != null) {
-          if(item?.materialType?.id != null) {
-            materialTypesClient.get(item.materialType.id,
+          if(item?.materialTypeId != null) {
+            materialTypesClient.get(item.materialTypeId,
               { materialTypeResponse ->
               if(materialTypeResponse.statusCode == 200) {
                 JsonResponse.success(routingContext.response(),
@@ -176,7 +176,7 @@ class Items {
               } else {
                 ServerErrorResponse.internalError(routingContext.response(),
                   String.format("Failed to get material type with ID: %s:, %s",
-                    item.materialType.id, materialTypeResponse.getBody()));
+                    item.materialTypeId, materialTypeResponse.getBody()));
               }
             })
           }
@@ -215,7 +215,7 @@ class Items {
   private Item requestToItem(Map<String, Object> itemRequest) {
     new Item(itemRequest.id, itemRequest.title,
       itemRequest.barcode, itemRequest.instanceId, itemRequest?.status?.name,
-      itemRequest?.materialType, itemRequest?.location?.name)
+      itemRequest?.materialType?.id, itemRequest?.location?.name)
   }
 
   private respondWithManyItems(
@@ -228,7 +228,7 @@ class Items {
     def allFutures = new ArrayList<CompletableFuture<Response>>()
 
     def materialTypeIds = items.stream()
-      .map({ it?.materialType?.id })
+      .map({ it?.materialTypeId })
       .filter({ it != null })
       .distinct()
       .collect(Collectors.toList())
