@@ -30,9 +30,7 @@ class ItemApiExamples extends Specification {
         .put("instanceId", createdInstance.id)
         .put("barcode", "645398607547")
         .put("status", new JsonObject().put("name", "Available"))
-        .put("materialType", new JsonObject()
-          .put("id", "${ApiTestSuite.bookMaterialType}")
-          .put("name", "Book"))
+        .put("materialType", bookMaterialType())
         .put("location", new JsonObject().put("name", "Annex Library"))
 
     when:
@@ -73,9 +71,7 @@ class ItemApiExamples extends Specification {
         .put("id", itemId)
         .put("title", createdInstance.title)
         .put("instanceId", createdInstance.id)
-        .put("materialType", new JsonObject()
-          .put("id", "${ApiTestSuite.bookMaterialType}")
-          .put("name", "Book"))
+        .put("materialType", bookMaterialType())
         .put("barcode", "645398607547")
 
     when:
@@ -110,9 +106,7 @@ class ItemApiExamples extends Specification {
         .put("instanceId", createdInstance.id)
         .put("barcode", "645398607547")
         .put("status", new JsonObject().put("name", "Available"))
-        .put("materialType", new JsonObject()
-          .put("id", "${ApiTestSuite.bookMaterialType}")
-          .put("name", "Book"))
+        .put("materialType", bookMaterialType())
         .put("location", new JsonObject().put("name", "Annex Library"))
 
     when:
@@ -223,9 +217,7 @@ class ItemApiExamples extends Specification {
         .put("instanceId", UUID.randomUUID().toString())
         .put("barcode", "546747342365")
         .put("status", new JsonObject().put("name", "Available"))
-        .put("materialType", new JsonObject()
-          .put("id", "${ApiTestSuite.bookMaterialType}")
-          .put("name", "Book"))
+        .put("materialType", bookMaterialType())
         .put("location", new JsonObject().put("name", "Main Library"))
 
     when:
@@ -448,9 +440,7 @@ class ItemApiExamples extends Specification {
         .put("instanceId", nodInstance.id)
         .put("barcode", "645398607547")
         .put("status", new JsonObject().put("name", "Available"))
-        .put("materialType", new JsonObject()
-          .put("id", "${ApiTestSuite.bookMaterialType}")
-          .put("name", "Book"))
+        .put("materialType", bookMaterialType())
         .put("location", new JsonObject().put("name", "Main Library"))
 
       def (createItemResponse, createItemBody) = client.post(ApiRoot.items(),
