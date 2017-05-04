@@ -388,30 +388,30 @@ abstract class ItemCollectionExamples {
   private Item smallAngryPlanet() {
     new Item(null, "Long Way to a Small Angry Planet", "036000291452",
       UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
-      "Main Library", canCirculateLoanTypeId)
+      "Main Library", canCirculateLoanTypeId, null)
   }
 
   private Item nod() {
     new Item(null, "Nod", "565578437802",
       UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
-      "Main Library", canCirculateLoanTypeId)
+      "Main Library", canCirculateLoanTypeId, null)
   }
 
   private Item uprooted() {
     new Item(null, "Uprooted", "657670342075",
       UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
-      "Main Library", canCirculateLoanTypeId)
+      "Main Library", canCirculateLoanTypeId, null)
   }
 
   private Item temeraire() {
     new Item(null, "Temeraire", "232142443432",
       UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
-      "Main Library", canCirculateLoanTypeId)
+      "Main Library", canCirculateLoanTypeId, null)
   }
 
   private Item interestingTimes() {
     new Item(null, "Interesting Times", "56454543534",
       UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
-      "Main Library", canCirculateLoanTypeId)
+      "Main Library", canCirculateLoanTypeId, null)
   }
 }

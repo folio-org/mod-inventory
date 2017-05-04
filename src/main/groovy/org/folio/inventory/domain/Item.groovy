@@ -8,6 +8,7 @@ class Item {
   final String status
   final String materialTypeId
   final String permanentLoanTypeId
+  final String temporaryLoanTypeId
   final String location
 
   Item(String id,
@@ -17,7 +18,8 @@ class Item {
        String status,
        String materialTypeId,
        String location,
-       String permanentLoanTypeId) {
+       String permanentLoanTypeId,
+       String temporaryLoanTypeId) {
 
     this.id = id
     this.title = title
@@ -27,18 +29,19 @@ class Item {
     this.materialTypeId = materialTypeId
     this.location = location
     this.permanentLoanTypeId = permanentLoanTypeId
+    this.temporaryLoanTypeId = temporaryLoanTypeId
   }
 
   Item copyWithNewId(String newId) {
     new Item(newId, this.title, this.barcode,
       this.instanceId, this.status, this.materialTypeId, this.location,
-      this.permanentLoanTypeId)
+      this.permanentLoanTypeId, this.temporaryLoanTypeId)
   }
 
   def changeStatus(String newStatus) {
     new Item(this.id, this.title, this.barcode,
       this.instanceId, newStatus, this.materialTypeId, this.location,
-      this.permanentLoanTypeId)
+      this.permanentLoanTypeId, this.temporaryLoanTypeId)
   }
 
   @Override

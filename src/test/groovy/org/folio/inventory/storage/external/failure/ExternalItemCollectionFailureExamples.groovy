@@ -132,7 +132,7 @@ abstract class ExternalItemCollectionFailureExamples {
   protected Item createItem() {
     new Item(null, UUID.randomUUID().toString(), "Nod", "6575467847",
       "${UUID.randomUUID()}", "${UUID.randomUUID()}",
-      "Main Library", "${UUID.randomUUID()}")
+      "Main Library", "${UUID.randomUUID()}", null)
   }
 
   private ItemCollection createCollection() {

@@ -12,12 +12,28 @@ class ItemRepresentation {
     this.relativeItemsPath = relativeItemsPath
   }
 
-  JsonObject toJson(Item item, JsonObject materialType, WebContext context) {
+  JsonObject toJson(
+    Item item,
+    JsonObject materialType,
+    JsonObject permanentLoanType,
+    JsonObject temporaryLoanType,
+    WebContext context) {
+
     def representation = toJson(item, context)
 
     if(materialType != null) {
       representation.getJsonObject("materialType")
         .put("name", materialType.getString("name"))
+    }
+
+    if(permanentLoanType != null) {
+      representation.getJsonObject("permanentLoanType")
+        .put("name", permanentLoanType.getString("name"))
+    }
+
+    if(temporaryLoanType != null) {
+      representation.getJsonObject("temporaryLoanType")
+        .put("name", temporaryLoanType.getString("name"))
     }
 
     representation
@@ -34,15 +50,14 @@ class ItemRepresentation {
       representation.put("status", new JsonObject().put("name", item.status))
     }
 
-    if(item.materialTypeId != null) {
-      representation.put("materialType", new JsonObject()
-        .put("id", item.materialTypeId))
-    }
+    includeReferenceIfPresent(representation, "materialType",
+      item.materialTypeId)
 
-    if(item.permanentLoanTypeId != null) {
-      representation.put("permanentLoanType", new JsonObject()
-        .put("id", item.permanentLoanTypeId))
-    }
+    includeReferenceIfPresent(representation, "permanentLoanType",
+      item.permanentLoanTypeId)
+
+    includeReferenceIfPresent(representation, "temporaryLoanType",
+      item.temporaryLoanTypeId)
 
     if(item.location != null) {
       representation.put("location",
@@ -59,6 +74,7 @@ class ItemRepresentation {
   JsonObject toJson(
     List<Item> items,
     Map<String, JsonObject> materialTypes,
+    Map<String, JsonObject> loanTypes,
     WebContext context) {
 
     def representation = new JsonObject()
@@ -67,8 +83,10 @@ class ItemRepresentation {
 
     items.each { item ->
       def materialType = materialTypes.get(item?.materialTypeId)
+      def permanentLoanType = loanTypes.get(item?.permanentLoanTypeId)
+      def temporaryLoanType = loanTypes.get(item?.temporaryLoanTypeId)
 
-      results.add(toJson(item, materialType, context))
+      results.add(toJson(item, materialType, permanentLoanType, temporaryLoanType, context))
     }
 
     representation.put("items", results)
@@ -90,5 +108,16 @@ class ItemRepresentation {
     representation.put("items", results)
 
     representation
+  }
+
+  private void includeReferenceIfPresent(
+    JsonObject representation,
+    String referencePropertyName,
+    String id) {
+
+    if (id != null) {
+      representation.put(referencePropertyName,
+        new JsonObject().put("id", id))
+    }
   }
 }

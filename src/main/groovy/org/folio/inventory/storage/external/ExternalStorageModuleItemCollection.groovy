@@ -282,7 +282,8 @@ class ExternalStorageModuleItemCollection
       itemFromServer?.getJsonObject("status")?.getString("name"),
       itemFromServer?.getString("materialTypeId"),
       itemFromServer?.getJsonObject("location")?.getString("name"),
-      itemFromServer?.getString("permanentLoanTypeId"))
+      itemFromServer?.getString("permanentLoanTypeId"),
+      itemFromServer?.getString("temporaryLoanTypeId"))
   }
 
   private Map mapToItemRequest(Item item) {
@@ -297,6 +298,7 @@ class ExternalStorageModuleItemCollection
 
     includeIfPresent(itemToSend, "materialTypeId", item?.materialTypeId)
     includeIfPresent(itemToSend, "permanentLoanTypeId", item?.permanentLoanTypeId)
+    includeIfPresent(itemToSend, "temporaryLoanTypeId", item?.temporaryLoanTypeId)
 
     itemToSend.put("location", new JsonObject().put("name", item.location))
 
