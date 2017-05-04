@@ -130,8 +130,9 @@ abstract class ExternalItemCollectionFailureExamples {
   protected abstract check(Failure failure)
 
   protected Item createItem() {
-    new Item(UUID.randomUUID().toString(), "Nod", "6575467847",
-      "${UUID.randomUUID()}", "${UUID.randomUUID()}", "Main Library")
+    new Item(null, UUID.randomUUID().toString(), "Nod", "6575467847",
+      "${UUID.randomUUID()}", "${UUID.randomUUID()}",
+      "Main Library", "${UUID.randomUUID()}")
   }
 
   private ItemCollection createCollection() {

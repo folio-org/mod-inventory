@@ -39,6 +39,11 @@ class ItemRepresentation {
         .put("id", item.materialTypeId))
     }
 
+    if(item.permanentLoanTypeId != null) {
+      representation.put("permanentLoanType", new JsonObject()
+        .put("id", item.permanentLoanTypeId))
+    }
+
     if(item.location != null) {
       representation.put("location",
         new JsonObject().put("name", item.location))

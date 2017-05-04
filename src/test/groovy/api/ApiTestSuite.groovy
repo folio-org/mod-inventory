@@ -71,6 +71,14 @@ class ApiTestSuite {
     dvdMaterialTypeId
   }
 
+  static String getCanCirculateLoanType() {
+    canCirculateLoanTypeId
+  }
+
+  static String getCourseReserveLoanType() {
+    courseReserveLoanTypeId
+  }
+
   static HttpClient createHttpClient() {
     new HttpClient(storageOkapiUrl(), TENANT_ID, TOKEN)
   }

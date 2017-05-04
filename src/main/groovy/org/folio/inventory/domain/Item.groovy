@@ -7,11 +7,18 @@ class Item {
   final String instanceId
   final String status
   final String materialTypeId
+  final String permanentLoanTypeId
   final String location
 
-  def Item(String id, String title, String barcode,
-           String instanceId, String status, String materialTypeId,
-           String location) {
+  Item(String id,
+       String title,
+       String barcode,
+       String instanceId,
+       String status,
+       String materialTypeId,
+       String location,
+       String permanentLoanTypeId) {
+
     this.id = id
     this.title = title
     this.barcode = barcode
@@ -19,27 +26,23 @@ class Item {
     this.status = status
     this.materialTypeId = materialTypeId
     this.location = location
-  }
-
-  Item(String title, String barcode,
-       String instanceId, String status, String materialTypeId,
-       String location) {
-    this(null, title, barcode, instanceId, status, materialTypeId, location)
+    this.permanentLoanTypeId = permanentLoanTypeId
   }
 
   Item copyWithNewId(String newId) {
     new Item(newId, this.title, this.barcode,
-      this.instanceId, this.status, this.materialTypeId, this.location)
+      this.instanceId, this.status, this.materialTypeId, this.location,
+      this.permanentLoanTypeId)
   }
 
   def changeStatus(String newStatus) {
     new Item(this.id, this.title, this.barcode,
-      this.instanceId, newStatus, this.materialTypeId, this.location)
+      this.instanceId, newStatus, this.materialTypeId, this.location,
+      this.permanentLoanTypeId)
   }
 
   @Override
   String toString() {
     println ("Item ID: ${id}, Title: ${title}, Barcode: ${barcode}")
   }
-
 }

@@ -215,7 +215,8 @@ class Items {
   private Item requestToItem(Map<String, Object> itemRequest) {
     new Item(itemRequest.id, itemRequest.title,
       itemRequest.barcode, itemRequest.instanceId, itemRequest?.status?.name,
-      itemRequest?.materialType?.id, itemRequest?.location?.name)
+      itemRequest?.materialType?.id, itemRequest?.location?.name,
+      itemRequest?.permanentLoanType?.id)
   }
 
   private respondWithManyItems(

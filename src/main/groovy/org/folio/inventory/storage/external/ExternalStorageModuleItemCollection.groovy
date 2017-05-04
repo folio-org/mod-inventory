@@ -281,7 +281,8 @@ class ExternalStorageModuleItemCollection
       itemFromServer.getString("instanceId"),
       itemFromServer?.getJsonObject("status")?.getString("name"),
       itemFromServer?.getString("materialTypeId"),
-      itemFromServer?.getJsonObject("location")?.getString("name"))
+      itemFromServer?.getJsonObject("location")?.getString("name"),
+      itemFromServer?.getString("permanentLoanTypeId"))
   }
 
   private Map mapToItemRequest(Item item) {
@@ -294,13 +295,22 @@ class ExternalStorageModuleItemCollection
     itemToSend.put("instanceId", item.instanceId)
     itemToSend.put("status", new JsonObject().put("name", item.status))
 
-    if(item?.materialTypeId != null) {
-      itemToSend.put("materialTypeId", item.materialTypeId)
-    }
+    includeIfPresent(itemToSend, "materialTypeId", item?.materialTypeId)
+    includeIfPresent(itemToSend, "permanentLoanTypeId", item?.permanentLoanTypeId)
 
     itemToSend.put("location", new JsonObject().put("name", item.location))
 
     itemToSend
+  }
+
+  private void includeIfPresent(
+    Map itemToSend,
+    String propertyName,
+    String propertyValue) {
+
+    if (propertyValue != null) {
+      itemToSend.put(propertyName, propertyValue)
+    }
   }
 
   private Handler<Throwable> exceptionHandler(Consumer<Failure> failureCallback) {

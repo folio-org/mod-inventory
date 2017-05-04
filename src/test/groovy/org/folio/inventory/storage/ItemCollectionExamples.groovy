@@ -16,6 +16,8 @@ import static org.folio.inventory.common.FutureAssistance.*
 abstract class ItemCollectionExamples {
 
   private final String bookMaterialTypeId = UUID.randomUUID().toString()
+  private final String canCirculateLoanTypeId = UUID.randomUUID().toString()
+
   private static final String firstTenantId = "test_tenant_1"
   private static final String secondTenantId = "test_tenant_2"
   private static final String firstTenantToken = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsInRlbmFudCI6ImRlbW9fdGVuYW50In0.29VPjLI6fLJzxQW0UhQ0jsvAn8xHz501zyXAxRflXfJ9wuDzT8TDf-V75PjzD7fe2kHjSV2dzRXbstt3BTtXIQ"
@@ -87,6 +89,7 @@ abstract class ItemCollectionExamples {
     assert smallAngry.barcode == "036000291452"
     assert smallAngry.status == "Available"
     assert smallAngry.materialTypeId == "${bookMaterialTypeId}"
+    assert smallAngry.permanentLoanTypeId == "${canCirculateLoanTypeId}"
     assert smallAngry.location == "Main Library"
 
     def nod = allItems.find({ it.title == "Nod" })
@@ -95,6 +98,7 @@ abstract class ItemCollectionExamples {
     assert nod.barcode == "565578437802"
     assert nod.status == "Available"
     assert nod.materialTypeId == "${bookMaterialTypeId}"
+    assert nod.permanentLoanTypeId == "${canCirculateLoanTypeId}"
     assert nod.location == "Main Library"
 
     def uprooted = allItems.find({ it.title == "Uprooted"})
@@ -103,6 +107,7 @@ abstract class ItemCollectionExamples {
     assert uprooted.barcode == "657670342075"
     assert uprooted.status == "Available"
     assert uprooted.materialTypeId == "${bookMaterialTypeId}"
+    assert uprooted.permanentLoanTypeId == "${canCirculateLoanTypeId}"
     assert uprooted.location == "Main Library"
   }
 
@@ -154,6 +159,7 @@ abstract class ItemCollectionExamples {
     assert updated.barcode == added.barcode
     assert updated.location == added.location
     assert updated.materialTypeId == added.materialTypeId
+    assert updated.permanentLoanTypeId == added.permanentLoanTypeId
     assert updated.status == "Checked Out"
   }
 
@@ -344,11 +350,12 @@ abstract class ItemCollectionExamples {
     def foundItem = getOnCompletion(findFuture)
     def otherFoundItem = getOnCompletion(otherFindFuture)
 
-    assert foundItem.instanceId == smallAngryPlanet.instanceId
     assert foundItem.title == "Long Way to a Small Angry Planet"
+    assert foundItem.instanceId == smallAngryPlanet.instanceId
     assert foundItem.barcode == "036000291452"
     assert foundItem.status == "Available"
     assert foundItem.materialTypeId == "${bookMaterialTypeId}"
+    assert foundItem.permanentLoanTypeId == "${canCirculateLoanTypeId}"
     assert foundItem.location == "Main Library"
 
     assert otherFoundItem.title == "Nod"
@@ -356,6 +363,7 @@ abstract class ItemCollectionExamples {
     assert otherFoundItem.barcode == "565578437802"
     assert otherFoundItem.status == "Available"
     assert otherFoundItem.materialTypeId == "${bookMaterialTypeId}"
+    assert otherFoundItem.permanentLoanTypeId == "${canCirculateLoanTypeId}"
     assert otherFoundItem.location == "Main Library"
   }
 
@@ -378,34 +386,32 @@ abstract class ItemCollectionExamples {
   }
 
   private Item smallAngryPlanet() {
-    new Item("Long Way to a Small Angry Planet", "036000291452",
+    new Item(null, "Long Way to a Small Angry Planet", "036000291452",
       UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
-      "Main Library")
+      "Main Library", canCirculateLoanTypeId)
   }
 
-
   private Item nod() {
-    new Item("Nod", "565578437802",
+    new Item(null, "Nod", "565578437802",
       UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
-      "Main Library")
+      "Main Library", canCirculateLoanTypeId)
   }
 
   private Item uprooted() {
-    new Item("Uprooted", "657670342075",
+    new Item(null, "Uprooted", "657670342075",
       UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
-      "Main Library")
+      "Main Library", canCirculateLoanTypeId)
   }
 
   private Item temeraire() {
-    new Item("Temeraire", "232142443432",
+    new Item(null, "Temeraire", "232142443432",
       UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
-      "Main Library")
+      "Main Library", canCirculateLoanTypeId)
   }
 
   private Item interestingTimes() {
-    new Item("Interesting Times", "56454543534",
+    new Item(null, "Interesting Times", "56454543534",
       UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
-      "Main Library")
+      "Main Library", canCirculateLoanTypeId)
   }
-
 }

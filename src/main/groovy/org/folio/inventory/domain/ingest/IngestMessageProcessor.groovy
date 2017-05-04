@@ -50,11 +50,9 @@ class IngestMessageProcessor {
     allInstances.collect ({ instances ->
       records.stream()
         .map({ record ->
-          new Item(
-            record.title,
-            record.barcode,
+          new Item(null, record.title, record.barcode,
             instances.find({ it.title == record.title })?.id,
-            "Available", materialTypes.book, "Main Library")
+            "Available", materialTypes.book, "Main Library", null)
       })
       .forEach({ itemCollection.add(it, allItems.receive(),
         { Failure failure -> println("Ingest Creation Failed: ${failure.reason}") })
