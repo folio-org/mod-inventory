@@ -13,6 +13,10 @@
     },
     "location": {
       "name": "Main Library"
+    },
+    "permanentLoanType": {
+      "id": "11477028-d9e6-44d2-9364-5c6f51053f51",
+      "name": "Reading Room"
     }
   },
   {
@@ -26,6 +30,14 @@
     "materialType": {
       "id": "fcf3d3dc-b27f-4ce4-a530-542ea53cacb5",
       "name": "Book"
+    },
+    "permanentLoanType": {
+      "id": "8e570d0d-931c-43d1-9ca1-221e693ea8d2",
+      "name": "Can Circulate"
+    },
+    "temporaryLoanType": {
+      "id": "74c25903-4019-4d8a-9360-5cb7761f44e5",
+      "name": "Course Reserve"
     },
     "location": {
       "name": "Main Library"
