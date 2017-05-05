@@ -496,19 +496,22 @@ class ItemApiExamples extends Specification {
 
     then:
       assert response.status == 200
-      assert all.items.size() == 2
 
-      all.items.each {
-        selfLinkRespectsWayResourceWasReached(it)
-      }
+      assert all.items.stream()
+        .filter({it.barcode == "645398607547"})
+        .findFirst().get()?.permanentLoanType?.id == ApiTestSuite.canCirculateLoanType
 
-      all.items.each {
-        selfLinkShouldBeReachable(it)
-      }
+    assert all.items.stream()
+      .filter({it.barcode == "645398607547"})
+      .findFirst().get()?.temporaryLoanType == null
 
-      all.items.each {
-        hasConsistentMaterialType(it)
-      }
+     assert all.items.stream()
+        .filter({it.barcode == "175848607547"})
+        .findFirst().get()?.permanentLoanType?.id == ApiTestSuite.canCirculateLoanType
+
+      assert all.items.stream()
+        .filter({it.barcode == "175848607547"})
+        .findFirst().get()?.temporaryLoanType?.id == ApiTestSuite.courseReserveLoanType
 
       all.items.each {
         hasConsistentPermanentLoanType(it)
@@ -516,14 +519,6 @@ class ItemApiExamples extends Specification {
 
       all.items.each {
         hasConsistentTemporaryLoanType(it)
-      }
-
-      all.items.each {
-        hasStatus(it)
-      }
-
-      all.items.each {
-        hasLocation(it)
       }
   }
 
