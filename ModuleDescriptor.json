@@ -85,7 +85,7 @@
   "requires" : [
     {
     "id" : "item-storage",
-    "version" : "2.0"
+    "version" : "2.1"
     },
     {
       "id": "instance-storage",
@@ -94,6 +94,10 @@
     {
       "id": "material-types",
       "version": "1.3"
+    },
+    {
+      "id": "loan-types",
+      "version": "1.0"
     }
   ],
   "permissionSets": [
