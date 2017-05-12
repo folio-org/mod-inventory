@@ -4,7 +4,7 @@
 
 ## 4.2.0 2017-05-08
 
-* Provide permanent and temporary loan type assocations for items
+* Provide permanent and temporary loan type associations for items
 * Include name of loan type in item representation (by querying loan type controlled vocabulary)
 
 ## 4.0.0 2017-04-25
