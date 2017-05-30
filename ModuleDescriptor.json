@@ -175,6 +175,7 @@
       "permissionName": "inventory.all",
       "displayName": "Inventory - all permissions",
       "description": "Entire set of permissions needed to use the inventory module",
+      "visible": true,
       "subPermissions": [
         "inventory.items.collection.get",
         "inventory.items.item.get",
