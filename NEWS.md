@@ -1,3 +1,8 @@
+## 4.4.0 2017-05-31
+
+* Makes the all inventory permissions set visible (requires Okapi 1.3.0)
+* Includes permission definition for enabling the items UI module (included in all permissions set)
+
 ## 4.3.0 2017-05-09
 
 * Include total record count in item and instance collection resources
