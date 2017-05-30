@@ -172,6 +172,11 @@
       "description": "Check the status of a MODS format file ingestion"
     },
     {
+      "permissionName": "module.items.enabled",
+      "displayName": "items - enable the items UI",
+      "description": "enable the items UI"
+    },
+    {
       "permissionName": "inventory.all",
       "displayName": "Inventory - all permissions",
       "description": "Entire set of permissions needed to use the inventory module",
@@ -190,7 +195,8 @@
         "inventory.instances.item.delete",
         "inventory.instances.collection.delete",
         "inventory.ingest.mods.post",
-        "inventory.ingest.mods.status.get"
+        "inventory.ingest.mods.status.get",
+        "module.items.enabled"
       ]
     }
   ]
