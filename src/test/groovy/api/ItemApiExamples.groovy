@@ -146,16 +146,12 @@ class ItemApiExamples extends Specification {
       selfLinkShouldBeReachable(createdItem)
   }
 
-  void "Can create an item without a material type"() {
+  void "Can create an item without a barcode"() {
     given:
-      def createdInstance = createInstance(
-        smallAngryPlanet(UUID.randomUUID()))
-
       def newItemRequest = new JsonObject()
-        .put("title", createdInstance.title)
-        .put("instanceId", createdInstance.id)
-        .put("barcode", "645398607547")
+        .put("title", "Nod")
         .put("status", new JsonObject().put("name", "Available"))
+        .put("materialType", bookMaterialType())
         .put("permanentLoanType", canCirculateLoanType())
         .put("location", new JsonObject().put("name", "Annex Library"))
 
@@ -174,19 +170,69 @@ class ItemApiExamples extends Specification {
 
       assert getResponse.status == 200
 
-      assert createdItem.id != null
-      assert createdItem.title == "Long Way to a Small Angry Planet"
-      assert createdItem.barcode == "645398607547"
-      assert createdItem?.status?.name == "Available"
-      assert createdItem?.location?.name == "Annex Library"
-      assert createdItem?.permanentLoanType?.id == ApiTestSuite.canCirculateLoanType
-      assert createdItem?.permanentLoanType?.name == "Can Circulate"
-
-      selfLinkRespectsWayResourceWasReached(createdItem)
-      selfLinkShouldBeReachable(createdItem)
+      assert createdItem.containsKey("barcode") == false
   }
 
-  void "Can create an item without a permanent loan type"() {
+  void "Can create multiple items without a barcode"() {
+
+    def firstItemRequest = new JsonObject()
+      .put("title", "Temeraire")
+      .put("status", new JsonObject().put("name", "Available"))
+      .put("location", new JsonObject().put("name", "Main Library"))
+      .put("materialType", bookMaterialType())
+      .put("permanentLoanType", canCirculateLoanType())
+
+    def (_, __) = client.post(ApiRoot.items(),
+      Json.encodePrettily(firstItemRequest))
+
+    def newItemRequest = new JsonObject()
+      .put("title", "Nod")
+      .put("status", new JsonObject().put("name", "Available"))
+      .put("materialType", bookMaterialType())
+      .put("permanentLoanType", canCirculateLoanType())
+      .put("location", new JsonObject().put("name", "Annex Library"))
+
+    when:
+      def (postResponse, ___) = client.post(
+        new URL("${ApiRoot.items()}"),
+        Json.encodePrettily(newItemRequest))
+
+    then:
+      def location = postResponse.headers.location.toString()
+
+      assert postResponse.status == 201
+      assert location != null
+
+      def (getResponse, createdItem) = client.get(location)
+
+      assert getResponse.status == 200
+
+      assert createdItem.containsKey("barcode") == false
+  }
+
+  void "Cannot create an item without a material type"() {
+    given:
+      def createdInstance = createInstance(
+        smallAngryPlanet(UUID.randomUUID()))
+
+      def newItemRequest = new JsonObject()
+        .put("title", createdInstance.title)
+        .put("instanceId", createdInstance.id)
+        .put("barcode", "645398607547")
+        .put("status", new JsonObject().put("name", "Available"))
+        .put("permanentLoanType", canCirculateLoanType())
+        .put("location", new JsonObject().put("name", "Annex Library"))
+
+    when:
+      def (postResponse, _) = client.post(
+        new URL("${ApiRoot.items()}"),
+        Json.encodePrettily(newItemRequest))
+
+    then:
+      assert postResponse.status == 422
+  }
+
+  void "Cannot create an item without a permanent loan type"() {
     given:
       def createdInstance = createInstance(
         smallAngryPlanet(UUID.randomUUID()))
@@ -205,26 +251,7 @@ class ItemApiExamples extends Specification {
         Json.encodePrettily(newItemRequest))
 
     then:
-      def location = postResponse.headers.location.toString()
-
-      assert postResponse.status == 201
-      assert location != null
-
-      def (getResponse, createdItem) = client.get(location)
-
-      assert getResponse.status == 200
-
-      assert createdItem.id != null
-      assert createdItem.title == "Long Way to a Small Angry Planet"
-      assert createdItem.barcode == "645398607547"
-      assert createdItem?.status?.name == "Available"
-      assert createdItem?.location?.name == "Annex Library"
-      assert createdItem?.materialType?.id == ApiTestSuite.bookMaterialType
-      assert createdItem?.materialType?.name == "Book"
-      assert createdItem?.permanentLoanType == null
-
-      selfLinkRespectsWayResourceWasReached(createdItem)
-      selfLinkShouldBeReachable(createdItem)
+      assert postResponse.status == 422
   }
 
   void "Can create an item without a temporary loan type"() {

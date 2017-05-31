@@ -5,7 +5,11 @@ import io.vertx.groovy.ext.web.RoutingContext
 import io.vertx.groovy.ext.web.handler.BodyHandler
 import org.folio.inventory.CollectionResourceClient
 import org.folio.inventory.common.WebContext
-import org.folio.inventory.common.api.response.*
+import org.folio.inventory.common.api.response.ClientErrorResponse
+import org.folio.inventory.common.api.response.FailureResponseConsumer
+import org.folio.inventory.common.api.response.JsonResponse
+import org.folio.inventory.common.api.response.RedirectResponse
+import org.folio.inventory.common.api.response.ServerErrorResponse
 import org.folio.inventory.common.domain.Success
 import org.folio.inventory.domain.ingest.IngestMessages
 import org.folio.inventory.parsing.ModsParser
@@ -13,6 +17,9 @@ import org.folio.inventory.parsing.UTF8LiteralCharacterEncoding
 import org.folio.inventory.storage.Storage
 import org.folio.inventory.support.JsonArrayHelper
 import org.folio.inventory.support.http.client.OkapiHttpClient
+import org.folio.inventory.support.http.client.Response
+
+import java.util.concurrent.CompletableFuture
 
 class ModsIngestion {
   private final Storage storage
@@ -34,6 +41,7 @@ class ModsIngestion {
       return
     }
 
+    //TODO: Will only work for book material type and can circulate loan type
     def context = new WebContext(routingContext)
 
     def client = new OkapiHttpClient(routingContext.vertx().createHttpClient(),
@@ -45,50 +53,80 @@ class ModsIngestion {
     def materialTypesClient = new CollectionResourceClient(client,
       new URL(context.okapiLocation + "/material-types"))
 
-    //TODO: Will only work for book material type
+    def loanTypesClient = new CollectionResourceClient(client,
+      new URL(context.okapiLocation + "/loan-types"))
+
+    def materialTypesRequestCompleted = new CompletableFuture<Response>()
+    def loanTypesRequestCompleted = new CompletableFuture<Response>()
+
     materialTypesClient.getMany(
       "query=" + URLEncoder.encode("name=\"Book\"", "UTF-8"),
-      { response ->
-        if(response.statusCode != 200) {
-          ServerErrorResponse.internalError(routingContext.response(),
-            "Unable to retrieve material types: ${response.statusCode}: ${response.body}")
-        }
-        else {
-          def bookMaterialTypeId =
-            JsonArrayHelper.toList(response.json.getJsonArray("mtypes"))
-              .first().getString("id")
+      { response -> materialTypesRequestCompleted.complete(response) })
 
-          routingContext.vertx().fileSystem().readFile(uploadFileName(routingContext),
-          { result ->
-            if (result.succeeded()) {
-              def uploadedFileContents = result.result().toString()
+    loanTypesClient.getMany(
+      "query=" + URLEncoder.encode("name=\"Can Circulate\"", "UTF-8"),
+      { response -> loanTypesRequestCompleted.complete(response) })
 
-              def records = new ModsParser(new UTF8LiteralCharacterEncoding())
-                .parseRecords(uploadedFileContents)
+    CompletableFuture.allOf(materialTypesRequestCompleted, loanTypesRequestCompleted)
+      .thenAccept({ v ->
 
-              def convertedRecords = new IngestRecordConverter().toJson(records)
+      def materialTypeResponse = materialTypesRequestCompleted.get()
+      def loanTypeResponse = loanTypesRequestCompleted.get()
 
-              storage.getIngestJobCollection(context)
-                .add(new IngestJob(IngestJobState.REQUESTED),
-                { Success success ->
+      if (materialTypeResponse.statusCode != 200) {
+        ServerErrorResponse.internalError(routingContext.response(),
+          "Unable to retrieve material types: ${materialTypeResponse.statusCode}: ${materialTypeResponse.body}")
 
-                  IngestMessages.start(convertedRecords,
-                    ["book": bookMaterialTypeId], success.result.id, context)
-                    .send(routingContext.vertx())
-
-                  RedirectResponse.accepted(routingContext.response(),
-                    statusLocation(routingContext, success.result.id))
-                },
-                {
-                  println("Creating Ingest Job failed")
-                })
-
-            } else {
-              ServerErrorResponse.internalError(
-                routingContext.response(), result.cause().toString())
-            }
-          })
+        return
       }
+
+      if (loanTypeResponse.statusCode != 200) {
+        ServerErrorResponse.internalError(routingContext.response(),
+          "Unable to retrieve loan types: ${loanTypeResponse.statusCode}: ${loanTypeResponse.body}")
+
+        return
+      }
+
+      def bookMaterialTypeId =
+        JsonArrayHelper.toList(materialTypeResponse.json.getJsonArray("mtypes"))
+          .first().getString("id")
+
+      def canCirculateLoanTypeId =
+        JsonArrayHelper.toList(loanTypeResponse.json.getJsonArray("loantypes"))
+          .first().getString("id")
+
+      routingContext.vertx().fileSystem().readFile(uploadFileName(routingContext),
+        { result ->
+          if (result.succeeded()) {
+            def uploadedFileContents = result.result().toString()
+
+            def records = new ModsParser(new UTF8LiteralCharacterEncoding())
+              .parseRecords(uploadedFileContents)
+
+            def convertedRecords = new IngestRecordConverter().toJson(records)
+
+            storage.getIngestJobCollection(context)
+              .add(new IngestJob(IngestJobState.REQUESTED),
+              { Success success ->
+
+                IngestMessages.start(convertedRecords,
+                  ["Book": bookMaterialTypeId],
+                  ["Can Circulate": canCirculateLoanTypeId],
+                  success.result.id, context)
+                  .send(routingContext.vertx())
+
+                RedirectResponse.accepted(routingContext.response(),
+                  statusLocation(routingContext, success.result.id))
+              },
+              {
+                println("Creating Ingest Job failed")
+              })
+
+          } else {
+            ServerErrorResponse.internalError(
+              routingContext.response(), result.cause().toString())
+          }
+        })
     })
   }
 
@@ -103,8 +141,6 @@ class ModsIngestion {
           ["status" : it.result.state.toString()])
       }, FailureResponseConsumer.serverError(routingContext.response()))
   }
-
-
 
   private String statusLocation(RoutingContext routingContext, jobId) {
 

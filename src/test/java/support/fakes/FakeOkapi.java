@@ -5,6 +5,8 @@ import io.vertx.core.Future;
 import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.Router;
 
+import java.util.ArrayList;
+
 public class FakeOkapi extends AbstractVerticle {
 
   private static final String TENANT_ID = "test_tenant";
@@ -63,7 +65,13 @@ public class FakeOkapi extends AbstractVerticle {
   }
 
   private void registerFakeItemsModule(Router router) {
-    registerFakeModule(router, "/item-storage/items", "items");
+    ArrayList<String> requiredProperties = new ArrayList<>();
+
+    requiredProperties.add("materialTypeId");
+    requiredProperties.add("permanentLoanTypeId");
+
+    new FakeStorageModule("/item-storage/items", "items",
+      TENANT_ID, requiredProperties).register(router);
   }
 
   private void registerFakeMaterialTypesModule(Router router) {

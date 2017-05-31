@@ -1,17 +1,13 @@
 package support.fakes;
 
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import support.fakes.http.server.ClientErrorResponse;
-import support.fakes.http.server.JsonResponse;
-import support.fakes.http.server.SuccessResponse;
-import support.fakes.http.server.WebContext;
+import support.fakes.http.server.*;
 
 import java.util.*;
 import java.util.function.Predicate;
@@ -19,6 +15,7 @@ import java.util.stream.Collectors;
 
 public class FakeStorageModule extends AbstractVerticle {
   private final String rootPath;
+  private final Collection<String> requiredProperties;
 
   private final Map<String, Map<String, JsonObject>> storedResourcesByTenant;
   private final String collectionPropertyName;
@@ -28,11 +25,21 @@ public class FakeStorageModule extends AbstractVerticle {
     String collectionPropertyName,
     String tenantId) {
 
+    this(rootPath, collectionPropertyName, tenantId, new ArrayList<>());
+  }
+
+  public FakeStorageModule(
+    String rootPath,
+    String collectionPropertyName,
+    String tenantId,
+    Collection<String> requiredProperties) {
+
     this.rootPath = rootPath;
+    this.collectionPropertyName = collectionPropertyName;
+    this.requiredProperties = requiredProperties;
 
     storedResourcesByTenant = new HashMap<>();
     storedResourcesByTenant.put(tenantId, new HashMap<>());
-    this.collectionPropertyName = collectionPropertyName;
   }
 
   public void register(Router router) {
@@ -42,18 +49,17 @@ public class FakeStorageModule extends AbstractVerticle {
     router.post(rootPath + "*").handler(BodyHandler.create());
     router.put(rootPath + "*").handler(BodyHandler.create());
 
+    router.post(rootPath).handler(this::checkRequiredProperties);
     router.post(rootPath).handler(this::create);
+
     router.get(rootPath).handler(this::getMany);
     router.delete(rootPath).handler(this::empty);
 
-    router.route(HttpMethod.PUT, rootPath + "/:id")
-      .handler(this::replace);
+    router.put(rootPath + "/:id").handler(this::checkRequiredProperties);
+    router.put(rootPath + "/:id").handler(this::replace);
 
-    router.route(HttpMethod.GET, rootPath + "/:id")
-      .handler(this::get);
-
-    router.route(HttpMethod.DELETE, rootPath + "/:id")
-      .handler(this::delete);
+    router.get(rootPath + "/:id").handler(this::get);
+    router.delete(rootPath + "/:id").handler(this::delete);
   }
 
   private void create(RoutingContext routingContext) {
@@ -217,7 +223,8 @@ public class FakeStorageModule extends AbstractVerticle {
             .getString(String.format("%s", fields[1])).contains(term);
         }
         else {
-          return loan.getString(String.format("%s", field)).contains(term);
+          return loan.containsKey(String.format("%s", field))
+            && loan.getString(String.format("%s", field)).contains(term);
         }
       }
     };
@@ -231,6 +238,26 @@ public class FakeStorageModule extends AbstractVerticle {
     }
     else {
       routingContext.next();
+    }
+  }
+
+  private void checkRequiredProperties(RoutingContext routingContext) {
+    JsonObject body = getJsonFromBody(routingContext);
+
+    ArrayList<ValidationError> errors = new ArrayList<>();
+
+    requiredProperties.stream().forEach(requiredProperty -> {
+      if(!body.getMap().containsKey(requiredProperty)) {
+        errors.add(new ValidationError());
+      }
+    });
+
+    if(errors.isEmpty()) {
+      routingContext.next();
+    }
+    else {
+      JsonResponse.unprocessableEntity(routingContext.response(),
+        errors);
     }
   }
 }

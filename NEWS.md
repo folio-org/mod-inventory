@@ -1,3 +1,15 @@
+## 5.0.0 Unreleased
+
+* Items do not require relating to an instance (instanceId is optional)
+* Items do not require a barcode (no uniqueness check performed when not supplied)
+* Items require a title
+* Items require a reference to a material type
+* Items require a reference to a permanent loan type
+* Requires item-storage interface version 3.0
+* Requires instance-storage interface version 2.0
+* Requires material-types interface version 2.0
+* Requires loan-types interface version 2.0
+
 ## 4.4.0 2017-05-31
 
 * Makes the all inventory permissions set visible (requires Okapi 1.3.0)

@@ -5,6 +5,8 @@ import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
+import java.util.List;
+
 public class JsonResponse {
 
   //TODO: Needs a location
@@ -18,6 +20,12 @@ public class JsonResponse {
                              JsonObject body) {
 
     response(response, body, 200);
+  }
+
+  public static void unprocessableEntity(
+    HttpServerResponse response,
+    List<ValidationError> errors) {
+    response(response, new JsonObject(), 422);
   }
 
   private static void response(HttpServerResponse response,

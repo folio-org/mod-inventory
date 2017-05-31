@@ -44,10 +44,10 @@ class HttpClient {
       }
     }
     catch (ConnectException ex) {
-      println "Failed to connect to ${url} internalError: ${ex}\n"
+      println "Failed to connect to GET ${url} internalError: ${ex}\n"
     }
     catch (ResponseParseException ex) {
-      println "Failed to access ${url} internalError: ${ex}\n"
+      println "Failed to access GET ${url} internalError: ${ex}\n"
     }
     catch (HttpResponseException ex) {
       parseResponseException(url, ex)
@@ -87,13 +87,13 @@ class HttpClient {
       }
     }
     catch (ConnectException ex) {
-      println "Failed to access ${url} internalError: ${ex})\n"
+      println "Failed to access POST ${url} internalError: ${ex})\n"
     }
     catch (ResponseParseException ex) {
-      println "Failed to access ${url} internalError: ${ex})\n"
+      println "Failed to access POST ${url} internalError: ${ex})\n"
     }
     catch (HttpResponseException ex) {
-      println "Failed to access ${url} internalError: ${ex})\n"
+      println "Failed to access POST ${url} internalError: ${ex})\n"
     }
   }
 
@@ -144,13 +144,13 @@ class HttpClient {
       }
     }
     catch (ConnectException ex) {
-      println "Failed to access ${url} internalError: ${ex})\n"
+      println "Failed to access POST ${url} internalError: ${ex})\n"
     }
     catch (ResponseParseException ex) {
-      println "Failed to access ${url} internalError: ${ex})\n"
+      println "Failed to access POST ${url} internalError: ${ex})\n"
     }
     catch (HttpResponseException ex) {
-      println "Failed to access ${url} internalError: ${ex})\n"
+      println "Failed to access POST ${url} internalError: ${ex})\n"
     }
   }
 
@@ -179,13 +179,13 @@ class HttpClient {
       }
     }
     catch (ConnectException ex) {
-      println "Failed to access ${url} internalError: ${ex})\n"
+      println "Failed to access PUT ${url} internalError: ${ex})\n"
     }
     catch (ResponseParseException ex) {
-      println "Failed to access ${url} internalError: ${ex})\n"
+      println "Failed to access PUT ${url} internalError: ${ex})\n"
     }
     catch (HttpResponseException ex) {
-      println "Failed to access ${url} internalError: ${ex})\n"
+      println "Failed to access PUT ${url} internalError: ${ex})\n"
     }
   }
 
