@@ -42,13 +42,14 @@ class ItemRepresentation {
   JsonObject toJson(Item item, WebContext context) {
     def representation = new JsonObject()
     representation.put("id", item.id)
-    representation.put("instanceId", item.instanceId)
     representation.put("title", item.title)
-    representation.put("barcode", item.barcode)
 
     if(item.status != null) {
       representation.put("status", new JsonObject().put("name", item.status))
     }
+
+    includeIfPresent(representation, "instanceId", item.instanceId)
+    includeIfPresent(representation, "barcode", item.barcode)
 
     includeReferenceIfPresent(representation, "materialType",
       item.materialTypeId)
@@ -123,6 +124,16 @@ class ItemRepresentation {
     if (id != null) {
       representation.put(referencePropertyName,
         new JsonObject().put("id", id))
+    }
+  }
+
+  private void includeIfPresent(
+    JsonObject representation,
+    String propertyName,
+    String propertyValue) {
+
+    if (propertyValue != null) {
+      representation.put(propertyName, propertyValue)
     }
   }
 }

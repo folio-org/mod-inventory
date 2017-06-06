@@ -86,21 +86,30 @@ class Items {
 
     def itemCollection = storage.getItemCollection(context)
 
-    itemCollection.findByCql("barcode=${newItem.barcode}",
-      PagingParameters.defaults(), {
+    if(newItem.barcode != null) {
+      itemCollection.findByCql("barcode=${newItem.barcode}",
+        PagingParameters.defaults(), {
 
-      if(it.result.items.size() == 0) {
-        itemCollection.add(newItem, { Success success ->
-          RedirectResponse.created(routingContext.response(),
-            context.absoluteUrl(
-              "${relativeItemsPath()}/${success.result.id}").toString())
-        }, FailureResponseConsumer.serverError(routingContext.response()))
-      }
-      else {
-        ClientErrorResponse.badRequest(routingContext.response(),
-          "Barcodes must be unique, ${newItem.barcode} is already assigned to another item")
-      }
-    }, FailureResponseConsumer.serverError(routingContext.response()))
+        if(it.result.items.size() == 0) {
+          itemCollection.add(newItem, { Success success ->
+            RedirectResponse.created(routingContext.response(),
+              context.absoluteUrl(
+                "${relativeItemsPath()}/${success.result.id}").toString())
+          }, FailureResponseConsumer.serverError(routingContext.response()))
+        }
+        else {
+          ClientErrorResponse.badRequest(routingContext.response(),
+            "Barcodes must be unique, ${newItem.barcode} is already assigned to another item")
+        }
+      }, FailureResponseConsumer.serverError(routingContext.response()))
+    }
+    else {
+      itemCollection.add(newItem, { Success success ->
+        RedirectResponse.created(routingContext.response(),
+          context.absoluteUrl(
+            "${relativeItemsPath()}/${success.result.id}").toString())
+      }, FailureResponseConsumer.serverError(routingContext.response()))
+    }
   }
 
   void update(RoutingContext routingContext) {
@@ -115,7 +124,7 @@ class Items {
     itemCollection.findById(routingContext.request().getParam("id"), {
       Success it ->
       if(it.result != null) {
-        if(it.result.barcode == updatedItem.barcode) {
+        if(updatedItem.barcode == null || it.result.barcode == updatedItem.barcode) {
           itemCollection.update(updatedItem,
             { SuccessResponse.noContent(routingContext.response()) },
             { Failure failure -> ServerErrorResponse.internalError(

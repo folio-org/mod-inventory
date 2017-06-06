@@ -33,6 +33,7 @@ class IngestMessageProcessor {
 
     def records = message.body().records
     def materialTypes = message.body().materialTypes
+    def loanTypes = message.body().loanTypes
 
     def context = new MessagingContext(message.headers())
 
@@ -52,7 +53,8 @@ class IngestMessageProcessor {
         .map({ record ->
           new Item(null, record.title, record.barcode,
             instances.find({ it.title == record.title })?.id,
-            "Available", materialTypes.book, "Main Library", null, null)
+            "Available", materialTypes.get("Book"), "Main Library",
+            loanTypes.get("Can Circulate"), null)
       })
       .forEach({ itemCollection.add(it, allItems.receive(),
         { Failure failure -> println("Ingest Creation Failed: ${failure.reason}") })

@@ -302,10 +302,10 @@ class ExternalStorageModuleItemCollection
     //TODO: Review if this shouldn't be defaulting here
     itemToSend.put("id", item.id ?: UUID.randomUUID().toString())
     itemToSend.put("title", item.title)
-    itemToSend.put("barcode", item.barcode)
-    itemToSend.put("instanceId", item.instanceId)
     itemToSend.put("status", new JsonObject().put("name", item.status))
 
+    includeIfPresent(itemToSend, "barcode", item?.barcode)
+    includeIfPresent(itemToSend, "instanceId", item?.instanceId)
     includeIfPresent(itemToSend, "materialTypeId", item?.materialTypeId)
     includeIfPresent(itemToSend, "permanentLoanTypeId", item?.permanentLoanTypeId)
     includeIfPresent(itemToSend, "temporaryLoanTypeId", item?.temporaryLoanTypeId)
