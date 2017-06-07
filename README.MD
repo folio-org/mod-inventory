@@ -100,6 +100,10 @@ http://localhost:9130/inventory
 
 Most of the development for these modules, thus far, has been performed on OS X, with some on Ubuntu. Feedback for these, and particularly other operating systems is very welcome.
 
+## Permissions
+
+The inventory.all permission set currently represents all of the permissions need to use the inventory related parts of the system (e.g. the scan application and it's configuration). This means that it contains additional permissions than those directly needed by the inventory module itself.
+
 # Additional Information
 
 The guide and other [documentation](doc) for this module.

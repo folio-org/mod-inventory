@@ -5,6 +5,7 @@
 * Items require a title
 * Items require a reference to a material type
 * Items require a reference to a permanent loan type
+* Inventory.all permission set includes permissions for related UI tasks
 * Requires item-storage interface version 3.0
 * Requires instance-storage interface version 2.0
 * Requires material-types interface version 2.0

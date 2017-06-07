@@ -10,12 +10,20 @@
           "methods": ["GET"],
           "pathPattern": "/inventory/items",
           "permissionsRequired": ["inventory.items.collection.get"],
-          "modulePermissions": ["inventory-storage.items.collection.get"]
+          "modulePermissions": [
+            "inventory-storage.items.collection.get",
+            "inventory-storage.material-types.item.get",
+            "inventory-storage.loan-types.item.get"
+          ]
         }, {
           "methods": ["GET"],
           "pathPattern": "/inventory/items/{id}",
           "permissionsRequired": ["inventory.items.item.get"],
-          "modulePermissions": ["inventory-storage.items.item.get"]
+          "modulePermissions": [
+            "inventory-storage.items.item.get",
+            "inventory-storage.material-types.item.get",
+            "inventory-storage.loan-types.item.get"
+          ]
         }, {
           "methods": ["POST"],
           "pathPattern": "/inventory/items",
@@ -179,7 +187,7 @@
     {
       "permissionName": "inventory.all",
       "displayName": "Inventory - all permissions",
-      "description": "Entire set of permissions needed to use the inventory module",
+      "description": "Entire set of permissions needed to use the inventory",
       "visible": true,
       "subPermissions": [
         "inventory.items.collection.get",
@@ -196,7 +204,8 @@
         "inventory.instances.collection.delete",
         "inventory.ingest.mods.post",
         "inventory.ingest.mods.status.get",
-        "module.items.enabled"
+        "module.items.enabled",
+        "inventory-storage.all"
       ]
     }
   ]
