@@ -1,4 +1,4 @@
-## 5.0.0 Unreleased
+## 5.0.0 2017-06-07
 
 * Items do not require relating to an instance (instanceId is optional)
 * Items do not require a barcode (no uniqueness check performed when not supplied)
