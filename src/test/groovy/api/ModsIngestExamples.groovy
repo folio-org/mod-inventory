@@ -1,15 +1,25 @@
 package api
 
+import api.support.ApiRoot
 import api.support.Preparation
-import org.folio.inventory.common.testing.HttpClient
+import io.vertx.core.json.JsonObject
+import org.folio.inventory.support.JsonArrayHelper
+import org.folio.inventory.support.http.client.OkapiHttpClient
+import org.folio.inventory.support.http.client.Response
+import org.folio.inventory.support.http.client.ResponseHandler
 import spock.lang.Specification
 import spock.util.concurrent.PollingConditions
 
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
+
+import static io.restassured.RestAssured.given
+
 class ModsIngestExamples extends Specification {
-  private final HttpClient client = ApiTestSuite.createHttpClient()
+  private final OkapiHttpClient okapiClient = ApiTestSuite.createOkapiHttpClient()
 
   def setup() {
-    def preparation = new Preparation(client)
+    def preparation = new Preparation(okapiClient)
     preparation.deleteInstances()
     preparation.deleteItems()
   }
@@ -20,13 +30,17 @@ class ModsIngestExamples extends Specification {
         "mods/multiple-example-mods-records.xml")
 
     when:
-      def (ingestResponse, _) = beginIngest([modsFile])
+      def statusLocation = given()
+        .header("X-Okapi-Url", ApiTestSuite.storageOkapiUrl())
+        .header("X-Okapi-Tenant", ApiTestSuite.TENANT_ID)
+        .header("X-Okapi-Token", ApiTestSuite.TOKEN)
+        .multiPart("record", modsFile)
+        .when().post(getIngestUrl())
+        .then()
+        .statusCode(202)
+        .extract().header("location")
 
     then:
-      def statusLocation = ingestResponse.headers.location.toString()
-      assert ingestResponse.status == 202
-      assert statusLocation != null
-
       def conditions = new PollingConditions(
         timeout: 10, initialDelay: 1.0, factor: 1.25)
 
@@ -43,38 +57,51 @@ class ModsIngestExamples extends Specification {
         loadFileFromResource("mods/multiple-example-mods-records.xml")
 
     when:
-      def (resp, body) = beginIngest([modsFile, modsFile])
+      given()
+        .header("X-Okapi-Url", ApiTestSuite.storageOkapiUrl())
+        .header("X-Okapi-Tenant", ApiTestSuite.TENANT_ID)
+        .header("X-Okapi-Token", ApiTestSuite.TOKEN)
+        .multiPart("record", modsFile)
+        .multiPart("record", modsFile)
+        .when().post(getIngestUrl())
+        .then()
+        .statusCode(400)
+        .body(is("Cannot parse multiple files in a single request"))
 
     then:
-      assert resp.status == 400
-      assert body == "Cannot parse multiple files in a single request"
+      assert true
   }
 
   private ingestJobHasCompleted(String statusLocation) {
-    def (resp, body) = client.get(statusLocation)
+    def getCompleted = new CompletableFuture<Response>()
 
-    assert resp.status == 200
-    assert body.status == "Completed"
+    okapiClient.get(statusLocation, ResponseHandler.json(getCompleted))
+
+    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS)
+
+    assert getResponse.statusCode == 200
+    assert getResponse.json.getString("status") == "Completed"
   }
 
   private expectedItemsCreatedFromIngest() {
-    def (resp, itemsBody) = client.get(
-      new URL("${inventoryApiRoot()}/items"))
+    def getAllCompleted = new CompletableFuture<Response>()
 
-    assert resp.status == 200
+    okapiClient.get(ApiRoot.items(),
+      ResponseHandler.json(getAllCompleted))
 
-    def items = itemsBody.items
+    Response getAllResponse = getAllCompleted.get(5, TimeUnit.SECONDS)
 
-    assert items != null
+    def items = JsonArrayHelper.toList(getAllResponse.json.getJsonArray("items"))
+
     assert items.size() == 8
-    assert items.every({ it.id != null })
-    assert items.every({ it.title != null })
-    assert items.every({ it.barcode != null })
-    assert items.every({ it.instanceId != null })
-    assert items.every({ it?.status?.name == "Available" })
-    assert items.every({ it?.materialType?.id == ApiTestSuite.bookMaterialType })
-    assert items.every({ it?.materialType?.name == "Book" })
-    assert items.every({ it?.location?.name == "Main Library" })
+    assert items.every({ it.containsKey("id") })
+    assert items.every({ it.containsKey("title") })
+    assert items.every({ it.containsKey("barcode") })
+    assert items.every({ it.containsKey("instanceId") })
+    assert items.every({ it.getJsonObject("status").getString("name") == "Available" })
+    assert items.every({ it.getJsonObject("materialType").getString("id") == ApiTestSuite.bookMaterialType })
+    assert items.every({ it.getJsonObject("materialType").getString("name") == "Book" })
+    assert items.every({ it.getJsonObject("location").getString("name") == "Main Library" })
 
     assert items.any({
       itemSimilarTo(it, "California: its gold and its inhabitants", "69228882")
@@ -111,30 +138,41 @@ class ModsIngestExamples extends Specification {
     items.every({ hasCorrectInstanceRelationship(it) })
   }
 
-  private hasCorrectInstanceRelationship(item) {
-    def (resp, instance) = client.get(
-      new URL("${inventoryApiRoot()}/instances/${item.instanceId}"))
+  private hasCorrectInstanceRelationship(JsonObject item) {
+    def getCompleted = new CompletableFuture<Response>()
 
-    assert resp.status == 200
-    assert instance != null
-    assert instance.title == item.title
+    okapiClient.get(new URL("${ApiRoot.instances()}/${item.getString("instanceId")}"),
+      ResponseHandler.json(getCompleted))
+
+    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS)
+
+    assert getResponse.statusCode == 200
+    assert getResponse.json.getString("title") == item.getString("title")
   }
 
   private expectedInstancesCreatedFromIngest() {
-    def (resp, body) = client.get(new URL("${inventoryApiRoot()}/instances"))
+    def getAllCompleted = new CompletableFuture<Response>()
 
-    def instances = body.instances
+    okapiClient.get(ApiRoot.instances(),
+      ResponseHandler.json(getAllCompleted))
 
-    assert resp.status == 200
-    assert instances != null
+    Response getAllResponse = getAllCompleted.get(5, TimeUnit.SECONDS)
+
+    def instances = JsonArrayHelper.toList(getAllResponse.json.getJsonArray("instances"))
 
     assert instances.size() == 8
-    assert instances.every({ it.id != null })
-    assert instances.every({ it.title != null })
-    assert instances.every({ it.identifiers != null })
-    assert instances.every({ it.identifiers.size() >= 1 })
-    assert instances.every({ it.identifiers.every({ it.namespace != null }) })
-    assert instances.every({ it.identifiers.every({ it.value != null }) })
+    assert instances.every({ it.containsKey("id") })
+    assert instances.every({ it.containsKey("title") })
+    assert instances.every({ it.containsKey("identifiers") })
+    assert instances.every({ it.getJsonArray("identifiers").size() >= 1 })
+    assert instances.every({
+      JsonArrayHelper.toList(it.getJsonArray("identifiers"))
+        .every({ it.containsKey("namespace") })
+    })
+    assert instances.every({
+      JsonArrayHelper.toList(it.getJsonArray("identifiers"))
+        .every({ it.containsKey("value") })
+    })
 
     assert instances.any({
       InstanceSimilarTo(it, "California: its gold and its inhabitants")
@@ -166,17 +204,8 @@ class ModsIngestExamples extends Specification {
       InstanceSimilarTo(it, "Grammaire") })
   }
 
-  private beginIngest(List<File> files) {
-    client.uploadFile(getIngestUrl(),
-      files, "record")
-  }
-
   private URL getIngestUrl() {
-    new URL("${inventoryApiRoot()}/ingest/mods")
-  }
-
-  private String inventoryApiRoot() {
-    "${ApiTestSuite.apiRoot()}/inventory"
+    new URL("${ApiRoot.inventory()}/ingest/mods")
   }
 
   private File loadFileFromResource(String filename) {
@@ -186,15 +215,15 @@ class ModsIngestExamples extends Specification {
   }
 
   private boolean itemSimilarTo(
-    record,
+    JsonObject record,
     String expectedSimilarTitle,
     String expectedBarcode) {
 
-    record.title.contains(expectedSimilarTitle) &&
-      record.barcode == expectedBarcode
+    record.getString("title").contains(expectedSimilarTitle) &&
+      record.getString("barcode") == expectedBarcode
   }
 
-  private boolean InstanceSimilarTo(record, String expectedSimilarTitle) {
-    record.title.contains(expectedSimilarTitle)
+  private boolean InstanceSimilarTo(JsonObject record, String expectedSimilarTitle) {
+    record.getString("title").contains(expectedSimilarTitle)
   }
 }

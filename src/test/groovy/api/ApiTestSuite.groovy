@@ -3,7 +3,7 @@ package api
 import api.support.ControlledVocabularyPreparation
 import org.folio.inventory.InventoryVerticle
 import org.folio.inventory.common.VertxAssistant
-import org.folio.inventory.common.testing.HttpClient
+import org.folio.inventory.support.http.client.OkapiHttpClient
 import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.runner.RunWith
@@ -25,7 +25,7 @@ class ApiTestSuite {
   public static final INVENTORY_VERTICLE_TEST_PORT = 9603
   public static final String TENANT_ID = "test_tenant"
 
-  private static final String TOKEN = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsInRlbmFudCI6ImRlbW9fdGVuYW50In0.29VPjLI6fLJzxQW0UhQ0jsvAn8xHz501zyXAxRflXfJ9wuDzT8TDf-V75PjzD7fe2kHjSV2dzRXbstt3BTtXIQ"
+  public static final String TOKEN = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsInRlbmFudCI6ImRlbW9fdGVuYW50In0.29VPjLI6fLJzxQW0UhQ0jsvAn8xHz501zyXAxRflXfJ9wuDzT8TDf-V75PjzD7fe2kHjSV2dzRXbstt3BTtXIQ"
 
   private static String bookMaterialTypeId
   private static String dvdMaterialTypeId
@@ -79,8 +79,13 @@ class ApiTestSuite {
     courseReserveLoanTypeId
   }
 
-  static HttpClient createHttpClient() {
-    new HttpClient(storageOkapiUrl(), TENANT_ID, TOKEN)
+  static OkapiHttpClient createOkapiHttpClient() {
+    return new OkapiHttpClient(
+      vertxAssistant.createUsingVertx({ it.createHttpClient() }),
+      new URL(storageOkapiUrl()), TENANT_ID, TOKEN, {
+      System.out.println(
+        String.format("Request failed: %s",
+          it.toString())) })
   }
 
   static String storageOkapiUrl() {
@@ -157,7 +162,7 @@ class ApiTestSuite {
   }
 
   private static def createMaterialTypes() {
-    def client = createHttpClient()
+    def client = createOkapiHttpClient()
 
     def materialTypesUrl = new URL("${storageOkapiUrl()}/material-types")
 
@@ -169,7 +174,7 @@ class ApiTestSuite {
   }
 
   private static def createLoanTypes() {
-    def client = createHttpClient()
+    def client = createOkapiHttpClient()
 
     def materialTypesUrl = new URL("${storageOkapiUrl()}/loan-types")
 

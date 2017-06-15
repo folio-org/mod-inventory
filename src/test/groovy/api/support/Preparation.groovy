@@ -1,23 +1,35 @@
 package api.support
 
-import org.folio.inventory.common.testing.HttpClient
+import org.folio.inventory.support.http.client.OkapiHttpClient
+import org.folio.inventory.support.http.client.Response
+import org.folio.inventory.support.http.client.ResponseHandler
+
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
 
 class Preparation {
-  private final HttpClient client
+  private final OkapiHttpClient client
 
-  def Preparation(HttpClient client) {
+  Preparation(OkapiHttpClient client) {
     this.client = client
   }
 
   void deleteInstances() {
-    def (response, _) = client.delete(ApiRoot.instances())
-
-    assert response.status == 204
+    deleteAll(ApiRoot.instances())
   }
 
   void deleteItems() {
-    def (response, _) = client.delete(ApiRoot.items())
+    deleteAll(ApiRoot.items())
+  }
 
-    assert response.status == 204
+  private void deleteAll(URL root) {
+    def getCompleted = new CompletableFuture<Response>()
+
+    client.delete(root,
+      ResponseHandler.any(getCompleted))
+
+    Response response = getCompleted.get(5, TimeUnit.SECONDS);
+
+    assert response.statusCode == 204
   }
 }

@@ -1,16 +1,21 @@
 package api.support
 
-import io.vertx.core.json.Json
 import io.vertx.core.json.JsonObject
-import org.folio.inventory.common.testing.HttpClient
+import org.folio.inventory.support.JsonArrayHelper
+import org.folio.inventory.support.http.client.OkapiHttpClient
+import org.folio.inventory.support.http.client.Response
+import org.folio.inventory.support.http.client.ResponseHandler
+
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
 
 class ControlledVocabularyPreparation {
-  private final HttpClient client
+  private final OkapiHttpClient client
   private final URL controlledVocabularyRoot
   private final String collectionWrapperProperty
 
   ControlledVocabularyPreparation(
-    HttpClient client,
+    OkapiHttpClient client,
     URL controlledVocabularyRoot,
     String collectionWrapperProperty) {
 
@@ -20,28 +25,38 @@ class ControlledVocabularyPreparation {
   }
 
   String createOrReferenceTerm(String name) {
-    def (getResponse, wrappedEntries) = client.get(controlledVocabularyRoot)
 
-    if(getResponse.status != 200) {
+    def getCompleted = new CompletableFuture<Response>()
+
+    client.get(controlledVocabularyRoot,
+      ResponseHandler.json(getCompleted))
+
+    Response response = getCompleted.get(5, TimeUnit.SECONDS);
+
+    if(response.statusCode != 200) {
       println("Controlled vocabulary API unavailable")
       assert false
     }
 
-    def existingTerms = wrappedEntries[this.collectionWrapperProperty]
+    def existingTerms = JsonArrayHelper.toList(response.json.getJsonArray(this.collectionWrapperProperty))
 
-    if (existingTerms.stream().noneMatch({ it.name == name })) {
+    if (existingTerms.stream().noneMatch({ it.getString(name).equals(name) })) {
       def vocabularyEntryRequest = new JsonObject().put("name", name);
 
-      def (postResponse, createdMaterialType) = client.post(
-        controlledVocabularyRoot, Json.encodePrettily(vocabularyEntryRequest))
+      def postCompleted = new CompletableFuture<Response>()
 
-      assert postResponse.status == 201
+      client.post(controlledVocabularyRoot,
+        vocabularyEntryRequest, ResponseHandler.json(postCompleted))
 
-      createdMaterialType.id
+      Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
+
+      assert postResponse.statusCode == 201
+
+      postResponse.json.getString("id")
     } else {
       existingTerms.stream()
-        .filter({ it.name == name })
-        .findFirst().get().id
+        .filter({ it.getString(name).equals(name) })
+        .findFirst().get().getString("id")
     }
   }
 }

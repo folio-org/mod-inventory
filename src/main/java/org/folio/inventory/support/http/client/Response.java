@@ -1,8 +1,8 @@
 package org.folio.inventory.support.http.client;
 
+import io.vertx.core.json.JsonObject;
 import io.vertx.groovy.core.buffer.Buffer;
 import io.vertx.groovy.core.http.HttpClientResponse;
-import io.vertx.core.json.JsonObject;
 
 import static io.vertx.core.http.HttpHeaders.CONTENT_TYPE;
 
@@ -10,17 +10,20 @@ public class Response {
   protected final String body;
   private final int statusCode;
   private final String contentType;
+  private final String location;
 
-  public Response(int statusCode, String body, String contentType) {
+  public Response(int statusCode, String body, String contentType, String location) {
     this.statusCode = statusCode;
     this.body = body;
     this.contentType = contentType;
+    this.location = location;
   }
 
   public static Response from(HttpClientResponse response, Buffer body) {
     return new Response(response.statusCode(),
       BufferHelper.stringFromBuffer(body),
-      convertNullToEmpty(response.getHeader(CONTENT_TYPE.toString())));
+      convertNullToEmpty(response.getHeader(CONTENT_TYPE.toString())),
+      response.getHeader("Location"));
   }
 
   public boolean hasBody() {
@@ -48,6 +51,10 @@ public class Response {
 
   public String getContentType() {
     return contentType;
+  }
+
+  public String getLocation() {
+    return this.location;
   }
 
   private static String convertNullToEmpty(String text) {

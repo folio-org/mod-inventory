@@ -6,20 +6,25 @@ import api.support.Preparation
 import com.github.jsonldjava.core.DocumentLoader
 import com.github.jsonldjava.core.JsonLdOptions
 import com.github.jsonldjava.core.JsonLdProcessor
-import io.vertx.core.json.Json
 import io.vertx.core.json.JsonObject
 import org.apache.http.impl.client.cache.CachingHttpClientBuilder
 import org.apache.http.message.BasicHeader
-import org.folio.inventory.common.testing.HttpClient
+import org.folio.inventory.support.JsonArrayHelper
+import org.folio.inventory.support.http.client.OkapiHttpClient
+import org.folio.inventory.support.http.client.Response
+import org.folio.inventory.support.http.client.ResponseHandler
 import spock.lang.Specification
+
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
 
 import static api.support.InstanceSamples.*
 
 class InstancesApiExamples extends Specification {
-  private final HttpClient client = ApiTestSuite.createHttpClient()
+  private final OkapiHttpClient okapiClient = ApiTestSuite.createOkapiHttpClient()
 
   def setup() {
-    new Preparation(client).deleteInstances()
+    new Preparation(okapiClient).deleteInstances()
   }
 
   void "Can create an instance"() {
@@ -29,23 +34,34 @@ class InstancesApiExamples extends Specification {
         .put("identifiers", [[namespace: "isbn", value: "9781473619777"]])
 
     when:
-      def (postResponse, _) = client.post(ApiRoot.instances(),
-        Json.encodePrettily(newInstanceRequest))
+      def postCompleted = new CompletableFuture<Response>()
+
+      okapiClient.post(ApiRoot.instances(),
+        newInstanceRequest, ResponseHandler.any(postCompleted))
+
+      Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
 
     then:
-      def location = postResponse.headers.location.toString()
+      def location = postResponse.location
 
-      assert postResponse.status == 201
+      assert postResponse.statusCode == 201
       assert location != null
 
-      def (getResponse, createdInstance) = client.get(location)
+      def getCompleted = new CompletableFuture<Response>()
 
-      assert getResponse.status == 200
+      okapiClient.get(location,
+        ResponseHandler.json(getCompleted))
 
-      assert createdInstance.id != null
-      assert createdInstance.title == "Long Way to a Small Angry Planet"
-      assert createdInstance.identifiers[0].namespace == "isbn"
-      assert createdInstance.identifiers[0].value == "9781473619777"
+      Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+
+      assert getResponse.statusCode == 200
+
+      def createdInstance = getResponse.json
+
+      assert createdInstance.containsKey("id")
+      assert createdInstance.getString("title") == "Long Way to a Small Angry Planet"
+      assert createdInstance.getJsonArray("identifiers").getJsonObject(0).getString("namespace") == "isbn"
+      assert createdInstance.getJsonArray("identifiers").getJsonObject(0).getString("value") == "9781473619777"
 
       expressesDublinCoreMetadata(createdInstance)
       dublinCoreContextLinkRespectsWayResourceWasReached(createdInstance)
@@ -62,22 +78,32 @@ class InstancesApiExamples extends Specification {
         .put("title", "Long Way to a Small Angry Planet")
 
     when:
-      def (postResponse, _) = client.post(ApiRoot.instances(),
-        Json.encodePrettily(newInstanceRequest))
+      def postCompleted = new CompletableFuture<Response>()
+
+      okapiClient.post(ApiRoot.instances(),
+        newInstanceRequest, ResponseHandler.any(postCompleted))
+
+      Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
 
     then:
-      def location = postResponse.headers.location.toString()
+      def location = postResponse.location
 
-      assert postResponse.status == 201
+      assert postResponse.statusCode == 201
       assert location != null
-      assert location.contains(instanceId)
 
-      def (getResponse, createdInstance) = client.get(location)
+      def getCompleted = new CompletableFuture<Response>()
 
-      assert getResponse.status == 200
+      okapiClient.get(location,
+        ResponseHandler.json(getCompleted))
 
-      assert createdInstance.id == instanceId
-      assert createdInstance.title == "Long Way to a Small Angry Planet"
+      Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+
+      assert getResponse.statusCode == 200
+
+      def createdInstance = getResponse.json
+
+      assert createdInstance.getString("id") == instanceId
+      assert createdInstance.getString("title") == "Long Way to a Small Angry Planet"
 
       expressesDublinCoreMetadata(createdInstance)
       dublinCoreContextLinkRespectsWayResourceWasReached(createdInstance)
@@ -90,14 +116,17 @@ class InstancesApiExamples extends Specification {
       def newInstanceRequest = new JsonObject()
 
     when:
-      def (postResponse, body) = client.post(
-        new URL("${ApiRoot.instances()}"),
-        Json.encodePrettily(newInstanceRequest))
+      def postCompleted = new CompletableFuture<Response>()
+
+      okapiClient.post(ApiRoot.instances(),
+        newInstanceRequest, ResponseHandler.text(postCompleted))
+
+      Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
 
     then:
-      assert postResponse.status == 400
-      assert postResponse.headers.location == null
-      assert body == "Title must be provided for an instance"
+      assert postResponse.statusCode == 400
+      assert postResponse.location == null
+      assert postResponse.body == "Title must be provided for an instance"
   }
 
   void "Can update an existing instance"() {
@@ -114,19 +143,30 @@ class InstancesApiExamples extends Specification {
         new URL("${ApiRoot.instances()}/${newInstance.id}")
 
     when:
-      def (putResponse, __) = client.put(instanceLocation,
-        Json.encodePrettily(updateInstanceRequest))
+      def putCompleted = new CompletableFuture<Response>()
+
+      okapiClient.put(instanceLocation,
+        updateInstanceRequest, ResponseHandler.any(putCompleted))
+
+      Response putResponse = putCompleted.get(5, TimeUnit.SECONDS);
 
     then:
-      assert putResponse.status == 204
+      assert putResponse.statusCode == 204
 
-      def (getResponse, updatedInstance) = client.get(instanceLocation)
+      def getCompleted = new CompletableFuture<Response>()
 
-      assert getResponse.status == 200
+      okapiClient.get(instanceLocation,
+        ResponseHandler.json(getCompleted))
 
-      assert updatedInstance.id == newInstance.id
-      assert updatedInstance.title == "The Long Way to a Small, Angry Planet"
-      assert updatedInstance.identifiers.size() == 1
+      Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+
+      assert getResponse.statusCode == 200
+
+      def updatedInstance = getResponse.json
+
+      assert updatedInstance.getString("id") == newInstance.id
+      assert updatedInstance.getString("title") == "The Long Way to a Small, Angry Planet"
+      assert updatedInstance.getJsonArray("identifiers").size() == 1
 
       selfLinkRespectsWayResourceWasReached(updatedInstance)
       selfLinkShouldBeReachable(updatedInstance)
@@ -137,12 +177,15 @@ class InstancesApiExamples extends Specification {
       def updateInstanceRequest = smallAngryPlanet(UUID.randomUUID())
 
     when:
-      def (putResponse, __) = client.put(
-        new URL("${ApiRoot.items()}/${updateInstanceRequest.getString("id")}"),
-        Json.encodePrettily(updateInstanceRequest))
+      def putCompleted = new CompletableFuture<Response>()
+
+      okapiClient.put(new URL("${ApiRoot.instances()}/${updateInstanceRequest.getString("id")}"),
+        updateInstanceRequest, ResponseHandler.any(putCompleted))
+
+      Response putResponse = putCompleted.get(5, TimeUnit.SECONDS);
 
     then:
-      assert putResponse.status == 404
+      assert putResponse.statusCode == 404
   }
 
   void "Can delete all instances"() {
@@ -152,17 +195,25 @@ class InstancesApiExamples extends Specification {
       createInstance(leviathanWakes(UUID.randomUUID()))
 
     when:
-      def (deleteResponse, deleteBody) = client.delete(ApiRoot.instances())
+      def deleteCompleted = new CompletableFuture<Response>()
 
-      def (_, wrappedInstances) = client.get(ApiRoot.instances())
-      def instances = wrappedInstances.instances
+      okapiClient.delete(ApiRoot.instances(),
+        ResponseHandler.any(deleteCompleted))
 
+      Response deleteResponse = deleteCompleted.get(5, TimeUnit.SECONDS);
     then:
-      assert deleteResponse.status == 204
-      assert deleteBody == null
+      assert deleteResponse.statusCode == 204
+      assert deleteResponse.hasBody() == false
 
-      assert instances.size() == 0
-      assert wrappedInstances.totalRecords == 0
+      def getAllCompleted = new CompletableFuture<Response>()
+
+      okapiClient.get(ApiRoot.instances(),
+        ResponseHandler.json(getAllCompleted))
+
+      Response getAllResponse = getAllCompleted.get(5, TimeUnit.SECONDS);
+
+      assert getAllResponse.json.getJsonArray("instances").size() == 0
+      assert getAllResponse.json.getInteger("totalRecords") == 0
   }
 
   void "Can delete a single instance"() {
@@ -175,20 +226,35 @@ class InstancesApiExamples extends Specification {
         new URL("${ApiRoot.instances()}/${instanceToDelete.id}")
 
     when:
-      def (deleteResponse, deleteBody) = client.delete(instanceToDeleteLocation)
+      def deleteCompleted = new CompletableFuture<Response>()
+
+      okapiClient.delete(instanceToDeleteLocation,
+        ResponseHandler.any(deleteCompleted))
+
+      Response deleteResponse = deleteCompleted.get(5, TimeUnit.SECONDS);
 
     then:
-      assert deleteResponse.status == 204
-      assert deleteBody == null
+      assert deleteResponse.statusCode == 204
+      assert deleteResponse.hasBody() == false
 
-      def (getResponse, _) = client.get(instanceToDeleteLocation)
+      def getCompleted = new CompletableFuture<Response>()
 
-      assert getResponse.status == 404
+      okapiClient.get(instanceToDeleteLocation,
+        ResponseHandler.any(getCompleted))
 
-      def (__, wrappedInstances) = client.get(ApiRoot.instances())
+      Response getResponse = getCompleted.get(5, TimeUnit.SECONDS)
 
-      assert wrappedInstances.instances.size() == 2
-      assert wrappedInstances.totalRecords == 2
+      assert getResponse.statusCode == 404
+
+      def getAllCompleted = new CompletableFuture<Response>()
+
+      okapiClient.get(ApiRoot.instances(),
+        ResponseHandler.json(getAllCompleted))
+
+      Response getAllResponse = getAllCompleted.get(5, TimeUnit.SECONDS);
+
+      assert getAllResponse.json.getJsonArray("instances").size() == 2
+      assert getAllResponse.json.getInteger("totalRecords") == 2
   }
 
   void "Can get all instances"() {
@@ -198,53 +264,74 @@ class InstancesApiExamples extends Specification {
       createInstance(temeraire(UUID.randomUUID()))
 
     when:
-      def (response, wrappedInstances) = client.get(ApiRoot.instances())
-      def instances = wrappedInstances.instances
+      def getAllCompleted = new CompletableFuture<Response>()
+
+      okapiClient.get(ApiRoot.instances(),
+        ResponseHandler.json(getAllCompleted))
+
+      Response getAllResponse = getAllCompleted.get(5, TimeUnit.SECONDS)
 
     then:
-      assert response.status == 200
+      assert getAllResponse.statusCode == 200
+
+      def instances = JsonArrayHelper.toList(getAllResponse.json.getJsonArray("instances"))
+
       assert instances.size() == 3
-      assert wrappedInstances.totalRecords == 3
+      assert getAllResponse.json.getInteger("totalRecords") == 3
 
       hasCollectionProperties(instances)
   }
 
   void "Can page all instances"() {
     given:
-    createInstance(smallAngryPlanet(UUID.randomUUID()))
-    createInstance(nod(UUID.randomUUID()))
-    createInstance(temeraire(UUID.randomUUID()))
-    createInstance(leviathanWakes(UUID.randomUUID()))
-    createInstance(taoOfPooh(UUID.randomUUID()))
+      createInstance(smallAngryPlanet(UUID.randomUUID()))
+      createInstance(nod(UUID.randomUUID()))
+      createInstance(temeraire(UUID.randomUUID()))
+      createInstance(leviathanWakes(UUID.randomUUID()))
+      createInstance(taoOfPooh(UUID.randomUUID()))
 
     when:
-      def (firstPageResponse, firstPage) = client.get(
-        ApiRoot.instances("limit=3"))
+      def firstPageGetCompleted = new CompletableFuture<Response>()
+      def secondPageGetCompleted = new CompletableFuture<Response>()
 
-      def (secondPageResponse, secondPage) = client.get(
-        ApiRoot.instances("limit=3&offset=3"))
+      okapiClient.get(ApiRoot.instances("limit=3"),
+        ResponseHandler.json(firstPageGetCompleted))
+
+      okapiClient.get(ApiRoot.instances("limit=3&offset=3"),
+        ResponseHandler.json(secondPageGetCompleted))
+
+      Response firstPageResponse = firstPageGetCompleted.get(5, TimeUnit.SECONDS)
+      Response secondPageResponse = secondPageGetCompleted.get(5, TimeUnit.SECONDS)
 
     then:
-      assert firstPageResponse.status == 200
-      assert firstPage.instances.size() == 3
+      assert firstPageResponse.statusCode == 200
+      assert secondPageResponse.statusCode == 200
 
-      assert secondPageResponse.status == 200
-      assert secondPage.instances.size() == 2
+      def firstPageInstances = JsonArrayHelper.toList(firstPageResponse.json.getJsonArray("instances"))
 
-      assert firstPage.totalRecords == 5
-      assert secondPage.totalRecords == 5
+      assert firstPageInstances.size() == 3
+      assert firstPageResponse.json.getInteger("totalRecords") == 5
+      hasCollectionProperties(firstPageInstances)
 
-      hasCollectionProperties(firstPage.instances)
-      hasCollectionProperties(secondPage.instances)
+      def secondPageInstances = JsonArrayHelper.toList(secondPageResponse.json.getJsonArray("instances"))
+
+      assert secondPageInstances.size() == 2
+      assert secondPageResponse.json.getInteger("totalRecords") == 5
+      hasCollectionProperties(secondPageInstances)
   }
 
   void "Page parameters must be numeric"() {
     when:
-      def (response, message) = client.get(ApiRoot.instances("limit=&offset="))
+      def getPagedCompleted = new CompletableFuture<Response>()
+
+      okapiClient.get(ApiRoot.instances("limit=&offset="),
+        ResponseHandler.text(getPagedCompleted))
+
+      Response getPagedResponse = getPagedCompleted.get(5, TimeUnit.SECONDS)
 
     then:
-      assert response.status == 400
-      assert message == "limit and offset must be numeric when supplied"
+      assert getPagedResponse.statusCode == 400
+      assert getPagedResponse.body == "limit and offset must be numeric when supplied"
   }
 
   void "Can search for instances by title"() {
@@ -254,27 +341,35 @@ class InstancesApiExamples extends Specification {
       createInstance(uprooted(UUID.randomUUID()))
 
     when:
-      def (response, wrappedInstances) = client.get(
-        ApiRoot.instances("query=title=*Small%20Angry*"))
+      def searchGetCompleted = new CompletableFuture<Response>()
 
-      def instances = wrappedInstances.instances
+      okapiClient.get(ApiRoot.instances("query=title=*Small%20Angry*"),
+        ResponseHandler.json(searchGetCompleted))
 
+      Response searchGetResponse = searchGetCompleted.get(5, TimeUnit.SECONDS)
     then:
-      assert response.status == 200
-      assert instances.size() == 1
-      assert wrappedInstances.totalRecords == 1
+      assert searchGetResponse.statusCode == 200
 
-      assert instances[0].title == "Long Way to a Small Angry Planet"
+      def instances = JsonArrayHelper.toList(searchGetResponse.json.getJsonArray("instances"))
+
+      assert instances.size() == 1
+      assert searchGetResponse.json.getInteger("totalRecords") == 1
+      assert instances[0].getString("title") == "Long Way to a Small Angry Planet"
 
       hasCollectionProperties(instances)
   }
 
   void "Cannot find an unknown resource"() {
     when:
-      def (response, _) = client.get("${ApiRoot.instances()}/${UUID.randomUUID()}")
+      def getCompleted = new CompletableFuture<Response>()
+
+      okapiClient.get("${ApiRoot.instances()}/${UUID.randomUUID()}",
+        ResponseHandler.any(getCompleted))
+
+      Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
 
     then:
-      assert response.status == 404
+      assert getResponse.statusCode == 404
   }
 
   private void hasCollectionProperties(instances) {
@@ -296,7 +391,7 @@ class InstancesApiExamples extends Specification {
     }
   }
 
-  private void expressesDublinCoreMetadata(instance) {
+  private void expressesDublinCoreMetadata(JsonObject instance) {
     def options = new JsonLdOptions()
     def documentLoader = new DocumentLoader()
     def httpClient = CachingHttpClientBuilder
@@ -308,11 +403,11 @@ class InstancesApiExamples extends Specification {
 
     options.setDocumentLoader(documentLoader)
 
-    def expandedLinkedData = JsonLdProcessor.expand(instance, options)
+    def expandedLinkedData = JsonLdProcessor.expand(instance.getMap(), options)
 
     assert expandedLinkedData.empty == false: "No Linked Data present"
     assert LinkedDataValue(expandedLinkedData,
-      "http://purl.org/dc/terms/title") == instance.title
+      "http://purl.org/dc/terms/title") == instance.getString("title")
   }
 
   private static String LinkedDataValue(List<Object> expanded, String field) {
@@ -320,21 +415,26 @@ class InstancesApiExamples extends Specification {
   }
 
   private def createInstance(JsonObject newInstanceRequest) {
-    InstanceApiClient.createInstance(client, newInstanceRequest)
+    InstanceApiClient.createInstance(okapiClient, newInstanceRequest)
   }
 
-  private void selfLinkShouldBeReachable(instance) {
-    def (response, _) = client.get(instance.links.self)
+  private void selfLinkShouldBeReachable(JsonObject instance) {
+    def getCompleted = new CompletableFuture<Response>()
 
-    assert response.status == 200
+    okapiClient.get(instance.getJsonObject("links").getString("self"),
+      ResponseHandler.json(getCompleted))
+
+    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+
+    assert getResponse.statusCode == 200
   }
 
-  private void dublinCoreContextLinkRespectsWayResourceWasReached(instance) {
-    assert containsApiRoot(instance."@context")
+  private void dublinCoreContextLinkRespectsWayResourceWasReached(JsonObject instance) {
+    assert containsApiRoot(instance.getString("@context"))
   }
 
-  private void selfLinkRespectsWayResourceWasReached(instance) {
-    assert containsApiRoot(instance.links.self)
+  private void selfLinkRespectsWayResourceWasReached(JsonObject instance) {
+    assert containsApiRoot(instance.getJsonObject("links").getString("self"))
   }
 
   private boolean containsApiRoot(String link) {

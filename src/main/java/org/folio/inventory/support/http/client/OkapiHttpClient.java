@@ -1,17 +1,16 @@
 package org.folio.inventory.support.http.client;
 
 import io.vertx.core.Handler;
+import io.vertx.core.json.Json;
 import io.vertx.groovy.core.http.HttpClient;
 import io.vertx.groovy.core.http.HttpClientRequest;
 import io.vertx.groovy.core.http.HttpClientResponse;
-import io.vertx.core.json.Json;
 
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.function.Consumer;
 
 public class OkapiHttpClient {
-
   private static final String TENANT_HEADER = "X-Okapi-Tenant";
   private static final String TOKEN_HEADER = "X-Okapi-Token";
   private static final String OKAPI_URL_HEADER = "X-Okapi-Url";

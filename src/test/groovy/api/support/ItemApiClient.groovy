@@ -8,12 +8,12 @@ import org.folio.inventory.support.http.client.ResponseHandler
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 
-class InstanceApiClient {
-  static def createInstance(OkapiHttpClient client, JsonObject newInstanceRequest) {
+class ItemApiClient {
+  static def createItem(OkapiHttpClient client, JsonObject newItemRequest) {
     def postCompleted = new CompletableFuture<Response>()
 
-    client.post(ApiRoot.instances(),
-      newInstanceRequest, ResponseHandler.any(postCompleted))
+    client.post(ApiRoot.items(),
+      newItemRequest, ResponseHandler.any(postCompleted))
 
     Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
 
@@ -27,6 +27,6 @@ class InstanceApiClient {
 
     assert getResponse.statusCode == 200
 
-    getResponse.json.getMap()
+    getResponse.json
   }
 }

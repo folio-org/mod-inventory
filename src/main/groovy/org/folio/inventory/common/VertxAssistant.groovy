@@ -3,6 +3,7 @@ package org.folio.inventory.common
 import io.vertx.groovy.core.Vertx
 
 import java.util.concurrent.CompletableFuture
+import java.util.function.Function
 
 class VertxAssistant {
 
@@ -10,6 +11,10 @@ class VertxAssistant {
 
   def useVertx(Closure closure) {
     closure(vertx)
+  }
+
+  def <T> T createUsingVertx(Function<Vertx, T> function) {
+    function.apply(vertx)
   }
 
   void start() {

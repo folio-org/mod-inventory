@@ -2,19 +2,25 @@ package api
 
 import api.support.ApiRoot
 import api.support.InstanceApiClient
+import api.support.ItemApiClient
 import api.support.Preparation
-import io.vertx.core.json.Json
 import io.vertx.core.json.JsonObject
-import org.folio.inventory.common.testing.HttpClient
+import org.folio.inventory.support.JsonArrayHelper
+import org.folio.inventory.support.http.client.OkapiHttpClient
+import org.folio.inventory.support.http.client.Response
+import org.folio.inventory.support.http.client.ResponseHandler
 import spock.lang.Specification
+
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
 
 import static api.support.InstanceSamples.*
 
 class ItemApiExamples extends Specification {
-  private final HttpClient client = ApiTestSuite.createHttpClient()
+  private final OkapiHttpClient okapiClient = ApiTestSuite.createOkapiHttpClient()
 
   def setup() {
-    def preparation = new Preparation(client)
+    def preparation = new Preparation(okapiClient)
 
     preparation.deleteItems()
     preparation.deleteInstances()
@@ -36,31 +42,38 @@ class ItemApiExamples extends Specification {
         .put("location", new JsonObject().put("name", "Annex Library"))
 
     when:
-      def (postResponse, _) = client.post(
-        new URL("${ApiRoot.items()}"),
-        Json.encodePrettily(newItemRequest))
+      def postCompleted = new CompletableFuture<Response>()
+
+      okapiClient.post(ApiRoot.items(),
+        newItemRequest, ResponseHandler.any(postCompleted))
+
+      Response postResponse = postCompleted.get(5, TimeUnit.SECONDS)
 
     then:
-      def location = postResponse.headers.location.toString()
+      assert postResponse.statusCode == 201
+      assert postResponse.location != null
 
-      assert postResponse.status == 201
-      assert location != null
+      def getCompleted = new CompletableFuture<Response>()
 
-      def (getResponse, createdItem) = client.get(location)
+      okapiClient.get(postResponse.location, ResponseHandler.json(getCompleted))
 
-      assert getResponse.status == 200
+      Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
 
-      assert createdItem.id != null
-      assert createdItem.title == "Long Way to a Small Angry Planet"
-      assert createdItem.barcode == "645398607547"
-      assert createdItem?.status?.name == "Available"
-      assert createdItem?.materialType?.id == ApiTestSuite.bookMaterialType
-      assert createdItem?.materialType?.name == "Book"
-      assert createdItem?.permanentLoanType?.id == ApiTestSuite.canCirculateLoanType
-      assert createdItem?.permanentLoanType?.name == "Can Circulate"
-      assert createdItem?.temporaryLoanType?.id == ApiTestSuite.courseReserveLoanType
-      assert createdItem?.temporaryLoanType?.name == "Course Reserves"
-      assert createdItem?.location?.name == "Annex Library"
+      assert getResponse.statusCode == 200
+
+      def createdItem = getResponse.json
+
+      assert createdItem.containsKey("id")
+      assert createdItem.getString("title") == "Long Way to a Small Angry Planet"
+      assert createdItem.getString("barcode") == "645398607547"
+      assert createdItem.getJsonObject("status").getString("name") == "Available"
+      assert createdItem.getJsonObject("materialType").getString("id") == ApiTestSuite.bookMaterialType
+      assert createdItem.getJsonObject("materialType").getString("name") == "Book"
+      assert createdItem.getJsonObject("permanentLoanType").getString("id") == ApiTestSuite.canCirculateLoanType
+      assert createdItem.getJsonObject("permanentLoanType").getString("name") == "Can Circulate"
+      assert createdItem.getJsonObject("temporaryLoanType").getString("id") == ApiTestSuite.courseReserveLoanType
+      assert createdItem.getJsonObject("temporaryLoanType").getString("name") == "Course Reserves"
+      assert createdItem.getJsonObject("location").getString("name") == "Annex Library"
 
       selfLinkRespectsWayResourceWasReached(createdItem)
       selfLinkShouldBeReachable(createdItem)
@@ -82,22 +95,28 @@ class ItemApiExamples extends Specification {
         .put("barcode", "645398607547")
 
     when:
-      def (postResponse, __) = client.post(
-        new URL("${ApiRoot.items()}"),
-        Json.encodePrettily(newItemRequest))
+      def postCompleted = new CompletableFuture<Response>()
+
+      okapiClient.post(ApiRoot.items(),
+        newItemRequest, ResponseHandler.any(postCompleted))
+
+      Response postResponse = postCompleted.get(5, TimeUnit.SECONDS)
 
     then:
-      def location = postResponse.headers.location.toString()
+      assert postResponse.statusCode == 201
+      assert postResponse.location != null
 
-      assert postResponse.status == 201
-      assert location != null
-      assert location.contains(itemId)
+      def getCompleted = new CompletableFuture<Response>()
 
-      def (getResponse, createdItem) = client.get(location)
+      okapiClient.get(postResponse.location, ResponseHandler.json(getCompleted))
 
-      assert getResponse.status == 200
+      Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
 
-      assert createdItem.id == itemId
+      assert getResponse.statusCode == 200
+
+      def createdItem = getResponse.json
+
+      assert createdItem.getString("id") == itemId
 
       selfLinkRespectsWayResourceWasReached(createdItem)
       selfLinkShouldBeReachable(createdItem)
@@ -118,29 +137,37 @@ class ItemApiExamples extends Specification {
         .put("location", new JsonObject().put("name", "Annex Library"))
 
     when:
-      def (postResponse, _) = client.post(
-        new URL("${ApiRoot.items()}"),
-        Json.encodePrettily(newItemRequest))
+      def postCompleted = new CompletableFuture<Response>()
+
+      okapiClient.post(ApiRoot.items(),
+        newItemRequest, ResponseHandler.any(postCompleted))
+
+      Response postResponse = postCompleted.get(5, TimeUnit.SECONDS)
 
     then:
-      def location = postResponse.headers.location.toString()
+      assert postResponse.statusCode == 201
+      assert postResponse.location != null
 
-      assert postResponse.status == 201
-      assert location != null
+      def getCompleted = new CompletableFuture<Response>()
 
-      def (getResponse, createdItem) = client.get(location)
+      okapiClient.get(postResponse.location, ResponseHandler.json(getCompleted))
 
-      assert getResponse.status == 200
+      Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
 
-      assert createdItem.id != null
-      assert createdItem.instanceId == createdInstance.id
-      assert createdItem.barcode == "645398607547"
-      assert createdItem?.status?.name == "Available"
-      assert createdItem?.materialType?.id == ApiTestSuite.bookMaterialType
-      assert createdItem?.materialType?.name == "Book"
-      assert createdItem?.permanentLoanType?.id == ApiTestSuite.canCirculateLoanType
-      assert createdItem?.permanentLoanType?.name == "Can Circulate"
-      assert createdItem?.location?.name == "Annex Library"
+      assert getResponse.statusCode == 200
+
+      def createdItem = getResponse.json
+
+      assert createdItem.containsKey("id")
+      assert createdItem.getString("title") == "Long Way to a Small Angry Planet"
+      assert createdItem.getString("instanceId") == createdInstance.id
+      assert createdItem.getString("barcode") == "645398607547"
+      assert createdItem.getJsonObject("status").getString("name") == "Available"
+      assert createdItem.getJsonObject("materialType").getString("id") == ApiTestSuite.bookMaterialType
+      assert createdItem.getJsonObject("materialType").getString("name") == "Book"
+      assert createdItem.getJsonObject("permanentLoanType").getString("id") == ApiTestSuite.canCirculateLoanType
+      assert createdItem.getJsonObject("permanentLoanType").getString("name") == "Can Circulate"
+      assert createdItem.getJsonObject("location").getString("name") == "Annex Library"
 
       selfLinkRespectsWayResourceWasReached(createdItem)
       selfLinkShouldBeReachable(createdItem)
@@ -156,19 +183,26 @@ class ItemApiExamples extends Specification {
         .put("location", new JsonObject().put("name", "Annex Library"))
 
     when:
-      def (postResponse, _) = client.post(
-        new URL("${ApiRoot.items()}"),
-        Json.encodePrettily(newItemRequest))
+      def postCompleted = new CompletableFuture<Response>()
+
+      okapiClient.post(ApiRoot.items(),
+        newItemRequest, ResponseHandler.any(postCompleted))
+
+      Response postResponse = postCompleted.get(5, TimeUnit.SECONDS)
 
     then:
-      def location = postResponse.headers.location.toString()
+      assert postResponse.statusCode == 201
+      assert postResponse.location != null
 
-      assert postResponse.status == 201
-      assert location != null
+      def getCompleted = new CompletableFuture<Response>()
 
-      def (getResponse, createdItem) = client.get(location)
+      okapiClient.get(postResponse.location, ResponseHandler.json(getCompleted))
 
-      assert getResponse.status == 200
+      Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+
+      assert getResponse.statusCode == 200
+
+      def createdItem = getResponse.json
 
       assert createdItem.containsKey("barcode") == false
   }
@@ -182,8 +216,7 @@ class ItemApiExamples extends Specification {
       .put("materialType", bookMaterialType())
       .put("permanentLoanType", canCirculateLoanType())
 
-    def (_, __) = client.post(ApiRoot.items(),
-      Json.encodePrettily(firstItemRequest))
+    ItemApiClient.createItem(okapiClient, firstItemRequest)
 
     def newItemRequest = new JsonObject()
       .put("title", "Nod")
@@ -193,19 +226,26 @@ class ItemApiExamples extends Specification {
       .put("location", new JsonObject().put("name", "Annex Library"))
 
     when:
-      def (postResponse, ___) = client.post(
-        new URL("${ApiRoot.items()}"),
-        Json.encodePrettily(newItemRequest))
+      def postCompleted = new CompletableFuture<Response>()
+
+      okapiClient.post(ApiRoot.items(),
+        newItemRequest, ResponseHandler.any(postCompleted))
+
+      Response postResponse = postCompleted.get(5, TimeUnit.SECONDS)
 
     then:
-      def location = postResponse.headers.location.toString()
+      assert postResponse.statusCode == 201
+      assert postResponse.location != null
 
-      assert postResponse.status == 201
-      assert location != null
+      def getCompleted = new CompletableFuture<Response>()
 
-      def (getResponse, createdItem) = client.get(location)
+      okapiClient.get(postResponse.location, ResponseHandler.json(getCompleted))
 
-      assert getResponse.status == 200
+      Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+
+      assert getResponse.statusCode == 200
+
+      def createdItem = getResponse.json
 
       assert createdItem.containsKey("barcode") == false
   }
@@ -224,12 +264,15 @@ class ItemApiExamples extends Specification {
         .put("location", new JsonObject().put("name", "Annex Library"))
 
     when:
-      def (postResponse, _) = client.post(
-        new URL("${ApiRoot.items()}"),
-        Json.encodePrettily(newItemRequest))
+      def postCompleted = new CompletableFuture<Response>()
+
+      okapiClient.post(ApiRoot.items(),
+        newItemRequest, ResponseHandler.any(postCompleted))
+
+      Response postResponse = postCompleted.get(5, TimeUnit.SECONDS)
 
     then:
-      assert postResponse.status == 422
+      assert postResponse.statusCode == 422
   }
 
   void "Cannot create an item without a permanent loan type"() {
@@ -246,12 +289,15 @@ class ItemApiExamples extends Specification {
         .put("location", new JsonObject().put("name", "Annex Library"))
 
     when:
-      def (postResponse, _) = client.post(
-        new URL("${ApiRoot.items()}"),
-        Json.encodePrettily(newItemRequest))
+      def postCompleted = new CompletableFuture<Response>()
+
+      okapiClient.post(ApiRoot.items(),
+        newItemRequest, ResponseHandler.any(postCompleted))
+
+      Response postResponse = postCompleted.get(5, TimeUnit.SECONDS)
 
     then:
-      assert postResponse.status == 422
+      assert postResponse.statusCode == 422
   }
 
   void "Can create an item without a temporary loan type"() {
@@ -269,29 +315,37 @@ class ItemApiExamples extends Specification {
         .put("location", new JsonObject().put("name", "Annex Library"))
 
     when:
-      def (postResponse, _) = client.post(
-        new URL("${ApiRoot.items()}"),
-        Json.encodePrettily(newItemRequest))
+      def postCompleted = new CompletableFuture<Response>()
+
+      okapiClient.post(ApiRoot.items(),
+        newItemRequest, ResponseHandler.any(postCompleted))
+
+      Response postResponse = postCompleted.get(5, TimeUnit.SECONDS)
 
     then:
-      def location = postResponse.headers.location.toString()
+      assert postResponse.statusCode == 201
+      assert postResponse.location != null
 
-      assert postResponse.status == 201
-      assert location != null
+      def getCompleted = new CompletableFuture<Response>()
 
-      def (getResponse, createdItem) = client.get(location)
+      okapiClient.get(postResponse.location, ResponseHandler.json(getCompleted))
 
-      assert getResponse.status == 200
+      Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
 
-      assert createdItem.id != null
-      assert createdItem.title == "Long Way to a Small Angry Planet"
-      assert createdItem.barcode == "645398607547"
-      assert createdItem?.status?.name == "Available"
-      assert createdItem?.location?.name == "Annex Library"
-      assert createdItem?.materialType?.id == ApiTestSuite.bookMaterialType
-      assert createdItem?.permanentLoanType?.id == ApiTestSuite.canCirculateLoanType
-      assert createdItem?.materialType?.name == "Book"
-      assert createdItem?.temporaryLoanType == null
+      assert getResponse.statusCode == 200
+
+      def createdItem = getResponse.json
+
+      assert createdItem.containsKey("id")
+      assert createdItem.getString("title") == "Long Way to a Small Angry Planet"
+      assert createdItem.getString("instanceId") == createdInstance.id
+      assert createdItem.getString("barcode") == "645398607547"
+      assert createdItem.getJsonObject("status").getString("name") == "Available"
+      assert createdItem.getJsonObject("materialType").getString("id") == ApiTestSuite.bookMaterialType
+      assert createdItem.getJsonObject("materialType").getString("name") == "Book"
+      assert createdItem.getJsonObject("permanentLoanType").getString("id") == ApiTestSuite.canCirculateLoanType
+      assert createdItem.getJsonObject("permanentLoanType").getString("name") == "Can Circulate"
+      assert createdItem.getJsonObject("location").getString("name") == "Annex Library"
 
       selfLinkRespectsWayResourceWasReached(createdItem)
       selfLinkShouldBeReachable(createdItem)
@@ -311,25 +365,36 @@ class ItemApiExamples extends Specification {
       def itemLocation = new URL("${ApiRoot.items()}/${newItem.getString("id")}")
 
     when:
-      def (putResponse, __) = client.put(itemLocation,
-        Json.encodePrettily(updateItemRequest))
+      def putCompleted = new CompletableFuture<Response>()
+
+      okapiClient.put(itemLocation,
+        updateItemRequest, ResponseHandler.any(putCompleted))
+
+      Response putResponse = putCompleted.get(5, TimeUnit.SECONDS)
 
     then:
-      assert putResponse.status == 204
+      assert putResponse.statusCode == 204
 
-      def (getResponse, updatedItem) = client.get(itemLocation)
+      def getCompleted = new CompletableFuture<Response>()
 
-      assert getResponse.status == 200
+      okapiClient.get(itemLocation, ResponseHandler.json(getCompleted))
 
-      assert updatedItem.id == newItem.getString("id")
-      assert updatedItem.instanceId == createdInstance.id
-      assert updatedItem.barcode == "645398607547"
-      assert updatedItem?.status?.name == "Checked Out"
-      assert updatedItem?.materialType?.id == ApiTestSuite.bookMaterialType
-      assert updatedItem?.materialType?.name == "Book"
-      assert updatedItem?.permanentLoanType?.id == ApiTestSuite.canCirculateLoanType
-      assert updatedItem?.permanentLoanType?.name == "Can Circulate"
-      assert updatedItem?.location?.name == "Main Library"
+      Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+
+      assert getResponse.statusCode == 200
+
+      def updatedItem = getResponse.json
+
+      assert updatedItem.containsKey("id")
+      assert updatedItem.getString("title") == "Long Way to a Small Angry Planet"
+      assert updatedItem.getString("instanceId") == createdInstance.id
+      assert updatedItem.getString("barcode") == "645398607547"
+      assert updatedItem.getJsonObject("status").getString("name") == "Checked Out"
+      assert updatedItem.getJsonObject("materialType").getString("id") == ApiTestSuite.bookMaterialType
+      assert updatedItem.getJsonObject("materialType").getString("name") == "Book"
+      assert updatedItem.getJsonObject("permanentLoanType").getString("id") == ApiTestSuite.canCirculateLoanType
+      assert updatedItem.getJsonObject("permanentLoanType").getString("name") == "Can Circulate"
+      assert updatedItem.getJsonObject("location").getString("name") == "Main Library"
 
       selfLinkRespectsWayResourceWasReached(updatedItem)
       selfLinkShouldBeReachable(updatedItem)
@@ -348,39 +413,48 @@ class ItemApiExamples extends Specification {
         .put("location", new JsonObject().put("name", "Main Library"))
 
     when:
-      def (putResponse, __) = client.put(
-        new URL("${ApiRoot.items()}/${updateItemRequest.getString("id")}"),
-        Json.encodePrettily(updateItemRequest))
+      def putCompleted = new CompletableFuture<Response>()
+
+      okapiClient.put(new URL("${ApiRoot.items()}/${updateItemRequest.getString("id")}"),
+        updateItemRequest, ResponseHandler.any(putCompleted))
+
+      Response putResponse = putCompleted.get(5, TimeUnit.SECONDS)
 
     then:
-      assert putResponse.status == 404
+      assert putResponse.statusCode == 404
   }
 
   void "Can delete all items"() {
     given:
-      def createdInstance = createInstance(
-        smallAngryPlanet(UUID.randomUUID()))
+      def createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()))
 
-      createItem(createdInstance.title, createdInstance.id,
-        "645398607547")
+      createItem(createdInstance.title, createdInstance.id, "645398607547")
 
-      createItem(createdInstance.title, createdInstance.id,
-        "175848607547")
+      createItem(createdInstance.title, createdInstance.id, "175848607547")
 
-      createItem(createdInstance.title, createdInstance.id,
-        "645334645247")
+      createItem(createdInstance.title, createdInstance.id, "645334645247")
 
     when:
-      def (deleteResponse, deleteBody) = client.delete(ApiRoot.items())
+      def deleteCompleted = new CompletableFuture<Response>()
 
-      def (_, wrappedItems) = client.get(ApiRoot.items())
+      okapiClient.delete(ApiRoot.items(),
+        ResponseHandler.any(deleteCompleted))
+
+      Response deleteResponse = deleteCompleted.get(5, TimeUnit.SECONDS)
 
     then:
-      assert deleteResponse.status == 204
-      assert deleteBody == null
+      assert deleteResponse.statusCode == 204
+      assert deleteResponse.hasBody() == false
 
-      assert wrappedItems.items.size() == 0
-      assert wrappedItems.totalRecords == 0
+      def getAllCompleted = new CompletableFuture<Response>()
+
+      okapiClient.get(ApiRoot.items(),
+        ResponseHandler.json(getAllCompleted))
+
+      Response getAllResponse = getAllCompleted.get(5, TimeUnit.SECONDS);
+
+      assert getAllResponse.json.getJsonArray("items").size() == 0
+      assert getAllResponse.json.getInteger("totalRecords") == 0
   }
 
   void "Can delete a single item"() {
@@ -388,11 +462,9 @@ class ItemApiExamples extends Specification {
       def createdInstance = createInstance(
         smallAngryPlanet(UUID.randomUUID()))
 
-      createItem(createdInstance.title, createdInstance.id,
-        "645398607547")
+      createItem(createdInstance.title, createdInstance.id, "645398607547")
 
-      createItem(createdInstance.title, createdInstance.id,
-        "175848607547")
+      createItem(createdInstance.title, createdInstance.id, "175848607547")
 
       def itemToDelete = createItem(createdInstance.title, createdInstance.id,
         "645334645247")
@@ -401,20 +473,35 @@ class ItemApiExamples extends Specification {
         new URL("${ApiRoot.items()}/${itemToDelete.getString("id")}")
 
     when:
-      def (deleteResponse, deleteBody) = client.delete(itemToDeleteLocation)
+      def deleteCompleted = new CompletableFuture<Response>()
+
+      okapiClient.delete(itemToDeleteLocation,
+        ResponseHandler.any(deleteCompleted))
+
+      Response deleteResponse = deleteCompleted.get(5, TimeUnit.SECONDS);
 
     then:
-      assert deleteResponse.status == 204
-      assert deleteBody == null
+      assert deleteResponse.statusCode == 204
+      assert deleteResponse.hasBody() == false
 
-      def (getResponse, _) = client.get(itemToDeleteLocation)
+      def getCompleted = new CompletableFuture<Response>()
 
-      assert getResponse.status == 404
+      okapiClient.get(itemToDeleteLocation,
+        ResponseHandler.any(getCompleted))
 
-      def (__, wrappedItems) = client.get(ApiRoot.items())
+      Response getResponse = getCompleted.get(5, TimeUnit.SECONDS)
 
-      assert wrappedItems.items.size() == 2
-      assert wrappedItems.totalRecords == 2
+      assert getResponse.statusCode == 404
+
+      def getAllCompleted = new CompletableFuture<Response>()
+
+      okapiClient.get(ApiRoot.items(),
+        ResponseHandler.json(getAllCompleted))
+
+      Response getAllResponse = getAllCompleted.get(5, TimeUnit.SECONDS);
+
+      assert getAllResponse.json.getJsonArray("items").size() == 2
+      assert getAllResponse.json.getInteger("totalRecords") == 2
   }
 
   void "Can page all items"() {
@@ -440,74 +527,85 @@ class ItemApiExamples extends Specification {
       createItem(nodInstance.title, nodInstance.id, "943209584495")
 
     when:
-      def (firstPageResponse, firstPage) = client.get(
-        ApiRoot.items("limit=3"))
+      def firstPageGetCompleted = new CompletableFuture<Response>()
+      def secondPageGetCompleted = new CompletableFuture<Response>()
 
-      def (secondPageResponse, secondPage) = client.get(
-        ApiRoot.items("limit=3&offset=3"))
+      okapiClient.get(ApiRoot.items("limit=3"),
+        ResponseHandler.json(firstPageGetCompleted))
+
+      okapiClient.get(ApiRoot.items("limit=3&offset=3"),
+        ResponseHandler.json(secondPageGetCompleted))
+
+      Response firstPageResponse = firstPageGetCompleted.get(5, TimeUnit.SECONDS)
+      Response secondPageResponse = secondPageGetCompleted.get(5, TimeUnit.SECONDS)
 
     then:
-      assert firstPageResponse.status == 200
-      assert firstPage.items.size() == 3
-      assert firstPage.totalRecords == 5
+      assert firstPageResponse.statusCode == 200
+      assert secondPageResponse.statusCode == 200
 
-      assert secondPageResponse.status == 200
-      assert secondPage.items.size() == 2
-      assert secondPage.totalRecords == 5
+      def firstPageItems = JsonArrayHelper.toList(firstPageResponse.json.getJsonArray("items"))
 
-      firstPage.items.each {
+      assert firstPageItems.size() == 3
+      assert firstPageResponse.json.getInteger("totalRecords") == 5
+
+      def secondPageItems = JsonArrayHelper.toList(secondPageResponse.json.getJsonArray("items"))
+
+      assert secondPageItems.size() == 2
+      assert secondPageResponse.json.getInteger("totalRecords") == 5
+
+      firstPageItems.each {
         selfLinkRespectsWayResourceWasReached(it)
       }
 
-      firstPage.items.each {
+      firstPageItems.each {
         selfLinkShouldBeReachable(it)
       }
 
-      firstPage.items.each {
+      firstPageItems.each {
         hasConsistentMaterialType(it)
       }
 
-      firstPage.items.each {
+      firstPageItems.each {
         hasConsistentPermanentLoanType(it)
       }
 
-      firstPage.items.each {
+      firstPageItems.each {
         hasConsistentTemporaryLoanType(it)
       }
 
-      firstPage.items.each {
+      firstPageItems.each {
         hasStatus(it)
       }
 
-      firstPage.items.each {
+      firstPageItems.each {
         hasLocation(it)
       }
 
-      secondPage.items.each {
+      secondPageItems.each {
         selfLinkRespectsWayResourceWasReached(it)
       }
 
-      secondPage.items.each {
+      secondPageItems.each {
         selfLinkShouldBeReachable(it)
       }
 
-      secondPage.items.each {
+      secondPageItems.each {
         hasConsistentMaterialType(it)
       }
 
-      secondPage.items.each {
+      secondPageItems.each {
         hasConsistentPermanentLoanType(it)
       }
 
-      secondPage.items.each {
+      secondPageItems.each {
         hasConsistentTemporaryLoanType(it)
       }
 
-      secondPage.items.each {
+      secondPageItems.each {
         hasStatus(it)
       }
 
-      secondPage.items.each {
+      secondPageItems.each {
         hasLocation(it)
       }
   }
@@ -523,73 +621,90 @@ class ItemApiExamples extends Specification {
         "175848607547", bookMaterialType(), canCirculateLoanType(), courseReservesLoanType())
 
     when:
-      def (response, all) = client.get(ApiRoot.items())
+      def getAllCompleted = new CompletableFuture<Response>()
+
+      okapiClient.get(ApiRoot.items(),
+        ResponseHandler.json(getAllCompleted))
+
+      Response getAllResponse = getAllCompleted.get(5, TimeUnit.SECONDS)
 
     then:
-      assert response.status == 200
+      assert getAllResponse.statusCode == 200
 
-      assert all.items.stream()
-        .filter({it.barcode == "645398607547"})
-        .findFirst().get()?.permanentLoanType?.id == ApiTestSuite.canCirculateLoanType
+      def items = JsonArrayHelper.toList(getAllResponse.json.getJsonArray("items"))
 
-    assert all.items.stream()
-      .filter({it.barcode == "645398607547"})
-      .findFirst().get()?.temporaryLoanType == null
+      assert items.size() == 2
+      assert getAllResponse.json.getInteger("totalRecords") == 2
 
-     assert all.items.stream()
-        .filter({it.barcode == "175848607547"})
-        .findFirst().get()?.permanentLoanType?.id == ApiTestSuite.canCirculateLoanType
+      assert items.stream()
+        .filter({it.getString("barcode") == "645398607547"})
+        .findFirst().get().getJsonObject("permanentLoanType").getString("id") == ApiTestSuite.canCirculateLoanType
 
-      assert all.items.stream()
-        .filter({it.barcode == "175848607547"})
-        .findFirst().get()?.temporaryLoanType?.id == ApiTestSuite.courseReserveLoanType
+      assert items.stream()
+        .filter({it.getString("barcode") == "645398607547"})
+        .findFirst().get().containsKey("temporaryLoanType") == false
 
-      all.items.each {
+      assert items.stream()
+        .filter({it.getString("barcode") == "175848607547"})
+        .findFirst().get().getJsonObject("permanentLoanType").getString("id") == ApiTestSuite.canCirculateLoanType
+
+      assert items.stream()
+        .filter({it.getString("barcode") == "175848607547"})
+        .findFirst().get().getJsonObject("temporaryLoanType").getString("id") == ApiTestSuite.courseReserveLoanType
+
+      items.each {
         hasConsistentPermanentLoanType(it)
       }
 
-      all.items.each {
+      items.each {
         hasConsistentTemporaryLoanType(it)
       }
   }
 
   void "Page parameters must be numeric"() {
     when:
-      def (response, message) = client.get(ApiRoot.items("limit=&offset="))
+      def getPagedCompleted = new CompletableFuture<Response>()
+
+      okapiClient.get(ApiRoot.items("limit=&offset="),
+        ResponseHandler.text(getPagedCompleted))
+
+      Response getPagedResponse = getPagedCompleted.get(5, TimeUnit.SECONDS)
 
     then:
-      assert response.status == 400
-      assert message == "limit and offset must be numeric when supplied"
+      assert getPagedResponse.statusCode == 400
+      assert getPagedResponse.body == "limit and offset must be numeric when supplied"
   }
 
   void "Can search for items by title"() {
     given:
-    def smallAngryInstance = createInstance(
-      smallAngryPlanet(UUID.randomUUID()))
+      def smallAngryInstance = createInstance(smallAngryPlanet(UUID.randomUUID()))
 
-      createItem(smallAngryInstance.title, smallAngryInstance.id,
-        "645398607547")
+      createItem(smallAngryInstance.title, smallAngryInstance.id, "645398607547")
 
       def nodInstance = createInstance(nod(UUID.randomUUID()))
 
       createItem(nodInstance.title, nodInstance.id, "564566456546")
 
     when:
-      def (response, wrappedItems) = client.get(
-        ApiRoot.items("query=title=*Small%20Angry*"))
+      def searchGetCompleted = new CompletableFuture<Response>()
+
+      okapiClient.get(ApiRoot.items("query=title=*Small%20Angry*"),
+        ResponseHandler.json(searchGetCompleted))
+
+      Response searchGetResponse = searchGetCompleted.get(5, TimeUnit.SECONDS)
 
     then:
-      assert response.status == 200
+      assert searchGetResponse.statusCode == 200
 
-      def items = wrappedItems.items
+      def items = JsonArrayHelper.toList(searchGetResponse.json.getJsonArray("items"))
 
       assert items.size() == 1
-      assert wrappedItems.totalRecords == 1
+      assert searchGetResponse.json.getInteger("totalRecords") == 1
 
       def firstItem = items[0]
 
-      assert firstItem.title == "Long Way to a Small Angry Planet"
-      assert firstItem.status.name == "Available"
+      assert firstItem.getString("title") == "Long Way to a Small Angry Planet"
+      assert firstItem.getJsonObject("status").getString("name") == "Available"
 
       items.each {
         selfLinkRespectsWayResourceWasReached(it)
@@ -631,6 +746,8 @@ class ItemApiExamples extends Specification {
       def nodInstance = createInstance(nod(UUID.randomUUID()))
 
     when:
+      def createItemCompleted = new CompletableFuture<Response>()
+
       def newItemRequest = new JsonObject()
         .put("title", nodInstance.title)
         .put("instanceId", nodInstance.id)
@@ -639,12 +756,14 @@ class ItemApiExamples extends Specification {
         .put("materialType", bookMaterialType())
         .put("location", new JsonObject().put("name", "Main Library"))
 
-      def (createItemResponse, createItemBody) = client.post(ApiRoot.items(),
-        Json.encodePrettily(newItemRequest))
+      okapiClient.post(ApiRoot.items(), newItemRequest,
+        ResponseHandler.any(createItemCompleted))
 
     then:
-      assert createItemResponse.status == 400
-      assert createItemBody == "Barcodes must be unique, 645398607547 is already assigned to another item"
+      def createResponse = createItemCompleted.get(5, TimeUnit.SECONDS)
+
+      assert createResponse.statusCode == 400
+      assert createResponse.body == "Barcodes must be unique, 645398607547 is already assigned to another item"
   }
 
   void "Cannot update an item to have the same barcode as an existing item"() {
@@ -667,12 +786,16 @@ class ItemApiExamples extends Specification {
       def nodItemLocation = new URL(
         "${ApiRoot.items()}/${changedNodItem.getString("id")}")
 
-    def (putItemResponse, putItemBody) = client.put(nodItemLocation,
-      Json.encodePrettily(changedNodItem));
+      def putItemCompleted = new CompletableFuture<Response>()
+
+      okapiClient.put(nodItemLocation, changedNodItem,
+        ResponseHandler.text(putItemCompleted));
 
     then:
-      assert putItemResponse.status == 400
-      assert putItemBody == "Barcodes must be unique, 645398607547 is already assigned to another item"
+      def putItemResponse = putItemCompleted.get(5, TimeUnit.SECONDS)
+
+      assert putItemResponse.statusCode == 400
+      assert putItemResponse.body == "Barcodes must be unique, 645398607547 is already assigned to another item"
   }
 
   void "Can change the barcode of an existing item"() {
@@ -688,17 +811,25 @@ class ItemApiExamples extends Specification {
       def nodItemLocation = new URL(
         "${ApiRoot.items()}/${changedNodItem.getString("id")}")
 
-      def (putItemResponse, _) = client.put(nodItemLocation,
-        Json.encodePrettily(changedNodItem))
+    def putItemCompleted = new CompletableFuture<Response>()
+
+    okapiClient.put(nodItemLocation, changedNodItem,
+        ResponseHandler.any(putItemCompleted))
 
     then:
-      assert putItemResponse.status == 204
+      def putItemResponse = putItemCompleted.get(5, TimeUnit.SECONDS)
 
-      def (getResponse, updatedItem) = client.get(nodItemLocation)
+      assert putItemResponse.statusCode == 204
 
-      assert getResponse.status == 200
+      def getItemCompleted = new CompletableFuture<Response>()
 
-      assert updatedItem.barcode == "645398607547"
+      okapiClient.get(nodItemLocation, ResponseHandler.json(getItemCompleted))
+
+      def getItemResponse = getItemCompleted.get(5, TimeUnit.SECONDS)
+
+      assert getItemResponse.statusCode == 200
+
+      assert getItemResponse.json.getString("barcode") == "645398607547"
   }
 
   void "Can remove the barcode of an existing item"() {
@@ -722,88 +853,107 @@ class ItemApiExamples extends Specification {
       def nodItemLocation = new URL(
         "${ApiRoot.items()}/${changedNodItem.getString("id")}")
 
-      def (putItemResponse, _) = client.put(nodItemLocation,
-        Json.encodePrettily(changedNodItem))
+      def putItemCompleted = new CompletableFuture<Response>()
+
+      okapiClient.put(nodItemLocation, changedNodItem,
+        ResponseHandler.any(putItemCompleted))
 
     then:
-      assert putItemResponse.status == 204
+      def putItemResponse = putItemCompleted.get(5, TimeUnit.SECONDS)
 
-      def (getResponse, updatedItem) = client.get(nodItemLocation)
+      assert putItemResponse.statusCode == 204
 
-      assert getResponse.status == 200
+      def getItemCompleted = new CompletableFuture<Response>()
 
-      assert updatedItem.barcode == null
+      okapiClient.get(nodItemLocation, ResponseHandler.json(getItemCompleted))
+
+      def getItemResponse = getItemCompleted.get(5, TimeUnit.SECONDS)
+
+      assert getItemResponse.statusCode == 200
+
+      assert getItemResponse.json.containsKey("barcode") == false
   }
 
-  private void selfLinkRespectsWayResourceWasReached(item) {
-    assert containsApiRoot(item.links.self)
+  private void selfLinkRespectsWayResourceWasReached(JsonObject item) {
+    assert containsApiRoot(item.getJsonObject("links").getString("self"))
   }
 
   private boolean containsApiRoot(String link) {
     link.contains(ApiTestSuite.apiRoot())
   }
 
-  private void selfLinkShouldBeReachable(item) {
-    def (response, _) = client.get(item.links.self)
+  private void selfLinkShouldBeReachable(JsonObject item) {
+    def getCompleted = new CompletableFuture<Response>()
 
-    assert response.status == 200
+    okapiClient.get(item.getJsonObject("links").getString("self"),
+      ResponseHandler.json(getCompleted))
+
+    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+
+    assert getResponse.statusCode == 200
   }
 
-  private void hasStatus(item) {
-    assert item?.status?.name != null
+  private void hasStatus(JsonObject item) {
+    assert item.containsKey("status")
+    assert item.getJsonObject("status").containsKey("name")
   }
 
-  private void hasConsistentMaterialType(item) {
+  private void hasConsistentMaterialType(JsonObject item) {
+    def materialType = item.getJsonObject("materialType")
 
-    switch(item?.materialType?.id) {
+    switch(materialType.getString("id")) {
       case ApiTestSuite.bookMaterialType:
-        assert item?.materialType?.id == ApiTestSuite.bookMaterialType
-        assert item?.materialType?.name == "Book"
+        assert materialType.getString("id") == ApiTestSuite.bookMaterialType
+        assert materialType.getString("name") == "Book"
         break
 
       case ApiTestSuite.dvdMaterialType:
-        assert item?.materialType?.id == ApiTestSuite.dvdMaterialType
-        assert item?.materialType?.name == "DVD"
+        assert materialType.getString("id") == ApiTestSuite.dvdMaterialType
+        assert materialType.getString("name") == "DVD"
         break
 
       default:
-        assert item?.materialType?.id == null
-        assert item?.materialType?.name == null
+        assert materialType.getString("id") == null
+        assert materialType.getString("name") == null
     }
   }
 
-  private void hasConsistentPermanentLoanType(item) {
-    hasConsistentLoanType(item?.permanentLoanType)
+  private void hasConsistentPermanentLoanType(JsonObject item) {
+    hasConsistentLoanType(item.getJsonObject("permanentLoanType"))
   }
 
-  private void hasConsistentTemporaryLoanType(item) {
-    hasConsistentLoanType(item?.temporaryLoanType)
+  private void hasConsistentTemporaryLoanType(JsonObject item) {
+    hasConsistentLoanType(item.getJsonObject("temporaryLoanType"))
   }
 
-  private void hasConsistentLoanType(loanType) {
-    switch (loanType?.id) {
+  private void hasConsistentLoanType(JsonObject loanType) {
+    if(loanType == null) {
+      return
+    }
+
+    switch (loanType.getString("id")) {
       case ApiTestSuite.canCirculateLoanType:
-        assert loanType?.id == ApiTestSuite.canCirculateLoanType
-        assert loanType?.name == "Can Circulate"
+        assert loanType.getString("id") == ApiTestSuite.canCirculateLoanType
+        assert loanType.getString("name") == "Can Circulate"
         break
 
       case ApiTestSuite.courseReserveLoanType:
-        assert loanType?.id == ApiTestSuite.courseReserveLoanType
-        assert loanType?.name == "Course Reserves"
+        assert loanType.getString("id") == ApiTestSuite.courseReserveLoanType
+        assert loanType.getString("name") == "Course Reserves"
         break
 
       default:
-        assert loanType?.id == null
-        assert loanType?.name == null
+        assert loanType.getString("id") == null
+        assert loanType.getString("name") == null
     }
   }
 
-  private void hasLocation(item) {
-    assert item?.location?.name != null
+  private void hasLocation(JsonObject item) {
+    assert item.getJsonObject("location").getString("name") != null
   }
 
   private def createInstance(JsonObject newInstanceRequest) {
-    InstanceApiClient.createInstance(client, newInstanceRequest)
+    InstanceApiClient.createInstance(okapiClient, newInstanceRequest)
   }
 
   private JsonObject createItem(String title, String instanceId, String barcode) {
@@ -840,16 +990,7 @@ class ItemApiExamples extends Specification {
       newItemRequest.put("temporaryLoanType", temporaryLoanType)
     }
 
-    def (createItemResponse, _) = client.post(ApiRoot.items(),
-      Json.encodePrettily(newItemRequest))
-
-    def instanceLocation = createItemResponse.headers.location.toString()
-
-    def (response, createdItem) = client.get(instanceLocation)
-
-    assert response.status == 200
-
-    createdItem
+    ItemApiClient.createItem(okapiClient, newItemRequest)
   }
 
   private JsonObject bookMaterialType() {
