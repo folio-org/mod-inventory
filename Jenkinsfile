@@ -100,7 +100,7 @@ pipeline {
 
          mail bcc: '', body: "${env.BUILD_URL}", cc: '', from: '', replyTo: '', 
                    subject: "Build failed: ${env.JOB_NAME} ${env.BUILD_NUMBER}", 
-                   to: 'malc@indexdata.com'
+                   to: 'folio-jenkins.backend@indexdata.com'
       }
 
       unstable {
@@ -109,7 +109,7 @@ pipeline {
 
          mail bcc: '', body: "${env.BUILD_URL}", cc: '', from: '', replyTo: '', 
                    subject: "Build unstable: ${env.JOB_NAME} ${env.BUILD_NUMBER}", 
-                   to: 'malc@indexdata.com'
+                   to: 'folio-jenkins.backend@indexdata.com'
       }
 
       changed {
@@ -117,7 +117,7 @@ pipeline {
                    message: "Build back to normal: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)")
          mail bcc: '', body: "${env.BUILD_URL}", cc: '', from: '', replyTo: '', 
                   subject: "Build back to normal: ${env.JOB_NAME} ${env.BUILD_NUMBER}", 
-                  to: 'malc@indexdata.com'
+                  to: 'folio-jenkins.backend@indexdata.com'
       }
    } 
 }
