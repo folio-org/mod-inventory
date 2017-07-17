@@ -50,7 +50,6 @@ pipeline {
 
             echo "$env.GRADLE_VERSION"
             sh 'gradle build fatJar'
-            }
          }
       }
         
