@@ -49,7 +49,7 @@ pipeline {
             }
 
             echo "Env: $env.GRADLE_VERSION"
-            echo "No Env: GRADLE_VERSION"
+            echo "No Env: $GRADLE_VERSION"
             sh 'gradle build fatJar'
          }
       }
