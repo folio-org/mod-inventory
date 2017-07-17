@@ -82,8 +82,8 @@ pipeline {
    
       stage('Clean Up') {
          steps {
-            sh "docker rmi ${docker_image}:${GRADLE_VERSION}-${env.BUILD_NUMBER}"
-            sh "docker rmi ${docker_image}:latest"
+            sh "docker rmi ${docker_image}:${GRADLE_VERSION}-${env.BUILD_NUMBER} || exit 0"
+            sh "docker rmi ${docker_image}:latest || exit 0"
          }
       }
    }  
