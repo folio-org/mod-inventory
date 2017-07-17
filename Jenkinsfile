@@ -18,7 +18,7 @@ pipeline {
                currentBuild.displayName = "#${env.BUILD_NUMBER}-${env.JOB_BASE_NAME}"
             }
 
-            slackSend '"Build started: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"'
+            slackSend "Build started: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
             step([$class: 'WsCleanup'])
          }
       }
@@ -44,9 +44,7 @@ pipeline {
         
       stage('Build') {
          steps {
-            sh 'GRADLE_VERSION=`grep "^version" build.gradle | 
-                                awk -F '=' '{ print $2 }' | 
-                                sed -e 's/\s\|"//g'`'
+            sh 'GRADLE_VERSION=`grep "^version" build.gradle | awk -F '=' '{ print $2 }' | sed -e 's/\s\|"//g'`'
 
             echo "$env.GRADLE_VERSION"
             sh 'gradle build fatJar'
