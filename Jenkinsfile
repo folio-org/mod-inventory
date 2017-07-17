@@ -44,9 +44,9 @@ pipeline {
         
       stage('Build') {
          steps {
-            sh '''
-               GRADLE_VERSION=`grep "^version" build.gradle | awk -F '=' '{ print $2 }' | sed -e 's/\\s\|\\"//g'`'
-            '''  
+            script {
+               def GRADLE_VERSION=$/grep "^version" build.gradle | awk -F '=' '{ print $2 }' | sed -e 's/\s|"//g'/$
+            }
 
             echo "$env.GRADLE_VERSION"
             sh 'gradle build fatJar'
