@@ -44,8 +44,13 @@ pipeline {
         
       stage('Build') {
          steps {
-            sh 'GRADLE_VERSION=`grep "^version" build.gradle | awk -F '=' '{ print $2 }' | sed -e 's/[\s|"]//g'`'
-            echo "Module Version: $env.GRADLE_VERSION"
+            script {
+              def get_gradle_ver = $/grep "^version" build.gradle | awk -F '=' '{ print $2 }' | sed 's/[\s|"]//g'/$
+              GRADLE_VERSION = sh(returnStdout: true, script: get_gradle_ver).trim()
+              sh "echo Module Version: $GRADLE_VERSION"
+  
+            }
+
             sh 'gradle build fatJar'
          }
       }
@@ -54,7 +59,7 @@ pipeline {
          steps {
             echo 'Building Docker image'
             script {
-               docker.build("${env.docker_image}:${env.GRADLE_VERSION}-${env.BUILD_NUMBER}", '--no-cache .')
+               docker.build("${env.docker_image}:${GRADLE_VERSION}-${env.BUILD_NUMBER}", '--no-cache .')
             }
          } 
       } 
@@ -64,10 +69,10 @@ pipeline {
             branch 'master'
          }
          steps {
-            echo "Pushing Docker image ${env.docker_image}:${env.GRADLE_VERSION} to Docker Hub..."
+            echo "Pushing Docker image ${env.docker_image}:${GRADLE_VERSION} to Docker Hub..."
             script {
                docker.withRegistry('https://index.docker.io/v1/', 'DockerHubIDJenkins') {
-                  def dockerImage =  docker.image("${env.docker_image}:${env.GRADLE_VERSION}-${env.BUILD_NUMBER}")
+                  def dockerImage =  docker.image("${env.docker_image}:${GRADLE_VERSION}-${env.BUILD_NUMBER}")
                   // dockerImage.push()
                   // dockerImage.push('latest')
                }
@@ -77,8 +82,8 @@ pipeline {
    
       stage('Clean Up') {
          steps {
-            sh "docker rmi ${docker_image}:${env.GRADLE_VERSION}-${env.BUILD_NUMBER}"
-            sh "docker rmi ${docker_image}:latest"
+            sh "docker rmi ${docker_image}:${GRADLE_VERSION}-${env.BUILD_NUMBER} || exit 0"
+            sh "docker rmi ${docker_image}:latest || exit 0"
          }
       }
    }  
