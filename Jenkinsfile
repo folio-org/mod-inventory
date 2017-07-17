@@ -44,12 +44,8 @@ pipeline {
         
       stage('Build') {
          steps {
-            script {
-               def GRADLE_VERSION = $/grep "^version" build.gradle | awk -F '=' '{ print $2 }' | sed -e 's/\s|"//g'/$
-            }
-
-            echo "Env: $env.GRADLE_VERSION"
-            echo "No Env: $GRADLE_VERSION"
+            sh 'GRADLE_VERSION=`grep "^version" build.gradle | awk -F '=' '{ print $2 }' | sed -e 's/[\s|"]//g'`'
+            echo "Module Version: $env.GRADLE_VERSION"
             sh 'gradle build fatJar'
          }
       }
@@ -96,6 +92,10 @@ pipeline {
       failure {
          slackSend(color: '#FF0000', 
                    message: "Build failed: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)")
+
+         mail bcc: '', body: "${env.BUILD_URL}", cc: '', from: '', replyTo: '', 
+                   subject: "Build failed: ${env.JOB_NAME} ${env.BUILD_NUMBER}", 
+                   to: 'malc@indexdata.com'
       }
 
       unstable {
@@ -103,7 +103,7 @@ pipeline {
                    message: "Build unstable: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)")
 
          mail bcc: '', body: "${env.BUILD_URL}", cc: '', from: '', replyTo: '', 
-                   subject: "Build Unstable: ${env.JOB_NAME} ${env.BUILD_NUMBER}", 
+                   subject: "Build unstable: ${env.JOB_NAME} ${env.BUILD_NUMBER}", 
                    to: 'malc@indexdata.com'
       }
 
@@ -112,7 +112,7 @@ pipeline {
                    message: "Build back to normal: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)")
          mail bcc: '', body: "${env.BUILD_URL}", cc: '', from: '', replyTo: '', 
                   subject: "Build back to normal: ${env.JOB_NAME} ${env.BUILD_NUMBER}", 
-                  to: 'folio-jenkins.ui@indexdata.com'
+                  to: 'malc@indexdata.com'
       }
    } 
 }
