@@ -45,10 +45,11 @@ pipeline {
       stage('Build') {
          steps {
             script {
-               def GRADLE_VERSION=$/grep "^version" build.gradle | awk -F '=' '{ print $2 }' | sed -e 's/\s|"//g'/$
+               def GRADLE_VERSION = $/grep "^version" build.gradle | awk -F '=' '{ print $2 }' | sed -e 's/\s|"//g'/$
             }
 
-            echo "$env.GRADLE_VERSION"
+            echo "Env: $env.GRADLE_VERSION"
+            echo "No Env: GRADLE_VERSION"
             sh 'gradle build fatJar'
          }
       }
