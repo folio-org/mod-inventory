@@ -54,6 +54,12 @@ pipeline {
          }
       }
 
+      stage('Publish Test Results') {
+         steps { 
+            junit 'build/test-results/**/*.xml'
+         }
+      }
+
       stage('Build Docker') {
          steps {
             echo 'Building Docker image'
