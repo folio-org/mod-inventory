@@ -1,5 +1,5 @@
 {
-  "id": "inventory",
+  "id": "inventory-5.0.1-SNAPSHOT",
   "name": "Inventory Module",
   "provides": [
     {

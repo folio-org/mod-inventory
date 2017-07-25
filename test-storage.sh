@@ -2,6 +2,8 @@
 
 tenant_id="test_tenant"
 okapi_proxy_address="http://localhost:9130"
+#Needs to be the specific version of Inventory Storage you want to use for testing
+inventory_storage_module_id="inventory-storage-5.1.1-SNAPSHOT"
 
 echo "Check if Okapi is contactable"
 curl -w '\n' -X GET -D -   \
@@ -12,7 +14,7 @@ echo "Create ${tenant_id} tenant"
 
 echo "Activate inventory storage for ${tenant_id}"
 activate_json=$(cat ./registration/activate.json)
-activate_json="${activate_json/moduleidhere/inventory-storage}"
+activate_json="${activate_json/moduleidhere/$inventory_storage_module_id}"
 
 curl -w '\n' -X POST -D - \
      -H "Content-type: application/json" \
@@ -26,7 +28,7 @@ gradle -Dokapi.address="${okapi_address}" clean cleanTest testStorageViaOkapi
 test_results=$?
 
 echo "Deactivate inventory storage for ${tenant_id}"
-curl -X DELETE -D - -w '\n' "${okapi_proxy_address}/_/proxy/tenants/${tenant_id}/modules/inventory-storage"
+curl -X DELETE -D - -w '\n' "${okapi_proxy_address}/_/proxy/tenants/${tenant_id}/modules/${inventory_storage_module_id}"
 
 echo "Deleting ${tenant_id}"
 ./delete-tenant.sh ${tenant_id}

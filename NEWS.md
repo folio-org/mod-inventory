@@ -1,5 +1,7 @@
 ## 5.0.1 Unreleased
 
+* Include implementation version in `id` in Module Descriptor
+
 ## 5.0.0 2017-06-07
 
 * Items do not require relating to an instance (instanceId is optional)
