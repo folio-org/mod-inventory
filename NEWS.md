@@ -1,5 +1,8 @@
-## 5.0.1 Unreleased
+## 5.1.0 Unreleased
 
+* MODINVSTOR-12 Searching and sorting on material type properties (e.g. materialType.name)
+* Provides inventory interface version 2.1 (notes additional CQL indexes in comments)
+* Requires item-storage interface version 3.1
 * Include implementation version in `id` in Module Descriptor
 
 ## 5.0.0 2017-06-07
