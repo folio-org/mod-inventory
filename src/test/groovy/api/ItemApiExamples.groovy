@@ -675,6 +675,66 @@ class ItemApiExamples extends Specification {
       assert putItemBody == "Barcodes must be unique, 645398607547 is already assigned to another item"
   }
 
+  void "Can change the barcode of an existing item"() {
+      def nodInstance = createInstance(nod(UUID.randomUUID()))
+
+      def nodItem = createItem(nodInstance.title, nodInstance.id,
+        "654647774352")
+
+    when:
+      def changedNodItem = nodItem.copy()
+        .put("barcode", "645398607547")
+
+      def nodItemLocation = new URL(
+        "${ApiRoot.items()}/${changedNodItem.getString("id")}")
+
+      def (putItemResponse, _) = client.put(nodItemLocation,
+        Json.encodePrettily(changedNodItem))
+
+    then:
+      assert putItemResponse.status == 204
+
+      def (getResponse, updatedItem) = client.get(nodItemLocation)
+
+      assert getResponse.status == 200
+
+      assert updatedItem.barcode == "645398607547"
+  }
+
+  void "Can remove the barcode of an existing item"() {
+      def nodInstance = createInstance(nod(UUID.randomUUID()))
+
+      def nodItem = createItem(nodInstance.title, nodInstance.id,
+        "654647774352")
+
+    def smallAngryInstance = createInstance(
+      smallAngryPlanet(UUID.randomUUID()))
+
+    //Second item with no barcode, to ensure empty barcode doesn't match
+    createItem(smallAngryInstance.title, smallAngryInstance.id,
+      null)
+
+    when:
+      def changedNodItem = nodItem.copy()
+
+      changedNodItem.remove("barcode")
+
+      def nodItemLocation = new URL(
+        "${ApiRoot.items()}/${changedNodItem.getString("id")}")
+
+      def (putItemResponse, _) = client.put(nodItemLocation,
+        Json.encodePrettily(changedNodItem))
+
+    then:
+      assert putItemResponse.status == 204
+
+      def (getResponse, updatedItem) = client.get(nodItemLocation)
+
+      assert getResponse.status == 200
+
+      assert updatedItem.barcode == null
+  }
+
   private void selfLinkRespectsWayResourceWasReached(item) {
     assert containsApiRoot(item.links.self)
   }
@@ -761,9 +821,12 @@ class ItemApiExamples extends Specification {
     def newItemRequest = new JsonObject()
       .put("title", title)
       .put("instanceId", instanceId)
-      .put("barcode", barcode)
       .put("status", new JsonObject().put("name", "Available"))
       .put("location", new JsonObject().put("name", "Main Library"))
+
+    if(barcode != null) {
+      newItemRequest.put("barcode", barcode)
+    }
 
     if(materialType != null) {
       newItemRequest.put("materialType", materialType)

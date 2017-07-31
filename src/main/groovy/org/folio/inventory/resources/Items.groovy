@@ -130,10 +130,11 @@ class Items {
             { Failure failure -> ServerErrorResponse.internalError(
               routingContext.response(), failure.reason) })
         } else {
-          itemCollection.findByCql("barcode=${updatedItem.barcode}",
+          itemCollection.findByCql(
+            String.format("barcode=%s and id<>%s", updatedItem.getBarcode(), updatedItem.getId()),
             PagingParameters.defaults(), {
 
-            if(it.result.items.size() == 1 && it.result.items.first().id == updatedItem.id) {
+            if(it.result.items.size() == 0) {
               itemCollection.update(updatedItem, {
                 SuccessResponse.noContent(routingContext.response()) },
                 { Failure failure -> ServerErrorResponse.internalError(

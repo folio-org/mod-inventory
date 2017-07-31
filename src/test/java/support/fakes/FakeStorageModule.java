@@ -6,7 +6,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
-import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.ImmutableTriple;
 import support.fakes.http.server.*;
 
 import java.util.*;
@@ -86,13 +86,13 @@ public class FakeStorageModule extends AbstractVerticle {
 
     Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
 
-    resourcesForTenant.replace(id, body);
-
     if(resourcesForTenant.containsKey(id)) {
+      resourcesForTenant.replace(id, body);
       SuccessResponse.noContent(routingContext.response());
     }
     else {
-      ClientErrorResponse.notFound(routingContext.response());
+      resourcesForTenant.put(id, body);
+      SuccessResponse.noContent(routingContext.response());
     }
   }
 
@@ -192,39 +192,56 @@ public class FakeStorageModule extends AbstractVerticle {
       return predicates;
     }
 
-    List<ImmutablePair<String, String>> pairs =
+    List<ImmutableTriple<String, String, String>> pairs =
       Arrays.stream(query.split(" and "))
-      .map( pairText -> {
-        String searchField = pairText.split("=")[0];
+        .map( pairText -> {
+          String[] split = pairText.split("=|<>");
+          String searchField = split[0];
 
-        String searchTerm =
-          pairText.replace(String.format("%s=", searchField), "")
+          String searchTerm = split[1]
             .replaceAll("\"", "")
             .replaceAll("\\*", "");
 
-        return new ImmutablePair<>(searchField, searchTerm);
-      })
-      .collect(Collectors.toList());
+          if(pairText.contains("=")) {
+            return new ImmutableTriple<>(searchField, searchTerm, "=");
+          }
+          else {
+            return new ImmutableTriple<>(searchField, searchTerm, "<>");
+          }
+        })
+        .collect(Collectors.toList());
 
     return pairs.stream()
-      .map(pair -> filterByField(pair.getLeft(), pair.getRight()))
+      .map(pair -> filterByField(pair.getLeft(), pair.getMiddle(), pair.getRight()))
       .collect(Collectors.toList());
   }
 
-  private Predicate<JsonObject> filterByField(String field, String term) {
+  private Predicate<JsonObject> filterByField(String field, String term, String operator) {
     return loan -> {
       if (term == null || field == null) {
         return true;
       } else {
+
+        String propertyValue = "";
+
+        //TODO: Should bomb if property does not exist
         if(field.contains(".")) {
           String[] fields = field.split("\\.");
 
-          return loan.getJsonObject(String.format("%s", fields[0]))
-            .getString(String.format("%s", fields[1])).contains(term);
+          propertyValue = loan.getJsonObject(String.format("%s", fields[0]))
+            .getString(String.format("%s", fields[1]));
         }
         else {
-          return loan.containsKey(String.format("%s", field))
-            && loan.getString(String.format("%s", field)).contains(term);
+          propertyValue = loan.getString(String.format("%s", field));
+        }
+
+        switch(operator) {
+          case "=":
+            return propertyValue.contains(term);
+          case "<>":
+            return !propertyValue.contains(term);
+          default:
+            return false;
         }
       }
     };

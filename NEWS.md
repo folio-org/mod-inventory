@@ -4,6 +4,7 @@
 * Provides inventory interface version 2.1 (notes additional CQL indexes in comments)
 * Requires item-storage interface version 3.1
 * Include implementation version in `id` in Module Descriptor
+* MODINV-18 - Fix for unique barcode check when changing barcode
 
 ## 5.0.0 2017-06-07
 
