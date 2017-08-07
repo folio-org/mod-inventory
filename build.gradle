@@ -35,6 +35,8 @@ dependencies {
   testCompile 'com.github.jsonld-java:jsonld-java:0.9.0'
 }
 
+defaultTasks 'build', 'generateDescriptors'
+
 test {
   //Gradle runs tests designed to be run in a suite twice
   //See: https://discuss.gradle.org/t/how-to-prevent-junit-test-suite-classes-from-being-ran-twice/7107/4
