@@ -2,12 +2,13 @@ apply plugin: 'groovy'
 apply plugin: 'application'
 
 mainClassName = "org.folio.inventory.Launcher"
+project.ext.artifactId = "inventory"
 version = "5.1.1-SNAPSHOT"
 
 ext.sharedManifest = manifest {
   attributes(
     "Main-Class": mainClassName,
-    "Implementation-Title": "inventory",
+    "Implementation-Title": project.properties['artifactId'],
     "Implementation-Version": version)
 }
 
@@ -39,6 +40,18 @@ test {
   //See: https://discuss.gradle.org/t/how-to-prevent-junit-test-suite-classes-from-being-ran-twice/7107/4
   exclude '**/External**Collection**Examples.class'
   exclude '**/api/**Examples.class'
+}
+
+import org.apache.tools.ant.filters.ReplaceTokens
+task generateDescriptors(type: Copy) {
+  from 'descriptors'
+  into 'build'
+  include('*Descriptor*-template.json')
+  filteringCharset = 'UTF-8'
+  expand(project.properties)
+  rename { String fileName ->
+    fileName.replace('-template', '')
+  }
 }
 
 task testApiDirect(type: Test) {
