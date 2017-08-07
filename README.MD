@@ -44,7 +44,7 @@ If sdkman is installed, run `source ./setup-environment.sh` to setup the shell w
 
 # Building
 
-run `gradle build` from the root directory.
+run `gradle` from the root directory.
 
 In order to build an executable Jar (e.g. for Okapi to deploy), run `gradle fatJar`.
 
