@@ -9,22 +9,22 @@ documentation:
     content: <b>API for interacting with an inventory of physical resources</b>
 
 schemas:
- - item: !include schema/item.json
- - items: !include schema/items.json
- - instance: !include schema/instance.json
- - instances: !include schema/instances.json
- - context: !include schema/instance_context.json
- - ingest-status: !include schema/ingest_status.json
+ - item: !include item.json
+ - items: !include items.json
+ - instance: !include instance.json
+ - instances: !include instances.json
+ - context: !include instance_context.json
+ - ingest-status: !include ingest_status.json
 
 traits:
- - secured: !include ../shared/traits/auth.raml
- - language: !include ../shared/traits/language.raml
- - pageable: !include ../shared/traits/pageable.raml
- - searchable: !include ../shared/traits/searchable.raml
+ - secured: !include raml-util/traits/auth.raml
+ - language: !include raml-util/traits/language.raml
+ - pageable: !include raml-util/traits/pageable.raml
+ - searchable: !include raml-util/traits/searchable.raml
 
 resourceTypes:
- - collection: !include ../shared/rtypes/collection.raml
- - collection-item: !include ../shared/rtypes/item-collection.raml
+ - collection: !include raml-util/rtypes/collection.raml
+ - collection-item: !include raml-util/rtypes/item-collection.raml
 
 /inventory:
   /items:
