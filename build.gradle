@@ -44,7 +44,6 @@ test {
   exclude '**/api/**Examples.class'
 }
 
-import org.apache.tools.ant.filters.ReplaceTokens
 task generateDescriptors(type: Copy) {
   from 'descriptors'
   into 'build'
