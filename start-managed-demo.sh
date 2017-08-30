@@ -9,6 +9,7 @@ curl -w '\n' -X GET -D -   \
 
 echo "Building Inventory"
 
+gradle generateDescriptors
 gradle -q fatJar || exit 1
 
 echo "Creating Tenant"

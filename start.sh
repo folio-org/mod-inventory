@@ -5,7 +5,7 @@ storage_type=${2:-okapi}
 storage_location=${3:-''}
 inventory_root_address=${4:-http://localhost:9403/inventory}
 
-gradle fatJar
+gradle generateDescriptors fatJar
 
 rm output.log
 

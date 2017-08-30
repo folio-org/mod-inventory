@@ -25,6 +25,8 @@ curl -w '\n' -X POST -D - \
      -d "${activate_json}"  \
      "${okapi_proxy_address}/_/proxy/tenants/${tenant_id}/modules"
 
+gradle generateDescriptors
+
 echo "Register inventory module"
 ./register.sh ${inventory_direct_address} ${inventory_instance_id} ${tenant_id}
 

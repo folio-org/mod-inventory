@@ -10,4 +10,4 @@ gradle clean test
 
 ./test-via-okapi.sh
 
-gradle fatJar
+gradle generateDescriptors fatJar
