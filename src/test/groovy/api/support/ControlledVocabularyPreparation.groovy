@@ -40,7 +40,7 @@ class ControlledVocabularyPreparation {
 
     def existingTerms = JsonArrayHelper.toList(response.json.getJsonArray(this.collectionWrapperProperty))
 
-    if (existingTerms.stream().noneMatch({ it.getString(name).equals(name) })) {
+    if (existingTerms.stream().noneMatch({ it.getString("name").equals(name) })) {
       def vocabularyEntryRequest = new JsonObject().put("name", name);
 
       def postCompleted = new CompletableFuture<Response>()
@@ -55,7 +55,7 @@ class ControlledVocabularyPreparation {
       postResponse.json.getString("id")
     } else {
       existingTerms.stream()
-        .filter({ it.getString(name).equals(name) })
+        .filter({ it.getString("name").equals(name) })
         .findFirst().get().getString("id")
     }
   }
