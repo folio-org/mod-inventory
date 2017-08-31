@@ -1,8 +1,8 @@
 package org.folio.inventory.support.http.client;
 
 import io.vertx.core.json.JsonObject;
-import io.vertx.groovy.core.buffer.Buffer;
-import io.vertx.groovy.core.http.HttpClientResponse;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpClientResponse;
 
 import static io.vertx.core.http.HttpHeaders.CONTENT_TYPE;
 

@@ -1,7 +1,7 @@
 package org.folio.inventory.support.http.client;
 
 import io.vertx.core.Handler;
-import io.vertx.groovy.core.http.HttpClientResponse;
+import io.vertx.core.http.HttpClientResponse;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;

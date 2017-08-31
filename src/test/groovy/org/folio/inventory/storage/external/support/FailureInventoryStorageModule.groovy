@@ -1,30 +1,30 @@
 package org.folio.inventory.storage.external.support
 
+import io.vertx.core.AbstractVerticle
 import io.vertx.core.Future
-import io.vertx.groovy.core.http.HttpServer
-import io.vertx.groovy.ext.web.Router
-import io.vertx.groovy.ext.web.RoutingContext
-import io.vertx.lang.groovy.GroovyVerticle
+import io.vertx.core.http.HttpServer
+import io.vertx.ext.web.Router
+import io.vertx.ext.web.RoutingContext
 import org.folio.inventory.common.WebRequestDiagnostics
 import org.folio.inventory.common.api.response.ClientErrorResponse
 import org.folio.inventory.common.api.response.ServerErrorResponse
 
-class FailureInventoryStorageModule extends GroovyVerticle {
+class FailureInventoryStorageModule extends AbstractVerticle {
   private static final int PORT_TO_USE = 9493
   private static final String address = "http://localhost:${PORT_TO_USE}"
 
   private HttpServer server;
 
-  static def String getServerErrorAddress() {
+  static String getServerErrorAddress() {
     address + "/server-error"
   }
 
-  static def String getBadRequestAddress() {
+  static String getBadRequestAddress() {
     address + "/bad-request"
   }
 
   @Override
-  public void start(Future deployed) {
+  void start(Future deployed) {
     server = vertx.createHttpServer()
 
     def router = Router.router(vertx)

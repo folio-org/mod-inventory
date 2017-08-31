@@ -1,15 +1,16 @@
 package org.folio.inventory.common.api.request
 
-import io.vertx.groovy.ext.web.RoutingContext
+import io.vertx.core.json.JsonObject
+import io.vertx.ext.web.RoutingContext
 
 class VertxBodyParser {
-  def toMap(RoutingContext routingContext) {
+  Map toMap(RoutingContext routingContext) {
     println("Received Body: ${routingContext.bodyAsString}")
 
     if (hasBody(routingContext)) {
-      routingContext.getBodyAsJson()
+      routingContext.getBodyAsJson().map
     } else {
-      new HashMap<String, Object>()
+      new JsonObject().map
     }
   }
 

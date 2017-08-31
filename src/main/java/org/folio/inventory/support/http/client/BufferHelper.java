@@ -1,6 +1,6 @@
 package org.folio.inventory.support.http.client;
 
-import io.vertx.groovy.core.buffer.Buffer;
+import io.vertx.core.buffer.Buffer;
 
 public class BufferHelper {
   public static String stringFromBuffer(Buffer buffer) {

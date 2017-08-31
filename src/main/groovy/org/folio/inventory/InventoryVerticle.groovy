@@ -1,10 +1,9 @@
 package org.folio.inventory
 
+import io.vertx.core.AbstractVerticle
 import io.vertx.core.Future
-import io.vertx.groovy.core.Vertx
-import io.vertx.groovy.core.http.HttpServer
-import io.vertx.groovy.ext.web.Router
-import io.vertx.lang.groovy.GroovyVerticle
+import io.vertx.core.http.HttpServer
+import io.vertx.ext.web.Router
 import org.folio.inventory.common.WebRequestDiagnostics
 import org.folio.inventory.domain.ingest.IngestMessageProcessor
 import org.folio.inventory.resources.Instances
@@ -12,40 +11,17 @@ import org.folio.inventory.resources.Items
 import org.folio.inventory.resources.ingest.ModsIngestion
 import org.folio.inventory.storage.Storage
 
-import java.util.concurrent.CompletableFuture
+class InventoryVerticle extends AbstractVerticle {
 
-public class InventoryVerticle extends GroovyVerticle {
-
-  private HttpServer server;
-
-  public static void deploy(Vertx vertx, Map config, CompletableFuture deployed) {
-    def options = ["config": config, "worker": true]
-
-    vertx.deployVerticle("groovy:org.folio.inventory.InventoryVerticle", options, { res ->
-      if (res.succeeded()) {
-        deployed.complete(null);
-      } else {
-        deployed.completeExceptionally(res.cause());
-      }
-    });
-  }
-
-  public static CompletableFuture<Void> deploy(Vertx vertx, Map config) {
-    def deployed = new CompletableFuture()
-
-    deploy(vertx, config, deployed)
-
-    deployed
-  }
+  private HttpServer server
 
   @Override
-  public void start(Future started) {
-
+  void start(Future started) {
     def router = Router.router(vertx)
 
     server = vertx.createHttpServer()
 
-    def config = vertx.getOrCreateContext().config()
+    Map<String, Object> config = vertx.getOrCreateContext().config().map
 
     println("Received Config")
     config.each { println("${it.key}:${it.value}") }
@@ -69,12 +45,11 @@ public class InventoryVerticle extends GroovyVerticle {
       }
     }
 
-    server.requestHandler(router.&accept)
-      .listen(config.port, onHttpServerStart)
+    server.requestHandler(router.&accept).listen(config.port, onHttpServerStart)
   }
 
   @Override
-  public void stop(Future stopped) {
+  void stop(Future stopped) {
     println "Stopping inventory module"
     server.close({ result ->
       if (result.succeeded()) {
@@ -83,6 +58,6 @@ public class InventoryVerticle extends GroovyVerticle {
       } else {
         stopped.fail(result.cause());
       }
-    });
+    })
   }
 }

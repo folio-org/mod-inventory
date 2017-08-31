@@ -5,8 +5,8 @@ import io.vertx.core.http.HttpMethod
 import io.vertx.core.json.Json
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
-import io.vertx.groovy.core.Vertx
-import io.vertx.groovy.core.http.HttpClientResponse
+import io.vertx.core.Vertx
+import io.vertx.core.http.HttpClientResponse
 import org.folio.inventory.common.api.request.PagingParameters
 import org.folio.inventory.common.domain.Failure
 import org.folio.inventory.common.domain.Success

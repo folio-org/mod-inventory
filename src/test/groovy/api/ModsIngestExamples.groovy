@@ -18,6 +18,7 @@ import static io.restassured.RestAssured.given
 class ModsIngestExamples extends Specification {
   private final OkapiHttpClient okapiClient = ApiTestSuite.createOkapiHttpClient()
 
+
   def setup() {
     def preparation = new Preparation(okapiClient)
     preparation.deleteInstances()

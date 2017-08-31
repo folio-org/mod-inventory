@@ -1,21 +1,23 @@
 package org.folio.inventory.storage.external.support
 
+import io.vertx.core.AbstractVerticle
 import io.vertx.core.Future
 import io.vertx.core.http.HttpMethod
+import io.vertx.core.http.HttpServer
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
-import io.vertx.groovy.core.http.HttpServer
-import io.vertx.groovy.ext.web.Router
-import io.vertx.groovy.ext.web.RoutingContext
-import io.vertx.groovy.ext.web.handler.BodyHandler
-import io.vertx.lang.groovy.GroovyVerticle
+import io.vertx.ext.web.Router
+import io.vertx.ext.web.RoutingContext
+import io.vertx.ext.web.handler.BodyHandler
 import org.folio.inventory.common.WebContext
 import org.folio.inventory.common.WebRequestDiagnostics
 import org.folio.inventory.common.api.response.ClientErrorResponse
 import org.folio.inventory.common.api.response.JsonResponse
 import org.folio.inventory.common.api.response.SuccessResponse
 
-class FakeInventoryStorageModule extends GroovyVerticle {
+import java.util.stream.Collectors
+
+class FakeInventoryStorageModule extends AbstractVerticle {
   private static final int PORT_TO_USE = 9492
   private static final String address = "http://localhost:${PORT_TO_USE}"
 
@@ -34,9 +36,20 @@ class FakeInventoryStorageModule extends GroovyVerticle {
   }
 
   @Override
-  public void start(Future deployed) {
+  void start(Future deployed) {
     def expectedTenants = vertx.getOrCreateContext().config()
-      .get("expectedTenants", [])
+      .getJsonArray("expectedTenants")
+      .stream()
+      .map({
+        if(it instanceof String) {
+          (String)it
+        }
+        else {
+          null
+        }
+      })
+      .filter({ it != null })
+      .collect(Collectors.toList())
 
     server = vertx.createHttpServer()
 
@@ -109,7 +122,7 @@ class FakeInventoryStorageModule extends GroovyVerticle {
   }
 
   @Override
-  public void stop(Future stopped) {
+  void stop(Future stopped) {
     println "Stopping fake storage module"
     server.close({ result ->
       if (result.succeeded()) {
@@ -118,13 +131,11 @@ class FakeInventoryStorageModule extends GroovyVerticle {
       } else {
         stopped.fail(result.cause());
       }
-    });
+    })
   }
 
   private def createItem(RoutingContext routingContext) {
-    def body = getMapFromBody(routingContext)
-
-    def newItem = new JsonObject(body)
+    def newItem = getMapFromBody(routingContext)
 
     def id = newItem.getString("id")
 
@@ -137,9 +148,7 @@ class FakeInventoryStorageModule extends GroovyVerticle {
   }
 
   private def updateItem(RoutingContext routingContext) {
-    def body = getMapFromBody(routingContext)
-
-    def updatedItem = new JsonObject(body)
+    def updatedItem = getMapFromBody(routingContext)
 
     def id = routingContext.request().getParam("id")
 
@@ -217,9 +226,7 @@ class FakeInventoryStorageModule extends GroovyVerticle {
   }
 
   private def createInstance(RoutingContext routingContext) {
-    def body = getMapFromBody(routingContext)
-
-    def newItem = new JsonObject(body)
+    def newItem = getMapFromBody(routingContext)
 
     def id = newItem.getString("id")
 
@@ -254,9 +261,7 @@ class FakeInventoryStorageModule extends GroovyVerticle {
   }
 
   private def updateInstance(RoutingContext routingContext) {
-    def body = getMapFromBody(routingContext)
-
-    def updatedInstance = new JsonObject(body)
+    def updatedInstance = getMapFromBody(routingContext)
 
     def id = routingContext.request().getParam("id")
 
@@ -328,14 +333,14 @@ class FakeInventoryStorageModule extends GroovyVerticle {
     }
   }
 
-  private static def getMapFromBody(RoutingContext routingContext) {
+  private static JsonObject getMapFromBody(RoutingContext routingContext) {
     if (hasBody(routingContext)) {
 
       println("Body received by fake: ${routingContext.getBodyAsString()}")
 
       routingContext.getBodyAsJson()
     } else {
-      new HashMap<String, Object>()
+      new JsonObject()
     }
   }
 

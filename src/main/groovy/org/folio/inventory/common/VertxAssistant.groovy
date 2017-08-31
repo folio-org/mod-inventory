@@ -1,6 +1,8 @@
 package org.folio.inventory.common
 
-import io.vertx.groovy.core.Vertx
+import io.vertx.core.DeploymentOptions
+import io.vertx.core.Vertx
+import io.vertx.core.json.JsonObject
 
 import java.util.concurrent.CompletableFuture
 import java.util.function.Function
@@ -52,9 +54,9 @@ class VertxAssistant {
 
     def startTime = System.currentTimeMillis()
 
-    def options = [:]
+    def options = new DeploymentOptions()
 
-    options.config = config
+    options.config = new JsonObject(config)
     options.worker = true
 
     vertx.deployVerticle("groovy:" + verticleClass,
@@ -76,9 +78,9 @@ class VertxAssistant {
 
     def startTime = System.currentTimeMillis()
 
-    def options = [:]
+    def options = new DeploymentOptions()
 
-    options.config = config
+    options.config = new JsonObject(config)
     options.worker = true
 
     vertx.deployVerticle(verticleClass,

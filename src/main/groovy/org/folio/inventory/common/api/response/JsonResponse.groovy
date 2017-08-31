@@ -1,8 +1,8 @@
 package org.folio.inventory.common.api.response
 
 import io.vertx.core.json.Json
-import io.vertx.groovy.core.buffer.Buffer
-import io.vertx.groovy.core.http.HttpServerResponse
+import io.vertx.core.buffer.Buffer
+import io.vertx.core.http.HttpServerResponse
 
 class JsonResponse {
   static success(HttpServerResponse response, body) {

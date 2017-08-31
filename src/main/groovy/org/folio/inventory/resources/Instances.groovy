@@ -2,9 +2,9 @@ package org.folio.inventory.resources
 
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
-import io.vertx.groovy.ext.web.Router
-import io.vertx.groovy.ext.web.RoutingContext
-import io.vertx.groovy.ext.web.handler.BodyHandler
+import io.vertx.ext.web.Router
+import io.vertx.ext.web.RoutingContext
+import io.vertx.ext.web.handler.BodyHandler
 import org.folio.inventory.common.WebContext
 import org.folio.inventory.common.api.request.PagingParameters
 import org.folio.inventory.common.api.request.VertxBodyParser

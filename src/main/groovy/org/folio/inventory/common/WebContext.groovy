@@ -1,6 +1,6 @@
 package org.folio.inventory.common
 
-import io.vertx.groovy.ext.web.RoutingContext
+import io.vertx.ext.web.RoutingContext
 
 class WebContext implements Context {
   private final RoutingContext routingContext

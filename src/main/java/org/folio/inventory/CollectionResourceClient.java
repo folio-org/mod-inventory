@@ -1,7 +1,7 @@
 package org.folio.inventory;
 
 import io.vertx.core.Handler;
-import io.vertx.groovy.core.http.HttpClientResponse;
+import io.vertx.core.http.HttpClientResponse;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
 

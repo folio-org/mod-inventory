@@ -1,6 +1,6 @@
 package org.folio.inventory.common
 
-import io.vertx.groovy.core.MultiMap
+import io.vertx.core.MultiMap
 
 class MessagingContext implements Context {
 

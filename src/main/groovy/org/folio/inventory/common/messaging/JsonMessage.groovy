@@ -1,8 +1,9 @@
 package org.folio.inventory.common.messaging
 
+import io.vertx.core.Vertx
+import io.vertx.core.eventbus.DeliveryOptions
+import io.vertx.core.eventbus.EventBus
 import io.vertx.core.json.JsonObject
-import io.vertx.groovy.core.Vertx
-import io.vertx.groovy.core.eventbus.EventBus
 
 class JsonMessage {
   private final String address
@@ -20,9 +21,13 @@ class JsonMessage {
   }
 
   void send(EventBus eventBus) {
+    def options = new DeliveryOptions()
+
+    headers.each { options.addHeader(it.key, it.value) }
+
     eventBus.send(
       address,
       body,
-      ["headers" : headers ])
+      options)
   }
 }

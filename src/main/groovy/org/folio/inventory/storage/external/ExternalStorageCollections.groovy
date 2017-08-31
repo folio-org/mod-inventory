@@ -1,6 +1,6 @@
 package org.folio.inventory.storage.external
 
-import io.vertx.groovy.core.Vertx
+import io.vertx.core.Vertx
 import org.folio.inventory.domain.CollectionProvider
 import org.folio.inventory.domain.InstanceCollection
 import org.folio.inventory.domain.ItemCollection

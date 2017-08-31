@@ -2,9 +2,9 @@ package org.folio.inventory.support.http.client;
 
 import io.vertx.core.Handler;
 import io.vertx.core.json.Json;
-import io.vertx.groovy.core.http.HttpClient;
-import io.vertx.groovy.core.http.HttpClientRequest;
-import io.vertx.groovy.core.http.HttpClientResponse;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpClientRequest;
+import io.vertx.core.http.HttpClientResponse;
 
 import java.net.MalformedURLException;
 import java.net.URL;

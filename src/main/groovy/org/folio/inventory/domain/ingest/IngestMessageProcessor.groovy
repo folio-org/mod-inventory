@@ -1,7 +1,8 @@
 package org.folio.inventory.domain.ingest
 
-import io.vertx.groovy.core.eventbus.EventBus
-import io.vertx.groovy.core.eventbus.Message
+import io.vertx.core.eventbus.EventBus
+import io.vertx.core.eventbus.Message
+import io.vertx.core.json.JsonObject
 import org.folio.inventory.common.CollectAll
 import org.folio.inventory.common.MessagingContext
 import org.folio.inventory.common.domain.Failure
@@ -11,6 +12,7 @@ import org.folio.inventory.domain.Messages
 import org.folio.inventory.resources.ingest.IngestJob
 import org.folio.inventory.resources.ingest.IngestJobState
 import org.folio.inventory.storage.Storage
+import org.folio.inventory.support.JsonArrayHelper
 
 class IngestMessageProcessor {
   private final Storage storage
@@ -31,9 +33,11 @@ class IngestMessageProcessor {
     def allItems = new CollectAll<Item>()
     def allInstances = new CollectAll<Instance>()
 
-    def records = message.body().records
-    def materialTypes = message.body().materialTypes
-    def loanTypes = message.body().loanTypes
+    def body = ((JsonObject)message.body()).map
+
+    def records = JsonArrayHelper.toListOfMaps(body.records)
+    Map materialTypes = body.materialTypes.map
+    Map loanTypes = body.loanTypes.map
 
     def context = new MessagingContext(message.headers())
 
@@ -42,7 +46,7 @@ class IngestMessageProcessor {
 
     records.stream()
       .map({
-      new Instance(it.title, it.identifiers)
+      new Instance(it.title, JsonArrayHelper.toListOfMaps(it.identifiers))
     })
     .forEach({ instanceCollection.add(it, allInstances.receive(),
       { Failure failure -> println("Ingest Creation Failed: ${failure.reason}") })

@@ -1,6 +1,6 @@
 package org.folio.inventory.common.api.response
 
-import io.vertx.groovy.core.http.HttpServerResponse
+import io.vertx.core.http.HttpServerResponse
 
 class SuccessResponse {
   static noContent(HttpServerResponse response) {
