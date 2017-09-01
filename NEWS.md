@@ -1,5 +1,8 @@
 ## 5.1.1 Unreleased
 
+* Remove `module.items.enabled` and `inventory-storage.all` permissions from 
+`inventory.all` set, as part of moving permissions to UI modules (MODINV-23)
+
 ## 5.1.0 2017-08-03
 
 * MODINVSTOR-12 Searching and sorting on material type properties (e.g. materialType.name)
