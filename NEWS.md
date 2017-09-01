@@ -1,4 +1,4 @@
-## 5.1.1 Unreleased
+## 5.1.1 2017-09-01
 
 * Remove `module.items.enabled` and `inventory-storage.all` permissions from 
 `inventory.all` set, as part of moving permissions to UI modules (MODINV-23)
