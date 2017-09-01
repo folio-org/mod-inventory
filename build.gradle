@@ -3,7 +3,7 @@ apply plugin: 'application'
 
 mainClassName = "org.folio.inventory.Launcher"
 project.ext.artifactId = "inventory"
-version = "5.1.1"
+version = "5.1.2-SNAPSHOT"
 
 ext.sharedManifest = manifest {
   attributes(
