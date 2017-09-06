@@ -2,7 +2,7 @@ apply plugin: 'groovy'
 apply plugin: 'application'
 
 mainClassName = "org.folio.inventory.Launcher"
-project.ext.artifactId = "inventory"
+project.ext.artifactId = "mod-inventory"
 version = "5.1.2-SNAPSHOT"
 
 ext.sharedManifest = manifest {
@@ -90,7 +90,7 @@ task fatJar(type: Jar) {
   manifest = project.manifest {
     from sharedManifest
   }
-  archiveName 'inventory.jar'
+  archiveName 'mod-inventory.jar'
   from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
   with jar
 }
