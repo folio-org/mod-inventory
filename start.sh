@@ -16,7 +16,7 @@ echo "Inventory Root Address: ${inventory_root_address}"
 
 java -Dorg.folio.metadata.inventory.storage.type="${storage_type}" \
   -Dorg.folio.metadata.inventory.storage.location="${storage_location}" \
- -jar build/libs/inventory.jar 1>output.log 2>output.log &
+ -jar build/libs/mod-inventory.jar 1>output.log 2>output.log &
 
 printf 'Waiting for inventory module to start\n'
 

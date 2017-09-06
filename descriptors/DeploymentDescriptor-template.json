@@ -1,6 +1,6 @@
 {
   "srvcId" : "${artifactId}-${version}",
   "descriptor" : {
-    "exec" : "java -Dport=%p -jar ../mod-inventory/build/libs/inventory.jar"
+    "exec" : "java -Dport=%p -jar ../mod-inventory/build/libs/mod-inventory.jar"
   }
 }
