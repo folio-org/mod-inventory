@@ -1,7 +1,10 @@
 ## 5.1.2 Unreleased
 
+* Adds mod- prefix to names of the built artifacts (FOLIO-813)
+
 ## 5.1.1 2017-09-01
 
+* Generates Descriptors at build time from templates in ./descriptors (FOLIO-701)
 * Remove `module.items.enabled` and `inventory-storage.all` permissions from 
 `inventory.all` set, as part of moving permissions to UI modules (MODINV-23)
 
