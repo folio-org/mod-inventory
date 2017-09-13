@@ -21,6 +21,7 @@ This readme is intended to get these modules up and running. For further informa
 - Java 8 JDK
 - Apache Groovy 2.4.8
 - Gradle 3.3
+- Maven 3.5.0 (build is being migrated)
 - Node 6.4.0 (for API linting and documentation generation)
 - NPM 3.10.3 (for API linting and documentation generation)
 - Python 3.6.0 (for nice to have parts of deployment scripts, e.g. is used to remove environment variables from Okapi)
