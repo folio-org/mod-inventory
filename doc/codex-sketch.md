@@ -74,3 +74,8 @@ GET /codex/12345
 ```
 
 Result records may include information necessary to obtain the source record from the module that contributed it.
+
+## Metadata model
+
+There is existing documentatin for [the Codex metadata model](https://wiki.folio.org/pages/viewpage.action?pageId=1415393).
+
