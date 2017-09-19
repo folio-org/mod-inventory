@@ -77,5 +77,5 @@ Result records may include information necessary to obtain the source record fro
 
 ## Metadata model
 
-There is existing documentatin for [the Codex metadata model](https://wiki.folio.org/pages/viewpage.action?pageId=1415393).
+There is existing documentation for [the Codex metadata model](https://wiki.folio.org/pages/viewpage.action?pageId=1415393).
 
