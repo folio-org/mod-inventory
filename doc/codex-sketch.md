@@ -12,7 +12,7 @@ When a module such as Inventory accepts a new record, it can pass on a suitably 
 ```
 POST /codex
 {
-  "author": "J. R. R. Tolkein",
+  "author": "J. R. R. Tolkien",
   "title": "The Fellowship of the Ring",
   ...
 }
@@ -24,7 +24,7 @@ And when it accepts a modified version of an existing record, it can pass on a s
 ```
 PUT /codex/12345
 {
-  "author": "John Ronald Reuel Tolkein",
+  "author": "John Ronald Reuel Tolkien",
   "title": "The Fellowship of the Ring",
   ...
 }
@@ -46,7 +46,7 @@ GET /codex?query=author=(tolkien or lewis)
   "records": [
     {
       "id": "12345",
-      "author": "John Ronald Reuel Tolkein",
+      "author": "John Ronald Reuel Tolkien",
       "title": "The Fellowship of the Ring"
     },
     {
@@ -65,7 +65,7 @@ GET /codex/12345
 200 OK
 {
   "id": "12345",
-  "author": "John Ronald Reuel Tolkein",
+  "author": "John Ronald Reuel Tolkien",
   "title": "The Fellowship of the Ring",
   "date": "1954",
   "publisher": "George Allen & Unwin",
