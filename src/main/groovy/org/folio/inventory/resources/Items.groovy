@@ -172,10 +172,15 @@ class Items {
     storage.getItemCollection(context).findById(
       routingContext.request().getParam("id"),
       { Success itemResponse ->
-        print "Retrieved item with id ${itemResponse.result.id}\n"
+
+        println("Got response for item")
+
         def item = itemResponse.result
 
         if(item != null) {
+
+          println("Retrieved item with id ${itemResponse.result.id}")
+
           def materialTypeFuture = new CompletableFuture<Response>()
           def permanentLoanTypeFuture = new CompletableFuture<Response>()
           def temporaryLoanTypeFuture = new CompletableFuture<Response>()
@@ -183,7 +188,7 @@ class Items {
           def permanentLocationFuture = new CompletableFuture<Response>()
 
           def allFutures = new ArrayList<CompletableFuture<Response>>()
-          
+
           if(item?.materialTypeId != null) {
             allFutures.add(materialTypeFuture)
 
@@ -244,14 +249,14 @@ class Items {
             def foundTemporaryLocation = item?.temporaryLocationId != null &&
               temporaryLocationFuture.join().statusCode == 200 ?
               temporaryLocationFuture.join().json : null
-            
+
             print "Creating ItemRepresentation JSON\n"
-            
+
             try {
               def itemRep = new ItemRepresentation(relativeItemsPath()).toJson(
-                item, 
-                foundMaterialType, 
-                foundPermanentLoanType, 
+                item,
+                foundMaterialType,
+                foundPermanentLoanType,
                 foundTemporaryLoanType,
                 foundPermanentLocation,
                 foundTemporaryLocation,
@@ -306,7 +311,7 @@ class Items {
   private CollectionResourceClient createLocationsClient(
     RoutingContext routingContext,
     WebContext context) {
-    
+
     def client = new OkapiHttpClient(routingContext.vertx().createHttpClient(),
       new URL(context.okapiLocation), context.tenantId,
       context.token,
@@ -380,27 +385,34 @@ class Items {
     CompletableFuture<Void> allDoneFuture = CompletableFuture.allOf(*allFutures)
 
     allDoneFuture.thenAccept({ v ->
-      def materialTypeResponses = allMaterialTypeFutures.stream()
-        .map({ future -> future.join() })
-        .collect(Collectors.toList())
+      System.out.println("GET all items: all futures completed")
 
-      def loanTypeResponses = allLoanTypeFutures.stream()
-        .map({ future -> future.join() })
-        .collect(Collectors.toList())
+      try {
+        def materialTypeResponses = allMaterialTypeFutures.stream()
+          .map({ future -> future.join() })
+          .collect(Collectors.toList())
 
-      def foundMaterialTypes = materialTypeResponses.stream()
-        .filter({ it.getStatusCode() == 200 })
-        .map({ it.getJson() })
-        .collect(Collectors.toMap({ it.getString("id") }, { it }))
+        def loanTypeResponses = allLoanTypeFutures.stream()
+          .map({ future -> future.join() })
+          .collect(Collectors.toList())
 
-      def foundLoanTypes = loanTypeResponses.stream()
-        .filter({ it.getStatusCode() == 200 })
-        .map({ it.getJson() })
-        .collect(Collectors.toMap({ it.getString("id") }, { it }))
+        def foundMaterialTypes = materialTypeResponses.stream()
+          .filter({ it.getStatusCode() == 200 })
+          .map({ it.getJson() })
+          .collect(Collectors.toMap({ it.getString("id") }, { it }))
 
-      JsonResponse.success(routingContext.response(),
-        new ItemRepresentation(relativeItemsPath())
-          .toJson(wrappedItems, foundMaterialTypes, foundLoanTypes, context))
+        def foundLoanTypes = loanTypeResponses.stream()
+          .filter({ it.getStatusCode() == 200 })
+          .map({ it.getJson() })
+          .collect(Collectors.toMap({ it.getString("id") }, { it }))
+
+        JsonResponse.success(routingContext.response(),
+          new ItemRepresentation(relativeItemsPath())
+            .toJson(wrappedItems, foundMaterialTypes, foundLoanTypes, [:], context))
+      }
+      catch(Throwable e) {
+        ServerErrorResponse.internalError(routingContext.response(), e.toString())
+      }
     })
   }
 }

@@ -57,10 +57,10 @@ class ItemApiExamples extends Specification {
       assert postResponse.location != null
 
       def getCompleted = new CompletableFuture<Response>()
-			
+
 			print "Getting from ${postResponse.location}\n"
       okapiClient.get(postResponse.location, ResponseHandler.json(getCompleted))
-			
+
 			def Response getResponse
 			try {
 				getResponse = getCompleted.get(5, TimeUnit.SECONDS);
@@ -587,9 +587,9 @@ class ItemApiExamples extends Specification {
         hasStatus(it)
       }
 
-      firstPageItems.each {
-        hasLocation(it)
-      }
+//      firstPageItems.each {
+//        hasLocation(it)
+//      }
 
       secondPageItems.each {
         selfLinkRespectsWayResourceWasReached(it)
@@ -615,9 +615,9 @@ class ItemApiExamples extends Specification {
         hasStatus(it)
       }
 
-      secondPageItems.each {
-        hasLocation(it)
-      }
+//      secondPageItems.each {
+//        hasLocation(it)
+//      }
   }
 
   void "Can get all items with different permanent and temporary loan types"() {
@@ -740,9 +740,9 @@ class ItemApiExamples extends Specification {
         hasStatus(it)
       }
 
-      items.each {
-        hasLocation(it)
-      }
+//      items.each {
+//        hasLocation(it)
+//      }
   }
 
   void "Cannot create a second item with the same barcode"() {

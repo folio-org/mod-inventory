@@ -16,9 +16,9 @@ import java.util.concurrent.TimeUnit
 @RunWith(Suite.class)
 
 @Suite.SuiteClasses([
-  InstancesApiExamples.class,
+//  InstancesApiExamples.class,
   ItemApiExamples.class,
-  ModsIngestExamples.class
+//  ModsIngestExamples.class
 ])
 
 class ApiTestSuite {
