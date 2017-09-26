@@ -9,8 +9,8 @@ class Item {
   final String materialTypeId
   final String permanentLoanTypeId
   final String temporaryLoanTypeId
-  final String permanentLocation
-  final String temporaryLocation
+  final String permanentLocationId
+  final String temporaryLocationId
 
   Item(String id,
        String title,
@@ -18,8 +18,8 @@ class Item {
        String instanceId,
        String status,
        String materialTypeId,
-       String permanentLocation,
-       String temporaryLocation,
+       String permanentLocationId,
+       String temporaryLocationId,
        String permanentLoanTypeId,
        String temporaryLoanTypeId) {
 
@@ -29,22 +29,22 @@ class Item {
     this.instanceId = instanceId
     this.status = status
     this.materialTypeId = materialTypeId
-    this.permanentLocation = permanentLocation
-    this.temporaryLocation = temporaryLocation
+    this.permanentLocationId = permanentLocationId
+    this.temporaryLocationId = temporaryLocationId
     this.permanentLoanTypeId = permanentLoanTypeId
     this.temporaryLoanTypeId = temporaryLoanTypeId
   }
 
   Item copyWithNewId(String newId) {
     new Item(newId, this.title, this.barcode,
-      this.instanceId, this.status, this.materialTypeId, this.permanentLocation,
-      this.temporaryLocation, this.permanentLoanTypeId, this.temporaryLoanTypeId)
+      this.instanceId, this.status, this.materialTypeId, this.permanentLocationId,
+      this.temporaryLocationId, this.permanentLoanTypeId, this.temporaryLoanTypeId)
   }
 
   def changeStatus(String newStatus) {
     new Item(this.id, this.title, this.barcode,
-      this.instanceId, newStatus, this.materialTypeId, this.permanentLocation,
-      this.temporaryLocation, this.permanentLoanTypeId, this.temporaryLoanTypeId)
+      this.instanceId, newStatus, this.materialTypeId, this.permanentLocationId,
+      this.temporaryLocationId, this.permanentLoanTypeId, this.temporaryLoanTypeId)
   }
 
   @Override

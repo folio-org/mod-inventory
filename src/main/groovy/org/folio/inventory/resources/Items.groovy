@@ -167,18 +167,23 @@ class Items {
 
     def materialTypesClient = createMaterialTypesClient(routingContext, context)
     def loanTypesClient = createLoanTypesClient(routingContext, context)
+    def locationsClient = createLocationsClient(routingContext, context)
 
     storage.getItemCollection(context).findById(
       routingContext.request().getParam("id"),
       { Success itemResponse ->
+        print "Retrieved item with id ${itemResponse.result.id}\n"
         def item = itemResponse.result
 
         if(item != null) {
           def materialTypeFuture = new CompletableFuture<Response>()
           def permanentLoanTypeFuture = new CompletableFuture<Response>()
           def temporaryLoanTypeFuture = new CompletableFuture<Response>()
-          def allFutures = new ArrayList<CompletableFuture<Response>>()
+          def temporaryLocationFuture = new CompletableFuture<Response>()
+          def permanentLocationFuture = new CompletableFuture<Response>()
 
+          def allFutures = new ArrayList<CompletableFuture<Response>>()
+          
           if(item?.materialTypeId != null) {
             allFutures.add(materialTypeFuture)
 
@@ -200,14 +205,30 @@ class Items {
               { response -> temporaryLoanTypeFuture.complete(response) })
           }
 
+          if(item?.permanentLocationId != null) {
+						allFutures.add(permanentLocationFuture)
+						locationsClient.get(item?.permanentLocationId,
+						  { response -> permanentLocationFuture.complete(response) })
+          } else {
+            print "No permanentLocationId in item"
+          }
+
+          if(item?.temporaryLocationId != null) {
+            allFutures.add(temporaryLocationFuture)
+            locationsClient.get(item?.temporaryLocationId,
+              { response -> temporaryLocationFuture.complete(response) })
+          } else {
+            print "No temporaryLocationId in item"
+          }
+
           CompletableFuture<Void> allDoneFuture = CompletableFuture.allOf(*allFutures)
 
           allDoneFuture.thenAccept({ v ->
 
+
             def foundMaterialType = item?.materialTypeId != null &&
               materialTypeFuture.join().statusCode == 200 ?
               materialTypeFuture.join().json : null
-
             def foundPermanentLoanType = item?.permanentLoanTypeId != null &&
               permanentLoanTypeFuture.join().statusCode == 200 ?
               permanentLoanTypeFuture.join().json : null
@@ -216,10 +237,32 @@ class Items {
               temporaryLoanTypeFuture.join().statusCode == 200 ?
               temporaryLoanTypeFuture.join().json : null
 
-            JsonResponse.success(routingContext.response(),
-              new ItemRepresentation(relativeItemsPath()).toJson(item,
-                foundMaterialType, foundPermanentLoanType,
-                foundTemporaryLoanType, context))
+            def foundPermanentLocation = item?.permanentLocationId != null &&
+              permanentLocationFuture.join().statusCode == 200 ?
+              permanentLocationFuture.join().json : null
+
+            def foundTemporaryLocation = item?.temporaryLocationId != null &&
+              temporaryLocationFuture.join().statusCode == 200 ?
+              temporaryLocationFuture.join().json : null
+            
+            print "Creating ItemRepresentation JSON\n"
+            
+            try {
+              def itemRep = new ItemRepresentation(relativeItemsPath()).toJson(
+                item, 
+                foundMaterialType, 
+                foundPermanentLoanType, 
+                foundTemporaryLoanType,
+                foundPermanentLocation,
+                foundTemporaryLocation,
+                context)
+
+              JsonResponse.success(routingContext.response(), itemRep)
+
+            } catch(Exception e) {
+              ServerErrorResponse.internalError(routingContext.response(),
+                "Error creating Item Representation: ${e.getLocalizedMessage()}")
+            }
           })
         }
         else {
@@ -260,6 +303,22 @@ class Items {
       new URL(context.okapiLocation + "/loan-types"))
   }
 
+  private CollectionResourceClient createLocationsClient(
+    RoutingContext routingContext,
+    WebContext context) {
+    
+    def client = new OkapiHttpClient(routingContext.vertx().createHttpClient(),
+      new URL(context.okapiLocation), context.tenantId,
+      context.token,
+      {
+        ServerErrorResponse.internalError(routingContext.response(),
+          "Fail to retrieve locations: ${it}")
+      })
+
+    new CollectionResourceClient(client,
+      new URL(context.okapiLocation + "/shelf-locations"))
+  }
+
 
   private static String relativeItemsPath() {
     "/inventory/items"
@@ -268,7 +327,7 @@ class Items {
   private Item requestToItem(Map<String, Object> itemRequest) {
     new Item(itemRequest.id, itemRequest.title,
       itemRequest.barcode, itemRequest.instanceId, itemRequest?.status?.name,
-      itemRequest?.materialType?.id, itemRequest?.location?.name,
+      itemRequest?.materialType?.id, itemRequest?.permanentLocation?.id, itemRequest?.temporaryLocation?.id,
       itemRequest?.permanentLoanType?.id, itemRequest?.temporaryLoanType?.id)
   }
 

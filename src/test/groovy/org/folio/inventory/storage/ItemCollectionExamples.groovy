@@ -17,6 +17,9 @@ abstract class ItemCollectionExamples {
 
   private final String bookMaterialTypeId = UUID.randomUUID().toString()
   private final String canCirculateLoanTypeId = UUID.randomUUID().toString()
+  
+  private final String mainLibraryLocationId = UUID.randomUUID().toString()
+  private final String annexLibraryLocationId = UUID.randomUUID().toString()
 
   private static final String firstTenantId = "test_tenant_1"
   private static final String secondTenantId = "test_tenant_2"
@@ -96,7 +99,8 @@ abstract class ItemCollectionExamples {
     assert smallAngry.status == "Available"
     assert smallAngry.materialTypeId == "${bookMaterialTypeId}"
     assert smallAngry.permanentLoanTypeId == "${canCirculateLoanTypeId}"
-    assert smallAngry.location == "Main Library"
+    assert smallAngry.permanentLocationId == mainLibraryLocationId
+    assert smallAngry.temporaryLocationId == annexLibraryLocationId
 
     def nod = allItems.find({ it.title == "Nod" })
 
@@ -105,7 +109,8 @@ abstract class ItemCollectionExamples {
     assert nod.status == "Available"
     assert nod.materialTypeId == "${bookMaterialTypeId}"
     assert nod.permanentLoanTypeId == "${canCirculateLoanTypeId}"
-    assert nod.location == "Main Library"
+    assert nod.permanentLocationId == mainLibraryLocationId
+    assert nod.temporaryLocationId == annexLibraryLocationId
 
     def uprooted = allItems.find({ it.title == "Uprooted"})
 
@@ -114,7 +119,9 @@ abstract class ItemCollectionExamples {
     assert uprooted.status == "Available"
     assert uprooted.materialTypeId == "${bookMaterialTypeId}"
     assert uprooted.permanentLoanTypeId == "${canCirculateLoanTypeId}"
-    assert uprooted.location == "Main Library"
+    assert uprooted.permanentLocationId == mainLibraryLocationId
+    assert uprooted.temporaryLocationId == annexLibraryLocationId
+
   }
 
   @Test
@@ -163,7 +170,8 @@ abstract class ItemCollectionExamples {
     assert updated.id == added.id
     assert updated.title == added.title
     assert updated.barcode == added.barcode
-    assert updated.location == added.location
+    assert updated.permanentLocationId == added.permanentLocationId
+    assert updated.temporaryLocationId == added.temporaryLocationId
     assert updated.materialTypeId == added.materialTypeId
     assert updated.permanentLoanTypeId == added.permanentLoanTypeId
     assert updated.status == "Checked Out"
@@ -372,7 +380,8 @@ abstract class ItemCollectionExamples {
     assert foundItem.status == "Available"
     assert foundItem.materialTypeId == "${bookMaterialTypeId}"
     assert foundItem.permanentLoanTypeId == "${canCirculateLoanTypeId}"
-    assert foundItem.location == "Main Library"
+    assert foundItem.permanentLocationId == mainLibraryLocationId
+    assert foundItem.temporaryLocationId == annexLibraryLocationId
 
     assert otherFoundItem.title == "Nod"
     assert otherFoundItem.instanceId == nod.instanceId
@@ -380,7 +389,8 @@ abstract class ItemCollectionExamples {
     assert otherFoundItem.status == "Available"
     assert otherFoundItem.materialTypeId == "${bookMaterialTypeId}"
     assert otherFoundItem.permanentLoanTypeId == "${canCirculateLoanTypeId}"
-    assert otherFoundItem.location == "Main Library"
+    assert otherFoundItem.permanentLocationId == mainLibraryLocationId
+    assert otherFoundItem.temporaryLocationId == annexLibraryLocationId
   }
 
   private void addSomeExamples(ItemCollection itemCollection) {
@@ -404,30 +414,30 @@ abstract class ItemCollectionExamples {
   private Item smallAngryPlanet() {
     new Item(null, "Long Way to a Small Angry Planet", "036000291452",
       UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
-      "Main Library", canCirculateLoanTypeId, null)
+      mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null)
   }
 
   private Item nod() {
     new Item(null, "Nod", "565578437802",
       UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
-      "Main Library", canCirculateLoanTypeId, null)
+      mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null)
   }
 
   private Item uprooted() {
     new Item(null, "Uprooted", "657670342075",
       UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
-      "Main Library", canCirculateLoanTypeId, null)
+      mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null)
   }
 
   private Item temeraire() {
     new Item(null, "Temeraire", "232142443432",
       UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
-      "Main Library", canCirculateLoanTypeId, null)
+      mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null)
   }
 
   private Item interestingTimes() {
     new Item(null, "Interesting Times", "56454543534",
       UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
-      "Main Library", canCirculateLoanTypeId, null)
+      mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null)
   }
 }

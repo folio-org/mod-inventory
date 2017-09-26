@@ -17,6 +17,8 @@ class ItemRepresentation {
     JsonObject materialType,
     JsonObject permanentLoanType,
     JsonObject temporaryLoanType,
+    JsonObject permanentLocation,
+    JsonObject temporaryLocation,
     WebContext context) {
 
     def representation = toJson(item, context)
@@ -34,6 +36,16 @@ class ItemRepresentation {
     if(temporaryLoanType != null) {
       representation.getJsonObject("temporaryLoanType")
         .put("name", temporaryLoanType.getString("name"))
+    }
+
+    if(permanentLocation != null) {
+      representation.getJsonObject("permanentLocation")
+        .put("name", permanentLocation.getString("name"))
+    }
+
+    if(temporaryLocation != null) {
+      representation.getJsonObject("temporaryLocation")
+        .put("name", temporaryLocation.getString("name"))
     }
 
     representation
@@ -60,10 +72,11 @@ class ItemRepresentation {
     includeReferenceIfPresent(representation, "temporaryLoanType",
       item.temporaryLoanTypeId)
 
-    if(item.location != null) {
-      representation.put("location",
-        new JsonObject().put("name", item.location))
-    }
+    includeReferenceIfPresent(representation, "permanentLocation",
+      item.permanentLocationId)
+
+    includeReferenceIfPresent(representation, "temporaryLocation",
+      item.temporaryLocationId)
 
     representation.put('links',
       ['self': context.absoluteUrl(
@@ -76,6 +89,7 @@ class ItemRepresentation {
     Map wrappedItems,
     Map<String, JsonObject> materialTypes,
     Map<String, JsonObject> loanTypes,
+    Map<String, JsonObject> locations,
     WebContext context) {
 
     def representation = new JsonObject()
@@ -87,8 +101,10 @@ class ItemRepresentation {
       def materialType = materialTypes.get(item?.materialTypeId)
       def permanentLoanType = loanTypes.get(item?.permanentLoanTypeId)
       def temporaryLoanType = loanTypes.get(item?.temporaryLoanTypeId)
-
-      results.add(toJson(item, materialType, permanentLoanType, temporaryLoanType, context))
+      def permanentLocation = locations.get(item?.permanentLocationId)
+      def temporaryLocation = locations.get(item?.temporaryLocationId)
+      results.add(toJson(item, materialType, permanentLoanType, temporaryLoanType, 
+        permanentLocation, temporaryLocation, context))
     }
 
     representation

@@ -13,6 +13,8 @@ import spock.lang.Specification
 
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.ExecutionException
+
 
 import static api.support.InstanceSamples.*
 
@@ -39,7 +41,8 @@ class ItemApiExamples extends Specification {
         .put("materialType", bookMaterialType())
         .put("permanentLoanType", canCirculateLoanType())
         .put("temporaryLoanType", courseReservesLoanType())
-        .put("location", new JsonObject().put("name", "Annex Library"))
+        .put("permanentLocation", permanentLocation())
+        .put("temporaryLocation", temporaryLocation())
 
     when:
       def postCompleted = new CompletableFuture<Response>()
@@ -54,10 +57,17 @@ class ItemApiExamples extends Specification {
       assert postResponse.location != null
 
       def getCompleted = new CompletableFuture<Response>()
-
+			
+			print "Getting from ${postResponse.location}\n"
       okapiClient.get(postResponse.location, ResponseHandler.json(getCompleted))
-
-      Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+			
+			def Response getResponse
+			try {
+				getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+			} catch(ExecutionException e) {
+				print "Error getting value from future: ${e}, ${e.getLocalizedMessage()}"
+				raise new Exception(e.getLocalizedMessage());
+			}
 
       assert getResponse.statusCode == 200
 
@@ -73,7 +83,8 @@ class ItemApiExamples extends Specification {
       assert createdItem.getJsonObject("permanentLoanType").getString("name") == "Can Circulate"
       assert createdItem.getJsonObject("temporaryLoanType").getString("id") == ApiTestSuite.courseReserveLoanType
       assert createdItem.getJsonObject("temporaryLoanType").getString("name") == "Course Reserves"
-      assert createdItem.getJsonObject("location").getString("name") == "Annex Library"
+      assert createdItem.getJsonObject("permanentLocation").getString("name") == "Main Library"
+      assert createdItem.getJsonObject("temporaryLocation").getString("name") == "Annex Library"
 
       selfLinkRespectsWayResourceWasReached(createdItem)
       selfLinkShouldBeReachable(createdItem)
@@ -134,7 +145,7 @@ class ItemApiExamples extends Specification {
         .put("status", new JsonObject().put("name", "Available"))
         .put("materialType", bookMaterialType())
         .put("permanentLoanType", canCirculateLoanType())
-        .put("location", new JsonObject().put("name", "Annex Library"))
+        .put("temporaryLocation", temporaryLocation())
 
     when:
       def postCompleted = new CompletableFuture<Response>()
@@ -167,7 +178,7 @@ class ItemApiExamples extends Specification {
       assert createdItem.getJsonObject("materialType").getString("name") == "Book"
       assert createdItem.getJsonObject("permanentLoanType").getString("id") == ApiTestSuite.canCirculateLoanType
       assert createdItem.getJsonObject("permanentLoanType").getString("name") == "Can Circulate"
-      assert createdItem.getJsonObject("location").getString("name") == "Annex Library"
+      assert createdItem.getJsonObject("temporaryLocation").getString("name") == "Annex Library"
 
       selfLinkRespectsWayResourceWasReached(createdItem)
       selfLinkShouldBeReachable(createdItem)
@@ -180,7 +191,7 @@ class ItemApiExamples extends Specification {
         .put("status", new JsonObject().put("name", "Available"))
         .put("materialType", bookMaterialType())
         .put("permanentLoanType", canCirculateLoanType())
-        .put("location", new JsonObject().put("name", "Annex Library"))
+				.put("temporaryLocation", temporaryLocation())
 
     when:
       def postCompleted = new CompletableFuture<Response>()
@@ -212,7 +223,7 @@ class ItemApiExamples extends Specification {
     def firstItemRequest = new JsonObject()
       .put("title", "Temeraire")
       .put("status", new JsonObject().put("name", "Available"))
-      .put("location", new JsonObject().put("name", "Main Library"))
+      .put("permanentLocation", permanentLocation())
       .put("materialType", bookMaterialType())
       .put("permanentLoanType", canCirculateLoanType())
 
@@ -223,7 +234,7 @@ class ItemApiExamples extends Specification {
       .put("status", new JsonObject().put("name", "Available"))
       .put("materialType", bookMaterialType())
       .put("permanentLoanType", canCirculateLoanType())
-      .put("location", new JsonObject().put("name", "Annex Library"))
+			.put("temporaryLocation", temporaryLocation())
 
     when:
       def postCompleted = new CompletableFuture<Response>()
@@ -261,8 +272,7 @@ class ItemApiExamples extends Specification {
         .put("barcode", "645398607547")
         .put("status", new JsonObject().put("name", "Available"))
         .put("permanentLoanType", canCirculateLoanType())
-        .put("location", new JsonObject().put("name", "Annex Library"))
-
+				.put("temporaryLocation", temporaryLocation())
     when:
       def postCompleted = new CompletableFuture<Response>()
 
@@ -286,7 +296,7 @@ class ItemApiExamples extends Specification {
         .put("barcode", "645398607547")
         .put("status", new JsonObject().put("name", "Available"))
         .put("materialType", bookMaterialType())
-        .put("location", new JsonObject().put("name", "Annex Library"))
+				.put("temporaryLocation", temporaryLocation())
 
     when:
       def postCompleted = new CompletableFuture<Response>()
@@ -312,7 +322,7 @@ class ItemApiExamples extends Specification {
         .put("status", new JsonObject().put("name", "Available"))
         .put("materialType", bookMaterialType())
         .put("permanentLoanType", canCirculateLoanType())
-        .put("location", new JsonObject().put("name", "Annex Library"))
+        .put("temporaryLocation", temporaryLocation())
 
     when:
       def postCompleted = new CompletableFuture<Response>()
@@ -345,7 +355,7 @@ class ItemApiExamples extends Specification {
       assert createdItem.getJsonObject("materialType").getString("name") == "Book"
       assert createdItem.getJsonObject("permanentLoanType").getString("id") == ApiTestSuite.canCirculateLoanType
       assert createdItem.getJsonObject("permanentLoanType").getString("name") == "Can Circulate"
-      assert createdItem.getJsonObject("location").getString("name") == "Annex Library"
+      assert createdItem.getJsonObject("temporaryLocation").getString("name") == "Annex Library"
 
       selfLinkRespectsWayResourceWasReached(createdItem)
       selfLinkShouldBeReachable(createdItem)
@@ -394,7 +404,7 @@ class ItemApiExamples extends Specification {
       assert updatedItem.getJsonObject("materialType").getString("name") == "Book"
       assert updatedItem.getJsonObject("permanentLoanType").getString("id") == ApiTestSuite.canCirculateLoanType
       assert updatedItem.getJsonObject("permanentLoanType").getString("name") == "Can Circulate"
-      assert updatedItem.getJsonObject("location").getString("name") == "Main Library"
+      assert updatedItem.getJsonObject("permanentLocation").getString("name") == "Main Library"
 
       selfLinkRespectsWayResourceWasReached(updatedItem)
       selfLinkShouldBeReachable(updatedItem)
@@ -410,7 +420,7 @@ class ItemApiExamples extends Specification {
         .put("status", new JsonObject().put("name", "Available"))
         .put("materialType", bookMaterialType())
         .put("permanentLoanType", canCirculateLoanType())
-        .put("location", new JsonObject().put("name", "Main Library"))
+				.put("temporaryLocation", temporaryLocation())
 
     when:
       def putCompleted = new CompletableFuture<Response>()
@@ -754,7 +764,7 @@ class ItemApiExamples extends Specification {
         .put("barcode", "645398607547")
         .put("status", new JsonObject().put("name", "Available"))
         .put("materialType", bookMaterialType())
-        .put("location", new JsonObject().put("name", "Main Library"))
+				.put("permanentLocation", permanentLocation())
 
       okapiClient.post(ApiRoot.items(), newItemRequest,
         ResponseHandler.any(createItemCompleted))
@@ -972,7 +982,8 @@ class ItemApiExamples extends Specification {
       .put("title", title)
       .put("instanceId", instanceId)
       .put("status", new JsonObject().put("name", "Available"))
-      .put("location", new JsonObject().put("name", "Main Library"))
+      .put("permanentLocation", permanentLocation())
+      .put("temporaryLocation", temporaryLocation())
 
     if(barcode != null) {
       newItemRequest.put("barcode", barcode)
@@ -1016,4 +1027,16 @@ class ItemApiExamples extends Specification {
       .put("id", "${ApiTestSuite.courseReserveLoanType}")
       .put("name", "Course Reserves")
   }
+
+  private JsonObject temporaryLocation() {
+		new JsonObject()
+			.put("id", "${ApiTestSuite.temporaryLocationId}")
+			.put("name", "Annex Library")
+  }
+
+  private JsonObject permanentLocation() {
+		new JsonObject()
+			.put("id", "${ApiTestSuite.permanentLocationId}")
+			.put("name", "Main Library")
+	}
 }
