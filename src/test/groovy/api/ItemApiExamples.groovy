@@ -587,9 +587,13 @@ class ItemApiExamples extends Specification {
         hasStatus(it)
       }
 
-//      firstPageItems.each {
-//        hasLocation(it)
-//      }
+      firstPageItems.each {
+        hasConsistentPermanentLocation(it)
+      }
+
+      firstPageItems.each {
+        hasConsistentTemporaryLocation(it)
+      }
 
       secondPageItems.each {
         selfLinkRespectsWayResourceWasReached(it)
@@ -615,9 +619,13 @@ class ItemApiExamples extends Specification {
         hasStatus(it)
       }
 
-//      secondPageItems.each {
-//        hasLocation(it)
-//      }
+    secondPageItems.each {
+      hasConsistentPermanentLocation(it)
+    }
+
+    secondPageItems.each {
+      hasConsistentTemporaryLocation(it)
+    }
   }
 
   void "Can get all items with different permanent and temporary loan types"() {
@@ -668,6 +676,14 @@ class ItemApiExamples extends Specification {
 
       items.each {
         hasConsistentTemporaryLoanType(it)
+      }
+
+      items.each {
+        hasConsistentPermanentLocation(it)
+      }
+
+      items.each {
+        hasConsistentTemporaryLocation(it)
       }
   }
 
@@ -740,9 +756,13 @@ class ItemApiExamples extends Specification {
         hasStatus(it)
       }
 
-//      items.each {
-//        hasLocation(it)
-//      }
+      items.each {
+        hasConsistentPermanentLocation(it)
+      }
+
+      items.each {
+        hasConsistentTemporaryLocation(it)
+      }
   }
 
   void "Cannot create a second item with the same barcode"() {
@@ -958,8 +978,34 @@ class ItemApiExamples extends Specification {
     }
   }
 
-  private void hasLocation(JsonObject item) {
-    assert item.getJsonObject("location").getString("name") != null
+  private void hasConsistentPermanentLocation(JsonObject item) {
+    hasConsistentLocation(item.getJsonObject("permanentLocation"))
+  }
+
+  private void hasConsistentTemporaryLocation(JsonObject item) {
+    hasConsistentLocation(item.getJsonObject("temporaryLocation"))
+  }
+
+  private void hasConsistentLocation(JsonObject location) {
+    if(location == null) {
+      return
+    }
+
+    switch (location.getString("id")) {
+      case ApiTestSuite.mainLibraryLocation:
+        assert location.getString("id") == ApiTestSuite.mainLibraryLocation
+        assert location.getString("name") == "Main Library"
+        break
+
+      case ApiTestSuite.annexLocation:
+        assert location.getString("id") == ApiTestSuite.annexLocation
+        assert location.getString("name") == "Annex Library"
+        break
+
+      default:
+        assert location.getString("id") == null
+        assert location.getString("name") == null
+    }
   }
 
   private def createInstance(JsonObject newInstanceRequest) {
@@ -1030,13 +1076,13 @@ class ItemApiExamples extends Specification {
 
   private JsonObject temporaryLocation() {
 		new JsonObject()
-			.put("id", "${ApiTestSuite.temporaryLocationId}")
+			.put("id", "${ApiTestSuite.annexLocationId}")
 			.put("name", "Annex Library")
   }
 
   private JsonObject permanentLocation() {
 		new JsonObject()
-			.put("id", "${ApiTestSuite.permanentLocationId}")
+			.put("id", "${ApiTestSuite.mainLibraryLocationId}")
 			.put("name", "Main Library")
 	}
 }

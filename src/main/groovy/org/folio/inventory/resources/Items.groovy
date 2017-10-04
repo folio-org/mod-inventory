@@ -343,9 +343,11 @@ class Items {
 
     def materialTypesClient = createMaterialTypesClient(routingContext, context)
     def loanTypesClient = createLoanTypesClient(routingContext, context)
+    def locationsClient = createLocationsClient(routingContext, context)
 
     def allMaterialTypeFutures = new ArrayList<CompletableFuture<Response>>()
     def allLoanTypeFutures = new ArrayList<CompletableFuture<Response>>()
+    def allLocationsFutures = new ArrayList<CompletableFuture<Response>>()
     def allFutures = new ArrayList<CompletableFuture<Response>>()
 
     def materialTypeIds = wrappedItems.items.stream()
@@ -382,6 +384,25 @@ class Items {
       loanTypesClient.get(id, { response -> newFuture.complete(response) })
     }
 
+    def permanentLocationIds = wrappedItems.items.stream()
+      .map({ it?.permanentLocationId })
+      .filter({ it != null })
+
+    def temporaryLocationIds = wrappedItems.items.stream()
+      .map({ it?.temporaryLocationId })
+      .filter({ it != null })
+
+    Stream.concat(permanentLocationIds, temporaryLocationIds)
+      .distinct()
+      .each { id ->
+      def newFuture = new CompletableFuture<>()
+
+      allFutures.add(newFuture)
+      allLocationsFutures.add(newFuture)
+
+      locationsClient.get(id, { response -> newFuture.complete(response) })
+    }
+
     CompletableFuture<Void> allDoneFuture = CompletableFuture.allOf(*allFutures)
 
     allDoneFuture.thenAccept({ v ->
@@ -396,6 +417,10 @@ class Items {
           .map({ future -> future.join() })
           .collect(Collectors.toList())
 
+        def locationResponses = allLocationsFutures.stream()
+          .map({ future -> future.join() })
+          .collect(Collectors.toList())
+
         def foundMaterialTypes = materialTypeResponses.stream()
           .filter({ it.getStatusCode() == 200 })
           .map({ it.getJson() })
@@ -406,9 +431,14 @@ class Items {
           .map({ it.getJson() })
           .collect(Collectors.toMap({ it.getString("id") }, { it }))
 
+        def foundLocations = locationResponses.stream()
+          .filter({ it.getStatusCode() == 200 })
+          .map({ it.getJson() })
+          .collect(Collectors.toMap({ it.getString("id") }, { it }))
+
         JsonResponse.success(routingContext.response(),
           new ItemRepresentation(relativeItemsPath())
-            .toJson(wrappedItems, foundMaterialTypes, foundLoanTypes, [:], context))
+            .toJson(wrappedItems, foundMaterialTypes, foundLoanTypes, foundLocations, context))
       }
       catch(Throwable e) {
         ServerErrorResponse.internalError(routingContext.response(), e.toString())

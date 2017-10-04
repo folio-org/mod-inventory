@@ -96,14 +96,13 @@ class ItemRepresentation {
 
     def results = new JsonArray()
 
-
     wrappedItems.items.each { item ->
       def materialType = materialTypes.get(item?.materialTypeId)
       def permanentLoanType = loanTypes.get(item?.permanentLoanTypeId)
       def temporaryLoanType = loanTypes.get(item?.temporaryLoanTypeId)
       def permanentLocation = locations.get(item?.permanentLocationId)
       def temporaryLocation = locations.get(item?.temporaryLocationId)
-      results.add(toJson(item, materialType, permanentLoanType, temporaryLoanType, 
+      results.add(toJson(item, materialType, permanentLoanType, temporaryLoanType,
         permanentLocation, temporaryLocation, context))
     }
 

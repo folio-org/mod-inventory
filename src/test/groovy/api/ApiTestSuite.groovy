@@ -16,9 +16,9 @@ import java.util.concurrent.TimeUnit
 @RunWith(Suite.class)
 
 @Suite.SuiteClasses([
-//  InstancesApiExamples.class,
+  InstancesApiExamples.class,
   ItemApiExamples.class,
-//  ModsIngestExamples.class
+  ModsIngestExamples.class
 ])
 
 class ApiTestSuite {
@@ -33,8 +33,8 @@ class ApiTestSuite {
   private static String canCirculateLoanTypeId
   private static String courseReserveLoanTypeId
 
-  private static String permanentLocationId
-  private static String temporaryLocationId
+  private static String mainLibraryLocationId
+  private static String annexLocationId
 
   private static VertxAssistant vertxAssistant = new VertxAssistant();
   private static String inventoryModuleDeploymentId
@@ -83,12 +83,12 @@ class ApiTestSuite {
     courseReserveLoanTypeId
   }
 
-  static String getPermanentLocation() {
-		permanentLocationId
+  static String getMainLibraryLocation() {
+		mainLibraryLocationId
   }
 
-  static String getTemporaryLocation() {
-		temporaryLocationId
+  static String getAnnexLocation() {
+		annexLocationId
 	}
 
   static OkapiHttpClient createOkapiHttpClient() {
@@ -205,7 +205,7 @@ class ApiTestSuite {
 		def locationPreparation = new ControlledVocabularyPreparation(client,
 			locationsUrl, "shelflocations")
 
-		permanentLocationId = locationPreparation.createOrReferenceTerm("Main Library")
-		temporaryLocationId = locationPreparation.createOrReferenceTerm("Annex Library")
+		mainLibraryLocationId = locationPreparation.createOrReferenceTerm("Main Library")
+		annexLocationId = locationPreparation.createOrReferenceTerm("Annex Library")
   }
 }

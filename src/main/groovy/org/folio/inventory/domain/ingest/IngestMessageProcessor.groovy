@@ -57,7 +57,7 @@ class IngestMessageProcessor {
         .map({ record ->
           new Item(null, record.title, record.barcode,
             instances.find({ it.title == record.title })?.id,
-            "Available", materialTypes.get("Book"), "Main Library",
+            "Available", materialTypes.get("Book"), null, null,
             loanTypes.get("Can Circulate"), null)
       })
       .forEach({ itemCollection.add(it, allItems.receive(),
