@@ -1,4 +1,4 @@
-## 5.1.2 Unreleased
+## 6.0.0 Unreleased
 
 * Adds mod- prefix to names of the built artifacts (FOLIO-813)
 
