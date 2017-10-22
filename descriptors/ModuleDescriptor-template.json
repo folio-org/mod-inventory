@@ -13,7 +13,8 @@
           "modulePermissions": [
             "inventory-storage.items.collection.get",
             "inventory-storage.material-types.item.get",
-            "inventory-storage.loan-types.item.get"
+            "inventory-storage.loan-types.item.get",
+            "inventory-storage.shelf-locations.item.get"
           ]
         }, {
           "methods": ["GET"],
@@ -22,7 +23,8 @@
           "modulePermissions": [
             "inventory-storage.items.item.get",
             "inventory-storage.material-types.item.get",
-            "inventory-storage.loan-types.item.get"
+            "inventory-storage.loan-types.item.get",
+            "inventory-storage.shelf-locations.item.get"
           ]
         }, {
           "methods": ["POST"],
@@ -81,7 +83,10 @@
           "modulePermissions": [
             "inventory-storage.items.item.post",
             "inventory-storage.instances.item.post",
-            "inventory-storage.instances.collection.get"]
+            "inventory-storage.instances.collection.get",
+            "inventory-storage.material-types.collection.get",
+            "inventory-storage.loan-types.collection.get",
+            "inventory-storage.shelf-locations.collection.get"]
         }, {
           "methods": ["GET"],
           "pathPattern": "/inventory/ingest/mods/status/{id}",
