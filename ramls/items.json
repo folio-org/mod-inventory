@@ -72,22 +72,39 @@
               "id"
             ]
           },
-          "location": {
+          "permanentLocation": {
             "type": "object",
             "properties": {
+              "id": {
+                "type": "string"
+              },
               "name": {
                 "type": "string"
               }
             },
             "required": [
-              "name"
+              "id"
+            ]
+          },
+          "temporaryLocation": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
             ]
           }
         },
         "required": [
-          "id",
           "title",
-          "instanceId"
+          "materialType",
+          "permanentLoanType"
         ]
       }
     },
