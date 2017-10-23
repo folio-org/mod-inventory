@@ -102,6 +102,7 @@ class ModsIngestExamples extends Specification {
     assert items.every({ it.getJsonObject("status").getString("name") == "Available" })
     assert items.every({ it.getJsonObject("materialType").getString("id") == ApiTestSuite.bookMaterialType })
     assert items.every({ it.getJsonObject("materialType").getString("name") == "Book" })
+    assert items.every({ it.getJsonObject("permanentLocation").getString("name") == "Main Library" })
 
     //TODO: Reinstate defaulting of location based upon lookup
 //    assert items.every({ it.getJsonObject("location").getString("name") == "Main Library" })

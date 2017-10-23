@@ -38,6 +38,7 @@ class IngestMessageProcessor {
     def records = JsonArrayHelper.toListOfMaps(body.records)
     Map materialTypes = body.materialTypes.map
     Map loanTypes = body.loanTypes.map
+    Map locations = body.locations.map
 
     def context = new MessagingContext(message.headers())
 
@@ -57,8 +58,8 @@ class IngestMessageProcessor {
         .map({ record ->
           new Item(null, record.title, record.barcode,
             instances.find({ it.title == record.title })?.id,
-            "Available", materialTypes.get("Book"), null, null,
-            loanTypes.get("Can Circulate"), null)
+            "Available", materialTypes.get("Book"), locations.get("Main Library"),
+            null, loanTypes.get("Can Circulate"), null)
       })
       .forEach({ itemCollection.add(it, allItems.receive(),
         { Failure failure -> println("Ingest Creation Failed: ${failure.reason}") })
