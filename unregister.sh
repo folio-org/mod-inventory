@@ -2,7 +2,7 @@
 
 instance_id=${1:-localhost-9403}
 tenant_id=${2:-demo_tenant}
-module_id=${3:-mod-inventory-5.1.2-SNAPSHOT}
+module_id=${3:-mod-inventory-6.0.0-SNAPSHOT}
 
 ./okapi-registration/unmanaged-deployment/unregister.sh \
   ${instance_id} \
