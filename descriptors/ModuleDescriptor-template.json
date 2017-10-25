@@ -30,7 +30,12 @@
           "methods": ["POST"],
           "pathPattern": "/inventory/items",
           "permissionsRequired": ["inventory.items.item.post"],
-          "modulePermissions": ["inventory-storage.items.item.post"]
+          "modulePermissions": [
+            "inventory-storage.items.item.post",
+            "inventory-storage.material-types.item.get",
+            "inventory-storage.loan-types.item.get",
+            "inventory-storage.shelf-locations.item.get"
+          ]
         }, {
           "methods": ["PUT"],
           "pathPattern": "/inventory/items/{id}",
