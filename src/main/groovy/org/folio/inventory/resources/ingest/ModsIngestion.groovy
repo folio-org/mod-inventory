@@ -100,17 +100,34 @@ class ModsIngestion {
         return
       }
 
-      def bookMaterialTypeId =
-        JsonArrayHelper.toList(materialTypeResponse.json.getJsonArray("mtypes"))
-          .first().getString("id")
+      def materialTypes = JsonArrayHelper.toList(
+        materialTypeResponse.json.getJsonArray("mtypes"))
 
-      def canCirculateLoanTypeId =
-        JsonArrayHelper.toList(loanTypeResponse.json.getJsonArray("loantypes"))
-          .first().getString("id")
+      if(materialTypes.size() != 1) {
+        ServerErrorResponse.internalError(routingContext.response(),
+          "Unable to find book material type: ${materialTypeResponse.body}")
 
-      def mainLibraryLocationId =
-        JsonArrayHelper.toList(locationsResponse.json.getJsonArray("shelflocations"))
-          .first().getString("id")
+        return
+      }
+
+      def loanTypes = JsonArrayHelper.toList(
+        loanTypeResponse.json.getJsonArray("loantypes"))
+
+      if(loanTypes.size() != 1) {
+        ServerErrorResponse.internalError(routingContext.response(),
+          "Unable to find can circulate loan type: ${loanTypeResponse.body}")
+
+        return
+      }
+
+      def locations = JsonArrayHelper.toList(
+        locationsResponse.json.getJsonArray("shelflocations"))
+
+      def bookMaterialTypeId = materialTypes.first().getString("id")
+      def canCirculateLoanTypeId = loanTypes.first().getString("id")
+
+      //location is optional so carry on gracefully
+      def mainLibraryLocationId = locations.size() == 1 ? locations.first().getString("id") : null;
 
       routingContext.vertx().fileSystem().readFile(uploadFileName(routingContext),
         { result ->
