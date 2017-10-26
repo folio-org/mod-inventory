@@ -291,7 +291,8 @@ class ExternalStorageModuleItemCollection
       itemFromServer.getString("instanceId"),
       itemFromServer?.getJsonObject("status")?.getString("name"),
       itemFromServer?.getString("materialTypeId"),
-      itemFromServer?.getJsonObject("location")?.getString("name"),
+      itemFromServer?.getString("permanentLocationId"),
+      itemFromServer?.getString("temporaryLocationId"),
       itemFromServer?.getString("permanentLoanTypeId"),
       itemFromServer?.getString("temporaryLoanTypeId"))
   }
@@ -309,8 +310,8 @@ class ExternalStorageModuleItemCollection
     includeIfPresent(itemToSend, "materialTypeId", item?.materialTypeId)
     includeIfPresent(itemToSend, "permanentLoanTypeId", item?.permanentLoanTypeId)
     includeIfPresent(itemToSend, "temporaryLoanTypeId", item?.temporaryLoanTypeId)
-
-    itemToSend.put("location", new JsonObject().put("name", item.location))
+		includeIfPresent(itemToSend, "permanentLocationId", item?.permanentLocationId)
+		includeIfPresent(itemToSend, "temporaryLocationId", item?.temporaryLocationId)
 
     itemToSend
   }

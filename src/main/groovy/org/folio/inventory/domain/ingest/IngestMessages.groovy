@@ -6,13 +6,21 @@ import org.folio.inventory.common.messaging.JsonMessage
 import org.folio.inventory.domain.Messages
 
 class IngestMessages {
-  static JsonMessage start(records, Map materialTypes, Map loanTypes, jobId, Context context) {
+  static JsonMessage start(
+    records,
+    Map materialTypes,
+    Map loanTypes,
+    Map locations,
+    jobId,
+    Context context) {
+
     new JsonMessage(Messages.START_INGEST.Address,
     headers(jobId, context),
     new JsonObject()
       .put("records", records)
       .put("materialTypes", materialTypes)
-      .put("loanTypes", loanTypes))
+      .put("loanTypes", loanTypes)
+      .put("locations", locations))
   }
 
   static completed(jobId, Context context) {

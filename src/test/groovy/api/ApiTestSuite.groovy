@@ -33,6 +33,9 @@ class ApiTestSuite {
   private static String canCirculateLoanTypeId
   private static String courseReserveLoanTypeId
 
+  private static String mainLibraryLocationId
+  private static String annexLocationId
+
   private static VertxAssistant vertxAssistant = new VertxAssistant();
   private static String inventoryModuleDeploymentId
   private static String fakeModulesDeploymentId
@@ -53,6 +56,7 @@ class ApiTestSuite {
     startFakeModules()
     createMaterialTypes()
     createLoanTypes()
+    createLocations()
     startInventoryVerticle()
   }
 
@@ -78,6 +82,14 @@ class ApiTestSuite {
   static String getCourseReserveLoanType() {
     courseReserveLoanTypeId
   }
+
+  static String getMainLibraryLocation() {
+		mainLibraryLocationId
+  }
+
+  static String getAnnexLocation() {
+		annexLocationId
+	}
 
   static OkapiHttpClient createOkapiHttpClient() {
     return new OkapiHttpClient(
@@ -183,5 +195,17 @@ class ApiTestSuite {
 
     canCirculateLoanTypeId = loanTypePreparation.createOrReferenceTerm("Can Circulate")
     courseReserveLoanTypeId = loanTypePreparation.createOrReferenceTerm("Course Reserves")
+  }
+
+  private static def createLocations() {
+		def client = createOkapiHttpClient()
+
+		def locationsUrl = new URL("${storageOkapiUrl()}/shelf-locations")
+
+		def locationPreparation = new ControlledVocabularyPreparation(client,
+			locationsUrl, "shelflocations")
+
+		mainLibraryLocationId = locationPreparation.createOrReferenceTerm("Main Library")
+		annexLocationId = locationPreparation.createOrReferenceTerm("Annex Library")
   }
 }

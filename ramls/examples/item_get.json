@@ -18,7 +18,8 @@
     "id": "74c25903-4019-4d8a-9360-5cb7761f44e5",
     "name": "Course Reserve"
   },
-  "location": {
+  "permanentLocation": {
+    "id": "d9cd0bed-1b49-4b5e-a7bd-064b8d177231",
     "name": "Main Library"
   }
 }

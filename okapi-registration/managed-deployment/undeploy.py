@@ -13,6 +13,8 @@ else:
 
 url = '{0}/_/discovery/modules/{1}'.format(okapi_address, module_id)
 
+print('Requesting ', url)
+
 instances_response = requests.get(url)
 
 if(instances_response.status_code == 200):

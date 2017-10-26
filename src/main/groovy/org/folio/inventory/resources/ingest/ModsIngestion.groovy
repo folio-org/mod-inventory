@@ -52,8 +52,12 @@ class ModsIngestion {
     def loanTypesClient = new CollectionResourceClient(client,
       new URL(context.okapiLocation + "/loan-types"))
 
+    def locationsClient = new CollectionResourceClient(client,
+      new URL(context.okapiLocation + "/shelf-locations"))
+
     def materialTypesRequestCompleted = new CompletableFuture<Response>()
     def loanTypesRequestCompleted = new CompletableFuture<Response>()
+    def locationsRequestCompleted = new CompletableFuture<Response>()
 
     materialTypesClient.getMany(
       "query=" + URLEncoder.encode("name=\"Book\"", "UTF-8"),
@@ -63,11 +67,17 @@ class ModsIngestion {
       "query=" + URLEncoder.encode("name=\"Can Circulate\"", "UTF-8"),
       { response -> loanTypesRequestCompleted.complete(response) })
 
-    CompletableFuture.allOf(materialTypesRequestCompleted, loanTypesRequestCompleted)
+    locationsClient.getMany(
+      "query=" + URLEncoder.encode("name=\"Main Library\"", "UTF-8"),
+      { response -> locationsRequestCompleted.complete(response) })
+
+    CompletableFuture.allOf(materialTypesRequestCompleted,
+      loanTypesRequestCompleted, locationsRequestCompleted)
       .thenAccept({ v ->
 
       def materialTypeResponse = materialTypesRequestCompleted.get()
       def loanTypeResponse = loanTypesRequestCompleted.get()
+      def locationsResponse = locationsRequestCompleted.get()
 
       if (materialTypeResponse.statusCode != 200) {
         ServerErrorResponse.internalError(routingContext.response(),
@@ -83,12 +93,23 @@ class ModsIngestion {
         return
       }
 
+      if (locationsResponse.statusCode != 200) {
+        ServerErrorResponse.internalError(routingContext.response(),
+          "Unable to retrieve locations: ${locationsResponse.statusCode}: ${locationsResponse.body}")
+
+        return
+      }
+
       def bookMaterialTypeId =
         JsonArrayHelper.toList(materialTypeResponse.json.getJsonArray("mtypes"))
           .first().getString("id")
 
       def canCirculateLoanTypeId =
         JsonArrayHelper.toList(loanTypeResponse.json.getJsonArray("loantypes"))
+          .first().getString("id")
+
+      def mainLibraryLocationId =
+        JsonArrayHelper.toList(locationsResponse.json.getJsonArray("shelflocations"))
           .first().getString("id")
 
       routingContext.vertx().fileSystem().readFile(uploadFileName(routingContext),
@@ -108,6 +129,7 @@ class ModsIngestion {
                 IngestMessages.start(convertedRecords,
                   ["Book": bookMaterialTypeId],
                   ["Can Circulate": canCirculateLoanTypeId],
+                  ["Main Library": mainLibraryLocationId],
                   success.result.id, context)
                   .send(routingContext.vertx())
 

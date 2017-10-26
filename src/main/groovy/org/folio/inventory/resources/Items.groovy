@@ -167,16 +167,26 @@ class Items {
 
     def materialTypesClient = createMaterialTypesClient(routingContext, context)
     def loanTypesClient = createLoanTypesClient(routingContext, context)
+    def locationsClient = createLocationsClient(routingContext, context)
 
     storage.getItemCollection(context).findById(
       routingContext.request().getParam("id"),
       { Success itemResponse ->
+
+        println("Got response for item")
+
         def item = itemResponse.result
 
         if(item != null) {
+
+          println("Retrieved item with id ${itemResponse.result.id}")
+
           def materialTypeFuture = new CompletableFuture<Response>()
           def permanentLoanTypeFuture = new CompletableFuture<Response>()
           def temporaryLoanTypeFuture = new CompletableFuture<Response>()
+          def temporaryLocationFuture = new CompletableFuture<Response>()
+          def permanentLocationFuture = new CompletableFuture<Response>()
+
           def allFutures = new ArrayList<CompletableFuture<Response>>()
 
           if(item?.materialTypeId != null) {
@@ -200,14 +210,30 @@ class Items {
               { response -> temporaryLoanTypeFuture.complete(response) })
           }
 
+          if(item?.permanentLocationId != null) {
+						allFutures.add(permanentLocationFuture)
+						locationsClient.get(item?.permanentLocationId,
+						  { response -> permanentLocationFuture.complete(response) })
+          } else {
+            print "No permanentLocationId in item"
+          }
+
+          if(item?.temporaryLocationId != null) {
+            allFutures.add(temporaryLocationFuture)
+            locationsClient.get(item?.temporaryLocationId,
+              { response -> temporaryLocationFuture.complete(response) })
+          } else {
+            print "No temporaryLocationId in item"
+          }
+
           CompletableFuture<Void> allDoneFuture = CompletableFuture.allOf(*allFutures)
 
           allDoneFuture.thenAccept({ v ->
 
+
             def foundMaterialType = item?.materialTypeId != null &&
               materialTypeFuture.join().statusCode == 200 ?
               materialTypeFuture.join().json : null
-
             def foundPermanentLoanType = item?.permanentLoanTypeId != null &&
               permanentLoanTypeFuture.join().statusCode == 200 ?
               permanentLoanTypeFuture.join().json : null
@@ -216,10 +242,32 @@ class Items {
               temporaryLoanTypeFuture.join().statusCode == 200 ?
               temporaryLoanTypeFuture.join().json : null
 
-            JsonResponse.success(routingContext.response(),
-              new ItemRepresentation(relativeItemsPath()).toJson(item,
-                foundMaterialType, foundPermanentLoanType,
-                foundTemporaryLoanType, context))
+            def foundPermanentLocation = item?.permanentLocationId != null &&
+              permanentLocationFuture.join().statusCode == 200 ?
+              permanentLocationFuture.join().json : null
+
+            def foundTemporaryLocation = item?.temporaryLocationId != null &&
+              temporaryLocationFuture.join().statusCode == 200 ?
+              temporaryLocationFuture.join().json : null
+
+            print "Creating ItemRepresentation JSON\n"
+
+            try {
+              def itemRep = new ItemRepresentation(relativeItemsPath()).toJson(
+                item,
+                foundMaterialType,
+                foundPermanentLoanType,
+                foundTemporaryLoanType,
+                foundPermanentLocation,
+                foundTemporaryLocation,
+                context)
+
+              JsonResponse.success(routingContext.response(), itemRep)
+
+            } catch(Exception e) {
+              ServerErrorResponse.internalError(routingContext.response(),
+                "Error creating Item Representation: ${e.getLocalizedMessage()}")
+            }
           })
         }
         else {
@@ -260,6 +308,22 @@ class Items {
       new URL(context.okapiLocation + "/loan-types"))
   }
 
+  private CollectionResourceClient createLocationsClient(
+    RoutingContext routingContext,
+    WebContext context) {
+
+    def client = new OkapiHttpClient(routingContext.vertx().createHttpClient(),
+      new URL(context.okapiLocation), context.tenantId,
+      context.token,
+      {
+        ServerErrorResponse.internalError(routingContext.response(),
+          "Fail to retrieve locations: ${it}")
+      })
+
+    new CollectionResourceClient(client,
+      new URL(context.okapiLocation + "/shelf-locations"))
+  }
+
 
   private static String relativeItemsPath() {
     "/inventory/items"
@@ -268,7 +332,7 @@ class Items {
   private Item requestToItem(Map<String, Object> itemRequest) {
     new Item(itemRequest.id, itemRequest.title,
       itemRequest.barcode, itemRequest.instanceId, itemRequest?.status?.name,
-      itemRequest?.materialType?.id, itemRequest?.location?.name,
+      itemRequest?.materialType?.id, itemRequest?.permanentLocation?.id, itemRequest?.temporaryLocation?.id,
       itemRequest?.permanentLoanType?.id, itemRequest?.temporaryLoanType?.id)
   }
 
@@ -279,9 +343,11 @@ class Items {
 
     def materialTypesClient = createMaterialTypesClient(routingContext, context)
     def loanTypesClient = createLoanTypesClient(routingContext, context)
+    def locationsClient = createLocationsClient(routingContext, context)
 
     def allMaterialTypeFutures = new ArrayList<CompletableFuture<Response>>()
     def allLoanTypeFutures = new ArrayList<CompletableFuture<Response>>()
+    def allLocationsFutures = new ArrayList<CompletableFuture<Response>>()
     def allFutures = new ArrayList<CompletableFuture<Response>>()
 
     def materialTypeIds = wrappedItems.items.stream()
@@ -318,30 +384,65 @@ class Items {
       loanTypesClient.get(id, { response -> newFuture.complete(response) })
     }
 
+    def permanentLocationIds = wrappedItems.items.stream()
+      .map({ it?.permanentLocationId })
+      .filter({ it != null })
+
+    def temporaryLocationIds = wrappedItems.items.stream()
+      .map({ it?.temporaryLocationId })
+      .filter({ it != null })
+
+    Stream.concat(permanentLocationIds, temporaryLocationIds)
+      .distinct()
+      .each { id ->
+      def newFuture = new CompletableFuture<>()
+
+      allFutures.add(newFuture)
+      allLocationsFutures.add(newFuture)
+
+      locationsClient.get(id, { response -> newFuture.complete(response) })
+    }
+
     CompletableFuture<Void> allDoneFuture = CompletableFuture.allOf(*allFutures)
 
     allDoneFuture.thenAccept({ v ->
-      def materialTypeResponses = allMaterialTypeFutures.stream()
-        .map({ future -> future.join() })
-        .collect(Collectors.toList())
+      System.out.println("GET all items: all futures completed")
 
-      def loanTypeResponses = allLoanTypeFutures.stream()
-        .map({ future -> future.join() })
-        .collect(Collectors.toList())
+      try {
+        def materialTypeResponses = allMaterialTypeFutures.stream()
+          .map({ future -> future.join() })
+          .collect(Collectors.toList())
 
-      def foundMaterialTypes = materialTypeResponses.stream()
-        .filter({ it.getStatusCode() == 200 })
-        .map({ it.getJson() })
-        .collect(Collectors.toMap({ it.getString("id") }, { it }))
+        def loanTypeResponses = allLoanTypeFutures.stream()
+          .map({ future -> future.join() })
+          .collect(Collectors.toList())
 
-      def foundLoanTypes = loanTypeResponses.stream()
-        .filter({ it.getStatusCode() == 200 })
-        .map({ it.getJson() })
-        .collect(Collectors.toMap({ it.getString("id") }, { it }))
+        def locationResponses = allLocationsFutures.stream()
+          .map({ future -> future.join() })
+          .collect(Collectors.toList())
 
-      JsonResponse.success(routingContext.response(),
-        new ItemRepresentation(relativeItemsPath())
-          .toJson(wrappedItems, foundMaterialTypes, foundLoanTypes, context))
+        def foundMaterialTypes = materialTypeResponses.stream()
+          .filter({ it.getStatusCode() == 200 })
+          .map({ it.getJson() })
+          .collect(Collectors.toMap({ it.getString("id") }, { it }))
+
+        def foundLoanTypes = loanTypeResponses.stream()
+          .filter({ it.getStatusCode() == 200 })
+          .map({ it.getJson() })
+          .collect(Collectors.toMap({ it.getString("id") }, { it }))
+
+        def foundLocations = locationResponses.stream()
+          .filter({ it.getStatusCode() == 200 })
+          .map({ it.getJson() })
+          .collect(Collectors.toMap({ it.getString("id") }, { it }))
+
+        JsonResponse.success(routingContext.response(),
+          new ItemRepresentation(relativeItemsPath())
+            .toJson(wrappedItems, foundMaterialTypes, foundLoanTypes, foundLocations, context))
+      }
+      catch(Throwable e) {
+        ServerErrorResponse.internalError(routingContext.response(), e.toString())
+      }
     })
   }
 }
