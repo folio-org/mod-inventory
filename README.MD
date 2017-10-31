@@ -53,35 +53,31 @@ In order to build an executable Jar (e.g. for Okapi to deploy), run `gradle fatJ
 
 ## Preparation
 
+### Running Okapi
+
+Make sure that [Okapi](https://github.com/folio-org/okapi) is running on its default port of 9130 (see the [guide](https://github.com/folio-org/okapi/blob/master/doc/guide.md) for instructions).
+
+A script for building and running Okapi is provided. Run `/start-okapi.sh` from the root of the Okapi source.
+
+As this runs Okapi using Postgres storage, some database preparation is required. This can be achieved by running `./create-okapi-database.sh` from the root of this repository.
+
+### Dependencies
+
 In order to activate the inventory module for a tenant, the dependencies described in the [Module Descriptor](ModuleDescriptor.json]) need to be fulfilled.
 
 The simplest way to fulfil these is to use the [inventory storage module](http://https://github.com/folio-org/mod-inventory-storage).
 
-## Sample Data
-
-Importing/ingesting of sample data is done via Okapi, so modules must be deployed and activated prior to importing.
-
-To load some sample data run `./import-sample-data.sh` from the root directory.
-
-## Running Okapi
-
-Make sure that [Okapi](https://github.com/folio-org/okapi) is running on its default port of 9130 (see the [guide](https://github.com/folio-org/okapi/blob/master/doc/guide.md) for instructions).
-
-A script for building and running Okapi is provided. Run `../mod-inventory/start-okapi.sh` from the root of the Okapi source.
-
-As this runs Okapi using Postgres storage, some database preparation is required. This can be achieved by running `./create-okapi-database.sh` from the root of this repository.
-
-## Managed by Okapi
+## Registration
 
 To register the module with deployment instructions and activate it for a demo tenant, run `./start-managed-demo.sh` from the root directory.
 
 To deactivate and unregister the module, run `./stop-managed-demo.sh` from the root directory.
 
-## Natively
+## Sample Data
 
-Run `./start.sh` from the root directory.
+Importing/ingesting of sample data is done via Okapi, so modules must be registered prior to importing.
 
-To stop them, run `./stop.sh` from the root directory.
+To load some sample data run `./import-sample-data.sh` from the root directory.
 
 # Making Requests
 

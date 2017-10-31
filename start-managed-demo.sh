@@ -9,8 +9,7 @@ curl -w '\n' -X GET -D -   \
 
 echo "Building Inventory"
 
-gradle generateDescriptors
-gradle -q fatJar || exit 1
+mvn clean package -q -Dmaven.test.skip=true || exit 1
 
 echo "Creating Tenant"
 ./create-tenant.sh
