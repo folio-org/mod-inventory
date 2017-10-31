@@ -100,10 +100,10 @@
       ]
     }
   ],
-  "requires" : [
+  "requires": [
     {
-    "id" : "item-storage",
-    "version" : "4.0"
+      "id": "item-storage",
+      "version": "4.0"
     },
     {
       "id": "instance-storage",
