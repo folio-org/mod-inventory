@@ -4,7 +4,11 @@
   "properties": {
     "status": {
       "type": "string",
-      "enum": ["Requested", "In Progress", "Completed"]
+      "enum": [
+        "Requested",
+        "In Progress",
+        "Completed"
+      ]
     }
   },
   "required": [
