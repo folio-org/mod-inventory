@@ -13,6 +13,9 @@ echo "Check if Okapi is contactable"
 curl -w '\n' -X GET -D -   \
      "${okapi_proxy_address}/_/env" || exit 1
 
+#remove log output
+rm test-via-okapi.log
+
 echo "Create ${tenant_id} tenant"
 ./create-tenant.sh ${tenant_id}
 
@@ -25,12 +28,16 @@ curl -w '\n' -X POST -D - \
      -d "${activate_json}"  \
      "${okapi_proxy_address}/_/proxy/tenants/${tenant_id}/modules"
 
-gradle generateDescriptors
+echo "Generate Descriptors from Templates"
+mvn clean compile -Dmaven.test.skip=true -q
 
 echo "Register inventory module"
 ./register.sh ${inventory_direct_address} ${inventory_instance_id} ${tenant_id}
 
-gradle -Dokapi.address="${okapi_address}" clean cleanTest testApiViaOkapi
+echo "Run tests via Okapi"
+#Potentially move to use integration test phase
+mvn -Dokapi.address="${okapi_proxy_address}" -Duse.okapi.initial.requests="true" \
+-Duse.okapi.storage.requests="true" clean test | tee -a test-via-okapi.log
 
 test_results=$?
 
@@ -47,12 +54,12 @@ echo "Need to manually remove test_tenant storage as Tenant API no longer invoke
 
 if [ $test_results != 0 ]; then
     echo '--------------------------------------'
-    echo 'BUILD FAILED'
+    echo 'BUILD FAILED (see test-via-okapi.log for more information)'
     echo '--------------------------------------'
     exit 1;
 else
     echo '--------------------------------------'
-    echo 'BUILD SUCCEEDED'
+    echo 'BUILD SUCCEEDED (see test-via-okapi.log for more information)'
     echo '--------------------------------------'
     exit 1;
 fi
