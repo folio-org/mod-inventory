@@ -6,7 +6,6 @@ buildMvn {
   
   doDocker = {
     buildJavaDocker {
-      dockerDir = 'okapi-core'
       overrideConfig  = 'no'
       publishMaster = 'yes'
     }
