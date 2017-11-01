@@ -17,7 +17,7 @@ abstract class ItemCollectionExamples {
 
   private final String bookMaterialTypeId = UUID.randomUUID().toString()
   private final String canCirculateLoanTypeId = UUID.randomUUID().toString()
-  
+
   private final String mainLibraryLocationId = UUID.randomUUID().toString()
   private final String annexLibraryLocationId = UUID.randomUUID().toString()
 

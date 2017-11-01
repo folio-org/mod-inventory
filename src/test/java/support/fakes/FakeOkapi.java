@@ -84,8 +84,8 @@ public class FakeOkapi extends AbstractVerticle {
   }
 
   private void registerFakeShelfLocationsModule(Router router) {
-  	registerFakeModule(router, "/shelf-locations", "shelflocations");
-	}
+    registerFakeModule(router, "/shelf-locations", "shelflocations");
+  }
 
   private void registerFakeModule(
     Router router,
