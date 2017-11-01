@@ -55,7 +55,7 @@ pipeline {
       }
 
       stage('Publish Test Results') {
-         steps { 
+         steps {
             junit 'build/test-results/**/*.xml'
          }
       }
@@ -122,7 +122,7 @@ pipeline {
          slackSend(color:'#FFFF00',
                    message: "Build unstable: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)")
 
-         mail bcc: '', body: "${env.BUILD_URL}", cc: '', from: 'folio-jenkins@indexdata.com', 
+         mail bcc: '', body: "${env.BUILD_URL}", cc: '', from: 'folio-jenkins@indexdata.com',
               replyTo: '', subject: "Build unstable: ${env.JOB_NAME} ${env.BUILD_NUMBER}",
                    to: 'folio-jenkins.backend@indexdata.com'
       }
