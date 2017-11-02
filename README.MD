@@ -10,7 +10,7 @@ FOLIO compatible inventory module.
 
 Provides basic physical item inventory management, currently limited to basic representations of local instances and items, which can only be created via a MODS import.
 
-Written in Groovy and uses Gradle as its build system.
+Written in Groovy and uses Maven as its build system.
 
 # Further Documentation
 
@@ -18,14 +18,19 @@ This readme is intended to get these modules up and running. For further informa
 
 # Prerequisites
 
+## Required
+
 - Java 8 JDK
 - Apache Groovy 2.4.8
-- Gradle 3.3
-- Maven 3.5.0 (build is being migrated)
+- Maven 3.5.0
+
+## Optional
+
+- [SDKMan](http://sdkman.io/) (recommended for installing Gradle and Groovy)
 - Node 6.4.0 (for API linting and documentation generation)
 - NPM 3.10.3 (for API linting and documentation generation)
 - Python 3.6.0 (for nice to have parts of deployment scripts, e.g. is used to remove environment variables from Okapi)
-- [SDKMan](http://sdkman.io/) (recommended for installing Gradle and Groovy)
+- Gradle 3.3 (for the `test-via-okapi-gradle.sh` script which produces nicer output)
 
 # Preparation
 
@@ -39,15 +44,15 @@ If these are not initialised, document generation and API linting operations may
 
 More information is available on the [developer site](http://dev.folio.org/doc/setup#update-git-submodules).
 
-## Groovy and Grails
+## Groovy and Gradle
 
 If sdkman is installed, run `source ./setup-environment.sh` to setup the shell with the appropriate versions of Gradle and Groovy.
 
 # Building
 
-run `gradle` from the root directory.
+run `mvn compile` from the root directory.
 
-In order to build an executable Jar (e.g. for Okapi to deploy), run `gradle fatJar`.
+In order to build an executable Jar (e.g. for Okapi to deploy), run `mvn package`.
 
 # Running
 
