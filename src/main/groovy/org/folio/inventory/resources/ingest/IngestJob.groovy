@@ -13,11 +13,11 @@ class IngestJob {
     this(null, state)
   }
 
-  def IngestJob copyWithNewId(String newId) {
-    new IngestJob(newId, this.state)
-  }
-
   IngestJob complete() {
     new IngestJob(this.id, IngestJobState.COMPLETED)
+  }
+
+  IngestJob copyWithNewId(String newId) {
+    return new IngestJob(newId, this.state);
   }
 }

@@ -3,28 +3,34 @@ package org.folio.inventory.storage.memory
 import org.folio.inventory.common.api.request.PagingParameters
 import org.folio.inventory.common.domain.Failure
 import org.folio.inventory.common.domain.Success
-import org.folio.inventory.common.storage.memory.InMemoryCollection
+
 import org.folio.inventory.domain.ingest.IngestJobCollection
 import org.folio.inventory.resources.ingest.IngestJob
 
 import java.util.function.Consumer
 
 class InMemoryIngestJobCollection implements IngestJobCollection {
-
-  private final collection = new InMemoryCollection<IngestJob>()
+  private final List<IngestJob> items = new ArrayList<IngestJob>()
 
   @Override
   void empty(Consumer<Success> completionCallback,
              Consumer<Failure> failureCallback) {
-    collection.empty(completionCallback)
+
+    items.clear()
+    completionCallback.accept(new Success<>(null))
   }
 
   @Override
   void add(IngestJob item,
            Consumer<Success<IngestJob>> resultCallback,
            Consumer<Failure> failureCallback) {
-    collection.add(item.copyWithNewId(UUID.randomUUID().toString()),
-      resultCallback)
+
+    if(item.id == null) {
+      item = item.copyWithNewId(UUID.randomUUID().toString());
+    }
+
+    items.add(item)
+    resultCallback.accept(new Success<IngestJob>(item))
   }
 
   @Override
@@ -32,7 +38,7 @@ class InMemoryIngestJobCollection implements IngestJobCollection {
                 Consumer<Success<IngestJob>> resultCallback,
                 Consumer<Failure> failureCallback) {
 
-    collection.findOne({ it.id == id }, resultCallback)
+    resultCallback.accept(new Success(items.find({ it.id == id })))
   }
 
   @Override
@@ -40,20 +46,44 @@ class InMemoryIngestJobCollection implements IngestJobCollection {
                Consumer<Success<Map>> resultCallback,
                Consumer<Failure> failureCallback) {
 
-    collection.some(pagingParameters, "jobs", resultCallback)
+    def totalRecords = items.size()
+
+    def paged = items.stream()
+      .skip(pagingParameters.offset)
+      .limit(pagingParameters.limit)
+      .collect()
+
+    resultCallback.accept(new Success(
+      wrapFindResult("jobs", paged, totalRecords)))
   }
 
   @Override
   void update(IngestJob ingestJob,
              Consumer<Success> completionCallback,
              Consumer<Failure> failureCallback) {
-    collection.replace(ingestJob, completionCallback)
+
+    items.removeIf({ it.id == ingestJob.id })
+    items.add(ingestJob)
+    completionCallback.accept(new Success(null))
   }
 
   @Override
   void delete(String id,
               Consumer<Success> completionCallback,
               Consumer<Failure> failureCallback) {
-    collection.remove(id, completionCallback)
+
+    items.removeIf({ it.id == id })
+    completionCallback.accept(new Success<>(null))
+  }
+
+  private Map wrapFindResult(
+    String collectionName,
+    Collection pagedRecords,
+    int totalRecords) {
+
+    [
+      (collectionName): pagedRecords,
+      "totalRecords"  : totalRecords
+    ]
   }
 }
