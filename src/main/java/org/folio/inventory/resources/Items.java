@@ -1,6 +1,8 @@
 package org.folio.inventory.resources;
 
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
@@ -17,6 +19,7 @@ import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.server.*;
 
 import java.io.UnsupportedEncodingException;
+import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -30,6 +33,8 @@ import java.util.stream.Stream;
 import static org.folio.inventory.common.FutureAssistance.allOf;
 
 public class Items {
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+
   private static final String RELATIVE_ITEMS_PATH = "/inventory/items";
 
   private final Storage storage;
@@ -360,7 +365,7 @@ public class Items {
     CompletableFuture<Void> allDoneFuture = allOf(allFutures);
 
     allDoneFuture.thenAccept(v -> {
-      System.out.println("GET all items: all futures completed");
+      log.info("GET all items: all futures completed");
 
       try {
         Map<String, JsonObject> foundMaterialTypes
@@ -467,7 +472,7 @@ public class Items {
     WebContext context,
     Item newItem,
     ItemCollection itemCollection) {
-    
+
     itemCollection.add(newItem, success -> {
       try {
         URL url = context.absoluteUrl(String.format("%s/%s",
@@ -475,8 +480,7 @@ public class Items {
 
         RedirectResponse.created(routingContext.response(), url.toString());
       } catch (MalformedURLException e) {
-        System.out.println(
-          String.format("Failed to create self link for item: %s", e.toString()));
+        log.warn(String.format("Failed to create self link for item: %s", e.toString()));
       }
     }, FailureResponseConsumer.serverError(routingContext.response()));
   }
