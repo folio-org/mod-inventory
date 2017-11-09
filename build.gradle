@@ -1,4 +1,5 @@
 apply plugin: 'groovy'
+apply plugin: 'java'
 apply plugin: 'application'
 
 mainClassName = "org.folio.inventory.Launcher"
@@ -33,6 +34,12 @@ dependencies {
 }
 
 defaultTasks 'build', 'generateDescriptors'
+
+//Fix strange issue with joint compilation and test source set referencing main
+sourceSets.main.java.srcDirs = []
+sourceSets.main.groovy.srcDirs = [ "src/main/java", "src/main/groovy"]
+sourceSets.test.groovy.srcDirs = ["src/test/groovy"]
+sourceSets.test.java.srcDirs = ["src/test/java"]
 
 test {
   //Gradle runs tests designed to be run in a suite twice
