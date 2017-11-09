@@ -1,8 +1,8 @@
-package org.folio.inventory.parsing
+package org.folio.inventory.parsing;
 
-class NoCharacterEcoding implements CharacterEncoding {
+public class NoCharacterEcoding implements CharacterEncoding {
   @Override
-  String decode(String input) {
-    input
+  public String decode(String input) {
+    return input;
   }
 }

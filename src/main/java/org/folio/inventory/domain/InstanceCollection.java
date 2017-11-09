@@ -1,6 +1,5 @@
-package org.folio.inventory.domain
+package org.folio.inventory.domain;
 
-interface InstanceCollection
-  extends AsynchronousCollection<Instance>,
-    SearchableCollection<Instance> {
+public interface InstanceCollection
+  extends AsynchronousCollection<Instance>, SearchableCollection<Instance> {
 }

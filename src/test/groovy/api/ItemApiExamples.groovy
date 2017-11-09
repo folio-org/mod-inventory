@@ -793,7 +793,7 @@ class ItemApiExamples extends Specification {
       def createResponse = createItemCompleted.get(5, TimeUnit.SECONDS)
 
       assert createResponse.statusCode == 400
-      assert createResponse.body == "Barcodes must be unique, 645398607547 is already assigned to another item"
+      assert createResponse.body == "Barcode must be unique, 645398607547 is already assigned to another item"
   }
 
   void "Cannot update an item to have the same barcode as an existing item"() {
@@ -825,7 +825,7 @@ class ItemApiExamples extends Specification {
       def putItemResponse = putItemCompleted.get(5, TimeUnit.SECONDS)
 
       assert putItemResponse.statusCode == 400
-      assert putItemResponse.body == "Barcodes must be unique, 645398607547 is already assigned to another item"
+      assert putItemResponse.body == "Barcode must be unique, 645398607547 is already assigned to another item"
   }
 
   void "Can change the barcode of an existing item"() {

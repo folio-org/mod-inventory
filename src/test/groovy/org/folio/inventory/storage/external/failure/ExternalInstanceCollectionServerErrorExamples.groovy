@@ -10,7 +10,7 @@ class ExternalInstanceCollectionServerErrorExamples
   extends ExternalInstanceCollectionFailureExamples {
 
   ExternalInstanceCollectionServerErrorExamples() {
-    super(ExternalStorageFailureSuite.useVertx(
+    super(ExternalStorageFailureSuite.createUsing(
       { new ExternalStorageCollections(it,
         ExternalStorageFailureSuite.serverErrorStorageAddress)}))
   }

@@ -1,12 +1,12 @@
-package org.folio.inventory.domain
+package org.folio.inventory.domain;
 
-enum Messages {
+public enum Messages {
   START_INGEST("org.folio.inventory.ingest.start"),
-  INGEST_COMPLETED("org.folio.inventory.ingest.completed")
-
-  public final Address
+  INGEST_COMPLETED("org.folio.inventory.ingest.completed");
 
   Messages(String address) {
-    this.Address = address
+    this.Address = address;
   }
+
+  public final String Address;
 }

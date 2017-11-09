@@ -1,42 +1,41 @@
-package org.folio.inventory.common
+package org.folio.inventory.common;
 
-import io.vertx.core.MultiMap
+import io.vertx.core.MultiMap;
 
-class MessagingContext implements Context {
-
-  private final MultiMap headers
-
-  MessagingContext(final MultiMap headers) {
-    this.headers = headers
+public class MessagingContext implements Context {
+  public MessagingContext(final MultiMap headers) {
+    this.headers = headers;
   }
 
   @Override
-  String getTenantId() {
-    getHeader("tenantId")
+  public String getTenantId() {
+    return getHeader("tenantId");
   }
 
   @Override
-  String getToken() {
-    getHeader("token")
+  public String getToken() {
+    return getHeader("token");
   }
 
   @Override
-  String getOkapiLocation() {
-    getHeader("okapiLocation")
+  public String getOkapiLocation() {
+    return getHeader("okapiLocation");
   }
 
   @Override
-  def getHeader(String header) {
-    headers.get(header)
+  public String getHeader(String header) {
+    return headers.get(header);
   }
 
   @Override
-  def getHeader(String header, Object defaultValue) {
-    hasHeader(header) ? getHeader(header) : defaultValue
+  public String getHeader(String header, String defaultValue) {
+    return hasHeader(header) ? getHeader(header) : defaultValue;
   }
 
   @Override
-  boolean hasHeader(String header) {
-    headers.contains(header)
+  public boolean hasHeader(String header) {
+    return headers.contains(header);
   }
+
+  private final MultiMap headers;
 }

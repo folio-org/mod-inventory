@@ -11,9 +11,9 @@ import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.handler.BodyHandler
 import org.folio.inventory.common.WebContext
 import org.folio.inventory.common.WebRequestDiagnostics
-import org.folio.inventory.common.api.response.ClientErrorResponse
-import org.folio.inventory.common.api.response.JsonResponse
-import org.folio.inventory.common.api.response.SuccessResponse
+import org.folio.inventory.support.http.server.ClientErrorResponse
+import org.folio.inventory.support.http.server.JsonResponse
+import org.folio.inventory.support.http.server.SuccessResponse
 
 import java.util.stream.Collectors
 

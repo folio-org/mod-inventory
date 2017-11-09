@@ -1,60 +1,76 @@
-package org.folio.inventory.domain
+package org.folio.inventory.domain;
 
-import java.util.stream.Collectors
+import org.apache.commons.lang3.StringUtils;
 
-class Instance {
-  final String id
-  final String title
-  final String source
-  final String instanceTypeId
-  final List<Map> identifiers
-  final List<Creator> creators
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
-  def Instance(
+public class Instance {
+  public final String id;
+  public final String title;
+  public final String source;
+  public final String instanceTypeId;
+  public final List<Identifier> identifiers;
+  public final List<Creator> creators;
+
+  public Instance(
     String id,
     String title,
-    List<Map> identifiers,
+    List<Identifier> identifiers,
     String source,
     String instanceTypeId,
     List<Creator> creators) {
 
-    this.id = id
-    this.title = title
-    this.identifiers = identifiers.collect()
-    this.source = source
-    this.instanceTypeId = instanceTypeId
-    this.creators = creators.collect()
+    this.id = id;
+    this.title = title;
+    this.identifiers = new ArrayList<>(identifiers);
+    this.source = source;
+    this.instanceTypeId = instanceTypeId;
+    this.creators = new ArrayList<>(creators);
   }
 
-  def Instance copyWithNewId(String newId) {
-    new Instance(newId, this.title, this.identifiers, this.source,
-      this.instanceTypeId, new ArrayList<Creator>())
+  public Instance copyWithNewId(String newId) {
+    return new Instance(newId, this.title, this.identifiers, this.source,
+      this.instanceTypeId, this.creators);
   }
 
-  Instance addIdentifier(String identifierTypeId, String value) {
-    def identifier = ['identifierTypeId' : identifierTypeId, 'value' : value]
+  public Instance addIdentifier(Identifier identifier) {
+    List<Identifier> newIdentifiers = new ArrayList<>(this.identifiers);
 
-    new Instance(id, title, this.identifiers.collect() << identifier,
-      this.source, this.instanceTypeId, this.creators)
+    newIdentifiers.add(identifier);
+
+    return new Instance(this.id, this.title, newIdentifiers, this.source,
+      this.instanceTypeId, this.creators);
   }
 
-  Instance addCreator(String creatorTypeId, String name) {
-    new Instance(id, title, this.identifiers.collect(),
-      this.source, this.instanceTypeId,
-      this.creators.collect() << new Creator(creatorTypeId, name))
+  public Instance addIdentifier(String identifierTypeId, String value) {
+    Identifier identifier = new Identifier(identifierTypeId, value);
+
+    return addIdentifier(identifier);
   }
 
-  Instance removeIdentifier(String identifierTypeId, String value) {
-    def newIdentifiers = this.identifiers.stream()
-      .filter({ !(it.identifierTypeId == identifierTypeId && it.value == value) })
-      .collect(Collectors.toList())
+  public Instance addCreator(String creatorTypeId, String name) {
+    List<Creator> newCreators = new ArrayList<>(this.creators);
 
-    new Instance(id, title, newIdentifiers, this.source, this.instanceTypeId,
-      this.creators)
+    newCreators.add(new Creator(creatorTypeId, name));
+
+    return new Instance(this.id, this.title, new ArrayList<>(this.identifiers),
+      this.source, this.instanceTypeId, newCreators);
+  }
+
+  public Instance removeIdentifier(final String identifierTypeId, final String value) {
+    List<Identifier> newIdentifiers = this.identifiers.stream()
+      .filter(it -> !(StringUtils.equals(it.identifierTypeId, identifierTypeId)
+        && StringUtils.equals(it.value, value)))
+      .collect(Collectors.toList());
+
+    return new Instance(this.id, this.title, newIdentifiers, this.source,
+      this.instanceTypeId, this.creators);
   }
 
   @Override
   public String toString() {
-    return "Instance ID: ${id}, Title: ${title}";
+    return String.format("Instance ID: %s, Title: %s", id, title);
   }
 }

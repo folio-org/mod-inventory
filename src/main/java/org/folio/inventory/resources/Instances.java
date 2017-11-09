@@ -1,238 +1,264 @@
-package org.folio.inventory.resources
+package org.folio.inventory.resources;
 
-import io.vertx.core.json.JsonArray
-import io.vertx.core.json.JsonObject
-import io.vertx.ext.web.Router
-import io.vertx.ext.web.RoutingContext
-import io.vertx.ext.web.handler.BodyHandler
-import org.folio.inventory.common.WebContext
-import org.folio.inventory.common.api.request.PagingParameters
-import org.folio.inventory.common.api.request.VertxBodyParser
-import org.folio.inventory.common.api.response.*
-import org.folio.inventory.common.domain.Success
-import org.folio.inventory.domain.Creator
-import org.folio.inventory.domain.Instance
-import org.folio.inventory.storage.Storage
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.inventory.common.WebContext;
+import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.domain.Creator;
+import org.folio.inventory.domain.Identifier;
+import org.folio.inventory.domain.Instance;
+import org.folio.inventory.domain.InstanceCollection;
+import org.folio.inventory.storage.Storage;
+import org.folio.inventory.support.JsonArrayHelper;
+import org.folio.inventory.support.http.server.*;
 
-class Instances {
-  private final Storage storage
+import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
-  Instances(final Storage storage) {
-    this.storage = storage
+public class Instances {
+  private final Storage storage;
+
+  public Instances(final Storage storage) {
+    this.storage = storage;
   }
 
-  void register(Router router) {
-    router.post(relativeInstancesPath() + "*").handler(BodyHandler.create())
-    router.put(relativeInstancesPath() + "*").handler(BodyHandler.create())
+  public void register(Router router) {
+    router.post(relativeInstancesPath() + "*").handler(BodyHandler.create());
+    router.put(relativeInstancesPath() + "*").handler(BodyHandler.create());
 
     router.get(relativeInstancesPath() + "/context")
-      .handler(this.&getMetadataContext)
+      .handler(this::getMetadataContext);
 
-    router.get(relativeInstancesPath()).handler(this.&getAll)
-    router.post(relativeInstancesPath()).handler(this.&create)
-    router.delete(relativeInstancesPath()).handler(this.&deleteAll)
+    router.get(relativeInstancesPath()).handler(this::getAll);
+    router.post(relativeInstancesPath()).handler(this::create);
+    router.delete(relativeInstancesPath()).handler(this::deleteAll);
 
-    router.get(relativeInstancesPath() + "/:id").handler(this.&getById)
-    router.put(relativeInstancesPath() + "/:id").handler(this.&update)
-    router.delete(relativeInstancesPath() + "/:id").handler(this.&deleteById)
+    router.get(relativeInstancesPath() + "/:id").handler(this::getById);
+    router.put(relativeInstancesPath() + "/:id").handler(this::update);
+    router.delete(relativeInstancesPath() + "/:id").handler(this::deleteById);
   }
 
   void getMetadataContext(RoutingContext routingContext) {
-    def representation = [:]
+    JsonObject representation = new JsonObject();
 
-    representation."@context" = [
-      "dcterms": "http://purl.org/dc/terms/",
-      "title"  : "dcterms:title"
-    ]
+    representation.put("@context", new JsonObject()
+      .put("dcterms", "http://purl.org/dc/terms/")
+      .put("title", "dcterms:title"));
 
-    JsonResponse.success(routingContext.response(),
-        representation)
+    JsonResponse.success(routingContext.response(), representation);
   }
 
-  void getAll(RoutingContext routingContext) {
-    def context = new WebContext(routingContext)
+  private void getAll(RoutingContext routingContext) {
+    WebContext context = new WebContext(routingContext);
 
-    def search = context.getStringParameter("query", null)
+    String search = context.getStringParameter("query", null);
 
-    def pagingParameters = PagingParameters.from(context)
+    PagingParameters pagingParameters = PagingParameters.from(context);
 
     if(pagingParameters == null) {
       ClientErrorResponse.badRequest(routingContext.response(),
-        "limit and offset must be numeric when supplied")
+        "limit and offset must be numeric when supplied");
 
-      return
+      return;
     }
 
     if(search == null) {
       storage.getInstanceCollection(context).findAll(
         pagingParameters,
-        { Success success -> JsonResponse.success(routingContext.response(),
-          toRepresentation(success.result, context)) },
-        FailureResponseConsumer.serverError(routingContext.response()))
+        success -> JsonResponse.success(routingContext.response(),
+          toRepresentation(success.getResult(), context)),
+        FailureResponseConsumer.serverError(routingContext.response()));
     }
     else {
-      storage.getInstanceCollection(context).findByCql(search,
-        pagingParameters, {
-        JsonResponse.success(routingContext.response(),
-          toRepresentation(it.result, context))
-      }, FailureResponseConsumer.serverError(routingContext.response()))
+      try {
+        storage.getInstanceCollection(context).findByCql(search,
+          pagingParameters, success ->
+            JsonResponse.success(routingContext.response(),
+            toRepresentation(success.getResult(), context)),
+          FailureResponseConsumer.serverError(routingContext.response()));
+      } catch (UnsupportedEncodingException e) {
+        ServerErrorResponse.internalError(routingContext.response(), e.toString());
+      }
     }
   }
 
   void create(RoutingContext routingContext) {
-    def context = new WebContext(routingContext)
+    WebContext context = new WebContext(routingContext);
 
-    Map instanceRequest = new VertxBodyParser().toMap(routingContext)
+    JsonObject instanceRequest = routingContext.getBodyAsJson();
 
-    if(isEmpty(instanceRequest.title)) {
+    if(StringUtils.isBlank(instanceRequest.getString("title"))) {
       ClientErrorResponse.badRequest(routingContext.response(),
-        "Title must be provided for an instance")
-      return
+        "Title must be provided for an instance");
+      return;
     }
 
-    def newInstance = requestToInstance(instanceRequest)
+    Instance newInstance = requestToInstance(instanceRequest);
 
     storage.getInstanceCollection(context).add(newInstance,
-      { Success success ->
-        RedirectResponse.created(routingContext.response(),
-        context.absoluteUrl(
-          "${relativeInstancesPath()}/${success.result.id}").toString())
-      }, FailureResponseConsumer.serverError(routingContext.response()))
+      success -> {
+        try {
+          URL url = context.absoluteUrl(String.format("%s/%s",
+            relativeInstancesPath(), success.getResult().id));
+
+          RedirectResponse.created(routingContext.response(), url.toString());
+        } catch (MalformedURLException e) {
+          System.out.println(
+            String.format("Failed to create self link for instance: " + e.toString()));
+        }
+      }, FailureResponseConsumer.serverError(routingContext.response()));
   }
 
   void update(RoutingContext routingContext) {
-    def context = new WebContext(routingContext)
+    WebContext context = new WebContext(routingContext);
 
-    Map instanceRequest = new VertxBodyParser().toMap(routingContext)
+    JsonObject instanceRequest = routingContext.getBodyAsJson();
 
-    def updatedInstance = requestToInstance(instanceRequest)
+    Instance updatedInstance = requestToInstance(instanceRequest);
 
-    def instanceCollection = storage.getInstanceCollection(context)
+    InstanceCollection instanceCollection = storage.getInstanceCollection(context);
 
     instanceCollection.findById(routingContext.request().getParam("id"),
-      { Success it ->
-        if(it.result != null) {
-          instanceCollection.update(updatedInstance, {
-            SuccessResponse.noContent(routingContext.response()) },
-            FailureResponseConsumer.serverError(routingContext.response()))
+      it -> {
+        if(it.getResult() != null) {
+          instanceCollection.update(updatedInstance,
+            v -> SuccessResponse.noContent(routingContext.response()),
+            FailureResponseConsumer.serverError(routingContext.response()));
         }
         else {
-          ClientErrorResponse.notFound(routingContext.response())
+          ClientErrorResponse.notFound(routingContext.response());
         }
-      }, FailureResponseConsumer.serverError(routingContext.response()))
+      }, FailureResponseConsumer.serverError(routingContext.response()));
   }
 
-  void deleteAll(RoutingContext routingContext) {
-    def context = new WebContext(routingContext)
+  private void deleteAll(RoutingContext routingContext) {
+    WebContext context = new WebContext(routingContext);
 
     storage.getInstanceCollection(context).empty (
-      { SuccessResponse.noContent(routingContext.response()) },
-      FailureResponseConsumer.serverError(routingContext.response()))
+      v -> SuccessResponse.noContent(routingContext.response()),
+      FailureResponseConsumer.serverError(routingContext.response()));
   }
 
-  void deleteById(RoutingContext routingContext) {
-    def context = new WebContext(routingContext)
+  private void deleteById(RoutingContext routingContext) {
+    WebContext context = new WebContext(routingContext);
 
     storage.getInstanceCollection(context).delete(
       routingContext.request().getParam("id"),
-      { SuccessResponse.noContent(routingContext.response()) },
-      FailureResponseConsumer.serverError(routingContext.response()))
+      v -> SuccessResponse.noContent(routingContext.response()),
+      FailureResponseConsumer.serverError(routingContext.response()));
   }
 
-  void getById(RoutingContext routingContext) {
-    def context = new WebContext(routingContext)
+  private void getById(RoutingContext routingContext) {
+    WebContext context = new WebContext(routingContext);
 
     storage.getInstanceCollection(context).findById(
       routingContext.request().getParam("id"),
-      { Success it ->
-        if(it.result != null) {
+      it -> {
+        if(it.getResult() != null) {
           JsonResponse.success(routingContext.response(),
-            toRepresentation(it.result, context))
+            toRepresentation(it.getResult(), context));
         }
         else {
-          ClientErrorResponse.notFound(routingContext.response())
+          ClientErrorResponse.notFound(routingContext.response());
         }
-      }, FailureResponseConsumer.serverError(routingContext.response()))
+      }, FailureResponseConsumer.serverError(routingContext.response()));
   }
 
   private static String relativeInstancesPath() {
-    "/inventory/instances"
+    return "/inventory/instances";
   }
 
-  private JsonObject toRepresentation(Map wrappedInstances, WebContext context) {
-    def representation = new JsonObject()
+  private JsonObject toRepresentation(
+    Map<String, Object> wrappedInstances,
+    WebContext context) {
 
-    def results = new JsonArray()
+    JsonObject representation = new JsonObject();
 
-    wrappedInstances.instances.each {
-      results.add(toRepresentation(it, context))
-    }
+    JsonArray results = new JsonArray();
+
+    List<Instance> instances = (List<Instance>)wrappedInstances.get("instances");
+
+    instances.stream().forEach(instance ->
+      results.add(toRepresentation(instance, context)));
 
     representation
       .put("instances", results)
-      .put("totalRecords", wrappedInstances.totalRecords)
+      .put("totalRecords", wrappedInstances.get("totalRecords"));
 
-    representation
+    return representation;
   }
 
   private JsonObject toRepresentation(Instance instance, WebContext context) {
-    def representation = new JsonObject()
+    JsonObject representation = new JsonObject();
 
-    representation.put("@context", context.absoluteUrl(
-      relativeInstancesPath() + "/context").toString())
-
-    representation.put("id", instance.id)
-    representation.put("title", instance.title)
-    representation.put("source", instance.source)
-    representation.put("instanceTypeId", instance.instanceTypeId)
-
-    def identifiers = []
-
-    instance.identifiers.each { identifier ->
-      def identifierRepresentation = [:]
-
-      identifierRepresentation.identifierTypeId = identifier.identifierTypeId
-      identifierRepresentation.value = identifier.value
-
-      identifiers.add(identifierRepresentation)
+    try {
+      representation.put("@context", context.absoluteUrl(
+        relativeInstancesPath() + "/context").toString());
+    } catch (MalformedURLException e) {
+      System.out.println(String.format("Failed to create context link for instance: " + e.toString()));
     }
 
-    representation.put('identifiers', identifiers)
+    representation.put("id", instance.id);
+    representation.put("title", instance.title);
+    representation.put("source", instance.source);
+    representation.put("instanceTypeId", instance.instanceTypeId);
 
-    def creators = []
+    representation.put("identifiers",
+      new JsonArray(instance.identifiers.stream()
+        .map(identifier -> { return new JsonObject()
+          .put("identifierTypeId", identifier.identifierTypeId)
+          .put("value", identifier.value); })
+        .collect(Collectors.toList())));
 
-    instance.creators.each { creator ->
-      def creatorRepresentation = [:]
+    representation.put("creators",
+      new JsonArray(instance.creators.stream()
+        .map(creator -> { return new JsonObject()
+          .put("creatorTypeId", creator.creatorTypeId)
+          .put("name", creator.name); })
+        .collect(Collectors.toList())));
 
-      creatorRepresentation.creatorTypeId = creator.creatorTypeId
-      creatorRepresentation.name = creator.name
+    try {
+      URL selfUrl = context.absoluteUrl(String.format("%s/%s",
+        relativeInstancesPath(), instance.id));
 
-      creators.add(creatorRepresentation)
+      representation.put("links", new JsonObject().put("self", selfUrl.toString()));
+    } catch (MalformedURLException e) {
+      System.out.println(String.format("Failed to create self link for instance: " + e.toString()));
     }
 
-    representation.put('creators', creators)
-
-    representation.put('links',
-      ['self': context.absoluteUrl(
-        relativeInstancesPath() + "/${instance.id}").toString()])
-
-    representation
+    return representation;
   }
 
-  private Instance requestToInstance(Map<String, Object> instanceRequest) {
+  private Instance requestToInstance(JsonObject instanceRequest) {
+    List<Identifier> identifiers = instanceRequest.containsKey("identifiers")
+      ? JsonArrayHelper.toList(instanceRequest.getJsonArray("identifiers")).stream()
+          .map(identifier -> new Identifier(identifier.getString("identifierTypeId"),
+          identifier.getString("value")))
+          .collect(Collectors.toList())
+          : new ArrayList<>();
 
-    List<Creator> creators = new ArrayList<>();
+    List<Creator> creators = instanceRequest.containsKey("creators")
+      ? JsonArrayHelper.toList(instanceRequest.getJsonArray("creators")).stream()
+      .map(creator -> new Creator(creator.getString("creatorTypeId"),
+        creator.getString("name")))
+      .collect(Collectors.toList())
+      : new ArrayList<>();
 
-    instanceRequest.creators.each {
-      creators.add(new Creator(it.creatorTypeId, it.name))
-    }
-
-    new Instance(instanceRequest.id, instanceRequest.title,
-      instanceRequest.identifiers, instanceRequest.source,
-      instanceRequest.instanceTypeId, creators)
-  }
-
-  private boolean isEmpty(String string) {
-    string == null || string.trim().length() == 0
+    return new Instance(
+      instanceRequest.getString("id"),
+      instanceRequest.getString("title"),
+      identifiers,
+      instanceRequest.getString("source"),
+      instanceRequest.getString("instanceTypeId"),
+      creators);
   }
 }

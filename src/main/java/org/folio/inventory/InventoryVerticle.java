@@ -1,63 +1,69 @@
-package org.folio.inventory
+package org.folio.inventory;
 
-import io.vertx.core.AbstractVerticle
-import io.vertx.core.Future
-import io.vertx.core.http.HttpServer
-import io.vertx.ext.web.Router
-import org.folio.inventory.common.WebRequestDiagnostics
-import org.folio.inventory.domain.ingest.IngestMessageProcessor
-import org.folio.inventory.resources.Instances
-import org.folio.inventory.resources.Items
-import org.folio.inventory.resources.ingest.ModsIngestion
-import org.folio.inventory.storage.Storage
+import io.vertx.core.AbstractVerticle;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.http.HttpServer;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.Router;
+import org.folio.inventory.common.WebRequestDiagnostics;
+import org.folio.inventory.domain.ingest.IngestMessageProcessor;
+import org.folio.inventory.resources.Instances;
+import org.folio.inventory.resources.Items;
+import org.folio.inventory.resources.ingest.ModsIngestion;
+import org.folio.inventory.storage.Storage;
 
-class InventoryVerticle extends AbstractVerticle {
-
-  private HttpServer server
+public class InventoryVerticle extends AbstractVerticle {
+  private HttpServer server;
 
   @Override
-  void start(Future started) {
-    def router = Router.router(vertx)
+  public void start(Future<Void> started) {
+    Router router = Router.router(vertx);
 
-    server = vertx.createHttpServer()
+    server = vertx.createHttpServer();
 
-    Map<String, Object> config = vertx.getOrCreateContext().config().map
+    JsonObject config = vertx.getOrCreateContext().config();
 
-    println("Received Config")
-    config.each { println("${it.key}:${it.value}") }
+    System.out.print("Received Config");
 
-    def storage = Storage.basedUpon(vertx, config)
+    config.fieldNames().stream().forEach(key -> {
+      System.out.println(String.format("%s:%s", key, config.getValue(key).toString()));
+    });
 
-    new IngestMessageProcessor(storage).register(vertx.eventBus())
+    Storage storage = Storage.basedUpon(vertx, config);
 
-    router.route().handler(WebRequestDiagnostics.&outputDiagnostics)
+    new IngestMessageProcessor(storage).register(vertx.eventBus());
 
-    new ModsIngestion(storage).register(router)
-    new Items(storage).register(router)
-    new Instances(storage).register(router)
+    router.route().handler(WebRequestDiagnostics::outputDiagnostics);
 
-    def onHttpServerStart = { result ->
+    new ModsIngestion(storage).register(router);
+    new Items(storage).register(router);
+    new Instances(storage).register(router);
+
+    Handler<AsyncResult<HttpServer>> onHttpServerStart = result -> {
       if (result.succeeded()) {
-        println "Listening on ${server.actualPort()}"
+        System.out.println(String.format("Listening on %s", server.actualPort()));
         started.complete();
       } else {
         started.fail(result.cause());
       }
-    }
+    };
 
-    server.requestHandler(router.&accept).listen(config.port, onHttpServerStart)
+    server.requestHandler(router::accept)
+      .listen(config.getInteger("port"), onHttpServerStart);
   }
 
   @Override
-  void stop(Future stopped) {
-    println "Stopping inventory module"
-    server.close({ result ->
+  public void stop(Future<Void> stopped) {
+    System.out.println("Stopping inventory module");
+    server.close(result -> {
       if (result.succeeded()) {
-        println "Stopped listening on ${server.actualPort()}"
+        System.out.println("Inventory module stopped");
         stopped.complete();
       } else {
         stopped.fail(result.cause());
       }
-    })
+    });
   }
 }

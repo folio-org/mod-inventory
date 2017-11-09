@@ -1,59 +1,58 @@
-package org.folio.inventory.storage
+package org.folio.inventory.storage;
 
-import io.vertx.core.Vertx
-import org.folio.inventory.common.Context
-import org.folio.inventory.domain.CollectionProvider
-import org.folio.inventory.domain.InstanceCollection
-import org.folio.inventory.domain.ItemCollection
-import org.folio.inventory.domain.ingest.IngestJobCollection
-import org.folio.inventory.storage.external.ExternalStorageCollections
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
+import org.folio.inventory.common.Context;
+import org.folio.inventory.domain.CollectionProvider;
+import org.folio.inventory.domain.InstanceCollection;
+import org.folio.inventory.domain.ItemCollection;
+import org.folio.inventory.domain.ingest.IngestJobCollection;
+import org.folio.inventory.storage.external.ExternalStorageCollections;
 
-import java.util.function.Function
+import java.util.function.Function;
 
-class Storage {
+public class Storage {
   private final Function<Context, CollectionProvider> providerFactory;
 
-  Storage( final Function<Context, CollectionProvider> providerFactory) {
-    this.providerFactory = providerFactory
+  private Storage(final Function<Context, CollectionProvider> providerFactory) {
+    this.providerFactory = providerFactory;
   }
 
-  static Storage basedUpon(Vertx vertx, Map<String, Object> config) {
-    def storageType = config.get("storage.type", "okapi")
+  public static Storage basedUpon(Vertx vertx, JsonObject config) {
+    String storageType = config.getString("storage.type", "okapi");
 
     switch(storageType) {
       case "external":
-        def location = config.get("storage.location", null)
+        String location = config.getString("storage.location", null);
 
         if(location == null) {
           throw new IllegalArgumentException(
-            "For external storage, location must be provided.")
+            "For external storage, location must be provided.");
         }
 
-        return new Storage(
-          { context -> new ExternalStorageCollections(vertx, location) })
-        break
+        return new Storage(context -> new ExternalStorageCollections(vertx, location));
 
       case "okapi":
-        return new Storage(
-        { context ->
-          new ExternalStorageCollections(vertx, context.okapiLocation) })
-        break
+        return new Storage(context ->
+          new ExternalStorageCollections(vertx, context.getOkapiLocation()));
 
       default:
-        throw new IllegalArgumentException(
-          "Storage type must be one of [external, okapi]")
+        throw new IllegalArgumentException("Storage type must be one of [external, okapi]");
     }
   }
 
-  ItemCollection getItemCollection(Context context) {
-    providerFactory.apply(context).getItemCollection(context.tenantId, context.token)
+  public ItemCollection getItemCollection(Context context) {
+    return providerFactory.apply(context).getItemCollection(
+      context.getTenantId(), context.getToken());
   }
 
-  InstanceCollection getInstanceCollection(Context context) {
-    providerFactory.apply(context).getInstanceCollection(context.tenantId, context.token)
+  public InstanceCollection getInstanceCollection(Context context) {
+    return providerFactory.apply(context).getInstanceCollection(
+      context.getTenantId(), context.getToken());
   }
 
-  IngestJobCollection getIngestJobCollection(Context context) {
-    providerFactory.apply(context).getIngestJobCollection(context.tenantId, context.token)
+  public IngestJobCollection getIngestJobCollection(Context context) {
+    return providerFactory.apply(context).getIngestJobCollection(
+      context.getTenantId(), context.getToken());
   }
 }

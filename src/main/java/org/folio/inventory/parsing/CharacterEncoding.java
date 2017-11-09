@@ -1,6 +1,5 @@
-package org.folio.inventory.parsing
+package org.folio.inventory.parsing;
 
-interface CharacterEncoding {
-
-  String decode(String input)
+public interface CharacterEncoding {
+  String decode(String input);
 }

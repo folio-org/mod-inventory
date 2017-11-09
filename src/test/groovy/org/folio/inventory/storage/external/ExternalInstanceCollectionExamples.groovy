@@ -2,7 +2,6 @@ package org.folio.inventory.storage.external
 
 import org.folio.inventory.common.WaitForAllFutures
 import org.folio.inventory.common.api.request.PagingParameters
-import org.folio.inventory.common.domain.Success
 import org.folio.inventory.domain.*
 import org.junit.Before
 import org.junit.Test
@@ -166,16 +165,16 @@ class ExternalInstanceCollectionExamples {
 
     allAdded.waitForCompletion()
 
-    def firstPageFuture = new CompletableFuture<Success<Map>>()
-    def secondPageFuture = new CompletableFuture<Success<Map>>()
+    def firstPageFuture = new CompletableFuture<Map>()
+    def secondPageFuture = new CompletableFuture<Map>()
 
-    collection.findAll(new PagingParameters(3, 0), complete(firstPageFuture),
+    collection.findAll(new PagingParameters(3, 0), succeed(firstPageFuture),
       fail(firstPageFuture))
-    collection.findAll(new PagingParameters(3, 3), complete(secondPageFuture),
+    collection.findAll(new PagingParameters(3, 3), succeed(secondPageFuture),
       fail(secondPageFuture))
 
-    def firstPage = getOnCompletion(firstPageFuture).result
-    def secondPage = getOnCompletion(secondPageFuture).result
+    def firstPage = getOnCompletion(firstPageFuture)
+    def secondPage = getOnCompletion(secondPageFuture)
 
     def firstPageInstances = firstPage.instances
     def secondPageInstances = secondPage.instances
@@ -365,7 +364,7 @@ class ExternalInstanceCollectionExamples {
   }
 
   private Instance createInstance(String title) {
-    new Instance(UUID.randomUUID().toString(), title, new ArrayList<Map>(),
+    new Instance(UUID.randomUUID().toString(), title, new ArrayList<Identifier>(),
       "Local", booksInstanceType, new ArrayList<Creator>())
   }
 

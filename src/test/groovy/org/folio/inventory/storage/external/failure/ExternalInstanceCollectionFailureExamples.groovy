@@ -5,6 +5,7 @@ import org.folio.inventory.common.domain.Failure
 import org.folio.inventory.common.domain.Success
 import org.folio.inventory.domain.CollectionProvider
 import org.folio.inventory.domain.Creator
+import org.folio.inventory.domain.Identifier
 import org.folio.inventory.domain.Instance
 import org.folio.inventory.domain.InstanceCollection
 import org.junit.Test
@@ -28,8 +29,9 @@ abstract class ExternalInstanceCollectionFailureExamples {
 
     def failureCalled = new CompletableFuture<Failure>()
 
-    collection.add(new Instance(UUID.randomUUID().toString(), "Nod", [], null,
-      UUID.randomUUID().toString(), new ArrayList<Creator>()),
+    collection.add(new Instance(UUID.randomUUID().toString(), "Nod",
+      new ArrayList<Identifier>(), null, UUID.randomUUID().toString(),
+      new ArrayList<Creator>()),
       { Success success -> fail("Completion callback should not be called") },
       { Failure failure -> failureCalled.complete(failure) })
 
@@ -44,8 +46,9 @@ abstract class ExternalInstanceCollectionFailureExamples {
 
     def failureCalled = new CompletableFuture<Failure>()
 
-    collection.update(new Instance(UUID.randomUUID().toString(), "Nod", [], null,
-      UUID.randomUUID().toString(), null),
+    collection.update(new Instance(UUID.randomUUID().toString(), "Nod",
+      new ArrayList<Identifier>(), null, UUID.randomUUID().toString(),
+      new ArrayList<Creator>()),
       { Success success -> fail("Completion callback should not be called") },
       { Failure failure -> failureCalled.complete(failure) })
 

@@ -1,11 +1,13 @@
-package support.fakes.http.server;
+package org.folio.inventory.support.http.server;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class JsonResponse {
 
@@ -24,8 +26,19 @@ public class JsonResponse {
 
   public static void unprocessableEntity(
     HttpServerResponse response,
-    List<ValidationError> errors) {
-    response(response, new JsonObject(), 422);
+    String message, List<ValidationError> errors) {
+
+    JsonArray parameters = new JsonArray(errors.stream()
+      .map(error -> new JsonObject()
+        .put("key", error.propertyName)
+        .put("value", error.value))
+      .collect(Collectors.toList()));
+
+    JsonObject wrappedErrors = new JsonObject()
+      .put("message", message)
+      .put("parameters", parameters);
+
+    response(response, wrappedErrors, 422);
   }
 
   private static void response(HttpServerResponse response,

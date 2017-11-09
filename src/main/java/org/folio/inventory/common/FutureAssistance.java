@@ -1,32 +1,43 @@
-package org.folio.inventory.common
+package org.folio.inventory.common;
 
-import org.folio.inventory.common.domain.Failure
-import org.folio.inventory.common.domain.Success
+import org.folio.inventory.common.domain.Failure;
+import org.folio.inventory.common.domain.Success;
 
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit
-import java.util.function.Consumer
+import java.util.ArrayList;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 
-class FutureAssistance {
-  static <T> T getOnCompletion(CompletableFuture<T> future) {
-    future.get(2000, TimeUnit.MILLISECONDS)
+public class FutureAssistance {
+  public static <T> T getOnCompletion(CompletableFuture<T> future)
+    throws InterruptedException, ExecutionException, TimeoutException {
+
+    return future.get(2000, TimeUnit.MILLISECONDS);
   }
 
-  static void waitForCompletion(CompletableFuture future) {
-    future.get(2000, TimeUnit.MILLISECONDS)
+  public static void waitForCompletion(CompletableFuture future)
+    throws InterruptedException, ExecutionException, TimeoutException {
+
+    future.get(2000, TimeUnit.MILLISECONDS);
   }
 
-  static Closure complete(CompletableFuture future) {
-    return { future.complete(it) }
+  public static Consumer<Void> complete(final CompletableFuture future) {
+    return v -> future.complete(null);
   }
 
-  static <T> Consumer<Success<T>> succeed(CompletableFuture<T> future) {
-    return { future.complete(it.result) }
+  public static <T> Consumer<Success<T>> succeed(final CompletableFuture<T> future) {
+    return success -> future.complete(success.getResult());
   }
 
-  static Consumer<Failure> fail(CompletableFuture future) {
-    return { Failure failure -> future.completeExceptionally(
-      new Exception(failure.reason))
-    }
+  public static Consumer<Failure> fail(final CompletableFuture future) {
+    return failure -> future.completeExceptionally(new Exception(failure.getReason()));
+  }
+
+  public static <T> CompletableFuture<Void> allOf(
+    ArrayList<CompletableFuture<T>> allFutures) {
+
+    return CompletableFuture.allOf(allFutures.toArray(new CompletableFuture<?>[] { }));
   }
 }

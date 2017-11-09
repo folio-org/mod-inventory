@@ -1,12 +1,10 @@
-package org.folio.inventory.common
+package org.folio.inventory.common;
 
-interface Context {
-  String getTenantId()
-
-  String getToken()
-
-  String getOkapiLocation()
-  def getHeader(String header)
-  def getHeader(String header, defaultValue)
-  boolean hasHeader(String header)
+public interface Context {
+  String getTenantId();
+  String getToken();
+  String getOkapiLocation();
+  String getHeader(String header);
+  String getHeader(String header, String defaultValue);
+  boolean hasHeader(String header);
 }

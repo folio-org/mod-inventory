@@ -1,89 +1,106 @@
-package org.folio.inventory.storage.memory
+package org.folio.inventory.storage.memory;
 
-import org.folio.inventory.common.api.request.PagingParameters
-import org.folio.inventory.common.domain.Failure
-import org.folio.inventory.common.domain.Success
+import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.common.domain.Failure;
+import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.domain.ingest.IngestJobCollection;
+import org.folio.inventory.resources.ingest.IngestJob;
 
-import org.folio.inventory.domain.ingest.IngestJobCollection
-import org.folio.inventory.resources.ingest.IngestJob
+import java.util.*;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
-import java.util.function.Consumer
-
-class InMemoryIngestJobCollection implements IngestJobCollection {
-  private final List<IngestJob> items = new ArrayList<IngestJob>()
+public class InMemoryIngestJobCollection implements IngestJobCollection {
+  private final List<IngestJob> items = new ArrayList<>();
 
   @Override
-  void empty(Consumer<Success> completionCallback,
-             Consumer<Failure> failureCallback) {
+  public void empty(
+    Consumer<Success> completionCallback,
+    Consumer<Failure> failureCallback) {
 
-    items.clear()
-    completionCallback.accept(new Success<>(null))
+    items.clear();
+    completionCallback.accept(new Success<>(null));
   }
 
   @Override
-  void add(IngestJob item,
-           Consumer<Success<IngestJob>> resultCallback,
-           Consumer<Failure> failureCallback) {
+  public void add(
+    IngestJob item,
+    Consumer<Success<IngestJob>> resultCallback,
+    Consumer<Failure> failureCallback) {
 
     if(item.id == null) {
       item = item.copyWithNewId(UUID.randomUUID().toString());
     }
 
-    items.add(item)
-    resultCallback.accept(new Success<IngestJob>(item))
+    items.add(item);
+    resultCallback.accept(new Success<>(item));
   }
 
   @Override
-  void findById(String id,
-                Consumer<Success<IngestJob>> resultCallback,
-                Consumer<Failure> failureCallback) {
+  public void findById(
+    final String id,
+    Consumer<Success<IngestJob>> resultCallback,
+    Consumer<Failure> failureCallback) {
 
-    resultCallback.accept(new Success(items.find({ it.id == id })))
+    Optional<IngestJob> foundJob = items.stream()
+      .filter(it -> it.id.equals(id))
+      .findFirst();
+
+    if(foundJob.isPresent()) {
+      resultCallback.accept(new Success<>(foundJob.get()));
+    }
+    else {
+      resultCallback.accept(new Success<>(null));
+    }
   }
 
   @Override
-  void findAll(PagingParameters pagingParameters,
-               Consumer<Success<Map>> resultCallback,
-               Consumer<Failure> failureCallback) {
+  public void findAll(
+    PagingParameters pagingParameters,
+    Consumer<Success<Map>> resultCallback,
+    Consumer<Failure> failureCallback) {
 
-    def totalRecords = items.size()
+    int totalRecords = items.size();
 
-    def paged = items.stream()
+    Collection paged = items.stream()
       .skip(pagingParameters.offset)
       .limit(pagingParameters.limit)
-      .collect()
+      .collect(Collectors.toList());
 
-    resultCallback.accept(new Success(
-      wrapFindResult("jobs", paged, totalRecords)))
+    resultCallback.accept(new Success<>(wrapFindResult(paged, totalRecords)));
   }
 
   @Override
-  void update(IngestJob ingestJob,
-             Consumer<Success> completionCallback,
-             Consumer<Failure> failureCallback) {
+  public void update(
+    final IngestJob ingestJob,
+    Consumer<Success> completionCallback,
+    Consumer<Failure> failureCallback) {
 
-    items.removeIf({ it.id == ingestJob.id })
-    items.add(ingestJob)
-    completionCallback.accept(new Success(null))
+    items.removeIf(it -> it.id.equals(ingestJob.id));
+    items.add(ingestJob);
+
+    completionCallback.accept(new Success<>(null));
   }
 
   @Override
-  void delete(String id,
-              Consumer<Success> completionCallback,
-              Consumer<Failure> failureCallback) {
+  public void delete(
+    final String id,
+    Consumer<Success> completionCallback,
+    Consumer<Failure> failureCallback) {
 
-    items.removeIf({ it.id == id })
-    completionCallback.accept(new Success<>(null))
+    items.removeIf(it -> it.id.equals(id));
+    completionCallback.accept(new Success<>(null));
+
   }
 
   private Map wrapFindResult(
-    String collectionName,
     Collection pagedRecords,
     int totalRecords) {
 
-    [
-      (collectionName): pagedRecords,
-      "totalRecords"  : totalRecords
-    ]
+    Map<String, Object> map = new HashMap<>(2);
+    map.put("jobs", pagedRecords);
+    map.put("totalRecords", totalRecords);
+    return map;
   }
+
 }

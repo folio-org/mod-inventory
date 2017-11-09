@@ -1,12 +1,12 @@
-package org.folio.inventory.resources.ingest
+package org.folio.inventory.resources.ingest;
 
-enum IngestJobState {
-  REQUESTED("Requested"), IN_PROGRESS("In Progress"), COMPLETED("Completed")
+public enum IngestJobState {
+  REQUESTED("Requested"), IN_PROGRESS("In Progress"), COMPLETED("Completed");
 
-  private final String printableDescription
+  private final String printableDescription;
 
   IngestJobState(String printableDescription) {
-    this.printableDescription = printableDescription
+    this.printableDescription = printableDescription;
   }
 
   @Override
