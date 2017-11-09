@@ -1,37 +1,38 @@
-package org.folio.inventory.common
+package org.folio.inventory.common;
 
-import org.folio.inventory.common.domain.Success
+import org.folio.inventory.common.domain.Success;
 
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit
-import java.util.function.Consumer
+import java.util.ArrayList;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 
-import static org.folio.inventory.common.FutureAssistance.complete
-import static org.folio.inventory.common.FutureAssistance.succeed
+public class WaitForAllFutures<T> {
+  private ArrayList<CompletableFuture<T>> allFutures = new ArrayList<CompletableFuture<T>>();
 
-class WaitForAllFutures<T> {
+  public Consumer<Void> notifyComplete() {
+    CompletableFuture newFuture = new CompletableFuture();
 
-  private allFutures = new ArrayList<CompletableFuture<T>>()
+    allFutures.add(newFuture);
 
-  Closure notifyComplete() {
-
-    def newFuture = new CompletableFuture()
-
-    allFutures.add(newFuture)
-
-    complete(newFuture)
+    return FutureAssistance.complete(newFuture);
   }
 
-  Consumer<Success> notifySuccess() {
+  public Consumer<Success> notifySuccess() {
 
-    def newFuture = new CompletableFuture()
+    CompletableFuture newFuture = new CompletableFuture();
 
-    allFutures.add(newFuture)
+    allFutures.add(newFuture);
 
-    succeed(newFuture)
+    return FutureAssistance.succeed(newFuture);
   }
 
-  void waitForCompletion() {
-    CompletableFuture.allOf(*allFutures).get(5000, TimeUnit.MILLISECONDS)
+  public void waitForCompletion()
+    throws InterruptedException, ExecutionException, TimeoutException {
+
+    CompletableFuture.allOf(allFutures.toArray(new CompletableFuture<?>[] { }))
+      .get(5000, TimeUnit.MILLISECONDS);
   }
 }

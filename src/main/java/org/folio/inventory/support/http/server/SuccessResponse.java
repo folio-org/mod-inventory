@@ -1,4 +1,4 @@
-package support.fakes.http.server;
+package org.folio.inventory.support.http.server;
 
 import io.vertx.core.http.HttpServerResponse;
 

@@ -1,11 +1,19 @@
-package org.folio.inventory.common.domain
+package org.folio.inventory.common.domain;
 
-class Failure {
-  final String reason
-  final Integer statusCode
-
-  def Failure(String reason, Integer statusCode) {
-    this.reason = reason
-    this.statusCode = statusCode
+public class Failure {
+  public Failure(String reason, Integer statusCode) {
+    this.reason = reason;
+    this.statusCode = statusCode;
   }
+
+  public final String getReason() {
+    return reason;
+  }
+
+  public final Integer getStatusCode() {
+    return statusCode;
+  }
+
+  private final String reason;
+  private final Integer statusCode;
 }

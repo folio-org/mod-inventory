@@ -1,19 +1,23 @@
-package org.folio.inventory.resources.ingest
+package org.folio.inventory.resources.ingest;
 
-class IngestJob {
-  final String id
-  final IngestJobState state
+public class IngestJob {
+  public final String id;
+  public final IngestJobState state;
 
-  IngestJob(String id, IngestJobState state) {
-    this.id = id
-    this.state = state
+  public IngestJob(String id, IngestJobState state) {
+    this.id = id;
+    this.state = state;
   }
 
-  IngestJob(IngestJobState state) {
-    this(null, state)
+  public IngestJob(IngestJobState state) {
+    this(null, state);
   }
 
-  IngestJob complete() {
-    new IngestJob(this.id, IngestJobState.COMPLETED)
+  public IngestJob complete() {
+    return new IngestJob(this.id, IngestJobState.COMPLETED);
+  }
+
+  public IngestJob copyWithNewId(String newId) {
+    return new IngestJob(newId, this.state);
   }
 }

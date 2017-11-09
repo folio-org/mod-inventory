@@ -1,84 +1,125 @@
-package org.folio.inventory.domain.ingest
+package org.folio.inventory.domain.ingest;
 
-import io.vertx.core.eventbus.EventBus
-import io.vertx.core.eventbus.Message
-import io.vertx.core.json.JsonObject
-import org.folio.inventory.common.CollectAll
-import org.folio.inventory.common.MessagingContext
-import org.folio.inventory.common.domain.Failure
-import org.folio.inventory.domain.Instance
-import org.folio.inventory.domain.Item
-import org.folio.inventory.domain.Messages
-import org.folio.inventory.resources.ingest.IngestJob
-import org.folio.inventory.resources.ingest.IngestJobState
-import org.folio.inventory.storage.Storage
-import org.folio.inventory.support.JsonArrayHelper
+import io.vertx.core.Handler;
+import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.eventbus.Message;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.inventory.common.CollectAll;
+import org.folio.inventory.common.MessagingContext;
+import org.folio.inventory.domain.*;
+import org.folio.inventory.resources.ingest.IngestJob;
+import org.folio.inventory.resources.ingest.IngestJobState;
+import org.folio.inventory.storage.Storage;
+import org.folio.inventory.support.JsonArrayHelper;
 
-class IngestMessageProcessor {
-  private final Storage storage
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
-  IngestMessageProcessor(final Storage storage) {
-    this.storage = storage
+public class IngestMessageProcessor {
+  private final Storage storage;
+
+  public IngestMessageProcessor(final Storage storage) {
+    this.storage = storage;
   }
 
-  void register(EventBus eventBus) {
-    eventBus.consumer(Messages.START_INGEST.Address)
-      .handler(this.&processRecordsMessage.rcurry(eventBus))
+  public void register(EventBus eventBus) {
+    eventBus.consumer(Messages.START_INGEST.Address, recordsMessageHandler(eventBus));
 
-    eventBus.consumer(Messages.INGEST_COMPLETED.Address)
-      .handler(this.&markIngestCompleted)
+    eventBus.consumer(Messages.INGEST_COMPLETED.Address, this::markIngestCompleted);
   }
 
-  private void processRecordsMessage(Message message, EventBus eventBus) {
-    def allItems = new CollectAll<Item>()
-    def allInstances = new CollectAll<Instance>()
+  private Handler<Message<JsonObject>> recordsMessageHandler(EventBus eventBus) {
+    return message -> processRecordsMessage(message, eventBus);
+  }
 
-    def body = ((JsonObject)message.body()).map
+  private void processRecordsMessage(Message<JsonObject> message, final EventBus eventBus) {
+    final CollectAll<Item> allItems = new CollectAll<>();
+    final CollectAll<Instance> allInstances = new CollectAll<>();
 
-    def records = JsonArrayHelper.toListOfMaps(body.records)
-    Map materialTypes = body.materialTypes.map
-    Map loanTypes = body.loanTypes.map
-    Map locations = body.locations.map
+    final MessagingContext context = new MessagingContext(message.headers());
+    final JsonObject body = message.body();
 
-    def context = new MessagingContext(message.headers())
+    IngestMessages.completed(context.getHeader("jobId"), context).send(eventBus);
 
-    def instanceCollection = storage.getInstanceCollection(context)
-    def itemCollection = storage.getItemCollection(context)
+    final List<JsonObject> records = JsonArrayHelper.toList(body.getJsonArray("records"));
+    final JsonObject materialTypes = body.getJsonObject("materialTypes");
+    final JsonObject loanTypes = body.getJsonObject("loanTypes");
+    final JsonObject locations = body.getJsonObject("locations");
+
+    final InstanceCollection instanceCollection = storage.getInstanceCollection(context);
+    final ItemCollection itemCollection = storage.getItemCollection(context);
 
     records.stream()
-      .map({
-      new Instance(it.title, JsonArrayHelper.toListOfMaps(it.identifiers))
-    })
-    .forEach({ instanceCollection.add(it, allInstances.receive(),
-      { Failure failure -> println("Ingest Creation Failed: ${failure.reason}") })
-    })
+      .map(record -> {
+        List<JsonObject> identifiersJson = JsonArrayHelper.toList(
+          record.getJsonArray("identifiers"));
 
-    allInstances.collect ({ instances ->
-      records.stream()
-        .map({ record ->
-          new Item(null, record.title, record.barcode,
-            instances.find({ it.title == record.title })?.id,
-            "Available", materialTypes.get("Book"), locations.get("Main Library"),
-            null, loanTypes.get("Can Circulate"), null)
-      })
-      .forEach({ itemCollection.add(it, allItems.receive(),
-        { Failure failure -> println("Ingest Creation Failed: ${failure.reason}") })
-      })
-    })
+        List<Identifier> identifiers = identifiersJson.stream()
+          .map(identifier -> new Identifier(identifier.getString("namespace"),
+            identifier.getString("value")))
+          .collect(Collectors.toList());
 
-    allItems.collect({
-      IngestMessages.completed(context.getHeader("jobId"), context)
-        .send(eventBus)
-    })
+        return new Instance(record.getString("title"), identifiers);
+      })
+      .forEach(instance -> {
+        instanceCollection.add(instance, allInstances.receive(),
+          failure -> System.out.println("Instance processing failed: " + failure.getReason()));
+      });
+
+      allInstances.collect(instances -> {
+        records.stream().map(record -> {
+          Optional<Instance> possibleInstance = instances.stream()
+            .filter(instance -> StringUtils.equals(instance.title, record.getString("title")))
+            .findFirst();
+
+          String instanceId = possibleInstance.isPresent()
+            ? possibleInstance.get().id
+            : null;
+
+          return new Item(null,
+            record.getString("title"),
+            record.getString("barcode"),
+            instanceId,
+            "Available",
+            materialTypes.getString("Book"),
+            locations.getString("Main Library"),
+            null,
+            loanTypes.getString("Can Circulate"),
+            null);
+        })
+        .forEach(item -> {
+          itemCollection.add(item, allItems.receive(),
+            failure -> System.out.println("Item processing failed: " + failure.getReason()));
+        });
+      });
+
+    allItems.collect(items -> {
+      IngestMessages.completed(context.getHeader("jobId"), context).send(eventBus);
+    });
   }
 
   private void markIngestCompleted(Message message) {
-    def context = new MessagingContext(message.headers())
+    final MessagingContext context = new MessagingContext(message.headers());
 
     storage.getIngestJobCollection(context).update(
       new IngestJob(context.getHeader("jobId"), IngestJobState.COMPLETED),
-      { },
-      { Failure failure ->
-        println("Updating ingest job failed: ${failure.reason}") })
+      v -> { },
+      failure -> System.out.println(
+        String.format("Updating ingest job failed: %s", failure.getReason())));
+  }
+
+  private Map<String, String> referenceRecordMap(JsonArray array) {
+
+    Map<String, String> map = new HashMap<>();
+
+    JsonArrayHelper.toList(array).stream()
+      .forEach(record -> map.put(record.getString("name"), record.getString("id")));
+
+    return map;
   }
 }

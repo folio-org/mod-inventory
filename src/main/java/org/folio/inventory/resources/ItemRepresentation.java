@@ -1,18 +1,23 @@
-package org.folio.inventory.resources
+package org.folio.inventory.resources;
 
-import io.vertx.core.json.JsonArray
-import io.vertx.core.json.JsonObject
-import org.folio.inventory.common.WebContext
-import org.folio.inventory.domain.Item
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import org.folio.inventory.common.WebContext;
+import org.folio.inventory.domain.Item;
+
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.List;
+import java.util.Map;
 
 class ItemRepresentation {
-  private final String relativeItemsPath
+  private final String relativeItemsPath;
 
-  def ItemRepresentation(String relativeItemsPath) {
-    this.relativeItemsPath = relativeItemsPath
+  public ItemRepresentation(String relativeItemsPath) {
+    this.relativeItemsPath = relativeItemsPath;
   }
 
-  JsonObject toJson(
+  public JsonObject toJson(
     Item item,
     JsonObject materialType,
     JsonObject permanentLoanType,
@@ -21,114 +26,122 @@ class ItemRepresentation {
     JsonObject temporaryLocation,
     WebContext context) {
 
-    def representation = toJson(item, context)
+    JsonObject representation = toJson(item, context);
 
     if(materialType != null) {
       representation.getJsonObject("materialType")
-        .put("name", materialType.getString("name"))
+        .put("name", materialType.getString("name"));
     }
 
     if(permanentLoanType != null) {
       representation.getJsonObject("permanentLoanType")
-        .put("name", permanentLoanType.getString("name"))
+        .put("name", permanentLoanType.getString("name"));
     }
 
     if(temporaryLoanType != null) {
       representation.getJsonObject("temporaryLoanType")
-        .put("name", temporaryLoanType.getString("name"))
+        .put("name", temporaryLoanType.getString("name"));
     }
 
     if(permanentLocation != null) {
       representation.getJsonObject("permanentLocation")
-        .put("name", permanentLocation.getString("name"))
+        .put("name", permanentLocation.getString("name"));
     }
 
     if(temporaryLocation != null) {
       representation.getJsonObject("temporaryLocation")
-        .put("name", temporaryLocation.getString("name"))
+        .put("name", temporaryLocation.getString("name"));
     }
 
-    representation
+    return representation;
   }
 
   JsonObject toJson(Item item, WebContext context) {
-    def representation = new JsonObject()
-    representation.put("id", item.id)
-    representation.put("title", item.title)
+
+    JsonObject representation = new JsonObject();
+    representation.put("id", item.id);
+    representation.put("title", item.title);
 
     if(item.status != null) {
-      representation.put("status", new JsonObject().put("name", item.status))
+      representation.put("status", new JsonObject().put("name", item.status));
     }
 
-    includeIfPresent(representation, "instanceId", item.instanceId)
-    includeIfPresent(representation, "barcode", item.barcode)
+    includeIfPresent(representation, "instanceId", item.instanceId);
+    includeIfPresent(representation, "barcode", item.barcode);
 
     includeReferenceIfPresent(representation, "materialType",
-      item.materialTypeId)
+      item.materialTypeId);
 
     includeReferenceIfPresent(representation, "permanentLoanType",
-      item.permanentLoanTypeId)
+      item.permanentLoanTypeId);
 
     includeReferenceIfPresent(representation, "temporaryLoanType",
-      item.temporaryLoanTypeId)
+      item.temporaryLoanTypeId);
 
     includeReferenceIfPresent(representation, "permanentLocation",
-      item.permanentLocationId)
+      item.permanentLocationId);
 
     includeReferenceIfPresent(representation, "temporaryLocation",
-      item.temporaryLocationId)
+      item.temporaryLocationId);
 
-    representation.put('links',
-      ['self': context.absoluteUrl(
-        "${relativeItemsPath}/${item.id}").toString()])
+    try {
+      URL selfUrl = context.absoluteUrl(String.format("%s/%s",
+        relativeItemsPath, item.id));
 
-    representation
+      representation.put("links", new JsonObject().put("self", selfUrl.toString()));
+    } catch (MalformedURLException e) {
+      System.out.println(String.format("Failed to create self link for item: " + e.toString()));
+    }
+
+    return representation;
   }
 
-  JsonObject toJson(
-    Map wrappedItems,
+  public JsonObject toJson(
+    Map<String, Object> wrappedItems,
     Map<String, JsonObject> materialTypes,
     Map<String, JsonObject> loanTypes,
     Map<String, JsonObject> locations,
     WebContext context) {
 
-    def representation = new JsonObject()
+    JsonObject representation = new JsonObject();
 
-    def results = new JsonArray()
+    JsonArray results = new JsonArray();
 
-    wrappedItems.items.each { item ->
-      def materialType = materialTypes.get(item?.materialTypeId)
-      def permanentLoanType = loanTypes.get(item?.permanentLoanTypeId)
-      def temporaryLoanType = loanTypes.get(item?.temporaryLoanTypeId)
-      def permanentLocation = locations.get(item?.permanentLocationId)
-      def temporaryLocation = locations.get(item?.temporaryLocationId)
+    List<Item> items = (List<Item>)wrappedItems.get("items");
+
+    items.stream().forEach(item -> {
+      JsonObject materialType = materialTypes.get(item.materialTypeId);
+      JsonObject permanentLoanType = loanTypes.get(item.permanentLoanTypeId);
+      JsonObject temporaryLoanType = loanTypes.get(item.temporaryLoanTypeId);
+      JsonObject permanentLocation = locations.get(item.permanentLocationId);
+      JsonObject temporaryLocation = locations.get(item.temporaryLocationId);
       results.add(toJson(item, materialType, permanentLoanType, temporaryLoanType,
-        permanentLocation, temporaryLocation, context))
-    }
+        permanentLocation, temporaryLocation, context));
+    });
 
     representation
       .put("items", results)
-      .put("totalRecords", wrappedItems.totalRecords)
+      .put("totalRecords", wrappedItems.get("totalRecords"));
 
-    representation
+    return representation;
   }
 
-  JsonObject toJson(Map wrappedItems,
+  public JsonObject toJson(Map wrappedItems,
                     WebContext context) {
 
-    def representation = new JsonObject()
+    JsonObject representation = new JsonObject();
 
-    def results = new JsonArray()
+    JsonArray results = new JsonArray();
 
-    wrappedItems.items.each { item ->
-      results.add(toJson(item, context))
-    }
+    List<Item> items = (List<Item>)wrappedItems.get("items");
+
+    items.forEach(item -> results.add(toJson(item, context)));
 
     representation
       .put("items", results)
-      .put("totalRecords", wrappedItems.totalRecords)
+      .put("totalRecords", wrappedItems.get("totalRecords"));
 
-    representation
+    return representation;
   }
 
   private void includeReferenceIfPresent(
@@ -138,7 +151,7 @@ class ItemRepresentation {
 
     if (id != null) {
       representation.put(referencePropertyName,
-        new JsonObject().put("id", id))
+        new JsonObject().put("id", id));
     }
   }
 
@@ -148,7 +161,7 @@ class ItemRepresentation {
     String propertyValue) {
 
     if (propertyValue != null) {
-      representation.put(propertyName, propertyValue)
+      representation.put(propertyName, propertyValue);
     }
   }
 }

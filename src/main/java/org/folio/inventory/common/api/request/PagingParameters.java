@@ -1,49 +1,38 @@
-package org.folio.inventory.common.api.request
+package org.folio.inventory.common.api.request;
 
-import org.apache.commons.lang3.StringUtils
-import org.folio.inventory.common.WebContext
+import org.apache.commons.lang3.StringUtils;
+import org.folio.inventory.common.WebContext;
 
-class PagingParameters {
+public class PagingParameters {
+  public final Integer limit;
+  public final Integer offset;
 
-  private final Integer limit
-  private final Integer offset
-
-  def PagingParameters(Integer limit, Integer offset) {
-    this.offset = offset
-    this.limit = limit
+  public PagingParameters(Integer limit, Integer offset) {
+    this.offset = offset;
+    this.limit = limit;
   }
 
-  static PagingParameters defaults() {
-    new PagingParameters(10, 0)
+  public static PagingParameters defaults() {
+    return new PagingParameters(10, 0);
   }
 
-  static PagingParameters from(WebContext context) {
+  public static PagingParameters from(WebContext context) {
+    String limit = context.getStringParameter("limit", "10");
+    String offset = context.getStringParameter("offset", "0");
 
-    def limit = context.getStringParameter("limit", "10")
-    def offset = context.getStringParameter("offset", "0")
-
-    if(valid(limit, offset)) {
-      new PagingParameters(Integer.parseInt(limit), Integer.parseInt(offset))
+    if (valid(limit, offset)) {
+      return new PagingParameters(Integer.parseInt(limit), Integer.parseInt(offset));
+    } else {
+      return null;
     }
-    else {
-      null
-    }
+
   }
 
-  def getLimit() {
-    this.limit;
-  }
-
-  def getOffset() {
-    this.offset;
-  }
-
-  private static boolean valid(String limit, String offset) {
-    if(StringUtils.isEmpty(limit) || StringUtils.isEmpty(offset)) {
-      false
-    }
-    else {
-      StringUtils.isNumeric(limit) && StringUtils.isNumeric(offset)
+  public static boolean valid(String limit, String offset) {
+    if (StringUtils.isEmpty(limit) || StringUtils.isEmpty(offset)) {
+      return false;
+    } else {
+      return StringUtils.isNumeric(limit) && StringUtils.isNumeric(offset);
     }
   }
 }

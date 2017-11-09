@@ -1,109 +1,109 @@
-package org.folio.inventory.common
+package org.folio.inventory.common;
 
-import io.vertx.core.DeploymentOptions
-import io.vertx.core.Vertx
-import io.vertx.core.json.JsonObject
+import io.vertx.core.DeploymentOptions;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 
-import java.util.concurrent.CompletableFuture
-import java.util.function.Function
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
-class VertxAssistant {
+public class VertxAssistant {
+  private Vertx vertx;
 
-  private Vertx vertx
-
-  def useVertx(Closure closure) {
-    closure(vertx)
+  public void useVertx(Consumer<Vertx> action) {
+    action.accept(vertx);
   }
 
-  def <T> T createUsingVertx(Function<Vertx, T> function) {
-    function.apply(vertx)
+  public <T> T createUsingVertx(Function<Vertx, T> function) {
+    return function.apply(vertx);
   }
 
-  void start() {
-    if(vertx == null) {
-      this.vertx = Vertx.vertx()
+  public void start() {
+    if (this.vertx == null) {
+      this.vertx = Vertx.vertx();
     }
   }
 
-  void stop() {
-    def stopped = new CompletableFuture()
+  public void stop() {
+    CompletableFuture stopped = new CompletableFuture();
 
-    stop(stopped)
+    stop(stopped);
 
-    stopped.join()
+    stopped.join();
   }
 
-  void stop(CompletableFuture stopped) {
+  public void stop(final CompletableFuture stopped) {
 
     if (vertx != null) {
-      vertx.close({ res ->
-        if (res.succeeded()) {
-          stopped.complete(null);
-        } else {
-          stopped.completeExceptionally(res.cause());
+      vertx.close(res -> {
+          if (res.succeeded()) {
+            stopped.complete(null);
+          } else {
+            stopped.completeExceptionally(res.cause());
+          }
         }
-      })
-
-      stopped.thenAccept({ vertx == null })
+      );
     }
   }
 
-  void deployGroovyVerticle(String verticleClass,
-                            Map<String, Object> config,
-                            CompletableFuture<String> deployed) {
+  public void deployGroovyVerticle(String verticleClass,
+                             Map<String, Object> config,
+                             CompletableFuture<String> deployed) {
 
-    def startTime = System.currentTimeMillis()
+    long startTime = System.currentTimeMillis();
 
-    def options = new DeploymentOptions()
+    DeploymentOptions options = new DeploymentOptions();
 
-    options.config = new JsonObject(config)
-    options.worker = true
+    options.setConfig(new JsonObject(config));
+    options.setWorker(true);
 
-    vertx.deployVerticle("groovy:" + verticleClass,
-      options,
-      { res ->
-        if (res.succeeded()) {
-          def elapsedTime = System.currentTimeMillis() - startTime
-          println("${verticleClass} deployed in ${elapsedTime} milliseconds")
-          deployed.complete(res.result());
-        } else {
-          deployed.completeExceptionally(res.cause());
-        }
-      });
-  }
+    vertx.deployVerticle("groovy:" + verticleClass, options, result -> {
+      if (result.succeeded()) {
+        long elapsedTime = System.currentTimeMillis() - startTime;
 
-  void deployVerticle(String verticleClass,
-                            Map<String, Object> config,
-                            CompletableFuture<String> deployed) {
+        String.format("%s deployed in %s milliseconds", verticleClass, elapsedTime);
 
-    def startTime = System.currentTimeMillis()
-
-    def options = new DeploymentOptions()
-
-    options.config = new JsonObject(config)
-    options.worker = true
-
-    vertx.deployVerticle(verticleClass,
-      options,
-      { res ->
-        if (res.succeeded()) {
-          def elapsedTime = System.currentTimeMillis() - startTime
-          println("${verticleClass} deployed in ${elapsedTime} milliseconds")
-          deployed.complete(res.result());
-        } else {
-          deployed.completeExceptionally(res.cause());
-        }
-      });
-  }
-
-
-  void undeployVerticle(String deploymentId, CompletableFuture undeployed) {
-
-    vertx.undeploy(deploymentId, { res ->
-      if (res.succeeded()) {
-        undeployed.complete();
+        deployed.complete(result.result());
       } else {
-        undeployed.completeExceptionally(res.cause());
+        deployed.completeExceptionally(result.cause());
+      }
+    });
+  }
+
+  public void deployVerticle(String verticleClass,
+                             Map<String, Object> config,
+                             CompletableFuture<String> deployed) {
+
+    long startTime = System.currentTimeMillis();
+
+    DeploymentOptions options = new DeploymentOptions();
+
+    options.setConfig(new JsonObject(config));
+    options.setWorker(true);
+
+    vertx.deployVerticle(verticleClass, options, result -> {
+      if (result.succeeded()) {
+        long elapsedTime = System.currentTimeMillis() - startTime;
+
+        String.format("%s deployed in %s milliseconds", verticleClass, elapsedTime);
+
+        deployed.complete(result.result());
+      } else {
+        deployed.completeExceptionally(result.cause());
+      }
+    });
+  }
+
+  public void undeployVerticle(String deploymentId,
+                               CompletableFuture<Void> undeployed) {
+
+    vertx.undeploy(deploymentId, result -> {
+      if (result.succeeded()) {
+        undeployed.complete(null);
+      } else {
+        undeployed.completeExceptionally(result.cause());
       }
     });
   }

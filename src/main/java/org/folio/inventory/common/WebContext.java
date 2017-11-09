@@ -1,63 +1,65 @@
-package org.folio.inventory.common
+package org.folio.inventory.common;
 
-import io.vertx.ext.web.RoutingContext
+import io.vertx.ext.web.RoutingContext;
 
-class WebContext implements Context {
-  private final RoutingContext routingContext
+import java.net.MalformedURLException;
+import java.net.URL;
 
-  WebContext(RoutingContext routingContext) {
-    this.routingContext = routingContext
+public class WebContext implements Context {
+  public WebContext(RoutingContext routingContext) {
+    this.routingContext = routingContext;
   }
 
   @Override
-  String getTenantId() {
-    getHeader("X-Okapi-Tenant", "")
+  public String getTenantId() {
+    return getHeader("X-Okapi-Tenant", "");
   }
 
   @Override
-  String getToken() {
-    getHeader("X-Okapi-Token", "")
+  public String getToken() {
+    return getHeader("X-Okapi-Token", "");
   }
 
   @Override
-  String getOkapiLocation() {
-    getHeader("X-Okapi-Url", "")
+  public String getOkapiLocation() {
+    return getHeader("X-Okapi-Url", "");
   }
 
   @Override
-  def getHeader(String header) {
-    routingContext.request().getHeader(header)
+  public String getHeader(String header) {
+    return routingContext.request().getHeader(header);
   }
 
   @Override
-  def getHeader(String header, defaultValue) {
-    hasHeader(header) ? getHeader(header) : defaultValue
+  public String getHeader(String header, String defaultValue) {
+    return hasHeader(header) ? getHeader(header) : defaultValue;
   }
 
   @Override
-  boolean hasHeader(String header) {
-    routingContext.request().headers().contains(header)
+  public boolean hasHeader(String header) {
+    return routingContext.request().headers().contains(header);
   }
 
-  def URL absoluteUrl(String path) {
-    def currentRequestUrl = new URL(routingContext.request().absoluteURI())
+  public URL absoluteUrl(String path) throws MalformedURLException {
+    URL currentRequestUrl = new URL(routingContext.request().absoluteURI());
 
     //It would seem Okapi preserves headers from the original request,
     // so there is no need to use X-Okapi-Url for this?
-
-    new URL(currentRequestUrl.protocol, currentRequestUrl.host,
-      currentRequestUrl.port, path)
+    return new URL(currentRequestUrl.getProtocol(), currentRequestUrl.getHost(),
+      currentRequestUrl.getPort(), path);
   }
 
-  Integer getIntegerParameter(String name, Integer defaultValue) {
-    def value = routingContext.request().getParam(name)
+  public Integer getIntegerParameter(String name, Integer defaultValue) {
+    String value = routingContext.request().getParam(name);
 
-    value != null ? Integer.parseInt(value) : defaultValue
+    return value != null ? Integer.parseInt(value) : defaultValue;
   }
 
-  String getStringParameter(String name, String defaultValue) {
-    def value = routingContext.request().getParam(name)
+  public String getStringParameter(String name, String defaultValue) {
+    String value = routingContext.request().getParam(name);
 
-    value != null ? value : defaultValue
+    return value != null ? value : defaultValue;
   }
+
+  private final RoutingContext routingContext;
 }

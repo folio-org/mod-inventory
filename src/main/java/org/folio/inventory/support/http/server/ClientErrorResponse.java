@@ -1,4 +1,4 @@
-package support.fakes.http.server;
+package org.folio.inventory.support.http.server;
 
 import io.vertx.core.http.HttpServerResponse;
 import org.apache.http.entity.ContentType;
@@ -6,7 +6,7 @@ import org.apache.http.entity.ContentType;
 public class ClientErrorResponse {
   public static void notFound(HttpServerResponse response) {
     response.setStatusCode(404);
-    response.end();
+    response.end("Not Found");
   }
 
   public static void badRequest(HttpServerResponse response, String reason) {

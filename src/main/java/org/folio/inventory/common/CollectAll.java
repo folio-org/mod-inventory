@@ -1,27 +1,30 @@
-package org.folio.inventory.common
+package org.folio.inventory.common;
 
-import org.folio.inventory.common.domain.Success
-import java.util.concurrent.CompletableFuture
-import java.util.function.Consumer
+import org.folio.inventory.common.domain.Success;
 
-import static org.folio.inventory.common.FutureAssistance.succeed
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
-class CollectAll<T> {
+public class CollectAll<T> {
+  private ArrayList<CompletableFuture<T>> allFutures = new ArrayList<>();
 
-  private allFutures = new ArrayList<CompletableFuture<T>>()
+  public Consumer<Success<T>> receive() {
+    CompletableFuture newFuture = new CompletableFuture();
 
-  Consumer<Success> receive() {
-    def newFuture = new CompletableFuture()
+    allFutures.add(newFuture);
 
-    allFutures.add(newFuture)
-
-    succeed(newFuture)
+    return FutureAssistance.succeed(newFuture);
   }
 
-  void collect(Closure action) {
-    if(action != null) {
-      CompletableFuture.allOf(*allFutures)
-        .thenApply { action(allFutures.collect { it.get() }) }
-    }
+  public void collect(Consumer<List<T>> action) {
+    CompletableFuture.allOf(allFutures.toArray(new CompletableFuture<?>[] { }))
+      .thenAccept(v -> {
+        action.accept(allFutures.stream()
+          .map(future -> future.join())
+          .collect(Collectors.toList()));
+      });
   }
 }

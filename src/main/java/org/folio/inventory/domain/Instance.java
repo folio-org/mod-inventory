@@ -1,48 +1,64 @@
-package org.folio.inventory.domain
+package org.folio.inventory.domain;
 
-class Instance {
-  final String id
-  final String title
-  final List<Map> identifiers
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
-  def Instance(String title, List<Map> identifiers) {
-    this(null, title, identifiers)
+public class Instance {
+  public final String id;
+  public final String title;
+  public final List<Identifier> identifiers;
+
+  public Instance(String title, List<Identifier> identifiers) {
+    this(null, title, identifiers);
   }
 
-  def Instance(String title) {
-    this(null, title, [])
+  public Instance(String title) {
+    this(null, title, new ArrayList());
   }
 
-  def Instance(String id, String title, List<Map> identifiers) {
-    this.id = id
-    this.title = title
-    this.identifiers = identifiers.collect()
+  public Instance(String id, String title, List<Identifier> identifiers) {
+    this.id = id;
+    this.title = title;
+
+    if(identifiers != null) {
+      this.identifiers = identifiers.stream().collect(Collectors.toList());
+    }
+    else {
+      this.identifiers = new ArrayList<>();
+    }
   }
 
-  def Instance copyWithNewId(String newId) {
-    new Instance(newId, this.title, this.identifiers)
+  public Instance copyWithNewId(String newId) {
+    return new Instance(newId, this.title, this.identifiers);
   }
 
-  Instance addIdentifier(Map identifier) {
-    new Instance(id, title, this.identifiers.collect() << identifier)
+  public Instance addIdentifier(Identifier identifier) {
+    List<Identifier> identifiers = this.identifiers.stream()
+      .collect(Collectors.toList());
+
+    identifiers.add(identifier);
+
+    return new Instance(id, title, identifiers);
   }
 
-  Instance addIdentifier(String namespace, String value) {
-    def identifier = ['namespace' : namespace, 'value' : value]
+  public Instance addIdentifier(String namespace, String value) {
+    Identifier identifier = new Identifier(namespace, value);
 
-    new Instance(id, title, this.identifiers.collect() << identifier)
+    return addIdentifier(identifier);
   }
 
   @Override
   public String toString() {
-    println ("Instance ID: ${id}, Title: ${title}")
+    return String.format("Instance ID: %s, Title: %s", id, title);
   }
 
-  Instance removeIdentifier(String namespace, String value) {
-    def newIdentifiers = this.identifiers.stream()
-      .filter({ !(it.namespace == namespace && it.value == value) })
-      .collect()
+  public Instance removeIdentifier(final String namespace, final String value) {
+    List<Identifier> newIdentifiers = this.identifiers.stream()
+      .filter(it -> !(it.namespace.equals(namespace) && it.value.equals(value)))
+      .collect(Collectors.toList());
 
-    new Instance(id, title, newIdentifiers)
+    return new Instance(id, title, newIdentifiers);
   }
+
 }

@@ -1,27 +1,27 @@
-package org.folio.inventory.common
+package org.folio.inventory.common;
 
-import io.vertx.ext.web.RoutingContext
+import io.vertx.ext.web.RoutingContext;
 
-class WebRequestDiagnostics {
+public class WebRequestDiagnostics {
+  public static void outputDiagnostics(RoutingContext routingContext) {
 
-  static void outputDiagnostics(RoutingContext routingContext) {
+    System.out.println(String.format("Handling %s\n", routingContext.normalisedPath()));
+    System.out.println(String.format("Method: %s\n", routingContext.request().rawMethod()));
 
-    printf "Handling %s\n", routingContext.normalisedPath()
-    printf "Method: %s\n", routingContext.request().rawMethod()
+    outputHeaders(routingContext);
 
-    outputHeaders routingContext
-
-    routingContext.next()
+    routingContext.next();
   }
 
   private static void outputHeaders(RoutingContext routingContext) {
-    println "Headers"
+    System.out.println("Headers");
 
-    for (def name : routingContext.request().headers().names()) {
-      for (def entry : routingContext.request().headers().getAll(name))
-        printf "%s : %s\n", name, entry
+    for (String name : routingContext.request().headers().names()) {
+      for (String entry : routingContext.request().headers().getAll(name))
+        System.out.println(String.format("%s : %s\n", name, entry));
     }
 
-    println()
+
+    System.out.println();
   }
 }

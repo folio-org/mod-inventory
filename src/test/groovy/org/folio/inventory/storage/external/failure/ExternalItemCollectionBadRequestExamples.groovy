@@ -10,7 +10,7 @@ class ExternalItemCollectionBadRequestExamples
   extends ExternalItemCollectionFailureExamples {
 
   ExternalItemCollectionBadRequestExamples() {
-    super(ExternalStorageFailureSuite.useVertx(
+    super(ExternalStorageFailureSuite.createUsing(
       { new ExternalStorageCollections(it,
         ExternalStorageFailureSuite.badRequestStorageAddress)}))
   }

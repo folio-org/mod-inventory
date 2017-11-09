@@ -1,5 +1,6 @@
 package org.folio.inventory.storage.external.failure
 
+import io.vertx.core.Vertx
 import org.folio.inventory.common.VertxAssistant
 import org.folio.inventory.storage.external.support.FailureInventoryStorageModule
 import org.junit.AfterClass
@@ -9,6 +10,7 @@ import org.junit.runners.Suite
 
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
+import java.util.function.Function
 
 @RunWith(Suite.class)
 
@@ -23,8 +25,8 @@ public class ExternalStorageFailureSuite {
   private static final VertxAssistant vertxAssistant = new VertxAssistant();
   private static String storageModuleDeploymentId
 
-  public static useVertx(Closure action) {
-    vertxAssistant.useVertx(action)
+  public static <T> T createUsing(Function<Vertx, T> function) {
+    vertxAssistant.createUsingVertx(function)
   }
 
   static String getServerErrorStorageAddress() {

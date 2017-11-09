@@ -1,5 +1,7 @@
 package org.folio.inventory.parsing
 
+import io.vertx.core.json.JsonObject
+import org.folio.inventory.support.JsonArrayHelper
 import org.junit.Test
 
 import java.util.regex.Pattern
@@ -9,19 +11,21 @@ class ModsParsingExamples {
   @Test
   void multipleModsRecordCanBeParsedIntoItems() {
 
-    def modsXml = this.getClass()
+    String modsXml = this.getClass()
       .getResourceAsStream('/mods/multiple-example-mods-records.xml')
       .getText("UTF-8")
 
-    def records = new ModsParser(new UTF8LiteralCharacterEncoding())
+    List<JsonObject> records = new ModsParser(new UTF8LiteralCharacterEncoding())
       .parseRecords(modsXml);
 
     assert records.size() == 8
 
+    assert records.stream().allMatch( { it.containsKey("title") } )
+
     NoTitlesContainEscapedCharacters(records)
 
-    assert records.every( { it.identifiers != null } )
-    assert records.every( { it.identifiers.size() > 0 } )
+    assert records.stream().allMatch( { it.containsKey("identifiers") } )
+    assert records.stream().allMatch( { it.getJsonArray("identifiers").size() > 0 } )
 
     def california = records.find({
       similarTo(it, "California: its gold and its inhabitants", "69228882")
@@ -29,7 +33,7 @@ class ModsParsingExamples {
 
     assert california != null
 
-    assert california.identifiers.size() == 1
+    assert california.getJsonArray("identifiers").size() == 1
     assert hasIdentifier(california, "UkMaC", "69228882")
 
 
@@ -39,7 +43,7 @@ class ModsParsingExamples {
 
     assert studien != null
 
-    assert studien.identifiers.size() == 1
+    assert studien.getJsonArray("identifiers").size() == 1
     assert hasIdentifier(studien, "UkMaC", "69247446")
 
     def essays = records.find({
@@ -48,7 +52,7 @@ class ModsParsingExamples {
 
     assert essays != null
 
-    assert essays.identifiers.size() == 3
+    assert essays.getJsonArray("identifiers").size() == 3
     assert hasIdentifier(essays, "UkMaC", "53556908")
     assert hasIdentifier(essays, "StGlU", "b13803414")
     assert hasIdentifier(essays, "isbn", "0889464944")
@@ -60,7 +64,7 @@ class ModsParsingExamples {
 
     assert sketches != null
 
-    assert sketches.identifiers.size() == 1
+    assert sketches.getJsonArray("identifiers").size() == 1
     assert hasIdentifier(sketches, "UkMaC", "69077747")
 
     def mcGuire = records.find({
@@ -79,7 +83,7 @@ class ModsParsingExamples {
 
     assert influenza != null
 
-    assert influenza.identifiers.size() == 1
+    assert influenza.getJsonArray("identifiers").size() == 1
     assert hasIdentifier(influenza, "UkMaC", "43620390")
 
     def nikitovic = records.find({
@@ -88,7 +92,7 @@ class ModsParsingExamples {
 
     assert nikitovic != null
 
-    assert nikitovic.identifiers.size() == 2
+    assert nikitovic.getJsonArray("identifiers").size() == 2
     assert hasIdentifier(nikitovic, "UkMaC", "37696876")
     assert hasIdentifier(nikitovic, "isbn", "8683385124")
 
@@ -98,30 +102,35 @@ class ModsParsingExamples {
 
     assert grammar != null
 
-    assert grammar.identifiers.size() == 1
+    assert grammar.getJsonArray("identifiers").size() == 1
     assert hasIdentifier(grammar, "UkMaC", "69250051")
   }
 
-  private void NoTitlesContainEscapedCharacters(records) {
-
-    assert !records.any {
+  private void NoTitlesContainEscapedCharacters(List<JsonObject> records) {
+    assert records.stream().noneMatch({ record ->
       Pattern.compile(
         '(\\\\x[0-9a-fA-F]{2})+',
-        Pattern.CASE_INSENSITIVE).matcher(it.title).find()
-    }
+        Pattern.CASE_INSENSITIVE).matcher(record.getString("title")).find()
+    })
   }
 
   private boolean similarTo(
-    record,
+    JsonObject record,
     String expectedSimilarTitle,
     String expectedBarcode) {
 
-      record.title.contains(expectedSimilarTitle) &&
-      record.barcode == expectedBarcode
+      record.getString("title").contains(expectedSimilarTitle) &&
+      record.getString("barcode") == expectedBarcode
   }
 
-  private boolean hasIdentifier(record, String namespace, String value) {
-    record.identifiers.any({ it.namespace == namespace && it.value == value })
+  private boolean hasIdentifier(
+    JsonObject record,
+    String namespace,
+    String value) {
+
+    JsonArrayHelper.toList(
+      record.getJsonArray("identifiers")).stream()
+      .anyMatch({ it.getString("namespace") == namespace && it.getString("value") == value })
   }
 }
 
