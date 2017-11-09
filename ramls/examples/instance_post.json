@@ -1,9 +1,17 @@
 {
   "title": "ADVANCING LIBRARY EDUCATION: TECHNOLOGICAL INNOVATION AND INSTRUCTIONAL DESIGN",
+  "source": "Local",
+  "instanceTypeId": "abc5dd49-7ede-49cb-84db-6fac770279a8",
   "identifiers": [
     {
-      "namespace": "isbn",
+      "identifierTypeId": "8261054f-be78-422d-bd51-4ed9f33c3422",
       "value": "9781466636897"
+    }
+  ],
+  "creators": [
+    {
+      "creatorTypeId": "2b94c631-fca9-a892-c730-03ee529ffe2a",
+      "name": "Samuels, Simon"
     }
   ]
 }

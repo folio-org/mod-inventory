@@ -7,7 +7,7 @@ class IngestRecordConverter {
   def toJson(records) {
     records.collect {
       def convertedIdentifiers = it.identifiers.collect {
-        ["namespace": "${it.namespace}", "value": "${it.value}"]
+        ["identifierTypeId": "${it.identifierTypeId}", "value": "${it.value}"]
       }
 
       new JsonObject()

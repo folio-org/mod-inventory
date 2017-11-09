@@ -32,7 +32,6 @@ class ModsParsingExamples {
     assert california.identifiers.size() == 1
     assert hasIdentifier(california, "UkMaC", "69228882")
 
-
     def studien = records.find({
       similarTo(it, "Studien zur Geschichte der Notenschrift.", "69247446")
     })
@@ -120,8 +119,8 @@ class ModsParsingExamples {
       record.barcode == expectedBarcode
   }
 
-  private boolean hasIdentifier(record, String namespace, String value) {
-    record.identifiers.any({ it.namespace == namespace && it.value == value })
+  private boolean hasIdentifier(record, String identifierTypeId, String value) {
+    record.identifiers.any({ it.identifierTypeId == identifierTypeId && it.value == value })
   }
 }
 

@@ -2,8 +2,9 @@
 
 * Removes `location` property from Item record
 * Introduces `permanentLocation` and `temporaryLocation` properties (which include the name fetched from `shelf-locations`)
-* Provides inventory interface version 3.0
+* Provides inventory interface version 4.0
 * Requires item-storage interface version 4.0
+* Requires instance-storage interface version 3.0
 * Requires shelf-locations interface version 1.0
 * Adds mod- prefix to names of the built artifacts (FOLIO-813)
 

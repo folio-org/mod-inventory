@@ -28,10 +28,24 @@ class InstancesApiExamples extends Specification {
   }
 
   void "Can create an instance"() {
+
     given:
-      def newInstanceRequest = new JsonObject()
+      def instanceTypeId = UUID.randomUUID().toString()
+
+    def newInstanceRequest = new JsonObject()
         .put("title", "Long Way to a Small Angry Planet")
-        .put("identifiers", [[namespace: "isbn", value: "9781473619777"]])
+        .put("identifiers", [
+          [
+            identifierTypeId: ISBN_IDENTIFIER_TYPE_ID.toString(),
+            value: "9781473619777"
+          ]])
+          .put("creators", [
+          [
+            creatorTypeId: PERSONAL_CREATOR_TYPE_ID.toString(),
+            name: "Chambers, Becky"
+          ]])
+        .put("source", "Local")
+        .put("instanceTypeId", instanceTypeId)
 
     when:
       def postCompleted = new CompletableFuture<Response>()
@@ -60,8 +74,18 @@ class InstancesApiExamples extends Specification {
 
       assert createdInstance.containsKey("id")
       assert createdInstance.getString("title") == "Long Way to a Small Angry Planet"
-      assert createdInstance.getJsonArray("identifiers").getJsonObject(0).getString("namespace") == "isbn"
-      assert createdInstance.getJsonArray("identifiers").getJsonObject(0).getString("value") == "9781473619777"
+      assert createdInstance.getString("source") == "Local"
+      assert createdInstance.getString("instanceTypeId") == instanceTypeId
+
+      def firstIdentifier = createdInstance.getJsonArray("identifiers").getJsonObject(0)
+
+      assert firstIdentifier.getString("identifierTypeId") == ISBN_IDENTIFIER_TYPE_ID.toString()
+      assert firstIdentifier.getString("value") == "9781473619777"
+
+      def firstCreator = createdInstance.getJsonArray("creators").getJsonObject(0)
+
+      assert firstCreator.getString("creatorTypeId") == PERSONAL_CREATOR_TYPE_ID.toString()
+      assert firstCreator.getString("name") == "Chambers, Becky"
 
       expressesDublinCoreMetadata(createdInstance)
       dublinCoreContextLinkRespectsWayResourceWasReached(createdInstance)
@@ -72,10 +96,18 @@ class InstancesApiExamples extends Specification {
   void "Can create an instance with an ID"() {
     given:
       def instanceId = UUID.randomUUID().toString()
+      def instanceTypeId = UUID.randomUUID().toString()
 
       def newInstanceRequest = new JsonObject()
         .put("id", instanceId)
         .put("title", "Long Way to a Small Angry Planet")
+        .put("source", "Local")
+        .put("creators", [
+        [
+          creatorTypeId: PERSONAL_CREATOR_TYPE_ID.toString(),
+          name: "Chambers, Becky"
+        ]])
+        .put("instanceTypeId", instanceTypeId)
 
     when:
       def postCompleted = new CompletableFuture<Response>()
@@ -104,6 +136,13 @@ class InstancesApiExamples extends Specification {
 
       assert createdInstance.getString("id") == instanceId
       assert createdInstance.getString("title") == "Long Way to a Small Angry Planet"
+      assert createdInstance.getString("source") == "Local"
+      assert createdInstance.getString("instanceTypeId") == instanceTypeId
+
+      def firstCreator = createdInstance.getJsonArray("creators").getJsonObject(0)
+
+      assert firstCreator.getString("creatorTypeId") == PERSONAL_CREATOR_TYPE_ID.toString()
+      assert firstCreator.getString("name") == "Chambers, Becky"
 
       expressesDublinCoreMetadata(createdInstance)
       dublinCoreContextLinkRespectsWayResourceWasReached(createdInstance)

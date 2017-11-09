@@ -167,11 +167,13 @@ class ModsIngestExamples extends Specification {
     assert instances.size() == 8
     assert instances.every({ it.containsKey("id") })
     assert instances.every({ it.containsKey("title") })
+    assert instances.every({ it.containsKey("instanceTypeId") })
+    assert instances.every({ it.containsKey("source") })
     assert instances.every({ it.containsKey("identifiers") })
     assert instances.every({ it.getJsonArray("identifiers").size() >= 1 })
     assert instances.every({
       JsonArrayHelper.toList(it.getJsonArray("identifiers"))
-        .every({ it.containsKey("namespace") })
+        .every({ it.containsKey("identifierTypeId") })
     })
     assert instances.every({
       JsonArrayHelper.toList(it.getJsonArray("identifiers"))

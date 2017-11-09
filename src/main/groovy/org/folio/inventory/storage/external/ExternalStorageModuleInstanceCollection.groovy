@@ -10,6 +10,7 @@ import io.vertx.core.http.HttpClientResponse
 import org.folio.inventory.common.api.request.PagingParameters
 import org.folio.inventory.common.domain.Failure
 import org.folio.inventory.common.domain.Success
+import org.folio.inventory.domain.Creator
 import org.folio.inventory.domain.Instance
 import org.folio.inventory.domain.InstanceCollection
 
@@ -288,10 +289,22 @@ class ExternalStorageModuleInstanceCollection
   private Map mapToInstanceRequest(Instance instance) {
     def instanceToSend = [:]
 
+    JsonArray creators = new JsonArray();
+
+    instance.creators.stream().forEach({
+      creator -> creators.add(new JsonObject()
+        .put("creatorTypeId", creator.creatorTypeId)
+        .put("name", creator.name))
+    });
+
     //TODO: Review if this shouldn't be defaulting here
     instanceToSend.put("id", instance.id ?: UUID.randomUUID().toString())
     instanceToSend.put("title", instance.title)
     instanceToSend.put("identifiers", instance.identifiers)
+    instanceToSend.put("creators", creators)
+    includeIfPresent(instanceToSend, "instanceTypeId", instance.instanceTypeId)
+    includeIfPresent(instanceToSend, "source", instance.source)
+
     instanceToSend
   }
 
@@ -300,16 +313,35 @@ class ExternalStorageModuleInstanceCollection
     def identifiers = toList(
       instanceFromServer.getJsonArray("identifiers", new JsonArray()))
 
+    def creators = toList(
+      instanceFromServer.getJsonArray("creators", new JsonArray()))
+
     new Instance(
       instanceFromServer.getString("id"),
       instanceFromServer.getString("title"),
-      identifiers.collect( {
-        [ 'namespace' : it.getString("namespace"),
-          'value' : it.getString("value") ] }))
+      identifiers.collect({
+        ['identifierTypeId': it.getString("identifierTypeId"),
+         'value'           : it.getString("value")]
+      }),
+      instanceFromServer.getString("source"),
+      instanceFromServer.getString("instanceTypeId"),
+      creators.collect({
+        new Creator(it.getString("creatorTypeId"), it.getString("name"))
+      }))
   }
 
   private toList(JsonArray array) {
     array.stream().collect()
+  }
+
+  private void includeIfPresent(
+    Map instanceToSend,
+    String propertyName,
+    String propertyValue) {
+
+    if (propertyValue != null) {
+      instanceToSend.put(propertyName, propertyValue)
+    }
   }
 
   private Handler<Throwable> exceptionHandler(Consumer<Failure> failureCallback) {

@@ -11,13 +11,19 @@
     "title": {
       "type": "string"
     },
+    "instanceTypeId": {
+      "type": "string"
+    },
+    "source": {
+      "type": "string"
+    },
     "identifiers": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "object",
         "properties": {
-          "namespace": {
+          "identifierTypeId": {
             "type": "string"
           },
           "value": {
@@ -25,8 +31,27 @@
           }
         },
         "required": [
-          "namespace",
+          "identifierTypeId",
           "value"
+        ]
+      }
+    },
+    "creators": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "creatorTypeId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "creatorTypeId"
         ]
       }
     },
@@ -43,6 +68,9 @@
     }
   },
   "required": [
-    "title"
+    "title",
+    "source",
+    "instanceTypeId",
+    "creators"
   ]
 }
