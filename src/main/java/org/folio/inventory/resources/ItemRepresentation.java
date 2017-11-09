@@ -3,6 +3,7 @@ package org.folio.inventory.resources;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.folio.inventory.common.WebContext;
+import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.domain.Item;
 
 import java.net.MalformedURLException;
@@ -97,7 +98,7 @@ class ItemRepresentation {
   }
 
   public JsonObject toJson(
-    Map<String, Object> wrappedItems,
+    MultipleRecords<Item> wrappedItems,
     Map<String, JsonObject> materialTypes,
     Map<String, JsonObject> loanTypes,
     Map<String, JsonObject> locations,
@@ -107,7 +108,7 @@ class ItemRepresentation {
 
     JsonArray results = new JsonArray();
 
-    List<Item> items = (List<Item>)wrappedItems.get("items");
+    List<Item> items = wrappedItems.records;
 
     items.stream().forEach(item -> {
       JsonObject materialType = materialTypes.get(item.materialTypeId);
@@ -121,25 +122,7 @@ class ItemRepresentation {
 
     representation
       .put("items", results)
-      .put("totalRecords", wrappedItems.get("totalRecords"));
-
-    return representation;
-  }
-
-  public JsonObject toJson(Map wrappedItems,
-                    WebContext context) {
-
-    JsonObject representation = new JsonObject();
-
-    JsonArray results = new JsonArray();
-
-    List<Item> items = (List<Item>)wrappedItems.get("items");
-
-    items.forEach(item -> results.add(toJson(item, context)));
-
-    representation
-      .put("items", results)
-      .put("totalRecords", wrappedItems.get("totalRecords"));
+      .put("totalRecords", wrappedItems.totalRecords);
 
     return representation;
   }

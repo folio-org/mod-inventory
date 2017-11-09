@@ -2,6 +2,7 @@ package org.folio.inventory.storage.memory;
 
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
+import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.ingest.IngestJobCollection;
 import org.folio.inventory.resources.ingest.IngestJob;
@@ -15,7 +16,7 @@ public class InMemoryIngestJobCollection implements IngestJobCollection {
 
   @Override
   public void empty(
-    Consumer<Success> completionCallback,
+    Consumer<Success<Void>> completionCallback,
     Consumer<Failure> failureCallback) {
 
     items.clear();
@@ -57,23 +58,23 @@ public class InMemoryIngestJobCollection implements IngestJobCollection {
   @Override
   public void findAll(
     PagingParameters pagingParameters,
-    Consumer<Success<Map>> resultCallback,
+    Consumer<Success<MultipleRecords<IngestJob>>> resultCallback,
     Consumer<Failure> failureCallback) {
 
     int totalRecords = items.size();
 
-    Collection paged = items.stream()
+    List<IngestJob> paged = items.stream()
       .skip(pagingParameters.offset)
       .limit(pagingParameters.limit)
       .collect(Collectors.toList());
 
-    resultCallback.accept(new Success<>(wrapFindResult(paged, totalRecords)));
+    resultCallback.accept(new Success<>(new MultipleRecords<>(paged, totalRecords)));
   }
 
   @Override
   public void update(
     final IngestJob ingestJob,
-    Consumer<Success> completionCallback,
+    Consumer<Success<Void>> completionCallback,
     Consumer<Failure> failureCallback) {
 
     items.removeIf(it -> it.id.equals(ingestJob.id));
@@ -85,22 +86,10 @@ public class InMemoryIngestJobCollection implements IngestJobCollection {
   @Override
   public void delete(
     final String id,
-    Consumer<Success> completionCallback,
+    Consumer<Success<Void>> completionCallback,
     Consumer<Failure> failureCallback) {
 
     items.removeIf(it -> it.id.equals(id));
     completionCallback.accept(new Success<>(null));
-
   }
-
-  private Map wrapFindResult(
-    Collection pagedRecords,
-    int totalRecords) {
-
-    Map<String, Object> map = new HashMap<>(2);
-    map.put("jobs", pagedRecords);
-    map.put("totalRecords", totalRecords);
-    return map;
-  }
-
 }

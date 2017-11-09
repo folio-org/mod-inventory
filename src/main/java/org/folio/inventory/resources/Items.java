@@ -7,6 +7,7 @@ import io.vertx.ext.web.handler.BodyHandler;
 import org.folio.inventory.CollectionResourceClient;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.Item;
 import org.folio.inventory.domain.ItemCollection;
@@ -21,6 +22,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -101,8 +103,7 @@ public class Items {
         itemCollection.findByCql(String.format("barcode=%s", newItem.barcode),
           PagingParameters.defaults(), findResult -> {
 
-            List<Item> items = (List<Item>)findResult.getResult().get("items");
-            if(items.size() == 0) {
+            if(findResult.getResult().records.size() == 0) {
               itemCollection.add(newItem, success -> {
                 try {
                   URL url = context.absoluteUrl(String.format("%s/%s",
@@ -162,7 +163,7 @@ public class Items {
               String.format("barcode=%s and id<>%s", updatedItem.barcode, updatedItem.id),
               PagingParameters.defaults(), it -> {
 
-              List<Item> items = (List<Item>)it.getResult().get("items");
+              List<Item> items = it.getResult().records;
 
               if(items.size() == 0) {
                 itemCollection.update(updatedItem,
@@ -360,7 +361,7 @@ public class Items {
   private void respondWithManyItems(
     RoutingContext routingContext,
     WebContext context,
-    Map<String, Object> wrappedItems) {
+    MultipleRecords<Item> wrappedItems) {
 
     CollectionResourceClient materialTypesClient;
     CollectionResourceClient loanTypesClient;
@@ -384,11 +385,9 @@ public class Items {
     ArrayList<CompletableFuture<Response>> allLocationsFutures = new ArrayList<>();
     ArrayList<CompletableFuture<Response>> allFutures = new ArrayList<>();
 
-    List<Item> items = (List<Item>)wrappedItems.get("items");
-
-    List<String> materialTypeIds = items.stream()
+    List<String> materialTypeIds = wrappedItems.records.stream()
       .map(item -> item.materialTypeId)
-      .filter(id -> id != null)
+      .filter(Objects::nonNull)
       .distinct()
       .collect(Collectors.toList());
 
@@ -401,15 +400,15 @@ public class Items {
     materialTypesClient.get(id, newFuture::complete);
     });
 
-    List<String> permanentLoanTypeIds = items.stream()
+    List<String> permanentLoanTypeIds = wrappedItems.records.stream()
       .map(item -> item.permanentLoanTypeId)
-      .filter(id -> id != null)
+      .filter(Objects::nonNull)
       .distinct()
       .collect(Collectors.toList());
 
-    List<String> temporaryLoanTypeIds = items.stream()
+    List<String> temporaryLoanTypeIds = wrappedItems.records.stream()
       .map(item -> item.temporaryLoanTypeId)
-      .filter(id -> id != null)
+      .filter(Objects::nonNull)
       .distinct()
       .collect(Collectors.toList());
 
@@ -425,15 +424,15 @@ public class Items {
       loanTypesClient.get(id, newFuture::complete);
     });
 
-    List<String> permanentLocationIds = items.stream()
+    List<String> permanentLocationIds = wrappedItems.records.stream()
       .map(item -> item.permanentLocationId)
-      .filter(id -> id != null)
+      .filter(Objects::nonNull)
       .distinct()
       .collect(Collectors.toList());
 
-    List<String> temporaryLocationIds = items.stream()
+    List<String> temporaryLocationIds = wrappedItems.records.stream()
       .map(item -> item.temporaryLocationId)
-      .filter(id -> id != null)
+      .filter(Objects::nonNull)
       .distinct()
       .collect(Collectors.toList());
 
@@ -457,30 +456,30 @@ public class Items {
       try {
         Map<String, JsonObject> foundMaterialTypes
           = allMaterialTypeFutures.stream()
-            .map(future -> future.join())
+            .map(CompletableFuture::join)
             .filter(response -> response.getStatusCode() == 200)
-            .map(response -> response.getJson())
+            .map(Response::getJson)
             .collect(Collectors.toMap(r -> r.getString("id"), r -> r));
 
         Map<String, JsonObject> foundLoanTypes
           = allLoanTypeFutures.stream()
-          .map(future -> future.join())
+          .map(CompletableFuture::join)
           .filter(response -> response.getStatusCode() == 200)
-          .map(response -> response.getJson())
+          .map(Response::getJson)
           .collect(Collectors.toMap(r -> r.getString("id"), r -> r));
 
         Map<String, JsonObject> foundLocations
           = allLocationsFutures.stream()
-          .map(future -> future.join())
+          .map(CompletableFuture::join)
           .filter(response -> response.getStatusCode() == 200)
-          .map(response -> response.getJson())
+          .map(Response::getJson)
           .collect(Collectors.toMap(r -> r.getString("id"), r -> r));
 
         JsonResponse.success(routingContext.response(),
           new ItemRepresentation(relativeItemsPath())
             .toJson(wrappedItems, foundMaterialTypes, foundLoanTypes, foundLocations, context));
       }
-      catch(Throwable e) {
+      catch(Exception e) {
         ServerErrorResponse.internalError(routingContext.response(), e.toString());
       }
     });

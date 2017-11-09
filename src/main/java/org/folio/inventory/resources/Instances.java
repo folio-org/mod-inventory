@@ -9,6 +9,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.domain.Creator;
+import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.domain.Identifier;
 import org.folio.inventory.domain.Instance;
 import org.folio.inventory.domain.InstanceCollection;
@@ -21,7 +22,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 public class Instances {
@@ -47,7 +47,7 @@ public class Instances {
     router.delete(relativeInstancesPath() + "/:id").handler(this::deleteById);
   }
 
-  void getMetadataContext(RoutingContext routingContext) {
+  private void getMetadataContext(RoutingContext routingContext) {
     JsonObject representation = new JsonObject();
 
     representation.put("@context", new JsonObject()
@@ -91,7 +91,7 @@ public class Instances {
     }
   }
 
-  void create(RoutingContext routingContext) {
+  private void create(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
 
     JsonObject instanceRequest = routingContext.getBodyAsJson();
@@ -118,7 +118,7 @@ public class Instances {
       }, FailureResponseConsumer.serverError(routingContext.response()));
   }
 
-  void update(RoutingContext routingContext) {
+  private void update(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
 
     JsonObject instanceRequest = routingContext.getBodyAsJson();
@@ -178,21 +178,21 @@ public class Instances {
   }
 
   private JsonObject toRepresentation(
-    Map<String, Object> wrappedInstances,
+    MultipleRecords<Instance> wrappedInstances,
     WebContext context) {
 
     JsonObject representation = new JsonObject();
 
     JsonArray results = new JsonArray();
 
-    List<Instance> instances = (List<Instance>)wrappedInstances.get("instances");
+    List<Instance> instances = wrappedInstances.records;
 
     instances.stream().forEach(instance ->
       results.add(toRepresentation(instance, context)));
 
     representation
       .put("instances", results)
-      .put("totalRecords", wrappedInstances.get("totalRecords"));
+      .put("totalRecords", wrappedInstances.totalRecords);
 
     return representation;
   }
