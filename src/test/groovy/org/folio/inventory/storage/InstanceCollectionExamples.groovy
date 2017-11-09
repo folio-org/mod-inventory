@@ -3,20 +3,13 @@ package org.folio.inventory.storage
 import org.folio.inventory.common.WaitForAllFutures
 import org.folio.inventory.common.api.request.PagingParameters
 import org.folio.inventory.common.domain.Success
-import org.folio.inventory.domain.CollectionProvider
-import org.folio.inventory.domain.Creator
-import org.folio.inventory.domain.Instance
-import org.folio.inventory.domain.InstanceCollection
-import org.folio.inventory.domain.Item
+import org.folio.inventory.domain.*
 import org.junit.Before
 import org.junit.Test
 
 import java.util.concurrent.CompletableFuture
 
-import static api.support.InstanceSamples.ASIN_IDENTIFIER_TYPE_ID
-import static api.support.InstanceSamples.DEFAULT_BOOK_INSTANCE_TYPE_ID
-import static api.support.InstanceSamples.ISBN_IDENTIFIER_TYPE_ID
-import static api.support.InstanceSamples.PERSONAL_CREATOR_TYPE_ID
+import static api.ApiTestSuite.*
 import static org.folio.inventory.common.FutureAssistance.*
 
 abstract class InstanceCollectionExamples {
@@ -102,12 +95,12 @@ abstract class InstanceCollectionExamples {
       it.title == "Uprooted"
     }
 
-    assert hasIdentifier(createdAngryPlanet, ISBN_IDENTIFIER_TYPE_ID, '9781473619777')
+    assert hasIdentifier(createdAngryPlanet, isbnIdentifierType, '9781473619777')
 
-    assert hasIdentifier(createdNod, ASIN_IDENTIFIER_TYPE_ID, 'B01D1PLMDO')
+    assert hasIdentifier(createdNod, asinIdentifierType, 'B01D1PLMDO')
 
-    assert hasIdentifier(createdUprooted, ISBN_IDENTIFIER_TYPE_ID, '1447294149')
-    assert hasIdentifier(createdUprooted, ISBN_IDENTIFIER_TYPE_ID, '9781447294146')
+    assert hasIdentifier(createdUprooted, isbnIdentifierType, '1447294149')
+    assert hasIdentifier(createdUprooted, isbnIdentifierType, '9781447294146')
   }
 
   @Test
@@ -157,9 +150,9 @@ abstract class InstanceCollectionExamples {
 
     assert foundNod.title == "Nod"
 
-    assert hasIdentifier(foundSmallAngry, ISBN_IDENTIFIER_TYPE_ID, '9781473619777')
+    assert hasIdentifier(foundSmallAngry, isbnIdentifierType, '9781473619777')
 
-    assert hasIdentifier(foundNod, ASIN_IDENTIFIER_TYPE_ID, 'B01D1PLMDO')
+    assert hasIdentifier(foundNod, asinIdentifierType, 'B01D1PLMDO')
   }
 
   @Test
@@ -249,7 +242,7 @@ abstract class InstanceCollectionExamples {
 
     def updateFinished = new CompletableFuture<Instance>()
 
-    def changed = added.removeIdentifier(ISBN_IDENTIFIER_TYPE_ID.toString(), '9781473619777')
+    def changed = added.removeIdentifier(isbnIdentifierType, '9781473619777')
 
     collection.update(changed, succeed(updateFinished), fail(updateFinished))
 
@@ -342,41 +335,41 @@ abstract class InstanceCollectionExamples {
 
   private Instance nod() {
     createInstance("Nod")
-      .addIdentifier(ASIN_IDENTIFIER_TYPE_ID.toString(), 'B01D1PLMDO')
-      .addCreator(PERSONAL_CREATOR_TYPE_ID.toString(), "Barnes, Adrian")
+      .addIdentifier(asinIdentifierType, 'B01D1PLMDO')
+      .addCreator(personalCreatorType, "Barnes, Adrian")
   }
 
   private Instance uprooted() {
     createInstance("Uprooted")
-      .addIdentifier(ISBN_IDENTIFIER_TYPE_ID.toString(), '1447294149')
-      .addIdentifier(ISBN_IDENTIFIER_TYPE_ID.toString(), '9781447294146')
-      .addCreator(PERSONAL_CREATOR_TYPE_ID.toString(), "Novik, Naomi")
+      .addIdentifier(isbnIdentifierType, '1447294149')
+      .addIdentifier(isbnIdentifierType, '9781447294146')
+      .addCreator(personalCreatorType, "Novik, Naomi")
   }
 
   private Instance smallAngryPlanet() {
     createInstance("Long Way to a Small Angry Planet")
-      .addIdentifier(ISBN_IDENTIFIER_TYPE_ID.toString(), '9781473619777')
-      .addCreator(PERSONAL_CREATOR_TYPE_ID.toString(), "Chambers, Becky")
+      .addIdentifier(isbnIdentifierType, '9781473619777')
+      .addCreator(personalCreatorType, "Chambers, Becky")
 
   }
 
   private Instance temeraire() {
     createInstance("Temeraire")
-      .addIdentifier(ISBN_IDENTIFIER_TYPE_ID.toString(), '0007258712')
-      .addIdentifier(ISBN_IDENTIFIER_TYPE_ID.toString(), '9780007258710')
-      .addCreator(PERSONAL_CREATOR_TYPE_ID.toString(), "Novik, Naomi")
+      .addIdentifier(isbnIdentifierType, '0007258712')
+      .addIdentifier(isbnIdentifierType, '9780007258710')
+      .addCreator(personalCreatorType, "Novik, Naomi")
   }
 
   private Instance interestingTimes() {
     createInstance("Interesting Times")
-      .addIdentifier(ISBN_IDENTIFIER_TYPE_ID.toString(), '0552167541')
-      .addIdentifier(ISBN_IDENTIFIER_TYPE_ID.toString(), '9780552167543')
-      .addCreator(PERSONAL_CREATOR_TYPE_ID.toString(), "Pratchett, Terry")
+      .addIdentifier(isbnIdentifierType, '0552167541')
+      .addIdentifier(isbnIdentifierType, '9780552167543')
+      .addCreator(personalCreatorType, "Pratchett, Terry")
   }
 
   private Instance createInstance(String title) {
     new Instance(UUID.randomUUID().toString(), title, new ArrayList<Map>(),
-      "Local", DEFAULT_BOOK_INSTANCE_TYPE_ID.toString(), new ArrayList<Creator>())
+      "Local", booksInstanceType, new ArrayList<Creator>())
   }
 
   private void emptyCollection(InstanceCollection collection) {
@@ -389,11 +382,11 @@ abstract class InstanceCollectionExamples {
 
   private boolean hasIdentifier(
     instance,
-    UUID identifierTypeId,
+    String identifierTypeId,
     String value) {
 
     instance.identifiers.any {
-      it.identifierTypeId == identifierTypeId.toString() && it.value == value
+      it.identifierTypeId == identifierTypeId && it.value == value
     }
   }
 }

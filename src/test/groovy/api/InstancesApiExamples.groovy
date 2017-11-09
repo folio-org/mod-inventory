@@ -30,22 +30,20 @@ class InstancesApiExamples extends Specification {
   void "Can create an instance"() {
 
     given:
-      def instanceTypeId = UUID.randomUUID().toString()
-
-    def newInstanceRequest = new JsonObject()
+      def newInstanceRequest = new JsonObject()
         .put("title", "Long Way to a Small Angry Planet")
         .put("identifiers", [
           [
-            identifierTypeId: ISBN_IDENTIFIER_TYPE_ID.toString(),
+            identifierTypeId: ApiTestSuite.isbnIdentifierType,
             value: "9781473619777"
           ]])
           .put("creators", [
           [
-            creatorTypeId: PERSONAL_CREATOR_TYPE_ID.toString(),
+            creatorTypeId: ApiTestSuite.personalCreatorType,
             name: "Chambers, Becky"
           ]])
         .put("source", "Local")
-        .put("instanceTypeId", instanceTypeId)
+        .put("instanceTypeId", ApiTestSuite.booksInstanceType)
 
     when:
       def postCompleted = new CompletableFuture<Response>()
@@ -75,16 +73,16 @@ class InstancesApiExamples extends Specification {
       assert createdInstance.containsKey("id")
       assert createdInstance.getString("title") == "Long Way to a Small Angry Planet"
       assert createdInstance.getString("source") == "Local"
-      assert createdInstance.getString("instanceTypeId") == instanceTypeId
+      assert createdInstance.getString("instanceTypeId") == ApiTestSuite.booksInstanceType
 
       def firstIdentifier = createdInstance.getJsonArray("identifiers").getJsonObject(0)
 
-      assert firstIdentifier.getString("identifierTypeId") == ISBN_IDENTIFIER_TYPE_ID.toString()
+      assert firstIdentifier.getString("identifierTypeId") == ApiTestSuite.isbnIdentifierType
       assert firstIdentifier.getString("value") == "9781473619777"
 
       def firstCreator = createdInstance.getJsonArray("creators").getJsonObject(0)
 
-      assert firstCreator.getString("creatorTypeId") == PERSONAL_CREATOR_TYPE_ID.toString()
+      assert firstCreator.getString("creatorTypeId") == ApiTestSuite.personalCreatorType
       assert firstCreator.getString("name") == "Chambers, Becky"
 
       expressesDublinCoreMetadata(createdInstance)
@@ -96,7 +94,6 @@ class InstancesApiExamples extends Specification {
   void "Can create an instance with an ID"() {
     given:
       def instanceId = UUID.randomUUID().toString()
-      def instanceTypeId = UUID.randomUUID().toString()
 
       def newInstanceRequest = new JsonObject()
         .put("id", instanceId)
@@ -104,10 +101,10 @@ class InstancesApiExamples extends Specification {
         .put("source", "Local")
         .put("creators", [
         [
-          creatorTypeId: PERSONAL_CREATOR_TYPE_ID.toString(),
+          creatorTypeId: ApiTestSuite.personalCreatorType,
           name: "Chambers, Becky"
         ]])
-        .put("instanceTypeId", instanceTypeId)
+        .put("instanceTypeId", ApiTestSuite.booksInstanceType)
 
     when:
       def postCompleted = new CompletableFuture<Response>()
@@ -137,11 +134,11 @@ class InstancesApiExamples extends Specification {
       assert createdInstance.getString("id") == instanceId
       assert createdInstance.getString("title") == "Long Way to a Small Angry Planet"
       assert createdInstance.getString("source") == "Local"
-      assert createdInstance.getString("instanceTypeId") == instanceTypeId
+      assert createdInstance.getString("instanceTypeId") == ApiTestSuite.booksInstanceType
 
       def firstCreator = createdInstance.getJsonArray("creators").getJsonObject(0)
 
-      assert firstCreator.getString("creatorTypeId") == PERSONAL_CREATOR_TYPE_ID.toString()
+      assert firstCreator.getString("creatorTypeId") == ApiTestSuite.personalCreatorType
       assert firstCreator.getString("name") == "Chambers, Becky"
 
       expressesDublinCoreMetadata(createdInstance)

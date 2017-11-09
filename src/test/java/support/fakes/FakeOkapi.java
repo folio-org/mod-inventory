@@ -32,6 +32,9 @@ public class FakeOkapi extends AbstractVerticle {
     registerFakeMaterialTypesModule(router);
     registerFakeLoanTypesModule(router);
     registerFakeShelfLocationsModule(router);
+    registerFakeInstanceTypesModule(router);
+    registerFakeIdentifierTypesModule(router);
+    registerFakeCreatorTypesModule(router);
 
     server.requestHandler(router::accept)
       .listen(PORT_TO_USE, result -> {
@@ -93,6 +96,18 @@ public class FakeOkapi extends AbstractVerticle {
 
   private void registerFakeShelfLocationsModule(Router router) {
     registerFakeModule(router, "/shelf-locations", "shelflocations");
+  }
+
+  private void registerFakeIdentifierTypesModule(Router router) {
+    registerFakeModule(router, "/identifier-types", "identifierTypes");
+  }
+
+  private void registerFakeInstanceTypesModule(Router router) {
+    registerFakeModule(router, "/instance-types", "instanceTypes");
+  }
+
+  private void registerFakeCreatorTypesModule(Router router) {
+    registerFakeModule(router, "/creator-types", "creatorTypes");
   }
 
   private void registerFakeModule(

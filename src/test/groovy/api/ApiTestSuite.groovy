@@ -36,6 +36,11 @@ class ApiTestSuite {
   private static String mainLibraryLocationId
   private static String annexLocationId
 
+  public static String isbnIdentifierTypeId;
+  public static String asinIdentifierTypeId;
+  public static String booksInstanceTypeId;
+  public static String personalCreatorTypeId;
+
   private static VertxAssistant vertxAssistant = new VertxAssistant();
   private static String inventoryModuleDeploymentId
   private static String fakeModulesDeploymentId
@@ -57,6 +62,9 @@ class ApiTestSuite {
     createMaterialTypes()
     createLoanTypes()
     createLocations()
+    createIdentifierTypes()
+    createInstanceTypes()
+    createCreatorTypes()
     startInventoryVerticle()
   }
 
@@ -90,6 +98,22 @@ class ApiTestSuite {
   static String getAnnexLocation() {
 		annexLocationId
 	}
+
+  static String getIsbnIdentifierType() {
+    isbnIdentifierTypeId
+  }
+
+  static String getAsinIdentifierType() {
+    asinIdentifierTypeId
+  }
+
+  static String getBooksInstanceType() {
+    booksInstanceTypeId
+  }
+
+  static String getPersonalCreatorType() {
+    personalCreatorTypeId
+  }
 
   static OkapiHttpClient createOkapiHttpClient() {
     return new OkapiHttpClient(
@@ -207,5 +231,39 @@ class ApiTestSuite {
 
 		mainLibraryLocationId = locationPreparation.createOrReferenceTerm("Main Library")
 		annexLocationId = locationPreparation.createOrReferenceTerm("Annex Library")
+  }
+
+  private static def createIdentifierTypes() {
+    def client = createOkapiHttpClient()
+
+    def identifierTypesUrl = new URL("${storageOkapiUrl()}/identifier-types")
+
+    def identifierTypesPreparation = new ControlledVocabularyPreparation(client,
+      identifierTypesUrl, "identifierTypes")
+
+    isbnIdentifierTypeId = identifierTypesPreparation.createOrReferenceTerm("ISBN")
+    asinIdentifierTypeId = identifierTypesPreparation.createOrReferenceTerm("ASIN")
+  }
+
+  private static def createInstanceTypes() {
+    def client = createOkapiHttpClient()
+
+    def instanceTypes = new URL("${storageOkapiUrl()}/instance-types")
+
+    def instanceTypesPreparation = new ControlledVocabularyPreparation(client,
+      instanceTypes, "instanceTypes")
+
+    booksInstanceTypeId = instanceTypesPreparation.createOrReferenceTerm("Books")
+  }
+
+  private static def createCreatorTypes() {
+    def client = createOkapiHttpClient()
+
+    def creatorTypes = new URL("${storageOkapiUrl()}/creator-types")
+
+    def creatorTypesPreparation = new ControlledVocabularyPreparation(client,
+      creatorTypes, "creatorTypes")
+
+    personalCreatorTypeId = creatorTypesPreparation.createOrReferenceTerm("personal name")
   }
 }
