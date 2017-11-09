@@ -3,7 +3,6 @@ package org.folio.inventory.domain.ingest;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.common.CollectAll;
@@ -14,9 +13,7 @@ import org.folio.inventory.resources.ingest.IngestJobState;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.JsonArrayHelper;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -29,8 +26,7 @@ public class IngestMessageProcessor {
 
   public void register(EventBus eventBus) {
     eventBus.consumer(Messages.START_INGEST.Address, recordsMessageHandler(eventBus));
-
-    eventBus.consumer(Messages.INGEST_COMPLETED.Address, this::markIngestCompleted);
+    eventBus.<JsonObject>consumer(Messages.INGEST_COMPLETED.Address, this::markIngestCompleted);
   }
 
   private Handler<Message<JsonObject>> recordsMessageHandler(EventBus eventBus) {
@@ -66,15 +62,14 @@ public class IngestMessageProcessor {
 
         return new Instance(record.getString("title"), identifiers);
       })
-      .forEach(instance -> {
-        instanceCollection.add(instance, allInstances.receive(),
-          failure -> System.out.println("Instance processing failed: " + failure.getReason()));
-      });
+      .forEach(instance -> instanceCollection.add(instance, allInstances.receive(),
+        failure -> System.out.println("Instance processing failed: " + failure.getReason())));
 
-      allInstances.collect(instances -> {
+      allInstances.collect(instances ->
         records.stream().map(record -> {
           Optional<Instance> possibleInstance = instances.stream()
-            .filter(instance -> StringUtils.equals(instance.title, record.getString("title")))
+            .filter(instance ->
+              StringUtils.equals(instance.title, record.getString("title")))
             .findFirst();
 
           String instanceId = possibleInstance.isPresent()
@@ -91,19 +86,15 @@ public class IngestMessageProcessor {
             null,
             loanTypes.getString("Can Circulate"),
             null);
-        })
-        .forEach(item -> {
-          itemCollection.add(item, allItems.receive(),
-            failure -> System.out.println("Item processing failed: " + failure.getReason()));
-        });
-      });
+      })
+      .forEach(item -> itemCollection.add(item, allItems.receive(),
+        failure -> System.out.println("Item processing failed: " + failure.getReason()))));
 
-    allItems.collect(items -> {
-      IngestMessages.completed(context.getHeader("jobId"), context).send(eventBus);
-    });
+    allItems.collect(items ->
+      IngestMessages.completed(context.getHeader("jobId"), context).send(eventBus));
   }
 
-  private void markIngestCompleted(Message message) {
+  private void markIngestCompleted(Message<JsonObject> message) {
     final MessagingContext context = new MessagingContext(message.headers());
 
     storage.getIngestJobCollection(context).update(
@@ -111,15 +102,5 @@ public class IngestMessageProcessor {
       v -> { },
       failure -> System.out.println(
         String.format("Updating ingest job failed: %s", failure.getReason())));
-  }
-
-  private Map<String, String> referenceRecordMap(JsonArray array) {
-
-    Map<String, String> map = new HashMap<>();
-
-    JsonArrayHelper.toList(array).stream()
-      .forEach(record -> map.put(record.getString("name"), record.getString("id")));
-
-    return map;
   }
 }

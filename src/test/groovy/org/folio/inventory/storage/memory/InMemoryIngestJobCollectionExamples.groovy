@@ -1,6 +1,7 @@
 package org.folio.inventory.storage.memory
 
 import org.folio.inventory.common.api.request.PagingParameters
+import org.folio.inventory.common.domain.MultipleRecords
 import org.folio.inventory.resources.ingest.IngestJob
 import org.folio.inventory.resources.ingest.IngestJobState
 import org.junit.Before
@@ -32,14 +33,14 @@ class InMemoryIngestJobCollectionExamples {
 
     waitForCompletion(addFuture)
 
-    def findFuture = new CompletableFuture<Map>()
+    def findFuture = new CompletableFuture<MultipleRecords<IngestJob>>()
 
     collection.findAll(PagingParameters.defaults(), succeed(findFuture),
       fail(findFuture))
 
     def allJobsWrapped = getOnCompletion(findFuture)
 
-    def allJobs = allJobsWrapped.jobs
+    def allJobs = allJobsWrapped.records
 
     assert allJobs.size() == 1
 
@@ -104,20 +105,20 @@ class InMemoryIngestJobCollectionExamples {
 
     def completed = added.complete()
 
-    def updateFuture = new CompletableFuture<IngestJob>()
+    def updateFuture = new CompletableFuture<Void>()
 
     collection.update(completed, succeed(updateFuture), fail(updateFuture))
 
     waitForCompletion(updateFuture)
 
-    def findAllFuture = new CompletableFuture<Map>()
+    def findAllFuture = new CompletableFuture<MultipleRecords<IngestJob>>()
 
     collection.findAll(PagingParameters.defaults(), succeed(findAllFuture),
       fail(findAllFuture))
 
     def allJobsWrapped = getOnCompletion(findAllFuture)
 
-    def allJobs = allJobsWrapped.jobs
+    def allJobs = allJobsWrapped.records
 
     assert allJobs.count({ it.id == added.id }) == 1
   }

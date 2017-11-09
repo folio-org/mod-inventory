@@ -9,6 +9,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
+import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.Identifier;
 import org.folio.inventory.domain.Instance;
@@ -17,9 +18,7 @@ import org.folio.inventory.support.JsonArrayHelper;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -85,29 +84,27 @@ class ExternalStorageModuleInstanceCollection
 
       String location = String.format("%s/instance-storage/instances/%s", storageAddress, id);
 
-      Handler<HttpClientResponse> onResponse = response -> {
-        response.bodyHandler(buffer -> {
-          String responseBody = buffer.getString(0, buffer.length());
-          int statusCode = response.statusCode();
+      Handler<HttpClientResponse> onResponse = response -> response.bodyHandler(buffer -> {
+        String responseBody = buffer.getString(0, buffer.length());
+        int statusCode = response.statusCode();
 
-          switch (statusCode) {
-            case 200:
-              JsonObject instanceFromServer = new JsonObject(responseBody);
+        switch (statusCode) {
+          case 200:
+            JsonObject instanceFromServer = new JsonObject(responseBody);
 
-              Instance foundInstance = mapFromJson(instanceFromServer);
+            Instance foundInstance = mapFromJson(instanceFromServer);
 
-              resultCallback.accept(new Success(foundInstance));
-              break;
+            resultCallback.accept(new Success<>(foundInstance));
+            break;
 
-            case 404:
-              resultCallback.accept(new Success(null));
-              break;
+          case 404:
+            resultCallback.accept(new Success<>(null));
+            break;
 
-            default:
-              failureCallback.accept(new Failure(responseBody, statusCode));
-          }
-        });
-      };
+          default:
+            failureCallback.accept(new Failure(responseBody, statusCode));
+        }
+      });
 
       vertx.createHttpClient().requestAbs(HttpMethod.GET, location, onResponse)
         .exceptionHandler(exceptionHandler(failureCallback))
@@ -118,43 +115,17 @@ class ExternalStorageModuleInstanceCollection
     }
 
     @Override
-    public void findAll(PagingParameters pagingParameters,
-                        Consumer<Success<Map>> resultCallback,
-                        Consumer<Failure> failureCallback) {
+    public void findAll(
+      PagingParameters pagingParameters,
+      Consumer<Success<MultipleRecords<Instance>>> resultCallback,
+      Consumer<Failure> failureCallback) {
 
       String location = String.format(storageAddress
           + "/instance-storage/instances?limit=%s&offset=%s",
         pagingParameters.limit, pagingParameters.offset);
 
-      Handler<HttpClientResponse> onResponse = response -> {
-        response.bodyHandler(buffer -> {
-          String responseBody = buffer.getString(0, buffer.length());
-          int statusCode = response.statusCode();
-
-          if(statusCode == 200) {
-            JsonObject wrappedItems = new JsonObject(responseBody);
-
-            List<JsonObject> items = JsonArrayHelper.toList(
-              wrappedItems.getJsonArray("instances"));
-
-            List<Instance> foundItems = items.stream()
-              .map(this::mapFromJson)
-              .collect(Collectors.toList());
-
-            Map<String, Object> result = new HashMap<>();
-
-            result.put("instances", foundItems);
-            result.put("totalRecords", wrappedItems.getInteger("totalRecords"));
-
-            resultCallback.accept(new Success<>(result));
-          }
-          else {
-            failureCallback.accept(new Failure(responseBody, statusCode));
-          }
-        });
-      };
-
-      vertx.createHttpClient().requestAbs(HttpMethod.GET, location, onResponse)
+      vertx.createHttpClient().requestAbs(HttpMethod.GET, location,
+        handleMultipleResults(resultCallback, failureCallback))
         .exceptionHandler(exceptionHandler(failureCallback))
         .putHeader("X-Okapi-Tenant", tenant)
         .putHeader("X-Okapi-Token", token)
@@ -163,23 +134,23 @@ class ExternalStorageModuleInstanceCollection
     }
 
     @Override
-    public void empty(Consumer<Success> completionCallback,
+    public void empty(
+      Consumer<Success<Void>> completionCallback,
       Consumer<Failure> failureCallback) {
       String location = storageAddress + "/instance-storage/instances";
 
-      Handler<HttpClientResponse> onResponse = response -> {
+      Handler<HttpClientResponse> onResponse = response ->
         response.bodyHandler(buffer -> {
           String responseBody = buffer.getString(0, buffer.length());
           int statusCode = response.statusCode();
 
           if(statusCode == 204) {
-            completionCallback.accept(new Success(null));
+            completionCallback.accept(new Success<>(null));
           }
           else {
             failureCallback.accept(new Failure(responseBody, statusCode));
           }
-        });
-      };
+      });
 
       vertx.createHttpClient().requestAbs(HttpMethod.DELETE, location, onResponse)
         .exceptionHandler(exceptionHandler(failureCallback))
@@ -192,7 +163,7 @@ class ExternalStorageModuleInstanceCollection
     @Override
     public void findByCql(String cqlQuery,
       PagingParameters pagingParameters,
-      Consumer<Success<Map>> resultCallback,
+      Consumer<Success<MultipleRecords<Instance>>> resultCallback,
       Consumer<Failure> failureCallback) throws UnsupportedEncodingException {
 
       String encodedQuery = URLEncoder.encode(cqlQuery, "UTF-8");
@@ -202,35 +173,8 @@ class ExternalStorageModuleInstanceCollection
           String.format("&limit=%s&offset=%s", pagingParameters.limit,
             pagingParameters.offset);
 
-      Handler<HttpClientResponse> onResponse = response -> {
-        response.bodyHandler(buffer -> {
-          String responseBody = buffer.getString(0, buffer.length());
-          int statusCode = response.statusCode();
-
-          if(statusCode == 200) {
-            JsonObject wrappedItems = new JsonObject(responseBody);
-
-            List<JsonObject> instances = toList(
-              wrappedItems.getJsonArray("instances"));
-
-            List<Instance> foundInstances = instances.stream()
-              .map(this::mapFromJson)
-              .collect(Collectors.toList());
-
-            Map<String, Object> result = new HashMap<>();
-
-            result.put("instances", foundInstances);
-            result.put("totalRecords", wrappedItems.getInteger("totalRecords"));
-
-            resultCallback.accept(new Success(result));
-          }
-          else {
-            failureCallback.accept(new Failure(responseBody, statusCode));
-          }
-        });
-      };
-
-      vertx.createHttpClient().getAbs(location.toString(), onResponse)
+      vertx.createHttpClient().getAbs(location.toString(),
+        handleMultipleResults(resultCallback, failureCallback))
         .exceptionHandler(exceptionHandler(failureCallback))
         .putHeader("X-Okapi-Tenant", tenant)
         .putHeader("X-Okapi-Token", token)
@@ -240,24 +184,23 @@ class ExternalStorageModuleInstanceCollection
 
     @Override
     public void update(Instance item,
-      Consumer<Success> completionCallback,
+      Consumer<Success<Void>> completionCallback,
       Consumer<Failure> failureCallback) {
 
       String location = String.format("%s/instance-storage/instances/%s", storageAddress, item.id);
 
-      Handler<HttpClientResponse> onResponse = response -> {
+      Handler<HttpClientResponse> onResponse = response ->
         response.bodyHandler(buffer -> {
           String responseBody = buffer.getString(0, buffer.length());
           int statusCode = response.statusCode();
 
           if(statusCode == 204) {
-            completionCallback.accept(new Success(null));
+            completionCallback.accept(new Success<>(null));
           }
           else {
             failureCallback.accept(new Failure(responseBody, statusCode));
           }
-        });
-      };
+      });
 
       JsonObject itemToSend = mapToInstanceRequest(item);
 
@@ -272,23 +215,22 @@ class ExternalStorageModuleInstanceCollection
 
     @Override
     public void delete(String id,
-      Consumer<Success> completionCallback,
+      Consumer<Success<Void>> completionCallback,
       Consumer<Failure> failureCallback) {
       String location = String.format("%s/instance-storage/instances/%s", storageAddress, id);
 
-      Handler<HttpClientResponse> onResponse = response -> {
+      Handler<HttpClientResponse> onResponse = response ->
         response.bodyHandler(buffer -> {
           String responseBody = buffer.getString(0, buffer.length());
           int statusCode = response.statusCode();
 
           if(statusCode == 204) {
-            completionCallback.accept(new Success(null));
+            completionCallback.accept(new Success<>(null));
           }
           else {
             failureCallback.accept(new Failure(responseBody, statusCode));
           }
-        });
-      };
+      });
 
       vertx.createHttpClient().requestAbs(HttpMethod.DELETE, location, onResponse)
         .exceptionHandler(exceptionHandler(failureCallback))
@@ -326,5 +268,35 @@ class ExternalStorageModuleInstanceCollection
 
   private Handler<Throwable> exceptionHandler(Consumer<Failure> failureCallback) {
     return it -> failureCallback.accept(new Failure(it.getMessage(), null));
+  }
+
+  private Handler<HttpClientResponse> handleMultipleResults(
+    Consumer<Success<MultipleRecords<Instance>>> resultCallback,
+    Consumer<Failure> failureCallback) {
+
+    return response ->
+      response.bodyHandler(buffer -> {
+        String responseBody = buffer.getString(0, buffer.length());
+        int statusCode = response.statusCode();
+
+        if(statusCode == 200) {
+          JsonObject wrappedInstances = new JsonObject(responseBody);
+
+          List<JsonObject> instances = JsonArrayHelper.toList(
+            wrappedInstances.getJsonArray("instances"));
+
+          List<Instance> foundItems = instances.stream()
+            .map(this::mapFromJson)
+            .collect(Collectors.toList());
+
+          MultipleRecords<Instance> result = new MultipleRecords<>(
+            foundItems, wrappedInstances.getInteger("totalRecords"));
+
+          resultCallback.accept(new Success<>(result));
+        }
+        else {
+          failureCallback.accept(new Failure(responseBody, statusCode));
+        }
+      });
   }
 }

@@ -2,6 +2,7 @@ package org.folio.inventory.storage.external
 
 import org.folio.inventory.common.WaitForAllFutures
 import org.folio.inventory.common.api.request.PagingParameters
+import org.folio.inventory.common.domain.MultipleRecords
 import org.folio.inventory.domain.CollectionProvider
 import org.folio.inventory.domain.Instance
 import org.folio.inventory.domain.InstanceCollection
@@ -43,14 +44,14 @@ class ExternalInstanceCollectionExamples {
 
     waitForCompletion(emptied)
 
-    def findFuture = new CompletableFuture<Map>()
+    def findFuture = new CompletableFuture<MultipleRecords<Instance>>()
 
     collection.findAll(PagingParameters.defaults(), succeed(findFuture),
       fail(findFuture))
 
     def allInstancesWrapped = getOnCompletion(findFuture)
 
-    def allInstances = allInstancesWrapped.instances
+    def allInstances = allInstancesWrapped.records
 
     assert allInstances.size() == 0
     assert allInstancesWrapped.totalRecords == 0
@@ -62,14 +63,14 @@ class ExternalInstanceCollectionExamples {
 
     addSomeExamples(collection)
 
-    def findFuture = new CompletableFuture<Map>()
+    def findFuture = new CompletableFuture<MultipleRecords<Instance>>()
 
     collection.findAll(PagingParameters.defaults(), succeed(findFuture),
       fail(findFuture))
 
     def allInstancesWrapped = getOnCompletion(findFuture)
 
-    def allInstances = allInstancesWrapped.instances
+    def allInstances = allInstancesWrapped.records
 
     assert allInstances.size() == 3
     assert allInstancesWrapped.totalRecords == 3
@@ -174,8 +175,8 @@ class ExternalInstanceCollectionExamples {
 
     allAdded.waitForCompletion()
 
-    def firstPageFuture = new CompletableFuture<Map>()
-    def secondPageFuture = new CompletableFuture<Map>()
+    def firstPageFuture = new CompletableFuture<MultipleRecords<Instance>>()
+    def secondPageFuture = new CompletableFuture<MultipleRecords<Instance>>()
 
     collection.findAll(new PagingParameters(3, 0), succeed(firstPageFuture),
       fail(firstPageFuture))
@@ -185,8 +186,8 @@ class ExternalInstanceCollectionExamples {
     def firstPage = getOnCompletion(firstPageFuture)
     def secondPage = getOnCompletion(secondPageFuture)
 
-    def firstPageInstances = firstPage.instances
-    def secondPageInstances = secondPage.instances
+    def firstPageInstances = firstPage.records
+    def secondPageInstances = secondPage.records
 
     assert firstPageInstances.size() == 3
     assert secondPageInstances.size() == 2
@@ -221,14 +222,14 @@ class ExternalInstanceCollectionExamples {
 
     assert findFuture.get() == null
 
-    def findAllFuture = new CompletableFuture<Map>()
+    def findAllFuture = new CompletableFuture<MultipleRecords<Instance>>()
 
     collection.findAll(PagingParameters.defaults(), succeed(findAllFuture),
       fail(findAllFuture))
 
     def allInstancesWrapped = getOnCompletion(findAllFuture)
 
-    def allInstances = allInstancesWrapped.instances
+    def allInstances = allInstancesWrapped.records
 
     assert allInstances.size() == 3
     assert allInstancesWrapped.totalRecords == 3
@@ -285,14 +286,14 @@ class ExternalInstanceCollectionExamples {
 
     def addedSmallAngryPlanet = getOnCompletion(firstAddFuture)
 
-    def findFuture = new CompletableFuture<Map>()
+    def findFuture = new CompletableFuture<MultipleRecords<Instance>>()
 
     collection.findByCql("title=\"*Small Angry*\"",
       new PagingParameters(10, 0), succeed(findFuture), fail(findFuture))
 
     def findByNameResultsWrapped = getOnCompletion(findFuture)
 
-    def findByNameResults = findByNameResultsWrapped.instances
+    def findByNameResults = findByNameResultsWrapped.records
 
     assert findByNameResults.size() == 1
     assert findByNameResultsWrapped.totalRecords == 1

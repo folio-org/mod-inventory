@@ -2,6 +2,7 @@ package org.folio.inventory.storage.external
 
 import org.folio.inventory.common.WaitForAllFutures
 import org.folio.inventory.common.api.request.PagingParameters
+import org.folio.inventory.common.domain.MultipleRecords
 import org.folio.inventory.common.domain.Success
 import org.folio.inventory.domain.CollectionProvider
 import org.folio.inventory.domain.Item
@@ -47,20 +48,20 @@ class ExternalItemCollectionExamples {
 
     addSomeExamples(collection)
 
-    def emptied = new CompletableFuture()
+    def emptied = new CompletableFuture<Void>()
 
     collection.empty(succeed(emptied), fail(emptied))
 
     waitForCompletion(emptied)
 
-    def findFuture = new CompletableFuture<List<Item>>()
+    def findFuture = new CompletableFuture<MultipleRecords<Item>>()
 
     collection.findAll(PagingParameters.defaults(),
       succeed(findFuture), fail(findFuture))
 
     def wrappedItems = getOnCompletion(findFuture)
 
-    def allItems = wrappedItems.items
+    def allItems = wrappedItems.records
 
     assert allItems.size() == 0
     assert wrappedItems.totalRecords == 0
@@ -72,14 +73,14 @@ class ExternalItemCollectionExamples {
 
     addSomeExamples(collection)
 
-    def findFuture = new CompletableFuture<Map>()
+    def findFuture = new CompletableFuture<MultipleRecords<Item>>()
 
     collection.findAll(PagingParameters.defaults(), succeed(findFuture),
       fail(findFuture))
 
     def wrappedItems = getOnCompletion(findFuture)
 
-    def allItems = wrappedItems.items
+    def allItems = wrappedItems.records
 
     assert allItems.size() == 3
     assert wrappedItems.totalRecords == 3
@@ -215,7 +216,7 @@ class ExternalItemCollectionExamples {
 
     def itemToBeDeleted = itemToBeDeletedFuture.get()
 
-    def deleted = new CompletableFuture()
+    def deleted = new CompletableFuture<Void>()
 
     collection.delete(itemToBeDeleted.id, succeed(deleted), fail(deleted))
 
@@ -228,14 +229,14 @@ class ExternalItemCollectionExamples {
 
     assert findFuture.get() == null
 
-    def findAllFuture = new CompletableFuture<Map>()
+    def findAllFuture = new CompletableFuture<MultipleRecords<Item>>()
 
     collection.findAll(PagingParameters.defaults(), succeed(findAllFuture),
       fail(findAllFuture))
 
     def wrappedItems = getOnCompletion(findAllFuture)
 
-    def allItems = wrappedItems.items
+    def allItems = wrappedItems.records
 
     assert allItems.size() == 3
     assert wrappedItems.totalRecords == 3
@@ -255,8 +256,8 @@ class ExternalItemCollectionExamples {
 
     allAdded.waitForCompletion()
 
-    def firstPageFuture = new CompletableFuture<Map>()
-    def secondPageFuture = new CompletableFuture<Map>()
+    def firstPageFuture = new CompletableFuture<MultipleRecords<Item>>()
+    def secondPageFuture = new CompletableFuture<MultipleRecords<Item>>()
 
     collection.findAll(new PagingParameters(3, 0), succeed(firstPageFuture),
       fail(secondPageFuture))
@@ -267,8 +268,8 @@ class ExternalItemCollectionExamples {
     def firstPage = getOnCompletion(firstPageFuture)
     def secondPage = getOnCompletion(secondPageFuture)
 
-    assert firstPage.items.size() == 3
-    assert secondPage.items.size() == 2
+    assert firstPage.records.size() == 3
+    assert secondPage.records.size() == 2
 
     assert firstPage.totalRecords == 5
     assert secondPage.totalRecords == 5
@@ -296,17 +297,17 @@ class ExternalItemCollectionExamples {
 
     def addedSmallAngryPlanet = getOnCompletion(firstAddFuture)
 
-    def findFuture = new CompletableFuture<Map>()
+    def findFuture = new CompletableFuture<MultipleRecords<Item>>()
 
     collection.findByCql("title=\"*Small Angry*\"", new PagingParameters(10, 0),
       succeed(findFuture), fail(findFuture))
 
     def wrappedItems = getOnCompletion(findFuture)
 
-    assert wrappedItems.items.size() == 1
+    assert wrappedItems.records.size() == 1
     assert wrappedItems.totalRecords == 1
 
-    assert wrappedItems.items[0].id == addedSmallAngryPlanet.id
+    assert wrappedItems.records[0].id == addedSmallAngryPlanet.id
   }
 
   @Test
@@ -330,17 +331,17 @@ class ExternalItemCollectionExamples {
 
     def addedSmallAngryPlanet = getOnCompletion(firstAddFuture)
 
-    def findFuture = new CompletableFuture<Map>()
+    def findFuture = new CompletableFuture<MultipleRecords<Item>>()
 
     collection.findByCql("barcode=036000291452", new PagingParameters(10, 0),
       succeed(findFuture), fail(findFuture))
 
     def wrappedItems = getOnCompletion(findFuture)
 
-    assert wrappedItems.items.size() == 1
+    assert wrappedItems.records.size() == 1
     assert wrappedItems.totalRecords == 1
 
-    assert wrappedItems.items[0].id == addedSmallAngryPlanet.id
+    assert wrappedItems.records[0].id == addedSmallAngryPlanet.id
   }
 
   @Test
