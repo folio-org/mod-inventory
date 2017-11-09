@@ -30,6 +30,8 @@ import java.util.stream.Stream;
 import static org.folio.inventory.common.FutureAssistance.allOf;
 
 public class Items {
+  private static final String RELATIVE_ITEMS_PATH = "/inventory/items";
+
   private final Storage storage;
 
   public Items(final Storage storage) {
@@ -37,16 +39,16 @@ public class Items {
   }
 
   public void register(Router router) {
-    router.post(relativeItemsPath() + "*").handler(BodyHandler.create());
-    router.put(relativeItemsPath() + "*").handler(BodyHandler.create());
+    router.post(RELATIVE_ITEMS_PATH + "*").handler(BodyHandler.create());
+    router.put(RELATIVE_ITEMS_PATH + "*").handler(BodyHandler.create());
 
-    router.get(relativeItemsPath()).handler(this::getAll);
-    router.post(relativeItemsPath()).handler(this::create);
-    router.delete(relativeItemsPath()).handler(this::deleteAll);
+    router.get(RELATIVE_ITEMS_PATH).handler(this::getAll);
+    router.post(RELATIVE_ITEMS_PATH).handler(this::create);
+    router.delete(RELATIVE_ITEMS_PATH).handler(this::deleteAll);
 
-    router.get(relativeItemsPath() + "/:id").handler(this::getById);
-    router.put(relativeItemsPath() + "/:id").handler(this::update);
-    router.delete(relativeItemsPath() + "/:id").handler(this::deleteById);
+    router.get(RELATIVE_ITEMS_PATH + "/:id").handler(this::getById);
+    router.put(RELATIVE_ITEMS_PATH + "/:id").handler(this::update);
+    router.delete(RELATIVE_ITEMS_PATH + "/:id").handler(this::deleteById);
   }
 
   private void getAll(RoutingContext routingContext) {
@@ -81,7 +83,7 @@ public class Items {
     }
   }
 
-  void deleteAll(RoutingContext routingContext) {
+  private void deleteAll(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
 
     storage.getItemCollection(context).empty(
@@ -89,7 +91,7 @@ public class Items {
       FailureResponseConsumer.serverError(routingContext.response()));
   }
 
-  void create(RoutingContext routingContext) {
+  private void create(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
 
     JsonObject item = routingContext.getBodyAsJson();
@@ -103,18 +105,8 @@ public class Items {
         itemCollection.findByCql(String.format("barcode=%s", newItem.barcode),
           PagingParameters.defaults(), findResult -> {
 
-            if(findResult.getResult().records.size() == 0) {
-              itemCollection.add(newItem, success -> {
-                try {
-                  URL url = context.absoluteUrl(String.format("%s/%s",
-                    relativeItemsPath(), success.getResult().id));
-
-                  RedirectResponse.created(routingContext.response(), url.toString());
-                } catch (MalformedURLException e) {
-                  System.out.println(
-                    String.format("Failed to create self link for item: " + e.toString()));
-                }
-              }, FailureResponseConsumer.serverError(routingContext.response()));
+            if(findResult.getResult().records.isEmpty()) {
+              addItem(routingContext, context, newItem, itemCollection);
             }
             else {
               ClientErrorResponse.badRequest(routingContext.response(),
@@ -127,17 +119,7 @@ public class Items {
       }
     }
     else {
-      itemCollection.add(newItem, success -> {
-        try {
-          URL url = context.absoluteUrl(String.format("%s/%s",
-            relativeItemsPath(), success.getResult().id));
-
-          RedirectResponse.created(routingContext.response(), url.toString());
-        } catch (MalformedURLException e) {
-          System.out.println(
-            String.format("Failed to create self link for item: " + e.toString()));
-        }
-      }, FailureResponseConsumer.serverError(routingContext.response()));
+      addItem(routingContext, context, newItem, itemCollection);
     }
   }
 
@@ -152,31 +134,11 @@ public class Items {
 
     itemCollection.findById(routingContext.request().getParam("id"), getItemResult -> {
       if(getItemResult.getResult() != null) {
-        if(updatedItem.barcode == null || getItemResult.getResult().barcode == updatedItem.barcode) {
-          itemCollection.update(updatedItem,
-            v -> SuccessResponse.noContent(routingContext.response()),
-            failure -> ServerErrorResponse.internalError(
-              routingContext.response(), failure.getReason()));
+        if(hasSameBarcode(updatedItem, getItemResult.getResult())) {
+          updateItem(routingContext, updatedItem, itemCollection);
         } else {
           try {
-            itemCollection.findByCql(
-              String.format("barcode=%s and id<>%s", updatedItem.barcode, updatedItem.id),
-              PagingParameters.defaults(), it -> {
-
-              List<Item> items = it.getResult().records;
-
-              if(items.size() == 0) {
-                itemCollection.update(updatedItem,
-                  v -> SuccessResponse.noContent(routingContext.response()),
-                  failure -> ServerErrorResponse.internalError(
-                    routingContext.response(), failure.getReason()));
-              }
-              else {
-                ClientErrorResponse.badRequest(routingContext.response(),
-                  String.format("Barcode must be unique, %s is already assigned to another item",
-                    updatedItem.barcode));
-              }
-            }, FailureResponseConsumer.serverError(routingContext.response()));
+            checkForNonUniqueBarcode(routingContext, updatedItem, itemCollection);
           } catch (UnsupportedEncodingException e) {
             ServerErrorResponse.internalError(routingContext.response(), e.toString());
           }
@@ -214,11 +176,6 @@ public class Items {
     });
   }
 
-  private void invalidOkapiUrlResponse(RoutingContext routingContext, WebContext context) {
-    ServerErrorResponse.internalError(routingContext.response(),
-      String.format("Invalid Okapi URL: %s", context.getOkapiLocation()));
-  }
-
   private void getById(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
     CollectionResourceClient materialTypesClient;
@@ -243,79 +200,33 @@ public class Items {
         Item item = itemResponse.getResult();
 
         if(item != null) {
-          CompletableFuture<Response> materialTypeFuture = new CompletableFuture<>();
-          CompletableFuture<Response> permanentLoanTypeFuture = new CompletableFuture<>();
-          CompletableFuture<Response> temporaryLoanTypeFuture = new CompletableFuture<>();
-          CompletableFuture<Response> temporaryLocationFuture = new CompletableFuture<>();
-          CompletableFuture<Response> permanentLocationFuture = new CompletableFuture<>();
-
           ArrayList<CompletableFuture<Response>> allFutures = new ArrayList<>();
 
-          if(item.materialTypeId != null) {
-            allFutures.add(materialTypeFuture);
+          CompletableFuture<Response> materialTypeFuture = getReferenceRecord(
+            item.materialTypeId, materialTypesClient, allFutures);
 
-            materialTypesClient.get(item.materialTypeId,
-              materialTypeFuture::complete);
-          }
+          CompletableFuture<Response> permanentLoanTypeFuture = getReferenceRecord(
+            item.permanentLoanTypeId, loanTypesClient, allFutures);
 
-          if(item.permanentLoanTypeId != null) {
-            allFutures.add(permanentLoanTypeFuture);
+          CompletableFuture<Response> temporaryLoanTypeFuture = getReferenceRecord(
+            item.temporaryLoanTypeId, loanTypesClient, allFutures);
 
-            loanTypesClient.get(item.permanentLoanTypeId,
-              permanentLoanTypeFuture::complete);
-          }
+          CompletableFuture<Response> temporaryLocationFuture = getReferenceRecord(
+            item.temporaryLocationId, locationsClient, allFutures);
 
-          if(item.temporaryLoanTypeId != null) {
-            allFutures.add(temporaryLoanTypeFuture);
-
-            loanTypesClient.get(item.temporaryLoanTypeId,
-              temporaryLoanTypeFuture::complete);
-          }
-
-          if(item.permanentLocationId != null) {
-						allFutures.add(permanentLocationFuture);
-
-						locationsClient.get(item.permanentLocationId,
-              permanentLocationFuture::complete);
-          }
-
-          if(item.temporaryLocationId != null){
-            allFutures.add(temporaryLocationFuture);
-            locationsClient.get(item.temporaryLocationId,
-              temporaryLocationFuture::complete);
-          }
+          CompletableFuture<Response> permanentLocationFuture = getReferenceRecord(
+            item.permanentLocationId, locationsClient, allFutures);
 
           CompletableFuture<Void> allDoneFuture = allOf(allFutures);
 
           allDoneFuture.thenAccept(v -> {
-            JsonObject foundMaterialType =
-              referenceRecordFrom(item.materialTypeId, materialTypeFuture);
-
-            JsonObject foundPermanentLoanType =
-              referenceRecordFrom(item.permanentLoanTypeId, permanentLoanTypeFuture);
-
-            JsonObject foundTemporaryLoanType =
-              referenceRecordFrom(item.temporaryLoanTypeId, temporaryLoanTypeFuture);
-
-            JsonObject foundPermanentLocation =
-              referenceRecordFrom(item.permanentLocationId, permanentLocationFuture);
-
-            JsonObject foundTemporaryLocation =
-              referenceRecordFrom(item.temporaryLocationId, temporaryLocationFuture);
-
             try {
-              JsonObject representation = new ItemRepresentation(relativeItemsPath())
-                .toJson(item,
-                foundMaterialType,
-                foundPermanentLoanType,
-                foundTemporaryLoanType,
-                foundPermanentLocation,
-                foundTemporaryLocation,
-                context);
+              JsonObject representation = includeReferenceRecordInformationInItem(
+                context, item, materialTypeFuture, permanentLoanTypeFuture,
+                temporaryLoanTypeFuture, temporaryLocationFuture, permanentLocationFuture);
 
               JsonResponse.success(routingContext.response(), representation);
-
-            } catch(Exception e) {
+            } catch (Exception e) {
               ServerErrorResponse.internalError(routingContext.response(),
                 "Error creating Item Representation: " + e.getLocalizedMessage());
             }
@@ -325,10 +236,6 @@ public class Items {
           ClientErrorResponse.notFound(routingContext.response());
         }
       }, FailureResponseConsumer.serverError(routingContext.response()));
-  }
-
-  private static String relativeItemsPath() {
-    return "/inventory/items";
   }
 
   private Item requestToItem(JsonObject itemRequest) {
@@ -478,7 +385,7 @@ public class Items {
           .collect(Collectors.toMap(r -> r.getString("id"), r -> r));
 
         JsonResponse.success(routingContext.response(),
-          new ItemRepresentation(relativeItemsPath())
+          new ItemRepresentation(RELATIVE_ITEMS_PATH)
             .toJson(wrappedItems, foundMaterialTypes, foundLoanTypes, foundLocations, context));
       }
       catch(Exception e) {
@@ -553,5 +460,120 @@ public class Items {
     return id != null &&
       requestFuture.join().getStatusCode() == 200 ?
       requestFuture.join().getJson() : null;
+  }
+
+  private void addItem(
+    RoutingContext routingContext,
+    WebContext context,
+    Item newItem,
+    ItemCollection itemCollection) {
+    
+    itemCollection.add(newItem, success -> {
+      try {
+        URL url = context.absoluteUrl(String.format("%s/%s",
+          RELATIVE_ITEMS_PATH, success.getResult().id));
+
+        RedirectResponse.created(routingContext.response(), url.toString());
+      } catch (MalformedURLException e) {
+        System.out.println(
+          String.format("Failed to create self link for item: %s", e.toString()));
+      }
+    }, FailureResponseConsumer.serverError(routingContext.response()));
+  }
+
+  private void invalidOkapiUrlResponse(RoutingContext routingContext, WebContext context) {
+    ServerErrorResponse.internalError(routingContext.response(),
+      String.format("Invalid Okapi URL: %s", context.getOkapiLocation()));
+  }
+
+  private CompletableFuture<Response> getReferenceRecord(
+    String id, CollectionResourceClient client,
+    ArrayList<CompletableFuture<Response>> allFutures) {
+
+    CompletableFuture<Response> newFuture = new CompletableFuture<>();
+
+    if(id != null) {
+      allFutures.add(newFuture);
+
+      client.get(id, newFuture::complete);
+
+      return newFuture;
+    }
+    else {
+      return null;
+    }
+  }
+
+  private JsonObject includeReferenceRecordInformationInItem(
+    WebContext context,
+    Item item,
+    CompletableFuture<Response> materialTypeFuture,
+    CompletableFuture<Response> permanentLoanTypeFuture,
+    CompletableFuture<Response> temporaryLoanTypeFuture,
+    CompletableFuture<Response> temporaryLocationFuture,
+    CompletableFuture<Response> permanentLocationFuture) {
+
+    JsonObject foundMaterialType =
+      referenceRecordFrom(item.materialTypeId, materialTypeFuture);
+
+    JsonObject foundPermanentLoanType =
+      referenceRecordFrom(item.permanentLoanTypeId, permanentLoanTypeFuture);
+
+    JsonObject foundTemporaryLoanType =
+      referenceRecordFrom(item.temporaryLoanTypeId, temporaryLoanTypeFuture);
+
+    JsonObject foundPermanentLocation =
+      referenceRecordFrom(item.permanentLocationId, permanentLocationFuture);
+
+    JsonObject foundTemporaryLocation =
+      referenceRecordFrom(item.temporaryLocationId, temporaryLocationFuture);
+
+    return new ItemRepresentation(RELATIVE_ITEMS_PATH)
+        .toJson(item,
+          foundMaterialType,
+          foundPermanentLoanType,
+          foundTemporaryLoanType,
+          foundPermanentLocation,
+          foundTemporaryLocation,
+          context);
+  }
+
+  private boolean hasSameBarcode(Item updatedItem, Item foundItem) {
+    return updatedItem.barcode == null
+      || Objects.equals(foundItem.barcode, updatedItem.barcode);
+  }
+
+  private void updateItem(
+    RoutingContext routingContext,
+    Item updatedItem,
+    ItemCollection itemCollection) {
+
+    itemCollection.update(updatedItem,
+      v -> SuccessResponse.noContent(routingContext.response()),
+      failure -> ServerErrorResponse.internalError(
+        routingContext.response(), failure.getReason()));
+  }
+
+  private void checkForNonUniqueBarcode(
+    RoutingContext routingContext,
+    Item updatedItem,
+    ItemCollection itemCollection)
+    throws UnsupportedEncodingException {
+
+    itemCollection.findByCql(
+      String.format("barcode=%s and id<>%s", updatedItem.barcode, updatedItem.id),
+      PagingParameters.defaults(), it -> {
+
+        List<Item> items = it.getResult().records;
+
+        if(items.isEmpty()) {
+          updateItem(routingContext, updatedItem, itemCollection);
+        }
+        else {
+          ClientErrorResponse.badRequest(routingContext.response(),
+            String.format("Barcode must be unique, %s is already assigned to another item",
+              updatedItem.barcode));
+        }
+      }, FailureResponseConsumer.serverError(routingContext.response()));
   }
 }
