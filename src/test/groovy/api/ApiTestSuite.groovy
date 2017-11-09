@@ -136,7 +136,7 @@ class ApiTestSuite {
                   "storage.type" : storageType,
                   "storage.location" : storageLocation]
 
-    vertxAssistant.deployGroovyVerticle(
+    vertxAssistant.deployVerticle(
       InventoryVerticle.class.name, config,  deployed)
 
     inventoryModuleDeploymentId = deployed.get(20000, TimeUnit.MILLISECONDS)

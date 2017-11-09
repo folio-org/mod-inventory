@@ -6,8 +6,8 @@ import io.vertx.core.http.HttpServer
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 import org.folio.inventory.common.WebRequestDiagnostics
-import org.folio.inventory.common.api.response.ClientErrorResponse
-import org.folio.inventory.common.api.response.ServerErrorResponse
+import org.folio.inventory.support.http.server.ClientErrorResponse
+import org.folio.inventory.support.http.server.ServerErrorResponse
 
 class FailureInventoryStorageModule extends AbstractVerticle {
   private static final int PORT_TO_USE = 9493
@@ -41,10 +41,10 @@ class FailureInventoryStorageModule extends AbstractVerticle {
 
     router.route().handler(WebRequestDiagnostics.&outputDiagnostics)
 
-    router.route('/server-error/item-storage/items/*').handler(this.&serverError)
-    router.route('/server-error/instance-storage/instances/*').handler(this.&serverError)
-    router.route('/bad-request/item-storage/items/*').handler(this.&badRequest)
-    router.route('/bad-request/instance-storage/instances/*').handler(this.&badRequest)
+    router.route("/server-error/item-storage/items/*").handler(this.&serverError)
+    router.route("/server-error/instance-storage/instances/*").handler(this.&serverError)
+    router.route("/bad-request/item-storage/items/*").handler(this.&badRequest)
+    router.route("/bad-request/instance-storage/instances/*").handler(this.&badRequest)
   }
 
   @Override
