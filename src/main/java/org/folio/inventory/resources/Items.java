@@ -197,8 +197,7 @@ public class Items {
       itemsStorageClient = createItemsStorageClient(client, context);
     }
     catch (MalformedURLException e) {
-      ServerErrorResponse.internalError(routingContext.response(),
-        String.format("Invalid Okapi URL: %s", context.getOkapiLocation()));
+      invalidOkapiUrlResponse(routingContext, context);
 
       return;
     }
@@ -215,6 +214,11 @@ public class Items {
     });
   }
 
+  private void invalidOkapiUrlResponse(RoutingContext routingContext, WebContext context) {
+    ServerErrorResponse.internalError(routingContext.response(),
+      String.format("Invalid Okapi URL: %s", context.getOkapiLocation()));
+  }
+
   private void getById(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
     CollectionResourceClient materialTypesClient;
@@ -228,8 +232,7 @@ public class Items {
       locationsClient = createLocationsClient(client, context);
     }
     catch (MalformedURLException e) {
-      ServerErrorResponse.internalError(routingContext.response(),
-        String.format("Invalid Okapi URL: %s", context.getOkapiLocation()));
+      invalidOkapiUrlResponse(routingContext, context);
 
       return;
     }
@@ -374,8 +377,7 @@ public class Items {
       locationsClient = createLocationsClient(client, context);
     }
     catch (MalformedURLException e) {
-      ServerErrorResponse.internalError(routingContext.response(),
-        String.format("Invalid Okapi URL: %s", context.getOkapiLocation()));
+      invalidOkapiUrlResponse(routingContext, context);
 
       return;
     }
