@@ -93,7 +93,8 @@
             "inventory-storage.loan-types.collection.get",
             "inventory-storage.shelf-locations.collection.get",
             "inventory-storage.instance-types.collection.get",
-            "inventory-storage.identifier-types.collection.get"]
+            "inventory-storage.identifier-types.collection.get",
+            "inventory-storage.creator-types.collection.get"]
         }, {
           "methods": ["GET"],
           "pathPattern": "/inventory/ingest/mods/status/{id}",
@@ -129,6 +130,10 @@
     },
     {
       "id": "identifier-types",
+      "version": "1.0"
+    },
+    {
+      "id": "creator-types",
       "version": "1.0"
     }
   ],

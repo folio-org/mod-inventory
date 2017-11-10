@@ -8,6 +8,7 @@
 * Requires shelf-locations interface version 1.0
 * Requires instance-types interface version 1.0
 * Requires identifier-types interface version 1.0
+* Requires creator-types interface version 1.0
 * Adds mod- prefix to names of the built artifacts (FOLIO-813)
 
 ## 5.1.1 2017-09-01
