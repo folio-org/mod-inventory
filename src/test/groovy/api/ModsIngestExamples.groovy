@@ -190,6 +190,26 @@ class ModsIngestExamples extends Specification {
         .every({ it.containsKey("value") })
     })
 
+    assert instances.every({ it.containsKey("creators") })
+    assert instances.every({ it.getJsonArray("creators").size() >= 1 })
+
+    assert instances.every({
+      JsonArrayHelper.toList(it.getJsonArray("creators"))
+        .every({ it.containsKey("creatorTypeId") })
+    })
+
+    //Creator type should be derived from MODS data, however for the moment,
+    //default to personal
+    assert instances.every({
+      JsonArrayHelper.toList(it.getJsonArray("creators"))
+        .every({ it.getString("creatorTypeId") == ApiTestSuite.personalCreatorType })
+    })
+
+    assert instances.every({
+      JsonArrayHelper.toList(it.getJsonArray("creators"))
+        .every({ it.containsKey("name") })
+    })
+
     assert instances.any({
       InstanceSimilarTo(it, "California: its gold and its inhabitants")
     })

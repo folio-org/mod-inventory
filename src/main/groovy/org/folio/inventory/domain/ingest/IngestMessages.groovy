@@ -13,6 +13,7 @@ class IngestMessages {
     Map locations,
     Map identifierTypes,
     Map instanceTypes,
+    Map creatorTypes,
     jobId,
     Context context) {
 
@@ -24,7 +25,8 @@ class IngestMessages {
       .put("loanTypes", loanTypes)
       .put("locations", locations)
       .put("identifierTypes", identifierTypes)
-      .put("instanceTypes", instanceTypes))
+      .put("instanceTypes", instanceTypes)
+      .put("creatorTypes", creatorTypes))
   }
 
   static completed(jobId, Context context) {

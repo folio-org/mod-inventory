@@ -44,6 +44,7 @@ class IngestMessageProcessor {
     Map locations = body.locations.map
     Map identifierTypes = body.identifierTypes.map
     Map instanceTypes = body.instanceTypes.map
+    Map creatorTypes = body.creatorTypes.map
 
     def context = new MessagingContext(message.headers())
 
@@ -54,20 +55,21 @@ class IngestMessageProcessor {
       .map({
         def creators = new ArrayList<Creator>()
 
-        creators.add(new Creator(UUID.randomUUID().toString(), "Fake Author"))
+        creators.add(new Creator(creatorTypes.get("personal name").toString(),
+          "Fake Author"))
 
-      def identifiers = JsonArrayHelper.toList(it.identifiers)
-        .stream()
-        .map({ identifier ->
-          def newIdentifier = new HashMap<String, Object>()
+        def identifiers = JsonArrayHelper.toList(it.identifiers)
+          .stream()
+          .map({ identifier ->
+            def newIdentifier = new HashMap<String, Object>()
 
-          //Default all identifiers to ISBN
-          newIdentifier.put("identifierTypeId", identifierTypes.get("ISBN"))
-          newIdentifier.put("value", identifier.getString("value"))
+            //Default all identifiers to ISBN
+            newIdentifier.put("identifierTypeId", identifierTypes.get("ISBN"))
+            newIdentifier.put("value", identifier.getString("value"))
 
-          return newIdentifier
-        })
-        .collect(Collectors.toList())
+            return newIdentifier
+          })
+          .collect(Collectors.toList())
 
       new Instance(UUID.randomUUID().toString(), it.title,
         identifiers, "Local: MODS", instanceTypes.get("Books"), creators)
