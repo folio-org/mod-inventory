@@ -1,5 +1,9 @@
 package org.folio.inventory.parsing
 
+import org.apache.commons.lang3.StringUtils
+
+import java.util.stream.Collectors
+
 class ModsParser {
 
   private final CharacterEncoding characterEncoding
@@ -8,7 +12,7 @@ class ModsParser {
     this.characterEncoding = characterEncoding
   }
 
-  public List<Map<String, String>> parseRecords(String xml) {
+  public List<Map<String, Object>> parseRecords(String xml) {
 
     def modsRecord = new XmlSlurper()
       .parseText(xml)
@@ -27,10 +31,18 @@ class ModsParser {
         [ "type" : it.@source, "value" : it.text() ]
       })
 
+      def creators = it.name.namePart.list().stream()
+        .filter({ namePart -> StringUtils.isBlank(namePart.@type.toString()) })
+        .map({
+          ["name" : characterEncoding.decode(it.text())]
+        })
+        .collect(Collectors.toList())
+
       def record = [:]
       record.put("title", title)
       record.put("barcode", barcode)
       record.put("identifiers", recordIdentifiers + identifiers)
+      record.put("creators", creators)
 
       records.add(record)
     }
