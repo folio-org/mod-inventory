@@ -104,9 +104,6 @@ class ModsIngestExamples extends Specification {
     assert items.every({ it.getJsonObject("materialType").getString("name") == "Book" })
     assert items.every({ it.getJsonObject("permanentLocation").getString("name") == "Main Library" })
 
-    //TODO: Reinstate defaulting of location based upon lookup
-//    assert items.every({ it.getJsonObject("location").getString("name") == "Main Library" })
-
     assert items.any({
       itemSimilarTo(it, "California: its gold and its inhabitants", "69228882")
     })
@@ -167,14 +164,26 @@ class ModsIngestExamples extends Specification {
     assert instances.size() == 8
     assert instances.every({ it.containsKey("id") })
     assert instances.every({ it.containsKey("title") })
+
     assert instances.every({ it.containsKey("instanceTypeId") })
+
     assert instances.every({ it.containsKey("source") })
+
     assert instances.every({ it.containsKey("identifiers") })
     assert instances.every({ it.getJsonArray("identifiers").size() >= 1 })
+
     assert instances.every({
       JsonArrayHelper.toList(it.getJsonArray("identifiers"))
         .every({ it.containsKey("identifierTypeId") })
     })
+
+    //Identifier type should be derived from MODS data, however for the moment,
+    //default to ISBN
+    assert instances.every({
+      JsonArrayHelper.toList(it.getJsonArray("identifiers"))
+        .every({ it.getString("identifierTypeId") == ApiTestSuite.isbnIdentifierType })
+    })
+
     assert instances.every({
       JsonArrayHelper.toList(it.getJsonArray("identifiers"))
         .every({ it.containsKey("value") })

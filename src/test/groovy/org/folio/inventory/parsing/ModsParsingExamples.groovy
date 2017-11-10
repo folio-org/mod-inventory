@@ -120,7 +120,7 @@ class ModsParsingExamples {
   }
 
   private boolean hasIdentifier(record, String identifierTypeId, String value) {
-    record.identifiers.any({ it.identifierTypeId == identifierTypeId && it.value == value })
+    record.identifiers.any({ it.type == identifierTypeId && it.value == value })
   }
 }
 

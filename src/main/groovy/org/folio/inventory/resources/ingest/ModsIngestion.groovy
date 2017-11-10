@@ -55,9 +55,13 @@ class ModsIngestion {
     def locationsClient = new CollectionResourceClient(client,
       new URL(context.okapiLocation + "/shelf-locations"))
 
+    def identifierTypesClient = new CollectionResourceClient(client,
+      new URL(context.okapiLocation + "/identifier-types"))
+
     def materialTypesRequestCompleted = new CompletableFuture<Response>()
     def loanTypesRequestCompleted = new CompletableFuture<Response>()
     def locationsRequestCompleted = new CompletableFuture<Response>()
+    def identifierTypesRequestCompleted = new CompletableFuture<Response>()
 
     materialTypesClient.getMany(
       "query=" + URLEncoder.encode("name=\"Book\"", "UTF-8"),
@@ -71,13 +75,21 @@ class ModsIngestion {
       "query=" + URLEncoder.encode("name=\"Main Library\"", "UTF-8"),
       { response -> locationsRequestCompleted.complete(response) })
 
-    CompletableFuture.allOf(materialTypesRequestCompleted,
-      loanTypesRequestCompleted, locationsRequestCompleted)
+    identifierTypesClient.getMany(
+      "query=" + URLEncoder.encode("name=\"ISBN\"", "UTF-8"),
+      { response -> identifierTypesRequestCompleted.complete(response) })
+
+    CompletableFuture.allOf(
+      materialTypesRequestCompleted,
+      loanTypesRequestCompleted,
+      locationsRequestCompleted,
+      identifierTypesRequestCompleted)
       .thenAccept({ v ->
 
       def materialTypeResponse = materialTypesRequestCompleted.get()
       def loanTypeResponse = loanTypesRequestCompleted.get()
       def locationsResponse = locationsRequestCompleted.get()
+      def identifierTypesResponse = identifierTypesRequestCompleted.get()
 
       if (materialTypeResponse.statusCode != 200) {
         ServerErrorResponse.internalError(routingContext.response(),
@@ -96,6 +108,13 @@ class ModsIngestion {
       if (locationsResponse.statusCode != 200) {
         ServerErrorResponse.internalError(routingContext.response(),
           "Unable to retrieve locations: ${locationsResponse.statusCode}: ${locationsResponse.body}")
+
+        return
+      }
+
+      if (identifierTypesResponse.statusCode != 200) {
+        ServerErrorResponse.internalError(routingContext.response(),
+          "Unable to retrieve locations: ${identifierTypesResponse.statusCode}: ${identifierTypesResponse.body}")
 
         return
       }
@@ -129,6 +148,18 @@ class ModsIngestion {
       //location is optional so carry on gracefully
       def mainLibraryLocationId = locations.size() == 1 ? locations.first().getString("id") : null;
 
+      def identifierTypes = JsonArrayHelper.toList(
+        identifierTypesResponse.json.getJsonArray("identifierTypes"))
+
+      if(identifierTypes.size() != 1) {
+        ServerErrorResponse.internalError(routingContext.response(),
+          "Unable to find ISBN identifier type: ${identifierTypesResponse.body}")
+
+        return
+      }
+
+      def isbnIdentifierTypeId = identifierTypes.first().getString("id")
+
       routingContext.vertx().fileSystem().readFile(uploadFileName(routingContext),
         { result ->
           if (result.succeeded()) {
@@ -147,6 +178,7 @@ class ModsIngestion {
                   ["Book": bookMaterialTypeId],
                   ["Can Circulate": canCirculateLoanTypeId],
                   ["Main Library": mainLibraryLocationId],
+                  ["ISBN": isbnIdentifierTypeId],
                   success.result.id, context)
                   .send(routingContext.vertx())
 

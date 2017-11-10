@@ -11,6 +11,7 @@ class IngestMessages {
     Map materialTypes,
     Map loanTypes,
     Map locations,
+    Map identifierTypes,
     jobId,
     Context context) {
 
@@ -20,7 +21,8 @@ class IngestMessages {
       .put("records", records)
       .put("materialTypes", materialTypes)
       .put("loanTypes", loanTypes)
-      .put("locations", locations))
+      .put("locations", locations)
+      .put("identifierTypes", identifierTypes))
   }
 
   static completed(jobId, Context context) {
@@ -35,5 +37,4 @@ class IngestMessages {
      "token"     : context.token,
      "okapiLocation": context.okapiLocation]
   }
-
 }

@@ -15,6 +15,8 @@ import org.folio.inventory.resources.ingest.IngestJobState
 import org.folio.inventory.storage.Storage
 import org.folio.inventory.support.JsonArrayHelper
 
+import java.util.stream.Collectors
+
 class IngestMessageProcessor {
   private final Storage storage
 
@@ -40,6 +42,7 @@ class IngestMessageProcessor {
     Map materialTypes = body.materialTypes.map
     Map loanTypes = body.loanTypes.map
     Map locations = body.locations.map
+    Map identifierTypes = body.identifierTypes.map
 
     def context = new MessagingContext(message.headers())
 
@@ -52,9 +55,21 @@ class IngestMessageProcessor {
 
         creators.add(new Creator(UUID.randomUUID().toString(), "Fake Author"))
 
-        new Instance(UUID.randomUUID().toString(), it.title,
-          JsonArrayHelper.toListOfMaps(it.identifiers), "Local: MODS",
-          UUID.randomUUID().toString(), creators)
+      def identifiers = JsonArrayHelper.toList(it.identifiers)
+        .stream()
+        .map({ identifier ->
+          def newIdentifier = new HashMap<String, Object>()
+
+          //Default all identifiers to ISBN
+          newIdentifier.put("identifierTypeId", identifierTypes.get("ISBN"))
+          newIdentifier.put("value", identifier.getString("value"))
+
+          return newIdentifier
+        })
+        .collect(Collectors.toList())
+
+      new Instance(UUID.randomUUID().toString(), it.title,
+        identifiers, "Local: MODS", UUID.randomUUID().toString(), creators)
     })
     .forEach({ instanceCollection.add(it, allInstances.receive(),
       { Failure failure -> println("Ingest Creation Failed: ${failure.reason}") })

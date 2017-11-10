@@ -20,11 +20,11 @@ class ModsParser {
       def barcode = it.location.holdingExternal.localHolds.objId.toString()
 
       def identifiers = it.identifier.list().collect( {
-        [ "identifierTypeId" : it.@type, "value" : it.text() ]
+        [ "type" : it.@type, "value" : it.text() ]
       })
 
       def recordIdentifiers = it.recordInfo.recordIdentifier.list().collect( {
-        [ "identifierTypeId" : it.@source, "value" : it.text() ]
+        [ "type" : it.@source, "value" : it.text() ]
       })
 
       def record = [:]
