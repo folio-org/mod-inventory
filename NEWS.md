@@ -6,6 +6,7 @@
 * Requires item-storage interface version 4.0
 * Requires instance-storage interface version 3.0
 * Requires shelf-locations interface version 1.0
+* Requires instance-types interface version 1.0
 * Adds mod- prefix to names of the built artifacts (FOLIO-813)
 
 ## 5.1.1 2017-09-01
