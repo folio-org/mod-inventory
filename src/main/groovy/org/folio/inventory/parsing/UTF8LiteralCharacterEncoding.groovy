@@ -8,5 +8,6 @@ class UTF8LiteralCharacterEncoding implements CharacterEncoding {
       .replace("\\xE2\\x80\\x99", '\u2019')
       .replace("\\xC3\\xA9", '\u00E9')
       .replace("\\xCC\\x81", '\u0301')
+      .replace("\\xCC\\x8C", '\u030C')
   }
 }

@@ -10,6 +10,7 @@ import org.folio.inventory.common.api.request.PagingParameters
 import org.folio.inventory.common.api.request.VertxBodyParser
 import org.folio.inventory.common.api.response.*
 import org.folio.inventory.common.domain.Success
+import org.folio.inventory.domain.Creator
 import org.folio.inventory.domain.Instance
 import org.folio.inventory.storage.Storage
 
@@ -182,19 +183,34 @@ class Instances {
 
     representation.put("id", instance.id)
     representation.put("title", instance.title)
+    representation.put("source", instance.source)
+    representation.put("instanceTypeId", instance.instanceTypeId)
 
     def identifiers = []
 
     instance.identifiers.each { identifier ->
       def identifierRepresentation = [:]
 
-      identifierRepresentation.namespace = identifier.namespace
+      identifierRepresentation.identifierTypeId = identifier.identifierTypeId
       identifierRepresentation.value = identifier.value
 
       identifiers.add(identifierRepresentation)
     }
 
     representation.put('identifiers', identifiers)
+
+    def creators = []
+
+    instance.creators.each { creator ->
+      def creatorRepresentation = [:]
+
+      creatorRepresentation.creatorTypeId = creator.creatorTypeId
+      creatorRepresentation.name = creator.name
+
+      creators.add(creatorRepresentation)
+    }
+
+    representation.put('creators', creators)
 
     representation.put('links',
       ['self': context.absoluteUrl(
@@ -204,8 +220,16 @@ class Instances {
   }
 
   private Instance requestToInstance(Map<String, Object> instanceRequest) {
+
+    List<Creator> creators = new ArrayList<>();
+
+    instanceRequest.creators.each {
+      creators.add(new Creator(it.creatorTypeId, it.name))
+    }
+
     new Instance(instanceRequest.id, instanceRequest.title,
-      instanceRequest.identifiers)
+      instanceRequest.identifiers, instanceRequest.source,
+      instanceRequest.instanceTypeId, creators)
   }
 
   private boolean isEmpty(String string) {

@@ -6,6 +6,7 @@ import io.vertx.core.json.JsonObject
 import org.folio.inventory.common.CollectAll
 import org.folio.inventory.common.MessagingContext
 import org.folio.inventory.common.domain.Failure
+import org.folio.inventory.domain.Creator
 import org.folio.inventory.domain.Instance
 import org.folio.inventory.domain.Item
 import org.folio.inventory.domain.Messages
@@ -13,6 +14,8 @@ import org.folio.inventory.resources.ingest.IngestJob
 import org.folio.inventory.resources.ingest.IngestJobState
 import org.folio.inventory.storage.Storage
 import org.folio.inventory.support.JsonArrayHelper
+
+import java.util.stream.Collectors
 
 class IngestMessageProcessor {
   private final Storage storage
@@ -39,6 +42,9 @@ class IngestMessageProcessor {
     Map materialTypes = body.materialTypes.map
     Map loanTypes = body.loanTypes.map
     Map locations = body.locations.map
+    Map identifierTypes = body.identifierTypes.map
+    Map instanceTypes = body.instanceTypes.map
+    Map creatorTypes = body.creatorTypes.map
 
     def context = new MessagingContext(message.headers())
 
@@ -47,7 +53,30 @@ class IngestMessageProcessor {
 
     records.stream()
       .map({
-      new Instance(it.title, JsonArrayHelper.toListOfMaps(it.identifiers))
+        def creators = JsonArrayHelper.toList(it.creators)
+          .stream()
+          .map({ creator ->
+            //Default all creators to personal name
+            return new Creator(creatorTypes.get("Personal name").toString(),
+            creator.getString("name"))
+        })
+        .collect(Collectors.toList())
+
+        def identifiers = JsonArrayHelper.toList(it.identifiers)
+          .stream()
+          .map({ identifier ->
+            def newIdentifier = new HashMap<String, Object>()
+
+            //Default all identifiers to ISBN
+            newIdentifier.put("identifierTypeId", identifierTypes.get("ISBN"))
+            newIdentifier.put("value", identifier.getString("value"))
+
+            return newIdentifier
+          })
+          .collect(Collectors.toList())
+
+      new Instance(UUID.randomUUID().toString(), it.title,
+        identifiers, "Local: MODS", instanceTypes.get("Books"), creators)
     })
     .forEach({ instanceCollection.add(it, allInstances.receive(),
       { Failure failure -> println("Ingest Creation Failed: ${failure.reason}") })

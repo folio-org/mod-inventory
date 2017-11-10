@@ -28,10 +28,22 @@ class InstancesApiExamples extends Specification {
   }
 
   void "Can create an instance"() {
+
     given:
       def newInstanceRequest = new JsonObject()
         .put("title", "Long Way to a Small Angry Planet")
-        .put("identifiers", [[namespace: "isbn", value: "9781473619777"]])
+        .put("identifiers", [
+          [
+            identifierTypeId: ApiTestSuite.isbnIdentifierType,
+            value: "9781473619777"
+          ]])
+          .put("creators", [
+          [
+            creatorTypeId: ApiTestSuite.personalCreatorType,
+            name: "Chambers, Becky"
+          ]])
+        .put("source", "Local")
+        .put("instanceTypeId", ApiTestSuite.booksInstanceType)
 
     when:
       def postCompleted = new CompletableFuture<Response>()
@@ -60,8 +72,18 @@ class InstancesApiExamples extends Specification {
 
       assert createdInstance.containsKey("id")
       assert createdInstance.getString("title") == "Long Way to a Small Angry Planet"
-      assert createdInstance.getJsonArray("identifiers").getJsonObject(0).getString("namespace") == "isbn"
-      assert createdInstance.getJsonArray("identifiers").getJsonObject(0).getString("value") == "9781473619777"
+      assert createdInstance.getString("source") == "Local"
+      assert createdInstance.getString("instanceTypeId") == ApiTestSuite.booksInstanceType
+
+      def firstIdentifier = createdInstance.getJsonArray("identifiers").getJsonObject(0)
+
+      assert firstIdentifier.getString("identifierTypeId") == ApiTestSuite.isbnIdentifierType
+      assert firstIdentifier.getString("value") == "9781473619777"
+
+      def firstCreator = createdInstance.getJsonArray("creators").getJsonObject(0)
+
+      assert firstCreator.getString("creatorTypeId") == ApiTestSuite.personalCreatorType
+      assert firstCreator.getString("name") == "Chambers, Becky"
 
       expressesDublinCoreMetadata(createdInstance)
       dublinCoreContextLinkRespectsWayResourceWasReached(createdInstance)
@@ -76,6 +98,13 @@ class InstancesApiExamples extends Specification {
       def newInstanceRequest = new JsonObject()
         .put("id", instanceId)
         .put("title", "Long Way to a Small Angry Planet")
+        .put("source", "Local")
+        .put("creators", [
+        [
+          creatorTypeId: ApiTestSuite.personalCreatorType,
+          name: "Chambers, Becky"
+        ]])
+        .put("instanceTypeId", ApiTestSuite.booksInstanceType)
 
     when:
       def postCompleted = new CompletableFuture<Response>()
@@ -104,6 +133,13 @@ class InstancesApiExamples extends Specification {
 
       assert createdInstance.getString("id") == instanceId
       assert createdInstance.getString("title") == "Long Way to a Small Angry Planet"
+      assert createdInstance.getString("source") == "Local"
+      assert createdInstance.getString("instanceTypeId") == ApiTestSuite.booksInstanceType
+
+      def firstCreator = createdInstance.getJsonArray("creators").getJsonObject(0)
+
+      assert firstCreator.getString("creatorTypeId") == ApiTestSuite.personalCreatorType
+      assert firstCreator.getString("name") == "Chambers, Becky"
 
       expressesDublinCoreMetadata(createdInstance)
       dublinCoreContextLinkRespectsWayResourceWasReached(createdInstance)

@@ -38,6 +38,7 @@ class ModsIngestExamples extends Specification {
         .multiPart("record", modsFile)
         .when().post(getIngestUrl())
         .then()
+        .log().all()
         .statusCode(202)
         .extract().header("location")
 
@@ -104,9 +105,6 @@ class ModsIngestExamples extends Specification {
     assert items.every({ it.getJsonObject("materialType").getString("name") == "Book" })
     assert items.every({ it.getJsonObject("permanentLocation").getString("name") == "Main Library" })
 
-    //TODO: Reinstate defaulting of location based upon lookup
-//    assert items.every({ it.getJsonObject("location").getString("name") == "Main Library" })
-
     assert items.any({
       itemSimilarTo(it, "California: its gold and its inhabitants", "69228882")
     })
@@ -167,45 +165,88 @@ class ModsIngestExamples extends Specification {
     assert instances.size() == 8
     assert instances.every({ it.containsKey("id") })
     assert instances.every({ it.containsKey("title") })
+
+    assert instances.every({ it.containsKey("instanceTypeId") })
+    assert instances.every({ it.getString("instanceTypeId") == ApiTestSuite.booksInstanceType })
+
+    assert instances.every({ it.containsKey("source") })
+
     assert instances.every({ it.containsKey("identifiers") })
     assert instances.every({ it.getJsonArray("identifiers").size() >= 1 })
+
     assert instances.every({
       JsonArrayHelper.toList(it.getJsonArray("identifiers"))
-        .every({ it.containsKey("namespace") })
+        .every({ it.containsKey("identifierTypeId") })
     })
+
+    //Identifier type should be derived from MODS data, however for the moment,
+    //default to ISBN
+    assert instances.every({
+      JsonArrayHelper.toList(it.getJsonArray("identifiers"))
+        .every({ it.getString("identifierTypeId") == ApiTestSuite.isbnIdentifierType })
+    })
+
     assert instances.every({
       JsonArrayHelper.toList(it.getJsonArray("identifiers"))
         .every({ it.containsKey("value") })
     })
 
-    assert instances.any({
-      InstanceSimilarTo(it, "California: its gold and its inhabitants")
+    assert instances.every({ it.containsKey("creators") })
+    assert instances.every({ it.getJsonArray("creators").size() >= 1 })
+
+    assert instances.every({
+      JsonArrayHelper.toList(it.getJsonArray("creators"))
+        .every({ it.containsKey("creatorTypeId") })
+    })
+
+    //Creator type should be derived from MODS data, however for the moment,
+    //default to personal
+    assert instances.every({
+      JsonArrayHelper.toList(it.getJsonArray("creators"))
+        .every({ it.getString("creatorTypeId") == ApiTestSuite.personalCreatorType })
+    })
+
+    assert instances.every({
+      JsonArrayHelper.toList(it.getJsonArray("creators"))
+        .every({ it.containsKey("name") })
     })
 
     assert instances.any({
-      InstanceSimilarTo(it, "Studien zur Geschichte der Notenschrift.")
+      InstanceSimilarTo(it, "California: its gold and its inhabitants",
+        "Huntley, Henry Veel")
     })
 
     assert instances.any({
-      InstanceSimilarTo(it, "Essays on C.S. Lewis and George MacDonald")
+      InstanceSimilarTo(it, "Studien zur Geschichte der Notenschrift.",
+        "Riemann, Karl Wilhelm J. Hugo.")
     })
 
     assert instances.any({
-      InstanceSimilarTo(it, "Statistical sketches of Upper Canada")
+      InstanceSimilarTo(it, "Essays on C.S. Lewis and George MacDonald",
+        "Marshall, Cynthia.")
     })
 
     assert instances.any({
-      InstanceSimilarTo(it, "Edward McGuire, RHA")
+      InstanceSimilarTo(it, "Statistical sketches of Upper Canada",
+        "Dunlop, William")
     })
 
     assert instances.any({
-      InstanceSimilarTo(it, "Influenza della Poesia sui Costumi") })
+      InstanceSimilarTo(it, "Edward McGuire, RHA",
+        "Fallon, Brian.")
+    })
 
     assert instances.any({
-      InstanceSimilarTo(it, "Pavle Nik") })
+      InstanceSimilarTo(it, "Influenza della Poesia sui Costumi",
+        "MABIL, Pier Luigi.") })
 
     assert instances.any({
-      InstanceSimilarTo(it, "Grammaire") })
+      InstanceSimilarTo(it, "Pavle Nik",
+        "Božović, Ratko.") })
+
+    assert instances.any({
+      InstanceSimilarTo(it, "Grammaire",
+        "Riemann, Othon.") })
   }
 
   private URL getIngestUrl() {
@@ -227,7 +268,15 @@ class ModsIngestExamples extends Specification {
       record.getString("barcode") == expectedBarcode
   }
 
-  private boolean InstanceSimilarTo(JsonObject record, String expectedSimilarTitle) {
-    record.getString("title").contains(expectedSimilarTitle)
+  private boolean InstanceSimilarTo(
+    JsonObject record,
+    String expectedSimilarTitle,
+    String expectedCreatorSimilarTo) {
+
+    record.getString("title").contains(expectedSimilarTitle) &&
+      JsonArrayHelper.toList(record.getJsonArray("creators")).stream()
+        .anyMatch({ creator ->
+          creator.getString("name").contains(expectedCreatorSimilarTo)
+      });
   }
 }

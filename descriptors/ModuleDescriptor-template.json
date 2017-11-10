@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "inventory",
-      "version": "3.0",
+      "version": "4.0",
       "handlers": [
         {
           "methods": ["GET"],
@@ -91,7 +91,10 @@
             "inventory-storage.instances.collection.get",
             "inventory-storage.material-types.collection.get",
             "inventory-storage.loan-types.collection.get",
-            "inventory-storage.shelf-locations.collection.get"]
+            "inventory-storage.shelf-locations.collection.get",
+            "inventory-storage.instance-types.collection.get",
+            "inventory-storage.identifier-types.collection.get",
+            "inventory-storage.creator-types.collection.get"]
         }, {
           "methods": ["GET"],
           "pathPattern": "/inventory/ingest/mods/status/{id}",
@@ -107,7 +110,7 @@
     },
     {
       "id": "instance-storage",
-      "version": "2.0"
+      "version": "3.0"
     },
     {
       "id": "material-types",
@@ -119,6 +122,18 @@
     },
     {
       "id": "shelf-locations",
+      "version": "1.0"
+    },
+    {
+      "id": "instance-types",
+      "version": "1.0"
+    },
+    {
+      "id": "identifier-types",
+      "version": "1.0"
+    },
+    {
+      "id": "creator-types",
       "version": "1.0"
     }
   ],

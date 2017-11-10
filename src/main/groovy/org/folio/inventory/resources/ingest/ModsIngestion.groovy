@@ -55,9 +55,21 @@ class ModsIngestion {
     def locationsClient = new CollectionResourceClient(client,
       new URL(context.okapiLocation + "/shelf-locations"))
 
+    def identifierTypesClient = new CollectionResourceClient(client,
+      new URL(context.okapiLocation + "/identifier-types"))
+
+    def instanceTypesClient = new CollectionResourceClient(client,
+      new URL(context.okapiLocation + "/instance-types"))
+
+    def creatorTypesClient = new CollectionResourceClient(client,
+      new URL(context.okapiLocation + "/creator-types"))
+
     def materialTypesRequestCompleted = new CompletableFuture<Response>()
     def loanTypesRequestCompleted = new CompletableFuture<Response>()
     def locationsRequestCompleted = new CompletableFuture<Response>()
+    def identifierTypesRequestCompleted = new CompletableFuture<Response>()
+    def instanceTypesRequestCompleted = new CompletableFuture<Response>()
+    def creatorTypesRequestCompleted = new CompletableFuture<Response>()
 
     materialTypesClient.getMany(
       "query=" + URLEncoder.encode("name=\"Book\"", "UTF-8"),
@@ -71,13 +83,33 @@ class ModsIngestion {
       "query=" + URLEncoder.encode("name=\"Main Library\"", "UTF-8"),
       { response -> locationsRequestCompleted.complete(response) })
 
-    CompletableFuture.allOf(materialTypesRequestCompleted,
-      loanTypesRequestCompleted, locationsRequestCompleted)
+    identifierTypesClient.getMany(
+      "query=" + URLEncoder.encode("name=\"ISBN\"", "UTF-8"),
+      { response -> identifierTypesRequestCompleted.complete(response) })
+
+    instanceTypesClient.getMany(
+      "query=" + URLEncoder.encode("name=\"Books\"", "UTF-8"),
+      { response -> instanceTypesRequestCompleted.complete(response) })
+
+    creatorTypesClient.getMany(
+      "query=" + URLEncoder.encode("name=\"Personal name\"", "UTF-8"),
+      { response -> creatorTypesRequestCompleted.complete(response) })
+
+    CompletableFuture.allOf(
+      materialTypesRequestCompleted,
+      loanTypesRequestCompleted,
+      locationsRequestCompleted,
+      identifierTypesRequestCompleted,
+      instanceTypesRequestCompleted,
+      creatorTypesRequestCompleted)
       .thenAccept({ v ->
 
       def materialTypeResponse = materialTypesRequestCompleted.get()
       def loanTypeResponse = loanTypesRequestCompleted.get()
       def locationsResponse = locationsRequestCompleted.get()
+      def identifierTypesResponse = identifierTypesRequestCompleted.get()
+      def instanceTypesResponse = instanceTypesRequestCompleted.get()
+      def creatorTypesResponse = creatorTypesRequestCompleted.get()
 
       if (materialTypeResponse.statusCode != 200) {
         ServerErrorResponse.internalError(routingContext.response(),
@@ -96,6 +128,27 @@ class ModsIngestion {
       if (locationsResponse.statusCode != 200) {
         ServerErrorResponse.internalError(routingContext.response(),
           "Unable to retrieve locations: ${locationsResponse.statusCode}: ${locationsResponse.body}")
+
+        return
+      }
+
+      if (identifierTypesResponse.statusCode != 200) {
+        ServerErrorResponse.internalError(routingContext.response(),
+          "Unable to retrieve identifier types: ${identifierTypesResponse.statusCode}: ${identifierTypesResponse.body}")
+
+        return
+      }
+
+      if (instanceTypesResponse.statusCode != 200) {
+        ServerErrorResponse.internalError(routingContext.response(),
+          "Unable to retrieve instance types: ${instanceTypesResponse.statusCode}: ${instanceTypesResponse.body}")
+
+        return
+      }
+
+      if (creatorTypesResponse.statusCode != 200) {
+        ServerErrorResponse.internalError(routingContext.response(),
+          "Unable to retrieve creator types: ${creatorTypesResponse.statusCode}: ${creatorTypesResponse.body}")
 
         return
       }
@@ -129,6 +182,42 @@ class ModsIngestion {
       //location is optional so carry on gracefully
       def mainLibraryLocationId = locations.size() == 1 ? locations.first().getString("id") : null;
 
+      def identifierTypes = JsonArrayHelper.toList(
+        identifierTypesResponse.json.getJsonArray("identifierTypes"))
+
+      if(identifierTypes.size() != 1) {
+        ServerErrorResponse.internalError(routingContext.response(),
+          "Unable to find ISBN identifier type: ${identifierTypesResponse.body}")
+
+        return
+      }
+
+      def isbnIdentifierTypeId = identifierTypes.first().getString("id")
+
+      def instanceTypes = JsonArrayHelper.toList(
+        instanceTypesResponse.json.getJsonArray("instanceTypes"))
+
+      if(instanceTypes.size() != 1) {
+        ServerErrorResponse.internalError(routingContext.response(),
+          "Unable to find books instance type: ${instanceTypesResponse.body}")
+
+        return
+      }
+
+      def booksInstanceTypeId = instanceTypes.first().getString("id")
+
+      def creatorTypes = JsonArrayHelper.toList(
+        creatorTypesResponse.json.getJsonArray("creatorTypes"))
+
+      if(creatorTypes.size() != 1) {
+        ServerErrorResponse.internalError(routingContext.response(),
+          "Unable to find peronal creator type: ${creatorTypesResponse.body}")
+
+        return
+      }
+
+      def personalCreatorTypeId = creatorTypes.first().getString("id")
+
       routingContext.vertx().fileSystem().readFile(uploadFileName(routingContext),
         { result ->
           if (result.succeeded()) {
@@ -147,6 +236,9 @@ class ModsIngestion {
                   ["Book": bookMaterialTypeId],
                   ["Can Circulate": canCirculateLoanTypeId],
                   ["Main Library": mainLibraryLocationId],
+                  ["ISBN": isbnIdentifierTypeId],
+                  ["Books": booksInstanceTypeId],
+                  ["Personal name": personalCreatorTypeId],
                   success.result.id, context)
                   .send(routingContext.vertx())
 
