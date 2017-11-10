@@ -53,10 +53,14 @@ class IngestMessageProcessor {
 
     records.stream()
       .map({
-        def creators = new ArrayList<Creator>()
-
-        creators.add(new Creator(creatorTypes.get("personal name").toString(),
-          "Fake Author"))
+        def creators = JsonArrayHelper.toList(it.creators)
+          .stream()
+          .map({ creator ->
+            //Default all creators to personal name
+            return new Creator(creatorTypes.get("personal name").toString(),
+            creator.getString("name"))
+        })
+        .collect(Collectors.toList())
 
         def identifiers = JsonArrayHelper.toList(it.identifiers)
           .stream()

@@ -211,33 +211,41 @@ class ModsIngestExamples extends Specification {
     })
 
     assert instances.any({
-      InstanceSimilarTo(it, "California: its gold and its inhabitants")
+      InstanceSimilarTo(it, "California: its gold and its inhabitants",
+        "Huntley, Henry Veel")
     })
 
     assert instances.any({
-      InstanceSimilarTo(it, "Studien zur Geschichte der Notenschrift.")
+      InstanceSimilarTo(it, "Studien zur Geschichte der Notenschrift.",
+        "Riemann, Karl Wilhelm J. Hugo.")
     })
 
     assert instances.any({
-      InstanceSimilarTo(it, "Essays on C.S. Lewis and George MacDonald")
+      InstanceSimilarTo(it, "Essays on C.S. Lewis and George MacDonald",
+        "Marshall, Cynthia.")
     })
 
     assert instances.any({
-      InstanceSimilarTo(it, "Statistical sketches of Upper Canada")
+      InstanceSimilarTo(it, "Statistical sketches of Upper Canada",
+        "Dunlop, William")
     })
 
     assert instances.any({
-      InstanceSimilarTo(it, "Edward McGuire, RHA")
+      InstanceSimilarTo(it, "Edward McGuire, RHA",
+        "Fallon, Brian.")
     })
 
     assert instances.any({
-      InstanceSimilarTo(it, "Influenza della Poesia sui Costumi") })
+      InstanceSimilarTo(it, "Influenza della Poesia sui Costumi",
+        "MABIL, Pier Luigi.") })
 
     assert instances.any({
-      InstanceSimilarTo(it, "Pavle Nik") })
+      InstanceSimilarTo(it, "Pavle Nik",
+        "Božović, Ratko.") })
 
     assert instances.any({
-      InstanceSimilarTo(it, "Grammaire") })
+      InstanceSimilarTo(it, "Grammaire",
+        "Riemann, Othon.") })
   }
 
   private URL getIngestUrl() {
@@ -259,7 +267,15 @@ class ModsIngestExamples extends Specification {
       record.getString("barcode") == expectedBarcode
   }
 
-  private boolean InstanceSimilarTo(JsonObject record, String expectedSimilarTitle) {
-    record.getString("title").contains(expectedSimilarTitle)
+  private boolean InstanceSimilarTo(
+    JsonObject record,
+    String expectedSimilarTitle,
+    String expectedCreatorSimilarTo) {
+
+    record.getString("title").contains(expectedSimilarTitle) &&
+      JsonArrayHelper.toList(record.getJsonArray("creators")).stream()
+        .anyMatch({ creator ->
+          creator.getString("name").contains(expectedCreatorSimilarTo)
+      });
   }
 }

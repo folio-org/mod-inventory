@@ -7,13 +7,18 @@ class IngestRecordConverter {
   def toJson(records) {
     records.collect {
       def convertedIdentifiers = it.identifiers.collect {
-        ["identifierTypeId": "${it.identifierTypeId}", "value": "${it.value}"]
+        ["type": "${it.type}", "value": "${it.value}"]
+      }
+
+      def convertedCreators = it.creators.collect {
+        ["name": "${it.name}"]
       }
 
       new JsonObject()
         .put("title", it.title)
         .put("barcode", it.barcode)
         .put("identifiers", new JsonArray(convertedIdentifiers))
+        .put("creators", new JsonArray(convertedCreators))
     }
   }
 }
