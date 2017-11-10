@@ -264,6 +264,6 @@ class ApiTestSuite {
     def creatorTypesPreparation = new ControlledVocabularyPreparation(client,
       creatorTypes, "creatorTypes")
 
-    personalCreatorTypeId = creatorTypesPreparation.createOrReferenceTerm("personal name")
+    personalCreatorTypeId = creatorTypesPreparation.createOrReferenceTerm("Personal name")
   }
 }

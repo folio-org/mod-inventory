@@ -38,6 +38,7 @@ class ModsIngestExamples extends Specification {
         .multiPart("record", modsFile)
         .when().post(getIngestUrl())
         .then()
+        .log().all()
         .statusCode(202)
         .extract().header("location")
 

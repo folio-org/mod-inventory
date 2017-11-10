@@ -57,7 +57,7 @@ class IngestMessageProcessor {
           .stream()
           .map({ creator ->
             //Default all creators to personal name
-            return new Creator(creatorTypes.get("personal name").toString(),
+            return new Creator(creatorTypes.get("Personal name").toString(),
             creator.getString("name"))
         })
         .collect(Collectors.toList())

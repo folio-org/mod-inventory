@@ -92,7 +92,7 @@ class ModsIngestion {
       { response -> instanceTypesRequestCompleted.complete(response) })
 
     creatorTypesClient.getMany(
-      "query=" + URLEncoder.encode("name=\"personal name\"", "UTF-8"),
+      "query=" + URLEncoder.encode("name=\"Personal name\"", "UTF-8"),
       { response -> creatorTypesRequestCompleted.complete(response) })
 
     CompletableFuture.allOf(
@@ -238,7 +238,7 @@ class ModsIngestion {
                   ["Main Library": mainLibraryLocationId],
                   ["ISBN": isbnIdentifierTypeId],
                   ["Books": booksInstanceTypeId],
-                  ["personal name": personalCreatorTypeId],
+                  ["Personal name": personalCreatorTypeId],
                   success.result.id, context)
                   .send(routingContext.vertx())
 
