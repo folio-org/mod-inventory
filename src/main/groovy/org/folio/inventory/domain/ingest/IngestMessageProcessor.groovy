@@ -43,6 +43,7 @@ class IngestMessageProcessor {
     Map loanTypes = body.loanTypes.map
     Map locations = body.locations.map
     Map identifierTypes = body.identifierTypes.map
+    Map instanceTypes = body.instanceTypes.map
 
     def context = new MessagingContext(message.headers())
 
@@ -69,7 +70,7 @@ class IngestMessageProcessor {
         .collect(Collectors.toList())
 
       new Instance(UUID.randomUUID().toString(), it.title,
-        identifiers, "Local: MODS", UUID.randomUUID().toString(), creators)
+        identifiers, "Local: MODS", instanceTypes.get("Books"), creators)
     })
     .forEach({ instanceCollection.add(it, allInstances.receive(),
       { Failure failure -> println("Ingest Creation Failed: ${failure.reason}") })

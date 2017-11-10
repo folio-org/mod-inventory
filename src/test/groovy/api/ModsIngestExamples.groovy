@@ -166,6 +166,7 @@ class ModsIngestExamples extends Specification {
     assert instances.every({ it.containsKey("title") })
 
     assert instances.every({ it.containsKey("instanceTypeId") })
+    assert instances.every({ it.getString("instanceTypeId") == ApiTestSuite.booksInstanceType })
 
     assert instances.every({ it.containsKey("source") })
 
