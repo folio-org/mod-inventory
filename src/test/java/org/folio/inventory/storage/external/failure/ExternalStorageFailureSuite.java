@@ -1,66 +1,71 @@
-package org.folio.inventory.storage.external.failure
+package org.folio.inventory.storage.external.failure;
 
-import io.vertx.core.Vertx
-import org.folio.inventory.common.VertxAssistant
-import org.folio.inventory.storage.external.support.FailureInventoryStorageModule
-import org.junit.AfterClass
-import org.junit.BeforeClass
-import org.junit.runner.RunWith
-import org.junit.runners.Suite
+import io.vertx.core.Vertx;
+import org.folio.inventory.common.VertxAssistant;
+import org.folio.inventory.storage.external.support.FailureInventoryStorageModule;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
 
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit
-import java.util.function.Function
+import java.util.HashMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
 
 @RunWith(Suite.class)
-
-@Suite.SuiteClasses([
+@Suite.SuiteClasses({
   ExternalItemCollectionServerErrorExamples.class,
   ExternalItemCollectionBadRequestExamples.class,
   ExternalInstanceCollectionServerErrorExamples.class,
   ExternalInstanceCollectionBadRequestExamples.class,
-])
-
+})
 public class ExternalStorageFailureSuite {
   private static final VertxAssistant vertxAssistant = new VertxAssistant();
-  private static String storageModuleDeploymentId
+  private static String storageModuleDeploymentId;
 
   public static <T> T createUsing(Function<Vertx, T> function) {
-    vertxAssistant.createUsingVertx(function)
+    return vertxAssistant.createUsingVertx(function);
   }
 
-  static String getServerErrorStorageAddress() {
-      FailureInventoryStorageModule.serverErrorAddress
+  public static String getServerErrorStorageAddress() {
+    return FailureInventoryStorageModule.getServerErrorAddress();
   }
 
-  static String getBadRequestStorageAddress() {
-    FailureInventoryStorageModule.badRequestAddress
+  public static String getBadRequestStorageAddress() {
+    return FailureInventoryStorageModule.getBadRequestAddress();
   }
 
   @BeforeClass
-  static void beforeAll() {
-    vertxAssistant.start()
+  public static void beforeAll()
+    throws InterruptedException, ExecutionException, TimeoutException {
 
-    println("Starting Failing Storage Module")
+    vertxAssistant.start();
 
-    def deployed = new CompletableFuture()
+    System.out.println("Starting Failing Storage Module");
+
+    CompletableFuture<String> deployed = new CompletableFuture<>();
 
     vertxAssistant.deployGroovyVerticle(
-      FailureInventoryStorageModule.class.name,
-      [:],
-      deployed)
+      FailureInventoryStorageModule.class.getName(),
+      new HashMap<>(),
+      deployed);
 
-    storageModuleDeploymentId = deployed.get(20000, TimeUnit.MILLISECONDS)
+    storageModuleDeploymentId = deployed.get(20000, TimeUnit.MILLISECONDS);
   }
 
   @AfterClass()
-  static void afterAll() {
-    def undeployed = new CompletableFuture()
+  public static void afterAll()
+    throws InterruptedException, ExecutionException, TimeoutException {
 
-    vertxAssistant.undeployVerticle(storageModuleDeploymentId, undeployed)
+    CompletableFuture<Void> undeployed = new CompletableFuture<>();
 
-    undeployed.get(20000, TimeUnit.MILLISECONDS)
+    vertxAssistant.undeployVerticle(storageModuleDeploymentId, undeployed);
 
-    vertxAssistant.stop()
+    undeployed.get(20000, TimeUnit.MILLISECONDS);
+
+    vertxAssistant.stop();
   }
 }

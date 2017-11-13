@@ -1,25 +1,36 @@
-package api.support
+package api.support;
 
-import api.ApiTestSuite
+import api.ApiTestSuite;
 
-class ApiRoot {
-  static String inventory() {
-    "${ApiTestSuite.apiRoot()}/inventory"
+import java.net.MalformedURLException;
+import java.net.URL;
+
+public class ApiRoot {
+  public static String inventory() {
+    return String.format("%s/inventory", ApiTestSuite.apiRoot());
   }
 
-  static URL instances() {
-    new URL("${inventory()}/instances")
+  public static URL instances()
+    throws MalformedURLException {
+
+    return new URL(String.format("%s/instances", inventory()));
   }
 
-  static URL instances(String query) {
-    new URL("${inventory()}/instances?${query}")
+  public static URL instances(String query)
+    throws MalformedURLException {
+
+    return new URL(String.format("%s/instances?%s", inventory(), query));
   }
 
-  static URL items() {
-    new URL("${inventory()}/items")
+  public static URL items()
+    throws MalformedURLException {
+
+    return new URL(String.format("%s/items", inventory()));
   }
 
-  static URL items(String query) {
-    new URL("${inventory()}/items?${query}")
+  public static URL items(String query)
+    throws MalformedURLException {
+
+    return new URL(String.format("%s/items?%s", inventory(), query));
   }
 }

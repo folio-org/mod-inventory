@@ -1,32 +1,47 @@
-package api.support
+package api.support;
 
-import io.vertx.core.json.JsonObject
-import org.folio.inventory.support.http.client.OkapiHttpClient
-import org.folio.inventory.support.http.client.Response
-import org.folio.inventory.support.http.client.ResponseHandler
+import io.vertx.core.json.JsonObject;
+import org.folio.inventory.support.http.client.OkapiHttpClient;
+import org.folio.inventory.support.http.client.Response;
+import org.folio.inventory.support.http.client.ResponseHandler;
 
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit
+import java.net.MalformedURLException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
-class ItemApiClient {
-  static def createItem(OkapiHttpClient client, JsonObject newItemRequest) {
-    def postCompleted = new CompletableFuture<Response>()
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
 
-    client.post(ApiRoot.items(),
-      newItemRequest, ResponseHandler.any(postCompleted))
+public class ItemApiClient {
+  public static JsonObject createItem(
+    OkapiHttpClient client,
+    JsonObject newItemRequest)
+    throws MalformedURLException,
+    InterruptedException,
+    ExecutionException,
+    TimeoutException {
+
+    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+
+    client.post(ApiRoot.items(), newItemRequest,
+      ResponseHandler.any(postCompleted));
 
     Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
 
-    assert postResponse.statusCode == 201
+    assertThat("Failed to create item",
+      postResponse.getStatusCode(), is(201));
 
-    def getCompleted = new CompletableFuture<Response>()
+    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
 
-    client.get(postResponse.location, ResponseHandler.json(getCompleted))
+    client.get(postResponse.getLocation(), ResponseHandler.json(getCompleted));
 
     Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
 
-    assert getResponse.statusCode == 200
+    assertThat("Failed to get item",
+      getResponse.getStatusCode(), is(200));
 
-    getResponse.json
+    return getResponse.getJson();
   }
 }

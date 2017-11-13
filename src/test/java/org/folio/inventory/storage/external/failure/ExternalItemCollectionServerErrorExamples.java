@@ -1,23 +1,23 @@
-package org.folio.inventory.storage.external.failure
+package org.folio.inventory.storage.external.failure;
 
-import org.folio.inventory.common.domain.Failure
-import org.folio.inventory.storage.external.ExternalStorageCollections
+import org.folio.inventory.common.domain.Failure;
+import org.folio.inventory.storage.external.ExternalStorageCollections;
 
-import static org.hamcrest.CoreMatchers.is
-import static org.junit.Assert.assertThat
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
 
-class ExternalItemCollectionServerErrorExamples
+public class ExternalItemCollectionServerErrorExamples
   extends ExternalItemCollectionFailureExamples {
 
-  def ExternalItemCollectionServerErrorExamples() {
+  public ExternalItemCollectionServerErrorExamples() {
     super(ExternalStorageFailureSuite.createUsing(
-      { new ExternalStorageCollections(it,
-        ExternalStorageFailureSuite.serverErrorStorageAddress)}))
+      it -> new ExternalStorageCollections(it,
+        ExternalStorageFailureSuite.getServerErrorStorageAddress())));
   }
 
   @Override
-  protected check(Failure failure) {
-    assertThat(failure.reason, is("Server Error"))
-    assertThat(failure.statusCode, is(500))
+  protected void check(Failure failure) {
+    assertThat(failure.getReason(), is("Server Error"));
+    assertThat(failure.getStatusCode(), is(500));
   }
 }

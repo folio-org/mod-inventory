@@ -28,9 +28,9 @@ dependencies {
 
   testCompile 'junit:junit:4.12'
   testCompile 'org.hamcrest:hamcrest-junit:2.0.0.0'
-  testCompile 'org.spockframework:spock-core:1.0-groovy-2.4'
   testCompile 'com.github.jsonld-java:jsonld-java:0.9.0'
   testCompile 'io.rest-assured:rest-assured:3.0.3'
+  testCompile 'org.awaitility:awaitility:3.0.0'
 }
 
 defaultTasks 'build', 'generateDescriptors'

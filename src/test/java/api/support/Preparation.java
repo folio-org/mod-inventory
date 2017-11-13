@@ -1,35 +1,53 @@
-package api.support
+package api.support;
 
-import org.folio.inventory.support.http.client.OkapiHttpClient
-import org.folio.inventory.support.http.client.Response
-import org.folio.inventory.support.http.client.ResponseHandler
+import org.folio.inventory.support.http.client.OkapiHttpClient;
+import org.folio.inventory.support.http.client.Response;
+import org.folio.inventory.support.http.client.ResponseHandler;
 
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
-class Preparation {
-  private final OkapiHttpClient client
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
 
-  Preparation(OkapiHttpClient client) {
-    this.client = client
+public class Preparation {
+  private final OkapiHttpClient client;
+
+  public Preparation(OkapiHttpClient client) {
+    this.client = client;
   }
 
-  void deleteInstances() {
-    deleteAll(ApiRoot.instances())
+  public void deleteInstances()
+    throws MalformedURLException,
+    InterruptedException,
+    ExecutionException,
+    TimeoutException {
+
+    deleteAll(ApiRoot.instances());
   }
 
-  void deleteItems() {
-    deleteAll(ApiRoot.items())
+  public void deleteItems()
+    throws MalformedURLException,
+    InterruptedException,
+    ExecutionException,
+    TimeoutException {
+
+    deleteAll(ApiRoot.items());
   }
 
-  private void deleteAll(URL root) {
-    def getCompleted = new CompletableFuture<Response>()
+  private void deleteAll(URL root)
+    throws InterruptedException, ExecutionException, TimeoutException {
 
-    client.delete(root,
-      ResponseHandler.any(getCompleted))
+    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+
+    client.delete(root, ResponseHandler.any(getCompleted));
 
     Response response = getCompleted.get(5, TimeUnit.SECONDS);
 
-    assert response.statusCode == 204
+    assertThat("Failed to delete all records", response.getStatusCode(), is(204));
   }
 }

@@ -1,141 +1,162 @@
-package org.folio.inventory.storage.external.failure
+package org.folio.inventory.storage.external.failure;
 
-import org.folio.inventory.common.api.request.PagingParameters
-import org.folio.inventory.common.domain.Failure
-import org.folio.inventory.common.domain.Success
-import org.folio.inventory.domain.CollectionProvider
-import org.folio.inventory.domain.Item
-import org.folio.inventory.domain.ItemCollection
-import org.junit.Test
+import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.common.domain.Failure;
+import org.folio.inventory.domain.CollectionProvider;
+import org.folio.inventory.domain.Item;
+import org.folio.inventory.domain.ItemCollection;
+import org.junit.Test;
 
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit
+import java.io.UnsupportedEncodingException;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
-import static org.junit.Assert.fail
+import static org.junit.Assert.fail;
 
-abstract class ExternalItemCollectionFailureExamples {
+public abstract class ExternalItemCollectionFailureExamples {
 
-  protected final CollectionProvider collectionProvider
+  private final CollectionProvider collectionProvider;
 
-  def ExternalItemCollectionFailureExamples(CollectionProvider collectionProvider) {
-    this.collectionProvider = collectionProvider
+  ExternalItemCollectionFailureExamples(CollectionProvider collectionProvider) {
+    this.collectionProvider = collectionProvider;
   }
 
   @Test
-  void serverErrorWhenCreatingAnItemTriggersFailureCallback() {
-    def collection = createCollection()
+  public void serverErrorWhenCreatingAnItemTriggersFailureCallback()
+    throws InterruptedException, ExecutionException, TimeoutException {
 
-    def failureCalled = new CompletableFuture<Failure>()
+    ItemCollection collection = createCollection();
+
+    CompletableFuture<Failure> failureCalled = new CompletableFuture<>();
 
     collection.add(createItem(),
-      { Success success -> fail("Completion callback should not be called") },
-      { Failure failure -> failureCalled.complete(failure) })
+      success -> fail("Completion callback should not be called"),
+      failureCalled::complete);
 
-    def failure = failureCalled.get(1000, TimeUnit.MILLISECONDS)
+    Failure failure = failureCalled.get(1000, TimeUnit.MILLISECONDS);
 
-    check(failure)
+    check(failure);
   }
 
   @Test
-  void serverErrorWhenUpdatingAnItemTriggersFailureCallback() {
-    def collection = createCollection()
+  public void serverErrorWhenUpdatingAnItemTriggersFailureCallback()
+    throws InterruptedException, ExecutionException, TimeoutException {
 
-    def failureCalled = new CompletableFuture<Failure>()
+    ItemCollection collection = createCollection();
+
+    CompletableFuture<Failure> failureCalled = new CompletableFuture<>();
 
     collection.update(createItem(),
-      { Success success -> fail("Completion callback should not be called") },
-      { Failure failure -> failureCalled.complete(failure) })
+      success -> fail("Completion callback should not be called"),
+      failureCalled::complete);
 
-    def failure = failureCalled.get(1000, TimeUnit.MILLISECONDS)
+    Failure failure = failureCalled.get(1000, TimeUnit.MILLISECONDS);
 
-    check(failure)
+    check(failure);
   }
 
   @Test
-  void serverErrorWhenGettingAllItemsTriggersFailureCallback() {
-    def collection = createCollection()
+  public void serverErrorWhenGettingAllItemsTriggersFailureCallback()
+    throws InterruptedException, ExecutionException, TimeoutException {
 
-    def failureCalled = new CompletableFuture<Failure>()
+    ItemCollection collection = createCollection();
+
+    CompletableFuture<Failure> failureCalled = new CompletableFuture<>();
 
     collection.findAll(PagingParameters.defaults(),
-      { Success success -> fail("Results callback should not be called") },
-      { Failure failure -> failureCalled.complete(failure) })
+      success -> fail("Completion callback should not be called"),
+      failureCalled::complete);
 
-    def failure = failureCalled.get(1000, TimeUnit.MILLISECONDS)
+    Failure failure = failureCalled.get(1000, TimeUnit.MILLISECONDS);
 
-    check(failure)
+    check(failure);
   }
 
   @Test
-  void serverErrorWhenGettingAnItemByIdTriggersFailureCallback() {
-    def collection = createCollection()
+  public void serverErrorWhenGettingAnItemByIdTriggersFailureCallback()
+    throws InterruptedException, ExecutionException, TimeoutException {
 
-    def failureCalled = new CompletableFuture<Failure>()
+    ItemCollection collection = createCollection();
+
+    CompletableFuture<Failure> failureCalled = new CompletableFuture<>();
 
     collection.findById(UUID.randomUUID().toString(),
-      { Success success -> fail("Results callback should not be called") },
-      { Failure failure -> failureCalled.complete(failure) })
+      success -> fail("Completion callback should not be called"),
+      failureCalled::complete);
 
-    def failure = failureCalled.get(1000, TimeUnit.MILLISECONDS)
+    Failure failure = failureCalled.get(1000, TimeUnit.MILLISECONDS);
 
-    check(failure)
+    check(failure);
   }
 
   @Test
-  void serverErrorWhenDeletingAnItemByIdTriggersFailureCallback() {
-    def collection = createCollection()
+  public void serverErrorWhenDeletingAnItemByIdTriggersFailureCallback()
+    throws InterruptedException, ExecutionException, TimeoutException {
 
-    def failureCalled = new CompletableFuture<Failure>()
+    ItemCollection collection = createCollection();
+
+    CompletableFuture<Failure> failureCalled = new CompletableFuture<>();
 
     collection.delete(UUID.randomUUID().toString(),
-      { Success success -> fail("Completion callback should not be called") },
-      { Failure failure -> failureCalled.complete(failure) })
+      success -> fail("Completion callback should not be called"),
+      failureCalled::complete);
 
-    def failure = failureCalled.get(1000, TimeUnit.MILLISECONDS)
+    Failure failure = failureCalled.get(1000, TimeUnit.MILLISECONDS);
 
-    check(failure)
+    check(failure);
   }
 
   @Test
-  void serverErrorWhenDeletingAllItemsTriggersFailureCallback() {
-    def collection = createCollection()
+  public void serverErrorWhenDeletingAllItemsTriggersFailureCallback()
+    throws InterruptedException, ExecutionException, TimeoutException {
 
-    def failureCalled = new CompletableFuture<Failure>()
+    ItemCollection collection = createCollection();
+
+    CompletableFuture<Failure> failureCalled = new CompletableFuture<>();
 
     collection.empty(
-      { Success success -> fail("Completion callback should not be called") },
-      { Failure failure -> failureCalled.complete(failure) })
+      success -> fail("Completion callback should not be called"),
+      failureCalled::complete);
 
-    def failure = failureCalled.get(1000, TimeUnit.MILLISECONDS)
+    Failure failure = failureCalled.get(1000, TimeUnit.MILLISECONDS);
 
-    check(failure)
+    check(failure);
   }
 
   @Test
-  void serverErrorWhenFindingItemsTriggersFailureCallback() {
-    def collection = createCollection()
+  public void serverErrorWhenFindingItemsTriggersFailureCallback()
+    throws InterruptedException,
+    ExecutionException,
+    TimeoutException,
+    UnsupportedEncodingException {
 
-    def failureCalled = new CompletableFuture<Failure>()
+    ItemCollection collection = createCollection();
+
+    CompletableFuture<Failure> failureCalled = new CompletableFuture<>();
 
     collection.findByCql("title=\"*Small Angry*\"",
       new PagingParameters(10, 0),
-      { Success success -> fail("Success callback should not be called") },
-      { Failure failure -> failureCalled.complete(failure) })
+      success -> fail("Completion callback should not be called"),
+      failureCalled::complete);
 
-    def failure = failureCalled.get(1000, TimeUnit.MILLISECONDS)
+    Failure failure = failureCalled.get(1000, TimeUnit.MILLISECONDS);
 
-    check(failure)
+    check(failure);
   }
 
-  protected abstract check(Failure failure)
+  protected abstract void check(Failure failure);
 
-  protected Item createItem() {
-    new Item(null, UUID.randomUUID().toString(), "Nod", "6575467847",
-      "${UUID.randomUUID()}", "${UUID.randomUUID()}",
-      "${UUID.randomUUID()}","${UUID.randomUUID()}","${UUID.randomUUID()}", null)
+  private static Item createItem() {
+    return new Item(null, UUID.randomUUID().toString(), "Nod", "6575467847",
+      UUID.randomUUID().toString(), UUID.randomUUID().toString(),
+      UUID.randomUUID().toString(), UUID.randomUUID().toString(),
+      UUID.randomUUID().toString(), null);
   }
 
   private ItemCollection createCollection() {
-    collectionProvider.getItemCollection("test_tenant", "")
+    return collectionProvider.getItemCollection("test_tenant", "");
   }
 }

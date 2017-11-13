@@ -1,282 +1,317 @@
-package api
+package api;
 
-import api.support.ApiRoot
-import api.support.Preparation
-import io.vertx.core.json.JsonObject
-import org.folio.inventory.support.JsonArrayHelper
-import org.folio.inventory.support.http.client.OkapiHttpClient
-import org.folio.inventory.support.http.client.Response
-import org.folio.inventory.support.http.client.ResponseHandler
-import spock.lang.Specification
-import spock.util.concurrent.PollingConditions
+import api.support.ApiRoot;
+import api.support.Preparation;
+import io.vertx.core.json.JsonObject;
+import org.apache.commons.lang3.StringUtils;
+import org.awaitility.Duration;
+import org.folio.inventory.support.JsonArrayHelper;
+import org.folio.inventory.support.http.client.OkapiHttpClient;
+import org.folio.inventory.support.http.client.Response;
+import org.folio.inventory.support.http.client.ResponseHandler;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit
+import java.io.File;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
-import static io.restassured.RestAssured.given
+import static io.restassured.RestAssured.given;
+import static org.awaitility.Awaitility.await;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.junit.Assert.assertThat;
 
-class ModsIngestExamples extends Specification {
-  private final OkapiHttpClient okapiClient = ApiTestSuite.createOkapiHttpClient()
+public class ModsIngestExamples {
+  private final OkapiHttpClient okapiClient;
 
-
-  def setup() {
-    def preparation = new Preparation(okapiClient)
-    preparation.deleteInstances()
-    preparation.deleteItems()
+  public ModsIngestExamples() throws MalformedURLException {
+    okapiClient = ApiTestSuite.createOkapiHttpClient();
   }
 
-  void "Ingest some MODS records"() {
-    given:
-      def modsFile = loadFileFromResource(
-        "mods/multiple-example-mods-records.xml")
+  @Before
+  public void setup()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
 
-    when:
-      def statusLocation = given()
-        .header("X-Okapi-Url", ApiTestSuite.storageOkapiUrl())
-        .header("X-Okapi-Tenant", ApiTestSuite.TENANT_ID)
-        .header("X-Okapi-Token", ApiTestSuite.TOKEN)
-        .multiPart("record", modsFile)
-        .when().post(getIngestUrl())
-        .then()
-        .log().all()
-        .statusCode(202)
-        .extract().header("location")
+    Preparation preparation = new Preparation(okapiClient);
+    preparation.deleteInstances();
+    preparation.deleteItems();
+  }
 
-    then:
-      def conditions = new PollingConditions(
-        timeout: 10, initialDelay: 1.0, factor: 1.25)
+  @Test
+  public void canIngestMODSRecords()
+    throws InterruptedException,
+    ExecutionException,
+    TimeoutException,
+    MalformedURLException {
 
-      conditions.eventually {
-        ingestJobHasCompleted(statusLocation)
-        expectedInstancesCreatedFromIngest()
-        expectedItemsCreatedFromIngest()
+    File modsFile = loadFileFromResource(
+      "mods/multiple-example-mods-records.xml");
+
+    String statusLocation = given()
+      .header("X-Okapi-Url", ApiTestSuite.storageOkapiUrl())
+      .header("X-Okapi-Tenant", ApiTestSuite.TENANT_ID)
+      .header("X-Okapi-Token", ApiTestSuite.TOKEN)
+      .multiPart("record", modsFile)
+      .when().post(getIngestUrl())
+      .then()
+      .log().all()
+      .statusCode(202)
+      .extract().header("location");
+
+    await().atMost(new Duration(10, TimeUnit.SECONDS))
+      .untilAsserted(() -> {
+        ingestJobHasCompleted(statusLocation);
+        expectedInstancesCreatedFromIngest();
+        expectedItemsCreatedFromIngest();
+      });
+  }
+
+  @Test
+  public void willRefuseIngestForMultipleFiles()
+    throws MalformedURLException {
+
+    File modsFile = loadFileFromResource("mods/multiple-example-mods-records.xml");
+
+    given()
+      .header("X-Okapi-Url", ApiTestSuite.storageOkapiUrl())
+      .header("X-Okapi-Tenant", ApiTestSuite.TENANT_ID)
+      .header("X-Okapi-Token", ApiTestSuite.TOKEN)
+      .multiPart("record", modsFile)
+      .multiPart("record", modsFile)
+      .when().post(getIngestUrl())
+      .then()
+      .statusCode(400)
+      .body(is("Cannot parse multiple files in a single request"));
+  }
+
+  private void ingestJobHasCompleted(String statusLocation)
+    throws InterruptedException,
+    ExecutionException,
+    TimeoutException {
+
+    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+
+    okapiClient.get(statusLocation, ResponseHandler.json(getCompleted));
+
+    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(getResponse.getStatusCode(), is(200));
+    assertThat(getResponse.getJson().getString("status"), is("Completed"));
+  }
+
+  private void expectedItemsCreatedFromIngest()
+    throws MalformedURLException,
+    InterruptedException,
+    ExecutionException,
+    TimeoutException {
+
+    CompletableFuture<Response> getAllCompleted = new CompletableFuture<>();
+
+    okapiClient.get(ApiRoot.items(), ResponseHandler.json(getAllCompleted));
+
+    Response getAllResponse = getAllCompleted.get(5, TimeUnit.SECONDS);
+
+    List<JsonObject> items = JsonArrayHelper.toList(
+      getAllResponse.getJson().getJsonArray("items"));
+
+    assertThat(items.size(), is(8));
+
+    //TODO: Could be replaced with separate loop per property for clearer feedback
+    items.stream().forEach(item -> {
+      assertThat(item.containsKey("id"), is(true));
+      assertThat(item.containsKey("title"), is(true));
+      assertThat(item.containsKey("barcode"), is(true));
+      assertThat(item.containsKey("instanceId"), is(true));
+      assertThat(item.getJsonObject("status").getString("name"), is("Available"));
+
+      assertThat(item.getJsonObject("materialType")
+        .getString("id"), is(ApiTestSuite.getBookMaterialType()));
+
+      assertThat(item.getJsonObject("materialType").getString("name"), is("Book"));
+
+      assertThat(item.getJsonObject("permanentLocation").getString("name"),
+        is("Main Library"));
+    });
+
+    assertThat(items.stream().anyMatch( item ->
+      itemSimilarTo(item, "California: its gold and its inhabitants", "69228882")),
+      is(true));
+
+    assertThat(items.stream().anyMatch(item ->
+      itemSimilarTo(item, "Studien zur Geschichte der Notenschrift.", "69247446")),
+      is(true));
+
+    assertThat(items.stream().anyMatch(item ->
+      itemSimilarTo(item, "Essays on C.S. Lewis and George MacDonald", "53556908")),
+      is(true));
+
+    assertThat(items.stream().anyMatch(item ->
+      itemSimilarTo(item, "Statistical sketches of Upper Canada", "69077747")),
+      is(true));
+
+    assertThat(items.stream().anyMatch(item ->
+      itemSimilarTo(item, "Edward McGuire, RHA", "22169083")), is(true));
+
+    assertThat(items.stream().anyMatch(item ->
+      itemSimilarTo(item, "Influenza della Poesia sui Costumi", "43620390")),
+      is(true));
+
+    assertThat(items.stream().anyMatch(item ->
+      itemSimilarTo(item, "Pavle Nik", "37696876")), is(true));
+
+    assertThat(items.stream().anyMatch(item ->
+      itemSimilarTo(item, "Grammaire", "69250051")), is(true));
+
+    items.stream().forEach(item -> {
+      try {
+        hasCorrectInstanceRelationship(item);
+      } catch (Exception e) {
+        Assert.fail(e.toString());
       }
+    });
   }
 
-  void "Refuse ingest for multiple files"() {
-    given:
-      def modsFile =
-        loadFileFromResource("mods/multiple-example-mods-records.xml")
+  private void hasCorrectInstanceRelationship(JsonObject item)
+    throws MalformedURLException,
+    InterruptedException,
+    ExecutionException,
+    TimeoutException {
 
-    when:
-      given()
-        .header("X-Okapi-Url", ApiTestSuite.storageOkapiUrl())
-        .header("X-Okapi-Tenant", ApiTestSuite.TENANT_ID)
-        .header("X-Okapi-Token", ApiTestSuite.TOKEN)
-        .multiPart("record", modsFile)
-        .multiPart("record", modsFile)
-        .when().post(getIngestUrl())
-        .then()
-        .statusCode(400)
-        .body(is("Cannot parse multiple files in a single request"))
+    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
 
-    then:
-      assert true
+    okapiClient.get(new URL(String.format("%s/%s", ApiRoot.instances(),
+      item.getString("instanceId"))), ResponseHandler.json(getCompleted));
+
+    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(getResponse.getStatusCode(), is(200));
+    assertThat(getResponse.getJson().getString("title"), is(item.getString("title")));
   }
 
-  private ingestJobHasCompleted(String statusLocation) {
-    def getCompleted = new CompletableFuture<Response>()
+  private void expectedInstancesCreatedFromIngest()
+    throws MalformedURLException,
+    InterruptedException,
+    ExecutionException,
+    TimeoutException {
 
-    okapiClient.get(statusLocation, ResponseHandler.json(getCompleted))
+    CompletableFuture<Response> getAllCompleted = new CompletableFuture<>();
 
-    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS)
+    okapiClient.get(ApiRoot.instances(), ResponseHandler.json(getAllCompleted));
 
-    assert getResponse.statusCode == 200
-    assert getResponse.json.getString("status") == "Completed"
+    Response getAllResponse = getAllCompleted.get(5, TimeUnit.SECONDS);
+
+    List<JsonObject> instances = JsonArrayHelper.toList(
+      getAllResponse.getJson().getJsonArray("instances"));
+
+    assertThat(instances.size(), is(8));
+
+    //TODO: Could be replaced with separate loop per property for clearer feedback
+    instances.stream().forEach(instance -> {
+      assertThat(instance.containsKey("id"), is(true));
+      assertThat(instance.containsKey("title"), is(true));
+
+      assertThat(instance.containsKey("instanceTypeId"), is(true));
+      assertThat(instance.getString("instanceTypeId"), is(ApiTestSuite.getBooksInstanceType()));
+
+      assertThat(instance.containsKey("source"), is(true));
+
+      assertThat(instance.containsKey("identifiers"), is(true));
+
+      List<JsonObject> identifiers = JsonArrayHelper.toList(
+        instance.getJsonArray("identifiers"));
+
+      assertThat(identifiers.size(), is(greaterThan(0)));
+
+      identifiers.stream().forEach(identifier -> {
+        assertThat(identifier.containsKey("identifierTypeId"), is(true));
+        //Identifier type should be derived from MODS data, however for the moment,
+        //default to ISBN
+        assertThat(identifier.getString("identifierTypeId"), is(ApiTestSuite.getIsbnIdentifierType()));
+
+        assertThat(identifier.containsKey("value"), is(true));
+      });
+
+      List<JsonObject> creators = JsonArrayHelper.toList(
+        instance.getJsonArray("creators"));
+
+      creators.stream().forEach(creator -> {
+        assertThat(creator.containsKey("creatorTypeId"), is(true));
+        //Identifier type should be derived from MODS data, however for the moment,
+        //default to Personal name
+        assertThat(creator.getString("creatorTypeId"), is(ApiTestSuite.getPersonalCreatorType()));
+
+        assertThat(creator.containsKey("name"), is(true));
+      });
+    });
+
+    assertThat(instances.stream().anyMatch(instance ->
+      InstanceSimilarTo(instance, "California: its gold and its inhabitants",
+        "Huntley, Henry Veel")), is(true));
+
+    assertThat(instances.stream().anyMatch(instance ->
+      InstanceSimilarTo(instance, "Studien zur Geschichte der Notenschrift.",
+        "Riemann, Karl Wilhelm J. Hugo.")), is(true));
+
+    assertThat(instances.stream().anyMatch(instance ->
+      InstanceSimilarTo(instance, "Essays on C.S. Lewis and George MacDonald",
+        "Marshall, Cynthia.")), is(true));
+
+    assertThat(instances.stream().anyMatch(instance ->
+      InstanceSimilarTo(instance, "Statistical sketches of Upper Canada",
+        "Dunlop, William")), is(true));
+
+    assertThat(instances.stream().anyMatch(instance ->
+      InstanceSimilarTo(instance, "Edward McGuire, RHA", "Fallon, Brian.")),
+      is(true));
+
+    assertThat(instances.stream().anyMatch(instance ->
+      InstanceSimilarTo(instance, "Influenza della Poesia sui Costumi",
+      "MABIL, Pier Luigi.")), is(true));
+
+    assertThat(instances.stream().anyMatch(instance ->
+      InstanceSimilarTo(instance, "Pavle Nik", "Božović, Ratko.")), is(true));
+
+    assertThat(instances.stream().anyMatch(instance ->
+      InstanceSimilarTo(instance, "Grammaire", "Riemann, Othon.")), is(true));
   }
 
-  private expectedItemsCreatedFromIngest() {
-    def getAllCompleted = new CompletableFuture<Response>()
-
-    okapiClient.get(ApiRoot.items(),
-      ResponseHandler.json(getAllCompleted))
-
-    Response getAllResponse = getAllCompleted.get(5, TimeUnit.SECONDS)
-
-    def items = JsonArrayHelper.toList(getAllResponse.json.getJsonArray("items"))
-
-    assert items.size() == 8
-    assert items.every({ it.containsKey("id") })
-    assert items.every({ it.containsKey("title") })
-    assert items.every({ it.containsKey("barcode") })
-    assert items.every({ it.containsKey("instanceId") })
-    assert items.every({ it.getJsonObject("status").getString("name") == "Available" })
-    assert items.every({ it.getJsonObject("materialType").getString("id") == ApiTestSuite.bookMaterialType })
-    assert items.every({ it.getJsonObject("materialType").getString("name") == "Book" })
-    assert items.every({ it.getJsonObject("permanentLocation").getString("name") == "Main Library" })
-
-    assert items.any({
-      itemSimilarTo(it, "California: its gold and its inhabitants", "69228882")
-    })
-
-    assert items.any({
-      itemSimilarTo(it, "Studien zur Geschichte der Notenschrift.", "69247446")
-    })
-
-    assert items.any({
-      itemSimilarTo(it, "Essays on C.S. Lewis and George MacDonald", "53556908")
-    })
-
-    assert items.any({
-      itemSimilarTo(it, "Statistical sketches of Upper Canada", "69077747")
-    })
-
-    assert items.any({
-      itemSimilarTo(it, "Edward McGuire, RHA", "22169083")
-    })
-
-    assert items.any({
-      itemSimilarTo(it, "Influenza della Poesia sui Costumi", "43620390")
-    })
-
-    assert items.any({
-      itemSimilarTo(it, "Pavle Nik", "37696876")
-    })
-
-    assert items.any({
-      itemSimilarTo(it, "Grammaire", "69250051")
-    })
-
-    items.every({ hasCorrectInstanceRelationship(it) })
-  }
-
-  private hasCorrectInstanceRelationship(JsonObject item) {
-    def getCompleted = new CompletableFuture<Response>()
-
-    okapiClient.get(new URL("${ApiRoot.instances()}/${item.getString("instanceId")}"),
-      ResponseHandler.json(getCompleted))
-
-    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS)
-
-    assert getResponse.statusCode == 200
-    assert getResponse.json.getString("title") == item.getString("title")
-  }
-
-  private expectedInstancesCreatedFromIngest() {
-    def getAllCompleted = new CompletableFuture<Response>()
-
-    okapiClient.get(ApiRoot.instances(),
-      ResponseHandler.json(getAllCompleted))
-
-    Response getAllResponse = getAllCompleted.get(5, TimeUnit.SECONDS)
-
-    def instances = JsonArrayHelper.toList(getAllResponse.json.getJsonArray("instances"))
-
-    assert instances.size() == 8
-    assert instances.every({ it.containsKey("id") })
-    assert instances.every({ it.containsKey("title") })
-
-    assert instances.every({ it.containsKey("instanceTypeId") })
-    assert instances.every({ it.getString("instanceTypeId") == ApiTestSuite.booksInstanceType })
-
-    assert instances.every({ it.containsKey("source") })
-
-    assert instances.every({ it.containsKey("identifiers") })
-    assert instances.every({ it.getJsonArray("identifiers").size() >= 1 })
-
-    assert instances.every({
-      JsonArrayHelper.toList(it.getJsonArray("identifiers"))
-        .every({ it.containsKey("identifierTypeId") })
-    })
-
-    //Identifier type should be derived from MODS data, however for the moment,
-    //default to ISBN
-    assert instances.every({
-      JsonArrayHelper.toList(it.getJsonArray("identifiers"))
-        .every({ it.getString("identifierTypeId") == ApiTestSuite.isbnIdentifierType })
-    })
-
-    assert instances.every({
-      JsonArrayHelper.toList(it.getJsonArray("identifiers"))
-        .every({ it.containsKey("value") })
-    })
-
-    assert instances.every({ it.containsKey("creators") })
-    assert instances.every({ it.getJsonArray("creators").size() >= 1 })
-
-    assert instances.every({
-      JsonArrayHelper.toList(it.getJsonArray("creators"))
-        .every({ it.containsKey("creatorTypeId") })
-    })
-
-    //Creator type should be derived from MODS data, however for the moment,
-    //default to personal
-    assert instances.every({
-      JsonArrayHelper.toList(it.getJsonArray("creators"))
-        .every({ it.getString("creatorTypeId") == ApiTestSuite.personalCreatorType })
-    })
-
-    assert instances.every({
-      JsonArrayHelper.toList(it.getJsonArray("creators"))
-        .every({ it.containsKey("name") })
-    })
-
-    assert instances.any({
-      InstanceSimilarTo(it, "California: its gold and its inhabitants",
-        "Huntley, Henry Veel")
-    })
-
-    assert instances.any({
-      InstanceSimilarTo(it, "Studien zur Geschichte der Notenschrift.",
-        "Riemann, Karl Wilhelm J. Hugo.")
-    })
-
-    assert instances.any({
-      InstanceSimilarTo(it, "Essays on C.S. Lewis and George MacDonald",
-        "Marshall, Cynthia.")
-    })
-
-    assert instances.any({
-      InstanceSimilarTo(it, "Statistical sketches of Upper Canada",
-        "Dunlop, William")
-    })
-
-    assert instances.any({
-      InstanceSimilarTo(it, "Edward McGuire, RHA",
-        "Fallon, Brian.")
-    })
-
-    assert instances.any({
-      InstanceSimilarTo(it, "Influenza della Poesia sui Costumi",
-        "MABIL, Pier Luigi.") })
-
-    assert instances.any({
-      InstanceSimilarTo(it, "Pavle Nik",
-        "Božović, Ratko.") })
-
-    assert instances.any({
-      InstanceSimilarTo(it, "Grammaire",
-        "Riemann, Othon.") })
-  }
-
-  private URL getIngestUrl() {
-    new URL("${ApiRoot.inventory()}/ingest/mods")
+  private static URL getIngestUrl() throws MalformedURLException {
+    return new URL(String.format("%s/ingest/mods", ApiRoot.inventory()));
   }
 
   private File loadFileFromResource(String filename) {
     ClassLoader classLoader = getClass().getClassLoader();
 
-    new File(classLoader.getResource(filename).getFile())
+    return new File(classLoader.getResource(filename).getFile());
   }
 
-  private boolean itemSimilarTo(
+  private static boolean itemSimilarTo(
     JsonObject record,
     String expectedSimilarTitle,
     String expectedBarcode) {
 
-    record.getString("title").contains(expectedSimilarTitle) &&
-      record.getString("barcode") == expectedBarcode
+    return record.getString("title").contains(expectedSimilarTitle) &&
+      StringUtils.equals(record.getString("barcode"), expectedBarcode);
   }
 
-  private boolean InstanceSimilarTo(
+  private static boolean InstanceSimilarTo(
     JsonObject record,
     String expectedSimilarTitle,
     String expectedCreatorSimilarTo) {
 
-    record.getString("title").contains(expectedSimilarTitle) &&
+    return record.getString("title").contains(expectedSimilarTitle) &&
       JsonArrayHelper.toList(record.getJsonArray("creators")).stream()
-        .anyMatch({ creator ->
-          creator.getString("name").contains(expectedCreatorSimilarTo)
-      });
+        .anyMatch(creator -> creator.getString("name")
+          .contains(expectedCreatorSimilarTo));
   }
 }

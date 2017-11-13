@@ -1,142 +1,162 @@
-package org.folio.inventory.storage.external.failure
+package org.folio.inventory.storage.external.failure;
 
-import org.folio.inventory.common.api.request.PagingParameters
-import org.folio.inventory.common.domain.Failure
-import org.folio.inventory.common.domain.Success
-import org.folio.inventory.domain.CollectionProvider
-import org.folio.inventory.domain.Creator
-import org.folio.inventory.domain.Identifier
-import org.folio.inventory.domain.Instance
-import org.folio.inventory.domain.InstanceCollection
-import org.junit.Test
+import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.common.domain.Failure;
+import org.folio.inventory.domain.CollectionProvider;
+import org.folio.inventory.domain.Instance;
+import org.folio.inventory.domain.InstanceCollection;
+import org.junit.Test;
 
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
-import static org.junit.Assert.fail
+import static org.junit.Assert.fail;
 
-abstract class ExternalInstanceCollectionFailureExamples {
+public abstract class ExternalInstanceCollectionFailureExamples {
 
-  protected final CollectionProvider collectionProvider
+  private final CollectionProvider collectionProvider;
 
-  def ExternalInstanceCollectionFailureExamples(CollectionProvider collectionProvider) {
-    this.collectionProvider = collectionProvider
+  ExternalInstanceCollectionFailureExamples(CollectionProvider collectionProvider) {
+    this.collectionProvider = collectionProvider;
   }
 
   @Test
-  void serverErrorWhenCreatingAnInstanceTriggersFailureCallback() {
-    def collection = createCollection()
+  public void serverErrorWhenCreatingAnInstanceTriggersFailureCallback()
+    throws InterruptedException, ExecutionException, TimeoutException {
 
-    def failureCalled = new CompletableFuture<Failure>()
+    InstanceCollection collection = createCollection();
 
-    collection.add(new Instance(UUID.randomUUID().toString(), "Nod",
-      new ArrayList<Identifier>(), null, UUID.randomUUID().toString(),
-      new ArrayList<Creator>()),
-      { Success success -> fail("Completion callback should not be called") },
-      { Failure failure -> failureCalled.complete(failure) })
+    CompletableFuture<Failure> failureCalled = new CompletableFuture<>();
 
-    def failure = failureCalled.get(1000, TimeUnit.MILLISECONDS)
+    collection.add(createInstance(),
+      success -> fail("Completion callback should not be called"),
+      failureCalled::complete);
 
-    check(failure)
+    Failure failure = failureCalled.get(1000, TimeUnit.MILLISECONDS);
+
+    check(failure);
   }
 
   @Test
-  void serverErrorWhenUpdatingAnInstanceTriggersFailureCallback() {
-    def collection = createCollection()
+  public void serverErrorWhenUpdatingAnInstanceTriggersFailureCallback()
+    throws InterruptedException, ExecutionException, TimeoutException {
 
-    def failureCalled = new CompletableFuture<Failure>()
+    InstanceCollection collection = createCollection();
 
-    collection.update(new Instance(UUID.randomUUID().toString(), "Nod",
-      new ArrayList<Identifier>(), null, UUID.randomUUID().toString(),
-      new ArrayList<Creator>()),
-      { Success success -> fail("Completion callback should not be called") },
-      { Failure failure -> failureCalled.complete(failure) })
+    CompletableFuture<Failure> failureCalled = new CompletableFuture<>();
 
-    def failure = failureCalled.get(1000, TimeUnit.MILLISECONDS)
+    collection.update(createInstance(),
+      success -> fail("Completion callback should not be called"),
+      failureCalled::complete);
 
-    check(failure)
+    Failure failure = failureCalled.get(1000, TimeUnit.MILLISECONDS);
+
+    check(failure);
   }
 
   @Test
-  void serverErrorWhenGettingAllInstancesTriggersFailureCallback() {
-    def collection = createCollection()
+  public void serverErrorWhenGettingAllInstancesTriggersFailureCallback()
+    throws InterruptedException, ExecutionException, TimeoutException {
 
-    def failureCalled = new CompletableFuture<Failure>()
+    InstanceCollection collection = createCollection();
+
+    CompletableFuture<Failure> failureCalled = new CompletableFuture<>();
 
     collection.findAll(PagingParameters.defaults(),
-      { Success success -> fail("Results callback should not be called") },
-      { Failure failure -> failureCalled.complete(failure) })
+      success -> fail("Completion callback should not be called"),
+      failureCalled::complete);
 
-    def failure = failureCalled.get(1000, TimeUnit.MILLISECONDS)
+    Failure failure = failureCalled.get(1000, TimeUnit.MILLISECONDS);
 
-    check(failure)
+    check(failure);
   }
 
   @Test
-  void serverErrorWhenGettingAnInstanceByIdTriggersFailureCallback() {
-    def collection = createCollection()
+  public void serverErrorWhenGettingAnInstanceByIdTriggersFailureCallback()
+    throws InterruptedException, ExecutionException, TimeoutException {
 
-    def failureCalled = new CompletableFuture<Failure>()
+    InstanceCollection collection = createCollection();
+
+    CompletableFuture<Failure> failureCalled = new CompletableFuture<>();
 
     collection.findById(UUID.randomUUID().toString(),
-      { Success success -> fail("Results callback should not be called") },
-      { Failure failure -> failureCalled.complete(failure) })
+      success -> fail("Completion callback should not be called"),
+      failureCalled::complete);
 
-    def failure = failureCalled.get(1000, TimeUnit.MILLISECONDS)
+    Failure failure = failureCalled.get(1000, TimeUnit.MILLISECONDS);
 
-    check(failure)
+    check(failure);
   }
 
   @Test
-  void serverErrorWhenDeletingAnInstanceByIdTriggersFailureCallback() {
-    def collection = createCollection()
+  public void serverErrorWhenDeletingAnInstanceByIdTriggersFailureCallback()
+    throws InterruptedException, ExecutionException, TimeoutException {
 
-    def failureCalled = new CompletableFuture<Failure>()
+    InstanceCollection collection = createCollection();
+
+    CompletableFuture<Failure> failureCalled = new CompletableFuture<>();
 
     collection.delete(UUID.randomUUID().toString(),
-      { Success success -> fail("Completion callback should not be called") },
-      { Failure failure -> failureCalled.complete(failure) })
+      success -> fail("Completion callback should not be called"),
+      failureCalled::complete);
 
-    def failure = failureCalled.get(1000, TimeUnit.MILLISECONDS)
+    Failure failure = failureCalled.get(1000, TimeUnit.MILLISECONDS);
 
-    check(failure)
+    check(failure);
   }
 
   @Test
-  void serverErrorWhenDeletingAllInstancesTriggersFailureCallback() {
-    def collection = createCollection()
+  public void serverErrorWhenDeletingAllInstancesTriggersFailureCallback()
+    throws InterruptedException, ExecutionException, TimeoutException {
 
-    def failureCalled = new CompletableFuture<Failure>()
+    InstanceCollection collection = createCollection();
+
+    CompletableFuture<Failure> failureCalled = new CompletableFuture<>();
 
     collection.empty(
-      { Success success -> fail("Completion callback should not be called") },
-      { Failure failure -> failureCalled.complete(failure) })
+      success -> fail("Completion callback should not be called"),
+      failureCalled::complete);
 
-    def failure = failureCalled.get(1000, TimeUnit.MILLISECONDS)
+    Failure failure = failureCalled.get(1000, TimeUnit.MILLISECONDS);
 
-    check(failure)
+    check(failure);
   }
 
   @Test
-  void serverErrorWhenFindingItemsTriggersFailureCallback() {
-    def collection = createCollection()
+  public void serverErrorWhenFindingItemsTriggersFailureCallback()
+    throws InterruptedException,
+    ExecutionException,
+    TimeoutException,
+    UnsupportedEncodingException {
 
-    def failureCalled = new CompletableFuture<Failure>()
+    InstanceCollection collection = createCollection();
+
+    CompletableFuture<Failure> failureCalled = new CompletableFuture<>();
 
     collection.findByCql("title=\"*Small Angry*\"",
       new PagingParameters(10, 0),
-      { Success success -> fail("Success callback should not be called") },
-      { Failure failure -> failureCalled.complete(failure) })
+      success -> fail("Completion callback should not be called"),
+      failureCalled::complete);
 
-    def failure = failureCalled.get(1000, TimeUnit.MILLISECONDS)
+    Failure failure = failureCalled.get(1000, TimeUnit.MILLISECONDS);
 
-    check(failure)
+    check(failure);
   }
 
-  protected abstract check(Failure failure)
+  protected abstract void check(Failure failure);
+
+  private static Instance createInstance() {
+    return new Instance(UUID.randomUUID().toString(), "Nod",
+      new ArrayList<>(), null, UUID.randomUUID().toString(),
+      new ArrayList<>());
+  }
 
   private InstanceCollection createCollection() {
-    collectionProvider.getInstanceCollection("test_tenant", "")
+    return collectionProvider.getInstanceCollection("test_tenant", "");
   }
-
 }

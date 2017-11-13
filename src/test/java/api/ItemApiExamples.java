@@ -1,1019 +1,1029 @@
-package api
+package api;
 
-import api.support.ApiRoot
-import api.support.InstanceApiClient
-import api.support.ItemApiClient
-import api.support.Preparation
-import io.vertx.core.json.JsonObject
-import org.folio.inventory.support.JsonArrayHelper
-import org.folio.inventory.support.http.client.OkapiHttpClient
-import org.folio.inventory.support.http.client.Response
-import org.folio.inventory.support.http.client.ResponseHandler
-import spock.lang.Specification
+import api.support.ApiRoot;
+import api.support.InstanceApiClient;
+import api.support.ItemApiClient;
+import api.support.Preparation;
+import io.vertx.core.json.JsonObject;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.inventory.support.JsonArrayHelper;
+import org.folio.inventory.support.http.client.OkapiHttpClient;
+import org.folio.inventory.support.http.client.Response;
+import org.folio.inventory.support.http.client.ResponseHandler;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.ExecutionException
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
+import static api.support.InstanceSamples.*;
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.assertThat;
 
-import static api.support.InstanceSamples.*
+public class ItemApiExamples {
+  private final OkapiHttpClient okapiClient;
 
-class ItemApiExamples extends Specification {
-  private final OkapiHttpClient okapiClient = ApiTestSuite.createOkapiHttpClient()
-
-  def setup() {
-    def preparation = new Preparation(okapiClient)
-
-    preparation.deleteItems()
-    preparation.deleteInstances()
+  public ItemApiExamples() throws MalformedURLException {
+    okapiClient = ApiTestSuite.createOkapiHttpClient();
   }
 
-  void "Can create an item"() {
-    given:
-      def createdInstance = createInstance(
-        smallAngryPlanet(UUID.randomUUID()))
+  @Before
+  public void setup()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
 
-      def newItemRequest = new JsonObject()
-        .put("title", createdInstance.title)
-        .put("instanceId", createdInstance.id)
-        .put("barcode", "645398607547")
-        .put("status", new JsonObject().put("name", "Available"))
-        .put("materialType", bookMaterialType())
-        .put("permanentLoanType", canCirculateLoanType())
-        .put("temporaryLoanType", courseReservesLoanType())
-        .put("permanentLocation", permanentLocation())
-        .put("temporaryLocation", temporaryLocation())
-
-    when:
-      def postCompleted = new CompletableFuture<Response>()
-
-      okapiClient.post(ApiRoot.items(),
-        newItemRequest, ResponseHandler.any(postCompleted))
-
-      Response postResponse = postCompleted.get(5, TimeUnit.SECONDS)
-
-    then:
-      assert postResponse.statusCode == 201
-      assert postResponse.location != null
-
-      def getCompleted = new CompletableFuture<Response>()
-
-			print "Getting from ${postResponse.location}\n"
-      okapiClient.get(postResponse.location, ResponseHandler.json(getCompleted))
-
-			def Response getResponse
-			try {
-				getResponse = getCompleted.get(5, TimeUnit.SECONDS);
-			} catch(ExecutionException e) {
-				print "Error getting value from future: ${e}, ${e.getLocalizedMessage()}"
-				raise new Exception(e.getLocalizedMessage());
-			}
-
-      assert getResponse.statusCode == 200
-
-      def createdItem = getResponse.json
-
-      assert createdItem.containsKey("id")
-      assert createdItem.getString("title") == "Long Way to a Small Angry Planet"
-      assert createdItem.getString("barcode") == "645398607547"
-      assert createdItem.getJsonObject("status").getString("name") == "Available"
-      assert createdItem.getJsonObject("materialType").getString("id") == ApiTestSuite.bookMaterialType
-      assert createdItem.getJsonObject("materialType").getString("name") == "Book"
-      assert createdItem.getJsonObject("permanentLoanType").getString("id") == ApiTestSuite.canCirculateLoanType
-      assert createdItem.getJsonObject("permanentLoanType").getString("name") == "Can Circulate"
-      assert createdItem.getJsonObject("temporaryLoanType").getString("id") == ApiTestSuite.courseReserveLoanType
-      assert createdItem.getJsonObject("temporaryLoanType").getString("name") == "Course Reserves"
-      assert createdItem.getJsonObject("permanentLocation").getString("name") == "Main Library"
-      assert createdItem.getJsonObject("temporaryLocation").getString("name") == "Annex Library"
-
-      selfLinkRespectsWayResourceWasReached(createdItem)
-      selfLinkShouldBeReachable(createdItem)
+    Preparation preparation = new Preparation(okapiClient);
+    preparation.deleteItems();
+    preparation.deleteInstances();
   }
 
-  void "Can create an item with an ID"() {
-    given:
-      def createdInstance = createInstance(
-        smallAngryPlanet(UUID.randomUUID()))
+  @Test
+  public void canCreateAnItem()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
 
-      def itemId = UUID.randomUUID().toString()
+    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
-      def newItemRequest = new JsonObject()
-        .put("id", itemId)
-        .put("title", createdInstance.title)
-        .put("instanceId", createdInstance.id)
-        .put("materialType", bookMaterialType())
-        .put("permanentLoanType", canCirculateLoanType())
-        .put("barcode", "645398607547")
-
-    when:
-      def postCompleted = new CompletableFuture<Response>()
-
-      okapiClient.post(ApiRoot.items(),
-        newItemRequest, ResponseHandler.any(postCompleted))
-
-      Response postResponse = postCompleted.get(5, TimeUnit.SECONDS)
-
-    then:
-      assert postResponse.statusCode == 201
-      assert postResponse.location != null
-
-      def getCompleted = new CompletableFuture<Response>()
-
-      okapiClient.get(postResponse.location, ResponseHandler.json(getCompleted))
-
-      Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
-
-      assert getResponse.statusCode == 200
-
-      def createdItem = getResponse.json
-
-      assert createdItem.getString("id") == itemId
-
-      selfLinkRespectsWayResourceWasReached(createdItem)
-      selfLinkShouldBeReachable(createdItem)
-  }
-
-  void "Can create an item based upon an instance"() {
-    given:
-      def createdInstance = createInstance(
-        smallAngryPlanet(UUID.randomUUID()))
-
-      def newItemRequest = new JsonObject()
-        .put("title", createdInstance.title)
-        .put("instanceId", createdInstance.id)
-        .put("barcode", "645398607547")
-        .put("status", new JsonObject().put("name", "Available"))
-        .put("materialType", bookMaterialType())
-        .put("permanentLoanType", canCirculateLoanType())
-        .put("temporaryLocation", temporaryLocation())
-
-    when:
-      def postCompleted = new CompletableFuture<Response>()
-
-      okapiClient.post(ApiRoot.items(),
-        newItemRequest, ResponseHandler.any(postCompleted))
-
-      Response postResponse = postCompleted.get(5, TimeUnit.SECONDS)
-
-    then:
-      assert postResponse.statusCode == 201
-      assert postResponse.location != null
-
-      def getCompleted = new CompletableFuture<Response>()
-
-      okapiClient.get(postResponse.location, ResponseHandler.json(getCompleted))
-
-      Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
-
-      assert getResponse.statusCode == 200
-
-      def createdItem = getResponse.json
-
-      assert createdItem.containsKey("id")
-      assert createdItem.getString("title") == "Long Way to a Small Angry Planet"
-      assert createdItem.getString("instanceId") == createdInstance.id
-      assert createdItem.getString("barcode") == "645398607547"
-      assert createdItem.getJsonObject("status").getString("name") == "Available"
-      assert createdItem.getJsonObject("materialType").getString("id") == ApiTestSuite.bookMaterialType
-      assert createdItem.getJsonObject("materialType").getString("name") == "Book"
-      assert createdItem.getJsonObject("permanentLoanType").getString("id") == ApiTestSuite.canCirculateLoanType
-      assert createdItem.getJsonObject("permanentLoanType").getString("name") == "Can Circulate"
-      assert createdItem.getJsonObject("temporaryLocation").getString("name") == "Annex Library"
-
-      selfLinkRespectsWayResourceWasReached(createdItem)
-      selfLinkShouldBeReachable(createdItem)
-  }
-
-  void "Can create an item without a barcode"() {
-    given:
-      def newItemRequest = new JsonObject()
-        .put("title", "Nod")
-        .put("status", new JsonObject().put("name", "Available"))
-        .put("materialType", bookMaterialType())
-        .put("permanentLoanType", canCirculateLoanType())
-				.put("temporaryLocation", temporaryLocation())
-
-    when:
-      def postCompleted = new CompletableFuture<Response>()
-
-      okapiClient.post(ApiRoot.items(),
-        newItemRequest, ResponseHandler.any(postCompleted))
-
-      Response postResponse = postCompleted.get(5, TimeUnit.SECONDS)
-
-    then:
-      assert postResponse.statusCode == 201
-      assert postResponse.location != null
-
-      def getCompleted = new CompletableFuture<Response>()
-
-      okapiClient.get(postResponse.location, ResponseHandler.json(getCompleted))
-
-      Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
-
-      assert getResponse.statusCode == 200
-
-      def createdItem = getResponse.json
-
-      assert createdItem.containsKey("barcode") == false
-  }
-
-  void "Can create multiple items without a barcode"() {
-
-    def firstItemRequest = new JsonObject()
-      .put("title", "Temeraire")
+    JsonObject newItemRequest = new JsonObject()
+      .put("title", createdInstance.getString("title"))
+      .put("instanceId", createdInstance.getString("id"))
+      .put("barcode", "645398607547")
       .put("status", new JsonObject().put("name", "Available"))
-      .put("permanentLocation", permanentLocation())
       .put("materialType", bookMaterialType())
       .put("permanentLoanType", canCirculateLoanType())
+      .put("temporaryLoanType", courseReservesLoanType())
+      .put("permanentLocation", permanentLocation())
+      .put("temporaryLocation", temporaryLocation());
 
-    ItemApiClient.createItem(okapiClient, firstItemRequest)
+    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
 
-    def newItemRequest = new JsonObject()
+    okapiClient.post(ApiRoot.items(), newItemRequest,
+      ResponseHandler.any(postCompleted));
+
+    Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(postResponse.getStatusCode(), is(201));
+    assertThat(postResponse.getLocation(), is(notNullValue()));
+
+    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+
+    okapiClient.get(postResponse.getLocation(), ResponseHandler.json(getCompleted));
+
+    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(getResponse.getStatusCode(), is(200));
+
+    JsonObject createdItem = getResponse.getJson();
+
+    assertThat(createdItem.containsKey("id"), is(true));
+    assertThat(createdItem.getString("title"), is("Long Way to a Small Angry Planet"));
+    assertThat(createdItem.getString("barcode"), is("645398607547"));
+    assertThat(createdItem.getJsonObject("status").getString("name"), is("Available"));
+
+    JsonObject materialType = createdItem.getJsonObject("materialType");
+
+    assertThat(materialType.getString("id"), is(ApiTestSuite.getBookMaterialType()));
+    assertThat(materialType.getString("name"), is("Book"));
+
+    JsonObject permanentLoanType = createdItem.getJsonObject("permanentLoanType");
+
+    JsonObject temporaryLoanType = createdItem.getJsonObject("temporaryLoanType");
+
+    assertThat(permanentLoanType.getString("id"), is(ApiTestSuite.getCanCirculateLoanType()));
+    assertThat(permanentLoanType.getString("name"), is("Can Circulate"));
+
+    assertThat(temporaryLoanType.getString("id"), is(ApiTestSuite.getCourseReserveLoanType()));
+    assertThat(temporaryLoanType.getString("name"), is("Course Reserves"));
+
+    assertThat(createdItem.getJsonObject("permanentLocation").getString("name"), is("Main Library"));
+    assertThat(createdItem.getJsonObject("temporaryLocation").getString("name"), is("Annex Library"));
+
+    selfLinkRespectsWayResourceWasReached(createdItem);
+    selfLinkShouldBeReachable(createdItem);
+  }
+
+  @Test
+  public void canCreateItemWithAnID()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    String itemId = UUID.randomUUID().toString();
+
+    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
+
+    JsonObject newItemRequest = new JsonObject()
+      .put("id", itemId)
+      .put("title", createdInstance.getString("title"))
+      .put("instanceId", createdInstance.getString("id"))
+      .put("barcode", "645398607547")
+      .put("status", new JsonObject().put("name", "Available"))
+      .put("materialType", bookMaterialType())
+      .put("permanentLoanType", canCirculateLoanType())
+      .put("temporaryLoanType", courseReservesLoanType())
+      .put("permanentLocation", permanentLocation())
+      .put("temporaryLocation", temporaryLocation());
+
+    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+
+    okapiClient.post(ApiRoot.items(), newItemRequest,
+      ResponseHandler.any(postCompleted));
+
+    Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(postResponse.getStatusCode(), is(201));
+    assertThat(postResponse.getLocation(), is(notNullValue()));
+
+    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+
+    okapiClient.get(postResponse.getLocation(), ResponseHandler.json(getCompleted));
+
+    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(getResponse.getStatusCode(), is(200));
+
+    JsonObject createdItem = getResponse.getJson();
+
+    assertThat(createdItem.containsKey("id"), is(true));
+    assertThat(createdItem.getString("id"), is(itemId));
+    assertThat(createdItem.getString("title"), is("Long Way to a Small Angry Planet"));
+    assertThat(createdItem.getString("barcode"), is("645398607547"));
+    assertThat(createdItem.getJsonObject("status").getString("name"), is("Available"));
+
+    JsonObject materialType = createdItem.getJsonObject("materialType");
+
+    assertThat(materialType.getString("id"), is(ApiTestSuite.getBookMaterialType()));
+    assertThat(materialType.getString("name"), is("Book"));
+
+    JsonObject permanentLoanType = createdItem.getJsonObject("permanentLoanType");
+
+    JsonObject temporaryLoanType = createdItem.getJsonObject("temporaryLoanType");
+
+    assertThat(permanentLoanType.getString("id"), is(ApiTestSuite.getCanCirculateLoanType()));
+    assertThat(permanentLoanType.getString("name"), is("Can Circulate"));
+    assertThat(temporaryLoanType.getString("id"), is(ApiTestSuite.getCourseReserveLoanType()));
+    assertThat(temporaryLoanType.getString("name"), is("Course Reserves"));
+
+    assertThat(createdItem.getJsonObject("permanentLocation").getString("name"), is("Main Library"));
+    assertThat(createdItem.getJsonObject("temporaryLocation").getString("name"), is("Annex Library"));
+
+    selfLinkRespectsWayResourceWasReached(createdItem);
+    selfLinkShouldBeReachable(createdItem);
+  }
+
+  @Test
+  public void canCreateAnItemWithoutBarcode()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    JsonObject newItemRequest = new JsonObject()
       .put("title", "Nod")
       .put("status", new JsonObject().put("name", "Available"))
       .put("materialType", bookMaterialType())
       .put("permanentLoanType", canCirculateLoanType())
-			.put("temporaryLocation", temporaryLocation())
+      .put("temporaryLocation", temporaryLocation());
 
-    when:
-      def postCompleted = new CompletableFuture<Response>()
+    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
 
-      okapiClient.post(ApiRoot.items(),
-        newItemRequest, ResponseHandler.any(postCompleted))
+    okapiClient.post(ApiRoot.items(), newItemRequest,
+      ResponseHandler.any(postCompleted));
 
-      Response postResponse = postCompleted.get(5, TimeUnit.SECONDS)
+    Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
 
-    then:
-      assert postResponse.statusCode == 201
-      assert postResponse.location != null
+    assertThat(postResponse.getStatusCode(), is(201));
+    assertThat(postResponse.getLocation(), is(notNullValue()));
 
-      def getCompleted = new CompletableFuture<Response>()
+    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
 
-      okapiClient.get(postResponse.location, ResponseHandler.json(getCompleted))
-
-      Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
-
-      assert getResponse.statusCode == 200
-
-      def createdItem = getResponse.json
-
-      assert createdItem.containsKey("barcode") == false
-  }
-
-  void "Cannot create an item without a material type"() {
-    given:
-      def createdInstance = createInstance(
-        smallAngryPlanet(UUID.randomUUID()))
-
-      def newItemRequest = new JsonObject()
-        .put("title", createdInstance.title)
-        .put("instanceId", createdInstance.id)
-        .put("barcode", "645398607547")
-        .put("status", new JsonObject().put("name", "Available"))
-        .put("permanentLoanType", canCirculateLoanType())
-				.put("temporaryLocation", temporaryLocation())
-    when:
-      def postCompleted = new CompletableFuture<Response>()
-
-      okapiClient.post(ApiRoot.items(),
-        newItemRequest, ResponseHandler.any(postCompleted))
-
-      Response postResponse = postCompleted.get(5, TimeUnit.SECONDS)
-
-    then:
-      assert postResponse.statusCode == 422
-  }
-
-  void "Cannot create an item without a permanent loan type"() {
-    given:
-      def createdInstance = createInstance(
-        smallAngryPlanet(UUID.randomUUID()))
-
-      def newItemRequest = new JsonObject()
-        .put("title", createdInstance.title)
-        .put("instanceId", createdInstance.id)
-        .put("barcode", "645398607547")
-        .put("status", new JsonObject().put("name", "Available"))
-        .put("materialType", bookMaterialType())
-				.put("temporaryLocation", temporaryLocation())
-
-    when:
-      def postCompleted = new CompletableFuture<Response>()
-
-      okapiClient.post(ApiRoot.items(),
-        newItemRequest, ResponseHandler.any(postCompleted))
-
-      Response postResponse = postCompleted.get(5, TimeUnit.SECONDS)
-
-    then:
-      assert postResponse.statusCode == 422
-  }
-
-  void "Can create an item without a temporary loan type"() {
-    given:
-      def createdInstance = createInstance(
-        smallAngryPlanet(UUID.randomUUID()))
-
-      def newItemRequest = new JsonObject()
-        .put("title", createdInstance.title)
-        .put("instanceId", createdInstance.id)
-        .put("barcode", "645398607547")
-        .put("status", new JsonObject().put("name", "Available"))
-        .put("materialType", bookMaterialType())
-        .put("permanentLoanType", canCirculateLoanType())
-        .put("temporaryLocation", temporaryLocation())
-
-    when:
-      def postCompleted = new CompletableFuture<Response>()
-
-      okapiClient.post(ApiRoot.items(),
-        newItemRequest, ResponseHandler.any(postCompleted))
-
-      Response postResponse = postCompleted.get(5, TimeUnit.SECONDS)
-
-    then:
-      assert postResponse.statusCode == 201
-      assert postResponse.location != null
-
-      def getCompleted = new CompletableFuture<Response>()
-
-      okapiClient.get(postResponse.location, ResponseHandler.json(getCompleted))
-
-      Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
-
-      assert getResponse.statusCode == 200
-
-      def createdItem = getResponse.json
-
-      assert createdItem.containsKey("id")
-      assert createdItem.getString("title") == "Long Way to a Small Angry Planet"
-      assert createdItem.getString("instanceId") == createdInstance.id
-      assert createdItem.getString("barcode") == "645398607547"
-      assert createdItem.getJsonObject("status").getString("name") == "Available"
-      assert createdItem.getJsonObject("materialType").getString("id") == ApiTestSuite.bookMaterialType
-      assert createdItem.getJsonObject("materialType").getString("name") == "Book"
-      assert createdItem.getJsonObject("permanentLoanType").getString("id") == ApiTestSuite.canCirculateLoanType
-      assert createdItem.getJsonObject("permanentLoanType").getString("name") == "Can Circulate"
-      assert createdItem.getJsonObject("temporaryLocation").getString("name") == "Annex Library"
-
-      selfLinkRespectsWayResourceWasReached(createdItem)
-      selfLinkShouldBeReachable(createdItem)
-  }
-
-  void "Can update an existing item"() {
-    given:
-      def createdInstance = createInstance(
-        smallAngryPlanet(UUID.randomUUID()))
-
-      def newItem = createItem(
-        createdInstance.title, createdInstance.id, "645398607547")
-
-      def updateItemRequest = newItem.copy()
-        .put("status", new JsonObject().put("name", "Checked Out"))
-
-      def itemLocation = new URL("${ApiRoot.items()}/${newItem.getString("id")}")
-
-    when:
-      def putCompleted = new CompletableFuture<Response>()
-
-      okapiClient.put(itemLocation,
-        updateItemRequest, ResponseHandler.any(putCompleted))
-
-      Response putResponse = putCompleted.get(5, TimeUnit.SECONDS)
-
-    then:
-      assert putResponse.statusCode == 204
-
-      def getCompleted = new CompletableFuture<Response>()
-
-      okapiClient.get(itemLocation, ResponseHandler.json(getCompleted))
-
-      Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
-
-      assert getResponse.statusCode == 200
-
-      def updatedItem = getResponse.json
-
-      assert updatedItem.containsKey("id")
-      assert updatedItem.getString("title") == "Long Way to a Small Angry Planet"
-      assert updatedItem.getString("instanceId") == createdInstance.id
-      assert updatedItem.getString("barcode") == "645398607547"
-      assert updatedItem.getJsonObject("status").getString("name") == "Checked Out"
-      assert updatedItem.getJsonObject("materialType").getString("id") == ApiTestSuite.bookMaterialType
-      assert updatedItem.getJsonObject("materialType").getString("name") == "Book"
-      assert updatedItem.getJsonObject("permanentLoanType").getString("id") == ApiTestSuite.canCirculateLoanType
-      assert updatedItem.getJsonObject("permanentLoanType").getString("name") == "Can Circulate"
-      assert updatedItem.getJsonObject("permanentLocation").getString("name") == "Main Library"
-
-      selfLinkRespectsWayResourceWasReached(updatedItem)
-      selfLinkShouldBeReachable(updatedItem)
-  }
-
-  void "Cannot update an item that does not exist"() {
-    given:
-      def updateItemRequest = new JsonObject()
-        .put("id", UUID.randomUUID().toString())
-        .put("title", "Nod")
-        .put("instanceId", UUID.randomUUID().toString())
-        .put("barcode", "546747342365")
-        .put("status", new JsonObject().put("name", "Available"))
-        .put("materialType", bookMaterialType())
-        .put("permanentLoanType", canCirculateLoanType())
-				.put("temporaryLocation", temporaryLocation())
-
-    when:
-      def putCompleted = new CompletableFuture<Response>()
-
-      okapiClient.put(new URL("${ApiRoot.items()}/${updateItemRequest.getString("id")}"),
-        updateItemRequest, ResponseHandler.any(putCompleted))
-
-      Response putResponse = putCompleted.get(5, TimeUnit.SECONDS)
-
-    then:
-      assert putResponse.statusCode == 404
-  }
-
-  void "Can delete all items"() {
-    given:
-      def createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()))
-
-      createItem(createdInstance.title, createdInstance.id, "645398607547")
-
-      createItem(createdInstance.title, createdInstance.id, "175848607547")
-
-      createItem(createdInstance.title, createdInstance.id, "645334645247")
-
-    when:
-      def deleteCompleted = new CompletableFuture<Response>()
-
-      okapiClient.delete(ApiRoot.items(),
-        ResponseHandler.any(deleteCompleted))
-
-      Response deleteResponse = deleteCompleted.get(5, TimeUnit.SECONDS)
-
-    then:
-      assert deleteResponse.statusCode == 204
-      assert deleteResponse.hasBody() == false
-
-      def getAllCompleted = new CompletableFuture<Response>()
-
-      okapiClient.get(ApiRoot.items(),
-        ResponseHandler.json(getAllCompleted))
-
-      Response getAllResponse = getAllCompleted.get(5, TimeUnit.SECONDS);
-
-      assert getAllResponse.json.getJsonArray("items").size() == 0
-      assert getAllResponse.json.getInteger("totalRecords") == 0
-  }
-
-  void "Can delete a single item"() {
-    given:
-      def createdInstance = createInstance(
-        smallAngryPlanet(UUID.randomUUID()))
-
-      createItem(createdInstance.title, createdInstance.id, "645398607547")
-
-      createItem(createdInstance.title, createdInstance.id, "175848607547")
-
-      def itemToDelete = createItem(createdInstance.title, createdInstance.id,
-        "645334645247")
-
-      def itemToDeleteLocation =
-        new URL("${ApiRoot.items()}/${itemToDelete.getString("id")}")
-
-    when:
-      def deleteCompleted = new CompletableFuture<Response>()
-
-      okapiClient.delete(itemToDeleteLocation,
-        ResponseHandler.any(deleteCompleted))
-
-      Response deleteResponse = deleteCompleted.get(5, TimeUnit.SECONDS);
-
-    then:
-      assert deleteResponse.statusCode == 204
-      assert deleteResponse.hasBody() == false
-
-      def getCompleted = new CompletableFuture<Response>()
-
-      okapiClient.get(itemToDeleteLocation,
-        ResponseHandler.any(getCompleted))
-
-      Response getResponse = getCompleted.get(5, TimeUnit.SECONDS)
-
-      assert getResponse.statusCode == 404
-
-      def getAllCompleted = new CompletableFuture<Response>()
-
-      okapiClient.get(ApiRoot.items(),
-        ResponseHandler.json(getAllCompleted))
-
-      Response getAllResponse = getAllCompleted.get(5, TimeUnit.SECONDS);
-
-      assert getAllResponse.json.getJsonArray("items").size() == 2
-      assert getAllResponse.json.getInteger("totalRecords") == 2
-  }
-
-  void "Can page all items"() {
-    given:
-      def smallAngryInstance = createInstance(smallAngryPlanet(UUID.randomUUID()))
-
-      createItem(smallAngryInstance.title, smallAngryInstance.id,
-        "645398607547", bookMaterialType(), canCirculateLoanType(), null)
-
-      createItem(smallAngryInstance.title, smallAngryInstance.id,
-        "175848607547", bookMaterialType(), courseReservesLoanType(), null)
-
-      def girlOnTheTrainInstance = createInstance(girlOnTheTrain(UUID.randomUUID()))
-
-      createItem(girlOnTheTrainInstance.title, girlOnTheTrainInstance.id,
-        "645334645247", dvdMaterialType(), canCirculateLoanType(),
-        courseReservesLoanType())
-
-      def nodInstance = createInstance(nod(UUID.randomUUID()))
-
-      createItem(nodInstance.title, nodInstance.id, "564566456546")
-
-      createItem(nodInstance.title, nodInstance.id, "943209584495")
-
-    when:
-      def firstPageGetCompleted = new CompletableFuture<Response>()
-      def secondPageGetCompleted = new CompletableFuture<Response>()
-
-      okapiClient.get(ApiRoot.items("limit=3"),
-        ResponseHandler.json(firstPageGetCompleted))
-
-      okapiClient.get(ApiRoot.items("limit=3&offset=3"),
-        ResponseHandler.json(secondPageGetCompleted))
-
-      Response firstPageResponse = firstPageGetCompleted.get(5, TimeUnit.SECONDS)
-      Response secondPageResponse = secondPageGetCompleted.get(5, TimeUnit.SECONDS)
-
-    then:
-      assert firstPageResponse.statusCode == 200
-      assert secondPageResponse.statusCode == 200
-
-      def firstPageItems = JsonArrayHelper.toList(firstPageResponse.json.getJsonArray("items"))
-
-      assert firstPageItems.size() == 3
-      assert firstPageResponse.json.getInteger("totalRecords") == 5
-
-      def secondPageItems = JsonArrayHelper.toList(secondPageResponse.json.getJsonArray("items"))
-
-      assert secondPageItems.size() == 2
-      assert secondPageResponse.json.getInteger("totalRecords") == 5
-
-      firstPageItems.each {
-        selfLinkRespectsWayResourceWasReached(it)
-      }
-
-      firstPageItems.each {
-        selfLinkShouldBeReachable(it)
-      }
-
-      firstPageItems.each {
-        hasConsistentMaterialType(it)
-      }
-
-      firstPageItems.each {
-        hasConsistentPermanentLoanType(it)
-      }
-
-      firstPageItems.each {
-        hasConsistentTemporaryLoanType(it)
-      }
-
-      firstPageItems.each {
-        hasStatus(it)
-      }
-
-      firstPageItems.each {
-        hasConsistentPermanentLocation(it)
-      }
-
-      firstPageItems.each {
-        hasConsistentTemporaryLocation(it)
-      }
-
-      secondPageItems.each {
-        selfLinkRespectsWayResourceWasReached(it)
-      }
-
-      secondPageItems.each {
-        selfLinkShouldBeReachable(it)
-      }
-
-      secondPageItems.each {
-        hasConsistentMaterialType(it)
-      }
-
-      secondPageItems.each {
-        hasConsistentPermanentLoanType(it)
-      }
-
-      secondPageItems.each {
-        hasConsistentTemporaryLoanType(it)
-      }
-
-      secondPageItems.each {
-        hasStatus(it)
-      }
-
-    secondPageItems.each {
-      hasConsistentPermanentLocation(it)
-    }
-
-    secondPageItems.each {
-      hasConsistentTemporaryLocation(it)
-    }
-  }
-
-  void "Can get all items with different permanent and temporary loan types"() {
-    given:
-      def smallAngryInstance = createInstance(smallAngryPlanet(UUID.randomUUID()))
-
-      createItem(smallAngryInstance.title, smallAngryInstance.id,
-        "645398607547", bookMaterialType(), canCirculateLoanType(), null)
-
-      createItem(smallAngryInstance.title, smallAngryInstance.id,
-        "175848607547", bookMaterialType(), canCirculateLoanType(), courseReservesLoanType())
-
-    when:
-      def getAllCompleted = new CompletableFuture<Response>()
-
-      okapiClient.get(ApiRoot.items(),
-        ResponseHandler.json(getAllCompleted))
-
-      Response getAllResponse = getAllCompleted.get(5, TimeUnit.SECONDS)
-
-    then:
-      assert getAllResponse.statusCode == 200
-
-      def items = JsonArrayHelper.toList(getAllResponse.json.getJsonArray("items"))
-
-      assert items.size() == 2
-      assert getAllResponse.json.getInteger("totalRecords") == 2
-
-      assert items.stream()
-        .filter({it.getString("barcode") == "645398607547"})
-        .findFirst().get().getJsonObject("permanentLoanType").getString("id") == ApiTestSuite.canCirculateLoanType
-
-      assert items.stream()
-        .filter({it.getString("barcode") == "645398607547"})
-        .findFirst().get().containsKey("temporaryLoanType") == false
-
-      assert items.stream()
-        .filter({it.getString("barcode") == "175848607547"})
-        .findFirst().get().getJsonObject("permanentLoanType").getString("id") == ApiTestSuite.canCirculateLoanType
-
-      assert items.stream()
-        .filter({it.getString("barcode") == "175848607547"})
-        .findFirst().get().getJsonObject("temporaryLoanType").getString("id") == ApiTestSuite.courseReserveLoanType
-
-      items.each {
-        hasConsistentPermanentLoanType(it)
-      }
-
-      items.each {
-        hasConsistentTemporaryLoanType(it)
-      }
-
-      items.each {
-        hasConsistentPermanentLocation(it)
-      }
-
-      items.each {
-        hasConsistentTemporaryLocation(it)
-      }
-  }
-
-  void "Page parameters must be numeric"() {
-    when:
-      def getPagedCompleted = new CompletableFuture<Response>()
-
-      okapiClient.get(ApiRoot.items("limit=&offset="),
-        ResponseHandler.text(getPagedCompleted))
-
-      Response getPagedResponse = getPagedCompleted.get(5, TimeUnit.SECONDS)
-
-    then:
-      assert getPagedResponse.statusCode == 400
-      assert getPagedResponse.body == "limit and offset must be numeric when supplied"
-  }
-
-  void "Can search for items by title"() {
-    given:
-      def smallAngryInstance = createInstance(smallAngryPlanet(UUID.randomUUID()))
-
-      createItem(smallAngryInstance.title, smallAngryInstance.id, "645398607547")
-
-      def nodInstance = createInstance(nod(UUID.randomUUID()))
-
-      createItem(nodInstance.title, nodInstance.id, "564566456546")
-
-    when:
-      def searchGetCompleted = new CompletableFuture<Response>()
-
-      okapiClient.get(ApiRoot.items("query=title=*Small%20Angry*"),
-        ResponseHandler.json(searchGetCompleted))
-
-      Response searchGetResponse = searchGetCompleted.get(5, TimeUnit.SECONDS)
-
-    then:
-      assert searchGetResponse.statusCode == 200
-
-      def items = JsonArrayHelper.toList(searchGetResponse.json.getJsonArray("items"))
-
-      assert items.size() == 1
-      assert searchGetResponse.json.getInteger("totalRecords") == 1
-
-      def firstItem = items[0]
-
-      assert firstItem.getString("title") == "Long Way to a Small Angry Planet"
-      assert firstItem.getJsonObject("status").getString("name") == "Available"
-
-      items.each {
-        selfLinkRespectsWayResourceWasReached(it)
-      }
-
-      items.each {
-        selfLinkShouldBeReachable(it)
-      }
-
-      items.each {
-        hasConsistentMaterialType(it)
-      }
-
-      items.each {
-        hasConsistentPermanentLoanType(it)
-      }
-
-      items.each {
-        hasConsistentTemporaryLoanType(it)
-      }
-
-      items.each {
-        hasStatus(it)
-      }
-
-      items.each {
-        hasConsistentPermanentLocation(it)
-      }
-
-      items.each {
-        hasConsistentTemporaryLocation(it)
-      }
-  }
-
-  void "Cannot create a second item with the same barcode"() {
-    given:
-      def smallAngryInstance = createInstance(
-        smallAngryPlanet(UUID.randomUUID()))
-
-      createItem(smallAngryInstance.title, smallAngryInstance.id,
-        "645398607547")
-
-      def nodInstance = createInstance(nod(UUID.randomUUID()))
-
-    when:
-      def createItemCompleted = new CompletableFuture<Response>()
-
-      def newItemRequest = new JsonObject()
-        .put("title", nodInstance.title)
-        .put("instanceId", nodInstance.id)
-        .put("barcode", "645398607547")
-        .put("status", new JsonObject().put("name", "Available"))
-        .put("materialType", bookMaterialType())
-				.put("permanentLocation", permanentLocation())
-
-      okapiClient.post(ApiRoot.items(), newItemRequest,
-        ResponseHandler.any(createItemCompleted))
-
-    then:
-      def createResponse = createItemCompleted.get(5, TimeUnit.SECONDS)
-
-      assert createResponse.statusCode == 400
-      assert createResponse.body == "Barcode must be unique, 645398607547 is already assigned to another item"
-  }
-
-  void "Cannot update an item to have the same barcode as an existing item"() {
-    given:
-      def smallAngryInstance = createInstance(
-        smallAngryPlanet(UUID.randomUUID()))
-
-      createItem(smallAngryInstance.title, smallAngryInstance.id,
-        "645398607547")
-
-      def nodInstance = createInstance(nod(UUID.randomUUID()))
-
-      def nodItem = createItem(nodInstance.title, nodInstance.id,
-        "654647774352")
-
-    when:
-      def changedNodItem = nodItem.copy()
-        .put("barcode", "645398607547")
-
-      def nodItemLocation = new URL(
-        "${ApiRoot.items()}/${changedNodItem.getString("id")}")
-
-      def putItemCompleted = new CompletableFuture<Response>()
-
-      okapiClient.put(nodItemLocation, changedNodItem,
-        ResponseHandler.text(putItemCompleted));
-
-    then:
-      def putItemResponse = putItemCompleted.get(5, TimeUnit.SECONDS)
-
-      assert putItemResponse.statusCode == 400
-      assert putItemResponse.body == "Barcode must be unique, 645398607547 is already assigned to another item"
-  }
-
-  void "Can change the barcode of an existing item"() {
-      def nodInstance = createInstance(nod(UUID.randomUUID()))
-
-      def nodItem = createItem(nodInstance.title, nodInstance.id,
-        "654647774352")
-
-    when:
-      def changedNodItem = nodItem.copy()
-        .put("barcode", "645398607547")
-
-      def nodItemLocation = new URL(
-        "${ApiRoot.items()}/${changedNodItem.getString("id")}")
-
-    def putItemCompleted = new CompletableFuture<Response>()
-
-    okapiClient.put(nodItemLocation, changedNodItem,
-        ResponseHandler.any(putItemCompleted))
-
-    then:
-      def putItemResponse = putItemCompleted.get(5, TimeUnit.SECONDS)
-
-      assert putItemResponse.statusCode == 204
-
-      def getItemCompleted = new CompletableFuture<Response>()
-
-      okapiClient.get(nodItemLocation, ResponseHandler.json(getItemCompleted))
-
-      def getItemResponse = getItemCompleted.get(5, TimeUnit.SECONDS)
-
-      assert getItemResponse.statusCode == 200
-
-      assert getItemResponse.json.getString("barcode") == "645398607547"
-  }
-
-  void "Can remove the barcode of an existing item"() {
-      def nodInstance = createInstance(nod(UUID.randomUUID()))
-
-      def nodItem = createItem(nodInstance.title, nodInstance.id,
-        "654647774352")
-
-    def smallAngryInstance = createInstance(
-      smallAngryPlanet(UUID.randomUUID()))
-
-    //Second item with no barcode, to ensure empty barcode doesn't match
-    createItem(smallAngryInstance.title, smallAngryInstance.id,
-      null)
-
-    when:
-      def changedNodItem = nodItem.copy()
-
-      changedNodItem.remove("barcode")
-
-      def nodItemLocation = new URL(
-        "${ApiRoot.items()}/${changedNodItem.getString("id")}")
-
-      def putItemCompleted = new CompletableFuture<Response>()
-
-      okapiClient.put(nodItemLocation, changedNodItem,
-        ResponseHandler.any(putItemCompleted))
-
-    then:
-      def putItemResponse = putItemCompleted.get(5, TimeUnit.SECONDS)
-
-      assert putItemResponse.statusCode == 204
-
-      def getItemCompleted = new CompletableFuture<Response>()
-
-      okapiClient.get(nodItemLocation, ResponseHandler.json(getItemCompleted))
-
-      def getItemResponse = getItemCompleted.get(5, TimeUnit.SECONDS)
-
-      assert getItemResponse.statusCode == 200
-
-      assert getItemResponse.json.containsKey("barcode") == false
-  }
-
-  private void selfLinkRespectsWayResourceWasReached(JsonObject item) {
-    assert containsApiRoot(item.getJsonObject("links").getString("self"))
-  }
-
-  private boolean containsApiRoot(String link) {
-    link.contains(ApiTestSuite.apiRoot())
-  }
-
-  private void selfLinkShouldBeReachable(JsonObject item) {
-    def getCompleted = new CompletableFuture<Response>()
-
-    okapiClient.get(item.getJsonObject("links").getString("self"),
-      ResponseHandler.json(getCompleted))
+    okapiClient.get(postResponse.getLocation(), ResponseHandler.json(getCompleted));
 
     Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
 
-    assert getResponse.statusCode == 200
+    assertThat(getResponse.getStatusCode(), is(200));
+
+    JsonObject createdItem = getResponse.getJson();
+
+    assertThat(createdItem.containsKey("barcode"), is(false));
   }
 
-  private void hasStatus(JsonObject item) {
-    assert item.containsKey("status")
-    assert item.getJsonObject("status").containsKey("name")
+  @Test
+  public void canCreateMultipleItemsWithoutBarcode()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    JsonObject firstItemRequest = new JsonObject()
+    .put("title", "Temeraire")
+    .put("status", new JsonObject().put("name", "Available"))
+    .put("permanentLocation", permanentLocation())
+    .put("materialType", bookMaterialType())
+    .put("permanentLoanType", canCirculateLoanType());
+
+    ItemApiClient.createItem(okapiClient, firstItemRequest);
+
+    JsonObject newItemRequest = new JsonObject()
+      .put("title", "Nod")
+      .put("status", new JsonObject().put("name", "Available"))
+      .put("materialType", bookMaterialType())
+      .put("permanentLoanType", canCirculateLoanType())
+      .put("temporaryLocation", temporaryLocation());
+
+    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+
+    okapiClient.post(ApiRoot.items(), newItemRequest,
+      ResponseHandler.any(postCompleted));
+
+    Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(postResponse.getStatusCode(), is(201));
+    assertThat(postResponse.getLocation(), is(notNullValue()));
+
+    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+
+    okapiClient.get(postResponse.getLocation(), ResponseHandler.json(getCompleted));
+
+    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(getResponse.getStatusCode(), is(200));
+
+    JsonObject createdItem = getResponse.getJson();
+
+    assertThat(createdItem.containsKey("barcode"), is(false));
   }
 
-  private void hasConsistentMaterialType(JsonObject item) {
-    def materialType = item.getJsonObject("materialType")
+  @Test
+  public void cannotCreateItemWithoutMaterialType()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
 
-    switch(materialType.getString("id")) {
-      case ApiTestSuite.bookMaterialType:
-        assert materialType.getString("id") == ApiTestSuite.bookMaterialType
-        assert materialType.getString("name") == "Book"
-        break
+    JsonObject createdInstance = createInstance(
+      smallAngryPlanet(UUID.randomUUID()));
 
-      case ApiTestSuite.dvdMaterialType:
-        assert materialType.getString("id") == ApiTestSuite.dvdMaterialType
-        assert materialType.getString("name") == "DVD"
-        break
+    JsonObject newItemRequest = new JsonObject()
+      .put("title", createdInstance.getString("title"))
+      .put("instanceId", createdInstance.getString("id"))
+      .put("barcode", "645398607547")
+      .put("status", new JsonObject().put("name", "Available"))
+      .put("permanentLoanType", canCirculateLoanType())
+      .put("temporaryLocation", temporaryLocation());
 
-      default:
-        assert materialType.getString("id") == null
-        assert materialType.getString("name") == null
+    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+
+    okapiClient.post(ApiRoot.items(), newItemRequest,
+      ResponseHandler.any(postCompleted));
+
+    Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(postResponse.getStatusCode(), is(422));
+  }
+
+  @Test
+  public void cannotCreateItemWithoutPermanentLoanType()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    JsonObject createdInstance = createInstance(
+      smallAngryPlanet(UUID.randomUUID()));
+
+    JsonObject newItemRequest = new JsonObject()
+      .put("title", createdInstance.getString("title"))
+      .put("instanceId", createdInstance.getString("id"))
+      .put("barcode", "645398607547")
+      .put("status", new JsonObject().put("name", "Available"))
+      .put("materialType", bookMaterialType())
+      .put("temporaryLocation", temporaryLocation());
+
+    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+
+    okapiClient.post(ApiRoot.items(), newItemRequest,
+      ResponseHandler.any(postCompleted));
+
+    Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(postResponse.getStatusCode(), is(422));
+  }
+
+  @Test
+  public void canCreateItemWithoutTemporaryLoanType()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    JsonObject createdInstance = createInstance(
+      smallAngryPlanet(UUID.randomUUID()));
+
+    JsonObject newItemRequest = new JsonObject()
+      .put("title", createdInstance.getString("title"))
+      .put("instanceId", createdInstance.getString("id"))
+      .put("barcode", "645398607547")
+      .put("status", new JsonObject().put("name", "Available"))
+      .put("materialType", bookMaterialType())
+      .put("permanentLoanType", canCirculateLoanType())
+      .put("temporaryLocation", temporaryLocation());
+
+    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+
+    okapiClient.post(ApiRoot.items(),
+      newItemRequest, ResponseHandler.any(postCompleted));
+
+    Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(postResponse.getStatusCode(), is(201));
+    assertThat(postResponse.getLocation(), is(notNullValue()));
+
+    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+
+    okapiClient.get(postResponse.getLocation(), ResponseHandler.json(getCompleted));
+
+    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(getResponse.getStatusCode(), is(200));
+
+    JsonObject createdItem = getResponse.getJson();
+
+    assertThat(createdItem.containsKey("id"), is(true));
+    assertThat(createdItem.getString("title"), is("Long Way to a Small Angry Planet"));
+    assertThat(createdItem.getString("barcode"), is("645398607547"));
+    assertThat(createdItem.getJsonObject("status").getString("name"), is("Available"));
+
+    JsonObject materialType = createdItem.getJsonObject("materialType");
+
+    assertThat(materialType.getString("id"), is(ApiTestSuite.getBookMaterialType()));
+    assertThat(materialType.getString("name"), is("Book"));
+
+    JsonObject permanentLoanType = createdItem.getJsonObject("permanentLoanType");
+
+    assertThat(permanentLoanType.getString("id"), is(ApiTestSuite.getCanCirculateLoanType()));
+    assertThat(permanentLoanType.getString("name"), is("Can Circulate"));
+
+    assertThat(createdItem.containsKey("temporaryLoanType"), is(false));
+
+    selfLinkRespectsWayResourceWasReached(createdItem);
+    selfLinkShouldBeReachable(createdItem);
+  }
+
+  @Test
+  public void canUpdateExistingItem()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    JsonObject createdInstance = createInstance(
+      smallAngryPlanet(UUID.randomUUID()));
+
+    JsonObject newItem = createItem(
+      createdInstance.getString("title"),
+      createdInstance.getString("id"), "645398607547");
+
+    JsonObject updateItemRequest = newItem.copy()
+      .put("status", new JsonObject().put("name", "Checked Out"));
+
+    URL itemLocation = new URL(String.format("%s/%s", ApiRoot.items(),
+      newItem.getString("id")));
+
+    CompletableFuture<Response> putCompleted = new CompletableFuture<>();
+
+    okapiClient.put(itemLocation, updateItemRequest,
+      ResponseHandler.any(putCompleted));
+
+    Response putResponse = putCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(putResponse.getStatusCode(), is(204));
+
+    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+
+    okapiClient.get(itemLocation, ResponseHandler.json(getCompleted));
+
+    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(getResponse.getStatusCode(), is(200));
+
+    JsonObject updatedItem = getResponse.getJson();
+
+    assertThat(updatedItem.containsKey("id"), is(true));
+    assertThat(updatedItem.getString("title"), is("Long Way to a Small Angry Planet"));
+    assertThat(updatedItem.getString("barcode"), is("645398607547"));
+    assertThat(updatedItem.getJsonObject("status").getString("name"), is("Checked Out"));
+
+    JsonObject materialType = updatedItem.getJsonObject("materialType");
+
+    assertThat(materialType.getString("id"), is(ApiTestSuite.getBookMaterialType()));
+    assertThat(materialType.getString("name"), is("Book"));
+
+    JsonObject permanentLoanType = updatedItem.getJsonObject("permanentLoanType");
+
+    assertThat(permanentLoanType.getString("id"), is(ApiTestSuite.getCanCirculateLoanType()));
+    assertThat(permanentLoanType.getString("name"), is("Can Circulate"));
+
+    assertThat(updatedItem.getJsonObject("permanentLocation").getString("name"), is("Main Library"));
+    assertThat(updatedItem.getJsonObject("temporaryLocation").getString("name"), is("Annex Library"));
+
+    selfLinkRespectsWayResourceWasReached(updatedItem);
+    selfLinkShouldBeReachable(updatedItem);
+  }
+
+  @Test
+  public void cannotUpdateItemThatDoesNotExist()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    JsonObject updateItemRequest = new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("title", "Nod")
+      .put("instanceId", UUID.randomUUID().toString())
+      .put("barcode", "546747342365")
+      .put("status", new JsonObject().put("name", "Available"))
+      .put("materialType", bookMaterialType())
+      .put("permanentLoanType", canCirculateLoanType())
+      .put("temporaryLocation", temporaryLocation());
+
+    CompletableFuture<Response> putCompleted = new CompletableFuture<>();
+
+    okapiClient.put(new URL(String.format("%s/%s", ApiRoot.items(),
+      updateItemRequest.getString("id"))),
+      updateItemRequest, ResponseHandler.any(putCompleted));
+
+    Response putResponse = putCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(putResponse.getStatusCode(), is(404));
+  }
+
+  @Test
+  public void canDeleteAllItems()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
+
+    createItem(createdInstance.getString("title"),
+      createdInstance.getString("id"), "645398607547");
+
+    createItem(createdInstance.getString("title"),
+      createdInstance.getString("id"), "175848607547");
+
+    createItem(createdInstance.getString("title"),
+      createdInstance.getString("id"), "645334645247");
+
+    CompletableFuture<Response> deleteCompleted = new CompletableFuture<>();
+
+    okapiClient.delete(ApiRoot.items(),
+      ResponseHandler.any(deleteCompleted));
+
+    Response deleteResponse = deleteCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(deleteResponse.getStatusCode(), is(204));
+    assertThat(deleteResponse.hasBody(), is(false));
+
+    CompletableFuture<Response> getAllCompleted = new CompletableFuture<>();
+
+    okapiClient.get(ApiRoot.items(), ResponseHandler.json(getAllCompleted));
+
+    Response getAllResponse = getAllCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(getAllResponse.getJson().getJsonArray("items").size(), is(0));
+    assertThat(getAllResponse.getJson().getInteger("totalRecords"), is(0));
+  }
+
+  @Test
+  public void CanDeleteSingleItem()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    JsonObject createdInstance = createInstance(
+      smallAngryPlanet(UUID.randomUUID()));
+
+    createItem(createdInstance.getString("title"),
+      createdInstance.getString("id"), "645398607547");
+
+    createItem(createdInstance.getString("title"),
+      createdInstance.getString("id"), "175848607547");
+
+    JsonObject itemToDelete = createItem(createdInstance.getString("title"),
+      createdInstance.getString("id"), "645334645247");
+
+    URL itemToDeleteLocation =
+      new URL(String.format("%s/%s", ApiRoot.items(), itemToDelete.getString("id")));
+
+    CompletableFuture<Response> deleteCompleted = new CompletableFuture<>();
+
+    okapiClient.delete(itemToDeleteLocation, ResponseHandler.any(deleteCompleted));
+
+    Response deleteResponse = deleteCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(deleteResponse.getStatusCode(), is(204));
+    assertThat(deleteResponse.hasBody(), is(false));
+
+    CompletableFuture<Response> getAllCompleted = new CompletableFuture<>();
+
+    okapiClient.get(ApiRoot.items(), ResponseHandler.json(getAllCompleted));
+
+    Response getAllResponse = getAllCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(getAllResponse.getJson().getJsonArray("items").size(), is(2));
+    assertThat(getAllResponse.getJson().getInteger("totalRecords"), is(2));
+  }
+
+  @Test
+  public void canPageAllItems()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    JsonObject smallAngryInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
+
+    createItem(smallAngryInstance.getString("title"),
+      smallAngryInstance.getString("id"), "645398607547", bookMaterialType(),
+      canCirculateLoanType(), null);
+
+    createItem(smallAngryInstance.getString("title"),
+      smallAngryInstance.getString("id"), "175848607547", bookMaterialType(),
+      courseReservesLoanType(), null);
+
+    JsonObject girlOnTheTrainInstance = createInstance(girlOnTheTrain(UUID.randomUUID()));
+
+    createItem(girlOnTheTrainInstance.getString("title"),
+      girlOnTheTrainInstance.getString("id"), "645334645247", dvdMaterialType(),
+      canCirculateLoanType(), courseReservesLoanType());
+
+    JsonObject nodInstance = createInstance(nod(UUID.randomUUID()));
+
+    createItem(nodInstance.getString("title"),
+      nodInstance.getString("id"), "564566456546");
+
+    createItem(nodInstance.getString("title"),
+      nodInstance.getString("id"), "943209584495");
+
+    CompletableFuture<Response> firstPageGetCompleted = new CompletableFuture<>();
+    CompletableFuture<Response> secondPageGetCompleted = new CompletableFuture<>();
+
+    okapiClient.get(ApiRoot.items("limit=3"),
+      ResponseHandler.json(firstPageGetCompleted));
+
+    okapiClient.get(ApiRoot.items("limit=3&offset=3"),
+      ResponseHandler.json(secondPageGetCompleted));
+
+    Response firstPageResponse = firstPageGetCompleted.get(5, TimeUnit.SECONDS);
+    Response secondPageResponse = secondPageGetCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(firstPageResponse.getStatusCode(), is(200));
+    assertThat(secondPageResponse.getStatusCode(), is(200));
+
+    List<JsonObject> firstPageItems = JsonArrayHelper.toList(
+      firstPageResponse.getJson().getJsonArray("items"));
+
+    assertThat(firstPageItems.size(), is(3));
+    assertThat(firstPageResponse.getJson().getInteger("totalRecords"), is(5));
+
+    List<JsonObject> secondPageItems = JsonArrayHelper.toList(
+      secondPageResponse.getJson().getJsonArray("items"));
+
+    assertThat(secondPageItems.size(), is(2));
+    assertThat(secondPageResponse.getJson().getInteger("totalRecords"), is(5));
+
+    firstPageItems.stream().forEach(ItemApiExamples::selfLinkRespectsWayResourceWasReached);
+    firstPageItems.stream().forEach(this::selfLinkShouldBeReachable);
+    firstPageItems.stream().forEach(ItemApiExamples::hasConsistentMaterialType);
+    firstPageItems.stream().forEach(ItemApiExamples::hasConsistentPermanentLoanType);
+    firstPageItems.stream().forEach(ItemApiExamples::hasConsistentTemporaryLoanType);
+
+    firstPageItems.stream().forEach(ItemApiExamples::hasStatus);
+    firstPageItems.stream().forEach(ItemApiExamples::hasConsistentPermanentLocation);
+    firstPageItems.stream().forEach(ItemApiExamples::hasConsistentTemporaryLocation);
+
+    secondPageItems.stream().forEach(ItemApiExamples::selfLinkRespectsWayResourceWasReached);
+    secondPageItems.stream().forEach(this::selfLinkShouldBeReachable);
+    secondPageItems.stream().forEach(ItemApiExamples::hasConsistentMaterialType);
+    secondPageItems.stream().forEach(ItemApiExamples::hasConsistentPermanentLoanType);
+    secondPageItems.stream().forEach(ItemApiExamples::hasConsistentTemporaryLoanType);
+    secondPageItems.stream().forEach(ItemApiExamples::hasStatus);
+    secondPageItems.stream().forEach(ItemApiExamples::hasConsistentPermanentLocation);
+    secondPageItems.stream().forEach(ItemApiExamples::hasConsistentTemporaryLocation);
+  }
+
+  @Test
+  public void CanGetAllItemsWithDifferentLoanTypes()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    JsonObject smallAngryInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
+
+    createItem(smallAngryInstance.getString("title"),
+      smallAngryInstance.getString("id"), "645398607547", bookMaterialType(),
+      canCirculateLoanType(), null);
+
+    createItem(smallAngryInstance.getString("title"),
+      smallAngryInstance.getString("id"), "175848607547", bookMaterialType(),
+      canCirculateLoanType(), courseReservesLoanType());
+
+    CompletableFuture<Response> getAllCompleted = new CompletableFuture<>();
+
+    okapiClient.get(ApiRoot.items(), ResponseHandler.json(getAllCompleted));
+
+    Response getAllResponse = getAllCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(getAllResponse.getStatusCode(), is(200));
+
+    List<JsonObject> items = JsonArrayHelper.toList(
+      getAllResponse.getJson().getJsonArray("items"));
+
+    assertThat(items.size(), is(2));
+    assertThat(getAllResponse.getJson().getInteger("totalRecords"), is(2));
+
+    assertThat(items.stream()
+      .filter(item -> StringUtils.equals(item.getString("barcode"), "645398607547"))
+      .findFirst().get().getJsonObject("permanentLoanType").getString("id"),
+      is(ApiTestSuite.getCanCirculateLoanType()));
+
+    assertThat(items.stream()
+      .filter(item -> StringUtils.equals(item.getString("barcode"), "645398607547"))
+      .findFirst().get().containsKey("temporaryLoanType"), is(false));
+
+    assertThat(items.stream()
+      .filter(item -> StringUtils.equals(item.getString("barcode"), "175848607547"))
+      .findFirst().get().getJsonObject("permanentLoanType").getString("id"),
+      is(ApiTestSuite.getCanCirculateLoanType()));
+
+    assertThat(items.stream()
+      .filter(item -> StringUtils.equals(item.getString("barcode"), "175848607547"))
+      .findFirst().get().getJsonObject("temporaryLoanType").getString("id"),
+      is(ApiTestSuite.getCourseReserveLoanType()));
+
+    items.stream().forEach(ItemApiExamples::hasConsistentPermanentLoanType);
+    items.stream().forEach(ItemApiExamples::hasConsistentTemporaryLoanType);
+    items.stream().forEach(ItemApiExamples::hasConsistentPermanentLocation);
+    items.stream().forEach(ItemApiExamples::hasConsistentTemporaryLocation);
+  }
+
+  @Test
+  public void pageParametersMustBeNumeric()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    CompletableFuture<Response> getPagedCompleted = new CompletableFuture<>();
+
+    okapiClient.get(ApiRoot.items("limit=&offset="),
+      ResponseHandler.text(getPagedCompleted));
+
+    Response getPagedResponse = getPagedCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(getPagedResponse.getStatusCode(), is(400));
+    assertThat(getPagedResponse.getBody(),
+      is("limit and offset must be numeric when supplied"));
+  }
+
+  @Test
+  public void canSearchForItemsByTitle()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    JsonObject smallAngryInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
+
+    createItem(smallAngryInstance.getString("title"),
+      smallAngryInstance.getString("id"), "645398607547");
+
+    JsonObject nodInstance = createInstance(nod(UUID.randomUUID()));
+
+    createItem(nodInstance.getString("title"), nodInstance.getString("id"),
+      "564566456546");
+
+    CompletableFuture<Response> searchGetCompleted = new CompletableFuture<>();
+
+    okapiClient.get(ApiRoot.items("query=title=*Small%20Angry*"),
+      ResponseHandler.json(searchGetCompleted));
+
+    Response searchGetResponse = searchGetCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(searchGetResponse.getStatusCode(), is(200));
+
+    List<JsonObject> items = JsonArrayHelper.toList(
+      searchGetResponse.getJson().getJsonArray("items"));
+
+    assertThat(items.size(), is(1));
+    assertThat(searchGetResponse.getJson().getInteger("totalRecords"), is(1));
+
+    JsonObject firstItem = items.get(0);
+
+    assertThat(firstItem.getString("title"), is("Long Way to a Small Angry Planet"));
+    assertThat(firstItem.getJsonObject("status").getString("name"), is("Available"));
+
+    items.stream().forEach(ItemApiExamples::selfLinkRespectsWayResourceWasReached);
+    items.stream().forEach(this::selfLinkShouldBeReachable);
+    items.stream().forEach(ItemApiExamples::hasConsistentMaterialType);
+    items.stream().forEach(ItemApiExamples::hasConsistentPermanentLoanType);
+    items.stream().forEach(ItemApiExamples::hasConsistentTemporaryLoanType);
+    items.stream().forEach(ItemApiExamples::hasStatus);
+    items.stream().forEach(ItemApiExamples::hasConsistentPermanentLocation);
+    items.stream().forEach(ItemApiExamples::hasConsistentTemporaryLocation);
+  }
+
+  @Test
+  public void cannotCreateSecondItemWithSameBarcode()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    JsonObject smallAngryInstance = createInstance(
+      smallAngryPlanet(UUID.randomUUID()));
+
+    createItem(smallAngryInstance.getString("title"),
+      smallAngryInstance.getString("id"), "645398607547");
+
+    JsonObject nodInstance = createInstance(nod(UUID.randomUUID()));
+
+    CompletableFuture<Response> createItemCompleted = new CompletableFuture<>();
+
+    JsonObject newItemRequest = new JsonObject()
+      .put("title", nodInstance.getString("title"))
+      .put("instanceId", nodInstance.getString("id"))
+      .put("barcode", "645398607547")
+      .put("status", new JsonObject().put("name", "Available"))
+      .put("materialType", bookMaterialType())
+      .put("permanentLocation", permanentLocation());
+
+    okapiClient.post(ApiRoot.items(), newItemRequest,
+      ResponseHandler.any(createItemCompleted));
+
+    Response createResponse = createItemCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(createResponse.getStatusCode(), is(400));
+    assertThat(createResponse.getBody(),
+      is("Barcode must be unique, 645398607547 is already assigned to another item"));
+  }
+
+  @Test
+  public void cannotUpdateItemToSameBarcodeAsExistingItem()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    JsonObject smallAngryInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
+
+    createItem(smallAngryInstance.getString("title"),
+      smallAngryInstance.getString("id"), "645398607547");
+
+    JsonObject nodInstance = createInstance(nod(UUID.randomUUID()));
+
+    JsonObject nodItem = createItem(nodInstance.getString("title"),
+      nodInstance.getString("id"), "654647774352");
+
+    JsonObject changedNodItem = nodItem.copy()
+      .put("barcode", "645398607547");
+
+    URL nodItemLocation = new URL(String.format("%s/%s",
+      ApiRoot.items(), changedNodItem.getString("id")));
+
+    CompletableFuture<Response> putItemCompleted = new CompletableFuture<>();
+
+    okapiClient.put(nodItemLocation, changedNodItem,
+      ResponseHandler.text(putItemCompleted));
+
+    Response putItemResponse = putItemCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(putItemResponse.getStatusCode(), is(400));
+    assertThat(putItemResponse.getBody(),
+      is("Barcode must be unique, 645398607547 is already assigned to another item"));
+  }
+
+  @Test
+  public void canChangeBarcodeForExistingItem()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    JsonObject nodInstance = createInstance(nod(UUID.randomUUID()));
+
+    JsonObject nodItem = createItem(nodInstance.getString("title"),
+      nodInstance.getString("id"), "654647774352");
+
+    JsonObject changedNodItem = nodItem.copy()
+      .put("barcode", "645398607547");
+
+    URL nodItemLocation = new URL(String.format("%s/%s",
+      ApiRoot.items(), changedNodItem.getString("id")));
+
+    CompletableFuture<Response> putItemCompleted = new CompletableFuture<>();
+
+    okapiClient.put(nodItemLocation, changedNodItem,
+        ResponseHandler.any(putItemCompleted));
+
+    Response putItemResponse = putItemCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(putItemResponse.getStatusCode(), is(204));
+
+    CompletableFuture<Response> getItemCompleted = new CompletableFuture<>();
+
+    okapiClient.get(nodItemLocation, ResponseHandler.json(getItemCompleted));
+
+    Response getItemResponse = getItemCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(getItemResponse.getStatusCode(), is(200));
+    assertThat(getItemResponse.getJson().getString("barcode"), is("645398607547"));
+  }
+
+  @Test
+  public void canRemoveBarcodeFromAnExistingItem()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    JsonObject nodInstance = createInstance(nod(UUID.randomUUID()));
+
+    JsonObject nodItem = createItem(nodInstance.getString("title"),
+      nodInstance.getString("id"), "654647774352");
+
+    JsonObject smallAngryInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
+
+    //Second item with no barcode, to ensure empty barcode doesn't match
+    createItem(smallAngryInstance.getString("title"),
+      smallAngryInstance.getString("id"), null);
+
+    JsonObject changedNodItem = nodItem.copy();
+
+    changedNodItem.remove("barcode");
+
+    URL nodItemLocation = new URL(String.format("%s/%s",
+      ApiRoot.items(), changedNodItem.getString("id")));
+
+    CompletableFuture<Response> putItemCompleted = new CompletableFuture<>();
+
+    okapiClient.put(nodItemLocation, changedNodItem,
+      ResponseHandler.any(putItemCompleted));
+
+    Response putItemResponse = putItemCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(putItemResponse.getStatusCode(), is(204));
+
+    CompletableFuture<Response> getItemCompleted = new CompletableFuture<>();
+
+    okapiClient.get(nodItemLocation, ResponseHandler.json(getItemCompleted));
+
+    Response getItemResponse = getItemCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(getItemResponse.getStatusCode(), is(200));
+    assertThat(getItemResponse.getJson().containsKey("barcode"), is(false));
+  }
+
+  private static void selfLinkRespectsWayResourceWasReached(JsonObject item) {
+    containsApiRoot(item.getJsonObject("links").getString("self"));
+  }
+
+  private static void containsApiRoot(String link) {
+    assertThat(link, containsString(ApiTestSuite.apiRoot()));
+  }
+
+  private void selfLinkShouldBeReachable(JsonObject item) {
+    try {
+      CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+
+      okapiClient.get(item.getJsonObject("links").getString("self"),
+        ResponseHandler.json(getCompleted));
+
+      Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+
+      assertThat(getResponse.getStatusCode(), is(200));
+    }
+    catch(Exception e) {
+      Assert.fail(e.toString());
     }
   }
 
-  private void hasConsistentPermanentLoanType(JsonObject item) {
-    hasConsistentLoanType(item.getJsonObject("permanentLoanType"))
+  private static void hasStatus(JsonObject item) {
+    assertThat(item.containsKey("status"), is(true));
+    assertThat(item.getJsonObject("status").containsKey("name"), is(true));
   }
 
-  private void hasConsistentTemporaryLoanType(JsonObject item) {
-    hasConsistentLoanType(item.getJsonObject("temporaryLoanType"))
+  private static void hasConsistentMaterialType(JsonObject item) {
+    JsonObject materialType = item.getJsonObject("materialType");
+
+    String materialTypeId = materialType.getString("id");
+
+    if (materialTypeId.equals(ApiTestSuite.getBookMaterialType())) {
+      assertThat(materialType.getString("id"), is(ApiTestSuite.getBookMaterialType()));
+      assertThat(materialType.getString("name"), is("Book"));
+
+    } else if (materialTypeId.equals(ApiTestSuite.getDvdMaterialType())) {
+      assertThat(materialType.getString("id"), is(ApiTestSuite.getDvdMaterialType()));
+      assertThat(materialType.getString("name"), is("DVD"));
+
+    } else {
+      assertThat(materialType.getString("id"), is(nullValue()));
+      assertThat(materialType.getString("name"), is(nullValue()));
+    }
   }
 
-  private void hasConsistentLoanType(JsonObject loanType) {
+  private static void hasConsistentPermanentLoanType(JsonObject item) {
+    hasConsistentLoanType(item.getJsonObject("permanentLoanType"));
+  }
+
+  private static void hasConsistentTemporaryLoanType(JsonObject item) {
+    hasConsistentLoanType(item.getJsonObject("temporaryLoanType"));
+  }
+
+  private static void hasConsistentLoanType(JsonObject loanType) {
     if(loanType == null) {
-      return
+      return;
     }
 
-    switch (loanType.getString("id")) {
-      case ApiTestSuite.canCirculateLoanType:
-        assert loanType.getString("id") == ApiTestSuite.canCirculateLoanType
-        assert loanType.getString("name") == "Can Circulate"
-        break
+    String loanTypeId = loanType.getString("id");
 
-      case ApiTestSuite.courseReserveLoanType:
-        assert loanType.getString("id") == ApiTestSuite.courseReserveLoanType
-        assert loanType.getString("name") == "Course Reserves"
-        break
+    if (loanTypeId.equals(ApiTestSuite.getCanCirculateLoanType())) {
+      assertThat(loanType.getString("id"), is(ApiTestSuite.getCanCirculateLoanType()));
+      assertThat(loanType.getString("name"), is("Can Circulate"));
 
-      default:
-        assert loanType.getString("id") == null
-        assert loanType.getString("name") == null
+    } else if (loanTypeId.equals(ApiTestSuite.getCourseReserveLoanType())) {
+      assertThat(loanType.getString("id"), is(ApiTestSuite.getCourseReserveLoanType()));
+      assertThat(loanType.getString("name"), is("Course Reserves"));
+
+    } else {
+      assertThat(loanType.getString("id"), is(nullValue()));
+      assertThat(loanType.getString("name"), is(nullValue()));
     }
   }
 
-  private void hasConsistentPermanentLocation(JsonObject item) {
-    hasConsistentLocation(item.getJsonObject("permanentLocation"))
+  private static void hasConsistentPermanentLocation(JsonObject item) {
+    hasConsistentLocation(item.getJsonObject("permanentLocation"));
   }
 
-  private void hasConsistentTemporaryLocation(JsonObject item) {
-    hasConsistentLocation(item.getJsonObject("temporaryLocation"))
+  private static void hasConsistentTemporaryLocation(JsonObject item) {
+    hasConsistentLocation(item.getJsonObject("temporaryLocation"));
   }
 
-  private void hasConsistentLocation(JsonObject location) {
+  private static void hasConsistentLocation(JsonObject location) {
     if(location == null) {
-      return
+      return;
     }
 
-    switch (location.getString("id")) {
-      case ApiTestSuite.mainLibraryLocation:
-        assert location.getString("id") == ApiTestSuite.mainLibraryLocation
-        assert location.getString("name") == "Main Library"
-        break
+    String locationId = location.getString("id");
 
-      case ApiTestSuite.annexLocation:
-        assert location.getString("id") == ApiTestSuite.annexLocation
-        assert location.getString("name") == "Annex Library"
-        break
+    if (locationId.equals(ApiTestSuite.getMainLibraryLocation())) {
+      assertThat(location.getString("id"), is(ApiTestSuite.getMainLibraryLocation()));
+      assertThat(location.getString("name"), is("Main Library"));
 
-      default:
-        assert location.getString("id") == null
-        assert location.getString("name") == null
+    } else if (locationId.equals(ApiTestSuite.getAnnexLocation())) {
+      assertThat(location.getString("id"), is(ApiTestSuite.getAnnexLocation()));
+      assertThat(location.getString("name"), is("Annex Library"));
+
+    } else {
+      assertThat(location.getString("id"), is(nullValue()));
+      assertThat(location.getString("name"), is(nullValue()));
     }
   }
 
-  private def createInstance(JsonObject newInstanceRequest) {
-    InstanceApiClient.createInstance(okapiClient, newInstanceRequest)
+  private JsonObject createInstance(JsonObject newInstanceRequest)
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    return InstanceApiClient.createInstance(okapiClient, newInstanceRequest);
   }
 
-  private JsonObject createItem(String title, String instanceId, String barcode) {
-    createItem(title, instanceId, barcode, bookMaterialType(), canCirculateLoanType(), null)
+  private JsonObject createItem(String title, String instanceId, String barcode)
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    return createItem(title, instanceId, barcode, bookMaterialType(),
+      canCirculateLoanType(), null);
   }
 
   private JsonObject createItem(
@@ -1022,67 +1032,71 @@ class ItemApiExamples extends Specification {
     String barcode,
     JsonObject materialType,
     JsonObject permanentLoanType,
-    JsonObject temporaryLoanType) {
+    JsonObject temporaryLoanType)
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
 
-    def newItemRequest = new JsonObject()
+    JsonObject newItemRequest = new JsonObject()
       .put("title", title)
       .put("instanceId", instanceId)
       .put("status", new JsonObject().put("name", "Available"))
       .put("permanentLocation", permanentLocation())
-      .put("temporaryLocation", temporaryLocation())
+      .put("temporaryLocation", temporaryLocation());
 
     if(barcode != null) {
-      newItemRequest.put("barcode", barcode)
+      newItemRequest.put("barcode", barcode);
     }
 
     if(materialType != null) {
-      newItemRequest.put("materialType", materialType)
+      newItemRequest.put("materialType", materialType);
     }
 
     if(permanentLoanType != null) {
-      newItemRequest.put("permanentLoanType", permanentLoanType)
+      newItemRequest.put("permanentLoanType", permanentLoanType);
     }
 
     if(temporaryLoanType != null) {
-      newItemRequest.put("temporaryLoanType", temporaryLoanType)
+      newItemRequest.put("temporaryLoanType", temporaryLoanType);
     }
 
-    ItemApiClient.createItem(okapiClient, newItemRequest)
+    return ItemApiClient.createItem(okapiClient, newItemRequest);
   }
 
-  private JsonObject bookMaterialType() {
-    new JsonObject()
-      .put("id", "${ApiTestSuite.bookMaterialType}")
-      .put("name", "Book")
+  private static JsonObject bookMaterialType() {
+    return new JsonObject()
+      .put("id", ApiTestSuite.getBookMaterialType())
+      .put("name", "Book");
   }
 
-  private JsonObject dvdMaterialType() {
-    new JsonObject()
-      .put("id", "${ApiTestSuite.dvdMaterialType}")
-      .put("name", "DVD")
+  private static JsonObject dvdMaterialType() {
+    return new JsonObject()
+      .put("id", ApiTestSuite.getDvdMaterialType())
+      .put("name", "DVD");
   }
 
-  private JsonObject canCirculateLoanType() {
-    new JsonObject()
-      .put("id", "${ApiTestSuite.canCirculateLoanType}")
-      .put("name", "Can Circulate")
+  private static JsonObject canCirculateLoanType() {
+    return new JsonObject()
+      .put("id", ApiTestSuite.getCanCirculateLoanType())
+      .put("name", "Can Circulate");
   }
 
-  private JsonObject courseReservesLoanType() {
-    new JsonObject()
-      .put("id", "${ApiTestSuite.courseReserveLoanType}")
-      .put("name", "Course Reserves")
+  private static JsonObject courseReservesLoanType() {
+    return new JsonObject()
+      .put("id", ApiTestSuite.getCourseReserveLoanType())
+      .put("name", "Course Reserves");
   }
 
-  private JsonObject temporaryLocation() {
-		new JsonObject()
-			.put("id", "${ApiTestSuite.annexLocationId}")
-			.put("name", "Annex Library")
+  private static JsonObject temporaryLocation() {
+		return new JsonObject()
+			.put("id", ApiTestSuite.getAnnexLocation())
+			.put("name", "Annex Library");
   }
 
-  private JsonObject permanentLocation() {
-		new JsonObject()
-			.put("id", "${ApiTestSuite.mainLibraryLocationId}")
-			.put("name", "Main Library")
+  private static JsonObject permanentLocation() {
+		return new JsonObject()
+			.put("id", ApiTestSuite.getMainLibraryLocation())
+			.put("name", "Main Library");
 	}
 }

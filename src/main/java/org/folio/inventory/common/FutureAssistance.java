@@ -3,7 +3,7 @@ package org.folio.inventory.common;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
 
-import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -23,7 +23,7 @@ public class FutureAssistance {
     future.get(2000, TimeUnit.MILLISECONDS);
   }
 
-  public static Consumer<Void> complete(final CompletableFuture future) {
+  public static Consumer<Success<Void>> complete(final CompletableFuture<Success<Void>> future) {
     return v -> future.complete(null);
   }
 
@@ -36,7 +36,7 @@ public class FutureAssistance {
   }
 
   public static <T> CompletableFuture<Void> allOf(
-    ArrayList<CompletableFuture<T>> allFutures) {
+    List<CompletableFuture<T>> allFutures) {
 
     return CompletableFuture.allOf(allFutures.toArray(new CompletableFuture<?>[] { }));
   }

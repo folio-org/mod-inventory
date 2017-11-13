@@ -12,17 +12,8 @@ import java.util.function.Consumer;
 public class WaitForAllFutures<T> {
   private ArrayList<CompletableFuture<T>> allFutures = new ArrayList<CompletableFuture<T>>();
 
-  public Consumer<Void> notifyComplete() {
-    CompletableFuture newFuture = new CompletableFuture();
-
-    allFutures.add(newFuture);
-
-    return FutureAssistance.complete(newFuture);
-  }
-
-  public Consumer<Success> notifySuccess() {
-
-    CompletableFuture newFuture = new CompletableFuture();
+  public Consumer<Success<T>> notifySuccess() {
+    CompletableFuture<T> newFuture = new CompletableFuture<>();
 
     allFutures.add(newFuture);
 

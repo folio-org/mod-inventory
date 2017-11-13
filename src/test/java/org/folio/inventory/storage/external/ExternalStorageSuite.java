@@ -1,87 +1,74 @@
-package org.folio.inventory.storage.external
+package org.folio.inventory.storage.external;
 
-import io.vertx.core.Vertx
-import org.folio.inventory.common.VertxAssistant
-import org.folio.inventory.storage.external.support.FakeInventoryStorageModule
-import org.junit.AfterClass
-import org.junit.BeforeClass
-import org.junit.runner.RunWith
-import org.junit.runners.Suite
+import io.vertx.core.Vertx;
+import org.folio.inventory.common.VertxAssistant;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
+import support.fakes.FakeOkapi;
 
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit
-import java.util.function.Function
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
 
 @RunWith(Suite.class)
-
-@Suite.SuiteClasses([
+@Suite.SuiteClasses({
   ExternalItemCollectionExamples.class,
   ExternalInstanceCollectionExamples.class
-])
-
+})
 public class ExternalStorageSuite {
   private static final VertxAssistant vertxAssistant = new VertxAssistant();
-  private static String storageModuleDeploymentId
+  private static String storageModuleDeploymentId;
 
   public static <T> T useVertx(Function<Vertx, T> action) {
-    vertxAssistant.createUsingVertx(action)
+    return vertxAssistant.createUsingVertx(action);
   }
 
-  static String getItemStorageAddress() {
-    if(!useFakeStorageModule()) {
-      System.getProperty("inventory.storage.address")
+  public static String getStorageAddress() {
+    if (!useFakeStorageModule()) {
+      return System.getProperty("inventory.storage.address");
+    } else {
+      return FakeOkapi.getAddress();
     }
-    else {
-      FakeInventoryStorageModule.address
-    }
-  }
-
-  static String getInstanceStorageAddress() {
-    if(!useFakeStorageModule()) {
-      System.getProperty("inventory.storage.address")
-    }
-    else {
-      FakeInventoryStorageModule.address
-    }
-  }
-
-  static Collection<String> getExpectedTenants() {
-    ["test_tenant_1", "test_tenant_2"]
   }
 
   @BeforeClass
-  static void beforeAll() {
-    vertxAssistant.start()
+  public static void beforeAll()
+    throws InterruptedException, ExecutionException, TimeoutException {
+    vertxAssistant.start();
 
-    if(useFakeStorageModule()) {
-      println("Starting Fake Storage Module")
+    if (useFakeStorageModule()) {
+      System.out.println("Starting Fake Storage Module");
 
-      def deployed = new CompletableFuture()
+      CompletableFuture<String> deployed = new CompletableFuture<>();
 
-      vertxAssistant.deployGroovyVerticle(
-        FakeInventoryStorageModule.class.name,
-        ["expectedTenants": expectedTenants],
-        deployed)
+      vertxAssistant.deployVerticle(FakeOkapi.class.getName(), new HashMap<>(),
+        deployed);
 
-      storageModuleDeploymentId = deployed.get(20000, TimeUnit.MILLISECONDS)
+      storageModuleDeploymentId = deployed.get(20000, TimeUnit.MILLISECONDS);
     }
   }
 
   private static boolean useFakeStorageModule() {
-      System.getProperty('inventory.storage.use', "fake") == "fake"
+    return System.getProperty("inventory.storage.use", "fake").equals("fake");
   }
 
-  @AfterClass()
-  static void afterAll() {
+  @AfterClass
+  public static void afterAll()
+    throws InterruptedException, ExecutionException, TimeoutException {
 
-    if(useFakeStorageModule()) {
-      def undeployed = new CompletableFuture()
+    if (useFakeStorageModule()) {
+      CompletableFuture<Void> undeployed = new CompletableFuture<>();
 
-      vertxAssistant.undeployVerticle(storageModuleDeploymentId, undeployed)
+      vertxAssistant.undeployVerticle(storageModuleDeploymentId, undeployed);
 
-      undeployed.get(20000, TimeUnit.MILLISECONDS)
+      undeployed.get(20000, TimeUnit.MILLISECONDS);
     }
 
-    vertxAssistant.stop()
+    vertxAssistant.stop();
   }
 }

@@ -1,125 +1,143 @@
-package org.folio.inventory.storage.memory
+package org.folio.inventory.storage.memory;
 
-import org.folio.inventory.common.api.request.PagingParameters
-import org.folio.inventory.common.domain.MultipleRecords
-import org.folio.inventory.resources.ingest.IngestJob
-import org.folio.inventory.resources.ingest.IngestJobState
-import org.junit.Before
-import org.junit.Test
+import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.resources.ingest.IngestJob;
+import org.folio.inventory.resources.ingest.IngestJobState;
+import org.junit.Before;
+import org.junit.Test;
 
-import java.util.concurrent.CompletableFuture
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
-import static org.folio.inventory.common.FutureAssistance.*
+import static org.folio.inventory.common.FutureAssistance.*;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.junit.Assert.assertThat;
 
-class InMemoryIngestJobCollectionExamples {
+public class InMemoryIngestJobCollectionExamples {
 
-  private final InMemoryIngestJobCollection collection = new InMemoryIngestJobCollection()
+  private final InMemoryIngestJobCollection collection = new InMemoryIngestJobCollection();
 
   @Before
-  public void before() {
-    def emptied = new CompletableFuture()
+  public void before()
+    throws InterruptedException, ExecutionException, TimeoutException {
 
-    collection.empty(succeed(emptied), fail(emptied))
+    CompletableFuture<Success<Void>> emptied = new CompletableFuture<>();
 
-    waitForCompletion(emptied)
+    collection.empty(complete(emptied), fail(emptied));
+
+    waitForCompletion(emptied);
   }
 
   @Test
-  void jobsCanBeAdded() {
-    def addFuture = new CompletableFuture<IngestJob>()
+  public void jobsCanBeAdded()
+    throws InterruptedException, ExecutionException, TimeoutException {
+
+    CompletableFuture<IngestJob> addFuture = new CompletableFuture<>();
 
     collection.add(new IngestJob(IngestJobState.REQUESTED),
-      succeed(addFuture), fail(addFuture))
+      succeed(addFuture), fail(addFuture));
 
-    waitForCompletion(addFuture)
+    waitForCompletion(addFuture);
 
-    def findFuture = new CompletableFuture<MultipleRecords<IngestJob>>()
+    CompletableFuture<MultipleRecords<IngestJob>> findFuture = new CompletableFuture<>();
 
     collection.findAll(PagingParameters.defaults(), succeed(findFuture),
-      fail(findFuture))
+      fail(findFuture));
 
-    def allJobsWrapped = getOnCompletion(findFuture)
+    MultipleRecords<IngestJob> allJobsWrapped = getOnCompletion(findFuture);
 
-    def allJobs = allJobsWrapped.records
+    List<IngestJob> allJobs = allJobsWrapped.records;
 
-    assert allJobs.size() == 1
+    assertThat(allJobs.size(), is(1));
 
-    assert allJobs.every { it.id != null }
-    assert allJobs.every { it.state == IngestJobState.REQUESTED }
+    allJobs.stream().forEach(job -> assertThat(job.id, is(notNullValue())));
+    allJobs.stream().forEach(job -> assertThat(job.state, is(IngestJobState.REQUESTED)));
   }
 
   @Test
-  void jobsCanBeFoundById() {
-    def addFuture = new CompletableFuture<IngestJob>()
+  public void jobsCanBeFoundById()
+    throws InterruptedException, ExecutionException, TimeoutException {
+
+    CompletableFuture<IngestJob> addFuture = new CompletableFuture<>();
 
     collection.add(new IngestJob(IngestJobState.REQUESTED),
-      succeed(addFuture), fail(addFuture))
+      succeed(addFuture), fail(addFuture));
 
-    def added = getOnCompletion(addFuture)
+    IngestJob added = getOnCompletion(addFuture);
 
-    def findFuture = new CompletableFuture<IngestJob>()
+    CompletableFuture<IngestJob> findFuture = new CompletableFuture<>();
 
-    collection.findById(added.id, succeed(findFuture), fail(findFuture))
+    collection.findById(added.id, succeed(findFuture), fail(findFuture));
 
-    def found = getOnCompletion(findFuture)
+    IngestJob found = getOnCompletion(findFuture);
 
-    assert found.id == added.id
-    assert found.state == IngestJobState.REQUESTED
+    assertThat(found.id, is(added.id));
+    assertThat(found.state, is(IngestJobState.REQUESTED));
   }
 
   @Test
-  void jobStateCanBeUpdated() {
-    def addFuture = new CompletableFuture<IngestJob>()
+  public void jobStateCanBeUpdated()
+    throws InterruptedException, ExecutionException, TimeoutException {
+
+    CompletableFuture<IngestJob> addFuture = new CompletableFuture<>();
 
     collection.add(new IngestJob(IngestJobState.REQUESTED),
-      succeed(addFuture), fail(addFuture))
+      succeed(addFuture), fail(addFuture));
 
-    def added = getOnCompletion(addFuture)
+    IngestJob added = getOnCompletion(addFuture);
 
-    def completed = added.complete()
+    IngestJob completed = added.complete();
 
-    def updateFuture = new CompletableFuture<IngestJob>()
+    CompletableFuture<Void> updateFuture = new CompletableFuture<>();
 
     collection.update(completed, succeed(updateFuture),
-      fail(updateFuture))
+      fail(updateFuture));
 
-    waitForCompletion(updateFuture)
+    waitForCompletion(updateFuture);
 
-    def findFuture = new CompletableFuture<IngestJob>()
+    CompletableFuture<IngestJob> findFuture = new CompletableFuture<>();
 
-    collection.findById(added.id, succeed(findFuture), fail(findFuture))
+    collection.findById(added.id, succeed(findFuture), fail(findFuture));
 
-    def found = getOnCompletion(findFuture)
+    IngestJob found = getOnCompletion(findFuture);
 
-    assert found.state == IngestJobState.COMPLETED
+    assertThat(found.state, is(IngestJobState.COMPLETED));
   }
 
   @Test
-  void singleJobWithSameIdFollowingUpdate() {
-    def addFuture = new CompletableFuture<IngestJob>()
+  public void singleJobWithSameIdFollowingUpdate()
+    throws InterruptedException, ExecutionException, TimeoutException {
+
+    CompletableFuture<IngestJob> addFuture = new CompletableFuture<>();
 
     collection.add(new IngestJob(IngestJobState.REQUESTED),
-      succeed(addFuture), fail(addFuture))
+      succeed(addFuture), fail(addFuture));
 
-    def added = getOnCompletion(addFuture)
+    IngestJob added = getOnCompletion(addFuture);
 
-    def completed = added.complete()
+    IngestJob completed = added.complete();
 
-    def updateFuture = new CompletableFuture<Void>()
+    CompletableFuture<Void> updateFuture = new CompletableFuture<>();
 
-    collection.update(completed, succeed(updateFuture), fail(updateFuture))
+    collection.update(completed, succeed(updateFuture), fail(updateFuture));
 
-    waitForCompletion(updateFuture)
+    waitForCompletion(updateFuture);
 
-    def findAllFuture = new CompletableFuture<MultipleRecords<IngestJob>>()
+    CompletableFuture<MultipleRecords<IngestJob>> findAllFuture = new CompletableFuture<>();
 
     collection.findAll(PagingParameters.defaults(), succeed(findAllFuture),
-      fail(findAllFuture))
+      fail(findAllFuture));
 
-    def allJobsWrapped = getOnCompletion(findAllFuture)
+    MultipleRecords<IngestJob> allJobsWrapped = getOnCompletion(findAllFuture);
 
-    def allJobs = allJobsWrapped.records
+    List<IngestJob> allJobs = allJobsWrapped.records;
 
-    assert allJobs.count({ it.id == added.id }) == 1
+    assertThat(allJobs.size(), is(1));
+    assertThat(allJobs.stream().findFirst().get().id, is(added.id));
   }
 }

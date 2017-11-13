@@ -1,269 +1,326 @@
-package api
+package api;
 
-import api.support.ControlledVocabularyPreparation
-import org.folio.inventory.InventoryVerticle
-import org.folio.inventory.common.VertxAssistant
-import org.folio.inventory.support.http.client.OkapiHttpClient
-import org.junit.AfterClass
-import org.junit.BeforeClass
-import org.junit.runner.RunWith
-import org.junit.runners.Suite
-import support.fakes.FakeOkapi
+import api.support.ControlledVocabularyPreparation;
+import io.vertx.core.Vertx;
+import org.folio.inventory.InventoryVerticle;
+import org.folio.inventory.common.VertxAssistant;
+import org.folio.inventory.support.http.client.OkapiHttpClient;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
+import support.fakes.FakeOkapi;
 
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 @RunWith(Suite.class)
-
-@Suite.SuiteClasses([
+@Suite.SuiteClasses({
   InstancesApiExamples.class,
   ItemApiExamples.class,
   ModsIngestExamples.class
-])
+})
+public class ApiTestSuite {
+  public static final int INVENTORY_VERTICLE_TEST_PORT = 9603;
+  public static final String TENANT_ID = "test_tenant";
 
-class ApiTestSuite {
-  public static final INVENTORY_VERTICLE_TEST_PORT = 9603
-  public static final String TENANT_ID = "test_tenant"
+  public static final String TOKEN = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsInRlbmFudCI6ImRlbW9fdGVuYW50In0.29VPjLI6fLJzxQW0UhQ0jsvAn8xHz501zyXAxRflXfJ9wuDzT8TDf-V75PjzD7fe2kHjSV2dzRXbstt3BTtXIQ";
 
-  public static final String TOKEN = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsInRlbmFudCI6ImRlbW9fdGVuYW50In0.29VPjLI6fLJzxQW0UhQ0jsvAn8xHz501zyXAxRflXfJ9wuDzT8TDf-V75PjzD7fe2kHjSV2dzRXbstt3BTtXIQ"
+  private static String bookMaterialTypeId;
+  private static String dvdMaterialTypeId;
 
-  private static String bookMaterialTypeId
-  private static String dvdMaterialTypeId
+  private static String canCirculateLoanTypeId;
+  private static String courseReserveLoanTypeId;
 
-  private static String canCirculateLoanTypeId
-  private static String courseReserveLoanTypeId
+  private static String mainLibraryLocationId;
+  private static String annexLocationId;
 
-  private static String mainLibraryLocationId
-  private static String annexLocationId
-
-  public static String isbnIdentifierTypeId;
-  public static String asinIdentifierTypeId;
-  public static String booksInstanceTypeId;
-  public static String personalCreatorTypeId;
+  private static String isbnIdentifierTypeId;
+  private static String asinIdentifierTypeId;
+  private static String booksInstanceTypeId;
+  private static String personalCreatorTypeId;
 
   private static VertxAssistant vertxAssistant = new VertxAssistant();
-  private static String inventoryModuleDeploymentId
-  private static String fakeModulesDeploymentId
+  private static String inventoryModuleDeploymentId;
+  private static String fakeModulesDeploymentId;
 
   private static Boolean useOkapiForApiRequests =
-    (System.getProperty("use.okapi.initial.requests") ?: "").toBoolean()
+    Boolean.parseBoolean(System.getProperty("use.okapi.initial.requests", ""));
   private static Boolean useOkapiForStorageRequests =
-    (System.getProperty("use.okapi.storage.requests") ?: "").toBoolean()
-  private static String okapiAddress = System.getProperty("okapi.address", "")
+    Boolean.parseBoolean(System.getProperty("use.okapi.storage.requests", ""));
+  private static String okapiAddress = System.getProperty("okapi.address", "");
 
   @BeforeClass
-  static void before() {
+  public static void before()
+    throws InterruptedException,
+    ExecutionException,
+    TimeoutException,
+    MalformedURLException {
 
-    println("Use Okapi For Initial Requests:" + System.getProperty("use.okapi.initial.requests"))
-    println("Use Okapi For Storage Requests:" + System.getProperty("use.okapi.storage.requests"))
+    System.out.println(String.format("Use Okapi For Initial Requests:%s",
+      System.getProperty("use.okapi.initial.requests")));
 
-    startVertx()
-    startFakeModules()
-    createMaterialTypes()
-    createLoanTypes()
-    createLocations()
-    createIdentifierTypes()
-    createInstanceTypes()
-    createCreatorTypes()
-    startInventoryVerticle()
+    System.out.println(String.format("Use Okapi For Storage Requests:%s",
+      System.getProperty("use.okapi.storage.requests")));
+
+    startVertx();
+    startFakeModules();
+    createMaterialTypes();
+    createLoanTypes();
+    createLocations();
+    createIdentifierTypes();
+    createInstanceTypes();
+    createCreatorTypes();
+    startInventoryVerticle();
   }
 
   @AfterClass
-  static void after() {
-    stopInventoryVerticle()
-    stopFakeModules()
-    stopVertx()
+  public static void after()
+    throws InterruptedException, ExecutionException, TimeoutException {
+
+    stopInventoryVerticle();
+    stopFakeModules();
+    stopVertx();
+  };
+
+  public static String getBookMaterialType() {
+    return bookMaterialTypeId;
   }
 
-  static String getBookMaterialType() {
-    bookMaterialTypeId
+  public static String getDvdMaterialType() {
+    return dvdMaterialTypeId;
   }
 
-  static String getDvdMaterialType() {
-    dvdMaterialTypeId
+  public static String getCanCirculateLoanType() {
+    return canCirculateLoanTypeId;
   }
 
-  static String getCanCirculateLoanType() {
-    canCirculateLoanTypeId
+  public static String getCourseReserveLoanType() {
+    return courseReserveLoanTypeId;
   }
 
-  static String getCourseReserveLoanType() {
-    courseReserveLoanTypeId
+  public static String getMainLibraryLocation() {
+		return mainLibraryLocationId;
   }
 
-  static String getMainLibraryLocation() {
-		mainLibraryLocationId
-  }
-
-  static String getAnnexLocation() {
-		annexLocationId
+  public static String getAnnexLocation() {
+		return annexLocationId;
 	}
 
-  static String getIsbnIdentifierType() {
-    isbnIdentifierTypeId
+  public static String getIsbnIdentifierType() {
+    return isbnIdentifierTypeId;
   }
 
-  static String getAsinIdentifierType() {
-    asinIdentifierTypeId
+  public static String getAsinIdentifierType() {
+    return asinIdentifierTypeId;
   }
 
-  static String getBooksInstanceType() {
-    booksInstanceTypeId
+  public static String getBooksInstanceType() {
+    return booksInstanceTypeId;
   }
 
-  static String getPersonalCreatorType() {
-    personalCreatorTypeId
+  public static String getPersonalCreatorType() {
+    return personalCreatorTypeId;
   }
 
-  static OkapiHttpClient createOkapiHttpClient() {
+  public static OkapiHttpClient createOkapiHttpClient()
+    throws MalformedURLException {
+
     return new OkapiHttpClient(
-      vertxAssistant.createUsingVertx({ it.createHttpClient() }),
-      new URL(storageOkapiUrl()), TENANT_ID, TOKEN, {
+      vertxAssistant.createUsingVertx(Vertx::createHttpClient),
+      new URL(storageOkapiUrl()), TENANT_ID, TOKEN, it ->
       System.out.println(
         String.format("Request failed: %s",
-          it.toString())) })
+          it.toString())));
   }
 
   static String storageOkapiUrl() {
     if(useOkapiForStorageRequests) {
-      okapiAddress
+      return okapiAddress;
     }
     else {
-      FakeOkapi.address
+      return FakeOkapi.getAddress();
     }
   }
 
-  static String apiRoot() {
-    def directRoot = "http://localhost:${ApiTestSuite.INVENTORY_VERTICLE_TEST_PORT}"
+  public static String apiRoot() {
+    String directRoot = String.format("http://localhost:%s",
+      ApiTestSuite.INVENTORY_VERTICLE_TEST_PORT);
 
-    useOkapiForApiRequests ? okapiAddress : directRoot
+    return useOkapiForApiRequests ? okapiAddress : directRoot;
   }
 
-  private static stopVertx() {
-    vertxAssistant.stop()
+  private static void stopVertx() {
+    vertxAssistant.stop();
   }
 
-  private static startVertx() {
-    vertxAssistant.start()
+  private static void startVertx() {
+    vertxAssistant.start();
   }
 
-  private static startInventoryVerticle() {
-    def deployed = new CompletableFuture()
+  private static void startInventoryVerticle()
+    throws InterruptedException, ExecutionException, TimeoutException {
 
-    def storageType = "okapi"
-    def storageLocation = ""
+    CompletableFuture<String> deployed = new CompletableFuture<>();
 
-    println("Storage Type: ${storageType}")
-    println("Storage Location: ${storageLocation}")
+    String storageType = "okapi";
+    String storageLocation = "";
 
-    def config = ["port": INVENTORY_VERTICLE_TEST_PORT,
-                  "storage.type" : storageType,
-                  "storage.location" : storageLocation]
+    System.out.println(String.format("Storage Type: %s", storageType));
+    System.out.println(String.format("Storage Location: %s", storageLocation));
+
+    Map<String, Object> config = new HashMap<>();
+
+    config.put("port", INVENTORY_VERTICLE_TEST_PORT);
+    config.put("storage.type", storageType);
+    config.put("storage.location", storageLocation);
 
     vertxAssistant.deployVerticle(
-      InventoryVerticle.class.name, config,  deployed)
+      InventoryVerticle.class.getName(), config, deployed);
 
-    inventoryModuleDeploymentId = deployed.get(20000, TimeUnit.MILLISECONDS)
+    inventoryModuleDeploymentId = deployed.get(20000, TimeUnit.MILLISECONDS);
   }
 
-  private static stopInventoryVerticle() {
-    def undeployed = new CompletableFuture()
+  private static void stopInventoryVerticle()
+    throws InterruptedException, ExecutionException, TimeoutException {
+
+    CompletableFuture<Void> undeployed = new CompletableFuture<>();
 
     if(inventoryModuleDeploymentId != null) {
-      vertxAssistant.undeployVerticle(inventoryModuleDeploymentId, undeployed)
+      vertxAssistant.undeployVerticle(inventoryModuleDeploymentId, undeployed);
 
-      undeployed.get(20000, TimeUnit.MILLISECONDS)
+      undeployed.get(20000, TimeUnit.MILLISECONDS);
     }
   }
 
-  private static startFakeModules() {
+  private static void startFakeModules()
+    throws InterruptedException, ExecutionException, TimeoutException {
+
     if(!useOkapiForStorageRequests) {
-      def fakeModulesDeployed = new CompletableFuture<>();
+      CompletableFuture<String> fakeModulesDeployed = new CompletableFuture<>();
 
         vertxAssistant.deployVerticle(FakeOkapi.class.getName(),
-          [:], fakeModulesDeployed);
+          new HashMap<>(), fakeModulesDeployed);
 
       fakeModulesDeploymentId = fakeModulesDeployed.get(10, TimeUnit.SECONDS);
     }
   }
 
-  private static stopFakeModules() {
+  private static void stopFakeModules()
+    throws InterruptedException, ExecutionException, TimeoutException {
+
     if(!useOkapiForStorageRequests && fakeModulesDeploymentId != null) {
-      def undeployed = new CompletableFuture()
+      CompletableFuture<Void> undeployed = new CompletableFuture<>();
 
-      vertxAssistant.undeployVerticle(fakeModulesDeploymentId, undeployed)
+      vertxAssistant.undeployVerticle(fakeModulesDeploymentId, undeployed);
 
-      undeployed.get(20000, TimeUnit.MILLISECONDS)
+      undeployed.get(20000, TimeUnit.MILLISECONDS);
     }
   }
 
-  private static def createMaterialTypes() {
-    def client = createOkapiHttpClient()
+  private static void createMaterialTypes()
+    throws MalformedURLException,
+    InterruptedException,
+    ExecutionException,
+    TimeoutException {
 
-    def materialTypesUrl = new URL("${storageOkapiUrl()}/material-types")
+    OkapiHttpClient client = createOkapiHttpClient();
 
-    def materialTypePreparation = new ControlledVocabularyPreparation(client,
-      materialTypesUrl, "mtypes")
+    URL materialTypesUrl = new URL(String.format("%s/material-types", storageOkapiUrl()));
 
-    bookMaterialTypeId = materialTypePreparation.createOrReferenceTerm("Book")
-    dvdMaterialTypeId = materialTypePreparation.createOrReferenceTerm("DVD")
+    ControlledVocabularyPreparation materialTypePreparation =
+      new ControlledVocabularyPreparation(client, materialTypesUrl, "mtypes");
+
+    bookMaterialTypeId = materialTypePreparation.createOrReferenceTerm("Book");
+    dvdMaterialTypeId = materialTypePreparation.createOrReferenceTerm("DVD");
   }
 
-  private static def createLoanTypes() {
-    def client = createOkapiHttpClient()
+  private static void createLoanTypes()
+    throws MalformedURLException,
+    InterruptedException,
+    ExecutionException,
+    TimeoutException {
 
-    def materialTypesUrl = new URL("${storageOkapiUrl()}/loan-types")
+    OkapiHttpClient client = createOkapiHttpClient();
 
-    def loanTypePreparation = new ControlledVocabularyPreparation(client,
-      materialTypesUrl, "loantypes")
+    URL loanTypes = new URL(String.format("%s/loan-types", storageOkapiUrl()));
 
-    canCirculateLoanTypeId = loanTypePreparation.createOrReferenceTerm("Can Circulate")
-    courseReserveLoanTypeId = loanTypePreparation.createOrReferenceTerm("Course Reserves")
+    ControlledVocabularyPreparation loanTypePreparation =
+      new ControlledVocabularyPreparation(client, loanTypes, "loantypes");
+
+    canCirculateLoanTypeId = loanTypePreparation.createOrReferenceTerm("Can Circulate");
+    courseReserveLoanTypeId = loanTypePreparation.createOrReferenceTerm("Course Reserves");
   }
 
-  private static def createLocations() {
-		def client = createOkapiHttpClient()
+  private static void createLocations()
+    throws MalformedURLException,
+    InterruptedException,
+    ExecutionException,
+    TimeoutException {
 
-		def locationsUrl = new URL("${storageOkapiUrl()}/shelf-locations")
+    OkapiHttpClient client = createOkapiHttpClient();
 
-		def locationPreparation = new ControlledVocabularyPreparation(client,
-			locationsUrl, "shelflocations")
+    URL locationsUrl = new URL(String.format("%s/shelf-locations", storageOkapiUrl()));
 
-		mainLibraryLocationId = locationPreparation.createOrReferenceTerm("Main Library")
-		annexLocationId = locationPreparation.createOrReferenceTerm("Annex Library")
+		ControlledVocabularyPreparation locationPreparation =
+      new ControlledVocabularyPreparation(client, locationsUrl, "shelflocations");
+
+		mainLibraryLocationId = locationPreparation.createOrReferenceTerm("Main Library");
+		annexLocationId = locationPreparation.createOrReferenceTerm("Annex Library");
   }
 
-  private static def createIdentifierTypes() {
-    def client = createOkapiHttpClient()
+  private static void createIdentifierTypes()
+    throws MalformedURLException,
+    InterruptedException,
+    ExecutionException,
+    TimeoutException {
 
-    def identifierTypesUrl = new URL("${storageOkapiUrl()}/identifier-types")
+    OkapiHttpClient client = createOkapiHttpClient();
 
-    def identifierTypesPreparation = new ControlledVocabularyPreparation(client,
-      identifierTypesUrl, "identifierTypes")
+    URL identifierTypesUrl = new URL(String.format("%s/identifier-types", storageOkapiUrl()));
 
-    isbnIdentifierTypeId = identifierTypesPreparation.createOrReferenceTerm("ISBN")
-    asinIdentifierTypeId = identifierTypesPreparation.createOrReferenceTerm("ASIN")
+    ControlledVocabularyPreparation identifierTypesPreparation =
+      new ControlledVocabularyPreparation(client, identifierTypesUrl, "identifierTypes");
+
+    isbnIdentifierTypeId = identifierTypesPreparation.createOrReferenceTerm("ISBN");
+    asinIdentifierTypeId = identifierTypesPreparation.createOrReferenceTerm("ASIN");
   }
 
-  private static def createInstanceTypes() {
-    def client = createOkapiHttpClient()
+  private static void createInstanceTypes()
+    throws MalformedURLException,
+      InterruptedException,
+      ExecutionException,
+      TimeoutException {
 
-    def instanceTypes = new URL("${storageOkapiUrl()}/instance-types")
+    OkapiHttpClient client = createOkapiHttpClient();
 
-    def instanceTypesPreparation = new ControlledVocabularyPreparation(client,
-      instanceTypes, "instanceTypes")
+    URL instanceTypes = new URL(String.format("%s/instance-types", storageOkapiUrl()));
 
-    booksInstanceTypeId = instanceTypesPreparation.createOrReferenceTerm("Books")
+    ControlledVocabularyPreparation instanceTypesPreparation =
+      new ControlledVocabularyPreparation(client, instanceTypes, "instanceTypes");
+
+    booksInstanceTypeId = instanceTypesPreparation.createOrReferenceTerm("Books");
   }
 
-  private static def createCreatorTypes() {
-    def client = createOkapiHttpClient()
+  private static void createCreatorTypes()
+    throws MalformedURLException,
+    InterruptedException,
+    ExecutionException,
+    TimeoutException {
 
-    def creatorTypes = new URL("${storageOkapiUrl()}/creator-types")
+    OkapiHttpClient client = createOkapiHttpClient();
 
-    def creatorTypesPreparation = new ControlledVocabularyPreparation(client,
-      creatorTypes, "creatorTypes")
+    URL creatorTypes = new URL(String.format("%s/creator-types", storageOkapiUrl()));
 
-    personalCreatorTypeId = creatorTypesPreparation.createOrReferenceTerm("Personal name")
+    ControlledVocabularyPreparation creatorTypesPreparation =
+      new ControlledVocabularyPreparation(client, creatorTypes, "creatorTypes");
+
+    personalCreatorTypeId = creatorTypesPreparation.createOrReferenceTerm("Personal name");
   }
 }

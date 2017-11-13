@@ -1,169 +1,192 @@
-package org.folio.inventory.parsing
+package org.folio.inventory.parsing;
 
-import io.vertx.core.json.JsonObject
-import org.folio.inventory.support.JsonArrayHelper
-import org.junit.Test
+import com.google.common.io.CharStreams;
+import io.vertx.core.json.JsonObject;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.inventory.support.JsonArrayHelper;
+import org.junit.Test;
+import org.xml.sax.SAXException;
 
-import java.util.regex.Pattern
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPathExpressionException;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.util.List;
+import java.util.regex.Pattern;
 
-class ModsParsingExamples {
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.junit.Assert.assertThat;
+
+public class ModsParsingExamples {
 
   @Test
-  void multipleModsRecordCanBeParsedIntoItems() {
+  public void multipleModsRecordCanBeParsedIntoItems()
+    throws ParserConfigurationException,
+    SAXException,
+    XPathExpressionException,
+    IOException {
 
-    String modsXml = this.getClass()
-      .getResourceAsStream('/mods/multiple-example-mods-records.xml')
-      .getText("UTF-8")
+    String modsXml;
+
+    try (final Reader reader = new InputStreamReader(this.getClass()
+      .getResourceAsStream("/mods/multiple-example-mods-records.xml"), "UTF-8")) {
+      modsXml = CharStreams.toString(reader);
+    }
 
     List<JsonObject> records = new ModsParser(new UTF8LiteralCharacterEncoding())
       .parseRecords(modsXml);
 
-    assert records.size() == 8
+    assertThat(records.size(), is(8));
 
-    assert records.stream().allMatch( { it.containsKey("title") } )
+    assertThat(records.stream().allMatch(it -> it.containsKey("title")), is(true));
 
-    NoTitlesContainEscapedCharacters(records)
+    NoTitlesContainEscapedCharacters(records);
 
-    assert records.stream().allMatch( { it.containsKey("identifiers") } )
-    assert records.stream().allMatch( { it.getJsonArray("identifiers").size() > 0 } )
+    assertThat(records.stream().allMatch(it -> it.containsKey("identifiers")), is(true));
+    assertThat(records.stream().allMatch(it -> it.getJsonArray("identifiers").size() > 0), is(true));
 
-    def california = records.find({
-      similarTo(it, "California: its gold and its inhabitants", "69228882")
-    })
+    JsonObject california = getRecord(records,
+      "California: its gold and its inhabitants", "69228882");
 
-    assert california != null
+    assertThat(california, is(notNullValue()));
 
-    assert california.getJsonArray("identifiers").size() == 1
-    assert hasIdentifier(california, "UkMaC", "69228882")
+    assertThat(california.getJsonArray("identifiers").size(), is(1));
+    assertThat(hasIdentifier(california, "UkMaC", "69228882"), is(true));
 
-    assert california.getJsonArray("creators").size() == 1
-    assert hasCreator(california, "Huntley, Henry Veel")
+    assertThat(california.getJsonArray("creators").size(), is(1));
+    assertThat(hasCreator(california, "Huntley, Henry Veel"), is(true));
 
-    def studien = records.find({
-      similarTo(it, "Studien zur Geschichte der Notenschrift.", "69247446")
-    })
+    JsonObject studien = getRecord(records,
+      "Studien zur Geschichte der Notenschrift.", "69247446");
 
-    assert studien != null
+    assertThat(studien, is(notNullValue()));
 
-    assert studien.getJsonArray("identifiers").size() == 1
-    assert hasIdentifier(studien, "UkMaC", "69247446")
+    assertThat(studien.getJsonArray("identifiers").size(), is(1));
+    assertThat(hasIdentifier(studien, "UkMaC", "69247446"), is(true));
 
-    assert studien.getJsonArray("creators").size() == 1
-    assert hasCreator(studien, "Riemann, Karl Wilhelm J. Hugo.")
+    assertThat(studien.getJsonArray("creators").size(), is(1));
+    assertThat(hasCreator(studien, "Riemann, Karl Wilhelm J. Hugo."), is(true));
 
-    def essays = records.find({
-      similarTo(it, "Essays on C.S. Lewis and George MacDonald", "53556908")
-    })
+    JsonObject essays = getRecord(records,
+      "Essays on C.S. Lewis and George MacDonald", "53556908");
 
-    assert essays != null
+    assertThat(essays, is(notNullValue()));
 
-    assert essays.getJsonArray("identifiers").size() == 3
-    assert hasIdentifier(essays, "UkMaC", "53556908")
-    assert hasIdentifier(essays, "StGlU", "b13803414")
-    assert hasIdentifier(essays, "isbn", "0889464944")
+    assertThat(essays.getJsonArray("identifiers").size(), is(3));
+    assertThat(hasIdentifier(essays, "UkMaC", "53556908"), is(true));
+    assertThat(hasIdentifier(essays, "StGlU", "b13803414"), is(true));
+    assertThat(hasIdentifier(essays, "isbn", "0889464944"), is(true));
 
-    assert essays.getJsonArray("creators").size() == 1
-    assert hasCreator(essays, "Marshall, Cynthia.")
+    assertThat(essays.getJsonArray("creators").size(), is(1));
+    assertThat(hasCreator(essays, "Marshall, Cynthia."), is(true));
 
-    def sketches = records.find({
-      similarTo(it, "Statistical sketches of Upper Canada", "69077747")
-    })
+    JsonObject sketches = getRecord(records,
+      "Statistical sketches of Upper Canada", "69077747");
 
-    assert sketches != null
+    assertThat(sketches, is(notNullValue()));
 
-    assert sketches.getJsonArray("identifiers").size() == 1
-    assert hasIdentifier(sketches, "UkMaC", "69077747")
+    assertThat(sketches.getJsonArray("identifiers").size(), is(1));
+    assertThat(hasIdentifier(sketches, "UkMaC", "69077747"), is(true));
 
-    assert sketches.getJsonArray("creators").size() == 1
-    assert hasCreator(sketches, "Dunlop, William")
+    assertThat(sketches.getJsonArray("creators").size(), is(1));
+    assertThat(hasCreator(sketches, "Dunlop, William"), is(true));
 
-    def mcGuire = records.find({
-      similarTo(it, "Edward McGuire, RHA", "22169083")
-    })
+    JsonObject mcGuire = getRecord(records, "Edward McGuire, RHA", "22169083");
 
-    assert mcGuire != null
+    assertThat(mcGuire, is(notNullValue()));
 
-    assert hasIdentifier(mcGuire, "isbn", "0716524783")
-    assert hasIdentifier(mcGuire, "bnb", "GB9141816")
-    assert hasIdentifier(mcGuire, "UkMaC", "22169083")
-    assert hasIdentifier(mcGuire, "StEdNL", "1851914")
+    assertThat(hasIdentifier(mcGuire, "isbn", "0716524783"), is(true));
+    assertThat(hasIdentifier(mcGuire, "bnb", "GB9141816"), is(true));
+    assertThat(hasIdentifier(mcGuire, "UkMaC", "22169083"), is(true));
+    assertThat(hasIdentifier(mcGuire, "StEdNL", "1851914"), is(true));
 
-    assert mcGuire.getJsonArray("creators").size() == 1
-    assert hasCreator(mcGuire, "Fallon, Brian.")
+    assertThat(mcGuire.getJsonArray("creators").size(), is(1));
+    assertThat(hasCreator(mcGuire, "Fallon, Brian."), is(true));
 
-    def influenza = records.find({ similarTo(it,
-      "Influenza della Poesia sui Costumi", "43620390") })
+    JsonObject influenza = getRecord(records,
+      "Influenza della Poesia sui Costumi", "43620390");
 
-    assert influenza != null
+    assertThat(influenza, is(notNullValue()));
 
-    assert influenza.getJsonArray("identifiers").size() == 1
-    assert hasIdentifier(influenza, "UkMaC", "43620390")
+    assertThat(influenza.getJsonArray("identifiers").size(), is(1));
+    assertThat(hasIdentifier(influenza, "UkMaC", "43620390"), is(true));
 
-    assert influenza.getJsonArray("creators").size() == 1
-    assert hasCreator(influenza, "MABIL, Pier Luigi.")
+    assertThat(influenza.getJsonArray("creators").size(), is(1));
+    assertThat(hasCreator(influenza, "MABIL, Pier Luigi."), is(true));
 
-    def nikitovic = records.find({
-      similarTo(it, "Pavle Nik Nikitović", "37696876")
-    })
+    JsonObject nikitovic = getRecord(records, "Pavle Nik Nikitović", "37696876");
 
-    assert nikitovic != null
+    assertThat(nikitovic, is(notNullValue()));
 
-    assert nikitovic.getJsonArray("identifiers").size() == 2
-    assert hasIdentifier(nikitovic, "UkMaC", "37696876")
-    assert hasIdentifier(nikitovic, "isbn", "8683385124")
+    assertThat(nikitovic.getJsonArray("identifiers").size(), is(2));
+    assertThat(hasIdentifier(nikitovic, "UkMaC", "37696876"), is(true));
+    assertThat(hasIdentifier(nikitovic, "isbn", "8683385124"), is(true));
 
-    assert nikitovic.getJsonArray("creators").size() == 2
-    assert hasCreator(nikitovic, "Nikitović, Pavle")
-    assert hasCreator(nikitovic, "Božović, Ratko.")
+    assertThat(nikitovic.getJsonArray("creators").size(), is(2));
+    assertThat(hasCreator(nikitovic, "Nikitović, Pavle"), is(true));
+    assertThat(hasCreator(nikitovic, "Božović, Ratko."), is(true));
 
-    def grammar = records.find({
-      similarTo(it, "Grammaire comparée du grec et du latin", "69250051")
-    })
+    JsonObject grammar = getRecord(records,
+      "Grammaire comparée du grec et du latin", "69250051");
 
-    assert grammar != null
+    assertThat(grammar, is(notNullValue()));
 
-    assert grammar.getJsonArray("identifiers").size() == 1
-    assert hasIdentifier(grammar, "UkMaC", "69250051")
+    assertThat(grammar.getJsonArray("identifiers").size(), is(1));
+    assertThat(hasIdentifier(grammar, "UkMaC", "69250051"), is(true));
 
-    assert grammar.getJsonArray("creators").size() == 2
-    assert hasCreator(grammar, "Riemann, Othon.")
-    assert hasCreator(grammar, "Goelzer, Henri Jules E.")
+    assertThat(grammar.getJsonArray("creators").size(), is(2));
+    assertThat(hasCreator(grammar, "Riemann, Othon."), is(true));
+    assertThat(hasCreator(grammar, "Goelzer, Henri Jules E."), is(true));
   }
 
-  private void NoTitlesContainEscapedCharacters(List<JsonObject> records) {
-    assert records.stream().noneMatch({ record ->
+  private static JsonObject getRecord(
+    List<JsonObject> records,
+    String title,
+    String barcode) {
+
+    return records.stream()
+      .filter(it -> similarTo(it, title, barcode))
+      .findFirst()
+      .orElse(null);
+  }
+
+  private static void NoTitlesContainEscapedCharacters(List<JsonObject> records) {
+    assertThat(records.stream().noneMatch(record ->
       Pattern.compile(
-        '(\\\\x[0-9a-fA-F]{2})+',
-        Pattern.CASE_INSENSITIVE).matcher(record.getString("title")).find()
-    })
+        "(\\\\x[0-9a-fA-F]{2})+",
+        Pattern.CASE_INSENSITIVE).matcher(record.getString("title")).find()),
+      is(true));
   }
 
-  private boolean similarTo(
+  private static boolean similarTo(
     JsonObject record,
     String expectedSimilarTitle,
     String expectedBarcode) {
 
-      record.getString("title").contains(expectedSimilarTitle) &&
-      record.getString("barcode") == expectedBarcode
+      return record.getString("title").contains(expectedSimilarTitle) &&
+        StringUtils.equals(record.getString("barcode"), expectedBarcode);
   }
 
-  private boolean hasIdentifier(
+  private static boolean hasIdentifier(
     JsonObject record,
     String identifierTypeId,
     String value) {
 
-    JsonArrayHelper.toList(
+    return JsonArrayHelper.toList(
       record.getJsonArray("identifiers")).stream()
-      .anyMatch({ it.getString("type") == identifierTypeId && it.getString("value") == value })
+      .anyMatch(it -> StringUtils.equals(it.getString("type"), identifierTypeId)
+        && StringUtils.equals(it.getString("value"), value));
   }
 
-  private boolean hasCreator(
+  private static boolean hasCreator(
     JsonObject record,
     String name) {
 
-    JsonArrayHelper.toList(
+    return JsonArrayHelper.toList(
       record.getJsonArray("creators")).stream()
-      .anyMatch({ it.getString("name") == name })
+      .anyMatch(it -> StringUtils.equals(it.getString("name"), name));
   }
 }
 

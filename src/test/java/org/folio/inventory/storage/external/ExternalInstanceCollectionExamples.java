@@ -1,389 +1,346 @@
-package org.folio.inventory.storage.external
+package org.folio.inventory.storage.external;
 
-import org.folio.inventory.common.WaitForAllFutures
-import org.folio.inventory.common.api.request.PagingParameters
-import org.folio.inventory.domain.*
-import org.folio.inventory.common.domain.MultipleRecords
-import org.junit.Before
-import org.junit.Test
+import api.ApiTestSuite;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.inventory.common.WaitForAllFutures;
+import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.domain.Instance;
+import org.folio.inventory.domain.InstanceCollection;
+import org.hamcrest.CoreMatchers;
+import org.junit.Before;
+import org.junit.Test;
 
-import java.util.concurrent.CompletableFuture
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
-import static api.ApiTestSuite.*
-import static org.folio.inventory.common.FutureAssistance.*
+import static api.ApiTestSuite.getAsinIdentifierType;
+import static api.ApiTestSuite.getIsbnIdentifierType;
+import static org.folio.inventory.common.FutureAssistance.*;
+import static org.folio.inventory.storage.external.ExternalStorageSuite.getStorageAddress;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
 
-class ExternalInstanceCollectionExamples {
+public class ExternalInstanceCollectionExamples {
+  private static final String tenantId = "test_tenant";
+  private static final String tenantToken = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsInRlbmFudCI6ImRlbW9fdGVuYW50In0.29VPjLI6fLJzxQW0UhQ0jsvAn8xHz501zyXAxRflXfJ9wuDzT8TDf-V75PjzD7fe2kHjSV2dzRXbstt3BTtXIQ";
 
-  private static final String firstTenantId = "test_tenant_1"
-  private static final String secondTenantId = "test_tenant_2"
-  private static final String firstTenantToken = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsInRlbmFudCI6ImRlbW9fdGVuYW50In0.29VPjLI6fLJzxQW0UhQ0jsvAn8xHz501zyXAxRflXfJ9wuDzT8TDf-V75PjzD7fe2kHjSV2dzRXbstt3BTtXIQ"
-  private static final String secondTenantToken = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsInRlbmFudCI6ImRlbW9fdGVuYW50In0.63jTgc15Kil946OdOGYZur_8xVWEUURANx87FAOQajh9TJbsnCMbjE164JQqNLMWShCyi9FOX0Kr1RFuiHTFAQ"
-
-  private final CollectionProvider collectionProvider = ExternalStorageSuite.useVertx({
-    new ExternalStorageCollections(it, ExternalStorageSuite.instanceStorageAddress) });
+  private final InstanceCollection collection =
+    ExternalStorageSuite.useVertx(
+      it -> new ExternalStorageModuleInstanceCollection(it, getStorageAddress(),
+        tenantId, tenantToken));
 
   @Before
-  void before() {
-    emptyCollection(collectionProvider.getInstanceCollection(firstTenantId,
-      firstTenantToken))
+  public void before()
+    throws InterruptedException, ExecutionException, TimeoutException {
 
-    emptyCollection(collectionProvider.getInstanceCollection(secondTenantId,
-      secondTenantToken))
+    CompletableFuture<Void> emptied = new CompletableFuture<Void>();
+
+    collection.empty(succeed(emptied), fail(emptied));
+
+    waitForCompletion(emptied);
   }
 
   @Test
-  void canBeEmptied() {
-    def collection = collectionProvider.getInstanceCollection(firstTenantId, firstTenantToken)
-    addSomeExamples(collection)
+  public void canBeEmptied()
+    throws InterruptedException, ExecutionException, TimeoutException {
 
-    def emptied = new CompletableFuture()
+    addSomeExamples(collection);
 
-    collection.empty(succeed(emptied), fail(emptied))
+    CompletableFuture<Void> emptied = new CompletableFuture<>();
 
-    waitForCompletion(emptied)
+    collection.empty(succeed(emptied), fail(emptied));
 
-    def findFuture = new CompletableFuture<MultipleRecords<Instance>>()
+    waitForCompletion(emptied);
 
-    collection.findAll(PagingParameters.defaults(), succeed(findFuture),
-      fail(findFuture))
+    CompletableFuture<MultipleRecords<Instance>> findFuture = new CompletableFuture<MultipleRecords<Instance>>();
 
-    def allInstancesWrapped = getOnCompletion(findFuture)
+    collection.findAll(PagingParameters.defaults(),
+      succeed(findFuture), fail(findFuture));
 
-    def allInstances = allInstancesWrapped.records
+    MultipleRecords<Instance> allInstancesWrapped = getOnCompletion(findFuture);
 
-    assert allInstances.size() == 0
-    assert allInstancesWrapped.totalRecords == 0
+    List<Instance> allInstances = allInstancesWrapped.records;
+
+    assertThat(allInstances.size(), is(0));
+    assertThat(allInstancesWrapped.totalRecords, is(0));
   }
 
   @Test
-  void anInstanceCanBeAdded() {
-    def collection = collectionProvider.getInstanceCollection(firstTenantId, firstTenantToken)
+  public void anInstanceCanBeAdded()
+    throws InterruptedException, ExecutionException, TimeoutException {
 
-    addSomeExamples(collection)
+    addSomeExamples(collection);
 
-    def findFuture = new CompletableFuture<MultipleRecords<Instance>>()
+    CompletableFuture<MultipleRecords<Instance>> findFuture = new CompletableFuture<MultipleRecords<Instance>>();
 
-    collection.findAll(PagingParameters.defaults(), succeed(findFuture),
-      fail(findFuture))
+    collection.findAll(PagingParameters.defaults(), succeed(findFuture), fail(findFuture));
 
-    def allInstancesWrapped = getOnCompletion(findFuture)
+    MultipleRecords<Instance> allInstancesWrapped = getOnCompletion(findFuture);
 
-    def allInstances = allInstancesWrapped.records
+    List<Instance> allInstances = allInstancesWrapped.records;
 
-    assert allInstances.size() == 3
-    assert allInstancesWrapped.totalRecords == 3
+    assertThat(allInstances.size(), is(3));
+    assertThat(allInstancesWrapped.totalRecords, is(3));
 
-    assert allInstances.every { it.id != null }
-    assert allInstances.every { it.title != null }
+    Instance createdAngryPlanet = getInstance(allInstances, "Long Way to a Small Angry Planet");
+    Instance createdNod = getInstance(allInstances, "Nod");
+    Instance createdUprooted = getInstance(allInstances, "Uprooted");
 
-    assert allInstances.any { it.title == "Long Way to a Small Angry Planet" }
-    assert allInstances.any { it.title == "Nod" }
-    assert allInstances.any { it.title == "Uprooted" }
-
-    def createdAngryPlanet = allInstances.find {
-      it.title == "Long Way to a Small Angry Planet"
-    }
-
-    def createdNod = allInstances.find {
-      it.title == "Nod"
-    }
-
-    def createdUprooted = allInstances.find {
-      it.title == "Uprooted"
-    }
-
-    assert hasIdentifier(createdAngryPlanet, isbnIdentifierType, '9781473619777')
-
-    assert hasIdentifier(createdNod, asinIdentifierType, 'B01D1PLMDO')
-
-    assert hasIdentifier(createdUprooted, isbnIdentifierType, '1447294149')
-    assert hasIdentifier(createdUprooted, isbnIdentifierType, '9781447294146')
+    assertThat(hasIdentifier(createdAngryPlanet, getIsbnIdentifierType(), "9781473619777"), is(true));
+    assertThat(hasIdentifier(createdNod, getAsinIdentifierType(), "B01D1PLMDO"), is(true));
+    assertThat(hasIdentifier(createdUprooted, getIsbnIdentifierType(), "1447294149"), is(true));
+    assertThat(hasIdentifier(createdUprooted, getIsbnIdentifierType(), "9781447294146"), is(true));
   }
 
   @Test
-  void anInstanceCanBeAddedWithAnId() {
-    def collection = collectionProvider.getInstanceCollection(firstTenantId, firstTenantToken)
+  public void anInstanceCanBeAddedWithAnId()
+    throws InterruptedException, ExecutionException, TimeoutException {
 
-    def addFinished = new CompletableFuture<Item>()
+    CompletableFuture<Instance> addFinished = new CompletableFuture<>();
 
-    def instanceId = UUID.randomUUID().toString()
+    String instanceId = UUID.randomUUID().toString();
 
-    def instanceWithId = smallAngryPlanet().copyWithNewId(instanceId)
+    Instance instanceWithId = smallAngryPlanet().copyWithNewId(instanceId);
 
-    collection.add(instanceWithId, succeed(addFinished), fail(addFinished))
+    collection.add(instanceWithId, succeed(addFinished), fail(addFinished));
 
-    def added = getOnCompletion(addFinished)
+    Instance added = getOnCompletion(addFinished);
 
-    assert added.id == instanceId
+    assertThat(added.id, is(instanceId));
   }
 
   @Test
-  void anInstanceCanBeFoundById() {
-    def collection = collectionProvider.getInstanceCollection(firstTenantId, firstTenantToken)
+  public void anInstanceCanBeFoundById()
+    throws InterruptedException, ExecutionException, TimeoutException {
 
-    def firstAddFuture = new CompletableFuture<Instance>()
-    def secondAddFuture = new CompletableFuture<Instance>()
+    CompletableFuture<Instance> firstAddFuture = new CompletableFuture<Instance>();
+    CompletableFuture<Instance> secondAddFuture = new CompletableFuture<Instance>();
 
-    collection.add(smallAngryPlanet(), succeed(firstAddFuture),
-      fail(firstAddFuture))
-    collection.add(nod(), succeed(secondAddFuture),
-      fail(secondAddFuture))
+    collection.add(smallAngryPlanet(), succeed(firstAddFuture), fail(firstAddFuture));
+    collection.add(nod(), succeed(secondAddFuture), fail(secondAddFuture));
 
-    def addedInstance = getOnCompletion(firstAddFuture)
-    def otherAddedInstance = getOnCompletion(secondAddFuture)
+    Instance addedInstance = getOnCompletion(firstAddFuture);
+    Instance otherAddedInstance = getOnCompletion(secondAddFuture);
 
-    def findFuture = new CompletableFuture<Instance>()
-    def otherFindFuture = new CompletableFuture<Instance>()
+    CompletableFuture<Instance> findFuture = new CompletableFuture<Instance>();
+    CompletableFuture<Instance> otherFindFuture = new CompletableFuture<Instance>();
 
-    collection.findById(addedInstance.id, succeed(findFuture),
-      fail(findFuture))
-    collection.findById(otherAddedInstance.id, succeed(otherFindFuture),
-      fail(otherFindFuture))
+    collection.findById(addedInstance.id, succeed(findFuture), fail(findFuture));
+    collection.findById(otherAddedInstance.id, succeed(otherFindFuture), fail(otherFindFuture));
 
-    def foundSmallAngry = getOnCompletion(findFuture)
-    def foundNod = getOnCompletion(otherFindFuture)
+    Instance foundSmallAngry = getOnCompletion(findFuture);
+    Instance foundNod = getOnCompletion(otherFindFuture);
 
-    assert foundSmallAngry.title == "Long Way to a Small Angry Planet"
+    assertThat(foundSmallAngry.title, is("Long Way to a Small Angry Planet"));
 
-    assert foundNod.title == "Nod"
+    assertThat(foundNod.title, is("Nod"));
 
-    assert hasIdentifier(foundSmallAngry, isbnIdentifierType, '9781473619777')
-
-    assert hasIdentifier(foundNod, asinIdentifierType, 'B01D1PLMDO')
+    assertThat(hasIdentifier(foundSmallAngry, getIsbnIdentifierType(), "9781473619777"), is(true));
+    assertThat(hasIdentifier(foundNod, getAsinIdentifierType(), "B01D1PLMDO"), is(true));
   }
 
   @Test
-  void allInstancesCanBePaged() {
-    def collection = collectionProvider.getInstanceCollection(firstTenantId, firstTenantToken)
+  public void allInstancesCanBePaged()
+    throws InterruptedException, ExecutionException, TimeoutException {
 
-    def allAdded = new WaitForAllFutures()
+    WaitForAllFutures<Instance> allAdded = new WaitForAllFutures<>();
 
-    collection.add(smallAngryPlanet(), allAdded.notifySuccess(), { })
-    collection.add(nod(), allAdded.notifySuccess(), { })
-    collection.add(uprooted(), allAdded.notifySuccess(), { })
-    collection.add(temeraire(), allAdded.notifySuccess(), { })
-    collection.add(interestingTimes(), allAdded.notifySuccess(), { })
+    collection.add(smallAngryPlanet(), allAdded.notifySuccess(), v -> {});
+    collection.add(nod(), allAdded.notifySuccess(), v -> {});
+    collection.add(uprooted(), allAdded.notifySuccess(), v -> {});
+    collection.add(temeraire(), allAdded.notifySuccess(), v -> {});
+    collection.add(interestingTimes(), allAdded.notifySuccess(), v -> {});
 
-    allAdded.waitForCompletion()
+    allAdded.waitForCompletion();
 
-    def firstPageFuture = new CompletableFuture<MultipleRecords<Instance>>()
-    def secondPageFuture = new CompletableFuture<MultipleRecords<Instance>>()
+    CompletableFuture<MultipleRecords<Instance>> firstPageFuture = new CompletableFuture<MultipleRecords<Instance>>();
+    CompletableFuture<MultipleRecords<Instance>> secondPageFuture = new CompletableFuture<MultipleRecords<Instance>>();
 
-    collection.findAll(new PagingParameters(3, 0), succeed(firstPageFuture),
-      fail(firstPageFuture))
-    collection.findAll(new PagingParameters(3, 3), succeed(secondPageFuture),
-      fail(secondPageFuture))
+    collection.findAll(new PagingParameters(3, 0), succeed(firstPageFuture), fail(firstPageFuture));
+    collection.findAll(new PagingParameters(3, 3), succeed(secondPageFuture), fail(secondPageFuture));
 
-    def firstPage = getOnCompletion(firstPageFuture)
-    def secondPage = getOnCompletion(secondPageFuture)
+    MultipleRecords<Instance> firstPage = getOnCompletion(firstPageFuture);
+    MultipleRecords<Instance> secondPage = getOnCompletion(secondPageFuture);
 
-    def firstPageInstances = firstPage.records
-    def secondPageInstances = secondPage.records
+    List<Instance> firstPageInstances = firstPage.records;
+    List<Instance> secondPageInstances = secondPage.records;
 
-    assert firstPageInstances.size() == 3
-    assert secondPageInstances.size() == 2
+    assertThat(firstPageInstances.size(), is(3));
+    assertThat(secondPageInstances.size(), is(2));
 
-    assert firstPage.totalRecords == 5
-    assert secondPage.totalRecords == 5
+    assertThat(firstPage.totalRecords, is(5));
+    assertThat(secondPage.totalRecords, is(5));
   }
 
   @Test
-  void anInstanceCanBeDeleted() {
-    def collection = collectionProvider.getInstanceCollection(firstTenantId, firstTenantToken)
+  public void anInstanceCanBeDeleted()
+    throws ExecutionException, InterruptedException, TimeoutException {
 
-    addSomeExamples(collection)
+    addSomeExamples(collection);
 
-    def instanceToBeDeletedFuture = new CompletableFuture<Instance>()
+    CompletableFuture<Instance> instanceToBeDeletedFuture = new CompletableFuture<Instance>();
 
-    collection.add(temeraire(), succeed(instanceToBeDeletedFuture),
-      fail(instanceToBeDeletedFuture))
+    collection.add(temeraire(), succeed(instanceToBeDeletedFuture), fail(instanceToBeDeletedFuture));
 
-    def instanceToBeDeleted = instanceToBeDeletedFuture.get()
+    Instance instanceToBeDeleted = instanceToBeDeletedFuture.get();
 
-    def deleted = new CompletableFuture()
+    CompletableFuture deleted = new CompletableFuture();
 
-    collection.delete(instanceToBeDeleted.id, succeed(deleted), fail(deleted))
+    collection.delete(instanceToBeDeleted.id, succeed(deleted), fail(deleted));
 
-    waitForCompletion(deleted)
+    waitForCompletion(deleted);
 
-    def findFuture = new CompletableFuture<Instance>()
+    CompletableFuture<Instance> findFuture = new CompletableFuture<Instance>();
 
-    collection.findById(instanceToBeDeleted.id, succeed(findFuture),
-      fail(findFuture))
+    collection.findById(instanceToBeDeleted.id, succeed(findFuture), fail(findFuture));
 
-    assert findFuture.get() == null
+    assertThat(findFuture.get(), is(CoreMatchers.nullValue()));
 
-    def findAllFuture = new CompletableFuture<MultipleRecords<Instance>>()
+    CompletableFuture<MultipleRecords<Instance>> findAllFuture = new CompletableFuture<MultipleRecords<Instance>>();
 
-    collection.findAll(PagingParameters.defaults(), succeed(findAllFuture),
-      fail(findAllFuture))
+    collection.findAll(PagingParameters.defaults(), succeed(findAllFuture), fail(findAllFuture));
 
-    def allInstancesWrapped = getOnCompletion(findAllFuture)
+    MultipleRecords<Instance> allInstancesWrapped = getOnCompletion(findAllFuture);
 
-    def allInstances = allInstancesWrapped.records
+    List<Instance> allInstances = allInstancesWrapped.records;
 
-    assert allInstances.size() == 3
-    assert allInstancesWrapped.totalRecords == 3
+    assertThat(allInstances.size(), is(3));
+    assertThat(allInstancesWrapped.totalRecords, is(3));
   }
 
   @Test
-  void anInstanceCanBeUpdated() {
-    def collection = collectionProvider.getInstanceCollection(firstTenantId, firstTenantToken)
+  public void anInstanceCanBeUpdated()
+    throws InterruptedException, ExecutionException, TimeoutException {
 
-    def addFinished = new CompletableFuture<Instance>()
+    CompletableFuture<Instance> addFinished = new CompletableFuture<Instance>();
 
-    collection.add(smallAngryPlanet(), succeed(addFinished),
-      fail(addFinished))
+    collection.add(smallAngryPlanet(), succeed(addFinished), fail(addFinished));
 
-    def added = getOnCompletion(addFinished)
+    Instance added = getOnCompletion(addFinished);
 
-    def updateFinished = new CompletableFuture<Instance>()
+    CompletableFuture<Void> updateFinished = new CompletableFuture<>();
 
-    def changed = added.removeIdentifier(isbnIdentifierType, '9781473619777')
+    Instance changed = added.removeIdentifier(getIsbnIdentifierType(), "9781473619777");
 
-    collection.update(changed, succeed(updateFinished), fail(updateFinished))
+    collection.update(changed, succeed(updateFinished), fail(updateFinished));
 
-    waitForCompletion(updateFinished)
+    waitForCompletion(updateFinished);
 
-    def gotUpdated = new CompletableFuture<Instance>()
+    CompletableFuture<Instance> gotUpdated = new CompletableFuture<Instance>();
 
-    collection.findById(added.id, succeed(gotUpdated), fail(gotUpdated))
+    collection.findById(added.id, succeed(gotUpdated), fail(gotUpdated));
 
-    def updated = getOnCompletion(gotUpdated)
+    Instance updated = getOnCompletion(gotUpdated);
 
-    assert updated.id == added.id
-    assert updated.title == added.title
-    assert updated.identifiers.size() == 0
+    assertThat(updated.id, is(added.id));
+    assertThat(updated.title, is(added.title));
+    assertThat(updated.identifiers.size(), is(0));
   }
 
   @Test
-  void instancesCanBeFoundByByPartialName() {
-    def collection = collectionProvider.getInstanceCollection(firstTenantId, firstTenantToken)
+  public void instancesCanBeFoundByByPartialName()
+    throws InterruptedException,
+    ExecutionException,
+    TimeoutException,
+    UnsupportedEncodingException {
 
-    def firstAddFuture = new CompletableFuture<Instance>()
-    def secondAddFuture = new CompletableFuture<Instance>()
-    def thirdAddFuture = new CompletableFuture<Instance>()
+    CompletableFuture<Instance> firstAddFuture = new CompletableFuture<Instance>();
+    CompletableFuture<Instance> secondAddFuture = new CompletableFuture<Instance>();
+    CompletableFuture<Instance> thirdAddFuture = new CompletableFuture<Instance>();
 
-    collection.add(smallAngryPlanet(), succeed(firstAddFuture),
-      fail(firstAddFuture))
-    collection.add(nod(), succeed(secondAddFuture),
-      fail(secondAddFuture))
-    collection.add(uprooted(), succeed(thirdAddFuture),
-      fail(thirdAddFuture))
+    collection.add(smallAngryPlanet(), succeed(firstAddFuture), fail(firstAddFuture));
+    collection.add(nod(), succeed(secondAddFuture), fail(secondAddFuture));
+    collection.add(uprooted(), succeed(thirdAddFuture), fail(thirdAddFuture));
 
-    def allAddsFuture = CompletableFuture.allOf(secondAddFuture, thirdAddFuture)
+    CompletableFuture<Void> allAddsFuture = CompletableFuture.allOf(secondAddFuture, thirdAddFuture);
 
-    getOnCompletion(allAddsFuture)
+    getOnCompletion(allAddsFuture);
 
-    def addedSmallAngryPlanet = getOnCompletion(firstAddFuture)
+    Instance addedSmallAngryPlanet = getOnCompletion(firstAddFuture);
 
-    def findFuture = new CompletableFuture<MultipleRecords<Instance>>()
+    CompletableFuture<MultipleRecords<Instance>> findFuture = new CompletableFuture<MultipleRecords<Instance>>();
 
-    collection.findByCql("title=\"*Small Angry*\"",
-      new PagingParameters(10, 0), succeed(findFuture), fail(findFuture))
+    collection.findByCql("title=\"*Small Angry*\"", new PagingParameters(10, 0),
+      succeed(findFuture), fail(findFuture));
 
-    def findByNameResultsWrapped = getOnCompletion(findFuture)
+    MultipleRecords<Instance> findByNameResultsWrapped = getOnCompletion(findFuture);
 
-    def findByNameResults = findByNameResultsWrapped.records
+    List<Instance> findByNameResults = findByNameResultsWrapped.records;
 
-    assert findByNameResults.size() == 1
-    assert findByNameResultsWrapped.totalRecords == 1
+    assertThat(findByNameResults.size(), is(1));
+    assertThat(findByNameResultsWrapped.totalRecords, is(1));
 
-    assert findByNameResults[0].id == addedSmallAngryPlanet.id
+    assertThat(findByNameResults.get(0).id, is(addedSmallAngryPlanet.id));
   }
 
-  @Test
-  void anInstanceCanBeFoundByIdWithinATenant() {
-    def firstTenantCollection = collectionProvider
-      .getInstanceCollection(firstTenantId, firstTenantToken)
+  private static void addSomeExamples(InstanceCollection instanceCollection)
+    throws InterruptedException, ExecutionException, TimeoutException {
 
-    def secondTenantCollection = collectionProvider
-      .getInstanceCollection(secondTenantId, secondTenantToken)
+    WaitForAllFutures<Instance> allAdded = new WaitForAllFutures<>();
 
-    def addFuture = new CompletableFuture<Item>()
+    instanceCollection.add(smallAngryPlanet(), allAdded.notifySuccess(), v -> {});
+    instanceCollection.add(nod(), allAdded.notifySuccess(), v -> {});
+    instanceCollection.add(uprooted(), allAdded.notifySuccess(), v -> {});
 
-    firstTenantCollection.add(smallAngryPlanet(), succeed(addFuture),
-      fail(addFuture))
-
-    def addedInstance = getOnCompletion(addFuture)
-
-    def findInstanceForCorrectTenant = new CompletableFuture<Instance>()
-    def findInstanceForIncorrectTenant = new CompletableFuture<Instance>()
-
-    firstTenantCollection.findById(addedInstance.id,
-      succeed(findInstanceForCorrectTenant), fail(findInstanceForCorrectTenant))
-
-    secondTenantCollection.findById(addedInstance.id,
-      succeed(findInstanceForIncorrectTenant), fail(findInstanceForIncorrectTenant))
-
-    assert getOnCompletion(findInstanceForCorrectTenant) != null
-    assert getOnCompletion(findInstanceForIncorrectTenant) == null
+    allAdded.waitForCompletion();
   }
 
-  private void addSomeExamples(InstanceCollection instanceCollection) {
-    def allAdded = new WaitForAllFutures()
-
-    instanceCollection.add(smallAngryPlanet(), allAdded.notifySuccess(), { })
-    instanceCollection.add(nod(), allAdded.notifySuccess(), { })
-    instanceCollection.add(uprooted(), allAdded.notifySuccess(), { })
-
-    allAdded.waitForCompletion()
+  private static Instance nod() {
+    return createInstance("Nod")
+      .addIdentifier(getAsinIdentifierType(), "B01D1PLMDO")
+      .addCreator(ApiTestSuite.getPersonalCreatorType(), "Barnes, Adrian");
   }
 
-  private Instance nod() {
-    createInstance("Nod")
-      .addIdentifier(asinIdentifierType, 'B01D1PLMDO')
-      .addCreator(personalCreatorType, "Barnes, Adrian")
+  private static Instance uprooted() {
+    return createInstance("Uprooted")
+      .addIdentifier(getIsbnIdentifierType(), "1447294149")
+      .addIdentifier(getIsbnIdentifierType(), "9781447294146")
+      .addCreator(ApiTestSuite.getPersonalCreatorType(), "Novik, Naomi");
   }
 
-  private Instance uprooted() {
-    createInstance("Uprooted")
-      .addIdentifier(isbnIdentifierType, '1447294149')
-      .addIdentifier(isbnIdentifierType, '9781447294146')
-      .addCreator(personalCreatorType, "Novik, Naomi")
+  private static Instance smallAngryPlanet() {
+    return createInstance("Long Way to a Small Angry Planet")
+      .addIdentifier(getIsbnIdentifierType(), "9781473619777")
+      .addCreator(ApiTestSuite.getPersonalCreatorType(), "Chambers, Becky");
   }
 
-  private Instance smallAngryPlanet() {
-    createInstance("Long Way to a Small Angry Planet")
-      .addIdentifier(isbnIdentifierType, '9781473619777')
-      .addCreator(personalCreatorType, "Chambers, Becky")
-
+  private static Instance temeraire() {
+    return createInstance("Temeraire")
+      .addIdentifier(getIsbnIdentifierType(), "0007258712")
+      .addIdentifier(getIsbnIdentifierType(), "9780007258710")
+      .addCreator(ApiTestSuite.getPersonalCreatorType(), "Novik, Naomi");
   }
 
-  private Instance temeraire() {
-    createInstance("Temeraire")
-      .addIdentifier(isbnIdentifierType, '0007258712')
-      .addIdentifier(isbnIdentifierType, '9780007258710')
-      .addCreator(personalCreatorType, "Novik, Naomi")
+  private static Instance interestingTimes() {
+    return createInstance("Interesting Times")
+      .addIdentifier(getIsbnIdentifierType(), "0552167541")
+      .addIdentifier(getIsbnIdentifierType(), "9780552167543")
+      .addCreator(ApiTestSuite.getPersonalCreatorType(), "Pratchett, Terry");
   }
 
-  private Instance interestingTimes() {
-    createInstance("Interesting Times")
-      .addIdentifier(isbnIdentifierType, '0552167541')
-      .addIdentifier(isbnIdentifierType, '9780552167543')
-      .addCreator(personalCreatorType, "Pratchett, Terry")
+  private static Instance createInstance(String title) {
+    return new Instance(UUID.randomUUID().toString(), title, new ArrayList<>(),
+      "Local", ApiTestSuite.getBooksInstanceType(), new ArrayList<>());
   }
 
-  private Instance createInstance(String title) {
-    new Instance(UUID.randomUUID().toString(), title, new ArrayList<Identifier>(),
-      "Local", booksInstanceType, new ArrayList<Creator>())
+  private static boolean hasIdentifier(
+    Instance instance,
+    final String identifierTypeId,
+    final String value) {
+
+    return instance.identifiers.stream().anyMatch(it ->
+      StringUtils.equals(it.identifierTypeId, identifierTypeId) && StringUtils.equals(it.value, value));
   }
 
-  private void emptyCollection(InstanceCollection collection) {
-    def emptied = new CompletableFuture()
-
-    collection.empty(succeed(emptied), fail(emptied))
-
-    waitForCompletion(emptied)
-  }
-
-  private boolean hasIdentifier(
-    instance,
-    String identifierTypeId,
-    String value) {
-
-    instance.identifiers.any {
-      it.identifierTypeId == identifierTypeId && it.value == value
-    }
+  private Instance getInstance(List<Instance> allInstances, final String title) {
+    return allInstances.stream()
+      .filter(it -> StringUtils.equals(it.title, title))
+      .findFirst().orElse(null);
   }
 }
