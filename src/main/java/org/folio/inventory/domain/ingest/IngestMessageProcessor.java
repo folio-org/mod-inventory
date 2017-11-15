@@ -19,6 +19,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class IngestMessageProcessor {
+  private static final String TITLE_PROPERTY = "title";
   private final Storage storage;
 
   public IngestMessageProcessor(final Storage storage) {
@@ -27,7 +28,7 @@ public class IngestMessageProcessor {
 
   public void register(EventBus eventBus) {
     eventBus.consumer(Messages.START_INGEST.Address, recordsMessageHandler(eventBus));
-    eventBus.<JsonObject>consumer(Messages.INGEST_COMPLETED.Address, this::markIngestCompleted);
+    eventBus.consumer(Messages.INGEST_COMPLETED.Address, this::markIngestCompleted);
   }
 
   private Handler<Message<JsonObject>> recordsMessageHandler(EventBus eventBus) {
@@ -41,7 +42,7 @@ public class IngestMessageProcessor {
     final MessagingContext context = new MessagingContext(message.headers());
     final JsonObject body = message.body();
 
-    IngestMessages.completed(context.getHeader("jobId"), context).send(eventBus);
+    IngestMessages.completed(context.getJobId(), context).send(eventBus);
 
     final List<JsonObject> records = JsonArrayHelper.toList(body.getJsonArray("records"));
     final JsonObject materialTypes = body.getJsonObject("materialTypes");
@@ -74,7 +75,7 @@ public class IngestMessageProcessor {
             creator.getString("name")))
           .collect(Collectors.toList());
 
-        return new Instance(UUID.randomUUID().toString(), record.getString("title"),
+        return new Instance(UUID.randomUUID().toString(), record.getString(TITLE_PROPERTY),
           identifiers, "Local: MODS", instanceTypes.getString("Books"), creators);
       })
       .forEach(instance -> instanceCollection.add(instance, allInstances.receive(),
@@ -84,7 +85,7 @@ public class IngestMessageProcessor {
         records.stream().map(record -> {
           Optional<Instance> possibleInstance = instances.stream()
             .filter(instance ->
-              StringUtils.equals(instance.title, record.getString("title")))
+              StringUtils.equals(instance.title, record.getString(TITLE_PROPERTY)))
             .findFirst();
 
           String instanceId = possibleInstance.isPresent()
@@ -92,7 +93,7 @@ public class IngestMessageProcessor {
             : null;
 
           return new Item(null,
-            record.getString("title"),
+            record.getString(TITLE_PROPERTY),
             record.getString("barcode"),
             instanceId,
             "Available",
@@ -106,14 +107,14 @@ public class IngestMessageProcessor {
         failure -> System.out.println("Item processing failed: " + failure.getReason()))));
 
     allItems.collect(items ->
-      IngestMessages.completed(context.getHeader("jobId"), context).send(eventBus));
+      IngestMessages.completed(context.getJobId(), context).send(eventBus));
   }
 
   private void markIngestCompleted(Message<JsonObject> message) {
     final MessagingContext context = new MessagingContext(message.headers());
 
     storage.getIngestJobCollection(context).update(
-      new IngestJob(context.getHeader("jobId"), IngestJobState.COMPLETED),
+      new IngestJob(context.getJobId(), IngestJobState.COMPLETED),
       v -> { },
       failure -> System.out.println(
         String.format("Updating ingest job failed: %s", failure.getReason())));

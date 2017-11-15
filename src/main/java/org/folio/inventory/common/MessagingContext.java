@@ -3,6 +3,8 @@ package org.folio.inventory.common;
 import io.vertx.core.MultiMap;
 
 public class MessagingContext implements Context {
+  private final MultiMap headers;
+
   public MessagingContext(final MultiMap headers) {
     this.headers = headers;
   }
@@ -37,5 +39,7 @@ public class MessagingContext implements Context {
     return headers.contains(header);
   }
 
-  private final MultiMap headers;
+  public String getJobId() {
+    return getHeader("jobId");
+  }
 }
