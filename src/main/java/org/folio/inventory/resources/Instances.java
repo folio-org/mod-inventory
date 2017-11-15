@@ -2,14 +2,16 @@ package org.folio.inventory.resources;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.api.request.PagingParameters;
-import org.folio.inventory.domain.Creator;
 import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.domain.Creator;
 import org.folio.inventory.domain.Identifier;
 import org.folio.inventory.domain.Instance;
 import org.folio.inventory.domain.InstanceCollection;
@@ -18,6 +20,7 @@ import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.server.*;
 
 import java.io.UnsupportedEncodingException;
+import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -25,6 +28,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class Instances {
+  private static final String INSTANCES_PATH = "/inventory/instances";
+  private static final String TITLE_PROPERTY_NAME = "title";
+  private static final String IDENTIFIER_PROPERTY_NAME = "identifiers";
+  private static final String CREATORS_PROPERTY_NAME = "creators";
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+
   private final Storage storage;
 
   public Instances(final Storage storage) {
@@ -32,19 +42,19 @@ public class Instances {
   }
 
   public void register(Router router) {
-    router.post(relativeInstancesPath() + "*").handler(BodyHandler.create());
-    router.put(relativeInstancesPath() + "*").handler(BodyHandler.create());
+    router.post(INSTANCES_PATH + "*").handler(BodyHandler.create());
+    router.put(INSTANCES_PATH + "*").handler(BodyHandler.create());
 
-    router.get(relativeInstancesPath() + "/context")
+    router.get(INSTANCES_PATH + "/context")
       .handler(this::getMetadataContext);
 
-    router.get(relativeInstancesPath()).handler(this::getAll);
-    router.post(relativeInstancesPath()).handler(this::create);
-    router.delete(relativeInstancesPath()).handler(this::deleteAll);
+    router.get(INSTANCES_PATH).handler(this::getAll);
+    router.post(INSTANCES_PATH).handler(this::create);
+    router.delete(INSTANCES_PATH).handler(this::deleteAll);
 
-    router.get(relativeInstancesPath() + "/:id").handler(this::getById);
-    router.put(relativeInstancesPath() + "/:id").handler(this::update);
-    router.delete(relativeInstancesPath() + "/:id").handler(this::deleteById);
+    router.get(INSTANCES_PATH + "/:id").handler(this::getById);
+    router.put(INSTANCES_PATH + "/:id").handler(this::update);
+    router.delete(INSTANCES_PATH + "/:id").handler(this::deleteById);
   }
 
   private void getMetadataContext(RoutingContext routingContext) {
@@ -52,7 +62,7 @@ public class Instances {
 
     representation.put("@context", new JsonObject()
       .put("dcterms", "http://purl.org/dc/terms/")
-      .put("title", "dcterms:title"));
+      .put(TITLE_PROPERTY_NAME, "dcterms:title"));
 
     JsonResponse.success(routingContext.response(), representation);
   }
@@ -96,7 +106,7 @@ public class Instances {
 
     JsonObject instanceRequest = routingContext.getBodyAsJson();
 
-    if(StringUtils.isBlank(instanceRequest.getString("title"))) {
+    if(StringUtils.isBlank(instanceRequest.getString(TITLE_PROPERTY_NAME))) {
       ClientErrorResponse.badRequest(routingContext.response(),
         "Title must be provided for an instance");
       return;
@@ -108,12 +118,12 @@ public class Instances {
       success -> {
         try {
           URL url = context.absoluteUrl(String.format("%s/%s",
-            relativeInstancesPath(), success.getResult().id));
+            INSTANCES_PATH, success.getResult().id));
 
           RedirectResponse.created(routingContext.response(), url.toString());
         } catch (MalformedURLException e) {
-          System.out.println(
-            String.format("Failed to create self link for instance: " + e.toString()));
+          log.warn(
+            String.format("Failed to create self link for instance: %s", e.toString()));
         }
       }, FailureResponseConsumer.serverError(routingContext.response()));
   }
@@ -173,10 +183,6 @@ public class Instances {
       }, FailureResponseConsumer.serverError(routingContext.response()));
   }
 
-  private static String relativeInstancesPath() {
-    return "/inventory/instances";
-  }
-
   private JsonObject toRepresentation(
     MultipleRecords<Instance> wrappedInstances,
     WebContext context) {
@@ -202,52 +208,54 @@ public class Instances {
 
     try {
       representation.put("@context", context.absoluteUrl(
-        relativeInstancesPath() + "/context").toString());
+        INSTANCES_PATH + "/context").toString());
     } catch (MalformedURLException e) {
-      System.out.println(String.format("Failed to create context link for instance: " + e.toString()));
+      log.warn(
+        String.format("Failed to create context link for instance: %s", e.toString()));
     }
 
     representation.put("id", instance.id);
-    representation.put("title", instance.title);
+    representation.put(TITLE_PROPERTY_NAME, instance.title);
     representation.put("source", instance.source);
     representation.put("instanceTypeId", instance.instanceTypeId);
 
-    representation.put("identifiers",
+    representation.put(IDENTIFIER_PROPERTY_NAME,
       new JsonArray(instance.identifiers.stream()
-        .map(identifier -> { return new JsonObject()
+        .map(identifier -> new JsonObject()
           .put("identifierTypeId", identifier.identifierTypeId)
-          .put("value", identifier.value); })
+          .put("value", identifier.value))
         .collect(Collectors.toList())));
 
-    representation.put("creators",
+    representation.put(CREATORS_PROPERTY_NAME,
       new JsonArray(instance.creators.stream()
-        .map(creator -> { return new JsonObject()
+        .map(creator -> new JsonObject()
           .put("creatorTypeId", creator.creatorTypeId)
-          .put("name", creator.name); })
+          .put("name", creator.name))
         .collect(Collectors.toList())));
 
     try {
       URL selfUrl = context.absoluteUrl(String.format("%s/%s",
-        relativeInstancesPath(), instance.id));
+        INSTANCES_PATH, instance.id));
 
       representation.put("links", new JsonObject().put("self", selfUrl.toString()));
     } catch (MalformedURLException e) {
-      System.out.println(String.format("Failed to create self link for instance: " + e.toString()));
+      log.warn(
+        String.format("Failed to create self link for instance: %s", e.toString()));
     }
 
     return representation;
   }
 
   private Instance requestToInstance(JsonObject instanceRequest) {
-    List<Identifier> identifiers = instanceRequest.containsKey("identifiers")
-      ? JsonArrayHelper.toList(instanceRequest.getJsonArray("identifiers")).stream()
+    List<Identifier> identifiers = instanceRequest.containsKey(IDENTIFIER_PROPERTY_NAME)
+      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(IDENTIFIER_PROPERTY_NAME)).stream()
           .map(identifier -> new Identifier(identifier.getString("identifierTypeId"),
           identifier.getString("value")))
           .collect(Collectors.toList())
           : new ArrayList<>();
 
-    List<Creator> creators = instanceRequest.containsKey("creators")
-      ? JsonArrayHelper.toList(instanceRequest.getJsonArray("creators")).stream()
+    List<Creator> creators = instanceRequest.containsKey(CREATORS_PROPERTY_NAME)
+      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(CREATORS_PROPERTY_NAME)).stream()
       .map(creator -> new Creator(creator.getString("creatorTypeId"),
         creator.getString("name")))
       .collect(Collectors.toList())
@@ -255,7 +263,7 @@ public class Instances {
 
     return new Instance(
       instanceRequest.getString("id"),
-      instanceRequest.getString("title"),
+      instanceRequest.getString(TITLE_PROPERTY_NAME),
       identifiers,
       instanceRequest.getString("source"),
       instanceRequest.getString("instanceTypeId"),
