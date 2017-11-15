@@ -2,13 +2,16 @@ package org.folio.inventory.storage.external;
 
 import io.vertx.core.Vertx;
 import org.folio.inventory.common.VertxAssistant;
+import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 import support.fakes.FakeOkapi;
 
-import java.util.*;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -18,10 +21,15 @@ import java.util.function.Function;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
   ExternalItemCollectionExamples.class,
-  ExternalInstanceCollectionExamples.class
+  ExternalInstanceCollectionExamples.class,
+  ReferenceRecordClientExamples.class
 })
 public class ExternalStorageSuite {
+  static final String TENANT_ID = "test_tenant";
+  static final String TENANT_TOKEN = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsInRlbmFudCI6ImRlbW9fdGVuYW50In0.29VPjLI6fLJzxQW0UhQ0jsvAn8xHz501zyXAxRflXfJ9wuDzT8TDf-V75PjzD7fe2kHjSV2dzRXbstt3BTtXIQ";
+
   private static final VertxAssistant vertxAssistant = new VertxAssistant();
+
   private static String storageModuleDeploymentId;
 
   public static <T> T useVertx(Function<Vertx, T> action) {
@@ -71,4 +79,16 @@ public class ExternalStorageSuite {
 
     vertxAssistant.stop();
   }
+
+  public static OkapiHttpClient createOkapiHttpClient()
+    throws MalformedURLException {
+
+    return new OkapiHttpClient(
+      vertxAssistant.createUsingVertx(Vertx::createHttpClient),
+      new URL(getStorageAddress()), TENANT_ID, TENANT_TOKEN, it ->
+      System.out.println(
+        String.format("Request failed: %s",
+          it.toString())));
+  }
+
 }

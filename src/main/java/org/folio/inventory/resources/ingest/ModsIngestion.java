@@ -8,28 +8,25 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import org.apache.commons.lang3.StringUtils;
-import org.folio.inventory.CollectionResourceClient;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.domain.ingest.IngestMessages;
 import org.folio.inventory.parsing.ModsParser;
 import org.folio.inventory.parsing.UTF8LiteralCharacterEncoding;
 import org.folio.inventory.storage.Storage;
-import org.folio.inventory.support.JsonArrayHelper;
+import org.folio.inventory.storage.external.CollectionResourceClient;
+import org.folio.inventory.storage.external.ReferenceRecord;
+import org.folio.inventory.storage.external.ReferenceRecordClient;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
-import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.server.*;
 
 import java.io.UnsupportedEncodingException;
 import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLEncoder;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
 public class ModsIngestion {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
@@ -63,33 +60,33 @@ public class ModsIngestion {
 
     WebContext context = new WebContext(routingContext);
     OkapiHttpClient client;
-    CollectionResourceClient materialTypesClient;
-    CollectionResourceClient loanTypesClient;
-    CollectionResourceClient locationsClient;
-    CollectionResourceClient instanceTypesClient;
-    CollectionResourceClient identifierTypesClient;
-    CollectionResourceClient creatorTypesClient;
+    ReferenceRecordClient materialTypesClient;
+    ReferenceRecordClient loanTypesClient;
+    ReferenceRecordClient locationsClient;
+    ReferenceRecordClient instanceTypesClient;
+    ReferenceRecordClient identifierTypesClient;
+    ReferenceRecordClient creatorTypesClient;
 
     try {
       client = createHttpClient(routingContext, context);
 
-      materialTypesClient = new CollectionResourceClient(client,
-        new URL(context.getOkapiLocation() + "/material-types"));
+      materialTypesClient = new ReferenceRecordClient(new CollectionResourceClient(client,
+        new URL(context.getOkapiLocation() + "/material-types")), "mtypes");
 
-      loanTypesClient = new CollectionResourceClient(client,
-        new URL(context.getOkapiLocation() + "/loan-types"));
+      loanTypesClient = new ReferenceRecordClient(new CollectionResourceClient(client,
+        new URL(context.getOkapiLocation() + "/loan-types")), "loantypes");
 
-      locationsClient = new CollectionResourceClient(client,
-        new URL(context.getOkapiLocation() + "/shelf-locations"));
+      locationsClient = new ReferenceRecordClient(new CollectionResourceClient(client,
+        new URL(context.getOkapiLocation() + "/shelf-locations")), "shelflocations");
 
-      identifierTypesClient = new CollectionResourceClient(client,
-        new URL(context.getOkapiLocation() + "/identifier-types"));
+      identifierTypesClient = new ReferenceRecordClient(new CollectionResourceClient(client,
+        new URL(context.getOkapiLocation() + "/identifier-types")), "identifierTypes");
 
-      instanceTypesClient = new CollectionResourceClient(client,
-        new URL(context.getOkapiLocation() + "/instance-types"));
+      instanceTypesClient = new ReferenceRecordClient(new CollectionResourceClient(client,
+        new URL(context.getOkapiLocation() + "/instance-types")), "instanceTypes");
 
-      creatorTypesClient = new CollectionResourceClient(client,
-        new URL(context.getOkapiLocation() + "/creator-types"));
+      creatorTypesClient = new ReferenceRecordClient(new CollectionResourceClient(client,
+        new URL(context.getOkapiLocation() + "/creator-types")), "creatorTypes");
     }
     catch (MalformedURLException e) {
       ServerErrorResponse.internalError(routingContext.response(),
@@ -98,240 +95,102 @@ public class ModsIngestion {
       return;
     }
 
-    String materialTypesQuery = null;
-    String loanTypesQuery = null;
-    String locationsQuery = null;
-    String instanceTypesQuery = null;
-    String identifierTypesQuery = null;
-    String creatorTypesQuery = null;
+    CompletableFuture<ReferenceRecord> materialTypesRequestCompleted;
+    CompletableFuture<ReferenceRecord> loanTypesRequestCompleted;
+    CompletableFuture<ReferenceRecord> locationsRequestCompleted;
+    CompletableFuture<ReferenceRecord> instanceTypesRequestCompleted;
+    CompletableFuture<ReferenceRecord> identifierTypesRequestCompleted;
+    CompletableFuture<ReferenceRecord> creatorTypesRequestCompleted;
 
     try {
-      materialTypesQuery = getReferenceRecordQuery("Book");
-      loanTypesQuery = getReferenceRecordQuery("Can Circulate");
-      locationsQuery = getReferenceRecordQuery("Main Library");
-      instanceTypesQuery = getReferenceRecordQuery("Books");
-      identifierTypesQuery = getReferenceRecordQuery("ISBN");
-      creatorTypesQuery = getReferenceRecordQuery("Personal name");
+      materialTypesRequestCompleted = wrapWithExceptionHandler(
+        routingContext, materialTypesClient.getRecord("Book"));
+
+      loanTypesRequestCompleted = wrapWithExceptionHandler(
+        routingContext, loanTypesClient.getRecord("Can Circulate"));
+
+      locationsRequestCompleted = wrapWithExceptionHandler(
+        routingContext, locationsClient.getRecord("Main Library"));
+
+      instanceTypesRequestCompleted = wrapWithExceptionHandler(
+        routingContext, instanceTypesClient.getRecord("Books"));
+
+      identifierTypesRequestCompleted = wrapWithExceptionHandler(
+        routingContext, identifierTypesClient.getRecord("ISBN"));
+
+      creatorTypesRequestCompleted = wrapWithExceptionHandler(
+        routingContext, creatorTypesClient.getRecord("Personal name"));
 
     } catch (UnsupportedEncodingException e) {
       String error = String.format("Failed to encode query: %s", e.toString());
 
       log.error(error);
       ServerErrorResponse.internalError(routingContext.response(), error);
+      return;
     }
-
-    CompletableFuture<Response> materialTypesRequestCompleted = new CompletableFuture<>();
-    CompletableFuture<Response> loanTypesRequestCompleted = new CompletableFuture<>();
-    CompletableFuture<Response> locationsRequestCompleted = new CompletableFuture<>();
-    CompletableFuture<Response> instanceTypesRequestCompleted = new CompletableFuture<>();
-    CompletableFuture<Response> identifierTypesRequestCompleted = new CompletableFuture<>();
-    CompletableFuture<Response> creatorTypesRequestCompleted = new CompletableFuture<>();
-
-    materialTypesClient.getMany(
-      materialTypesQuery,
-      materialTypesRequestCompleted::complete);
-
-    loanTypesClient.getMany(
-      loanTypesQuery,
-      loanTypesRequestCompleted::complete);
-
-    locationsClient.getMany(
-      locationsQuery,
-      locationsRequestCompleted::complete);
-
-    instanceTypesClient.getMany(
-      instanceTypesQuery,
-      instanceTypesRequestCompleted::complete);
-
-    identifierTypesClient.getMany(
-      identifierTypesQuery,
-      identifierTypesRequestCompleted::complete);
-
-    creatorTypesClient.getMany(
-      creatorTypesQuery,
-      creatorTypesRequestCompleted::complete);
 
     CompletableFuture.allOf(materialTypesRequestCompleted,
       loanTypesRequestCompleted, locationsRequestCompleted,
       instanceTypesRequestCompleted, identifierTypesRequestCompleted,
       creatorTypesRequestCompleted)
       .thenAccept(v -> {
-        Response materialTypeResponse = materialTypesRequestCompleted.join();
-        Response loanTypeResponse = loanTypesRequestCompleted.join();
-        Response locationsResponse = locationsRequestCompleted.join();
-        Response instanceTypesResponse = instanceTypesRequestCompleted.join();
-        Response identifierTypesResponse = identifierTypesRequestCompleted.join();
-        Response creatorTypesResponse = creatorTypesRequestCompleted.join();
+        ReferenceRecord bookMaterialType = materialTypesRequestCompleted.join();
+        ReferenceRecord canCirculateLoanType = loanTypesRequestCompleted.join();
+        ReferenceRecord mainLibraryLocation = locationsRequestCompleted.join();
+        ReferenceRecord booksInstanceType = instanceTypesRequestCompleted.join();
+        ReferenceRecord isbnIdentifierType = identifierTypesRequestCompleted.join();
+        ReferenceRecord personalCreatorType = creatorTypesRequestCompleted.join();
 
-      if (materialTypeResponse.getStatusCode() != 200) {
-        ServerErrorResponse.internalError(routingContext.response(),
-        String.format("Unable to retrieve material types: %s: %s",
-          materialTypeResponse.getStatusCode(), materialTypeResponse.getBody()));
-
-      return;
-    }
-
-    if (loanTypeResponse.getStatusCode() != 200) {
-      ServerErrorResponse.internalError(routingContext.response(),
-        String.format("Unable to retrieve loan types: %s: %s",
-          loanTypeResponse.getStatusCode(), loanTypeResponse.getBody()));
-
-      return;
-    }
-
-    if (locationsResponse.getStatusCode() != 200) {
-      ServerErrorResponse.internalError(routingContext.response(),
-        String.format("Unable to retrieve locations: %s: %s",
-          locationsResponse.getStatusCode(), locationsResponse.getBody()));
-
-      return;
-    }
-
-    if (instanceTypesResponse.getStatusCode() != 200) {
-      ServerErrorResponse.internalError(routingContext.response(),
-        String.format("Unable to retrieve instance types: %s: %s",
-          instanceTypesResponse.getStatusCode(), instanceTypesResponse.getBody()));
-
-      return;
-    }
-
-    if (identifierTypesResponse.getStatusCode() != 200) {
-      ServerErrorResponse.internalError(routingContext.response(),
-        String.format("Unable to retrieve identifier types: %s: %s",
-          identifierTypesResponse.getStatusCode(), identifierTypesResponse.getBody()));
-
-      return;
-    }
-
-    if (creatorTypesResponse.getStatusCode() != 200) {
-      ServerErrorResponse.internalError(routingContext.response(),
-        String.format("Unable to retrieve creator types: %s: %s",
-          creatorTypesResponse.getStatusCode(), creatorTypesResponse.getBody()));
-
-      return;
-    }
-
-    List<JsonObject> materialTypes = JsonArrayHelper.toList(
-      materialTypeResponse.getJson().getJsonArray("mtypes"));
-
-    if(materialTypes.size() != 1) {
-      ServerErrorResponse.internalError(routingContext.response(),
-        String.format("Unable to find book material type: %s", materialTypeResponse.getBody()));
-
-      return;
-    }
-
-    List<JsonObject> loanTypes = JsonArrayHelper.toList(
-      loanTypeResponse.getJson().getJsonArray("loantypes"));
-
-    if(loanTypes.size() != 1) {
-      ServerErrorResponse.internalError(routingContext.response(),
-        String.format("Unable to find can circulate loan type: %s", loanTypeResponse.getBody()));
-
-      return;
-    }
-
-    List<JsonObject> locations = JsonArrayHelper.toList(
-      locationsResponse.getJson().getJsonArray("shelflocations"));
-
-    String bookMaterialTypeId = materialTypes.stream().findFirst().get().getString("id");
-    String canCirculateLoanTypeId = loanTypes.stream().findFirst().get().getString("id");
-
-    //location is optional so carry on gracefully
-    String mainLibraryLocationId = locations.size() == 1
-      ? locations.stream().findFirst().get().getString("id")
-      : null;
-
-    List<JsonObject> identifierTypes = JsonArrayHelper.toList(
-      identifierTypesResponse.getJson().getJsonArray("identifierTypes"));
-
-    if(identifierTypes.size() != 1) {
-      ServerErrorResponse.internalError(routingContext.response(),
-        String.format("Unable to find ISBN identifier type: %s",
-          identifierTypesResponse.getBody()));
-
-      return;
-    }
-
-    String isbnIdentifierTypeId = identifierTypes.stream().findFirst().get().getString("id");
-
-    List<JsonObject> instanceTypes = JsonArrayHelper.toList(
-      instanceTypesResponse.getJson().getJsonArray("instanceTypes"));
-
-    if(instanceTypes.size() != 1) {
-      ServerErrorResponse.internalError(routingContext.response(),
-        String.format("Unable to find books instance type: %s",
-          instanceTypesResponse.getBody()));
-
-      return;
-    }
-
-    String booksInstanceTypeId = instanceTypes.stream().findFirst().get().getString("id");
-
-    List<JsonObject> creatorTypes = JsonArrayHelper.toList(
-      creatorTypesResponse.getJson().getJsonArray("creatorTypes"));
-
-    if(creatorTypes.size() != 1) {
-      ServerErrorResponse.internalError(routingContext.response(),
-        String.format("Unable to find personal name creator type: %s",
-          creatorTypesResponse.getBody()));
-
-      return;
-    }
-
-    String personalCreatorTypeId = creatorTypes.stream().findFirst().get().getString("id");
-
-    String uploadFileName = uploadFileName(routingContext);
-
-    if(StringUtils.isBlank(uploadFileName)) {
-      ServerErrorResponse.internalError(routingContext.response(),
-        "Unable to get upload file name");
-
-      return;
-    }
-
-    routingContext.vertx().fileSystem().readFile(uploadFileName,
-      result -> {
-        if (result.succeeded()) {
-          String uploadedFileContents = result.result().toString();
-
-          try {
-            List<JsonObject> records = new ModsParser(new UTF8LiteralCharacterEncoding())
-              .parseRecords(uploadedFileContents);
-
-            storage.getIngestJobCollection(context)
-              .add(new IngestJob(IngestJobState.REQUESTED),
-                success -> {
-                  IngestMessages.start(records,
-                    singleEntryMap("Book", bookMaterialTypeId),
-                    singleEntryMap("Can Circulate", canCirculateLoanTypeId),
-                    singleEntryMap("Main Library", mainLibraryLocationId),
-                    singleEntryMap("ISBN", isbnIdentifierTypeId),
-                    singleEntryMap("Books", booksInstanceTypeId),
-                    singleEntryMap("Personal name", personalCreatorTypeId),
-                    success.getResult().id, context).send(routingContext.vertx());
-
-                  RedirectResponse.accepted(routingContext.response(),
-                    statusLocation(routingContext, success.getResult().id));
-                },
-                failure -> log.error("Creating Ingest Job failed")
-              );
-          } catch (Exception e) {
-            ServerErrorResponse.internalError(routingContext.response(),
-              String.format("Unable to parse MODS file:%s", e.toString()));
-          }
-        } else {
-        ServerErrorResponse.internalError(
-          routingContext.response(), result.cause().toString());
+        if(anyNull(bookMaterialType, canCirculateLoanType, booksInstanceType,
+          isbnIdentifierType, personalCreatorType)) {
+          return;
         }
-      });
+
+        if(mainLibraryLocation == null) {
+          log.warn(
+            "Location for ingested records will be null, as could not find main library location");
+        }
+
+        String uploadFileName = uploadFileName(routingContext);
+
+        if(StringUtils.isBlank(uploadFileName)) {
+          ServerErrorResponse.internalError(routingContext.response(),
+            "Unable to get upload file name");
+
+          return;
+        }
+
+        wrapWithExceptionHandler(routingContext,
+          getFileContents(routingContext.vertx().fileSystem(), uploadFileName))
+          .thenAccept(fileContents -> {
+            try {
+              List<JsonObject> records = new ModsParser(
+                new UTF8LiteralCharacterEncoding())
+                .parseRecords(fileContents);
+
+              storage.getIngestJobCollection(context)
+                .add(new IngestJob(IngestJobState.REQUESTED),
+                  success -> {
+                    IngestMessages.start(records,
+                      singleEntryMap(bookMaterialType),
+                      singleEntryMap(canCirculateLoanType),
+                      singleEntryMap(mainLibraryLocation),
+                      singleEntryMap(isbnIdentifierType),
+                      singleEntryMap(booksInstanceType),
+                      singleEntryMap(personalCreatorType),
+                      success.getResult().id, context).send(routingContext.vertx());
+
+                    RedirectResponse.accepted(routingContext.response(),
+                      statusLocation(routingContext, success.getResult().id));
+                  },
+                  failure -> log.error("Creating Ingest Job failed")
+                );
+            } catch (Exception e) {
+              ServerErrorResponse.internalError(routingContext.response(),
+                String.format("Unable to parse MODS file:%s", e.toString()));
+            }
+          });
     });
-  }
-
-  private static String getReferenceRecordQuery(String name)
-    throws UnsupportedEncodingException {
-
-    return "query=" + URLEncoder.encode(String.format("name=\"%s\"", name), "UTF-8");
   }
 
   private void status(RoutingContext routingContext) {
@@ -344,10 +203,10 @@ public class ModsIngestion {
         FailureResponseConsumer.serverError(routingContext.response()));
   }
 
-  private Map<String, String> singleEntryMap(String key, String value) {
+  private Map<String, String> singleEntryMap(ReferenceRecord record) {
     HashMap<String, String> map = new HashMap<>();
 
-    map.put(key, value);
+    map.put(record.name, record.id);
 
     return map;
   }
@@ -381,5 +240,52 @@ public class ModsIngestion {
       exception -> ServerErrorResponse.internalError(routingContext.response(),
         String.format("Failed to contact storage module: %s",
           exception.toString())));
+  }
+
+  private <T> CompletableFuture<T> wrapWithExceptionHandler(
+    RoutingContext routingContext,
+    CompletableFuture<T> future) {
+
+    return future.exceptionally(t -> {
+      handleException(routingContext, t);
+
+      return null;
+    });
+  }
+
+  private void handleException(
+    RoutingContext routingContext,
+    Throwable exception) {
+
+    log.error(exception);
+    ServerErrorResponse.internalError(routingContext.response(),
+      exception.toString());
+  }
+
+  private boolean anyNull(ReferenceRecord... records) {
+    return Stream.of(records).anyMatch(Objects::isNull);
+  }
+
+  private CompletableFuture<String> getFileContents(
+    io.vertx.core.file.FileSystem fileSystem, String filename) {
+
+    CompletableFuture<String> future = new CompletableFuture<>();
+
+    try {
+      fileSystem.readFile(filename,
+        result -> {
+          if(result.succeeded()) {
+            future.complete(result.result().toString());
+          }
+          else {
+            future.completeExceptionally(result.cause());
+          }
+      });
+    }
+    catch (Exception e) {
+      future.completeExceptionally(e);
+    }
+
+    return future;
   }
 }

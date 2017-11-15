@@ -1,4 +1,4 @@
-package org.folio.inventory;
+package org.folio.inventory.storage.external;
 
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpClientResponse;

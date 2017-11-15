@@ -24,8 +24,6 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
 public class ExternalInstanceCollectionExamples {
-  private static final String TENANT_ID = "test_tenant";
-  private static final String TENANT_TOKEN = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsInRlbmFudCI6ImRlbW9fdGVuYW50In0.29VPjLI6fLJzxQW0UhQ0jsvAn8xHz501zyXAxRflXfJ9wuDzT8TDf-V75PjzD7fe2kHjSV2dzRXbstt3BTtXIQ";
   private static final String BOOKS_INSTANCE_TYPE = UUID.randomUUID().toString();
   private static final String PERSONAL_CREATOR_TYPE = UUID.randomUUID().toString();
   private static final String ISBN_IDENTIFIER_TYPE = UUID.randomUUID().toString();
@@ -34,7 +32,7 @@ public class ExternalInstanceCollectionExamples {
   private final InstanceCollection collection =
     ExternalStorageSuite.useVertx(
       it -> new ExternalStorageModuleInstanceCollection(it, getStorageAddress(),
-        TENANT_ID, TENANT_TOKEN));
+        ExternalStorageSuite.TENANT_ID, ExternalStorageSuite.TENANT_TOKEN));
 
   @Before
   public void before()

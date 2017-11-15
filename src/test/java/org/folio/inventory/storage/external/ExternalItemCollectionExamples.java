@@ -22,20 +22,16 @@ import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
 
 public class ExternalItemCollectionExamples {
-
   private final String bookMaterialTypeId = UUID.randomUUID().toString();
   private final String canCirculateLoanTypeId = UUID.randomUUID().toString();
 
   private final String mainLibraryLocationId = UUID.randomUUID().toString();
   private final String annexLibraryLocationId = UUID.randomUUID().toString();
 
-  private static final String tenantId = "test_tenant";
-  private static final String tenantToken = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsInRlbmFudCI6ImRlbW9fdGVuYW50In0.29VPjLI6fLJzxQW0UhQ0jsvAn8xHz501zyXAxRflXfJ9wuDzT8TDf-V75PjzD7fe2kHjSV2dzRXbstt3BTtXIQ";
-
   private final ItemCollection collection =
     ExternalStorageSuite.useVertx(
       it -> new ExternalStorageModuleItemCollection(it, getStorageAddress(),
-        tenantId, tenantToken));
+        ExternalStorageSuite.TENANT_ID, ExternalStorageSuite.TENANT_TOKEN));
 
   private final Item smallAngryPlanet = smallAngryPlanet();
   private final Item nod = nod();
