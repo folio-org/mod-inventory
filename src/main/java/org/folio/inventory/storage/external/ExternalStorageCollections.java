@@ -19,14 +19,14 @@ public class ExternalStorageCollections implements CollectionProvider {
 
   @Override
   public ItemCollection getItemCollection(String tenantId, String token) {
-    return new ExternalStorageModuleItemCollection(vertx,
-      String.format("%s/%s", baseAddress, "item-storage/items"), tenantId, token);
+    return new ExternalStorageModuleItemCollection(vertx, baseAddress,
+      tenantId, token);
   }
 
   @Override
   public InstanceCollection getInstanceCollection(String tenantId, String token) {
-    return new ExternalStorageModuleInstanceCollection(vertx,
-      String.format("%s/%s", baseAddress, "instance-storage/instances"), tenantId, token);
+    return new ExternalStorageModuleInstanceCollection(vertx, baseAddress,
+      tenantId, token);
   }
 
   @Override
