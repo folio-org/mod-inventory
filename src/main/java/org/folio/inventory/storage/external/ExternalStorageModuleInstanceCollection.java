@@ -52,7 +52,7 @@ class ExternalStorageModuleInstanceCollection
     Consumer<Success<Instance>> resultCallback,
     Consumer<Failure> failureCallback) {
 
-    String location = storageAddress + "/instance-storage/instances";
+    String location = storageAddress;
 
     Handler<HttpClientResponse> onResponse = response ->
       response.bodyHandler(buffer -> {
@@ -123,7 +123,7 @@ class ExternalStorageModuleInstanceCollection
     Consumer<Failure> failureCallback) {
 
     String location = String.format(storageAddress
-        + "/instance-storage/instances?limit=%s&offset=%s",
+        + "?limit=%s&offset=%s",
       pagingParameters.limit, pagingParameters.offset);
 
     HttpClientRequest request = createRequest(HttpMethod.GET, location,
@@ -137,7 +137,8 @@ class ExternalStorageModuleInstanceCollection
   public void empty(
     Consumer<Success<Void>> completionCallback,
     Consumer<Failure> failureCallback) {
-    String location = storageAddress + "/instance-storage/instances";
+
+    String location = storageAddress;
 
     Handler<HttpClientResponse> onResponse = noContentResponseHandler(
       completionCallback, failureCallback);
@@ -159,7 +160,7 @@ class ExternalStorageModuleInstanceCollection
     String encodedQuery = URLEncoder.encode(cqlQuery, "UTF-8");
 
     String location =
-      String.format("%s/instance-storage/instances?query=%s", storageAddress, encodedQuery) +
+      String.format("%s?query=%s", storageAddress, encodedQuery) +
         String.format("&limit=%s&offset=%s", pagingParameters.limit,
           pagingParameters.offset);
 
@@ -341,7 +342,7 @@ class ExternalStorageModuleInstanceCollection
   }
 
   private String individualRecordLocation(String id) {
-    return String.format("%s/instance-storage/instances/%s", storageAddress, id);
+    return String.format("%s/%s", storageAddress, id);
   }
 
   private Handler<HttpClientResponse> noContentResponseHandler(

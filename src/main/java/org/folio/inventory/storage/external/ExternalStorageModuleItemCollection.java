@@ -44,7 +44,7 @@ class ExternalStorageModuleItemCollection
            Consumer<Success<Item>> resultCallback,
            Consumer<Failure> failureCallback) {
 
-    String location = storageAddress + "/item-storage/items";
+    String location = storageAddress;
 
     Handler<HttpClientResponse> onResponse = response ->
       response.bodyHandler(buffer -> {
@@ -77,7 +77,7 @@ class ExternalStorageModuleItemCollection
                 Consumer<Success<Item>> resultCallback,
                 Consumer<Failure> failureCallback) {
 
-    String location = String.format("%s/item-storage/items/%s", storageAddress, id);
+    String location = String.format("%s/%s", storageAddress, id);
 
     Handler<HttpClientResponse> onResponse = response -> {
       response.bodyHandler(buffer -> {
@@ -117,7 +117,7 @@ class ExternalStorageModuleItemCollection
                Consumer<Failure> failureCallback) {
 
     String location = String.format(storageAddress
-      + "/item-storage/items?limit=%s&offset=%s",
+      + "?limit=%s&offset=%s",
       pagingParameters.limit, pagingParameters.offset);
 
     vertx.createHttpClient().requestAbs(HttpMethod.GET, location,
@@ -132,7 +132,7 @@ class ExternalStorageModuleItemCollection
   @Override
   public void empty(Consumer<Success<Void>> completionCallback,
              Consumer<Failure> failureCallback) {
-    String location = storageAddress + "/item-storage/items";
+    String location = storageAddress;
 
     Handler<HttpClientResponse> onResponse = response ->
       response.bodyHandler(buffer -> {
@@ -164,7 +164,7 @@ class ExternalStorageModuleItemCollection
    String encodedQuery = URLEncoder.encode(cqlQuery, "UTF-8");
 
     String location =
-      String.format("%s/item-storage/items?query=%s", storageAddress, encodedQuery) +
+      String.format("%s?query=%s", storageAddress, encodedQuery) +
         String.format("&limit=%s&offset=%s", pagingParameters.limit,
           pagingParameters.offset);
 
@@ -182,7 +182,7 @@ class ExternalStorageModuleItemCollection
               Consumer<Success<Void>> completionCallback,
               Consumer<Failure> failureCallback) {
 
-    String location = String.format("%s/item-storage/items/%s", storageAddress, item.id);
+    String location = String.format("%s/%s", storageAddress, item.id);
 
     Handler<HttpClientResponse> onResponse = response ->
       response.bodyHandler(buffer -> {
@@ -212,7 +212,7 @@ class ExternalStorageModuleItemCollection
   public void delete(String id,
               Consumer<Success<Void>> completionCallback,
               Consumer<Failure> failureCallback) {
-    String location = String.format("%s/item-storage/items/%s", storageAddress, id);
+    String location = String.format("%s/%s", storageAddress, id);
 
     Handler<HttpClientResponse> onResponse = response ->
       response.bodyHandler(buffer -> {

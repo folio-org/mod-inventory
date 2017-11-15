@@ -17,6 +17,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import static org.folio.inventory.common.FutureAssistance.*;
+import static org.folio.inventory.storage.external.ExternalStorageSuite.getStorageAddress;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
 
@@ -33,7 +34,8 @@ public class ExternalItemCollectionExamples {
 
   private final ItemCollection collection =
     ExternalStorageSuite.useVertx(
-      it -> new ExternalStorageModuleItemCollection(it, ExternalStorageSuite.getStorageAddress(),
+      it -> new ExternalStorageModuleItemCollection(it,
+        String.format("%s/%s", getStorageAddress(), "item-storage/items"),
         tenantId, tenantToken));
 
   private final Item smallAngryPlanet = smallAngryPlanet();
