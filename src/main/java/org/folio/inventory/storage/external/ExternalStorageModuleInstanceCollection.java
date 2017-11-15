@@ -2,6 +2,7 @@ package org.folio.inventory.storage.external;
 
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.Json;
@@ -34,212 +35,177 @@ class ExternalStorageModuleInstanceCollection
   private final String tenant;
   private final String token;
 
-  public ExternalStorageModuleInstanceCollection(Vertx vertx,
-                                              String storageAddress,
-                                              String tenant,
-                                              String token) {
-      this.vertx = vertx;
-      this.storageAddress = storageAddress;
-      this.tenant = tenant;
-      this.token = token;
-    }
+  ExternalStorageModuleInstanceCollection(
+    Vertx vertx,
+    String storageAddress,
+    String tenant,
+    String token) {
 
-    @Override
-    public void add(Instance item,
-      Consumer<Success<Instance>> resultCallback,
-      Consumer<Failure> failureCallback) {
+    this.vertx = vertx;
+    this.storageAddress = storageAddress;
+    this.tenant = tenant;
+    this.token = token;
+  }
 
-      String location = storageAddress + "/instance-storage/instances";
+  @Override
+  public void add(Instance item,
+    Consumer<Success<Instance>> resultCallback,
+    Consumer<Failure> failureCallback) {
 
-      Handler<HttpClientResponse> onResponse = response -> {
-        response.bodyHandler(buffer -> {
-          String responseBody = buffer.getString(0, buffer.length());
-          int statusCode = response.statusCode();
+    String location = storageAddress + "/instance-storage/instances";
 
-          if(statusCode == 201) {
-            Instance createdInstance = mapFromJson(new JsonObject(responseBody));
-
-            resultCallback.accept(new Success<>(createdInstance));
-          }
-          else {
-            failureCallback.accept(new Failure(responseBody, statusCode));
-          }
-        });
-      };
-
-      JsonObject itemToSend = mapToInstanceRequest(item);
-
-      vertx.createHttpClient().requestAbs(HttpMethod.POST, location, onResponse)
-        .exceptionHandler(exceptionHandler(failureCallback))
-        .putHeader("X-Okapi-Tenant", tenant)
-        .putHeader("X-Okapi-Token", token)
-        .putHeader("Content-Type", "application/json")
-        .putHeader("Accept", "application/json")
-        .end(Json.encodePrettily(itemToSend));
-    }
-
-    @Override
-    public void findById(String id,
-      Consumer<Success<Instance>> resultCallback,
-      Consumer<Failure> failureCallback) {
-
-      String location = String.format("%s/instance-storage/instances/%s", storageAddress, id);
-
-      Handler<HttpClientResponse> onResponse = response -> response.bodyHandler(buffer -> {
+    Handler<HttpClientResponse> onResponse = response ->
+      response.bodyHandler(buffer -> {
         String responseBody = buffer.getString(0, buffer.length());
         int statusCode = response.statusCode();
 
-        switch (statusCode) {
-          case 200:
-            JsonObject instanceFromServer = new JsonObject(responseBody);
+        if(statusCode == 201) {
+          Instance createdInstance = mapFromJson(new JsonObject(responseBody));
 
-            Instance foundInstance = mapFromJson(instanceFromServer);
-
-            resultCallback.accept(new Success<>(foundInstance));
-            break;
-
-          case 404:
-            resultCallback.accept(new Success<>(null));
-            break;
-
-          default:
-            failureCallback.accept(new Failure(responseBody, statusCode));
+          resultCallback.accept(new Success<>(createdInstance));
         }
-      });
+        else {
+          failureCallback.accept(new Failure(responseBody, statusCode));
+        }
+    });
 
-      vertx.createHttpClient().requestAbs(HttpMethod.GET, location, onResponse)
-        .exceptionHandler(exceptionHandler(failureCallback))
-        .putHeader("X-Okapi-Tenant",  tenant)
-        .putHeader("X-Okapi-Token", token)
-        .putHeader("Accept", "application/json")
-        .end();
-    }
+    JsonObject itemToSend = mapToInstanceRequest(item);
 
-    @Override
-    public void findAll(
-      PagingParameters pagingParameters,
-      Consumer<Success<MultipleRecords<Instance>>> resultCallback,
-      Consumer<Failure> failureCallback) {
+    HttpClientRequest request = createRequest(HttpMethod.POST, location,
+      onResponse, failureCallback);
 
-      String location = String.format(storageAddress
-          + "/instance-storage/instances?limit=%s&offset=%s",
-        pagingParameters.limit, pagingParameters.offset);
+    jsonContentType(request);
+    acceptJson(request);
 
-      vertx.createHttpClient().requestAbs(HttpMethod.GET, location,
-        handleMultipleResults(resultCallback, failureCallback))
-        .exceptionHandler(exceptionHandler(failureCallback))
-        .putHeader("X-Okapi-Tenant", tenant)
-        .putHeader("X-Okapi-Token", token)
-        .putHeader("Accept", "application/json")
-        .end();
-    }
+    request.end(Json.encodePrettily(itemToSend));
+  }
 
-    @Override
-    public void empty(
-      Consumer<Success<Void>> completionCallback,
-      Consumer<Failure> failureCallback) {
-      String location = storageAddress + "/instance-storage/instances";
+  @Override
+  public void findById(String id,
+    Consumer<Success<Instance>> resultCallback,
+    Consumer<Failure> failureCallback) {
 
-      Handler<HttpClientResponse> onResponse = response ->
-        response.bodyHandler(buffer -> {
-          String responseBody = buffer.getString(0, buffer.length());
-          int statusCode = response.statusCode();
+    String location = individualRecordLocation(id);
 
-          if(statusCode == 204) {
-            completionCallback.accept(new Success<>(null));
-          }
-          else {
-            failureCallback.accept(new Failure(responseBody, statusCode));
-          }
-      });
+    Handler<HttpClientResponse> onResponse = response -> response.bodyHandler(buffer -> {
+      String responseBody = buffer.getString(0, buffer.length());
+      int statusCode = response.statusCode();
 
-      vertx.createHttpClient().requestAbs(HttpMethod.DELETE, location, onResponse)
-        .exceptionHandler(exceptionHandler(failureCallback))
-        .putHeader("X-Okapi-Tenant", tenant)
-        .putHeader("X-Okapi-Token", token)
-        .putHeader("Accept", "application/json, text/plain")
-        .end();
-    }
+      switch (statusCode) {
+        case 200:
+          JsonObject instanceFromServer = new JsonObject(responseBody);
 
-    @Override
-    public void findByCql(String cqlQuery,
-      PagingParameters pagingParameters,
-      Consumer<Success<MultipleRecords<Instance>>> resultCallback,
-      Consumer<Failure> failureCallback) throws UnsupportedEncodingException {
+          Instance foundInstance = mapFromJson(instanceFromServer);
 
-      String encodedQuery = URLEncoder.encode(cqlQuery, "UTF-8");
+          resultCallback.accept(new Success<>(foundInstance));
+          break;
 
-      String location =
-        String.format("%s/instance-storage/instances?query=%s", storageAddress, encodedQuery) +
-          String.format("&limit=%s&offset=%s", pagingParameters.limit,
-            pagingParameters.offset);
+        case 404:
+          resultCallback.accept(new Success<>(null));
+          break;
 
-      vertx.createHttpClient().getAbs(location.toString(),
-        handleMultipleResults(resultCallback, failureCallback))
-        .exceptionHandler(exceptionHandler(failureCallback))
-        .putHeader("X-Okapi-Tenant", tenant)
-        .putHeader("X-Okapi-Token", token)
-        .putHeader("Accept", "application/json")
-        .end();
-    }
+        default:
+          failureCallback.accept(new Failure(responseBody, statusCode));
+      }
+    });
 
-    @Override
-    public void update(Instance item,
-      Consumer<Success<Void>> completionCallback,
-      Consumer<Failure> failureCallback) {
+    HttpClientRequest request = createRequest(HttpMethod.GET, location,
+      onResponse, failureCallback);
 
-      String location = String.format("%s/instance-storage/instances/%s", storageAddress, item.id);
+    acceptJson(request);
+    request.end();
+  }
 
-      Handler<HttpClientResponse> onResponse = response ->
-        response.bodyHandler(buffer -> {
-          String responseBody = buffer.getString(0, buffer.length());
-          int statusCode = response.statusCode();
+  @Override
+  public void findAll(
+    PagingParameters pagingParameters,
+    Consumer<Success<MultipleRecords<Instance>>> resultCallback,
+    Consumer<Failure> failureCallback) {
 
-          if(statusCode == 204) {
-            completionCallback.accept(new Success<>(null));
-          }
-          else {
-            failureCallback.accept(new Failure(responseBody, statusCode));
-          }
-      });
+    String location = String.format(storageAddress
+        + "/instance-storage/instances?limit=%s&offset=%s",
+      pagingParameters.limit, pagingParameters.offset);
 
-      JsonObject itemToSend = mapToInstanceRequest(item);
+    HttpClientRequest request = createRequest(HttpMethod.GET, location,
+      handleMultipleResults(resultCallback, failureCallback), failureCallback);
 
-      vertx.createHttpClient().requestAbs(HttpMethod.PUT, location, onResponse)
-        .exceptionHandler(exceptionHandler(failureCallback))
-        .putHeader("X-Okapi-Tenant", tenant)
-        .putHeader("X-Okapi-Token", token)
-        .putHeader("Content-Type", "application/json")
-        .putHeader("Accept", "text/plain")
-        .end(Json.encodePrettily(itemToSend));
-    }
+    acceptJson(request);
+    request.end();
+  }
 
-    @Override
-    public void delete(String id,
-      Consumer<Success<Void>> completionCallback,
-      Consumer<Failure> failureCallback) {
-      String location = String.format("%s/instance-storage/instances/%s", storageAddress, id);
+  @Override
+  public void empty(
+    Consumer<Success<Void>> completionCallback,
+    Consumer<Failure> failureCallback) {
+    String location = storageAddress + "/instance-storage/instances";
 
-      Handler<HttpClientResponse> onResponse = response ->
-        response.bodyHandler(buffer -> {
-          String responseBody = buffer.getString(0, buffer.length());
-          int statusCode = response.statusCode();
+    Handler<HttpClientResponse> onResponse = noContentResponseHandler(
+      completionCallback, failureCallback);
 
-          if(statusCode == 204) {
-            completionCallback.accept(new Success<>(null));
-          }
-          else {
-            failureCallback.accept(new Failure(responseBody, statusCode));
-          }
-      });
+    HttpClientRequest request =
+      createRequest(HttpMethod.DELETE, location, onResponse, failureCallback);
 
-      vertx.createHttpClient().requestAbs(HttpMethod.DELETE, location, onResponse)
-        .exceptionHandler(exceptionHandler(failureCallback))
-        .putHeader("X-Okapi-Tenant", tenant)
-        .putHeader("X-Okapi-Token", token)
-        .putHeader("Accept", "application/json, text/plain")
-        .end();
-    }
+    acceptJsonOrPlainText(request);
+    request.end();
+
+  }
+
+  @Override
+  public void findByCql(String cqlQuery,
+    PagingParameters pagingParameters,
+    Consumer<Success<MultipleRecords<Instance>>> resultCallback,
+    Consumer<Failure> failureCallback) throws UnsupportedEncodingException {
+
+    String encodedQuery = URLEncoder.encode(cqlQuery, "UTF-8");
+
+    String location =
+      String.format("%s/instance-storage/instances?query=%s", storageAddress, encodedQuery) +
+        String.format("&limit=%s&offset=%s", pagingParameters.limit,
+          pagingParameters.offset);
+
+    HttpClientRequest request = createRequest(HttpMethod.GET, location,
+      handleMultipleResults(resultCallback, failureCallback), failureCallback);
+
+    acceptJson(request);
+    request.end();
+  }
+
+  @Override
+  public void update(Instance item,
+    Consumer<Success<Void>> completionCallback,
+    Consumer<Failure> failureCallback) {
+
+    String location = individualRecordLocation(item.id);
+
+    Handler<HttpClientResponse> onResponse = noContentResponseHandler(
+      completionCallback, failureCallback);
+
+    JsonObject itemToSend = mapToInstanceRequest(item);
+
+    HttpClientRequest request = createRequest(HttpMethod.PUT, location,
+      onResponse, failureCallback);
+
+    jsonContentType(request);
+    acceptPlainText(request);
+
+    request.end(Json.encodePrettily(itemToSend));
+  }
+
+  @Override
+  public void delete(String id,
+    Consumer<Success<Void>> completionCallback,
+    Consumer<Failure> failureCallback) {
+    String location = individualRecordLocation(id);
+
+    Handler<HttpClientResponse> onResponse = noContentResponseHandler(
+      completionCallback, failureCallback);
+
+    HttpClientRequest request = createRequest(HttpMethod.DELETE, location,
+      onResponse, failureCallback);
+
+    acceptJsonOrPlainText(request);
+    request.end();
+  }
 
   private JsonObject mapToInstanceRequest(Instance instance) {
     JsonObject instanceToSend = new JsonObject();
@@ -317,6 +283,78 @@ class ExternalStorageModuleInstanceCollection
             foundItems, wrappedInstances.getInteger("totalRecords"));
 
           resultCallback.accept(new Success<>(result));
+        }
+        else {
+          failureCallback.accept(new Failure(responseBody, statusCode));
+        }
+      });
+  }
+
+  private void acceptJson(HttpClientRequest request) {
+    request.putHeader("Accept", "application/json");
+  }
+
+  private void jsonContentType(HttpClientRequest request) {
+    accept(request, "application/json");
+  }
+
+  private static void acceptJsonOrPlainText(HttpClientRequest request) {
+    accept(request, "application/json, text/plain");
+  }
+
+  private static void acceptPlainText(HttpClientRequest request) {
+    accept(request, "text/plain");
+  }
+
+  private static void accept(
+    HttpClientRequest request,
+    String contentTypes) {
+
+    request.putHeader("Accept", contentTypes);
+  }
+
+  private void addOkapiHeaders(HttpClientRequest request) {
+    request.putHeader("X-Okapi-Tenant", tenant)
+      .putHeader("X-Okapi-Token", token);
+  }
+
+  private void registerExceptionHandler(
+    HttpClientRequest request,
+    Consumer<Failure> failureCallback) {
+
+    request.exceptionHandler(exceptionHandler(failureCallback));
+  }
+
+  private HttpClientRequest createRequest(
+    HttpMethod method,
+    String location,
+    Handler<HttpClientResponse> onResponse,
+    Consumer<Failure> failureCallback) {
+
+    HttpClientRequest request = vertx.createHttpClient()
+      .requestAbs(method, location, onResponse);
+
+    registerExceptionHandler(request, failureCallback);
+    addOkapiHeaders(request);
+
+    return request;
+  }
+
+  private String individualRecordLocation(String id) {
+    return String.format("%s/instance-storage/instances/%s", storageAddress, id);
+  }
+
+  private Handler<HttpClientResponse> noContentResponseHandler(
+    Consumer<Success<Void>> completionCallback,
+    Consumer<Failure> failureCallback) {
+
+    return response ->
+      response.bodyHandler(buffer -> {
+        String responseBody = buffer.getString(0, buffer.length());
+        int statusCode = response.statusCode();
+
+        if(statusCode == 204) {
+          completionCallback.accept(new Success<>(null));
         }
         else {
           failureCallback.accept(new Failure(responseBody, statusCode));
