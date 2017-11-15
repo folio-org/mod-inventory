@@ -1,6 +1,5 @@
 package org.folio.inventory.storage.external;
 
-import api.ApiTestSuite;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.common.WaitForAllFutures;
 import org.folio.inventory.common.api.request.PagingParameters;
@@ -19,21 +18,23 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-import static api.ApiTestSuite.getAsinIdentifierType;
-import static api.ApiTestSuite.getIsbnIdentifierType;
 import static org.folio.inventory.common.FutureAssistance.*;
 import static org.folio.inventory.storage.external.ExternalStorageSuite.getStorageAddress;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
 public class ExternalInstanceCollectionExamples {
-  private static final String tenantId = "test_tenant";
-  private static final String tenantToken = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsInRlbmFudCI6ImRlbW9fdGVuYW50In0.29VPjLI6fLJzxQW0UhQ0jsvAn8xHz501zyXAxRflXfJ9wuDzT8TDf-V75PjzD7fe2kHjSV2dzRXbstt3BTtXIQ";
+  private static final String TENANT_ID = "test_tenant";
+  private static final String TENANT_TOKEN = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsInRlbmFudCI6ImRlbW9fdGVuYW50In0.29VPjLI6fLJzxQW0UhQ0jsvAn8xHz501zyXAxRflXfJ9wuDzT8TDf-V75PjzD7fe2kHjSV2dzRXbstt3BTtXIQ";
+  private static final String BOOKS_INSTANCE_TYPE = UUID.randomUUID().toString();
+  private static final String PERSONAL_CREATOR_TYPE = UUID.randomUUID().toString();
+  private static final String ISBN_IDENTIFIER_TYPE = UUID.randomUUID().toString();
+  private static final String ASIN_IDENTIFIER_TYPE = UUID.randomUUID().toString();
 
   private final InstanceCollection collection =
     ExternalStorageSuite.useVertx(
       it -> new ExternalStorageModuleInstanceCollection(it, getStorageAddress(),
-        tenantId, tenantToken));
+        TENANT_ID, TENANT_TOKEN));
 
   @Before
   public void before()
@@ -92,10 +93,10 @@ public class ExternalInstanceCollectionExamples {
     Instance createdNod = getInstance(allInstances, "Nod");
     Instance createdUprooted = getInstance(allInstances, "Uprooted");
 
-    assertThat(hasIdentifier(createdAngryPlanet, getIsbnIdentifierType(), "9781473619777"), is(true));
-    assertThat(hasIdentifier(createdNod, getAsinIdentifierType(), "B01D1PLMDO"), is(true));
-    assertThat(hasIdentifier(createdUprooted, getIsbnIdentifierType(), "1447294149"), is(true));
-    assertThat(hasIdentifier(createdUprooted, getIsbnIdentifierType(), "9781447294146"), is(true));
+    assertThat(hasIdentifier(createdAngryPlanet, ISBN_IDENTIFIER_TYPE, "9781473619777"), is(true));
+    assertThat(hasIdentifier(createdNod, ASIN_IDENTIFIER_TYPE, "B01D1PLMDO"), is(true));
+    assertThat(hasIdentifier(createdUprooted, ISBN_IDENTIFIER_TYPE, "1447294149"), is(true));
+    assertThat(hasIdentifier(createdUprooted, ISBN_IDENTIFIER_TYPE, "9781447294146"), is(true));
   }
 
   @Test
@@ -141,8 +142,8 @@ public class ExternalInstanceCollectionExamples {
 
     assertThat(foundNod.title, is("Nod"));
 
-    assertThat(hasIdentifier(foundSmallAngry, getIsbnIdentifierType(), "9781473619777"), is(true));
-    assertThat(hasIdentifier(foundNod, getAsinIdentifierType(), "B01D1PLMDO"), is(true));
+    assertThat(hasIdentifier(foundSmallAngry, ISBN_IDENTIFIER_TYPE, "9781473619777"), is(true));
+    assertThat(hasIdentifier(foundNod, ASIN_IDENTIFIER_TYPE, "B01D1PLMDO"), is(true));
   }
 
   @Test
@@ -226,7 +227,7 @@ public class ExternalInstanceCollectionExamples {
 
     CompletableFuture<Void> updateFinished = new CompletableFuture<>();
 
-    Instance changed = added.removeIdentifier(getIsbnIdentifierType(), "9781473619777");
+    Instance changed = added.removeIdentifier(ISBN_IDENTIFIER_TYPE, "9781473619777");
 
     collection.update(changed, succeed(updateFinished), fail(updateFinished));
 
@@ -293,40 +294,40 @@ public class ExternalInstanceCollectionExamples {
 
   private static Instance nod() {
     return createInstance("Nod")
-      .addIdentifier(getAsinIdentifierType(), "B01D1PLMDO")
-      .addCreator(ApiTestSuite.getPersonalCreatorType(), "Barnes, Adrian");
+      .addIdentifier(ASIN_IDENTIFIER_TYPE, "B01D1PLMDO")
+      .addCreator(PERSONAL_CREATOR_TYPE, "Barnes, Adrian");
   }
 
   private static Instance uprooted() {
     return createInstance("Uprooted")
-      .addIdentifier(getIsbnIdentifierType(), "1447294149")
-      .addIdentifier(getIsbnIdentifierType(), "9781447294146")
-      .addCreator(ApiTestSuite.getPersonalCreatorType(), "Novik, Naomi");
+      .addIdentifier(ISBN_IDENTIFIER_TYPE, "1447294149")
+      .addIdentifier(ISBN_IDENTIFIER_TYPE, "9781447294146")
+      .addCreator(PERSONAL_CREATOR_TYPE, "Novik, Naomi");
   }
 
   private static Instance smallAngryPlanet() {
     return createInstance("Long Way to a Small Angry Planet")
-      .addIdentifier(getIsbnIdentifierType(), "9781473619777")
-      .addCreator(ApiTestSuite.getPersonalCreatorType(), "Chambers, Becky");
+      .addIdentifier(ISBN_IDENTIFIER_TYPE, "9781473619777")
+      .addCreator(PERSONAL_CREATOR_TYPE, "Chambers, Becky");
   }
 
   private static Instance temeraire() {
     return createInstance("Temeraire")
-      .addIdentifier(getIsbnIdentifierType(), "0007258712")
-      .addIdentifier(getIsbnIdentifierType(), "9780007258710")
-      .addCreator(ApiTestSuite.getPersonalCreatorType(), "Novik, Naomi");
+      .addIdentifier(ISBN_IDENTIFIER_TYPE, "0007258712")
+      .addIdentifier(ISBN_IDENTIFIER_TYPE, "9780007258710")
+      .addCreator(PERSONAL_CREATOR_TYPE, "Novik, Naomi");
   }
 
   private static Instance interestingTimes() {
     return createInstance("Interesting Times")
-      .addIdentifier(getIsbnIdentifierType(), "0552167541")
-      .addIdentifier(getIsbnIdentifierType(), "9780552167543")
-      .addCreator(ApiTestSuite.getPersonalCreatorType(), "Pratchett, Terry");
+      .addIdentifier(ISBN_IDENTIFIER_TYPE, "0552167541")
+      .addIdentifier(ISBN_IDENTIFIER_TYPE, "9780552167543")
+      .addCreator(PERSONAL_CREATOR_TYPE, "Pratchett, Terry");
   }
 
   private static Instance createInstance(String title) {
     return new Instance(UUID.randomUUID().toString(), title, new ArrayList<>(),
-      "Local", ApiTestSuite.getBooksInstanceType(), new ArrayList<>());
+      "Local", BOOKS_INSTANCE_TYPE, new ArrayList<>());
   }
 
   private static boolean hasIdentifier(
@@ -335,7 +336,8 @@ public class ExternalInstanceCollectionExamples {
     final String value) {
 
     return instance.identifiers.stream().anyMatch(it ->
-      StringUtils.equals(it.identifierTypeId, identifierTypeId) && StringUtils.equals(it.value, value));
+      StringUtils.equals(it.identifierTypeId, identifierTypeId)
+        && StringUtils.equals(it.value, value));
   }
 
   private Instance getInstance(List<Instance> allInstances, final String title) {
