@@ -48,7 +48,7 @@ public class ExternalStorageFailureSuite {
 
     CompletableFuture<String> deployed = new CompletableFuture<>();
 
-    vertxAssistant.deployGroovyVerticle(
+    vertxAssistant.deployVerticle(
       FailureInventoryStorageModule.class.getName(),
       new HashMap<>(),
       deployed);
