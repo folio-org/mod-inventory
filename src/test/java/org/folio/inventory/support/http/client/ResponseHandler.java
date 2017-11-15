@@ -2,12 +2,15 @@ package org.folio.inventory.support.http.client;
 
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpClientResponse;
+import org.folio.inventory.support.http.ContentType;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
 public class ResponseHandler {
+  private ResponseHandler() { }
+
   public static Handler<HttpClientResponse> any(
     CompletableFuture<Response> completed) {
 
@@ -19,13 +22,13 @@ public class ResponseHandler {
   public static Handler<HttpClientResponse> json(
     CompletableFuture<Response> completed) {
 
-    return strictContentType(completed, "application/json");
+    return strictContentType(completed, ContentType.APPLICATION_JSON);
   }
 
   public static Handler<HttpClientResponse> text(
     CompletableFuture<Response> completed) {
 
-    return strictContentType(completed, "text/plain");
+    return strictContentType(completed, ContentType.TEXT_PLAIN);
   }
 
   private static Handler<HttpClientResponse> strictContentType(

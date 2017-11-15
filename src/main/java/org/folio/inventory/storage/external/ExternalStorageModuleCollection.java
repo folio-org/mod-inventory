@@ -4,14 +4,17 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.http.HttpClientResponse;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.support.JsonArrayHelper;
+import org.folio.inventory.support.http.ContentType;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -192,21 +195,24 @@ abstract class ExternalStorageModuleCollection<T> {
     request.end();
   }
 
+  private void acceptJson(HttpClientRequest request) {
+    accept(request, ContentType.APPLICATION_JSON);
+  }
+
   private static void acceptJsonOrPlainText(HttpClientRequest request) {
-    accept(request, "application/json, text/plain");
+    accept(request, ContentType.APPLICATION_JSON, ContentType.TEXT_PLAIN);
   }
 
   private static void acceptPlainText(HttpClientRequest request) {
-    accept(request, "text/plain");
+    accept(request, ContentType.TEXT_PLAIN);
   }
 
   private static void accept(
     HttpClientRequest request,
-    String contentTypes) {
+    String... contentTypes) {
 
-    request.putHeader("Accept", contentTypes);
+    request.putHeader(HttpHeaders.ACCEPT, StringUtils.join(contentTypes, ","));
   }
-
 
   private Handler<Throwable> exceptionHandler(
     Consumer<Failure> failureCallback) {
@@ -214,12 +220,8 @@ abstract class ExternalStorageModuleCollection<T> {
     return it -> failureCallback.accept(new Failure(it.getMessage(), null));
   }
 
-  private void acceptJson(HttpClientRequest request) {
-    request.putHeader("Accept", "application/json");
-  }
-
   private void jsonContentType(HttpClientRequest request) {
-    accept(request, "application/json");
+    request.putHeader(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_JSON);
   }
 
   private void addOkapiHeaders(HttpClientRequest request) {
