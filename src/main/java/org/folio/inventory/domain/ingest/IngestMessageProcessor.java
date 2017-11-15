@@ -4,6 +4,8 @@ import io.vertx.core.Handler;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.common.CollectAll;
 import org.folio.inventory.common.MessagingContext;
@@ -13,12 +15,15 @@ import org.folio.inventory.resources.ingest.IngestJobState;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.JsonArrayHelper;
 
+import java.lang.invoke.MethodHandles;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class IngestMessageProcessor {
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+
   private static final String TITLE_PROPERTY = "title";
   private final Storage storage;
 
@@ -79,7 +84,7 @@ public class IngestMessageProcessor {
           identifiers, "Local: MODS", instanceTypes.getString("Books"), creators);
       })
       .forEach(instance -> instanceCollection.add(instance, allInstances.receive(),
-        failure -> System.out.println("Instance processing failed: " + failure.getReason())));
+        failure -> log.error("Instance processing failed: " + failure.getReason())));
 
       allInstances.collect(instances ->
         records.stream().map(record -> {
@@ -104,7 +109,7 @@ public class IngestMessageProcessor {
             null);
       })
       .forEach(item -> itemCollection.add(item, allItems.receive(),
-        failure -> System.out.println("Item processing failed: " + failure.getReason()))));
+        failure -> log.error("Item processing failed: " + failure.getReason()))));
 
     allItems.collect(items ->
       IngestMessages.completed(context.getJobId(), context).send(eventBus));
@@ -115,8 +120,8 @@ public class IngestMessageProcessor {
 
     storage.getIngestJobCollection(context).update(
       new IngestJob(context.getJobId(), IngestJobState.COMPLETED),
-      v -> { },
-      failure -> System.out.println(
+      v -> log.info(String.format("Ingest job %s completed", context.getJobId())),
+      failure -> log.error(
         String.format("Updating ingest job failed: %s", failure.getReason())));
   }
 }
