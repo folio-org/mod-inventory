@@ -1,9 +1,11 @@
 package org.folio.inventory.resources.ingest;
 
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.FileUpload;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.CollectionResourceClient;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.WebContext;
@@ -23,6 +25,7 @@ import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 public class ModsIngestion {
@@ -266,7 +269,16 @@ public class ModsIngestion {
 
     String personalCreatorTypeId = creatorTypes.stream().findFirst().get().getString("id");
 
-    routingContext.vertx().fileSystem().readFile(uploadFileName(routingContext),
+    String uploadFileName = uploadFileName(routingContext);
+
+    if(StringUtils.isBlank(uploadFileName)) {
+      ServerErrorResponse.internalError(routingContext.response(),
+        "Unable to get upload file name");
+
+      return;
+    }
+
+    routingContext.vertx().fileSystem().readFile(uploadFileName,
       result -> {
         if (result.succeeded()) {
           String uploadedFileContents = result.result().toString();
@@ -332,8 +344,12 @@ public class ModsIngestion {
   }
 
   private String uploadFileName(RoutingContext routingContext) {
-    return routingContext.fileUploads().stream().findFirst().get()
-      .uploadedFileName();
+    Optional<FileUpload> possibleUploadedFile = routingContext.fileUploads()
+      .stream().findFirst();
+
+    return possibleUploadedFile.isPresent()
+      ? possibleUploadedFile.get().uploadedFileName()
+      : null;
   }
 
   private static String relativeModsIngestPath() {
