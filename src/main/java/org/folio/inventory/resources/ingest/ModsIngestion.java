@@ -1,6 +1,8 @@
 package org.folio.inventory.resources.ingest;
 
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.FileUpload;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -19,6 +21,7 @@ import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.server.*;
 
 import java.io.UnsupportedEncodingException;
+import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -29,6 +32,9 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 public class ModsIngestion {
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+  private static final String RELATIVE_MODS_INGEST_PATH = "/inventory/ingest/mods";
+
   private final Storage storage;
 
   public ModsIngestion(final Storage storage) {
@@ -36,14 +42,18 @@ public class ModsIngestion {
   }
 
   public void register(Router router) {
-    router.post(relativeModsIngestPath() + "*").handler(BodyHandler.create());
-    router.post(relativeModsIngestPath()).handler(this::ingest);
-    router.get(relativeModsIngestPath() + "/status/:id").handler(this::status);
+    router.post(RELATIVE_MODS_INGEST_PATH + "*").handler(BodyHandler.create());
+    router.post(RELATIVE_MODS_INGEST_PATH).handler(this::ingest);
+    router.get(RELATIVE_MODS_INGEST_PATH + "/status/:id").handler(this::status);
   }
 
-  //TODO: Will only work for book material type
+  //TODO: Will only work for single examples of each reference record
+  // book material type
   // can circulate loan type
-  // and main library location
+  // main library location
+  // books instance type
+  // isbn identifier type
+  // personal creator type
   private void ingest(RoutingContext routingContext) {
     if(routingContext.fileUploads().size() > 1) {
       ClientErrorResponse.badRequest(routingContext.response(),
@@ -96,16 +106,18 @@ public class ModsIngestion {
     String creatorTypesQuery = null;
 
     try {
-      materialTypesQuery = "query=" + URLEncoder.encode("name=\"Book\"", "UTF-8");
-      loanTypesQuery = "query=" + URLEncoder.encode("name=\"Can Circulate\"", "UTF-8");
-      locationsQuery = "query=" + URLEncoder.encode("name=\"Main Library\"", "UTF-8");
-      instanceTypesQuery = "query=" + URLEncoder.encode("name=\"Books\"", "UTF-8");
-      identifierTypesQuery = "query=" + URLEncoder.encode("name=\"ISBN\"", "UTF-8");
-      creatorTypesQuery = "query=" + URLEncoder.encode("name=\"Personal name\"", "UTF-8");
+      materialTypesQuery = getReferenceRecordQuery("Book");
+      loanTypesQuery = getReferenceRecordQuery("Can Circulate");
+      locationsQuery = getReferenceRecordQuery("Main Library");
+      instanceTypesQuery = getReferenceRecordQuery("Books");
+      identifierTypesQuery = getReferenceRecordQuery("ISBN");
+      creatorTypesQuery = getReferenceRecordQuery("Personal name");
 
     } catch (UnsupportedEncodingException e) {
-      ServerErrorResponse.internalError(routingContext.response(),
-        String.format("Failed to encode query"));
+      String error = String.format("Failed to encode query: %s", e.toString());
+
+      log.error(error);
+      ServerErrorResponse.internalError(routingContext.response(), error);
     }
 
     CompletableFuture<Response> materialTypesRequestCompleted = new CompletableFuture<>();
@@ -302,7 +314,7 @@ public class ModsIngestion {
                   RedirectResponse.accepted(routingContext.response(),
                     statusLocation(routingContext, success.getResult().id));
                 },
-                failure -> System.out.println("Creating Ingest Job failed")
+                failure -> log.error("Creating Ingest Job failed")
               );
           } catch (Exception e) {
             ServerErrorResponse.internalError(routingContext.response(),
@@ -314,6 +326,12 @@ public class ModsIngestion {
         }
       });
     });
+  }
+
+  private static String getReferenceRecordQuery(String name)
+    throws UnsupportedEncodingException {
+
+    return "query=" + URLEncoder.encode(String.format("name=\"%s\"", name), "UTF-8");
   }
 
   private void status(RoutingContext routingContext) {
@@ -335,12 +353,11 @@ public class ModsIngestion {
   }
 
   private String statusLocation(RoutingContext routingContext, String jobId) {
-
     String scheme = routingContext.request().scheme();
     String host = routingContext.request().host();
 
     return String.format("%s://%s%s/status/%s",
-      scheme, host, relativeModsIngestPath(), jobId);
+      scheme, host, RELATIVE_MODS_INGEST_PATH, jobId);
   }
 
   private String uploadFileName(RoutingContext routingContext) {
@@ -352,12 +369,10 @@ public class ModsIngestion {
       : null;
   }
 
-  private static String relativeModsIngestPath() {
-    return "/inventory/ingest/mods";
-  }
+  private OkapiHttpClient createHttpClient(
+    RoutingContext routingContext,
+    WebContext context)
 
-  private OkapiHttpClient createHttpClient(RoutingContext routingContext,
-                                           WebContext context)
     throws MalformedURLException {
 
     return new OkapiHttpClient(routingContext.vertx().createHttpClient(),
