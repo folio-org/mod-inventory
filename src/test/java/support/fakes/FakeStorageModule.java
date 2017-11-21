@@ -7,7 +7,11 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
-import support.fakes.http.server.*;
+import org.folio.inventory.common.WebContext;
+import org.folio.inventory.support.http.server.ClientErrorResponse;
+import org.folio.inventory.support.http.server.JsonResponse;
+import org.folio.inventory.support.http.server.SuccessResponse;
+import org.folio.inventory.support.http.server.ValidationError;
 
 import java.util.*;
 import java.util.function.Predicate;
@@ -63,7 +67,6 @@ public class FakeStorageModule extends AbstractVerticle {
   }
 
   private void create(RoutingContext routingContext) {
-
     WebContext context = new WebContext(routingContext);
 
     JsonObject body = getJsonFromBody(routingContext);
@@ -250,7 +253,7 @@ public class FakeStorageModule extends AbstractVerticle {
   private void checkTokenHeader(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
 
-    if(context.getOkapiToken() == null || context.getOkapiToken() == "") {
+    if(context.getToken() == null || context.getToken() == "") {
       ClientErrorResponse.forbidden(routingContext.response());
     }
     else {
@@ -265,7 +268,7 @@ public class FakeStorageModule extends AbstractVerticle {
 
     requiredProperties.stream().forEach(requiredProperty -> {
       if(!body.getMap().containsKey(requiredProperty)) {
-        errors.add(new ValidationError());
+        errors.add(new ValidationError(requiredProperty, null));
       }
     });
 
@@ -274,7 +277,7 @@ public class FakeStorageModule extends AbstractVerticle {
     }
     else {
       JsonResponse.unprocessableEntity(routingContext.response(),
-        errors);
+        "Missing required properties", errors);
     }
   }
 }

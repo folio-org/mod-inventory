@@ -2,7 +2,7 @@
 
 rm -rf target/
 
-mvn -q clean org.jacoco:jacoco-maven-plugin:prepare-agent test
+mvn clean org.jacoco:jacoco-maven-plugin:prepare-agent test
 
 test_results=$?
 
