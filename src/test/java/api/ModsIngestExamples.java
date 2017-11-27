@@ -121,10 +121,12 @@ public class ModsIngestExamples {
 
     Response getAllResponse = getAllCompleted.get(5, TimeUnit.SECONDS);
 
-    List<JsonObject> items = JsonArrayHelper.toList(
-      getAllResponse.getJson().getJsonArray("items"));
+    JsonObject wrappedItems = getAllResponse.getJson();
 
-    assertThat(items.size(), is(8));
+    List<JsonObject> items = JsonArrayHelper.toList(
+      wrappedItems.getJsonArray("items"));
+
+    assertThat(wrappedItems.getInteger("totalRecords"), is(9));
 
     //TODO: Could be replaced with separate loop per property for clearer feedback
     items.stream().forEach(item -> {
@@ -172,6 +174,9 @@ public class ModsIngestExamples {
     assertThat(items.stream().anyMatch(item ->
       itemSimilarTo(item, "Grammaire", "69250051")), is(true));
 
+    assertThat(items.stream().anyMatch(item ->
+      itemSimilarTo(item, "Angry Planet", "67437645")), is(true));
+
     items.stream().forEach(item -> {
       try {
         hasCorrectInstanceRelationship(item);
@@ -210,10 +215,12 @@ public class ModsIngestExamples {
 
     Response getAllResponse = getAllCompleted.get(5, TimeUnit.SECONDS);
 
-    List<JsonObject> instances = JsonArrayHelper.toList(
-      getAllResponse.getJson().getJsonArray("instances"));
+    JsonObject wrappedInstances = getAllResponse.getJson();
 
-    assertThat(instances.size(), is(8));
+    List<JsonObject> instances = JsonArrayHelper.toList(
+      wrappedInstances.getJsonArray("instances"));
+
+    assertThat(wrappedInstances.getInteger("totalRecords"), is(9));
 
     //TODO: Could be replaced with separate loop per property for clearer feedback
     instances.stream().forEach(instance -> {
@@ -283,6 +290,9 @@ public class ModsIngestExamples {
 
     assertThat(instances.stream().anyMatch(instance ->
       InstanceSimilarTo(instance, "Grammaire", "Riemann, Othon.")), is(true));
+
+    assertThat(instances.stream().anyMatch(instance ->
+      InstanceSimilarTo(instance, "Angry Planet", "Unknown creator")), is(true));
   }
 
   private static URL getIngestUrl() throws MalformedURLException {

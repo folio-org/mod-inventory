@@ -80,6 +80,12 @@ public class IngestMessageProcessor {
             creator.getString("name")))
           .collect(Collectors.toList());
 
+        if(creators.isEmpty()) {
+          creators.add(new Creator(
+            creatorTypes.getString("Personal name"),
+            "Unknown creator"));
+        }
+
         return new Instance(UUID.randomUUID().toString(), record.getString(TITLE_PROPERTY),
           identifiers, "Local: MODS", instanceTypes.getString("Books"), creators);
       })
@@ -102,10 +108,14 @@ public class IngestMessageProcessor {
             record.getString("barcode"),
             instanceId,
             "Available",
-            materialTypes.getString("Book"),
+            materialTypes.getString("Book") != null
+              ? materialTypes.getString("Book")
+              : materialTypes.getString("book"),
             locations.getString("Main Library"),
             null,
-            loanTypes.getString("Can Circulate"),
+            loanTypes.getString("Can Circulate") != null
+              ? loanTypes.getString("Can Circulate")
+              : loanTypes.getString("Can circulate"),
             null);
       })
       .forEach(item -> itemCollection.add(item, allItems.receive(),

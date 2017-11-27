@@ -38,7 +38,7 @@ public class ModsParsingExamples {
     List<JsonObject> records = new ModsParser(new UTF8LiteralCharacterEncoding())
       .parseRecords(modsXml);
 
-    assertThat(records.size(), is(8));
+    assertThat(records.size(), is(9));
 
     assertThat(records.stream().allMatch(it -> it.containsKey("title")), is(true));
 
@@ -139,6 +139,55 @@ public class ModsParsingExamples {
     assertThat(grammar.getJsonArray("creators").size(), is(2));
     assertThat(hasCreator(grammar, "Riemann, Othon."), is(true));
     assertThat(hasCreator(grammar, "Goelzer, Henri Jules E."), is(true));
+
+    JsonObject smallAngry = getRecord(records,
+      "The Long Way to a Small, Angry Planet", "67437645");
+
+    assertThat(smallAngry, is(notNullValue()));
+
+    assertThat(smallAngry.getJsonArray("identifiers").size(), is(3));
+    assertThat(hasIdentifier(smallAngry, "UkMaC", "684566576"), is(true));
+    assertThat(hasIdentifier(smallAngry, "isbn", "1473619793"), is(true));
+    assertThat(hasIdentifier(smallAngry, "isbn", "9781473619791"), is(true));
+
+    assertThat(smallAngry.getJsonArray("creators").size(), is(0));
+
+  }
+
+  @Test
+  public void createsIdentifierWithBlankTypeWhenAttributeNotPresent()
+    throws ParserConfigurationException,
+    SAXException,
+    XPathExpressionException,
+    IOException {
+
+    String modsXml;
+
+    try (final Reader reader = new InputStreamReader(this.getClass()
+      .getResourceAsStream("/mods/no-identifier-source-or-type.xml"), "UTF-8")) {
+      modsXml = CharStreams.toString(reader);
+    }
+
+    List<JsonObject> records = new ModsParser(new UTF8LiteralCharacterEncoding())
+      .parseRecords(modsXml);
+
+    assertThat(records.size(), is(2));
+
+    JsonObject firstRecord = records.get(0);
+    List<JsonObject> firstRecordIdentifiers = JsonArrayHelper.toList(
+      firstRecord.getJsonArray("identifiers"));
+
+    assertThat(firstRecordIdentifiers.size(), is(1));
+    assertThat(firstRecordIdentifiers.get(0).getString("type"), is(""));
+    assertThat(firstRecordIdentifiers.get(0).getString("value"), is("no-source"));
+
+    JsonObject secondRecord = records.get(1);
+    List<JsonObject> secondRecordIdentifiers = JsonArrayHelper.toList(
+      secondRecord.getJsonArray("identifiers"));
+
+    assertThat(secondRecordIdentifiers.size(), is(1));
+    assertThat(secondRecordIdentifiers.get(0).getString("type"), is(""));
+    assertThat(secondRecordIdentifiers.get(0).getString("value"), is("no-type"));
   }
 
   private static JsonObject getRecord(
