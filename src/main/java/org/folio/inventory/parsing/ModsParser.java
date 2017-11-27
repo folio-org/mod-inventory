@@ -64,7 +64,10 @@ public class ModsParser {
 
       for(int recordIdentifierIndex = 0; recordIdentifierIndex < recordIdentifiers.getLength(); recordIdentifierIndex++) {
         Node recordIdentifier = recordIdentifiers.item(recordIdentifierIndex);
-        String type = recordIdentifier.getAttributes().getNamedItem("source").getTextContent();
+
+        Node sourceAttribute = recordIdentifier.getAttributes().getNamedItem("source");
+
+        String type = sourceAttribute != null ? sourceAttribute.getTextContent() : "";
         String value = recordIdentifier.getTextContent();
 
         parsedIdentifiers.add(new JsonObject()
@@ -77,7 +80,10 @@ public class ModsParser {
 
       for(int identifierIndex = 0; identifierIndex < identifiers.getLength(); identifierIndex++) {
         Node identifier = identifiers.item(identifierIndex);
-        String type = identifier.getAttributes().getNamedItem("type").getTextContent();
+
+        Node typeAttribute = identifier.getAttributes().getNamedItem("type");
+
+        String type = typeAttribute != null ? typeAttribute.getTextContent() : "";
         String value = identifier.getTextContent();
 
         parsedIdentifiers.add(new JsonObject()

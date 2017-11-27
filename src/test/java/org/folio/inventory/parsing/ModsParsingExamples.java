@@ -141,6 +141,42 @@ public class ModsParsingExamples {
     assertThat(hasCreator(grammar, "Goelzer, Henri Jules E."), is(true));
   }
 
+  @Test
+  public void createsIdentifierWithBlankTypeWhenAttributeNotPresent()
+    throws ParserConfigurationException,
+    SAXException,
+    XPathExpressionException,
+    IOException {
+
+    String modsXml;
+
+    try (final Reader reader = new InputStreamReader(this.getClass()
+      .getResourceAsStream("/mods/no-identifier-source-or-type.xml"), "UTF-8")) {
+      modsXml = CharStreams.toString(reader);
+    }
+
+    List<JsonObject> records = new ModsParser(new UTF8LiteralCharacterEncoding())
+      .parseRecords(modsXml);
+
+    assertThat(records.size(), is(2));
+
+    JsonObject firstRecord = records.get(0);
+    List<JsonObject> firstRecordIdentifiers = JsonArrayHelper.toList(
+      firstRecord.getJsonArray("identifiers"));
+
+    assertThat(firstRecordIdentifiers.size(), is(1));
+    assertThat(firstRecordIdentifiers.get(0).getString("type"), is(""));
+    assertThat(firstRecordIdentifiers.get(0).getString("value"), is("no-source"));
+
+    JsonObject secondRecord = records.get(1);
+    List<JsonObject> secondRecordIdentifiers = JsonArrayHelper.toList(
+      secondRecord.getJsonArray("identifiers"));
+
+    assertThat(secondRecordIdentifiers.size(), is(1));
+    assertThat(secondRecordIdentifiers.get(0).getString("type"), is(""));
+    assertThat(secondRecordIdentifiers.get(0).getString("value"), is("no-type"));
+  }
+
   private static JsonObject getRecord(
     List<JsonObject> records,
     String title,
