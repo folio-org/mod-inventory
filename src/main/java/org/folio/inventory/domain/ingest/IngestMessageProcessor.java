@@ -108,10 +108,14 @@ public class IngestMessageProcessor {
             record.getString("barcode"),
             instanceId,
             "Available",
-            materialTypes.getString("Book"),
+            materialTypes.getString("Book") != null
+              ? materialTypes.getString("Book")
+              : materialTypes.getString("book"),
             locations.getString("Main Library"),
             null,
-            loanTypes.getString("Can Circulate"),
+            loanTypes.getString("Can Circulate") != null
+              ? loanTypes.getString("Can Circulate")
+              : loanTypes.getString("Can circulate"),
             null);
       })
       .forEach(item -> itemCollection.add(item, allItems.receive(),
