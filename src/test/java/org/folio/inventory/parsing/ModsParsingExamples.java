@@ -38,7 +38,7 @@ public class ModsParsingExamples {
     List<JsonObject> records = new ModsParser(new UTF8LiteralCharacterEncoding())
       .parseRecords(modsXml);
 
-    assertThat(records.size(), is(8));
+    assertThat(records.size(), is(9));
 
     assertThat(records.stream().allMatch(it -> it.containsKey("title")), is(true));
 
@@ -139,6 +139,19 @@ public class ModsParsingExamples {
     assertThat(grammar.getJsonArray("creators").size(), is(2));
     assertThat(hasCreator(grammar, "Riemann, Othon."), is(true));
     assertThat(hasCreator(grammar, "Goelzer, Henri Jules E."), is(true));
+
+    JsonObject smallAngry = getRecord(records,
+      "The Long Way to a Small, Angry Planet", "67437645");
+
+    assertThat(smallAngry, is(notNullValue()));
+
+    assertThat(smallAngry.getJsonArray("identifiers").size(), is(3));
+    assertThat(hasIdentifier(smallAngry, "UkMaC", "684566576"), is(true));
+    assertThat(hasIdentifier(smallAngry, "isbn", "1473619793"), is(true));
+    assertThat(hasIdentifier(smallAngry, "isbn", "9781473619791"), is(true));
+
+    assertThat(smallAngry.getJsonArray("creators").size(), is(0));
+
   }
 
   @Test

@@ -80,6 +80,12 @@ public class IngestMessageProcessor {
             creator.getString("name")))
           .collect(Collectors.toList());
 
+        if(creators.isEmpty()) {
+          creators.add(new Creator(
+            creatorTypes.getString("Personal name"),
+            "Unknown creator"));
+        }
+
         return new Instance(UUID.randomUUID().toString(), record.getString(TITLE_PROPERTY),
           identifiers, "Local: MODS", instanceTypes.getString("Books"), creators);
       })
