@@ -4,7 +4,11 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import org.folio.inventory.domain.Creator;
+import org.folio.inventory.domain.Identifier;
 import org.folio.inventory.domain.Instance;
+import org.folio.inventory.support.exceptions.UnexpectedJsonTypeException;
+
 import java.lang.invoke.MethodHandles;
 import java.util.*;
 
@@ -15,27 +19,25 @@ public class MarcParser {
   private static final String SUBFIELDS = "subfields";
   private static final String TITLE_FIELD = "245";
 
-  public Instance marcJsonToFolioInstance(JsonObject marcEntry) {
-    String id = "";
-    String title = "";
-    String source = "";
-    String instanceTypeId = "";
+  public Instance marcJsonToFolioInstance(JsonObject marcEntry) throws UnexpectedJsonTypeException {
+    String id;
+    String title;
+    List<Identifier> identifiers = new ArrayList<>();
+    String source;
+    String instanceTypeId;
+    List<Creator> creators =  new ArrayList<>();
 
     if (marcEntry.containsKey(FIELDS) && marcEntry.getValue(FIELDS).getClass() == JsonArray.class) {
       JsonArray fieldArray = marcEntry.getJsonArray(FIELDS);
       List<JsonObject> fields = this.extractFromJsonArray(fieldArray);
+      id = "";
       title = this.extractTitle(fields);
+      source = "";
+      instanceTypeId = "";
     } else {
-      LOGGER.debug("JsonObject [marcEntry]: no JsonArray found at key 'fields'");
+      throw new UnexpectedJsonTypeException("JsonObject [marcEntry]: no JsonArray found at key 'fields'");
     }
-    return new Instance(
-      id,
-      title,
-      new ArrayList<>(),
-      source,
-      instanceTypeId,
-      new ArrayList<>()
-    );
+    return new Instance(id, title, identifiers, source, instanceTypeId, creators);
   }
 
   private String extractTitle(List<JsonObject> fields) {
