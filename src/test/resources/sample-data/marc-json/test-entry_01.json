@@ -1,0 +1,28 @@
+{
+  "fields": [
+    {
+      "245": {
+        "subfields": [
+          {
+            "a": "title"
+          },
+          {
+            "b": "remainder_of_title"
+          },
+          {
+            "c": "state_of_responsibility"
+          },
+          {
+            "f": "inclusive_dates"
+          },
+          {
+            "g": "bulk_dates"
+          },
+          {
+            "h": "medium"
+          }
+        ]
+      }
+    }
+  ]
+}
