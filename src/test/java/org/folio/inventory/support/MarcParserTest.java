@@ -2,9 +2,7 @@ package org.folio.inventory.support;
 
 import io.vertx.core.json.JsonObject;
 import org.folio.inventory.domain.Instance;
-import org.junit.After;
 import static org.junit.Assert.assertEquals;
-import org.junit.Before;
 import org.junit.Test;
 import java.io.*;
 import java.util.ArrayList;
@@ -15,22 +13,12 @@ import java.util.ArrayList;
 public class MarcParserTest {
 
   private MarcParser marcParser = new MarcParser();
-  private JsonObject marcEntry;
   private Instance testInstance = this.createTestInstance();
-
-  @Before
-  public void setUp() throws Exception {
-    this.importMarcJsonSampleData();
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    marcEntry.clear();
-  }
 
   @Test
   public void marcJsonToFolioInstance() throws Exception {
-    Instance instance = marcParser.marcJsonToFolioInstance(marcEntry);
+    Instance instance = marcParser.marcJsonToFolioInstance(
+      new JsonObject(this.getJsonString("/sample-data/marc-json/test-entry_01.json")));
     assertEquals(testInstance.id, instance.id);
     assertEquals(testInstance.title, instance.title);
     assertEquals(testInstance.source, instance.source);
@@ -39,12 +27,13 @@ public class MarcParserTest {
     assertEquals(testInstance.creators, instance.creators);
   }
 
-  private void importMarcJsonSampleData() {
-    this.marcEntry = new JsonObject(this.getJsonString());
-  }
+//  @Test(expected = MissingRequiredFieldException.class)
+//  public void marcJsonToFolioInstanceWithoutTitle() throws Exception {
+//    marcParser.marcJsonToFolioInstance(
+//      new JsonObject(this.getJsonString("/sample-data/marc-json/marc-without-245.json")));
+//  }
 
-  private String getJsonString() {
-    String file = "/sample-data/marc-json/test-entry_01.json";
+  private String getJsonString(String file) {
     InputStream is = this.getClass().getResourceAsStream(file);
     String jsonString =  null;
     try {
