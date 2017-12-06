@@ -392,30 +392,35 @@ public class ExternalItemCollectionExamples {
 
   private Item smallAngryPlanet() {
     return new Item(null, "Long Way to a Small Angry Planet", "036000291452",
+      null, null, null,
       UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
       mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null);
   }
 
   private Item nod() {
     return new Item(null, "Nod", "565578437802",
+      null, null, null,
       UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
       mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null);
   }
 
   private Item uprooted() {
     return new Item(null, "Uprooted", "657670342075",
+      null, null, null,
       UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
       mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null);
   }
 
   private Item temeraire() {
     return new Item(null, "Temeraire", "232142443432",
+      null, null, null,
       UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
       mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null);
   }
 
   private Item interestingTimes() {
     return new Item(null, "Interesting Times", "56454543534",
+      null, null, null,
       UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
       mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null);
   }

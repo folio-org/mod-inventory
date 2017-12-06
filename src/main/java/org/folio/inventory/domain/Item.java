@@ -4,6 +4,9 @@ public class Item {
   public final String id;
   public final String title;
   public final String barcode;
+  public final String enumeration;
+  public final String chronology;
+  public final String numberOfPieces;
   public final String instanceId;
   public final String status;
   public final String materialTypeId;
@@ -15,6 +18,9 @@ public class Item {
   public Item(String id,
        String title,
        String barcode,
+       String enumeration,
+       String chronology,
+       String numberOfPieces,
        String instanceId,
        String status,
        String materialTypeId,
@@ -26,6 +32,9 @@ public class Item {
     this.id = id;
     this.title = title;
     this.barcode = barcode;
+    this.enumeration = enumeration;
+    this.chronology = chronology;
+    this.numberOfPieces = numberOfPieces;
     this.instanceId = instanceId;
     this.status = status;
     this.materialTypeId = materialTypeId;
@@ -36,14 +45,18 @@ public class Item {
   }
 
   public Item copyWithNewId(String newId) {
-    return new Item(newId, this.title, this.barcode,
-      this.instanceId, this.status, this.materialTypeId, this.permanentLocationId,
+    return new Item(newId, this.title, this.barcode, this.enumeration,
+      this.chronology, this.numberOfPieces,
+      this.instanceId, this.status, this.materialTypeId,
+      this.permanentLocationId,
       this.temporaryLocationId, this.permanentLoanTypeId, this.temporaryLoanTypeId);
   }
 
   public Item changeStatus(String newStatus) {
-    return new Item(this.id, this.title, this.barcode,
-      this.instanceId, newStatus, this.materialTypeId, this.permanentLocationId,
+    return new Item(this.id, this.title, this.barcode, this.enumeration,
+      this.chronology, this.numberOfPieces,
+      this.instanceId, newStatus, this.materialTypeId,
+      this.permanentLocationId,
       this.temporaryLocationId, this.permanentLoanTypeId, this.temporaryLoanTypeId);
   }
 

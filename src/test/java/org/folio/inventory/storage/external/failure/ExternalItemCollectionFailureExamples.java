@@ -151,6 +151,7 @@ public abstract class ExternalItemCollectionFailureExamples {
 
   private static Item createItem() {
     return new Item(null, UUID.randomUUID().toString(), "Nod", "6575467847",
+      null, null, null,
       UUID.randomUUID().toString(), UUID.randomUUID().toString(),
       UUID.randomUUID().toString(), UUID.randomUUID().toString(),
       UUID.randomUUID().toString(), null);

@@ -106,6 +106,7 @@ public class IngestMessageProcessor {
           return new Item(null,
             record.getString(TITLE_PROPERTY),
             record.getString("barcode"),
+            null, null, null,
             instanceId,
             "Available",
             materialTypes.getString("Book") != null

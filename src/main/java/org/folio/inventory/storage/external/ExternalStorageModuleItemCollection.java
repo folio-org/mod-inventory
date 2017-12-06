@@ -10,7 +10,6 @@ import java.util.UUID;
 class ExternalStorageModuleItemCollection
   extends ExternalStorageModuleCollection<Item>
   implements ItemCollection {
-
   ExternalStorageModuleItemCollection(Vertx vertx,
                                       String baseAddress,
                                       String tenant,
@@ -26,6 +25,9 @@ class ExternalStorageModuleItemCollection
       itemFromServer.getString("id"),
       itemFromServer.getString("title"),
       itemFromServer.getString("barcode"),
+      itemFromServer.getString("enumeration"),
+      itemFromServer.getString("chronology"),
+      itemFromServer.getString("numberOfPieces"),
       itemFromServer.getString("instanceId"),
       itemFromServer.getJsonObject("status").getString("name"),
       itemFromServer.getString("materialTypeId"),
@@ -53,12 +55,15 @@ class ExternalStorageModuleItemCollection
     itemToSend.put("status", new JsonObject().put("name", item.status));
 
     includeIfPresent(itemToSend, "barcode", item.barcode);
+    includeIfPresent(itemToSend, "enumeration", item.enumeration);
+    includeIfPresent(itemToSend, "chronology", item.chronology);
+    includeIfPresent(itemToSend, "numberOfPieces", item.numberOfPieces);
     includeIfPresent(itemToSend, "instanceId", item.instanceId);
     includeIfPresent(itemToSend, "materialTypeId", item.materialTypeId);
     includeIfPresent(itemToSend, "permanentLoanTypeId", item.permanentLoanTypeId);
     includeIfPresent(itemToSend, "temporaryLoanTypeId", item.temporaryLoanTypeId);
-		includeIfPresent(itemToSend, "permanentLocationId", item.permanentLocationId);
-		includeIfPresent(itemToSend, "temporaryLocationId", item.temporaryLocationId);
+    includeIfPresent(itemToSend, "permanentLocationId", item.permanentLocationId);
+    includeIfPresent(itemToSend, "temporaryLocationId", item.temporaryLocationId);
 
     return itemToSend;
   }
