@@ -23,6 +23,7 @@ import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -31,6 +32,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.folio.inventory.common.FutureAssistance.allOf;
+import org.folio.inventory.support.JsonArrayHelper;
 
 public class Items {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
@@ -244,7 +246,11 @@ public class Items {
   }
 
   private Item requestToItem(JsonObject itemRequest) {
+    List<String> pieceIdentifiers;
+    pieceIdentifiers = JsonArrayHelper.toListOfStrings(itemRequest.getJsonArray("pieceIdentifiers"));    
     String status = getNestedProperty(itemRequest, "status", "name");
+    List<String> notes;
+    notes = JsonArrayHelper.toListOfStrings(itemRequest.getJsonArray("notes"));
     String materialTypeId = getNestedProperty(itemRequest, "materialType", "id");
     String permanentLocationId = getNestedProperty(itemRequest, "permanentLocation", "id");
     String temporaryLocationId = getNestedProperty(itemRequest, "temporaryLocation", "id");
@@ -257,8 +263,10 @@ public class Items {
       itemRequest.getString("barcode"),
       itemRequest.getString("enumeration"),
       itemRequest.getString("chronology"),
+      pieceIdentifiers,
       itemRequest.getString("numberOfPieces"),
       itemRequest.getString("instanceId"),
+      notes,
       status,
       materialTypeId,
       permanentLocationId,
