@@ -27,7 +27,8 @@ public class FakeOkapi extends AbstractVerticle {
 
     this.server = vertx.createHttpServer();
 
-    RegisterFakeInstanceStorageModule(router);
+    registerFakeInstanceStorageModule(router);
+    registerFakeHoldingStorageModule(router);
     registerFakeItemsModule(router);
     registerFakeMaterialTypesModule(router);
     registerFakeLoanTypesModule(router);
@@ -64,7 +65,7 @@ public class FakeOkapi extends AbstractVerticle {
     }
   }
 
-  private void RegisterFakeInstanceStorageModule(Router router) {
+  private void registerFakeInstanceStorageModule(Router router) {
     ArrayList<String> requiredProperties = new ArrayList<>();
 
     requiredProperties.add("title");
@@ -73,6 +74,16 @@ public class FakeOkapi extends AbstractVerticle {
     requiredProperties.add("creators");
 
     new FakeStorageModule("/instance-storage/instances", "instances",
+      TENANT_ID, requiredProperties).register(router);
+  }
+
+  private void registerFakeHoldingStorageModule(Router router) {
+    ArrayList<String> requiredProperties = new ArrayList<>();
+
+    requiredProperties.add("instanceId");
+    requiredProperties.add("permanentLocationId");
+
+    new FakeStorageModule("/holdings-storage/holdings", "holdingsRecords",
       TENANT_ID, requiredProperties).register(router);
   }
 
