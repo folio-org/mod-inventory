@@ -1,9 +1,6 @@
 package api;
 
-import api.support.ApiRoot;
-import api.support.InstanceApiClient;
-import api.support.ItemApiClient;
-import api.support.Preparation;
+import api.support.*;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.support.JsonArrayHelper;
@@ -28,7 +25,7 @@ import static api.support.InstanceSamples.*;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
 
-public class ItemApiExamples {
+public class ItemApiExamples extends ApiTests {
   private final OkapiHttpClient okapiClient;
 
   public ItemApiExamples() throws MalformedURLException {

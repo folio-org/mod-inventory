@@ -1,6 +1,7 @@
 package api;
 
 import api.support.ApiRoot;
+import api.support.ApiTests;
 import api.support.InstanceApiClient;
 import api.support.Preparation;
 import com.github.jsonldjava.core.DocumentLoader;
@@ -36,7 +37,7 @@ import static api.support.InstanceSamples.*;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
 
-public class InstancesApiExamples {
+public class InstancesApiExamples extends ApiTests {
   private final OkapiHttpClient okapiClient;
 
   public InstancesApiExamples() throws MalformedURLException {

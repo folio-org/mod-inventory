@@ -1,6 +1,7 @@
 package api;
 
 import api.support.ApiRoot;
+import api.support.ApiTests;
 import api.support.Preparation;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
@@ -28,7 +29,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertThat;
 
-public class ModsIngestExamples {
+public class ModsIngestExamples extends ApiTests {
   private final OkapiHttpClient okapiClient;
 
   public ModsIngestExamples() throws MalformedURLException {

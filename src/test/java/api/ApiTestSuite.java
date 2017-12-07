@@ -56,6 +56,8 @@ public class ApiTestSuite {
     Boolean.parseBoolean(System.getProperty("use.okapi.storage.requests", ""));
   private static String okapiAddress = System.getProperty("okapi.address", "");
 
+  private static boolean initialised;
+
   @BeforeClass
   public static void before()
     throws InterruptedException,
@@ -78,6 +80,8 @@ public class ApiTestSuite {
     createInstanceTypes();
     createCreatorTypes();
     startInventoryVerticle();
+
+    initialised = true;
   }
 
   @AfterClass
@@ -87,7 +91,13 @@ public class ApiTestSuite {
     stopInventoryVerticle();
     stopFakeModules();
     stopVertx();
+
+    initialised = false;
   };
+
+  public static boolean isNotInitialised() {
+    return !initialised;
+  }
 
   public static String getBookMaterialType() {
     return bookMaterialTypeId;
