@@ -10,6 +10,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -392,31 +393,46 @@ public class ExternalItemCollectionExamples {
 
   private Item smallAngryPlanet() {
     return new Item(null, "Long Way to a Small Angry Planet", "036000291452",
-      UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
+      null, null, new ArrayList<>(), null,
+      UUID.randomUUID().toString(),
+      new ArrayList<>(),
+      "Available", bookMaterialTypeId,
       mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null);
   }
 
   private Item nod() {
     return new Item(null, "Nod", "565578437802",
-      UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
+      null, null, new ArrayList<>(), null,
+      UUID.randomUUID().toString(),
+      new ArrayList<>(),
+      "Available", bookMaterialTypeId,
       mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null);
   }
 
   private Item uprooted() {
     return new Item(null, "Uprooted", "657670342075",
-      UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
+      null, null, new ArrayList<>(), null,
+      UUID.randomUUID().toString(), 
+      new ArrayList<>(),
+      "Available", bookMaterialTypeId,
       mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null);
   }
 
   private Item temeraire() {
     return new Item(null, "Temeraire", "232142443432",
-      UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
+      null, null, new ArrayList<>(), null,
+      UUID.randomUUID().toString(),
+      new ArrayList<>(),
+      "Available", bookMaterialTypeId,
       mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null);
   }
 
   private Item interestingTimes() {
     return new Item(null, "Interesting Times", "56454543534",
-      UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
+      null, null, new ArrayList<>(), null,
+      UUID.randomUUID().toString(),
+      new ArrayList<>(),
+      "Available", bookMaterialTypeId,
       mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null);
   }
 

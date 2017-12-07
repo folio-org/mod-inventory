@@ -69,6 +69,11 @@ class ItemRepresentation {
 
     includeIfPresent(representation, "instanceId", item.instanceId);
     includeIfPresent(representation, "barcode", item.barcode);
+    includeIfPresent(representation, "enumeration", item.enumeration);
+    includeIfPresent(representation, "chronology", item.chronology);
+    representation.put("pieceIdentifiers",item.pieceIdentifiers);
+    representation.put("notes", item.notes);
+    includeIfPresent(representation, "numberOfPieces", item.numberOfPieces);
 
     includeReferenceIfPresent(representation, "materialType",
       item.materialTypeId);

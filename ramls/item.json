@@ -14,6 +14,29 @@
     "barcode": {
       "type": "string"
     },
+    "enumeration": {
+      "type": "string"
+    },
+    "chronology": {
+      "type": "string"
+    },
+    "pieceIdentifiers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "numberOfPieces": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
     "status": {
       "type": "object",
       "properties": {

@@ -2,6 +2,7 @@ package org.folio.inventory.support;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import java.util.ArrayList;
 
 import java.util.List;
 import java.util.Map;
@@ -21,6 +22,16 @@ public class JsonArrayHelper {
       })
       .filter(it -> it != null)
       .collect(Collectors.toList());
+  }
+
+  public static List<String> toListOfStrings(JsonArray jsonArray) {
+    List<String> list = new ArrayList<>();
+    if (jsonArray != null) {
+      for (int i=0; i<jsonArray.size(); i++){
+        list.add(jsonArray.getString(i));
+      }
+    }
+    return list;
   }
 
   public static List<Map> toListOfMaps(JsonArray array) {

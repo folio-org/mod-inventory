@@ -16,6 +16,7 @@ import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.JsonArrayHelper;
 
 import java.lang.invoke.MethodHandles;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -106,7 +107,9 @@ public class IngestMessageProcessor {
           return new Item(null,
             record.getString(TITLE_PROPERTY),
             record.getString("barcode"),
+            null, null, new ArrayList<>(), null,
             instanceId,
+            new ArrayList<>(),
             "Available",
             materialTypes.getString("Book") != null
               ? materialTypes.getString("Book")

@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static api.support.InstanceSamples.*;
+import java.util.ArrayList;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
 
@@ -59,6 +60,8 @@ public class ItemApiExamples {
       .put("title", createdInstance.getString("title"))
       .put("instanceId", createdInstance.getString("id"))
       .put("barcode", "645398607547")
+      .put("pieceIdentifiers", new ArrayList<>())
+      .put("notes", new ArrayList<>())
       .put("status", new JsonObject().put("name", "Available"))
       .put("materialType", bookMaterialType())
       .put("permanentLoanType", canCirculateLoanType())
@@ -129,6 +132,8 @@ public class ItemApiExamples {
       .put("title", createdInstance.getString("title"))
       .put("instanceId", createdInstance.getString("id"))
       .put("barcode", "645398607547")
+      .put("pieceIdentifiers", new ArrayList<>())
+      .put("notes", new ArrayList<>())
       .put("status", new JsonObject().put("name", "Available"))
       .put("materialType", bookMaterialType())
       .put("permanentLoanType", canCirculateLoanType())
@@ -192,6 +197,8 @@ public class ItemApiExamples {
 
     JsonObject newItemRequest = new JsonObject()
       .put("title", "Nod")
+      .put("pieceIdentifiers", new ArrayList<>())
+      .put("notes", new ArrayList<>())
       .put("status", new JsonObject().put("name", "Available"))
       .put("materialType", bookMaterialType())
       .put("permanentLoanType", canCirculateLoanType())
@@ -229,6 +236,8 @@ public class ItemApiExamples {
 
     JsonObject firstItemRequest = new JsonObject()
     .put("title", "Temeraire")
+    .put("pieceIdentifiers", new ArrayList<>())
+    .put("notes", new ArrayList<>())
     .put("status", new JsonObject().put("name", "Available"))
     .put("permanentLocation", permanentLocation())
     .put("materialType", bookMaterialType())
@@ -238,6 +247,8 @@ public class ItemApiExamples {
 
     JsonObject newItemRequest = new JsonObject()
       .put("title", "Nod")
+      .put("pieceIdentifiers", new ArrayList<>())
+      .put("notes", new ArrayList<>())
       .put("status", new JsonObject().put("name", "Available"))
       .put("materialType", bookMaterialType())
       .put("permanentLoanType", canCirculateLoanType())
@@ -280,6 +291,8 @@ public class ItemApiExamples {
       .put("title", createdInstance.getString("title"))
       .put("instanceId", createdInstance.getString("id"))
       .put("barcode", "645398607547")
+      .put("pieceIdentifiers", new ArrayList<>())
+      .put("notes", new ArrayList<>())
       .put("status", new JsonObject().put("name", "Available"))
       .put("permanentLoanType", canCirculateLoanType())
       .put("temporaryLocation", temporaryLocation());
@@ -308,6 +321,8 @@ public class ItemApiExamples {
       .put("title", createdInstance.getString("title"))
       .put("instanceId", createdInstance.getString("id"))
       .put("barcode", "645398607547")
+      .put("pieceIdentifiers", new ArrayList<>())
+      .put("notes", new ArrayList<>())
       .put("status", new JsonObject().put("name", "Available"))
       .put("materialType", bookMaterialType())
       .put("temporaryLocation", temporaryLocation());
@@ -336,6 +351,8 @@ public class ItemApiExamples {
       .put("title", createdInstance.getString("title"))
       .put("instanceId", createdInstance.getString("id"))
       .put("barcode", "645398607547")
+      .put("pieceIdentifiers", new ArrayList<>())
+      .put("notes", new ArrayList<>())
       .put("status", new JsonObject().put("name", "Available"))
       .put("materialType", bookMaterialType())
       .put("permanentLoanType", canCirculateLoanType())
@@ -455,6 +472,8 @@ public class ItemApiExamples {
       .put("title", "Nod")
       .put("instanceId", UUID.randomUUID().toString())
       .put("barcode", "546747342365")
+      .put("pieceIdentifiers", new ArrayList<>())
+      .put("notes", new ArrayList<>())
       .put("status", new JsonObject().put("name", "Available"))
       .put("materialType", bookMaterialType())
       .put("permanentLoanType", canCirculateLoanType())
@@ -771,6 +790,8 @@ public class ItemApiExamples {
       .put("title", nodInstance.getString("title"))
       .put("instanceId", nodInstance.getString("id"))
       .put("barcode", "645398607547")
+      .put("pieceIdentifiers", new ArrayList<>())
+      .put("notes", new ArrayList<>())
       .put("status", new JsonObject().put("name", "Available"))
       .put("materialType", bookMaterialType())
       .put("permanentLocation", permanentLocation());
@@ -1041,6 +1062,8 @@ public class ItemApiExamples {
     JsonObject newItemRequest = new JsonObject()
       .put("title", title)
       .put("instanceId", instanceId)
+      .put("pieceIdentifiers", new ArrayList<>())
+      .put("notes", new ArrayList<>())
       .put("status", new JsonObject().put("name", "Available"))
       .put("permanentLocation", permanentLocation())
       .put("temporaryLocation", temporaryLocation());
