@@ -61,12 +61,12 @@ class ItemRepresentation {
 
     JsonObject representation = new JsonObject();
     representation.put("id", item.id);
-    representation.put("title", item.title);
 
     if(item.status != null) {
       representation.put("status", new JsonObject().put("name", item.status));
     }
 
+    includeIfPresent(representation, "title", item.title);
     includeIfPresent(representation, "instanceId", item.instanceId);
     includeIfPresent(representation, "barcode", item.barcode);
     includeIfPresent(representation, "enumeration", item.enumeration);
