@@ -12,6 +12,7 @@ public class Item {
   public final List<String> pieceIdentifiers;
   public final String numberOfPieces;
   public final String instanceId;
+  public final String holdingId;
   public final List<String> notes;
   public final String status;
   public final String materialTypeId;
@@ -21,20 +22,20 @@ public class Item {
   public final String temporaryLocationId;
 
   public Item(String id,
-       String title,
-       String barcode,
-       String enumeration,
-       String chronology,
-       List<String> pieceIdentifiers,
-       String numberOfPieces,
-       String instanceId,
-       List<String> notes,
-       String status,
-       String materialTypeId,
-       String permanentLocationId,
-       String temporaryLocationId,
-       String permanentLoanTypeId,
-       String temporaryLoanTypeId) {
+              String title,
+              String barcode,
+              String enumeration,
+              String chronology,
+              List<String> pieceIdentifiers,
+              String numberOfPieces,
+              String instanceId,
+              String holdingId, List<String> notes,
+              String status,
+              String materialTypeId,
+              String permanentLocationId,
+              String temporaryLocationId,
+              String permanentLoanTypeId,
+              String temporaryLoanTypeId) {
 
     this.id = id;
     this.title = title;
@@ -44,6 +45,7 @@ public class Item {
     this.pieceIdentifiers = new ArrayList<>(pieceIdentifiers);
     this.numberOfPieces = numberOfPieces;
     this.instanceId = instanceId;
+    this.holdingId = holdingId;
     this.notes = new ArrayList<>(notes);
     this.status = status;
     this.materialTypeId = materialTypeId;
@@ -56,17 +58,17 @@ public class Item {
   public Item copyWithNewId(String newId) {
     return new Item(newId, this.title, this.barcode, this.enumeration,
       this.chronology, this.pieceIdentifiers, this.numberOfPieces,
-      this.instanceId, this.notes, this.status, this.materialTypeId,
-      this.permanentLocationId,
-      this.temporaryLocationId, this.permanentLoanTypeId, this.temporaryLoanTypeId);
+      this.instanceId, holdingId, this.notes, this.status, this.materialTypeId,
+      this.permanentLocationId, this.temporaryLocationId, this.permanentLoanTypeId,
+      this.temporaryLoanTypeId);
   }
 
   public Item changeStatus(String newStatus) {
     return new Item(this.id, this.title, this.barcode, this.enumeration,
       this.chronology, this.pieceIdentifiers, this.numberOfPieces,
-      this.instanceId, this.notes, newStatus, this.materialTypeId,
-      this.permanentLocationId,
-      this.temporaryLocationId, this.permanentLoanTypeId, this.temporaryLoanTypeId);
+      this.instanceId, holdingId, this.notes, newStatus, this.materialTypeId,
+      this.permanentLocationId, this.temporaryLocationId, this.permanentLoanTypeId,
+      this.temporaryLoanTypeId);
   }
 
   @Override

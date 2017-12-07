@@ -68,6 +68,7 @@ class ItemRepresentation {
 
     includeIfPresent(representation, "title", item.title);
     includeIfPresent(representation, "instanceId", item.instanceId);
+    includeIfPresent(representation, "holdingsRecordId", item.holdingId);
     includeIfPresent(representation, "barcode", item.barcode);
     includeIfPresent(representation, "enumeration", item.enumeration);
     includeIfPresent(representation, "chronology", item.chronology);

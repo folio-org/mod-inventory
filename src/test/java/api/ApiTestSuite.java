@@ -150,7 +150,7 @@ public class ApiTestSuite {
           it.toString())));
   }
 
-  static String storageOkapiUrl() {
+  public static String storageOkapiUrl() {
     if(useOkapiForStorageRequests) {
       return okapiAddress;
     }

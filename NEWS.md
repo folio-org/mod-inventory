@@ -2,10 +2,13 @@
 
 * Removes `location` property from `item` record
 * `title` is now optional for an `item` (MODINV-34)
+* Adds `holdingsRecordId` to item (MODINV-30)
+* MODS ingest now creates holdings records (MODINV-30) 
 * Introduces `permanentLocation` and `temporaryLocation` properties (which include the name fetched from `shelf-locations`)
-* Provides inventory interface version 4.1
+* Provides inventory interface version 4.2
 * Requires item-storage interface version 4.1
 * Requires instance-storage interface version 3.0
+* Requires holding-storage interface version 1.0
 * Requires shelf-locations interface version 1.0
 * Requires instance-types interface version 1.0
 * Requires identifier-types interface version 1.0

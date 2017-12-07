@@ -23,6 +23,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static api.ApiTestSuite.storageOkapiUrl;
 import static io.restassured.RestAssured.given;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.CoreMatchers.is;
@@ -59,7 +60,7 @@ public class ModsIngestExamples extends ApiTests {
       "mods/multiple-example-mods-records.xml");
 
     String statusLocation = given()
-      .header("X-Okapi-Url", ApiTestSuite.storageOkapiUrl())
+      .header("X-Okapi-Url", storageOkapiUrl())
       .header("X-Okapi-Tenant", ApiTestSuite.TENANT_ID)
       .header("X-Okapi-Token", ApiTestSuite.TOKEN)
       .multiPart("record", modsFile)
@@ -73,6 +74,7 @@ public class ModsIngestExamples extends ApiTests {
       .untilAsserted(() -> {
         ingestJobHasCompleted(statusLocation);
         expectedInstancesCreatedFromIngest();
+        expectedHoldingsCreatedFromIngest();
         expectedItemsCreatedFromIngest();
       });
   }
@@ -84,7 +86,7 @@ public class ModsIngestExamples extends ApiTests {
     File modsFile = loadFileFromResource("mods/multiple-example-mods-records.xml");
 
     given()
-      .header("X-Okapi-Url", ApiTestSuite.storageOkapiUrl())
+      .header("X-Okapi-Url", storageOkapiUrl())
       .header("X-Okapi-Tenant", ApiTestSuite.TENANT_ID)
       .header("X-Okapi-Token", ApiTestSuite.TOKEN)
       .multiPart("record", modsFile)
@@ -135,6 +137,7 @@ public class ModsIngestExamples extends ApiTests {
       assertThat(item.containsKey("title"), is(true));
       assertThat(item.containsKey("barcode"), is(true));
       assertThat(item.containsKey("instanceId"), is(true));
+      assertThat(item.containsKey("holdingsRecordId"), is(true));
       assertThat(item.getJsonObject("status").getString("name"), is("Available"));
 
       assertThat(item.getJsonObject("materialType")
@@ -185,6 +188,14 @@ public class ModsIngestExamples extends ApiTests {
         Assert.fail(e.toString());
       }
     });
+
+    items.stream().forEach(item -> {
+      try {
+        hasCorrectHoldingRelationship(item);
+      } catch (Exception e) {
+        Assert.fail(e.toString());
+      }
+    });
   }
 
   private void hasCorrectInstanceRelationship(JsonObject item)
@@ -202,6 +213,45 @@ public class ModsIngestExamples extends ApiTests {
 
     assertThat(getResponse.getStatusCode(), is(200));
     assertThat(getResponse.getJson().getString("title"), is(item.getString("title")));
+  }
+
+  private void hasCorrectHoldingRelationship(JsonObject item)
+    throws MalformedURLException,
+    InterruptedException,
+    ExecutionException,
+    TimeoutException {
+
+    CompletableFuture<Response> getHoldingCompleted = new CompletableFuture<>();
+
+    //TODO: Use business logic interface when built
+    //likely after RAML module builder upgrade
+    URL holdingLocation = new URL(String.format(
+      "%s/holdings-storage/holdings/%s",
+      storageOkapiUrl(), item.getString("holdingsRecordId")));
+
+    okapiClient.get(holdingLocation, ResponseHandler.any(getHoldingCompleted));
+
+    Response getHoldingResponse = getHoldingCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(String.format("No holding found for item %s", item.getString("id")),
+      getHoldingResponse.getStatusCode(), is(200));
+
+    JsonObject holding = getHoldingResponse.getJson();
+
+    CompletableFuture<Response> getInstanceCompleted = new CompletableFuture<>();
+
+    okapiClient.get(new URL(String.format("%s/%s",
+      ApiRoot.instances(),
+      holding.getString("instanceId"))), ResponseHandler.json(getInstanceCompleted));
+
+    Response getInstanceResponse = getInstanceCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(String.format("No instance found for item %s, holding %s",
+      item.getString("id"), holding.getString("id")),
+      getInstanceResponse.getStatusCode(), is(200));
+
+    //Will need to change when title is no longer on item
+    assertThat(getInstanceResponse.getJson().getString("title"), is(item.getString("title")));
   }
 
   private void expectedInstancesCreatedFromIngest()
@@ -294,6 +344,38 @@ public class ModsIngestExamples extends ApiTests {
 
     assertThat(instances.stream().anyMatch(instance ->
       InstanceSimilarTo(instance, "Angry Planet", "Unknown creator")), is(true));
+  }
+
+  private void expectedHoldingsCreatedFromIngest()
+    throws MalformedURLException,
+    InterruptedException,
+    ExecutionException,
+    TimeoutException {
+
+    CompletableFuture<Response> getAllCompleted = new CompletableFuture<>();
+
+    //TODO: Use business logic interface when built
+    //likely after RAML module builder upgrade
+    okapiClient.get(String.format("%s/%s", storageOkapiUrl(), "holdings-storage/holdings"),
+      ResponseHandler.json(getAllCompleted));
+
+    Response getAllResponse = getAllCompleted.get(5, TimeUnit.SECONDS);
+
+    JsonObject wrappedHoldings = getAllResponse.getJson();
+
+    List<JsonObject> holdings = JsonArrayHelper.toList(
+      wrappedHoldings.getJsonArray("holdingsRecords"));
+
+    assertThat(wrappedHoldings.getInteger("totalRecords"), is(9));
+
+    //TODO: Could be replaced with separate loop per property for clearer feedback
+    holdings.stream().forEach(holding -> {
+      assertThat(holding.containsKey("id"), is(true));
+      assertThat(holding.containsKey("instanceId"), is(true));
+      assertThat(holding.containsKey("permanentLocationId"), is(true));
+
+      assertThat(holding.getString("permanentLocationId"), is(ApiTestSuite.getMainLibraryLocation()));
+    });
   }
 
   private static URL getIngestUrl() throws MalformedURLException {

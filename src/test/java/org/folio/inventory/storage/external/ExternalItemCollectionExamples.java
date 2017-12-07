@@ -395,7 +395,7 @@ public class ExternalItemCollectionExamples {
     return new Item(null, "Long Way to a Small Angry Planet", "036000291452",
       null, null, new ArrayList<>(), null,
       UUID.randomUUID().toString(),
-      new ArrayList<>(),
+      null, new ArrayList<>(),
       "Available", bookMaterialTypeId,
       mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null);
   }
@@ -404,7 +404,7 @@ public class ExternalItemCollectionExamples {
     return new Item(null, "Nod", "565578437802",
       null, null, new ArrayList<>(), null,
       UUID.randomUUID().toString(),
-      new ArrayList<>(),
+      null, new ArrayList<>(),
       "Available", bookMaterialTypeId,
       mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null);
   }
@@ -412,8 +412,8 @@ public class ExternalItemCollectionExamples {
   private Item uprooted() {
     return new Item(null, "Uprooted", "657670342075",
       null, null, new ArrayList<>(), null,
-      UUID.randomUUID().toString(), 
-      new ArrayList<>(),
+      UUID.randomUUID().toString(),
+      null, new ArrayList<>(),
       "Available", bookMaterialTypeId,
       mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null);
   }
@@ -422,7 +422,7 @@ public class ExternalItemCollectionExamples {
     return new Item(null, "Temeraire", "232142443432",
       null, null, new ArrayList<>(), null,
       UUID.randomUUID().toString(),
-      new ArrayList<>(),
+      null, new ArrayList<>(),
       "Available", bookMaterialTypeId,
       mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null);
   }
@@ -431,7 +431,7 @@ public class ExternalItemCollectionExamples {
     return new Item(null, "Interesting Times", "56454543534",
       null, null, new ArrayList<>(), null,
       UUID.randomUUID().toString(),
-      new ArrayList<>(),
+      null, new ArrayList<>(),
       "Available", bookMaterialTypeId,
       mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null);
   }
