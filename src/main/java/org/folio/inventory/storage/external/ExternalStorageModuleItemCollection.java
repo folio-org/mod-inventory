@@ -1,15 +1,13 @@
 package org.folio.inventory.storage.external;
 
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import java.util.ArrayList;
-import java.util.List;
 import org.folio.inventory.domain.Item;
 import org.folio.inventory.domain.ItemCollection;
-
-import java.util.UUID;
 import org.folio.inventory.support.JsonArrayHelper;
+
+import java.util.List;
+import java.util.UUID;
 
 class ExternalStorageModuleItemCollection
   extends ExternalStorageModuleCollection<Item>
@@ -65,7 +63,7 @@ class ExternalStorageModuleItemCollection
       ? item.id
       : UUID.randomUUID().toString());
 
-    itemToSend.put("title", item.title);
+    includeIfPresent(itemToSend, "title", item.title);
     itemToSend.put("status", new JsonObject().put("name", item.status));
     itemToSend.put("pieceIdentifiers", item.pieceIdentifiers);
     itemToSend.put("notes", item.notes);

@@ -16,6 +16,7 @@ import org.junit.Test;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -24,7 +25,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static api.support.InstanceSamples.*;
-import java.util.ArrayList;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
 
@@ -225,6 +225,44 @@ public class ItemApiExamples {
     JsonObject createdItem = getResponse.getJson();
 
     assertThat(createdItem.containsKey("barcode"), is(false));
+  }
+
+  @Test
+  public void canCreateAnItemWithoutTitle()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    JsonObject newItemRequest = new JsonObject()
+      .put("pieceIdentifiers", new ArrayList<>())
+      .put("notes", new ArrayList<>())
+      .put("status", new JsonObject().put("name", "Available"))
+      .put("materialType", bookMaterialType())
+      .put("permanentLoanType", canCirculateLoanType())
+      .put("temporaryLocation", temporaryLocation());
+
+    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+
+    okapiClient.post(ApiRoot.items(), newItemRequest,
+      ResponseHandler.any(postCompleted));
+
+    Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(postResponse.getStatusCode(), is(201));
+    assertThat(postResponse.getLocation(), is(notNullValue()));
+
+    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+
+    okapiClient.get(postResponse.getLocation(), ResponseHandler.json(getCompleted));
+
+    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(getResponse.getStatusCode(), is(200));
+
+    JsonObject createdItem = getResponse.getJson();
+
+    assertThat(createdItem.containsKey("title"), is(false));
   }
 
   @Test
