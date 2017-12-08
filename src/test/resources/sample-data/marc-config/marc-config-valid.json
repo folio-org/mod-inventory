@@ -1,0 +1,23 @@
+{
+  "instance-fields":
+  [
+    {
+      "name":"title",
+      "required":true,
+      "repeatable":false
+    },
+    {
+      "name":"altTitles",
+      "required":false,
+      "repeatable":true
+    }
+  ],
+  "marc-fields":
+  {
+
+    "245":"title",
+    "246":"altTitles"
+  }
+}
+
+

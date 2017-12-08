@@ -1,0 +1,15 @@
+{
+  "instance-fields":
+  [
+    "foo",
+    "bar"
+  ],
+  "marc-fields":
+  {
+
+    "245":"title",
+    "246":"altTitles"
+  }
+}
+
+

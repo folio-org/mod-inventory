@@ -1,25 +1,62 @@
 {
-  "fields": [
+  "leader":"ignored for now",
+  "fields":
+  [
     {
-      "245": {
-        "subfields": [
+      "001":"control_number"
+    },
+    {
+      "245":
+      {
+        "subfields":
+        [
           {
-            "a": "title"
+            "a":"title"
           },
           {
-            "b": "remainder_of_title"
+            "b":"remainder_of_title"
           },
           {
-            "c": "state_of_responsibility"
+            "c":"state_of_responsibility"
           },
           {
-            "f": "inclusive_dates"
+            "f":"inclusive_dates"
           },
           {
-            "g": "bulk_dates"
+            "g":"bulk_dates"
           },
           {
-            "h": "medium"
+            "h":"medium"
+          }
+        ],
+        "ind1": "ignored",
+        "ind2": "ignored"
+      }
+    },
+    {
+      "700":
+      {
+        "subfields":
+        [
+          {
+            "a":"personal_name_1"
+          },
+          {
+            "b":"numeration_1"
+          }
+        ]
+      }
+    },
+    {
+      "700":
+      {
+        "subfields":
+        [
+          {
+            "a":"personal_name_2"
+          },
+          {
+            "b":"numeration_2"
           }
         ]
       }

@@ -3,6 +3,12 @@
   "fields":
   [
     {
+      "001":"ControlNumber-001"
+    },
+    {
+      "009":"ControlNumber-009"
+    },
+    {
       "020":
       {
         "subfields":
