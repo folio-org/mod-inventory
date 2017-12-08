@@ -4,6 +4,7 @@
 * `title` is now optional for an `item` (MODINV-34)
 * Adds `holdingsRecordId` to item (MODINV-30)
 * MODS ingest now creates holdings records (MODINV-30) 
+* Introduces `enumeration`, `chronology`, `numberOfPieces`, `notes`, `pieceIdentifiers` (MODINV-33)
 * Introduces `permanentLocation` and `temporaryLocation` properties (which include the name fetched from `shelf-locations`)
 * Provides inventory interface version 4.2
 * Requires item-storage interface version 4.1
