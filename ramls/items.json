@@ -13,6 +13,9 @@
           "instanceId": {
             "type": "string"
           },
+          "holdingsRecordId": {
+            "type": "string"
+          },
           "title": {
             "type": "string"
           },
