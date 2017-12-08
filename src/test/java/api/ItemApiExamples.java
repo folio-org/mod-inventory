@@ -26,10 +26,8 @@ import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
 
 public class ItemApiExamples extends ApiTests {
-  private final OkapiHttpClient okapiClient;
-
   public ItemApiExamples() throws MalformedURLException {
-    okapiClient = ApiTestSuite.createOkapiHttpClient();
+    super();
   }
 
   @Before
@@ -41,6 +39,7 @@ public class ItemApiExamples extends ApiTests {
 
     Preparation preparation = new Preparation(okapiClient);
     preparation.deleteItems();
+    holdingsStorageClient.deleteAll();
     preparation.deleteInstances();
   }
 

@@ -7,7 +7,6 @@ import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.awaitility.Duration;
 import org.folio.inventory.support.JsonArrayHelper;
-import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
 import org.junit.Assert;
@@ -31,10 +30,8 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertThat;
 
 public class ModsIngestExamples extends ApiTests {
-  private final OkapiHttpClient okapiClient;
-
   public ModsIngestExamples() throws MalformedURLException {
-    okapiClient = ApiTestSuite.createOkapiHttpClient();
+    super();
   }
 
   @Before
@@ -45,8 +42,9 @@ public class ModsIngestExamples extends ApiTests {
     ExecutionException {
 
     Preparation preparation = new Preparation(okapiClient);
-    preparation.deleteInstances();
     preparation.deleteItems();
+    holdingsStorageClient.deleteAll();
+    preparation.deleteInstances();
   }
 
   @Test

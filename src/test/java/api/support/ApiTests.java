@@ -1,6 +1,8 @@
 package api.support;
 
 import api.ApiTestSuite;
+import api.support.http.ResourceClient;
+import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.slf4j.Logger;
@@ -15,6 +17,14 @@ public abstract class ApiTests {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private static boolean runningOnOwn;
+  protected final OkapiHttpClient okapiClient;
+
+  protected final ResourceClient holdingsStorageClient;
+
+  public ApiTests() throws MalformedURLException {
+    okapiClient = ApiTestSuite.createOkapiHttpClient();
+    holdingsStorageClient = ResourceClient.forHoldings(okapiClient);
+  }
 
   @BeforeClass
   public static void before()
