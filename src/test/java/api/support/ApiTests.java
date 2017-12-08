@@ -4,6 +4,7 @@ import api.ApiTestSuite;
 import api.support.http.ResourceClient;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,5 +52,18 @@ public abstract class ApiTests {
       System.out.println("Running test on own, un-initialising suite manually");
       ApiTestSuite.after();
     }
+  }
+
+  @Before
+  public void setup()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    Preparation preparation = new Preparation(okapiClient);
+    preparation.deleteItems();
+    holdingsStorageClient.deleteAll();
+    preparation.deleteInstances();
   }
 }

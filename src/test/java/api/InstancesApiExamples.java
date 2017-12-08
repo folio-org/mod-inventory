@@ -41,19 +41,6 @@ public class InstancesApiExamples extends ApiTests {
     super();
   }
 
-  @Before
-  public void setup()
-    throws InterruptedException,
-    MalformedURLException,
-    TimeoutException,
-    ExecutionException {
-
-    Preparation preparation = new Preparation(okapiClient);
-    preparation.deleteItems();
-    holdingsStorageClient.deleteAll();
-    preparation.deleteInstances();
-  }
-
   @Test
   public void canCreateAnInstance()
     throws InterruptedException,

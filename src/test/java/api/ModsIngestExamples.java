@@ -2,7 +2,6 @@ package api;
 
 import api.support.ApiRoot;
 import api.support.ApiTests;
-import api.support.Preparation;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.awaitility.Duration;
@@ -10,7 +9,6 @@ import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -32,19 +30,6 @@ import static org.junit.Assert.assertThat;
 public class ModsIngestExamples extends ApiTests {
   public ModsIngestExamples() throws MalformedURLException {
     super();
-  }
-
-  @Before
-  public void setup()
-    throws InterruptedException,
-    MalformedURLException,
-    TimeoutException,
-    ExecutionException {
-
-    Preparation preparation = new Preparation(okapiClient);
-    preparation.deleteItems();
-    holdingsStorageClient.deleteAll();
-    preparation.deleteInstances();
   }
 
   @Test
