@@ -238,6 +238,10 @@ public class FakeStorageModule extends AbstractVerticle {
           propertyValue = loan.getString(String.format("%s", field));
         }
 
+        if(propertyValue == null) {
+          return false;
+        }
+
         switch(operator) {
           case "=":
             return propertyValue.contains(term);

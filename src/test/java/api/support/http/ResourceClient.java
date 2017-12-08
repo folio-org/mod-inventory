@@ -19,6 +19,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static org.hamcrest.core.Is.is;
+import static org.hamcrest.core.IsNull.notNullValue;
 import static org.hamcrest.junit.MatcherAssert.assertThat;
 
 public class ResourceClient {
@@ -28,9 +29,19 @@ public class ResourceClient {
   private final String resourceName;
   private final String collectionArrayPropertyName;
 
-  public static ResourceClient forHoldings(OkapiHttpClient client) {
+  public static ResourceClient forHoldingsStorage(OkapiHttpClient client) {
     return new ResourceClient(client, StorageInterfaceUrls::holdingStorageUrl,
       "holdingsRecords");
+  }
+
+  public static ResourceClient forItems(OkapiHttpClient client) {
+    return new ResourceClient(client, BusinessLogicInterfaceUrls::items,
+      "items");
+  }
+
+  public static ResourceClient forInstances(OkapiHttpClient client) {
+    return new ResourceClient(client, BusinessLogicInterfaceUrls::instances,
+      "instances");
   }
 
   private ResourceClient(
@@ -71,8 +82,9 @@ public class ResourceClient {
 
     CompletableFuture<Response> createCompleted = new CompletableFuture<>();
 
+    //TODO: Reinstate json checking
     client.post(urlMaker.combine(""), request,
-      ResponseHandler.json(createCompleted));
+      ResponseHandler.any(createCompleted));
 
     Response response = createCompleted.get(5, TimeUnit.SECONDS);
 
@@ -80,7 +92,19 @@ public class ResourceClient {
       String.format("Failed to create %s: %s", resourceName, response.getBody()),
       response.getStatusCode(), is(HttpURLConnection.HTTP_CREATED));
 
-    return new IndividualResource(response);
+    if(response.hasBody()) {
+      return new IndividualResource(response);
+    }
+    else {
+      assertThat(response.getLocation(), is(notNullValue()));
+
+      CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+
+      client.get(response.getLocation(),
+        ResponseHandler.any(getCompleted));
+
+      return new IndividualResource(getCompleted.get(5, TimeUnit.SECONDS));
+    }
   }
 
   public void replace(UUID id, Builder builder)
