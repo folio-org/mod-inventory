@@ -193,6 +193,7 @@ public class ModsIngestExamples extends ApiTests {
     //TODO: Could be replaced with separate loop per property for clearer feedback
     storedItems.stream().forEach(item -> {
       assertThat(item.containsKey("title"), is(false));
+      assertThat(item.containsKey("permanentLocationId"), is(false));
     });
   }
 

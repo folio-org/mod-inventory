@@ -129,7 +129,7 @@ public class IngestMessageProcessor {
               materialTypes.getString("Book") != null
                 ? materialTypes.getString("Book")
                 : materialTypes.getString("book"),
-              locations.getString("Main Library"),
+              null,
               null,
               loanTypes.getString("Can Circulate") != null
                 ? loanTypes.getString("Can Circulate")
