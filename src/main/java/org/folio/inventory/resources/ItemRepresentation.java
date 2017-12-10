@@ -31,26 +31,31 @@ class ItemRepresentation {
 
     if(materialType != null) {
       representation.getJsonObject("materialType")
+        .put("id", materialType.getString("id"))
         .put("name", materialType.getString("name"));
     }
 
     if(permanentLoanType != null) {
       representation.getJsonObject("permanentLoanType")
+        .put("id", permanentLoanType.getString("id"))
         .put("name", permanentLoanType.getString("name"));
     }
 
     if(temporaryLoanType != null) {
       representation.getJsonObject("temporaryLoanType")
+        .put("id", temporaryLoanType.getString("id"))
         .put("name", temporaryLoanType.getString("name"));
     }
 
     if(permanentLocation != null) {
       representation.getJsonObject("permanentLocation")
+        .put("id", permanentLocation.getString("id"))
         .put("name", permanentLocation.getString("name"));
     }
 
     if(temporaryLocation != null) {
       representation.getJsonObject("temporaryLocation")
+        .put("id", temporaryLocation.getString("id"))
         .put("name", temporaryLocation.getString("name"));
     }
 

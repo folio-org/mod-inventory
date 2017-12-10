@@ -1,5 +1,6 @@
-package api;
+package api.items;
 
+import api.ApiTestSuite;
 import api.support.ApiRoot;
 import api.support.ApiTests;
 import api.support.InstanceApiClient;
@@ -12,6 +13,7 @@ import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
+import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -50,6 +52,8 @@ public class ItemApiExamples extends ApiTests {
 
     IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)
+      .withTitle("Long Way to a Small Angry Planet")
+      .withBarcode("645398607547")
       .inMainLibrary()
       .temporarilyInAnnex()
       .canCirculate()
@@ -64,7 +68,7 @@ public class ItemApiExamples extends ApiTests {
 
     JsonObject materialType = createdItem.getJsonObject("materialType");
 
-    assertThat(materialType.getString("id"), is(ApiTestSuite.getBookMaterialType()));
+    assertThat(materialType.getString("id"), CoreMatchers.is(ApiTestSuite.getBookMaterialType()));
     assertThat(materialType.getString("name"), is("Book"));
 
     JsonObject permanentLoanType = createdItem.getJsonObject("permanentLoanType");
@@ -103,6 +107,8 @@ public class ItemApiExamples extends ApiTests {
     IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
       .withId(itemId)
       .forHolding(holdingId)
+      .withTitle("Long Way to a Small Angry Planet")
+      .withBarcode("645398607547")
       .inMainLibrary()
       .temporarilyInAnnex()
       .canCirculate()
@@ -286,6 +292,8 @@ public class ItemApiExamples extends ApiTests {
 
     IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)
+      .withTitle("Long Way to a Small Angry Planet")
+      .withBarcode("645398607547")
       .withNoTemporaryLoanType());
 
     Response getResponse = itemsClient.getById(postResponse.getId());
@@ -333,6 +341,8 @@ public class ItemApiExamples extends ApiTests {
     JsonObject newItemRequest = new ItemRequestBuilder()
       .withId(itemId)
       .forHolding(holdingId)
+      .withTitle("Long Way to a Small Angry Planet")
+      .withBarcode("645398607547")
       .canCirculate()
       .inMainLibrary()
       .temporarilyInAnnex()

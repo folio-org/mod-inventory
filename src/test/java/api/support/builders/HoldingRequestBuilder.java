@@ -37,6 +37,14 @@ public class HoldingRequestBuilder implements Builder {
       permanentLocationId);
   }
 
+  public HoldingRequestBuilder inMainLibrary() {
+    return withPermanentLocation(UUID.fromString(ApiTestSuite.getMainLibraryLocation()));
+  }
+
+  public HoldingRequestBuilder inAnnex() {
+    return withPermanentLocation(UUID.fromString(ApiTestSuite.getAnnexLocation()));
+  }
+
   public HoldingRequestBuilder forInstance(UUID instanceId) {
     return new HoldingRequestBuilder(
       instanceId,

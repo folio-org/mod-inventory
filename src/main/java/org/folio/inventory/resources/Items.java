@@ -184,12 +184,14 @@ public class Items {
 
   private void getById(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
+    CollectionResourceClient holdingsClient;
     CollectionResourceClient materialTypesClient;
     CollectionResourceClient loanTypesClient;
     CollectionResourceClient locationsClient;
 
     try {
       OkapiHttpClient client = createHttpClient(routingContext, context);
+      holdingsClient = createHoldingsClient(client, context);
       materialTypesClient = createMaterialTypesClient(client, context);
       loanTypesClient = createLoanTypesClient(client, context);
       locationsClient = createLocationsClient(client, context);
@@ -206,37 +208,56 @@ public class Items {
         Item item = itemResponse.getResult();
 
         if(item != null) {
-          ArrayList<CompletableFuture<Response>> allFutures = new ArrayList<>();
 
-          CompletableFuture<Response> materialTypeFuture = getReferenceRecord(
-            item.materialTypeId, materialTypesClient, allFutures);
+          System.out.println(String.format("Fetching holding: %s", item.holdingId));
 
-          CompletableFuture<Response> permanentLoanTypeFuture = getReferenceRecord(
-            item.permanentLoanTypeId, loanTypesClient, allFutures);
+          holdingsClient.get(item.holdingId, holdingResponse -> {
 
-          CompletableFuture<Response> temporaryLoanTypeFuture = getReferenceRecord(
-            item.temporaryLoanTypeId, loanTypesClient, allFutures);
+            System.out.println(String.format("Holding response - %s: %s",
+              holdingResponse.getStatusCode(), holdingResponse.getBody()));
 
-          CompletableFuture<Response> temporaryLocationFuture = getReferenceRecord(
-            item.temporaryLocationId, locationsClient, allFutures);
+            String permanentLocationId = holdingResponse.getStatusCode() == 200
+              && holdingResponse.getJson().containsKey("permanentLocationId")
+              ? holdingResponse.getJson().getString("permanentLocationId")
+              : item.permanentLocationId;
 
-          CompletableFuture<Response> permanentLocationFuture = getReferenceRecord(
-            item.permanentLocationId, locationsClient, allFutures);
+            System.out.println(String.format("Fetching permanent location: %s",
+              permanentLocationId));
 
-          CompletableFuture<Void> allDoneFuture = allOf(allFutures);
+            ArrayList<CompletableFuture<Response>> allFutures = new ArrayList<>();
 
-          allDoneFuture.thenAccept(v -> {
-            try {
-              JsonObject representation = includeReferenceRecordInformationInItem(
-                context, item, materialTypeFuture, permanentLoanTypeFuture,
-                temporaryLoanTypeFuture, temporaryLocationFuture, permanentLocationFuture);
+            CompletableFuture<Response> materialTypeFuture = getReferenceRecord(
+              item.materialTypeId, materialTypesClient, allFutures);
 
-              JsonResponse.success(routingContext.response(), representation);
-            } catch (Exception e) {
-              ServerErrorResponse.internalError(routingContext.response(),
-                "Error creating Item Representation: " + e.getLocalizedMessage());
-            }
+            CompletableFuture<Response> permanentLoanTypeFuture = getReferenceRecord(
+              item.permanentLoanTypeId, loanTypesClient, allFutures);
+
+            CompletableFuture<Response> temporaryLoanTypeFuture = getReferenceRecord(
+              item.temporaryLoanTypeId, loanTypesClient, allFutures);
+
+            CompletableFuture<Response> permanentLocationFuture = getReferenceRecord(
+              permanentLocationId, locationsClient, allFutures);
+
+            CompletableFuture<Response> temporaryLocationFuture = getReferenceRecord(
+              item.temporaryLocationId, locationsClient, allFutures);
+
+            CompletableFuture<Void> allDoneFuture = allOf(allFutures);
+
+            allDoneFuture.thenAccept(v -> {
+              try {
+                JsonObject representation = includeReferenceRecordInformationInItem(
+                  context, item, materialTypeFuture, permanentLocationId, permanentLoanTypeFuture,
+                  temporaryLoanTypeFuture, temporaryLocationFuture, permanentLocationFuture);
+
+                JsonResponse.success(routingContext.response(), representation);
+              } catch (Exception e) {
+                ServerErrorResponse.internalError(routingContext.response(),
+                  "Error creating Item Representation: " + e.getLocalizedMessage());
+              }
+            });
+
           });
+
         }
         else {
           ClientErrorResponse.notFound(routingContext.response());
@@ -432,6 +453,15 @@ public class Items {
       "/item-storage/items");
   }
 
+  private CollectionResourceClient createHoldingsClient(
+    OkapiHttpClient client,
+    WebContext context)
+    throws MalformedURLException {
+
+    return createCollectionResourceClient(client, context,
+      "/holdings-storage/holdings");
+  }
+
   private CollectionResourceClient createMaterialTypesClient(
     OkapiHttpClient client,
     WebContext context)
@@ -523,6 +553,7 @@ public class Items {
     WebContext context,
     Item item,
     CompletableFuture<Response> materialTypeFuture,
+    String permanentLocationId,
     CompletableFuture<Response> permanentLoanTypeFuture,
     CompletableFuture<Response> temporaryLoanTypeFuture,
     CompletableFuture<Response> temporaryLocationFuture,
@@ -538,7 +569,7 @@ public class Items {
       referenceRecordFrom(item.temporaryLoanTypeId, temporaryLoanTypeFuture);
 
     JsonObject foundPermanentLocation =
-      referenceRecordFrom(item.permanentLocationId, permanentLocationFuture);
+      referenceRecordFrom(permanentLocationId, permanentLocationFuture);
 
     JsonObject foundTemporaryLocation =
       referenceRecordFrom(item.temporaryLocationId, temporaryLocationFuture);

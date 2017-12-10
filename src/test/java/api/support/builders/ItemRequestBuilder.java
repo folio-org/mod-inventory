@@ -22,8 +22,9 @@ public class ItemRequestBuilder implements Builder {
   private final JsonObject temporaryLoanType;
 
   public ItemRequestBuilder() {
-    this(UUID.randomUUID(), null, null, "Long Way to a Small Angry Planet", "645398607547",
-      AVAILABLE_STATUS, bookMaterialType(), mainLibrary(), null, canCirculateLoanType(), null
+    this(UUID.randomUUID(), null, null, null, "645398607547",
+      AVAILABLE_STATUS, bookMaterialType(), mainLibrary(), null,
+      canCirculateLoanType(), null
     );
   }
 
@@ -187,6 +188,10 @@ public class ItemRequestBuilder implements Builder {
 
   public ItemRequestBuilder inMainLibrary() {
     return withPermanentLocation(mainLibrary());
+  }
+
+  public ItemRequestBuilder inAnnex() {
+    return withPermanentLocation(annex());
   }
 
   public ItemRequestBuilder withNoPermanentLocation() {
