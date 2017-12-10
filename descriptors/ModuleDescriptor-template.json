@@ -13,8 +13,13 @@
           "modulePermissions": [
             "inventory-storage.items.collection.get",
             "inventory-storage.material-types.item.get",
+            "inventory-storage.material-types.collection.get",
             "inventory-storage.loan-types.item.get",
-            "inventory-storage.shelf-locations.item.get"
+            "inventory-storage.loan-types.collection.get",
+            "inventory-storage.shelf-locations.item.get",
+            "inventory-storage.shelf-locations.collection.get",
+            "inventory-storage.holdings.collection.get",
+            "inventory-storage.holdings.item.get"
           ]
         }, {
           "methods": ["GET"],
@@ -23,8 +28,13 @@
           "modulePermissions": [
             "inventory-storage.items.item.get",
             "inventory-storage.material-types.item.get",
+            "inventory-storage.material-types.collection.get",
             "inventory-storage.loan-types.item.get",
-            "inventory-storage.shelf-locations.item.get"
+            "inventory-storage.loan-types.collection.get",
+            "inventory-storage.shelf-locations.item.get",
+            "inventory-storage.shelf-locations.collection.get",
+            "inventory-storage.holdings.collection.get",
+            "inventory-storage.holdings.item.get"
           ]
         }, {
           "methods": ["POST"],
@@ -33,8 +43,13 @@
           "modulePermissions": [
             "inventory-storage.items.item.post",
             "inventory-storage.material-types.item.get",
+            "inventory-storage.material-types.collection.get",
             "inventory-storage.loan-types.item.get",
-            "inventory-storage.shelf-locations.item.get"
+            "inventory-storage.loan-types.collection.get",
+            "inventory-storage.shelf-locations.item.get",
+            "inventory-storage.shelf-locations.collection.get",
+            "inventory-storage.holdings.collection.get",
+            "inventory-storage.holdings.item.get"
           ]
         }, {
           "methods": ["PUT"],
