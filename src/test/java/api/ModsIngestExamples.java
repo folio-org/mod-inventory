@@ -59,6 +59,7 @@ public class ModsIngestExamples extends ApiTests {
         expectedInstancesCreatedFromIngest();
         expectedHoldingsCreatedFromIngest();
         expectedItemsCreatedFromIngest();
+        expectedStoredItemsCreatedFromIngest();
       });
   }
 
@@ -178,6 +179,20 @@ public class ModsIngestExamples extends ApiTests {
       } catch (Exception e) {
         Assert.fail(e.toString());
       }
+    });
+  }
+
+  private void expectedStoredItemsCreatedFromIngest()
+    throws MalformedURLException,
+    InterruptedException,
+    ExecutionException,
+    TimeoutException {
+
+    List<JsonObject> storedItems = itemsStorageClient.getAll();
+
+    //TODO: Could be replaced with separate loop per property for clearer feedback
+    storedItems.stream().forEach(item -> {
+      assertThat(item.containsKey("title"), is(false));
     });
   }
 
