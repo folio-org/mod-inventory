@@ -253,7 +253,7 @@ public class Items {
                   JsonResponse.success(routingContext.response(), representation);
                 } catch (Exception e) {
                   ServerErrorResponse.internalError(routingContext.response(),
-                    "Error creating Item Representation: " + e.getLocalizedMessage());
+                    String.format("Error creating Item Representation: %s", e));
                 }
               });
               });
@@ -312,6 +312,7 @@ public class Items {
     MultipleRecords<Item> wrappedItems) {
 
     CollectionResourceClient holdingsClient;
+    CollectionResourceClient instancesClient;
     CollectionResourceClient materialTypesClient;
     CollectionResourceClient loanTypesClient;
     CollectionResourceClient locationsClient;
@@ -319,6 +320,7 @@ public class Items {
     try {
       OkapiHttpClient client = createHttpClient(routingContext, context);
       holdingsClient = createHoldingsClient(client, context);
+      instancesClient = createInstancesClient(client, context);
       materialTypesClient = createMaterialTypesClient(client, context);
       loanTypesClient = createLoanTypesClient(client, context);
       locationsClient = createLocationsClient(client, context);
@@ -348,115 +350,141 @@ public class Items {
     holdingsClient.getMany(holdingsQuery, holdingsIds.size(), 0,
       holdingsFetched::complete);
 
-  holdingsFetched.thenAccept(holdingsResponse -> {
-    if (holdingsResponse.getStatusCode() != 200) {
-      ServerErrorResponse.internalError(routingContext.response(),
-        String.format("Holdings request (%s) failed %s: %s",
-          holdingsQuery, holdingsResponse.getStatusCode(),
-          holdingsResponse.getBody()));
-    }
+    holdingsFetched.thenAccept(holdingsResponse -> {
+      if (holdingsResponse.getStatusCode() != 200) {
+        ServerErrorResponse.internalError(routingContext.response(),
+          String.format("Holdings request (%s) failed %s: %s",
+            holdingsQuery, holdingsResponse.getStatusCode(),
+            holdingsResponse.getBody()));
+      }
 
-    final List<JsonObject> holdings = JsonArrayHelper.toList(
-      holdingsResponse.getJson().getJsonArray("holdingsRecords"));
+      final List<JsonObject> holdings = JsonArrayHelper.toList(
+        holdingsResponse.getJson().getJsonArray("holdingsRecords"));
 
-    List<String> materialTypeIds = wrappedItems.records.stream()
-      .map(item -> item.materialTypeId)
-      .filter(Objects::nonNull)
-      .distinct()
-      .collect(Collectors.toList());
+      List<String> instanceIds = holdings.stream()
+        .map(holding -> holding.getString("instanceId"))
+        .filter(Objects::nonNull)
+        .distinct()
+        .collect(Collectors.toList());
 
-    materialTypeIds.stream().forEach(id -> {
-      CompletableFuture<Response> newFuture = new CompletableFuture<>();
+      CompletableFuture<Response> instancesFetched =
+        new CompletableFuture<>();
 
-      allFutures.add(newFuture);
-      allMaterialTypeFutures.add(newFuture);
+      String instancesQuery = multipleRecordsCqlQuery(instanceIds);
 
-      materialTypesClient.get(id, newFuture::complete);
-    });
+      instancesClient.getMany(instancesQuery, instanceIds.size(), 0,
+        instancesFetched::complete);
 
-    List<String> permanentLoanTypeIds = wrappedItems.records.stream()
-      .map(item -> item.permanentLoanTypeId)
-      .filter(Objects::nonNull)
-      .distinct()
-      .collect(Collectors.toList());
-
-    List<String> temporaryLoanTypeIds = wrappedItems.records.stream()
-      .map(item -> item.temporaryLoanTypeId)
-      .filter(Objects::nonNull)
-      .distinct()
-      .collect(Collectors.toList());
-
-    Stream.concat(permanentLoanTypeIds.stream(), temporaryLoanTypeIds.stream())
-      .distinct()
-      .forEach(id -> {
-
-        CompletableFuture<Response> newFuture = new CompletableFuture<>();
-
-        allFutures.add(newFuture);
-        allLoanTypeFutures.add(newFuture);
-
-        loanTypesClient.get(id, newFuture::complete);
-      });
-
-    List<String> permanentLocationIds = wrappedItems.records.stream()
-      .map(item -> HoldingsSupport.determinePermanentLocationIdForItem(item,
-        HoldingsSupport.holdingForItem(item, holdings).orElse(null)))
-      .filter(Objects::nonNull)
-      .distinct()
-      .collect(Collectors.toList());
-
-    List<String> temporaryLocationIds = wrappedItems.records.stream()
-      .map(item -> item.temporaryLocationId)
-      .filter(Objects::nonNull)
-      .distinct()
-      .collect(Collectors.toList());
-
-    Stream.concat(permanentLocationIds.stream(), temporaryLocationIds.stream())
-      .distinct()
-      .forEach(id -> {
-
-        CompletableFuture<Response> newFuture = new CompletableFuture<>();
-
-        allFutures.add(newFuture);
-        allLocationsFutures.add(newFuture);
-
-        locationsClient.get(id, newFuture::complete);
-      });
-
-      CompletableFuture<Void> allDoneFuture = allOf(allFutures);
-
-      allDoneFuture.thenAccept(v -> {
-        log.info("GET all items: all futures completed");
-
-        try {
-          Map<String, JsonObject> foundMaterialTypes
-            = allMaterialTypeFutures.stream()
-            .map(CompletableFuture::join)
-            .filter(response -> response.getStatusCode() == 200)
-            .map(Response::getJson)
-            .collect(Collectors.toMap(r -> r.getString("id"), r -> r));
-
-          Map<String, JsonObject> foundLoanTypes
-            = allLoanTypeFutures.stream()
-            .map(CompletableFuture::join)
-            .filter(response -> response.getStatusCode() == 200)
-            .map(Response::getJson)
-            .collect(Collectors.toMap(r -> r.getString("id"), r -> r));
-
-          Map<String, JsonObject> foundLocations
-            = allLocationsFutures.stream()
-            .map(CompletableFuture::join)
-            .filter(response -> response.getStatusCode() == 200)
-            .map(Response::getJson)
-            .collect(Collectors.toMap(r -> r.getString("id"), r -> r));
-
-          JsonResponse.success(routingContext.response(),
-            new ItemRepresentation(RELATIVE_ITEMS_PATH)
-              .toJson(wrappedItems, holdings, foundMaterialTypes, foundLoanTypes,
-                foundLocations, context));
-        } catch (Exception e) {
-          ServerErrorResponse.internalError(routingContext.response(), e.toString());
+      instancesFetched.thenAccept(instancesResponse -> {
+        if (instancesResponse.getStatusCode() != 200) {
+          ServerErrorResponse.internalError(routingContext.response(),
+            String.format("Instances request (%s) failed %s: %s",
+              instancesQuery, instancesResponse.getStatusCode(),
+              instancesResponse.getBody()));
         }
+
+        final List<JsonObject> instances = JsonArrayHelper.toList(
+          instancesResponse.getJson().getJsonArray("instances"));
+
+        List<String> materialTypeIds = wrappedItems.records.stream()
+          .map(item -> item.materialTypeId)
+          .filter(Objects::nonNull)
+          .distinct()
+          .collect(Collectors.toList());
+
+        materialTypeIds.stream().forEach(id -> {
+          CompletableFuture<Response> newFuture = new CompletableFuture<>();
+
+          allFutures.add(newFuture);
+          allMaterialTypeFutures.add(newFuture);
+
+          materialTypesClient.get(id, newFuture::complete);
+        });
+
+        List<String> permanentLoanTypeIds = wrappedItems.records.stream()
+          .map(item -> item.permanentLoanTypeId)
+          .filter(Objects::nonNull)
+          .distinct()
+          .collect(Collectors.toList());
+
+        List<String> temporaryLoanTypeIds = wrappedItems.records.stream()
+          .map(item -> item.temporaryLoanTypeId)
+          .filter(Objects::nonNull)
+          .distinct()
+          .collect(Collectors.toList());
+
+        Stream.concat(permanentLoanTypeIds.stream(), temporaryLoanTypeIds.stream())
+          .distinct()
+          .forEach(id -> {
+
+            CompletableFuture<Response> newFuture = new CompletableFuture<>();
+
+            allFutures.add(newFuture);
+            allLoanTypeFutures.add(newFuture);
+
+            loanTypesClient.get(id, newFuture::complete);
+          });
+
+        List<String> permanentLocationIds = wrappedItems.records.stream()
+          .map(item -> HoldingsSupport.determinePermanentLocationIdForItem(item,
+            HoldingsSupport.holdingForItem(item, holdings).orElse(null)))
+          .filter(Objects::nonNull)
+          .distinct()
+          .collect(Collectors.toList());
+
+        List<String> temporaryLocationIds = wrappedItems.records.stream()
+          .map(item -> item.temporaryLocationId)
+          .filter(Objects::nonNull)
+          .distinct()
+          .collect(Collectors.toList());
+
+        Stream.concat(permanentLocationIds.stream(), temporaryLocationIds.stream())
+          .distinct()
+          .forEach(id -> {
+
+            CompletableFuture<Response> newFuture = new CompletableFuture<>();
+
+            allFutures.add(newFuture);
+            allLocationsFutures.add(newFuture);
+
+            locationsClient.get(id, newFuture::complete);
+          });
+
+        CompletableFuture<Void> allDoneFuture = allOf(allFutures);
+
+        allDoneFuture.thenAccept(v -> {
+          log.info("GET all items: all futures completed");
+
+          try {
+            Map<String, JsonObject> foundMaterialTypes
+              = allMaterialTypeFutures.stream()
+              .map(CompletableFuture::join)
+              .filter(response -> response.getStatusCode() == 200)
+              .map(Response::getJson)
+              .collect(Collectors.toMap(r -> r.getString("id"), r -> r));
+
+            Map<String, JsonObject> foundLoanTypes
+              = allLoanTypeFutures.stream()
+              .map(CompletableFuture::join)
+              .filter(response -> response.getStatusCode() == 200)
+              .map(Response::getJson)
+              .collect(Collectors.toMap(r -> r.getString("id"), r -> r));
+
+            Map<String, JsonObject> foundLocations
+              = allLocationsFutures.stream()
+              .map(CompletableFuture::join)
+              .filter(response -> response.getStatusCode() == 200)
+              .map(Response::getJson)
+              .collect(Collectors.toMap(r -> r.getString("id"), r -> r));
+
+            JsonResponse.success(routingContext.response(),
+              new ItemRepresentation(RELATIVE_ITEMS_PATH)
+                .toJson(wrappedItems, holdings, instances, foundMaterialTypes,
+                  foundLoanTypes, foundLocations, context));
+          } catch (Exception e) {
+            ServerErrorResponse.internalError(routingContext.response(), e.toString());
+          }
+        });
       });
     });
   }
@@ -542,9 +570,12 @@ public class Items {
     String id,
     CompletableFuture<Response> requestFuture) {
 
-    return id != null &&
-      requestFuture.join().getStatusCode() == 200 ?
-      requestFuture.join().getJson() : null;
+    return id != null
+      && requestFuture != null
+      && requestFuture.join() != null
+      && requestFuture.join().getStatusCode() == 200
+      ? requestFuture.join().getJson()
+      : null;
   }
 
   private void addItem(

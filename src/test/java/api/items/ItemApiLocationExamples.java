@@ -40,8 +40,7 @@ public class ItemApiLocationExamples extends ApiTests {
     UUID holdingId = holdingsStorageClient.create(
       new HoldingRequestBuilder()
         .forInstance(instanceId)
-        .inMainLibrary()
-        .create())
+        .inMainLibrary())
       .getId();
 
     IndividualResource response = itemsClient.create(
@@ -125,8 +124,7 @@ public class ItemApiLocationExamples extends ApiTests {
     UUID firstHoldingId = holdingsStorageClient.create(
       new HoldingRequestBuilder()
         .forInstance(firstInstanceId)
-        .inMainLibrary()
-        .create())
+        .inMainLibrary())
       .getId();
 
     UUID firstItemId = itemsClient.create(
@@ -142,8 +140,7 @@ public class ItemApiLocationExamples extends ApiTests {
     UUID secondHoldingId = holdingsStorageClient.create(
       new HoldingRequestBuilder()
         .forInstance(secondInstanceId)
-        .inAnnex()
-        .create())
+        .inAnnex())
       .getId();
 
     UUID secondItemId = itemsClient.create(

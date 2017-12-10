@@ -14,4 +14,13 @@ public class StorageInterfaceUrls {
       return null;
     }
   }
+
+  public static URL itemsStorageUrl(String subPath) {
+    try {
+      return URLHelper.joinPath(new URL(storageOkapiUrl()), String.format(
+        "/item-storage/items%s", subPath));
+    } catch (MalformedURLException e) {
+      return null;
+    }
+  }
 }

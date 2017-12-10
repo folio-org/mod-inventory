@@ -184,9 +184,9 @@ public class ItemApiExamples extends ApiTests {
       .forHolding(holdingId)
       .withNoTitle());
 
-    JsonObject createdItem = itemsClient.getById(postResponse.getId()).getJson();
+    JsonObject createdItemInStorage = itemsStorageClient.getById(postResponse.getId()).getJson();
 
-    assertThat(createdItem.containsKey("title"), is(false));
+    assertThat(createdItemInStorage.containsKey("title"), is(false));
   }
 
   @Test
@@ -243,6 +243,29 @@ public class ItemApiExamples extends ApiTests {
     Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
 
     assertThat(postResponse.getStatusCode(), is(422));
+  }
+
+  @Test
+  public void cannotCreateItemWithoutPermanentLocation()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
+
+    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withNoPermanentLocation());
+
+    JsonObject createdItemInStorage = itemsStorageClient.getById(postResponse.getId()).getJson();
+
+    assertThat(createdItemInStorage.containsKey("permanentLocationId"), is(false));
   }
 
   @Test

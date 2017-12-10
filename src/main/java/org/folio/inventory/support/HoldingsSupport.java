@@ -26,4 +26,19 @@ public class HoldingsSupport {
       .filter(holding -> holding.getString("id").equals(holdingsRecordId))
       .findFirst();
   }
+
+  public static Optional<JsonObject> instanceForHolding(
+    JsonObject holding,
+    Collection<JsonObject> instances) {
+
+    if(holding == null || !holding.containsKey("instanceId")) {
+      return Optional.empty();
+    }
+
+    String instanceId = holding.getString("instanceId");
+
+    return instances.stream()
+      .filter(instance -> instance.getString("id").equals(instanceId))
+      .findFirst();
+  }
 }

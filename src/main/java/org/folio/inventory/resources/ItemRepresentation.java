@@ -14,6 +14,7 @@ import java.util.Map;
 
 import static org.folio.inventory.support.HoldingsSupport.determinePermanentLocationIdForItem;
 import static org.folio.inventory.support.HoldingsSupport.holdingForItem;
+import static org.folio.inventory.support.HoldingsSupport.instanceForHolding;
 
 class ItemRepresentation {
   private final String relativeItemsPath;
@@ -53,9 +54,14 @@ class ItemRepresentation {
     }
 
     if(permanentLocation != null) {
-      representation.getJsonObject("permanentLocation")
+      if(representation.containsKey("permanentLocation")) {
+        representation.getJsonObject("permanentLocation")
+          .put("id", permanentLocation.getString("id"))
+          .put("name", permanentLocation.getString("name"));
+      }
+      representation.put("permanentLocation", new JsonObject()
         .put("id", permanentLocation.getString("id"))
-        .put("name", permanentLocation.getString("name"));
+        .put("name", permanentLocation.getString("name")));
     }
 
     if(temporaryLocation != null) {
@@ -123,6 +129,7 @@ class ItemRepresentation {
   public JsonObject toJson(
     MultipleRecords<Item> wrappedItems,
     Collection<JsonObject> holdings,
+    Collection<JsonObject> instances,
     Map<String, JsonObject> materialTypes,
     Map<String, JsonObject> loanTypes,
     Map<String, JsonObject> locations,
@@ -139,14 +146,18 @@ class ItemRepresentation {
       JsonObject permanentLoanType = loanTypes.get(item.permanentLoanTypeId);
       JsonObject temporaryLoanType = loanTypes.get(item.temporaryLoanTypeId);
 
+      JsonObject holding = holdingForItem(item, holdings).orElse(null);
+
+      JsonObject instance = instanceForHolding(holding, instances).orElse(null);
+
       String permanentLocationId = determinePermanentLocationIdForItem(item,
-        holdingForItem(item, holdings).orElse(null));
+        holding);
 
       JsonObject permanentLocation = locations.get(permanentLocationId);
 
       JsonObject temporaryLocation = locations.get(item.temporaryLocationId);
 
-      results.add(toJson(item, null, materialType, permanentLoanType,
+      results.add(toJson(item, instance, materialType, permanentLoanType,
         temporaryLoanType, permanentLocation, temporaryLocation, context));
     });
 

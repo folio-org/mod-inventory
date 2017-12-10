@@ -21,12 +21,14 @@ public abstract class ApiTests {
   protected final OkapiHttpClient okapiClient;
 
   protected final ResourceClient holdingsStorageClient;
+  protected final ResourceClient itemsStorageClient;
   protected final ResourceClient itemsClient;
   protected final ResourceClient instancesClient;
 
   public ApiTests() throws MalformedURLException {
     okapiClient = ApiTestSuite.createOkapiHttpClient();
     holdingsStorageClient = ResourceClient.forHoldingsStorage(okapiClient);
+    itemsStorageClient = ResourceClient.forItemsStorage(okapiClient);
     itemsClient = ResourceClient.forItems(okapiClient);
     instancesClient = ResourceClient.forInstances(okapiClient);
   }
