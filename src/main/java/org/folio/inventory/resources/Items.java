@@ -184,6 +184,7 @@ public class Items {
   private void getById(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
     CollectionResourceClient holdingsClient;
+    CollectionResourceClient instancesClient;
     CollectionResourceClient materialTypesClient;
     CollectionResourceClient loanTypesClient;
     CollectionResourceClient locationsClient;
@@ -191,6 +192,7 @@ public class Items {
     try {
       OkapiHttpClient client = createHttpClient(routingContext, context);
       holdingsClient = createHoldingsClient(client, context);
+      instancesClient = createInstancesClient(client, context);
       materialTypesClient = createMaterialTypesClient(client, context);
       loanTypesClient = createLoanTypesClient(client, context);
       locationsClient = createLocationsClient(client, context);
@@ -207,56 +209,56 @@ public class Items {
         Item item = itemResponse.getResult();
 
         if(item != null) {
-
-          System.out.println(String.format("Fetching holding: %s", item.holdingId));
-
           holdingsClient.get(item.holdingId, holdingResponse -> {
+            String instanceId = holdingResponse.getStatusCode() == 200
+              ? holdingResponse.getJson().getString("instanceId")
+              : null;
 
-            System.out.println(String.format("Holding response - %s: %s",
-              holdingResponse.getStatusCode(), holdingResponse.getBody()));
+            instancesClient.get(instanceId, instanceResponse -> {
+              final JsonObject instance = instanceResponse.getStatusCode() == 200
+                ? instanceResponse.getJson()
+                : null;
 
-            String permanentLocationId = holdingResponse.getStatusCode() == 200
-              && holdingResponse.getJson().containsKey("permanentLocationId")
-              ? holdingResponse.getJson().getString("permanentLocationId")
-              : item.permanentLocationId;
+              String permanentLocationId = holdingResponse.getStatusCode() == 200
+                && holdingResponse.getJson().containsKey("permanentLocationId")
+                ? holdingResponse.getJson().getString("permanentLocationId")
+                : item.permanentLocationId;
 
-            System.out.println(String.format("Fetching permanent location: %s",
-              permanentLocationId));
+              ArrayList<CompletableFuture<Response>> allFutures = new ArrayList<>();
 
-            ArrayList<CompletableFuture<Response>> allFutures = new ArrayList<>();
+              CompletableFuture<Response> materialTypeFuture = getReferenceRecord(
+                item.materialTypeId, materialTypesClient, allFutures);
 
-            CompletableFuture<Response> materialTypeFuture = getReferenceRecord(
-              item.materialTypeId, materialTypesClient, allFutures);
+              CompletableFuture<Response> permanentLoanTypeFuture = getReferenceRecord(
+                item.permanentLoanTypeId, loanTypesClient, allFutures);
 
-            CompletableFuture<Response> permanentLoanTypeFuture = getReferenceRecord(
-              item.permanentLoanTypeId, loanTypesClient, allFutures);
+              CompletableFuture<Response> temporaryLoanTypeFuture = getReferenceRecord(
+                item.temporaryLoanTypeId, loanTypesClient, allFutures);
 
-            CompletableFuture<Response> temporaryLoanTypeFuture = getReferenceRecord(
-              item.temporaryLoanTypeId, loanTypesClient, allFutures);
+              CompletableFuture<Response> permanentLocationFuture = getReferenceRecord(
+                permanentLocationId, locationsClient, allFutures);
 
-            CompletableFuture<Response> permanentLocationFuture = getReferenceRecord(
-              permanentLocationId, locationsClient, allFutures);
+              CompletableFuture<Response> temporaryLocationFuture = getReferenceRecord(
+                item.temporaryLocationId, locationsClient, allFutures);
 
-            CompletableFuture<Response> temporaryLocationFuture = getReferenceRecord(
-              item.temporaryLocationId, locationsClient, allFutures);
+              CompletableFuture<Void> allDoneFuture = allOf(allFutures);
 
-            CompletableFuture<Void> allDoneFuture = allOf(allFutures);
+              allDoneFuture.thenAccept(v -> {
+                try {
+                  JsonObject representation = includeReferenceRecordInformationInItem(
+                    context, item, instance, materialTypeFuture, permanentLocationId,
+                    permanentLoanTypeFuture, temporaryLoanTypeFuture,
+                    temporaryLocationFuture, permanentLocationFuture);
 
-            allDoneFuture.thenAccept(v -> {
-              try {
-                JsonObject representation = includeReferenceRecordInformationInItem(
-                  context, item, materialTypeFuture, permanentLocationId, permanentLoanTypeFuture,
-                  temporaryLoanTypeFuture, temporaryLocationFuture, permanentLocationFuture);
-
-                JsonResponse.success(routingContext.response(), representation);
-              } catch (Exception e) {
-                ServerErrorResponse.internalError(routingContext.response(),
-                  "Error creating Item Representation: " + e.getLocalizedMessage());
-              }
-            });
+                  JsonResponse.success(routingContext.response(), representation);
+                } catch (Exception e) {
+                  ServerErrorResponse.internalError(routingContext.response(),
+                    "Error creating Item Representation: " + e.getLocalizedMessage());
+                }
+              });
+              });
 
           });
-
         }
         else {
           ClientErrorResponse.notFound(routingContext.response());
@@ -490,6 +492,15 @@ public class Items {
       "/holdings-storage/holdings");
   }
 
+  private CollectionResourceClient createInstancesClient(
+    OkapiHttpClient client,
+    WebContext context)
+    throws MalformedURLException {
+
+    return createCollectionResourceClient(client, context,
+      "/instance-storage/instances");
+  }
+
   private CollectionResourceClient createMaterialTypesClient(
     OkapiHttpClient client,
     WebContext context)
@@ -580,6 +591,7 @@ public class Items {
   private JsonObject includeReferenceRecordInformationInItem(
     WebContext context,
     Item item,
+    JsonObject instance,
     CompletableFuture<Response> materialTypeFuture,
     String permanentLocationId,
     CompletableFuture<Response> permanentLoanTypeFuture,
@@ -604,6 +616,7 @@ public class Items {
 
     return new ItemRepresentation(RELATIVE_ITEMS_PATH)
         .toJson(item,
+          instance,
           foundMaterialType,
           foundPermanentLoanType,
           foundTemporaryLoanType,

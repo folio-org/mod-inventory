@@ -24,6 +24,7 @@ class ItemRepresentation {
 
   public JsonObject toJson(
     Item item,
+    JsonObject instance,
     JsonObject materialType,
     JsonObject permanentLoanType,
     JsonObject temporaryLoanType,
@@ -31,7 +32,7 @@ class ItemRepresentation {
     JsonObject temporaryLocation,
     WebContext context) {
 
-    JsonObject representation = toJson(item, context);
+    JsonObject representation = toJson(item, instance, context);
 
     if(materialType != null) {
       representation.getJsonObject("materialType")
@@ -66,7 +67,10 @@ class ItemRepresentation {
     return representation;
   }
 
-  JsonObject toJson(Item item, WebContext context) {
+  JsonObject toJson(
+    Item item,
+    JsonObject instance,
+    WebContext context) {
 
     JsonObject representation = new JsonObject();
     representation.put("id", item.id);
@@ -75,7 +79,11 @@ class ItemRepresentation {
       representation.put("status", new JsonObject().put("name", item.status));
     }
 
-    includeIfPresent(representation, "title", item.title);
+    String title = instance != null && instance.containsKey("title")
+      ? instance.getString("title")
+      : item.title;
+
+    includeIfPresent(representation, "title", title);
     includeIfPresent(representation, "instanceId", item.instanceId);
     includeIfPresent(representation, "holdingsRecordId", item.holdingId);
     includeIfPresent(representation, "barcode", item.barcode);
@@ -138,8 +146,8 @@ class ItemRepresentation {
 
       JsonObject temporaryLocation = locations.get(item.temporaryLocationId);
 
-      results.add(toJson(item, materialType, permanentLoanType, temporaryLoanType,
-        permanentLocation, temporaryLocation, context));
+      results.add(toJson(item, null, materialType, permanentLoanType,
+        temporaryLoanType, permanentLocation, temporaryLocation, context));
     });
 
     representation
