@@ -8,8 +8,12 @@ import org.folio.inventory.domain.Item;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+
+import static org.folio.inventory.support.HoldingsSupport.determinePermanentLocationIdForItem;
+import static org.folio.inventory.support.HoldingsSupport.holdingForItem;
 
 class ItemRepresentation {
   private final String relativeItemsPath;
@@ -110,6 +114,7 @@ class ItemRepresentation {
 
   public JsonObject toJson(
     MultipleRecords<Item> wrappedItems,
+    Collection<JsonObject> holdings,
     Map<String, JsonObject> materialTypes,
     Map<String, JsonObject> loanTypes,
     Map<String, JsonObject> locations,
@@ -125,8 +130,14 @@ class ItemRepresentation {
       JsonObject materialType = materialTypes.get(item.materialTypeId);
       JsonObject permanentLoanType = loanTypes.get(item.permanentLoanTypeId);
       JsonObject temporaryLoanType = loanTypes.get(item.temporaryLoanTypeId);
-      JsonObject permanentLocation = locations.get(item.permanentLocationId);
+
+      String permanentLocationId = determinePermanentLocationIdForItem(item,
+        holdingForItem(item, holdings).orElse(null));
+
+      JsonObject permanentLocation = locations.get(permanentLocationId);
+
       JsonObject temporaryLocation = locations.get(item.temporaryLocationId);
+
       results.add(toJson(item, materialType, permanentLoanType, temporaryLoanType,
         permanentLocation, temporaryLocation, context));
     });

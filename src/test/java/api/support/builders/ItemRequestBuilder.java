@@ -213,6 +213,10 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLoanType);
   }
 
+  public ItemRequestBuilder temporarilyInMainLibrary() {
+    return withTemporaryLocation(mainLibrary());
+  }
+
   public ItemRequestBuilder temporarilyInAnnex() {
     return withTemporaryLocation(annex());
   }
