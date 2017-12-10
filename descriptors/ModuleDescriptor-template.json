@@ -19,7 +19,9 @@
             "inventory-storage.shelf-locations.item.get",
             "inventory-storage.shelf-locations.collection.get",
             "inventory-storage.holdings.collection.get",
-            "inventory-storage.holdings.item.get"
+            "inventory-storage.holdings.item.get",
+            "inventory-storage.instances.collection.get",
+            "inventory-storage.instances.item.get"
           ]
         }, {
           "methods": ["GET"],
@@ -34,7 +36,9 @@
             "inventory-storage.shelf-locations.item.get",
             "inventory-storage.shelf-locations.collection.get",
             "inventory-storage.holdings.collection.get",
-            "inventory-storage.holdings.item.get"
+            "inventory-storage.holdings.item.get",
+            "inventory-storage.instances.collection.get",
+            "inventory-storage.instances.item.get"
           ]
         }, {
           "methods": ["POST"],
@@ -49,7 +53,9 @@
             "inventory-storage.shelf-locations.item.get",
             "inventory-storage.shelf-locations.collection.get",
             "inventory-storage.holdings.collection.get",
-            "inventory-storage.holdings.item.get"
+            "inventory-storage.holdings.item.get",
+            "inventory-storage.instances.collection.get",
+            "inventory-storage.instances.item.get"
           ]
         }, {
           "methods": ["PUT"],
