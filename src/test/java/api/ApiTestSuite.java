@@ -1,5 +1,8 @@
 package api;
 
+import api.items.ItemApiExamples;
+import api.items.ItemApiLocationExamples;
+import api.items.ItemApiTitleExamples;
 import api.support.ControlledVocabularyPreparation;
 import io.vertx.core.Vertx;
 import org.folio.inventory.InventoryVerticle;
@@ -24,6 +27,8 @@ import java.util.concurrent.TimeoutException;
 @Suite.SuiteClasses({
   InstancesApiExamples.class,
   ItemApiExamples.class,
+  ItemApiLocationExamples.class,
+  ItemApiTitleExamples.class,
   ModsIngestExamples.class
 })
 public class ApiTestSuite {

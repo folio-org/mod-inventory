@@ -8,8 +8,13 @@ import org.folio.inventory.domain.Item;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+
+import static org.folio.inventory.support.HoldingsSupport.determinePermanentLocationIdForItem;
+import static org.folio.inventory.support.HoldingsSupport.holdingForItem;
+import static org.folio.inventory.support.HoldingsSupport.instanceForHolding;
 
 class ItemRepresentation {
   private final String relativeItemsPath;
@@ -20,6 +25,7 @@ class ItemRepresentation {
 
   public JsonObject toJson(
     Item item,
+    JsonObject instance,
     JsonObject materialType,
     JsonObject permanentLoanType,
     JsonObject temporaryLoanType,
@@ -27,37 +33,50 @@ class ItemRepresentation {
     JsonObject temporaryLocation,
     WebContext context) {
 
-    JsonObject representation = toJson(item, context);
+    JsonObject representation = toJson(item, instance, context);
 
     if(materialType != null) {
       representation.getJsonObject("materialType")
+        .put("id", materialType.getString("id"))
         .put("name", materialType.getString("name"));
     }
 
     if(permanentLoanType != null) {
       representation.getJsonObject("permanentLoanType")
+        .put("id", permanentLoanType.getString("id"))
         .put("name", permanentLoanType.getString("name"));
     }
 
     if(temporaryLoanType != null) {
       representation.getJsonObject("temporaryLoanType")
+        .put("id", temporaryLoanType.getString("id"))
         .put("name", temporaryLoanType.getString("name"));
     }
 
     if(permanentLocation != null) {
-      representation.getJsonObject("permanentLocation")
-        .put("name", permanentLocation.getString("name"));
+      if(representation.containsKey("permanentLocation")) {
+        representation.getJsonObject("permanentLocation")
+          .put("id", permanentLocation.getString("id"))
+          .put("name", permanentLocation.getString("name"));
+      }
+      representation.put("permanentLocation", new JsonObject()
+        .put("id", permanentLocation.getString("id"))
+        .put("name", permanentLocation.getString("name")));
     }
 
     if(temporaryLocation != null) {
       representation.getJsonObject("temporaryLocation")
+        .put("id", temporaryLocation.getString("id"))
         .put("name", temporaryLocation.getString("name"));
     }
 
     return representation;
   }
 
-  JsonObject toJson(Item item, WebContext context) {
+  JsonObject toJson(
+    Item item,
+    JsonObject instance,
+    WebContext context) {
 
     JsonObject representation = new JsonObject();
     representation.put("id", item.id);
@@ -66,7 +85,11 @@ class ItemRepresentation {
       representation.put("status", new JsonObject().put("name", item.status));
     }
 
-    includeIfPresent(representation, "title", item.title);
+    String title = instance != null && instance.containsKey("title")
+      ? instance.getString("title")
+      : item.title;
+
+    includeIfPresent(representation, "title", title);
     includeIfPresent(representation, "instanceId", item.instanceId);
     includeIfPresent(representation, "holdingsRecordId", item.holdingId);
     includeIfPresent(representation, "barcode", item.barcode);
@@ -105,6 +128,8 @@ class ItemRepresentation {
 
   public JsonObject toJson(
     MultipleRecords<Item> wrappedItems,
+    Collection<JsonObject> holdings,
+    Collection<JsonObject> instances,
     Map<String, JsonObject> materialTypes,
     Map<String, JsonObject> loanTypes,
     Map<String, JsonObject> locations,
@@ -120,10 +145,20 @@ class ItemRepresentation {
       JsonObject materialType = materialTypes.get(item.materialTypeId);
       JsonObject permanentLoanType = loanTypes.get(item.permanentLoanTypeId);
       JsonObject temporaryLoanType = loanTypes.get(item.temporaryLoanTypeId);
-      JsonObject permanentLocation = locations.get(item.permanentLocationId);
+
+      JsonObject holding = holdingForItem(item, holdings).orElse(null);
+
+      JsonObject instance = instanceForHolding(holding, instances).orElse(null);
+
+      String permanentLocationId = determinePermanentLocationIdForItem(item,
+        holding);
+
+      JsonObject permanentLocation = locations.get(permanentLocationId);
+
       JsonObject temporaryLocation = locations.get(item.temporaryLocationId);
-      results.add(toJson(item, materialType, permanentLoanType, temporaryLoanType,
-        permanentLocation, temporaryLocation, context));
+
+      results.add(toJson(item, instance, materialType, permanentLoanType,
+        temporaryLoanType, permanentLocation, temporaryLocation, context));
     });
 
     representation

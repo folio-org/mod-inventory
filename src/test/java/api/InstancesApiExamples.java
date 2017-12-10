@@ -15,7 +15,6 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
 import org.apache.http.message.BasicHeader;
 import org.folio.inventory.support.JsonArrayHelper;
-import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
 import org.junit.Assert;
@@ -38,20 +37,8 @@ import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
 
 public class InstancesApiExamples extends ApiTests {
-  private final OkapiHttpClient okapiClient;
-
   public InstancesApiExamples() throws MalformedURLException {
-    okapiClient = ApiTestSuite.createOkapiHttpClient();
-  }
-
-  @Before
-  public void setup()
-    throws InterruptedException,
-    MalformedURLException,
-    TimeoutException,
-    ExecutionException {
-
-    new Preparation(okapiClient).deleteInstances();
+    super();
   }
 
   @Test

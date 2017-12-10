@@ -2,16 +2,13 @@ package api;
 
 import api.support.ApiRoot;
 import api.support.ApiTests;
-import api.support.Preparation;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.awaitility.Duration;
 import org.folio.inventory.support.JsonArrayHelper;
-import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -31,22 +28,8 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertThat;
 
 public class ModsIngestExamples extends ApiTests {
-  private final OkapiHttpClient okapiClient;
-
   public ModsIngestExamples() throws MalformedURLException {
-    okapiClient = ApiTestSuite.createOkapiHttpClient();
-  }
-
-  @Before
-  public void setup()
-    throws InterruptedException,
-    MalformedURLException,
-    TimeoutException,
-    ExecutionException {
-
-    Preparation preparation = new Preparation(okapiClient);
-    preparation.deleteInstances();
-    preparation.deleteItems();
+    super();
   }
 
   @Test
@@ -76,6 +59,7 @@ public class ModsIngestExamples extends ApiTests {
         expectedInstancesCreatedFromIngest();
         expectedHoldingsCreatedFromIngest();
         expectedItemsCreatedFromIngest();
+        expectedStoredItemsCreatedFromIngest();
       });
   }
 
@@ -195,6 +179,21 @@ public class ModsIngestExamples extends ApiTests {
       } catch (Exception e) {
         Assert.fail(e.toString());
       }
+    });
+  }
+
+  private void expectedStoredItemsCreatedFromIngest()
+    throws MalformedURLException,
+    InterruptedException,
+    ExecutionException,
+    TimeoutException {
+
+    List<JsonObject> storedItems = itemsStorageClient.getAll();
+
+    //TODO: Could be replaced with separate loop per property for clearer feedback
+    storedItems.stream().forEach(item -> {
+      assertThat(item.containsKey("title"), is(false));
+      assertThat(item.containsKey("permanentLocationId"), is(false));
     });
   }
 

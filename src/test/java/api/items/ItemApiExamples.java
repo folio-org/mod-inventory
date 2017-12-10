@@ -1,14 +1,20 @@
-package api;
+package api.items;
 
-import api.support.*;
+import api.ApiTestSuite;
+import api.support.ApiRoot;
+import api.support.ApiTests;
+import api.support.InstanceApiClient;
+import api.support.ItemApiClient;
+import api.support.builders.HoldingRequestBuilder;
+import api.support.builders.ItemRequestBuilder;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.support.JsonArrayHelper;
-import org.folio.inventory.support.http.client.OkapiHttpClient;
+import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
+import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.net.MalformedURLException;
@@ -26,22 +32,8 @@ import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
 
 public class ItemApiExamples extends ApiTests {
-  private final OkapiHttpClient okapiClient;
-
   public ItemApiExamples() throws MalformedURLException {
-    okapiClient = ApiTestSuite.createOkapiHttpClient();
-  }
-
-  @Before
-  public void setup()
-    throws InterruptedException,
-    MalformedURLException,
-    TimeoutException,
-    ExecutionException {
-
-    Preparation preparation = new Preparation(okapiClient);
-    preparation.deleteItems();
-    preparation.deleteInstances();
+    super();
   }
 
   @Test
@@ -53,38 +45,21 @@ public class ItemApiExamples extends ApiTests {
 
     JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
-    JsonObject newItemRequest = new JsonObject()
-      .put("title", createdInstance.getString("title"))
-      .put("instanceId", createdInstance.getString("id"))
-      .put("barcode", "645398607547")
-      .put("pieceIdentifiers", new ArrayList<>())
-      .put("notes", new ArrayList<>())
-      .put("status", new JsonObject().put("name", "Available"))
-      .put("materialType", bookMaterialType())
-      .put("permanentLoanType", canCirculateLoanType())
-      .put("temporaryLoanType", courseReservesLoanType())
-      .put("permanentLocation", permanentLocation())
-      .put("temporaryLocation", temporaryLocation());
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
 
-    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withTitle("Long Way to a Small Angry Planet")
+      .withBarcode("645398607547")
+      .inMainLibrary()
+      .temporarilyInAnnex()
+      .canCirculate()
+      .temporarilyCourseReserves());
 
-    okapiClient.post(ApiRoot.items(), newItemRequest,
-      ResponseHandler.any(postCompleted));
-
-    Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
-
-    assertThat(postResponse.getStatusCode(), is(201));
-    assertThat(postResponse.getLocation(), is(notNullValue()));
-
-    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
-
-    okapiClient.get(postResponse.getLocation(), ResponseHandler.json(getCompleted));
-
-    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
-
-    assertThat(getResponse.getStatusCode(), is(200));
-
-    JsonObject createdItem = getResponse.getJson();
+    JsonObject createdItem = itemsClient.getById(postResponse.getId()).getJson();
 
     assertThat(createdItem.containsKey("id"), is(true));
     assertThat(createdItem.getString("title"), is("Long Way to a Small Angry Planet"));
@@ -93,7 +68,7 @@ public class ItemApiExamples extends ApiTests {
 
     JsonObject materialType = createdItem.getJsonObject("materialType");
 
-    assertThat(materialType.getString("id"), is(ApiTestSuite.getBookMaterialType()));
+    assertThat(materialType.getString("id"), CoreMatchers.is(ApiTestSuite.getBookMaterialType()));
     assertThat(materialType.getString("name"), is("Book"));
 
     JsonObject permanentLoanType = createdItem.getJsonObject("permanentLoanType");
@@ -120,46 +95,29 @@ public class ItemApiExamples extends ApiTests {
     TimeoutException,
     ExecutionException {
 
-    String itemId = UUID.randomUUID().toString();
+    UUID itemId = UUID.randomUUID();
 
     JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
-    JsonObject newItemRequest = new JsonObject()
-      .put("id", itemId)
-      .put("title", createdInstance.getString("title"))
-      .put("instanceId", createdInstance.getString("id"))
-      .put("barcode", "645398607547")
-      .put("pieceIdentifiers", new ArrayList<>())
-      .put("notes", new ArrayList<>())
-      .put("status", new JsonObject().put("name", "Available"))
-      .put("materialType", bookMaterialType())
-      .put("permanentLoanType", canCirculateLoanType())
-      .put("temporaryLoanType", courseReservesLoanType())
-      .put("permanentLocation", permanentLocation())
-      .put("temporaryLocation", temporaryLocation());
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
 
-    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
+      .withId(itemId)
+      .forHolding(holdingId)
+      .withTitle("Long Way to a Small Angry Planet")
+      .withBarcode("645398607547")
+      .inMainLibrary()
+      .temporarilyInAnnex()
+      .canCirculate()
+      .temporarilyCourseReserves());
 
-    okapiClient.post(ApiRoot.items(), newItemRequest,
-      ResponseHandler.any(postCompleted));
-
-    Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
-
-    assertThat(postResponse.getStatusCode(), is(201));
-    assertThat(postResponse.getLocation(), is(notNullValue()));
-
-    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
-
-    okapiClient.get(postResponse.getLocation(), ResponseHandler.json(getCompleted));
-
-    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
-
-    assertThat(getResponse.getStatusCode(), is(200));
-
-    JsonObject createdItem = getResponse.getJson();
+    JsonObject createdItem = itemsClient.getById(postResponse.getId()).getJson();
 
     assertThat(createdItem.containsKey("id"), is(true));
-    assertThat(createdItem.getString("id"), is(itemId));
+    assertThat(createdItem.getString("id"), is(itemId.toString()));
     assertThat(createdItem.getString("title"), is("Long Way to a Small Angry Planet"));
     assertThat(createdItem.getString("barcode"), is("645398607547"));
     assertThat(createdItem.getJsonObject("status").getString("name"), is("Available"));
@@ -192,34 +150,18 @@ public class ItemApiExamples extends ApiTests {
     TimeoutException,
     ExecutionException {
 
-    JsonObject newItemRequest = new JsonObject()
-      .put("title", "Nod")
-      .put("pieceIdentifiers", new ArrayList<>())
-      .put("notes", new ArrayList<>())
-      .put("status", new JsonObject().put("name", "Available"))
-      .put("materialType", bookMaterialType())
-      .put("permanentLoanType", canCirculateLoanType())
-      .put("temporaryLocation", temporaryLocation());
+    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
-    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
 
-    okapiClient.post(ApiRoot.items(), newItemRequest,
-      ResponseHandler.any(postCompleted));
+    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withNoBarcode());
 
-    Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
-
-    assertThat(postResponse.getStatusCode(), is(201));
-    assertThat(postResponse.getLocation(), is(notNullValue()));
-
-    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
-
-    okapiClient.get(postResponse.getLocation(), ResponseHandler.json(getCompleted));
-
-    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
-
-    assertThat(getResponse.getStatusCode(), is(200));
-
-    JsonObject createdItem = getResponse.getJson();
+    JsonObject createdItem = itemsClient.getById(postResponse.getId()).getJson();
 
     assertThat(createdItem.containsKey("barcode"), is(false));
   }
@@ -231,35 +173,20 @@ public class ItemApiExamples extends ApiTests {
     TimeoutException,
     ExecutionException {
 
-    JsonObject newItemRequest = new JsonObject()
-      .put("pieceIdentifiers", new ArrayList<>())
-      .put("notes", new ArrayList<>())
-      .put("status", new JsonObject().put("name", "Available"))
-      .put("materialType", bookMaterialType())
-      .put("permanentLoanType", canCirculateLoanType())
-      .put("temporaryLocation", temporaryLocation());
+    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
-    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
 
-    okapiClient.post(ApiRoot.items(), newItemRequest,
-      ResponseHandler.any(postCompleted));
+    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withNoTitle());
 
-    Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
+    JsonObject createdItemInStorage = itemsStorageClient.getById(postResponse.getId()).getJson();
 
-    assertThat(postResponse.getStatusCode(), is(201));
-    assertThat(postResponse.getLocation(), is(notNullValue()));
-
-    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
-
-    okapiClient.get(postResponse.getLocation(), ResponseHandler.json(getCompleted));
-
-    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
-
-    assertThat(getResponse.getStatusCode(), is(200));
-
-    JsonObject createdItem = getResponse.getJson();
-
-    assertThat(createdItem.containsKey("title"), is(false));
+    assertThat(createdItemInStorage.containsKey("title"), is(false));
   }
 
   @Test
@@ -269,45 +196,22 @@ public class ItemApiExamples extends ApiTests {
     TimeoutException,
     ExecutionException {
 
-    JsonObject firstItemRequest = new JsonObject()
-    .put("title", "Temeraire")
-    .put("pieceIdentifiers", new ArrayList<>())
-    .put("notes", new ArrayList<>())
-    .put("status", new JsonObject().put("name", "Available"))
-    .put("permanentLocation", permanentLocation())
-    .put("materialType", bookMaterialType())
-    .put("permanentLoanType", canCirculateLoanType());
+    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
-    ItemApiClient.createItem(okapiClient, firstItemRequest);
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
 
-    JsonObject newItemRequest = new JsonObject()
-      .put("title", "Nod")
-      .put("pieceIdentifiers", new ArrayList<>())
-      .put("notes", new ArrayList<>())
-      .put("status", new JsonObject().put("name", "Available"))
-      .put("materialType", bookMaterialType())
-      .put("permanentLoanType", canCirculateLoanType())
-      .put("temporaryLocation", temporaryLocation());
+    itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withNoBarcode());
 
-    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+    IndividualResource secondItemResponse = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withNoBarcode());
 
-    okapiClient.post(ApiRoot.items(), newItemRequest,
-      ResponseHandler.any(postCompleted));
-
-    Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
-
-    assertThat(postResponse.getStatusCode(), is(201));
-    assertThat(postResponse.getLocation(), is(notNullValue()));
-
-    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
-
-    okapiClient.get(postResponse.getLocation(), ResponseHandler.json(getCompleted));
-
-    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
-
-    assertThat(getResponse.getStatusCode(), is(200));
-
-    JsonObject createdItem = getResponse.getJson();
+    JsonObject createdItem = itemsClient.getById(secondItemResponse.getId()).getJson();
 
     assertThat(createdItem.containsKey("barcode"), is(false));
   }
@@ -319,18 +223,17 @@ public class ItemApiExamples extends ApiTests {
     TimeoutException,
     ExecutionException {
 
-    JsonObject createdInstance = createInstance(
-      smallAngryPlanet(UUID.randomUUID()));
+    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
-    JsonObject newItemRequest = new JsonObject()
-      .put("title", createdInstance.getString("title"))
-      .put("instanceId", createdInstance.getString("id"))
-      .put("barcode", "645398607547")
-      .put("pieceIdentifiers", new ArrayList<>())
-      .put("notes", new ArrayList<>())
-      .put("status", new JsonObject().put("name", "Available"))
-      .put("permanentLoanType", canCirculateLoanType())
-      .put("temporaryLocation", temporaryLocation());
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
+
+    JsonObject newItemRequest = new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withNoMaterialType()
+      .create();
 
     CompletableFuture<Response> postCompleted = new CompletableFuture<>();
 
@@ -343,6 +246,29 @@ public class ItemApiExamples extends ApiTests {
   }
 
   @Test
+  public void cannotCreateItemWithoutPermanentLocation()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
+
+    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withNoPermanentLocation());
+
+    JsonObject createdItemInStorage = itemsStorageClient.getById(postResponse.getId()).getJson();
+
+    assertThat(createdItemInStorage.containsKey("permanentLocationId"), is(false));
+  }
+
+  @Test
   public void cannotCreateItemWithoutPermanentLoanType()
     throws InterruptedException,
     MalformedURLException,
@@ -352,15 +278,15 @@ public class ItemApiExamples extends ApiTests {
     JsonObject createdInstance = createInstance(
       smallAngryPlanet(UUID.randomUUID()));
 
-    JsonObject newItemRequest = new JsonObject()
-      .put("title", createdInstance.getString("title"))
-      .put("instanceId", createdInstance.getString("id"))
-      .put("barcode", "645398607547")
-      .put("pieceIdentifiers", new ArrayList<>())
-      .put("notes", new ArrayList<>())
-      .put("status", new JsonObject().put("name", "Available"))
-      .put("materialType", bookMaterialType())
-      .put("temporaryLocation", temporaryLocation());
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
+
+    JsonObject newItemRequest = new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withNoPermanentLoanType()
+      .create();
 
     CompletableFuture<Response> postCompleted = new CompletableFuture<>();
 
@@ -382,34 +308,18 @@ public class ItemApiExamples extends ApiTests {
     JsonObject createdInstance = createInstance(
       smallAngryPlanet(UUID.randomUUID()));
 
-    JsonObject newItemRequest = new JsonObject()
-      .put("title", createdInstance.getString("title"))
-      .put("instanceId", createdInstance.getString("id"))
-      .put("barcode", "645398607547")
-      .put("pieceIdentifiers", new ArrayList<>())
-      .put("notes", new ArrayList<>())
-      .put("status", new JsonObject().put("name", "Available"))
-      .put("materialType", bookMaterialType())
-      .put("permanentLoanType", canCirculateLoanType())
-      .put("temporaryLocation", temporaryLocation());
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
 
-    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withTitle("Long Way to a Small Angry Planet")
+      .withBarcode("645398607547")
+      .withNoTemporaryLoanType());
 
-    okapiClient.post(ApiRoot.items(),
-      newItemRequest, ResponseHandler.any(postCompleted));
-
-    Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
-
-    assertThat(postResponse.getStatusCode(), is(201));
-    assertThat(postResponse.getLocation(), is(notNullValue()));
-
-    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
-
-    okapiClient.get(postResponse.getLocation(), ResponseHandler.json(getCompleted));
-
-    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
-
-    assertThat(getResponse.getStatusCode(), is(200));
+    Response getResponse = itemsClient.getById(postResponse.getId());
 
     JsonObject createdItem = getResponse.getJson();
 
@@ -444,33 +354,33 @@ public class ItemApiExamples extends ApiTests {
     JsonObject createdInstance = createInstance(
       smallAngryPlanet(UUID.randomUUID()));
 
-    JsonObject newItem = createItem(
-      createdInstance.getString("title"),
-      createdInstance.getString("id"), "645398607547");
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
 
-    JsonObject updateItemRequest = newItem.copy()
+    UUID itemId = UUID.randomUUID();
+
+    JsonObject newItemRequest = new ItemRequestBuilder()
+      .withId(itemId)
+      .forHolding(holdingId)
+      .withTitle("Long Way to a Small Angry Planet")
+      .withBarcode("645398607547")
+      .canCirculate()
+      .inMainLibrary()
+      .temporarilyInAnnex()
+      .create();
+
+    itemsClient.create(newItemRequest);
+
+    JsonObject updateItemRequest = newItemRequest.copy()
       .put("status", new JsonObject().put("name", "Checked Out"));
 
-    URL itemLocation = new URL(String.format("%s/%s", ApiRoot.items(),
-      newItem.getString("id")));
+    itemsClient.replace(itemId, updateItemRequest);
 
-    CompletableFuture<Response> putCompleted = new CompletableFuture<>();
-
-    okapiClient.put(itemLocation, updateItemRequest,
-      ResponseHandler.any(putCompleted));
-
-    Response putResponse = putCompleted.get(5, TimeUnit.SECONDS);
-
-    assertThat(putResponse.getStatusCode(), is(204));
-
-    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
-
-    okapiClient.get(itemLocation, ResponseHandler.json(getCompleted));
-
-    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+    Response getResponse = itemsClient.getById(itemId);
 
     assertThat(getResponse.getStatusCode(), is(200));
-
     JsonObject updatedItem = getResponse.getJson();
 
     assertThat(updatedItem.containsKey("id"), is(true));
@@ -502,17 +412,23 @@ public class ItemApiExamples extends ApiTests {
     TimeoutException,
     ExecutionException {
 
-    JsonObject updateItemRequest = new JsonObject()
-      .put("id", UUID.randomUUID().toString())
-      .put("title", "Nod")
-      .put("instanceId", UUID.randomUUID().toString())
-      .put("barcode", "546747342365")
-      .put("pieceIdentifiers", new ArrayList<>())
-      .put("notes", new ArrayList<>())
-      .put("status", new JsonObject().put("name", "Available"))
-      .put("materialType", bookMaterialType())
-      .put("permanentLoanType", canCirculateLoanType())
-      .put("temporaryLocation", temporaryLocation());
+    JsonObject createdInstance = createInstance(
+      smallAngryPlanet(UUID.randomUUID()));
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
+
+    UUID itemId = UUID.randomUUID();
+
+    JsonObject updateItemRequest = new ItemRequestBuilder()
+      .withId(itemId)
+      .forHolding(holdingId)
+      .canCirculate()
+      .inMainLibrary()
+      .temporarilyInAnnex()
+      .create();
 
     CompletableFuture<Response> putCompleted = new CompletableFuture<>();
 
@@ -534,24 +450,24 @@ public class ItemApiExamples extends ApiTests {
 
     JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
-    createItem(createdInstance.getString("title"),
-      createdInstance.getString("id"), "645398607547");
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
 
-    createItem(createdInstance.getString("title"),
-      createdInstance.getString("id"), "175848607547");
+    itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withBarcode("645398607547"));
 
-    createItem(createdInstance.getString("title"),
-      createdInstance.getString("id"), "645334645247");
+    itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withBarcode("175848607547"));
 
-    CompletableFuture<Response> deleteCompleted = new CompletableFuture<>();
+    itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withBarcode("645334645247"));
 
-    okapiClient.delete(ApiRoot.items(),
-      ResponseHandler.any(deleteCompleted));
-
-    Response deleteResponse = deleteCompleted.get(5, TimeUnit.SECONDS);
-
-    assertThat(deleteResponse.getStatusCode(), is(204));
-    assertThat(deleteResponse.hasBody(), is(false));
+    itemsClient.deleteAll();
 
     CompletableFuture<Response> getAllCompleted = new CompletableFuture<>();
 
@@ -570,29 +486,26 @@ public class ItemApiExamples extends ApiTests {
     TimeoutException,
     ExecutionException {
 
-    JsonObject createdInstance = createInstance(
-      smallAngryPlanet(UUID.randomUUID()));
+    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
-    createItem(createdInstance.getString("title"),
-      createdInstance.getString("id"), "645398607547");
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
 
-    createItem(createdInstance.getString("title"),
-      createdInstance.getString("id"), "175848607547");
+    itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withBarcode("645398607547"));
 
-    JsonObject itemToDelete = createItem(createdInstance.getString("title"),
-      createdInstance.getString("id"), "645334645247");
+    IndividualResource itemToDeleteResponse = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withBarcode("175848607547"));
 
-    URL itemToDeleteLocation =
-      new URL(String.format("%s/%s", ApiRoot.items(), itemToDelete.getString("id")));
+    itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withBarcode("645334645247"));
 
-    CompletableFuture<Response> deleteCompleted = new CompletableFuture<>();
-
-    okapiClient.delete(itemToDeleteLocation, ResponseHandler.any(deleteCompleted));
-
-    Response deleteResponse = deleteCompleted.get(5, TimeUnit.SECONDS);
-
-    assertThat(deleteResponse.getStatusCode(), is(204));
-    assertThat(deleteResponse.hasBody(), is(false));
+    itemsClient.delete(itemToDeleteResponse.getId());
 
     CompletableFuture<Response> getAllCompleted = new CompletableFuture<>();
 
@@ -613,27 +526,55 @@ public class ItemApiExamples extends ApiTests {
 
     JsonObject smallAngryInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
-    createItem(smallAngryInstance.getString("title"),
-      smallAngryInstance.getString("id"), "645398607547", bookMaterialType(),
-      canCirculateLoanType(), null);
+    UUID smallAngryHoldingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(smallAngryInstance.getString("id"))))
+      .getId();
 
-    createItem(smallAngryInstance.getString("title"),
-      smallAngryInstance.getString("id"), "175848607547", bookMaterialType(),
-      courseReservesLoanType(), null);
+    itemsClient.create(new ItemRequestBuilder()
+      .forHolding(smallAngryHoldingId)
+      .book()
+      .canCirculate()
+      .withBarcode("645398607547"));
+
+    itemsClient.create(new ItemRequestBuilder()
+      .forHolding(smallAngryHoldingId)
+      .book()
+      .courseReserves()
+      .withBarcode("175848607547"));
 
     JsonObject girlOnTheTrainInstance = createInstance(girlOnTheTrain(UUID.randomUUID()));
 
-    createItem(girlOnTheTrainInstance.getString("title"),
-      girlOnTheTrainInstance.getString("id"), "645334645247", dvdMaterialType(),
-      canCirculateLoanType(), courseReservesLoanType());
+    UUID girlOnTheTrainHoldingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(girlOnTheTrainInstance.getString("id"))))
+      .getId();
+
+    itemsClient.create(new ItemRequestBuilder()
+      .forHolding(girlOnTheTrainHoldingId)
+      .dvd()
+      .canCirculate()
+      .temporarilyCourseReserves()
+      .withBarcode("645334645247"));
 
     JsonObject nodInstance = createInstance(nod(UUID.randomUUID()));
 
-    createItem(nodInstance.getString("title"),
-      nodInstance.getString("id"), "564566456546");
+    UUID nodHoldingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(nodInstance.getString("id"))))
+      .getId();
 
-    createItem(nodInstance.getString("title"),
-      nodInstance.getString("id"), "943209584495");
+    itemsClient.create(new ItemRequestBuilder()
+      .forHolding(nodHoldingId)
+      .book()
+      .courseReserves()
+      .withBarcode("564566456546"));
+
+    itemsClient.create(new ItemRequestBuilder()
+      .forHolding(nodHoldingId)
+      .book()
+      .courseReserves()
+      .withBarcode("943209584495"));
 
     CompletableFuture<Response> firstPageGetCompleted = new CompletableFuture<>();
     CompletableFuture<Response> secondPageGetCompleted = new CompletableFuture<>();
@@ -683,7 +624,7 @@ public class ItemApiExamples extends ApiTests {
   }
 
   @Test
-  public void CanGetAllItemsWithDifferentLoanTypes()
+  public void CanGetAllItemsWithDifferentTemporaryLoanType()
     throws InterruptedException,
     MalformedURLException,
     TimeoutException,
@@ -691,13 +632,23 @@ public class ItemApiExamples extends ApiTests {
 
     JsonObject smallAngryInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
-    createItem(smallAngryInstance.getString("title"),
-      smallAngryInstance.getString("id"), "645398607547", bookMaterialType(),
-      canCirculateLoanType(), null);
+    UUID smallAngryHoldingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(smallAngryInstance.getString("id"))))
+      .getId();
 
-    createItem(smallAngryInstance.getString("title"),
-      smallAngryInstance.getString("id"), "175848607547", bookMaterialType(),
-      canCirculateLoanType(), courseReservesLoanType());
+    itemsClient.create(new ItemRequestBuilder()
+      .forHolding(smallAngryHoldingId)
+      .book()
+      .canCirculate()
+      .withBarcode("645398607547"));
+
+    itemsClient.create(new ItemRequestBuilder()
+      .forHolding(smallAngryHoldingId)
+      .book()
+      .canCirculate()
+      .temporarilyCourseReserves()
+      .withBarcode("175848607547"));
 
     CompletableFuture<Response> getAllCompleted = new CompletableFuture<>();
 
@@ -764,15 +715,34 @@ public class ItemApiExamples extends ApiTests {
     TimeoutException,
     ExecutionException {
 
+    //TODO: "This capability will go away when title is removed from item"
     JsonObject smallAngryInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
-    createItem(smallAngryInstance.getString("title"),
-      smallAngryInstance.getString("id"), "645398607547");
+    UUID smallAngryHoldingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(smallAngryInstance.getString("id"))))
+      .getId();
+
+    itemsClient.create(new ItemRequestBuilder()
+      .forHolding(smallAngryHoldingId)
+      .book()
+      .withTitle(smallAngryInstance.getString("title"))
+      .canCirculate()
+      .withBarcode("645398607547"));
 
     JsonObject nodInstance = createInstance(nod(UUID.randomUUID()));
 
-    createItem(nodInstance.getString("title"), nodInstance.getString("id"),
-      "564566456546");
+    UUID nodHoldingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(nodInstance.getString("id"))))
+      .getId();
+
+    itemsClient.create(new ItemRequestBuilder()
+      .forHolding(nodHoldingId)
+      .book()
+      .withTitle(nodInstance.getString("title"))
+      .canCirculate()
+      .withBarcode("564566456546"));
 
     CompletableFuture<Response> searchGetCompleted = new CompletableFuture<>();
 
@@ -811,33 +781,41 @@ public class ItemApiExamples extends ApiTests {
     TimeoutException,
     ExecutionException {
 
-    JsonObject smallAngryInstance = createInstance(
-      smallAngryPlanet(UUID.randomUUID()));
+    JsonObject smallAngryInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
-    createItem(smallAngryInstance.getString("title"),
-      smallAngryInstance.getString("id"), "645398607547");
+    UUID smallAngryHoldingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(smallAngryInstance.getString("id"))))
+      .getId();
+
+    itemsClient.create(new ItemRequestBuilder()
+      .forHolding(smallAngryHoldingId)
+      .book()
+      .canCirculate()
+      .withBarcode("645398607547"));
 
     JsonObject nodInstance = createInstance(nod(UUID.randomUUID()));
 
+    UUID nodHoldingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(nodInstance.getString("id"))))
+      .getId();
+
+    JsonObject sameBarcodeItemRequest = new ItemRequestBuilder()
+      .forHolding(nodHoldingId)
+      .book()
+      .canCirculate()
+      .withBarcode("645398607547").create();
+
     CompletableFuture<Response> createItemCompleted = new CompletableFuture<>();
 
-    JsonObject newItemRequest = new JsonObject()
-      .put("title", nodInstance.getString("title"))
-      .put("instanceId", nodInstance.getString("id"))
-      .put("barcode", "645398607547")
-      .put("pieceIdentifiers", new ArrayList<>())
-      .put("notes", new ArrayList<>())
-      .put("status", new JsonObject().put("name", "Available"))
-      .put("materialType", bookMaterialType())
-      .put("permanentLocation", permanentLocation());
-
-    okapiClient.post(ApiRoot.items(), newItemRequest,
+    okapiClient.post(ApiRoot.items(), sameBarcodeItemRequest,
       ResponseHandler.any(createItemCompleted));
 
-    Response createResponse = createItemCompleted.get(5, TimeUnit.SECONDS);
+    Response sameBarcodeCreateResponse = createItemCompleted.get(5, TimeUnit.SECONDS);
 
-    assertThat(createResponse.getStatusCode(), is(400));
-    assertThat(createResponse.getBody(),
+    assertThat(sameBarcodeCreateResponse.getStatusCode(), is(400));
+    assertThat(sameBarcodeCreateResponse.getBody(),
       is("Barcode must be unique, 645398607547 is already assigned to another item"));
   }
 
@@ -850,19 +828,35 @@ public class ItemApiExamples extends ApiTests {
 
     JsonObject smallAngryInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
-    createItem(smallAngryInstance.getString("title"),
-      smallAngryInstance.getString("id"), "645398607547");
+    UUID smallAngryHoldingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(smallAngryInstance.getString("id"))))
+      .getId();
+
+    itemsClient.create(new ItemRequestBuilder()
+      .forHolding(smallAngryHoldingId)
+      .book()
+      .canCirculate()
+      .withBarcode("645398607547"));
 
     JsonObject nodInstance = createInstance(nod(UUID.randomUUID()));
 
-    JsonObject nodItem = createItem(nodInstance.getString("title"),
-      nodInstance.getString("id"), "654647774352");
+    UUID nodHoldingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(nodInstance.getString("id"))))
+      .getId();
 
-    JsonObject changedNodItem = nodItem.copy()
+    IndividualResource nodItemResponse = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(nodHoldingId)
+      .book()
+      .canCirculate()
+      .withBarcode("654647774352"));
+
+    JsonObject changedNodItem = nodItemResponse.getJson().copy()
       .put("barcode", "645398607547");
 
     URL nodItemLocation = new URL(String.format("%s/%s",
-      ApiRoot.items(), changedNodItem.getString("id")));
+      ApiRoot.items(), nodItemResponse.getId()));
 
     CompletableFuture<Response> putItemCompleted = new CompletableFuture<>();
 
@@ -885,14 +879,22 @@ public class ItemApiExamples extends ApiTests {
 
     JsonObject nodInstance = createInstance(nod(UUID.randomUUID()));
 
-    JsonObject nodItem = createItem(nodInstance.getString("title"),
-      nodInstance.getString("id"), "654647774352");
+    UUID nodHoldingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(nodInstance.getString("id"))))
+      .getId();
 
-    JsonObject changedNodItem = nodItem.copy()
+    IndividualResource nodItemResponse = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(nodHoldingId)
+      .book()
+      .canCirculate()
+      .withBarcode("654647774352"));
+
+    JsonObject changedNodItem = nodItemResponse.getJson().copy()
       .put("barcode", "645398607547");
 
     URL nodItemLocation = new URL(String.format("%s/%s",
-      ApiRoot.items(), changedNodItem.getString("id")));
+      ApiRoot.items(), nodItemResponse.getId()));
 
     CompletableFuture<Response> putItemCompleted = new CompletableFuture<>();
 
@@ -920,23 +922,39 @@ public class ItemApiExamples extends ApiTests {
     TimeoutException,
     ExecutionException {
 
-    JsonObject nodInstance = createInstance(nod(UUID.randomUUID()));
-
-    JsonObject nodItem = createItem(nodInstance.getString("title"),
-      nodInstance.getString("id"), "654647774352");
-
     JsonObject smallAngryInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
-    //Second item with no barcode, to ensure empty barcode doesn't match
-    createItem(smallAngryInstance.getString("title"),
-      smallAngryInstance.getString("id"), null);
+    UUID smallAngryHoldingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(smallAngryInstance.getString("id"))))
+      .getId();
 
-    JsonObject changedNodItem = nodItem.copy();
+    //Existing item with no barcode, to ensure empty barcode doesn't match
+    itemsClient.create(new ItemRequestBuilder()
+      .forHolding(smallAngryHoldingId)
+      .book()
+      .canCirculate()
+      .withNoBarcode());
+
+    JsonObject nodInstance = createInstance(nod(UUID.randomUUID()));
+
+    UUID nodHoldingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(nodInstance.getString("id"))))
+      .getId();
+
+    IndividualResource nodItemResponse = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(nodHoldingId)
+      .book()
+      .canCirculate()
+      .withBarcode("654647774352"));
+
+    JsonObject changedNodItem = nodItemResponse.getJson().copy();
 
     changedNodItem.remove("barcode");
 
     URL nodItemLocation = new URL(String.format("%s/%s",
-      ApiRoot.items(), changedNodItem.getString("id")));
+      ApiRoot.items(), nodItemResponse.getId()));
 
     CompletableFuture<Response> putItemCompleted = new CompletableFuture<>();
 
