@@ -3,51 +3,51 @@
   "altTitles":
   [
     {
-      "title":"240a 240b"
+      "value":"240a 240b"
     },
     {
-      "title":"246a 246b 246n0 246n1"
+      "value":"246a 246b 246n0 246n1"
     },
     {
-      "title":"247a 247b"
+      "value":"247a 247b"
     }
   ],
   "version":"250a 250b",
   "series":
   [
     {
-      "statement":"490a0 490a1 490v0 490v1"
+      "value":"490a0 490a1 490v0 490v1"
     },
     {
-      "statement":"490a0 490v0"
+      "value":"490a0 490v0"
     }
   ],
   "identifiers":
   [
     {
-      "type":"Control Number",
-      "value":"ControlNumber-001"
+      "value":"ControlNumber-001",
+      "type":"Control Number"
     },
     {
-      "type":"Control Number",
-      "value":"ControlNumber-009"
+      "value":"ControlNumber-009",
+      "type":"Control Number"
     },
     {
-      "type":"ISBN",
-      "value":"020a 020c"
+      "value":"020a 020c",
+      "type":"ISBN"
     },
     {
-      "type":"ISSN",
-      "value":"022a 022l"
+      "value":"022a 022l",
+      "type":"ISSN"
     }
   ],
   "contributors":
   [
     {
-      "contributor":"700a 700c0 700c1"
+      "value":"700a 700c0 700c1"
     },
     {
-      "contributor":"710a 710b0 710b1"
+      "value":"710a 710b0 710b1"
     }
   ]
 }

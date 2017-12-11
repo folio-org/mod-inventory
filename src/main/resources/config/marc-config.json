@@ -9,8 +9,7 @@
     {
       "name":"altTitles",
       "required":false,
-      "repeatable":true,
-      "subfield-name":"altTitle"
+      "repeatable":true
     },
     {
       "name":"version",
@@ -20,20 +19,17 @@
     {
       "name":"series",
       "required":false,
-      "repeatable":true,
-      "subfield-name":"statement"
+      "repeatable":true
     },
     {
       "name":"identifiers",
       "required":false,
-      "repeatable":true,
-      "subfield-name":"identifier"
+      "repeatable":true
     },
     {
       "name":"contributors",
       "required":false,
-      "repeatable":true,
-      "subfield-name":"contributor"
+      "repeatable":true
     }
   ],
   "marc-fields":
@@ -68,6 +64,21 @@
     "711":"contributors",
     "720":"contributors",
     "830":"series"
+  },
+  "identifier-types":
+  {
+    "001":"Control Number",
+    "002":"Control Number",
+    "003":"Control Number",
+    "004":"Control Number",
+    "005":"Control Number",
+    "006":"Control Number",
+    "007":"Control Number",
+    "008":"Control Number",
+    "009":"Control Number",
+    "010":"LCCN",
+    "020":"ISBN",
+    "022":"ISSN"
   }
 }
 
