@@ -1,8 +1,6 @@
 package org.folio.inventory.support;
 
 import io.vertx.core.json.JsonObject;
-import org.folio.inventory.exceptions.UnexpectedJsonObjectException;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
