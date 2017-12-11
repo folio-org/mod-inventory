@@ -32,8 +32,15 @@ public class MarcParserTest {
     assertEquals(expected.toString(), actual.toString());
   }
 
-  /*@Test(expected = InvalidMarcJsonException.class)
-  public void validateInvalidJson() throws IOException, InvalidMarcJsonException {
-    new JsonHelper().getJsonFileAsJsonObject("/sample-data/marc-json/invalid_01.json");
-  }*/
+  @Test(expected = InvalidMarcJsonException.class)
+  public void validateInvalidJson1() throws IOException, InvalidMarcJsonException {
+    JsonObject jo = new JsonHelper().getJsonFileAsJsonObject("/sample-data/marc-json/has-no-fields.json");
+    marcParser.marcJson2FolioJson(jo);
+  }
+
+  @Test(expected = InvalidMarcJsonException.class)
+  public void validateInvalidJson2() throws IOException, InvalidMarcJsonException {
+    JsonObject jo = new JsonHelper().getJsonFileAsJsonObject("/sample-data/marc-json/fields-no-array.json");
+    marcParser.marcJson2FolioJson(jo);
+  }
 }

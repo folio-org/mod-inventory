@@ -15,6 +15,8 @@ public class MarcParser {
   private static final String FIELDS = "fields";
   private static final String SUBFIELDS = "subfields";
   private static final String VALUE = "value";
+  private static final String TYPE = "type";
+  private static final String NAME = "name";
   private static final String MARC_FIELDS = "marc-fields";
   private static final String INSTANCE_FIELDS = "instance-fields";
   private static final String IDENTIFIER_TYPES = "identifier-types";
@@ -37,10 +39,6 @@ public class MarcParser {
     return this.parse(instanceMap);
   }
 
-  private void validate(JsonObject marc) throws InvalidMarcJsonException {
-    // TODO: validation
-  }
-
   private Map<String,JsonObject> extractFolioEntriesFromMarcFields(JsonArray marcFieldsInput) {
     Map<String, JsonObject> instanceMap = this.createConfiguredInitializedInstanceMap();
     return this.mapMarcFieldsToInstanceMap(marcFieldsInput, instanceMap);
@@ -59,8 +57,7 @@ public class MarcParser {
           data.put(SUBFIELD_NAME, instanceFieldConfig.getString(SUBFIELD_NAME));
         }
         data.put(FIELDS, new JsonArray());
-        instanceMap.put(
-          instanceFieldConfig.getString("name"), data);
+        instanceMap.put(instanceFieldConfig.getString(NAME), data);
       }
     }
     return instanceMap;
@@ -72,7 +69,8 @@ public class MarcParser {
     for (Object o : marcFieldsInput) {
       if (o instanceof JsonObject) {
         JsonObject jo = (JsonObject) o;
-        for (String marcNum : jo.fieldNames()) {
+        if (jo.fieldNames().iterator().hasNext()) {
+          String marcNum = jo.fieldNames().iterator().next();
           instanceMap.get(marcFieldMapping.getString(marcNum)).getJsonArray(FIELDS).add(jo);
         }
       }
@@ -114,7 +112,7 @@ public class MarcParser {
           outputObject.put(VALUE, String.join(" ", subfields));
         }
         if (marcConfig.getConfig().getJsonObject(IDENTIFIER_TYPES).containsKey(fieldName)) {
-          outputObject.put("type", marcConfig.getConfig().getJsonObject(IDENTIFIER_TYPES).getString(fieldName));
+          outputObject.put(TYPE, marcConfig.getConfig().getJsonObject(IDENTIFIER_TYPES).getString(fieldName));
         }
         outputArray.add(outputObject);
       }
@@ -144,4 +142,12 @@ public class MarcParser {
       Integer.parseInt(marcNum) < 10;
   }
 
+  private void validate(JsonObject marc) throws InvalidMarcJsonException {
+    if (!marc.containsKey(FIELDS)) {
+      throw new InvalidMarcJsonException("No key 'fields' found in MARC file...");
+    }
+    if (!(marc.getValue(FIELDS) instanceof JsonArray)) {
+      throw new InvalidMarcJsonException("Value at key 'fields' not a JsonArray...");
+    }
+  }
 }
