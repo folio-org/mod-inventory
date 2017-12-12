@@ -78,7 +78,13 @@
     "009":"Control Number",
     "010":"LCCN",
     "020":"ISBN",
-    "022":"ISSN"
+    "022":"ISSN",
+    "024":"Other Standard Indentifier",
+    "027":"Standard Technical Report Number",
+    "028":"Publisher Number",
+    "030":"CODEN",
+    "035":"System Control Number",
+    "074":"GPO Item Number"
   }
 }
 

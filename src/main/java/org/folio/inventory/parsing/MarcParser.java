@@ -48,17 +48,18 @@ public class MarcParser {
     Map<String, JsonObject> instanceMap = new LinkedHashMap<>();
     JsonArray configuredInstanceFields = marcConfig.getConfig().getJsonArray(INSTANCE_FIELDS);
     for (Object o : configuredInstanceFields) {
-      if (o instanceof JsonObject) {
-        JsonObject instanceFieldConfig = (JsonObject) o;
-        JsonObject data = new JsonObject();
-        data.put(REQUIRED, instanceFieldConfig.getBoolean(REQUIRED));
-        data.put(REPEATABLE, instanceFieldConfig.getBoolean(REPEATABLE));
-        if (instanceFieldConfig.containsKey(SUBFIELD_NAME)) {
-          data.put(SUBFIELD_NAME, instanceFieldConfig.getString(SUBFIELD_NAME));
-        }
-        data.put(FIELDS, new JsonArray());
-        instanceMap.put(instanceFieldConfig.getString(NAME), data);
+      if (!(o instanceof JsonObject)) {
+        continue;
       }
+      JsonObject instanceFieldConfig = (JsonObject) o;
+      JsonObject data = new JsonObject();
+      data.put(REQUIRED, instanceFieldConfig.getBoolean(REQUIRED));
+      data.put(REPEATABLE, instanceFieldConfig.getBoolean(REPEATABLE));
+      if (instanceFieldConfig.containsKey(SUBFIELD_NAME)) {
+        data.put(SUBFIELD_NAME, instanceFieldConfig.getString(SUBFIELD_NAME));
+      }
+      data.put(FIELDS, new JsonArray());
+      instanceMap.put(instanceFieldConfig.getString(NAME), data);
     }
     return instanceMap;
   }
@@ -67,12 +68,13 @@ public class MarcParser {
                                                             Map<String,JsonObject> instanceMap) {
     JsonObject marcFieldMapping = marcConfig.getConfig().getJsonObject(MARC_FIELDS);
     for (Object o : marcFieldsInput) {
-      if (o instanceof JsonObject) {
-        JsonObject jo = (JsonObject) o;
-        if (jo.fieldNames().iterator().hasNext()) {
-          String marcNum = jo.fieldNames().iterator().next();
-          instanceMap.get(marcFieldMapping.getString(marcNum)).getJsonArray(FIELDS).add(jo);
-        }
+      if (!(o instanceof JsonObject)) {
+        continue;
+      }
+      JsonObject jo = (JsonObject) o;
+      String marcNum = jo.fieldNames().iterator().next();
+      if (marcFieldMapping.getString(marcNum) != null) {
+        instanceMap.get(marcFieldMapping.getString(marcNum)).getJsonArray(FIELDS).add(jo);
       }
     }
     return instanceMap;
@@ -106,11 +108,12 @@ public class MarcParser {
           continue;
         }
         for (Object o : field.getJsonObject(fieldName).getJsonArray(SUBFIELDS)) {
-          if (o instanceof JsonObject) {
-            JsonObject subfield = (JsonObject) o;
-            String subfieldName = subfield.fieldNames().iterator().next();
-            subfields.add(subfield.getString(subfieldName));
+          if (!(o instanceof JsonObject)) {
+            continue;
           }
+          JsonObject subfield = (JsonObject) o;
+          String subfieldName = subfield.fieldNames().iterator().next();
+          subfields.add(subfield.getString(subfieldName));
         }
         outputObject.put(VALUE, String.join(" ", subfields));
         putTypeIfConfiguredAsIdentifierType(fieldName, outputObject);
@@ -154,6 +157,15 @@ public class MarcParser {
     }
     if (!(marc.getValue(FIELDS) instanceof JsonArray)) {
       throw new InvalidMarcJsonException("Value at key 'fields' not a JsonArray...");
+    }
+    JsonArray fields = (JsonArray) marc.getValue(FIELDS);
+    for (Object field : fields) {
+      if (!(field instanceof JsonObject)) {
+        throw new InvalidMarcJsonException("Array 'fields' contains item of type other than JsonObject...");
+      }
+      if (((JsonObject) field).isEmpty()) {
+        throw new InvalidMarcJsonException("Array 'fields' contains an empty JsonObject...");
+      }
     }
   }
 }
