@@ -94,30 +94,36 @@ public class MarcParser {
     JsonArray fields = entry.getValue().getJsonArray(FIELDS);
     JsonArray outputArray = new JsonArray();
     for (Object obj : fields) {
-      JsonObject outputObject = new JsonObject();
-      List<String> subfields = new ArrayList<>();
       if (obj instanceof JsonObject) {
+        JsonObject outputObject = new JsonObject();
+        List<String> subfields = new ArrayList<>();
         JsonObject field = (JsonObject) obj;
         String fieldName = field.fieldNames().iterator().next();
         if (isControlNumber(fieldName, field)) {
           outputObject.put(VALUE, field.getString(fieldName));
-        } else {
-          for (Object o : field.getJsonObject(fieldName).getJsonArray(SUBFIELDS)) {
-            if (o instanceof JsonObject) {
-              JsonObject subfield = (JsonObject) o;
-              String subfieldName = subfield.fieldNames().iterator().next();
-              subfields.add(subfield.getString(subfieldName));
-            }
+          putTypeIfConfiguredAsIdentifierType(fieldName, outputObject);
+          outputArray.add(outputObject);
+          continue;
+        }
+        for (Object o : field.getJsonObject(fieldName).getJsonArray(SUBFIELDS)) {
+          if (o instanceof JsonObject) {
+            JsonObject subfield = (JsonObject) o;
+            String subfieldName = subfield.fieldNames().iterator().next();
+            subfields.add(subfield.getString(subfieldName));
           }
-          outputObject.put(VALUE, String.join(" ", subfields));
         }
-        if (marcConfig.getConfig().getJsonObject(IDENTIFIER_TYPES).containsKey(fieldName)) {
-          outputObject.put(TYPE, marcConfig.getConfig().getJsonObject(IDENTIFIER_TYPES).getString(fieldName));
-        }
+        outputObject.put(VALUE, String.join(" ", subfields));
+        putTypeIfConfiguredAsIdentifierType(fieldName, outputObject);
         outputArray.add(outputObject);
       }
     }
     output.put(entry.getKey(), outputArray);
+  }
+
+  private void putTypeIfConfiguredAsIdentifierType(String fieldName, JsonObject outputObject) {
+    if (marcConfig.getConfig().getJsonObject(IDENTIFIER_TYPES).containsKey(fieldName)) {
+      outputObject.put(TYPE, marcConfig.getConfig().getJsonObject(IDENTIFIER_TYPES).getString(fieldName));
+    }
   }
 
   private void parseNonRepeatable(Map.Entry<String, JsonObject> entry, JsonObject output) {
