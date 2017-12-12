@@ -34,14 +34,14 @@ public class MarcParser {
   }
 
   public JsonObject marcJson2FolioJson(JsonObject inputMarc) throws InvalidMarcJsonException {
-    this.validate(inputMarc);
-    Map<String,JsonObject> instanceMap = this.extractFolioEntriesFromMarcFields(inputMarc.getJsonArray(FIELDS));
-    return this.parse(instanceMap);
+    validate(inputMarc);
+    Map<String,JsonObject> instanceMap = extractFolioEntriesFromMarcFields(inputMarc.getJsonArray(FIELDS));
+    return parse(instanceMap);
   }
 
   private Map<String,JsonObject> extractFolioEntriesFromMarcFields(JsonArray marcFieldsInput) {
-    Map<String, JsonObject> instanceMap = this.createConfiguredInitializedInstanceMap();
-    return this.mapMarcFieldsToInstanceMap(marcFieldsInput, instanceMap);
+    Map<String, JsonObject> instanceMap = createConfiguredInitializedInstanceMap();
+    return mapMarcFieldsToInstanceMap(marcFieldsInput, instanceMap);
   }
 
   private Map<String,JsonObject> createConfiguredInitializedInstanceMap() {
@@ -82,9 +82,9 @@ public class MarcParser {
     JsonObject output = new JsonObject();
     for (Map.Entry<String,JsonObject> entry : instanceMap.entrySet()) {
       if (entry.getValue().getBoolean(REPEATABLE)) {
-        this.parseRepeatable(entry, output);
+        parseRepeatable(entry, output);
       } else {
-        this.parseNonRepeatable(entry, output);
+        parseNonRepeatable(entry, output);
       }
     }
     return output;
@@ -99,7 +99,7 @@ public class MarcParser {
       if (obj instanceof JsonObject) {
         JsonObject field = (JsonObject) obj;
         String fieldName = field.fieldNames().iterator().next();
-        if (this.isControlNumber(fieldName, field)) {
+        if (isControlNumber(fieldName, field)) {
           outputObject.put(VALUE, field.getString(fieldName));
         } else {
           for (Object o : field.getJsonObject(fieldName).getJsonArray(SUBFIELDS)) {
