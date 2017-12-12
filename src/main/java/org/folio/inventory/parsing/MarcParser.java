@@ -3,11 +3,14 @@ package org.folio.inventory.parsing;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import org.folio.inventory.exceptions.InvalidMarcJsonException;
 import org.folio.inventory.parsing.config.MarcConfig;
 import org.folio.inventory.exceptions.InvalidMarcConfigException;
 
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.util.*;
 
 public class MarcParser {
@@ -23,6 +26,7 @@ public class MarcParser {
   private static final String SUBFIELD_NAME = "subfield-name";
   private static final String REQUIRED = "required";
   private static final String REPEATABLE = "repeatable";
+  private static final Logger LOGGER = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   private MarcConfig marcConfig;
 
   public MarcParser() throws IOException, InvalidMarcConfigException {
@@ -73,7 +77,9 @@ public class MarcParser {
       }
       JsonObject jo = (JsonObject) o;
       String marcNum = jo.fieldNames().iterator().next();
-      if (marcFieldMapping.getString(marcNum) != null) {
+      if (marcFieldMapping.getString(marcNum) == null) {
+        LOGGER.debug(String.format("MARC field %s not found in config and ignored...", marcNum));
+      } else {
         instanceMap.get(marcFieldMapping.getString(marcNum)).getJsonArray(FIELDS).add(jo);
       }
     }
@@ -136,11 +142,12 @@ public class MarcParser {
       String fieldName = fields.getJsonObject(0).fieldNames().iterator().next();
       for (Object o : fields.getJsonObject(0).getJsonObject(fieldName).getJsonArray(
         (SUBFIELDS))) {
-        if (o instanceof JsonObject) {
-          JsonObject subfield = (JsonObject) o;
-          String subfieldName = subfield.fieldNames().iterator().next();
-          subfields.add(subfield.getString(subfieldName));
+        if (!(o instanceof JsonObject)) {
+          continue;
         }
+        JsonObject subfield = (JsonObject) o;
+        String subfieldName = subfield.fieldNames().iterator().next();
+        subfields.add(subfield.getString(subfieldName));
       }
     }
     output.put(entry.getKey(), String.join(" ", subfields));
