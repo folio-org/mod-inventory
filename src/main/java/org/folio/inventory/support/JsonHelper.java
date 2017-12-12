@@ -8,7 +8,12 @@ import java.io.InputStreamReader;
 
 public class JsonHelper {
 
-  public String readFile(InputStream is) throws IOException {
+  public JsonObject getJsonFileAsJsonObject(String filePath) throws IOException {
+    InputStream is = this.getClass().getResourceAsStream(filePath);
+    return new JsonObject(readFile(is));
+  }
+
+  private String readFile(InputStream is) throws IOException {
     try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
       StringBuilder sb = new StringBuilder();
       String line = br.readLine();
@@ -19,10 +24,5 @@ public class JsonHelper {
       }
       return sb.toString();
     }
-  }
-
-  public JsonObject getJsonFileAsJsonObject(String filePath) throws IOException {
-    InputStream is = this.getClass().getResourceAsStream(filePath);
-    return new JsonObject(this.readFile(is));
   }
 }
