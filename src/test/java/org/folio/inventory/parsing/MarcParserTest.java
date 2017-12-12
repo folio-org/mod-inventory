@@ -26,21 +26,21 @@ public class MarcParserTest {
   public void marcJson2FolioJson() throws IOException, InvalidMarcJsonException {
     JsonHelper jh = new JsonHelper();
     JsonObject expected = jh.getJsonFileAsJsonObject(
-      "/sample-data/marc-json/test-output_01a.json");
+      "/marc/test-output_01a.json");
     JsonObject actual = marcParser.marcJson2FolioJson(jh.getJsonFileAsJsonObject(
-      "/sample-data/marc-json/test-input_01a.json"));
+      "/marc/test-input_01a.json"));
     assertEquals(expected.toString(), actual.toString());
   }
 
   @Test(expected = InvalidMarcJsonException.class)
   public void validateInvalidJson1() throws IOException, InvalidMarcJsonException {
-    JsonObject jo = new JsonHelper().getJsonFileAsJsonObject("/sample-data/marc-json/has-no-fields.json");
+    JsonObject jo = new JsonHelper().getJsonFileAsJsonObject("/marc/has-no-fields.json");
     marcParser.marcJson2FolioJson(jo);
   }
 
   @Test(expected = InvalidMarcJsonException.class)
   public void validateInvalidJson2() throws IOException, InvalidMarcJsonException {
-    JsonObject jo = new JsonHelper().getJsonFileAsJsonObject("/sample-data/marc-json/fields-no-array.json");
+    JsonObject jo = new JsonHelper().getJsonFileAsJsonObject("/marc/fields-no-array.json");
     marcParser.marcJson2FolioJson(jo);
   }
 }
