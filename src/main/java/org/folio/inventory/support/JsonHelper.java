@@ -1,0 +1,28 @@
+package org.folio.inventory.support;
+
+import io.vertx.core.json.JsonObject;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+
+public class JsonHelper {
+
+  public JsonObject getJsonFileAsJsonObject(String filePath) throws IOException {
+    InputStream is = this.getClass().getResourceAsStream(filePath);
+    return new JsonObject(readFile(is));
+  }
+
+  private String readFile(InputStream is) throws IOException {
+    try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
+      StringBuilder sb = new StringBuilder();
+      String line = br.readLine();
+      while (line != null) {
+        sb.append(line);
+        sb.append("\n");
+        line = br.readLine();
+      }
+      return sb.toString();
+    }
+  }
+}

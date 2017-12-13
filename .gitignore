@@ -3,6 +3,7 @@
 build/
 .idea/
 .gradle/
+*.iml
 metrics/
 *.log
 **/doc/api/generated/
@@ -10,3 +11,4 @@ node_modules/
 **/docker/tmp
 target/
 file-uploads/
+out/

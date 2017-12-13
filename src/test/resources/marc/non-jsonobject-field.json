@@ -1,0 +1,12 @@
+{
+  "fields":
+  [
+    {
+      "100":"hello"
+    },
+    "this item should trigger an exception",
+    {
+      "200":"ok"
+    }
+  ]
+}

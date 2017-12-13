@@ -1,0 +1,53 @@
+{
+  "title":"245a 245b 245k0 245k1",
+  "altTitles":
+  [
+    {
+      "value":"240a 240b"
+    },
+    {
+      "value":"246a 246b 246n0 246n1"
+    },
+    {
+      "value":"247a 247b"
+    }
+  ],
+  "version":"250a 250b",
+  "series":
+  [
+    {
+      "value":"490a0 490a1 490v0 490v1"
+    },
+    {
+      "value":"490a0 490v0"
+    }
+  ],
+  "identifiers":
+  [
+    {
+      "value":"ControlNumber-001",
+      "type":"Control Number"
+    },
+    {
+      "value":"ControlNumber-009",
+      "type":"Control Number"
+    },
+    {
+      "value":"020a 020c",
+      "type":"ISBN"
+    },
+    {
+      "value":"022a 022l",
+      "type":"ISSN"
+    }
+  ],
+  "contributors":
+  [
+    {
+      "value":"700a 700c0 700c1"
+    },
+    {
+      "value":"710a 710b0 710b1"
+    }
+  ]
+}
