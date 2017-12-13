@@ -98,7 +98,6 @@ public class ExternalItemCollectionExamples {
 
     assertThat(smallAngry, notNullValue());
     assertThat(smallAngry.status, is("Available"));
-    assertThat(smallAngry.instanceId, is(notNullValue()));
     assertThat(smallAngry.materialTypeId, is(bookMaterialTypeId));
     assertThat(smallAngry.permanentLoanTypeId, is(canCirculateLoanTypeId));
     assertThat(smallAngry.temporaryLocationId, is(annexLibraryLocationId));
@@ -107,7 +106,6 @@ public class ExternalItemCollectionExamples {
 
     assertThat(nod, notNullValue());
     assertThat(nod.status, is("Available"));
-    assertThat(nod.instanceId, is(notNullValue()));
     assertThat(nod.materialTypeId, is(bookMaterialTypeId));
     assertThat(nod.permanentLoanTypeId, is(canCirculateLoanTypeId));
     assertThat(nod.temporaryLocationId, is(annexLibraryLocationId));
@@ -116,7 +114,6 @@ public class ExternalItemCollectionExamples {
 
     assertThat(uprooted, notNullValue());
     assertThat(uprooted.status, is("Available"));
-    assertThat(uprooted.instanceId, is(notNullValue()));
     assertThat(uprooted.materialTypeId, is(bookMaterialTypeId));
     assertThat(uprooted.permanentLoanTypeId, is(canCirculateLoanTypeId));
     assertThat(uprooted.temporaryLocationId, is(annexLibraryLocationId));
@@ -313,7 +310,6 @@ public class ExternalItemCollectionExamples {
     Item otherFoundItem = getOnCompletion(otherFindFuture);
 
     assertThat(foundItem, notNullValue());
-    assertThat(foundItem.instanceId, is(smallAngryPlanet.instanceId));
     assertThat(foundItem.barcode, is("036000291452"));
     assertThat(foundItem.status, is("Available"));
     assertThat(foundItem.materialTypeId, is(bookMaterialTypeId));
@@ -321,7 +317,6 @@ public class ExternalItemCollectionExamples {
     assertThat(foundItem.temporaryLocationId, is(annexLibraryLocationId));
 
     assertThat(otherFoundItem, notNullValue());
-    assertThat(otherFoundItem.instanceId, is(nod.instanceId));
     assertThat(otherFoundItem.barcode, is("565578437802"));
     assertThat(otherFoundItem.status, is("Available"));
     assertThat(otherFoundItem.materialTypeId, is(bookMaterialTypeId));
@@ -344,7 +339,6 @@ public class ExternalItemCollectionExamples {
   private Item smallAngryPlanet() {
     return new Item(null, "036000291452",
       null, null, new ArrayList<>(), null,
-      UUID.randomUUID().toString(),
       null, new ArrayList<>(),
       "Available", bookMaterialTypeId,
       annexLibraryLocationId, canCirculateLoanTypeId, null);
@@ -353,7 +347,6 @@ public class ExternalItemCollectionExamples {
   private Item nod() {
     return new Item(null, "565578437802",
       null, null, new ArrayList<>(), null,
-      UUID.randomUUID().toString(),
       null, new ArrayList<>(),
       "Available", bookMaterialTypeId,
       annexLibraryLocationId, canCirculateLoanTypeId, null);
@@ -362,7 +355,6 @@ public class ExternalItemCollectionExamples {
   private Item uprooted() {
     return new Item(null, "657670342075",
       null, null, new ArrayList<>(), null,
-      UUID.randomUUID().toString(),
       null, new ArrayList<>(),
       "Available", bookMaterialTypeId,
       annexLibraryLocationId, canCirculateLoanTypeId, null);
@@ -371,7 +363,6 @@ public class ExternalItemCollectionExamples {
   private Item temeraire() {
     return new Item(null, "232142443432",
       null, null, new ArrayList<>(), null,
-      UUID.randomUUID().toString(),
       null, new ArrayList<>(),
       "Available", bookMaterialTypeId,
       annexLibraryLocationId, canCirculateLoanTypeId, null);
@@ -380,7 +371,6 @@ public class ExternalItemCollectionExamples {
   private Item interestingTimes() {
     return new Item(null, "56454543534",
       null, null, new ArrayList<>(), null,
-      UUID.randomUUID().toString(),
       null, new ArrayList<>(),
       "Available", bookMaterialTypeId,
       annexLibraryLocationId, canCirculateLoanTypeId, null);

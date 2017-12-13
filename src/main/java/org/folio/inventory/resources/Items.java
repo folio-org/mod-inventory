@@ -284,7 +284,6 @@ public class Items {
       itemRequest.getString("chronology"),
       pieceIdentifiers,
       itemRequest.getString("numberOfPieces"),
-      itemRequest.getString("instanceId"),
       itemRequest.getString("holdingsRecordId"),
       notes,
       status,

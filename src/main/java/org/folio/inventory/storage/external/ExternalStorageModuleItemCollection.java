@@ -38,7 +38,6 @@ class ExternalStorageModuleItemCollection
       itemFromServer.getString("chronology"),
       pieceIdentifierList,
       itemFromServer.getString("numberOfPieces"),
-      itemFromServer.getString("instanceId"),
       itemFromServer.getString("holdingsRecordId"),
       notesList,
       itemFromServer.getJsonObject("status").getString("name"),
@@ -69,7 +68,6 @@ class ExternalStorageModuleItemCollection
     includeIfPresent(itemToSend, "enumeration", item.enumeration);
     includeIfPresent(itemToSend, "chronology", item.chronology);
     includeIfPresent(itemToSend, "numberOfPieces", item.numberOfPieces);
-    includeIfPresent(itemToSend, "instanceId", item.instanceId);
     includeIfPresent(itemToSend, "holdingsRecordId", item.holdingId);
     includeIfPresent(itemToSend, "materialTypeId", item.materialTypeId);
     includeIfPresent(itemToSend, "permanentLoanTypeId", item.permanentLoanTypeId);

@@ -90,7 +90,6 @@ class ItemRepresentation {
     }
 
     includeIfPresent(representation, "title", instance, i -> i.getString("title"));
-    includeIfPresent(representation, "instanceId", item.instanceId);
     includeIfPresent(representation, "holdingsRecordId", item.holdingId);
     includeIfPresent(representation, "barcode", item.barcode);
     includeIfPresent(representation, "enumeration", item.enumeration);
