@@ -101,7 +101,6 @@ public class ExternalItemCollectionExamples {
     assertThat(smallAngry.instanceId, is(notNullValue()));
     assertThat(smallAngry.materialTypeId, is(bookMaterialTypeId));
     assertThat(smallAngry.permanentLoanTypeId, is(canCirculateLoanTypeId));
-    assertThat(smallAngry.permanentLocationId, is(mainLibraryLocationId));
     assertThat(smallAngry.temporaryLocationId, is(annexLibraryLocationId));
 
     Item nod = getItem(allItems, "565578437802");
@@ -111,7 +110,6 @@ public class ExternalItemCollectionExamples {
     assertThat(nod.instanceId, is(notNullValue()));
     assertThat(nod.materialTypeId, is(bookMaterialTypeId));
     assertThat(nod.permanentLoanTypeId, is(canCirculateLoanTypeId));
-    assertThat(nod.permanentLocationId, is(mainLibraryLocationId));
     assertThat(nod.temporaryLocationId, is(annexLibraryLocationId));
 
     Item uprooted = getItem(allItems, "657670342075");
@@ -121,7 +119,6 @@ public class ExternalItemCollectionExamples {
     assertThat(uprooted.instanceId, is(notNullValue()));
     assertThat(uprooted.materialTypeId, is(bookMaterialTypeId));
     assertThat(uprooted.permanentLoanTypeId, is(canCirculateLoanTypeId));
-    assertThat(uprooted.permanentLocationId, is(mainLibraryLocationId));
     assertThat(uprooted.temporaryLocationId, is(annexLibraryLocationId));
   }
 
@@ -170,7 +167,6 @@ public class ExternalItemCollectionExamples {
 
     assertThat(updated.id, is(added.id));
     assertThat(updated.barcode, is(added.barcode));
-    assertThat(updated.permanentLocationId, is(added.permanentLocationId));
     assertThat(updated.temporaryLocationId, is(added.temporaryLocationId));
     assertThat(updated.materialTypeId, is(added.materialTypeId));
     assertThat(updated.permanentLoanTypeId, is(added.permanentLoanTypeId));
@@ -322,7 +318,6 @@ public class ExternalItemCollectionExamples {
     assertThat(foundItem.status, is("Available"));
     assertThat(foundItem.materialTypeId, is(bookMaterialTypeId));
     assertThat(foundItem.permanentLoanTypeId, is(canCirculateLoanTypeId));
-    assertThat(foundItem.permanentLocationId, is(mainLibraryLocationId));
     assertThat(foundItem.temporaryLocationId, is(annexLibraryLocationId));
 
     assertThat(otherFoundItem, notNullValue());
@@ -331,7 +326,6 @@ public class ExternalItemCollectionExamples {
     assertThat(otherFoundItem.status, is("Available"));
     assertThat(otherFoundItem.materialTypeId, is(bookMaterialTypeId));
     assertThat(otherFoundItem.permanentLoanTypeId, is(canCirculateLoanTypeId));
-    assertThat(otherFoundItem.permanentLocationId, is(mainLibraryLocationId));
     assertThat(otherFoundItem.temporaryLocationId, is(annexLibraryLocationId));
   }
 
@@ -353,7 +347,7 @@ public class ExternalItemCollectionExamples {
       UUID.randomUUID().toString(),
       null, new ArrayList<>(),
       "Available", bookMaterialTypeId,
-      mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null);
+      annexLibraryLocationId, canCirculateLoanTypeId, null);
   }
 
   private Item nod() {
@@ -362,7 +356,7 @@ public class ExternalItemCollectionExamples {
       UUID.randomUUID().toString(),
       null, new ArrayList<>(),
       "Available", bookMaterialTypeId,
-      mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null);
+      annexLibraryLocationId, canCirculateLoanTypeId, null);
   }
 
   private Item uprooted() {
@@ -371,7 +365,7 @@ public class ExternalItemCollectionExamples {
       UUID.randomUUID().toString(),
       null, new ArrayList<>(),
       "Available", bookMaterialTypeId,
-      mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null);
+      annexLibraryLocationId, canCirculateLoanTypeId, null);
   }
 
   private Item temeraire() {
@@ -380,7 +374,7 @@ public class ExternalItemCollectionExamples {
       UUID.randomUUID().toString(),
       null, new ArrayList<>(),
       "Available", bookMaterialTypeId,
-      mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null);
+      annexLibraryLocationId, canCirculateLoanTypeId, null);
   }
 
   private Item interestingTimes() {
@@ -389,7 +383,7 @@ public class ExternalItemCollectionExamples {
       UUID.randomUUID().toString(),
       null, new ArrayList<>(),
       "Available", bookMaterialTypeId,
-      mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null);
+      annexLibraryLocationId, canCirculateLoanTypeId, null);
   }
 
   private Item getItem(List<Item> allItems, String barcode) {

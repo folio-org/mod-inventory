@@ -53,7 +53,6 @@ public class ItemApiExamples extends ApiTests {
     IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)
       .withBarcode("645398607547")
-      .inMainLibrary()
       .temporarilyInAnnex()
       .canCirculate()
       .temporarilyCourseReserves());
@@ -107,7 +106,6 @@ public class ItemApiExamples extends ApiTests {
       .withId(itemId)
       .forHolding(holdingId)
       .withBarcode("645398607547")
-      .inMainLibrary()
       .temporarilyInAnnex()
       .canCirculate()
       .temporarilyCourseReserves());
@@ -221,29 +219,6 @@ public class ItemApiExamples extends ApiTests {
   }
 
   @Test
-  public void cannotCreateItemWithoutPermanentLocation()
-    throws InterruptedException,
-    MalformedURLException,
-    TimeoutException,
-    ExecutionException {
-
-    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
-
-    UUID holdingId = holdingsStorageClient.create(
-      new HoldingRequestBuilder()
-        .forInstance(UUID.fromString(createdInstance.getString("id"))))
-      .getId();
-
-    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
-      .forHolding(holdingId)
-      .withNoPermanentLocation());
-
-    JsonObject createdItemInStorage = itemsStorageClient.getById(postResponse.getId()).getJson();
-
-    assertThat(createdItemInStorage.containsKey("permanentLocationId"), is(false));
-  }
-
-  @Test
   public void cannotCreateItemWithoutPermanentLoanType()
     throws InterruptedException,
     MalformedURLException,
@@ -340,7 +315,6 @@ public class ItemApiExamples extends ApiTests {
       .forHolding(holdingId)
       .withBarcode("645398607547")
       .canCirculate()
-      .inMainLibrary()
       .temporarilyInAnnex()
       .create();
 
@@ -399,7 +373,6 @@ public class ItemApiExamples extends ApiTests {
       .withId(itemId)
       .forHolding(holdingId)
       .canCirculate()
-      .inMainLibrary()
       .temporarilyInAnnex()
       .create();
 

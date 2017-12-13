@@ -222,7 +222,7 @@ public class Items {
               String permanentLocationId = holdingResponse.getStatusCode() == 200
                 && holdingResponse.getJson().containsKey("permanentLocationId")
                 ? holdingResponse.getJson().getString("permanentLocationId")
-                : item.permanentLocationId;
+                : null;
 
               ArrayList<CompletableFuture<Response>> allFutures = new ArrayList<>();
 
@@ -273,14 +273,12 @@ public class Items {
     List<String> notes;
     notes = JsonArrayHelper.toListOfStrings(itemRequest.getJsonArray("notes"));
     String materialTypeId = getNestedProperty(itemRequest, "materialType", "id");
-    String permanentLocationId = getNestedProperty(itemRequest, "permanentLocation", "id");
     String temporaryLocationId = getNestedProperty(itemRequest, "temporaryLocation", "id");
     String permanentLoanTypeId = getNestedProperty(itemRequest, "permanentLoanType", "id");
     String temporaryLoanTypeId = getNestedProperty(itemRequest, "temporaryLoanType", "id");
 
     return new Item(
       itemRequest.getString("id"),
-      //Title is read-only and so is discarded,
       itemRequest.getString("barcode"),
       itemRequest.getString("enumeration"),
       itemRequest.getString("chronology"),
@@ -291,7 +289,6 @@ public class Items {
       notes,
       status,
       materialTypeId,
-      permanentLocationId,
       temporaryLocationId,
       permanentLoanTypeId,
       temporaryLoanTypeId);
@@ -426,7 +423,7 @@ public class Items {
           });
 
         List<String> permanentLocationIds = wrappedItems.records.stream()
-          .map(item -> HoldingsSupport.determinePermanentLocationIdForItem(item,
+          .map(item -> HoldingsSupport.determinePermanentLocationIdForItem(
             HoldingsSupport.holdingForItem(item, holdings).orElse(null)))
           .filter(Objects::nonNull)
           .distinct()

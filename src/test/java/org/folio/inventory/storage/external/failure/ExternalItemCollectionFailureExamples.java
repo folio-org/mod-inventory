@@ -155,7 +155,7 @@ public abstract class ExternalItemCollectionFailureExamples {
       null, new ArrayList<>(), null, null,
       null, new ArrayList<>(),
       UUID.randomUUID().toString(), UUID.randomUUID().toString(),
-      UUID.randomUUID().toString(), UUID.randomUUID().toString(),
+      UUID.randomUUID().toString(),
       UUID.randomUUID().toString(), null);
   }
 

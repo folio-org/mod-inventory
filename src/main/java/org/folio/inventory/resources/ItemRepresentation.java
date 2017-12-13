@@ -108,9 +108,6 @@ class ItemRepresentation {
     includeReferenceIfPresent(representation, "temporaryLoanType",
       item.temporaryLoanTypeId);
 
-    includeReferenceIfPresent(representation, "permanentLocation",
-      item.permanentLocationId);
-
     includeReferenceIfPresent(representation, "temporaryLocation",
       item.temporaryLocationId);
 
@@ -150,7 +147,7 @@ class ItemRepresentation {
 
       JsonObject instance = instanceForHolding(holding, instances).orElse(null);
 
-      String permanentLocationId = determinePermanentLocationIdForItem(item,
+      String permanentLocationId = determinePermanentLocationIdForItem(
         holding);
 
       JsonObject permanentLocation = locations.get(permanentLocationId);
