@@ -11,7 +11,6 @@ public class ItemRequestBuilder implements Builder {
 
   private final UUID id;
   private final UUID holdingId;
-  private final UUID instanceId;
   private final String readOnlyTitle;
   private final String barcode;
   private final String status;
@@ -22,7 +21,7 @@ public class ItemRequestBuilder implements Builder {
   private final JsonObject temporaryLoanType;
 
   public ItemRequestBuilder() {
-    this(UUID.randomUUID(), null, null, null, "645398607547",
+    this(UUID.randomUUID(), null, null, "645398607547",
       AVAILABLE_STATUS, bookMaterialType(), null, null,
       canCirculateLoanType(), null
     );
@@ -31,7 +30,6 @@ public class ItemRequestBuilder implements Builder {
   private ItemRequestBuilder(
     UUID id,
     UUID holdingId,
-    UUID instanceId,
     String readOnlyTitle,
     String barcode,
     String status,
@@ -48,7 +46,6 @@ public class ItemRequestBuilder implements Builder {
     this.status = status;
     this.readOnlyPermanentLocation = readOnlyPermanentLocation;
     this.temporaryLocation = temporaryLocation;
-    this.instanceId = instanceId;
     this.permanentLoanType = permanentLoanType;
     this.temporaryLoanType = temporaryLoanType;
     this.materialType = materialType;
@@ -60,7 +57,6 @@ public class ItemRequestBuilder implements Builder {
     includeWhenPresent(itemRequest, "id", id);
     includeWhenPresent(itemRequest, "barcode", barcode);
     includeWhenPresent(itemRequest, "holdingsRecordId", holdingId);
-    includeWhenPresent(itemRequest, "instanceId", instanceId);
     includeWhenPresent(itemRequest, "barcode", barcode);
 
     itemRequest.put("status", new JsonObject().put("name", status));
@@ -81,7 +77,6 @@ public class ItemRequestBuilder implements Builder {
     return new ItemRequestBuilder(
       id,
       this.holdingId,
-      this.instanceId,
       this.readOnlyTitle,
       this.barcode,
       this.status,
@@ -96,7 +91,6 @@ public class ItemRequestBuilder implements Builder {
     return new ItemRequestBuilder(
       this.id,
       holdingId,
-      instanceId,
       this.readOnlyTitle,
       this.barcode,
       this.status,
@@ -111,7 +105,6 @@ public class ItemRequestBuilder implements Builder {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
-      instanceId,
       title,
       this.barcode,
       this.status,
@@ -126,7 +119,6 @@ public class ItemRequestBuilder implements Builder {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
-      instanceId,
       this.readOnlyTitle,
       barcode,
       this.status,
@@ -145,7 +137,6 @@ public class ItemRequestBuilder implements Builder {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
-      this.instanceId,
       this.readOnlyTitle,
       this.barcode,
       this.status,
@@ -172,7 +163,6 @@ public class ItemRequestBuilder implements Builder {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
-      instanceId,
       this.readOnlyTitle,
       this.barcode,
       this.status,
@@ -187,7 +177,6 @@ public class ItemRequestBuilder implements Builder {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
-      this.instanceId,
       this.readOnlyTitle,
       this.barcode,
       this.status,
@@ -214,7 +203,6 @@ public class ItemRequestBuilder implements Builder {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
-      this.instanceId,
       this.readOnlyTitle,
       this.barcode,
       this.status,
@@ -241,7 +229,6 @@ public class ItemRequestBuilder implements Builder {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
-      this.instanceId,
       this.readOnlyTitle,
       this.barcode,
       this.status,
