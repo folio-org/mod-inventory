@@ -300,9 +300,6 @@ public class ModsIngestExamples extends ApiTests {
       assertThat("item should have a barcode",
         item.containsKey("barcode"), is(true));
 
-      assertThat("item should have an instance",
-        item.containsKey("instanceId"), is(true));
-
       assertThat("item should have a holding",
         item.containsKey("holdingsRecordId"), is(true));
 

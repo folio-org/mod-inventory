@@ -102,6 +102,7 @@ public class IngestMessageProcessor {
 
         allHoldings.collect(holdings ->
           records.stream().map(record -> {
+            //Will fail if have multiple instances with exactly the same title
             Optional<Instance> possibleInstance = instances.stream()
               .filter(instance ->
                 StringUtils.equals(instance.title, record.getString(TITLE_PROPERTY)))
@@ -123,7 +124,7 @@ public class IngestMessageProcessor {
             return new Item(null,
               record.getString("barcode"),
               null, null, new ArrayList<>(), null,
-              instanceId, holdingId, new ArrayList<>(),
+              null, holdingId, new ArrayList<>(),
               "Available",
               materialTypes.getString("Book") != null
                 ? materialTypes.getString("Book")
