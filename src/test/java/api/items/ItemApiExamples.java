@@ -4,7 +4,6 @@ import api.ApiTestSuite;
 import api.support.ApiRoot;
 import api.support.ApiTests;
 import api.support.InstanceApiClient;
-import api.support.ItemApiClient;
 import api.support.builders.HoldingRequestBuilder;
 import api.support.builders.ItemRequestBuilder;
 import io.vertx.core.json.JsonObject;
@@ -19,7 +18,6 @@ import org.junit.Test;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -1017,80 +1015,6 @@ public class ItemApiExamples extends ApiTests {
     ExecutionException {
 
     return InstanceApiClient.createInstance(okapiClient, newInstanceRequest);
-  }
-
-  private JsonObject createItem(String title, String instanceId, String barcode)
-    throws InterruptedException,
-    MalformedURLException,
-    TimeoutException,
-    ExecutionException {
-
-    return createItem(title, instanceId, barcode, bookMaterialType(),
-      canCirculateLoanType(), null);
-  }
-
-  private JsonObject createItem(
-    String title,
-    String instanceId,
-    String barcode,
-    JsonObject materialType,
-    JsonObject permanentLoanType,
-    JsonObject temporaryLoanType)
-    throws InterruptedException,
-    MalformedURLException,
-    TimeoutException,
-    ExecutionException {
-
-    JsonObject newItemRequest = new JsonObject()
-      .put("title", title)
-      .put("instanceId", instanceId)
-      .put("pieceIdentifiers", new ArrayList<>())
-      .put("notes", new ArrayList<>())
-      .put("status", new JsonObject().put("name", "Available"))
-      .put("permanentLocation", permanentLocation())
-      .put("temporaryLocation", temporaryLocation());
-
-    if(barcode != null) {
-      newItemRequest.put("barcode", barcode);
-    }
-
-    if(materialType != null) {
-      newItemRequest.put("materialType", materialType);
-    }
-
-    if(permanentLoanType != null) {
-      newItemRequest.put("permanentLoanType", permanentLoanType);
-    }
-
-    if(temporaryLoanType != null) {
-      newItemRequest.put("temporaryLoanType", temporaryLoanType);
-    }
-
-    return ItemApiClient.createItem(okapiClient, newItemRequest);
-  }
-
-  private static JsonObject bookMaterialType() {
-    return new JsonObject()
-      .put("id", ApiTestSuite.getBookMaterialType())
-      .put("name", "Book");
-  }
-
-  private static JsonObject dvdMaterialType() {
-    return new JsonObject()
-      .put("id", ApiTestSuite.getDvdMaterialType())
-      .put("name", "DVD");
-  }
-
-  private static JsonObject canCirculateLoanType() {
-    return new JsonObject()
-      .put("id", ApiTestSuite.getCanCirculateLoanType())
-      .put("name", "Can Circulate");
-  }
-
-  private static JsonObject courseReservesLoanType() {
-    return new JsonObject()
-      .put("id", ApiTestSuite.getCourseReserveLoanType())
-      .put("name", "Course Reserves");
   }
 
   private static JsonObject temporaryLocation() {
