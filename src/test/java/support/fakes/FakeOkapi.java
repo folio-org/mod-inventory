@@ -29,7 +29,7 @@ public class FakeOkapi extends AbstractVerticle {
 
     registerFakeInstanceStorageModule(router);
     registerFakeHoldingStorageModule(router);
-    registerFakeItemsModule(router);
+    registerFakeItemsStorageModule(router);
     registerFakeMaterialTypesModule(router);
     registerFakeLoanTypesModule(router);
     registerFakeShelfLocationsModule(router);
@@ -66,67 +66,80 @@ public class FakeOkapi extends AbstractVerticle {
   }
 
   private void registerFakeInstanceStorageModule(Router router) {
-    ArrayList<String> requiredProperties = new ArrayList<>();
-
-    requiredProperties.add("title");
-    requiredProperties.add("source");
-    requiredProperties.add("instanceTypeId");
-    requiredProperties.add("contributors");
-
-    new FakeStorageModule("/instance-storage/instances", "instances",
-      TENANT_ID, requiredProperties).register(router);
+    new FakeStorageModuleBuilder()
+      .withRecordName("instance")
+      .withRootPath("/instance-storage/instances")
+      .withCollectionPropertyName("instances")
+      .withRequiredProperties("source", "title", "contributors", "instanceTypeId")
+      .create().register(router);
   }
 
   private void registerFakeHoldingStorageModule(Router router) {
-    ArrayList<String> requiredProperties = new ArrayList<>();
-
-    requiredProperties.add("instanceId");
-    requiredProperties.add("permanentLocationId");
-
-    new FakeStorageModule("/holdings-storage/holdings", "holdingsRecords",
-      TENANT_ID, requiredProperties).register(router);
+    new FakeStorageModuleBuilder()
+      .withRecordName("holding")
+      .withRootPath("/holdings-storage/holdings")
+      .withCollectionPropertyName("holdingsRecords")
+      .withRequiredProperties("instanceId", "permanentLocationId")
+      .create().register(router);
   }
 
-  private void registerFakeItemsModule(Router router) {
-    ArrayList<String> requiredProperties = new ArrayList<>();
-
-    requiredProperties.add("materialTypeId");
-    requiredProperties.add("permanentLoanTypeId");
-
-    new FakeStorageModule("/item-storage/items", "items",
-      TENANT_ID, requiredProperties).register(router);
+  private void registerFakeItemsStorageModule(Router router) {
+    new FakeStorageModuleBuilder()
+      .withRecordName("item")
+      .withRootPath("/item-storage/items")
+      .withRequiredProperties("materialTypeId", "permanentLoanTypeId")
+      .create().register(router);
   }
 
   private void registerFakeMaterialTypesModule(Router router) {
-    registerFakeModule(router, "/material-types", "mtypes");
+
+    new FakeStorageModuleBuilder()
+      .withRecordName("material type")
+      .withRootPath("/material-types")
+      .withCollectionPropertyName("mtypes")
+      .create().register(router);
   }
 
   private void registerFakeLoanTypesModule(Router router) {
-    registerFakeModule(router, "/loan-types", "loantypes");
+
+    new FakeStorageModuleBuilder()
+      .withRecordName("loan type")
+      .withRootPath("/loan-types")
+      .withCollectionPropertyName("loantypes")
+      .create().register(router);
   }
 
   private void registerFakeShelfLocationsModule(Router router) {
-    registerFakeModule(router, "/shelf-locations", "shelflocations");
+
+    new FakeStorageModuleBuilder()
+      .withRecordName("location")
+      .withRootPath("/shelf-locations")
+      .withCollectionPropertyName("shelflocations")
+      .create().register(router);
   }
 
   private void registerFakeIdentifierTypesModule(Router router) {
-    registerFakeModule(router, "/identifier-types", "identifierTypes");
+
+    new FakeStorageModuleBuilder()
+      .withRecordName("identifier type")
+      .withRootPath("/identifier-types")
+      .withCollectionPropertyName("identifierTypes")
+      .create().register(router);
   }
 
   private void registerFakeInstanceTypesModule(Router router) {
-    registerFakeModule(router, "/instance-types", "instanceTypes");
+    new FakeStorageModuleBuilder()
+      .withRecordName("instance type")
+      .withRootPath("/instance-types")
+      .withCollectionPropertyName("instanceTypes")
+      .create().register(router);
   }
 
   private void registerFakeContributorNameTypesModule(Router router) {
-    registerFakeModule(router, "/contributor-name-types", "contributorNameTypes");
-  }
-
-  private void registerFakeModule(
-    Router router,
-    String rootPath,
-    String collectionPropertyName) {
-
-    new FakeStorageModule(rootPath, collectionPropertyName,
-      TENANT_ID).register(router);
+    new FakeStorageModuleBuilder()
+      .withRecordName("contributor type names")
+      .withRootPath("/contributor-name-types")
+      .withCollectionPropertyName("contributorNameTypes")
+      .create().register(router);
   }
 }
