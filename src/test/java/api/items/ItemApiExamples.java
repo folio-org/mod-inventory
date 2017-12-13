@@ -52,7 +52,6 @@ public class ItemApiExamples extends ApiTests {
 
     IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)
-      .withTitle("Long Way to a Small Angry Planet")
       .withBarcode("645398607547")
       .inMainLibrary()
       .temporarilyInAnnex()
@@ -107,7 +106,6 @@ public class ItemApiExamples extends ApiTests {
     IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
       .withId(itemId)
       .forHolding(holdingId)
-      .withTitle("Long Way to a Small Angry Planet")
       .withBarcode("645398607547")
       .inMainLibrary()
       .temporarilyInAnnex()
@@ -164,29 +162,6 @@ public class ItemApiExamples extends ApiTests {
     JsonObject createdItem = itemsClient.getById(postResponse.getId()).getJson();
 
     assertThat(createdItem.containsKey("barcode"), is(false));
-  }
-
-  @Test
-  public void canCreateAnItemWithoutTitle()
-    throws InterruptedException,
-    MalformedURLException,
-    TimeoutException,
-    ExecutionException {
-
-    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
-
-    UUID holdingId = holdingsStorageClient.create(
-      new HoldingRequestBuilder()
-        .forInstance(UUID.fromString(createdInstance.getString("id"))))
-      .getId();
-
-    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
-      .forHolding(holdingId)
-      .withNoTitle());
-
-    JsonObject createdItemInStorage = itemsStorageClient.getById(postResponse.getId()).getJson();
-
-    assertThat(createdItemInStorage.containsKey("title"), is(false));
   }
 
   @Test
@@ -315,7 +290,6 @@ public class ItemApiExamples extends ApiTests {
 
     IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)
-      .withTitle("Long Way to a Small Angry Planet")
       .withBarcode("645398607547")
       .withNoTemporaryLoanType());
 
@@ -364,7 +338,6 @@ public class ItemApiExamples extends ApiTests {
     JsonObject newItemRequest = new ItemRequestBuilder()
       .withId(itemId)
       .forHolding(holdingId)
-      .withTitle("Long Way to a Small Angry Planet")
       .withBarcode("645398607547")
       .canCirculate()
       .inMainLibrary()
@@ -709,13 +682,12 @@ public class ItemApiExamples extends ApiTests {
   }
 
   @Test
-  public void canSearchForItemsByTitle()
+  public void cannotSearchForItemsByTitle()
     throws InterruptedException,
     MalformedURLException,
     TimeoutException,
     ExecutionException {
 
-    //TODO: "This capability will go away when title is removed from item"
     JsonObject smallAngryInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
     UUID smallAngryHoldingId = holdingsStorageClient.create(
@@ -726,7 +698,6 @@ public class ItemApiExamples extends ApiTests {
     itemsClient.create(new ItemRequestBuilder()
       .forHolding(smallAngryHoldingId)
       .book()
-      .withTitle(smallAngryInstance.getString("title"))
       .canCirculate()
       .withBarcode("645398607547"));
 
@@ -740,7 +711,6 @@ public class ItemApiExamples extends ApiTests {
     itemsClient.create(new ItemRequestBuilder()
       .forHolding(nodHoldingId)
       .book()
-      .withTitle(nodInstance.getString("title"))
       .canCirculate()
       .withBarcode("564566456546"));
 
@@ -756,22 +726,8 @@ public class ItemApiExamples extends ApiTests {
     List<JsonObject> items = JsonArrayHelper.toList(
       searchGetResponse.getJson().getJsonArray("items"));
 
-    assertThat(items.size(), is(1));
-    assertThat(searchGetResponse.getJson().getInteger("totalRecords"), is(1));
-
-    JsonObject firstItem = items.get(0);
-
-    assertThat(firstItem.getString("title"), is("Long Way to a Small Angry Planet"));
-    assertThat(firstItem.getJsonObject("status").getString("name"), is("Available"));
-
-    items.stream().forEach(ItemApiExamples::selfLinkRespectsWayResourceWasReached);
-    items.stream().forEach(this::selfLinkShouldBeReachable);
-    items.stream().forEach(ItemApiExamples::hasConsistentMaterialType);
-    items.stream().forEach(ItemApiExamples::hasConsistentPermanentLoanType);
-    items.stream().forEach(ItemApiExamples::hasConsistentTemporaryLoanType);
-    items.stream().forEach(ItemApiExamples::hasStatus);
-    items.stream().forEach(ItemApiExamples::hasConsistentPermanentLocation);
-    items.stream().forEach(ItemApiExamples::hasConsistentTemporaryLocation);
+    assertThat(items.size(), is(0));
+    assertThat(searchGetResponse.getJson().getInteger("totalRecords"), is(0));
   }
 
   @Test

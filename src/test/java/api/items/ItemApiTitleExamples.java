@@ -6,6 +6,7 @@ import api.support.fixtures.InstanceRequestExamples;
 import api.support.fixtures.ItemRequestExamples;
 import io.vertx.core.json.JsonObject;
 import org.folio.inventory.support.http.client.IndividualResource;
+import org.folio.inventory.support.http.client.Response;
 import org.junit.Test;
 
 import java.io.UnsupportedEncodingException;
@@ -43,8 +44,7 @@ public class ItemApiTitleExamples extends ApiTests {
 
     IndividualResource response = itemsClient.create(
       ItemRequestExamples.basedUponSmallAngryPlanet()
-        .forHolding(holdingId)
-        .withTitle("A different item title")); //Deliberately different to demonstrate precedence
+        .forHolding(holdingId));
 
     JsonObject createdItem = response.getJson();
 
@@ -53,7 +53,7 @@ public class ItemApiTitleExamples extends ApiTests {
   }
 
   @Test
-  public void titleIsFromItemWhenNoInstance()
+  public void noTitleWhenNoInstance()
     throws InterruptedException,
     ExecutionException,
     TimeoutException,
@@ -72,17 +72,16 @@ public class ItemApiTitleExamples extends ApiTests {
 
     IndividualResource response = itemsClient.create(
       ItemRequestExamples.basedUponSmallAngryPlanet()
-        .forHolding(holdingId)
-        .withTitle("A different item title")); //Deliberately different to demonstrate precedence
+        .forHolding(holdingId));
 
     JsonObject createdItem = response.getJson();
 
-    assertThat("has title from item",
-      createdItem.getString("title"), is("A different item title"));
+    assertThat("has no title",
+      createdItem.containsKey("title"), is(false));
   }
 
   @Test
-  public void titleIsFromItemWhenNoHolding()
+  public void noTitleWhenNoHolding()
     throws InterruptedException,
     ExecutionException,
     TimeoutException,
@@ -91,27 +90,7 @@ public class ItemApiTitleExamples extends ApiTests {
 
     IndividualResource response = itemsClient.create(
       ItemRequestExamples.basedUponSmallAngryPlanet()
-        .forHolding(null)
-        .withTitle("A different item title"));
-
-    JsonObject createdItem = response.getJson();
-
-    assertThat("has title from item",
-      createdItem.getString("title"), is("A different item title"));
-  }
-
-  @Test
-  public void noTitleWhenNoHoldingAndNoTitleOnItem()
-    throws InterruptedException,
-    ExecutionException,
-    TimeoutException,
-    MalformedURLException,
-    UnsupportedEncodingException {
-
-    IndividualResource response = itemsClient.create(
-      ItemRequestExamples.basedUponSmallAngryPlanet()
-        .forHolding(null)
-        .withNoTitle());
+        .forHolding(null));
 
     JsonObject createdItem = response.getJson();
 
@@ -137,8 +116,7 @@ public class ItemApiTitleExamples extends ApiTests {
 
     UUID firstItemId = itemsClient.create(
       ItemRequestExamples.basedUponSmallAngryPlanet()
-        .forHolding(firstHoldingId)
-        .withTitle("A different title")) //Deliberately different to demonstrate precedence
+        .forHolding(firstHoldingId))
         .getId();
 
     UUID secondInstanceId = instancesClient.create(
@@ -151,8 +129,7 @@ public class ItemApiTitleExamples extends ApiTests {
 
     UUID secondItemId = itemsClient.create(
       ItemRequestExamples.basedUponTemeraire()
-        .forHolding(secondHoldingId)
-        .withTitle("Another different title")) //Deliberately different to demonstrate precedence
+        .forHolding(secondHoldingId))
       .getId();
 
     List<JsonObject> fetchedItemsResponse = itemsClient.getAll();
@@ -173,7 +150,7 @@ public class ItemApiTitleExamples extends ApiTests {
   }
 
   @Test
-  public void titlesComeFromItemWhenHoldingOrInstanceNotFound()
+  public void noTitleWhenHoldingOrInstanceNotFound()
     throws InterruptedException,
     MalformedURLException,
     TimeoutException,
@@ -190,7 +167,6 @@ public class ItemApiTitleExamples extends ApiTests {
 
     UUID firstItemId = itemsClient.create(
       ItemRequestExamples.basedUponSmallAngryPlanet()
-        .withTitle("A different title") // deliberately different to demonstrate behaviour
         .forHolding(firstHoldingId))
       .getId();
 
@@ -205,7 +181,6 @@ public class ItemApiTitleExamples extends ApiTests {
 
     UUID secondItemId = itemsClient.create(
       ItemRequestExamples.basedUponTemeraire()
-        .withTitle("Another different title") // deliberately different to demonstrate behaviour
         .forHolding(secondHoldingId))
       .getId();
 
@@ -221,13 +196,69 @@ public class ItemApiTitleExamples extends ApiTests {
     JsonObject firstFetchedItem = getRecordById(
       fetchedItemsResponse, firstItemId).get();
 
-    assertThat("has title from item",
-      firstFetchedItem.getString("title"), is("A different title"));
+    assertThat("has no title",
+      firstFetchedItem.containsKey("title"), is(false));
 
     JsonObject secondFetchedItem = getRecordById(
       fetchedItemsResponse, secondItemId).get();
 
-    assertThat("has title from item",
-      secondFetchedItem.getString("title"), is("Another different title"));
+    assertThat("has no title",
+      secondFetchedItem.containsKey("title"), is(false));
+  }
+
+  @Test
+  public void readOnlyTitleIsNotStoredWhenCreated()
+    throws InterruptedException,
+    ExecutionException,
+    TimeoutException,
+    MalformedURLException,
+    UnsupportedEncodingException {
+
+    UUID instanceId = instancesClient.create(
+      InstanceRequestExamples.smallAngryPlanet()).getId();
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(instanceId))
+      .getId();
+
+    IndividualResource response = itemsClient.create(
+      ItemRequestExamples.basedUponSmallAngryPlanet()
+        .withReadOnlyTitle("Should be discarded")
+        .forHolding(holdingId));
+
+    Response storedItemResponse = itemsStorageClient.getById(response.getId());
+
+    assertThat("title should not be stored",
+      storedItemResponse.getJson().containsKey("title"), is(false));
+  }
+
+  @Test
+  public void readOnlyTitleIsNotStoredWhenUpdated()
+    throws InterruptedException,
+    ExecutionException,
+    TimeoutException,
+    MalformedURLException,
+    UnsupportedEncodingException {
+
+    UUID instanceId = instancesClient.create(
+      InstanceRequestExamples.smallAngryPlanet()).getId();
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(instanceId))
+      .getId();
+
+    IndividualResource response = itemsClient.create(
+      ItemRequestExamples.basedUponSmallAngryPlanet()
+        .withReadOnlyTitle("Should be discarded")
+        .forHolding(holdingId));
+
+    itemsClient.replace(response.getId(), response.getJson());
+
+    Response storedItemResponse = itemsStorageClient.getById(response.getId());
+
+    assertThat("title should not be stored",
+      storedItemResponse.getJson().containsKey("title"), is(false));
   }
 }

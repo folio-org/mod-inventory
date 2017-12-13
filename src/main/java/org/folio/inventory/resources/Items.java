@@ -280,7 +280,7 @@ public class Items {
 
     return new Item(
       itemRequest.getString("id"),
-      itemRequest.getString("title"),
+      //Title is read-only and so is discarded,
       itemRequest.getString("barcode"),
       itemRequest.getString("enumeration"),
       itemRequest.getString("chronology"),

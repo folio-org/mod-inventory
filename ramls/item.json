@@ -12,7 +12,9 @@
       "type": "string"
     },
     "title": {
-      "type": "string"
+      "type": "string",
+      "description": "title of the item (read only, inherited from associated instance)",
+      "readonly": true
     },
     "barcode": {
       "type": "string"

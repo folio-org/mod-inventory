@@ -33,7 +33,6 @@ class ExternalStorageModuleItemCollection
 
     return new Item(
       itemFromServer.getString("id"),
-      itemFromServer.getString("title"),
       itemFromServer.getString("barcode"),
       itemFromServer.getString("enumeration"),
       itemFromServer.getString("chronology"),
@@ -64,7 +63,6 @@ class ExternalStorageModuleItemCollection
       ? item.id
       : UUID.randomUUID().toString());
 
-    includeIfPresent(itemToSend, "title", item.title);
     itemToSend.put("status", new JsonObject().put("name", item.status));
     itemToSend.put("pieceIdentifiers", item.pieceIdentifiers);
     itemToSend.put("notes", item.notes);

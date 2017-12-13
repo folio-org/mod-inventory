@@ -2,21 +2,25 @@ package org.folio.inventory.resources;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.domain.Item;
 
+import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
-import static org.folio.inventory.support.HoldingsSupport.determinePermanentLocationIdForItem;
-import static org.folio.inventory.support.HoldingsSupport.holdingForItem;
-import static org.folio.inventory.support.HoldingsSupport.instanceForHolding;
+import static org.folio.inventory.support.HoldingsSupport.*;
 
 class ItemRepresentation {
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+
   private final String relativeItemsPath;
 
   public ItemRepresentation(String relativeItemsPath) {
@@ -85,11 +89,7 @@ class ItemRepresentation {
       representation.put("status", new JsonObject().put("name", item.status));
     }
 
-    String title = instance != null && instance.containsKey("title")
-      ? instance.getString("title")
-      : item.title;
-
-    includeIfPresent(representation, "title", title);
+    includeIfPresent(representation, "title", instance, i -> i.getString("title"));
     includeIfPresent(representation, "instanceId", item.instanceId);
     includeIfPresent(representation, "holdingsRecordId", item.holdingId);
     includeIfPresent(representation, "barcode", item.barcode);
@@ -120,7 +120,7 @@ class ItemRepresentation {
 
       representation.put("links", new JsonObject().put("self", selfUrl.toString()));
     } catch (MalformedURLException e) {
-      System.out.println(String.format("Failed to create self link for item: " + e.toString()));
+      log.warn(String.format("Failed to create self link for item: %s", e.toString()));
     }
 
     return representation;
@@ -186,6 +186,21 @@ class ItemRepresentation {
 
     if (propertyValue != null) {
       representation.put(propertyName, propertyValue);
+    }
+  }
+
+  private void includeIfPresent(
+    JsonObject representation,
+    String propertyName,
+    JsonObject from,
+    Function<JsonObject, String> propertyValue) {
+
+    if (from != null) {
+      String value = propertyValue.apply(from);
+
+      if(value != null) {
+        representation.put(propertyName, value);
+      }
     }
   }
 }

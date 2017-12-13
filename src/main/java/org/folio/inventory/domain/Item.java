@@ -5,7 +5,6 @@ import java.util.List;
 
 public class Item {
   public final String id;
-  public final String title;
   public final String barcode;
   public final String enumeration;
   public final String chronology;
@@ -22,14 +21,14 @@ public class Item {
   public final String temporaryLocationId;
 
   public Item(String id,
-              String title,
               String barcode,
               String enumeration,
               String chronology,
               List<String> pieceIdentifiers,
               String numberOfPieces,
               String instanceId,
-              String holdingId, List<String> notes,
+              String holdingId,
+              List<String> notes,
               String status,
               String materialTypeId,
               String permanentLocationId,
@@ -38,7 +37,6 @@ public class Item {
               String temporaryLoanTypeId) {
 
     this.id = id;
-    this.title = title;
     this.barcode = barcode;
     this.enumeration = enumeration;
     this.chronology = chronology;
@@ -56,7 +54,7 @@ public class Item {
   }
 
   public Item copyWithNewId(String newId) {
-    return new Item(newId, this.title, this.barcode, this.enumeration,
+    return new Item(newId, this.barcode, this.enumeration,
       this.chronology, this.pieceIdentifiers, this.numberOfPieces,
       this.instanceId, holdingId, this.notes, this.status, this.materialTypeId,
       this.permanentLocationId, this.temporaryLocationId, this.permanentLoanTypeId,
@@ -64,7 +62,7 @@ public class Item {
   }
 
   public Item changeStatus(String newStatus) {
-    return new Item(this.id, this.title, this.barcode, this.enumeration,
+    return new Item(this.id, this.barcode, this.enumeration,
       this.chronology, this.pieceIdentifiers, this.numberOfPieces,
       this.instanceId, holdingId, this.notes, newStatus, this.materialTypeId,
       this.permanentLocationId, this.temporaryLocationId, this.permanentLoanTypeId,
@@ -73,6 +71,6 @@ public class Item {
 
   @Override
   public String toString() {
-    return String.format("Item ID: %s, Title: %s, Barcode: %s", id, title, barcode);
+    return String.format("Item ID: %s, Barcode: %s", id, barcode);
   }
 }

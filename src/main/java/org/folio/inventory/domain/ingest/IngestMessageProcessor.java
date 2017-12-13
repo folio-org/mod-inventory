@@ -121,7 +121,6 @@ public class IngestMessageProcessor {
               : null;
 
             return new Item(null,
-              null,
               record.getString("barcode"),
               null, null, new ArrayList<>(), null,
               instanceId, holdingId, new ArrayList<>(),

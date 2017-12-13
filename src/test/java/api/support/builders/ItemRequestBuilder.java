@@ -12,7 +12,7 @@ public class ItemRequestBuilder implements Builder {
   private final UUID id;
   private final UUID holdingId;
   private final UUID instanceId;
-  private final String title;
+  private final String readOnlyTitle;
   private final String barcode;
   private final String status;
   private final JsonObject materialType;
@@ -32,7 +32,7 @@ public class ItemRequestBuilder implements Builder {
     UUID id,
     UUID holdingId,
     UUID instanceId,
-    String title,
+    String readOnlyTitle,
     String barcode,
     String status,
     JsonObject materialType,
@@ -43,7 +43,7 @@ public class ItemRequestBuilder implements Builder {
 
     this.id = id;
     this.holdingId = holdingId;
-    this.title = title;
+    this.readOnlyTitle = readOnlyTitle;
     this.barcode = barcode;
     this.status = status;
     this.permanentLocation = permanentLocation;
@@ -58,7 +58,6 @@ public class ItemRequestBuilder implements Builder {
     JsonObject itemRequest = new JsonObject();
 
     includeWhenPresent(itemRequest, "id", id);
-    includeWhenPresent(itemRequest, "title", title);
     includeWhenPresent(itemRequest, "barcode", barcode);
     includeWhenPresent(itemRequest, "holdingsRecordId", holdingId);
     includeWhenPresent(itemRequest, "instanceId", instanceId);
@@ -73,6 +72,9 @@ public class ItemRequestBuilder implements Builder {
     includeWhenPresent(itemRequest, "permanentLocation", permanentLocation);
     includeWhenPresent(itemRequest, "temporaryLocation", temporaryLocation);
 
+    //Read only properties
+    includeWhenPresent(itemRequest, "title", readOnlyTitle);
+
     return itemRequest;
   }
 
@@ -81,7 +83,7 @@ public class ItemRequestBuilder implements Builder {
       id,
       this.holdingId,
       this.instanceId,
-      this.title,
+      this.readOnlyTitle,
       this.barcode,
       this.status,
       this.materialType,
@@ -96,7 +98,7 @@ public class ItemRequestBuilder implements Builder {
       this.id,
       holdingId,
       instanceId,
-      this.title,
+      this.readOnlyTitle,
       this.barcode,
       this.status,
       this.materialType,
@@ -106,7 +108,7 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLoanType);
   }
 
-  public ItemRequestBuilder withTitle(String title) {
+  public ItemRequestBuilder withReadOnlyTitle(String title) {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
@@ -121,16 +123,12 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLoanType);
   }
 
-  public ItemRequestBuilder withNoTitle() {
-    return withTitle(null);
-  }
-
   public ItemRequestBuilder withBarcode(String barcode) {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
       instanceId,
-      this.title,
+      this.readOnlyTitle,
       barcode,
       this.status,
       this.materialType,
@@ -149,7 +147,7 @@ public class ItemRequestBuilder implements Builder {
       this.id,
       this.holdingId,
       this.instanceId,
-      this.title,
+      this.readOnlyTitle,
       this.barcode,
       this.status,
       materialType,
@@ -176,7 +174,7 @@ public class ItemRequestBuilder implements Builder {
       this.id,
       this.holdingId,
       instanceId,
-      this.title,
+      this.readOnlyTitle,
       this.barcode,
       this.status,
       this.materialType,
@@ -203,7 +201,7 @@ public class ItemRequestBuilder implements Builder {
       this.id,
       this.holdingId,
       this.instanceId,
-      this.title,
+      this.readOnlyTitle,
       this.barcode,
       this.status,
       this.materialType,
@@ -230,7 +228,7 @@ public class ItemRequestBuilder implements Builder {
       this.id,
       this.holdingId,
       this.instanceId,
-      this.title,
+      this.readOnlyTitle,
       this.barcode,
       this.status,
       this.materialType,
@@ -257,7 +255,7 @@ public class ItemRequestBuilder implements Builder {
       this.id,
       this.holdingId,
       this.instanceId,
-      this.title,
+      this.readOnlyTitle,
       this.barcode,
       this.status,
       this.materialType,
