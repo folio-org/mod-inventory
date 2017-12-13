@@ -15,6 +15,7 @@ import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -220,17 +221,10 @@ public class ModsIngestExamples extends ApiTests {
     ExecutionException,
     TimeoutException {
 
-    CompletableFuture<Response> getHoldingCompleted = new CompletableFuture<>();
-
     //TODO: Use business logic interface when built
     //likely after RAML module builder upgrade
-    URL holdingLocation = new URL(String.format(
-      "%s/holdings-storage/holdings/%s",
-      storageOkapiUrl(), item.getString("holdingsRecordId")));
-
-    okapiClient.get(holdingLocation, ResponseHandler.any(getHoldingCompleted));
-
-    Response getHoldingResponse = getHoldingCompleted.get(5, TimeUnit.SECONDS);
+    Response getHoldingResponse = holdingsStorageClient.getById(
+      UUID.fromString(item.getString("holdingsRecordId")));
 
     assertThat(String.format("No holding found for item %s", item.getString("id")),
       getHoldingResponse.getStatusCode(), is(200));
