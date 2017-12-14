@@ -6,6 +6,7 @@
       "type": "string"
     },
     "holdingsRecordId": {
+      "description": "ID of the holding the item is a member of",
       "type": "string"
     },
     "title": {
