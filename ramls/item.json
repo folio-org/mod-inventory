@@ -47,6 +47,7 @@
           "type": "string"
         }
       },
+      "additionalProperties": false,
       "required": [
         "name"
       ]
@@ -61,6 +62,7 @@
           "type": "string"
         }
       },
+      "additionalProperties": false,
       "required": [
         "id"
       ]
@@ -75,6 +77,7 @@
           "type": "string"
         }
       },
+      "additionalProperties": false,
       "required": [
         "id"
       ]
@@ -89,6 +92,7 @@
           "type": "string"
         }
       },
+      "additionalProperties": false,
       "required": [
         "id"
       ]
@@ -103,6 +107,7 @@
           "type": "string"
         }
       },
+      "additionalProperties": false,
       "required": [
         "id"
       ]
@@ -117,11 +122,13 @@
           "type": "string"
         }
       },
+      "additionalProperties": false,
       "required": [
         "id"
       ]
     }
   },
+  "additionalProperties": false,
   "required": [
     "materialType",
     "permanentLoanType",
