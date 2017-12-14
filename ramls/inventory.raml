@@ -9,9 +9,9 @@ documentation:
     content: <b>API for interacting with an inventory of physical resources</b>
 
 schemas:
- - item: !include item.json
+ - item.json: !include item.json
  - items: !include items.json
- - instance: !include instance.json
+ - instance.json: !include instance.json
  - instances: !include instances.json
  - context: !include instance_context.json
  - ingest-status: !include ingest_status.json
@@ -33,7 +33,7 @@ resourceTypes:
       collection:
         exampleCollection: !include examples/items_get.json
         schemaCollection: items
-        schemaItem: item
+        schemaItem: item.json
         exampleItem: !include examples/item_get.json
     get:
       is: [pageable,
@@ -48,7 +48,7 @@ resourceTypes:
       type:
         collection-item:
           exampleItem: !include examples/item_get.json
-          schema: item
+          schema: item.json
       get:
   /instances:
     displayName: Instances
@@ -56,7 +56,7 @@ resourceTypes:
       collection:
         exampleCollection: !include  examples/instances_get.json
         schemaCollection: instances
-        schemaItem: instance
+        schemaItem: instance.json
         exampleItem: !include examples/instance_get.json
     get:
       is: [pageable]
@@ -69,7 +69,7 @@ resourceTypes:
       type:
         collection-item:
           exampleItem: !include examples/instance_get.json
-          schema: instance
+          schema: instance.json
       get:
     /context:
       get:
