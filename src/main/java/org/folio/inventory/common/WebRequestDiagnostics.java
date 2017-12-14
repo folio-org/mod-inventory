@@ -1,12 +1,22 @@
 package org.folio.inventory.common;
 
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.RoutingContext;
 
+import java.lang.invoke.MethodHandles;
+
 public class WebRequestDiagnostics {
+  private WebRequestDiagnostics() {
+
+  }
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+
   public static void outputDiagnostics(RoutingContext routingContext) {
 
-    System.out.println(String.format("Handling %s\n", routingContext.normalisedPath()));
-    System.out.println(String.format("Method: %s\n", routingContext.request().rawMethod()));
+    log.info(String.format("Handling %s %s", routingContext.request().rawMethod(),
+      routingContext.normalisedPath()));
 
     outputHeaders(routingContext);
 
@@ -14,14 +24,11 @@ public class WebRequestDiagnostics {
   }
 
   private static void outputHeaders(RoutingContext routingContext) {
-    System.out.println("Headers");
+    log.debug("Headers");
 
     for (String name : routingContext.request().headers().names()) {
       for (String entry : routingContext.request().headers().getAll(name))
-        System.out.println(String.format("%s : %s\n", name, entry));
+        log.debug(String.format("%s : %s", name, entry));
     }
-
-
-    System.out.println();
   }
 }
