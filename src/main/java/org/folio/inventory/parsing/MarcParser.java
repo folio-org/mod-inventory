@@ -6,13 +6,19 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import org.folio.inventory.exceptions.InvalidMarcJsonException;
+import org.folio.inventory.exceptions.MarcParseException;
 import org.folio.inventory.parsing.config.MarcConfig;
 import org.folio.inventory.exceptions.InvalidMarcConfigException;
 
-import java.io.IOException;
 import java.lang.invoke.MethodHandles;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
+/**
+ * Parse an instance record in MARC JSON and convert it to a FOLIO JSON record.
+ */
 public class MarcParser {
 
   private static final String FIELDS = "fields";
@@ -29,15 +35,30 @@ public class MarcParser {
   private static final Logger LOGGER = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   private MarcConfig marcConfig;
 
-  public MarcParser() throws IOException, InvalidMarcConfigException {
+  /**
+   * Parser with default config.
+   * @throws InvalidMarcConfigException  when default config file is invalid
+   */
+  public MarcParser() throws InvalidMarcConfigException {
     marcConfig = new MarcConfig();
   }
 
-  public MarcParser(String configPath) throws IOException, InvalidMarcConfigException {
+  /**
+   * Parser using a specific config file.
+   * @param configPath  resource path of the config file.
+   * @throws InvalidMarcConfigException  when config file is invalid
+   */
+  public MarcParser(String configPath) throws InvalidMarcConfigException {
     marcConfig = new MarcConfig(configPath);
   }
 
-  public JsonObject marcJson2FolioJson(JsonObject inputMarc) throws InvalidMarcJsonException {
+  /**
+   * Convert the MARC JSON of an instance record to a FOLIO JSON.
+   * @param inputMarc  MARC JSON input
+   * @return FOLIO JSON output
+   * @throws MarcParseException  if the input is invalid
+   */
+  public JsonObject marcJson2FolioJson(JsonObject inputMarc) throws MarcParseException {
     validate(inputMarc);
     Map<String,JsonObject> instanceMap = extractFolioEntriesFromMarcFields(inputMarc.getJsonArray(FIELDS));
     return parse(instanceMap);
@@ -86,75 +107,85 @@ public class MarcParser {
     return instanceMap;
   }
 
-  private JsonObject parse(Map<String,JsonObject> instanceMap) {
+  private JsonObject parse(Map<String,JsonObject> instanceMap) throws MarcParseException {
     JsonObject output = new JsonObject();
     for (Map.Entry<String,JsonObject> entry : instanceMap.entrySet()) {
-      if (entry.getValue().getBoolean(REPEATABLE)) {
-        parseRepeatable(entry, output);
-      } else {
-        parseNonRepeatable(entry, output);
+      try {
+        if (entry.getValue().getBoolean(REPEATABLE)) {
+          parseRepeatable(entry, output);
+        } else {
+          parseNonRepeatable(entry, output);
+        }
+      }
+      catch (Exception e) {
+        throw new MarcParseException(entry.getKey(), e);
       }
     }
     return output;
+  }
+
+  /**
+   * Return the concatenated content of the subfields.
+   * <p>
+   * subfields({"subfields":[{"a":"foo"},{"b":"bar"}]}) = "foo bar"
+   *
+   * @param jsonObject  json to parse
+   * @return concatenated subfield values
+   */
+  private String subfields(JsonObject jsonObject) {
+    List<String> subfields = new ArrayList<>();
+    for (Object o : jsonObject.getJsonArray(SUBFIELDS)) {
+      JsonObject subfield = (JsonObject) o;
+      String subfieldName = subfield.fieldNames().iterator().next();
+      subfields.add(subfield.getString(subfieldName));
+    }
+    return String.join(" ", subfields);
   }
 
   private void parseRepeatable(Map.Entry<String, JsonObject> entry, JsonObject output) {
     JsonArray fields = entry.getValue().getJsonArray(FIELDS);
     JsonArray outputArray = new JsonArray();
     for (Object obj : fields) {
-      if (obj instanceof JsonObject) {
-        JsonObject outputObject = new JsonObject();
-        List<String> subfields = new ArrayList<>();
-        JsonObject field = (JsonObject) obj;
-        String fieldName = field.fieldNames().iterator().next();
-        if (isControlNumber(fieldName, field)) {
-          outputObject.put(VALUE, field.getString(fieldName));
-          putTypeIfConfiguredAsIdentifierType(fieldName, outputObject);
-          outputArray.add(outputObject);
-          continue;
-        }
-        for (Object o : field.getJsonObject(fieldName).getJsonArray(SUBFIELDS)) {
-          if (!(o instanceof JsonObject)) {
-            continue;
-          }
-          JsonObject subfield = (JsonObject) o;
-          String subfieldName = subfield.fieldNames().iterator().next();
-          subfields.add(subfield.getString(subfieldName));
-        }
-        outputObject.put(VALUE, String.join(" ", subfields));
-        putTypeIfConfiguredAsIdentifierType(fieldName, outputObject);
-        outputArray.add(outputObject);
+      JsonObject field = (JsonObject) obj;
+      String fieldName = field.fieldNames().iterator().next();
+      JsonObject outputObject = new JsonObject();
+      if (isControlNumber(fieldName, field)) {
+        outputObject.put(VALUE, field.getString(fieldName));
+      } else {
+        outputObject.put(VALUE, subfields(field.getJsonObject(fieldName)));
       }
+      putTypeIfConfiguredAsIdentifierType(fieldName, outputObject);
+      outputArray.add(outputObject);
     }
     output.put(entry.getKey(), outputArray);
   }
 
   private void putTypeIfConfiguredAsIdentifierType(String fieldName, JsonObject outputObject) {
-    if (marcConfig.getConfig().getJsonObject(IDENTIFIER_TYPES).containsKey(fieldName)) {
-      outputObject.put(TYPE, marcConfig.getConfig().getJsonObject(IDENTIFIER_TYPES).getString(fieldName));
+    JsonObject identifierTypes = marcConfig.getConfig().getJsonObject(IDENTIFIER_TYPES);
+    if (identifierTypes == null) {
+      return;
     }
+    String type = identifierTypes.getString(fieldName);
+    if (type == null) {
+      return;
+    }
+    outputObject.put(TYPE, type);
   }
 
   private void parseNonRepeatable(Map.Entry<String, JsonObject> entry, JsonObject output) {
-    List<String> subfields = new ArrayList<>();
     JsonArray fields = entry.getValue().getJsonArray(FIELDS);
-    if (!fields.isEmpty()) {
-      String fieldName = fields.getJsonObject(0).fieldNames().iterator().next();
-      for (Object o : fields.getJsonObject(0).getJsonObject(fieldName).getJsonArray(
-        (SUBFIELDS))) {
-        if (!(o instanceof JsonObject)) {
-          continue;
-        }
-        JsonObject subfield = (JsonObject) o;
-        String subfieldName = subfield.fieldNames().iterator().next();
-        subfields.add(subfield.getString(subfieldName));
-      }
+    if (fields.isEmpty()) {
+      output.put(entry.getKey(), "");
+      return;
     }
-    output.put(entry.getKey(), String.join(" ", subfields));
+    /** for example 245 */
+    String fieldName = fields.getJsonObject(0).fieldNames().iterator().next();
+    JsonObject field = fields.getJsonObject(0).getJsonObject(fieldName);
+    output.put(entry.getKey(), subfields(field));
   }
 
   private boolean isControlNumber(String marcNum, JsonObject jo) {
-    return (jo.getValue(marcNum).getClass() == String.class) &&
+    return (jo.getValue(marcNum) instanceof String) &&
       Integer.parseInt(marcNum) < 10;
   }
 

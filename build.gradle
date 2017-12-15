@@ -13,7 +13,12 @@ ext.sharedManifest = manifest {
 }
 
 repositories {
+  maven { url "https://repository.folio.org/repository/maven-folio" }
   mavenCentral()
+}
+
+compileJava {
+  options.encoding = 'UTF-8'
 }
 
 dependencies {
@@ -24,12 +29,15 @@ dependencies {
   compile 'org.apache.commons:commons-lang3:3.5'
   compile 'org.apache.httpcomponents:httpclient-osgi:4.5.2'
   compile 'org.apache.commons:commons-io:1.3.2'
+  compile 'org.folio:util:16.0.2'
 
   testCompile 'junit:junit:4.12'
+  testCompile 'pl.pragmatists:JUnitParams:1.1.1'
   testCompile 'org.hamcrest:hamcrest-junit:2.0.0.0'
   testCompile 'com.github.jsonld-java:jsonld-java:0.9.0'
   testCompile 'io.rest-assured:rest-assured:3.0.3'
   testCompile 'org.awaitility:awaitility:3.0.0'
+  testCompile 'org.folio:testing:16.0.2'
 }
 
 defaultTasks 'build', 'generateDescriptors'
