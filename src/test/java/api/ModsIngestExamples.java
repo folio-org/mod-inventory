@@ -298,16 +298,16 @@ public class ModsIngestExamples extends ApiTests {
         assertThat(identifier.containsKey("value"), is(true));
       });
 
-      List<JsonObject> creators = JsonArrayHelper.toList(
-        instance.getJsonArray("creators"));
+      List<JsonObject> contributors = JsonArrayHelper.toList(
+        instance.getJsonArray("contributors"));
 
-      creators.stream().forEach(creator -> {
-        assertThat(creator.containsKey("creatorTypeId"), is(true));
+      contributors.stream().forEach(contributor -> {
+        assertThat(contributor.containsKey("contributorNameTypeId"), is(true));
         //Identifier type should be derived from MODS data, however for the moment,
         //default to Personal name
-        assertThat(creator.getString("creatorTypeId"), is(ApiTestSuite.getPersonalCreatorType()));
+        assertThat(contributor.getString("contributorNameTypeId"), is(ApiTestSuite.getPersonalContributorNameType()));
 
-        assertThat(creator.containsKey("name"), is(true));
+        assertThat(contributor.containsKey("name"), is(true));
       });
     });
 
@@ -342,7 +342,7 @@ public class ModsIngestExamples extends ApiTests {
       InstanceSimilarTo(instance, "Grammaire", "Riemann, Othon.")), is(true));
 
     assertThat(instances.stream().anyMatch(instance ->
-      InstanceSimilarTo(instance, "Angry Planet", "Unknown creator")), is(true));
+      InstanceSimilarTo(instance, "Angry Planet", "Unknown contributor")), is(true));
   }
 
   private void expectedHoldingsCreatedFromIngest()
@@ -399,11 +399,11 @@ public class ModsIngestExamples extends ApiTests {
   private static boolean InstanceSimilarTo(
     JsonObject record,
     String expectedSimilarTitle,
-    String expectedCreatorSimilarTo) {
+    String expectedContributorSimilarTo) {
 
     return record.getString("title").contains(expectedSimilarTitle) &&
-      JsonArrayHelper.toList(record.getJsonArray("creators")).stream()
-        .anyMatch(creator -> creator.getString("name")
-          .contains(expectedCreatorSimilarTo));
+      JsonArrayHelper.toList(record.getJsonArray("contributors")).stream()
+        .anyMatch(contributor -> contributor.getString("name")
+          .contains(expectedContributorSimilarTo));
   }
 }

@@ -12,13 +12,13 @@ public class InstanceSamples {
     UUID id,
     String title,
     JsonArray identifiers,
-    JsonArray creators) {
+    JsonArray contributors) {
 
     return new JsonObject()
       .put("id",id.toString())
       .put("title", title)
       .put("identifiers", identifiers)
-      .put("creators", creators)
+      .put("contributors", contributors)
       .put("source", "Local")
       .put("instanceTypeId", getBooksInstanceType());
   }
@@ -28,12 +28,12 @@ public class InstanceSamples {
 
     identifiers.add(identifier(getIsbnIdentifierType(), "9781473619777"));
 
-    JsonArray creators = new JsonArray();
+    JsonArray contributors = new JsonArray();
 
-    creators.add(creator("Chambers, Becky"));
+    contributors.add(contributor("Chambers, Becky"));
 
     return createInstanceRequest(id, "Long Way to a Small Angry Planet",
-      identifiers, creators);
+      identifiers, contributors);
   }
 
   public static JsonObject nod(UUID id) {
@@ -41,11 +41,11 @@ public class InstanceSamples {
 
     identifiers.add(identifier(getAsinIdentifierType(), "B01D1PLMDO"));
 
-    JsonArray creators = new JsonArray();
+    JsonArray contributors = new JsonArray();
 
-    creators.add(creator("Barnes, Adrian"));
+    contributors.add(contributor("Barnes, Adrian"));
 
-    return createInstanceRequest(id, "Nod", identifiers, creators);
+    return createInstanceRequest(id, "Nod", identifiers, contributors);
   }
 
   public static JsonObject uprooted(UUID id) {
@@ -54,12 +54,12 @@ public class InstanceSamples {
     identifiers.add(identifier(getIsbnIdentifierType(), "1447294149"));
     identifiers.add(identifier(getIsbnIdentifierType(), "9781447294146"));
 
-    JsonArray creators = new JsonArray();
+    JsonArray contributors = new JsonArray();
 
-    creators.add(creator("Novik, Naomi"));
+    contributors.add(contributor("Novik, Naomi"));
 
     return createInstanceRequest(id, "Uprooted",
-      identifiers, creators);
+      identifiers, contributors);
   }
 
   public static JsonObject temeraire(UUID id) {
@@ -68,12 +68,12 @@ public class InstanceSamples {
     identifiers.add(identifier(getIsbnIdentifierType(), "0007258712"));
     identifiers.add(identifier(getIsbnIdentifierType(), "9780007258710"));
 
-    JsonArray creators = new JsonArray();
+    JsonArray contributors = new JsonArray();
 
-    creators.add(creator("Novik, Naomi"));
+    contributors.add(contributor("Novik, Naomi"));
 
     return createInstanceRequest(id, "Temeraire",
-      identifiers, creators);
+      identifiers, contributors);
   }
 
   public static JsonObject leviathanWakes(UUID id) {
@@ -82,11 +82,11 @@ public class InstanceSamples {
     identifiers.add(identifier(getIsbnIdentifierType(), "1841499897"));
     identifiers.add(identifier(getIsbnIdentifierType(), "9781841499895"));
 
-    JsonArray creators = new JsonArray();
+    JsonArray contributors = new JsonArray();
 
-    creators.add(creator("Corey, James S. A."));
+    contributors.add(contributor("Corey, James S. A."));
 
-    return createInstanceRequest(id, "Leviathan Wakes", identifiers, creators);
+    return createInstanceRequest(id, "Leviathan Wakes", identifiers, contributors);
   }
 
   public static JsonObject taoOfPooh(UUID id) {
@@ -95,11 +95,11 @@ public class InstanceSamples {
     identifiers.add(identifier(getIsbnIdentifierType(), "1405204265"));
     identifiers.add(identifier(getIsbnIdentifierType(), "9781405204265"));
 
-    JsonArray creators = new JsonArray();
+    JsonArray contributors = new JsonArray();
 
-    creators.add(creator("Hoff, Benjamin"));
+    contributors.add(contributor("Hoff, Benjamin"));
 
-    return createInstanceRequest(id, "Tao of Pooh", identifiers, creators);
+    return createInstanceRequest(id, "Tao of Pooh", identifiers, contributors);
   }
 
   public static JsonObject girlOnTheTrain(UUID id) {
@@ -107,12 +107,12 @@ public class InstanceSamples {
 
     identifiers.add(identifier(getAsinIdentifierType(), "B01LO7PJOE"));
 
-    JsonArray creators = new JsonArray();
+    JsonArray contributors = new JsonArray();
 
-    creators.add(creator("Hawkins, Paula"));
+    contributors.add(contributor("Hawkins, Paula"));
 
     return createInstanceRequest(id, "The Girl on the Train",
-      identifiers, creators);
+      identifiers, contributors);
   }
 
   private static JsonObject identifier(
@@ -124,9 +124,9 @@ public class InstanceSamples {
       .put("value", value);
   }
 
-  private static JsonObject creator(String name) {
+  private static JsonObject contributor(String name) {
     return new JsonObject()
-      .put("creatorTypeId", getPersonalCreatorType())
+      .put("contributorNameTypeId", getPersonalContributorNameType())
       .put("name", name);
   }
 }

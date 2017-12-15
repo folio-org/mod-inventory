@@ -35,7 +35,7 @@ public class FakeOkapi extends AbstractVerticle {
     registerFakeShelfLocationsModule(router);
     registerFakeInstanceTypesModule(router);
     registerFakeIdentifierTypesModule(router);
-    registerFakeCreatorTypesModule(router);
+    registerFakeContributorNameTypesModule(router);
 
     server.requestHandler(router::accept)
       .listen(PORT_TO_USE, result -> {
@@ -71,7 +71,7 @@ public class FakeOkapi extends AbstractVerticle {
     requiredProperties.add("title");
     requiredProperties.add("source");
     requiredProperties.add("instanceTypeId");
-    requiredProperties.add("creators");
+    requiredProperties.add("contributors");
 
     new FakeStorageModule("/instance-storage/instances", "instances",
       TENANT_ID, requiredProperties).register(router);
@@ -117,8 +117,8 @@ public class FakeOkapi extends AbstractVerticle {
     registerFakeModule(router, "/instance-types", "instanceTypes");
   }
 
-  private void registerFakeCreatorTypesModule(Router router) {
-    registerFakeModule(router, "/creator-types", "creatorTypes");
+  private void registerFakeContributorNameTypesModule(Router router) {
+    registerFakeModule(router, "/contributor-name-types", "contributorNameTypes");
   }
 
   private void registerFakeModule(

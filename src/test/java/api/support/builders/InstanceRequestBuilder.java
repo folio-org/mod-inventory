@@ -8,19 +8,19 @@ import java.util.UUID;
 
 public class InstanceRequestBuilder implements Builder {
   private final String title;
-  private final String creator;
+  private final String contributor;
   private final UUID id;
 
-  public InstanceRequestBuilder(String title, String creator) {
+  public InstanceRequestBuilder(String title, String contributor) {
     id = UUID.randomUUID();
     this.title = title;
-    this.creator = creator;
+    this.contributor = contributor;
   }
 
-  public InstanceRequestBuilder(UUID id, String title, String creator) {
+  public InstanceRequestBuilder(UUID id, String title, String contributor) {
     this.id = id;
     this.title = title;
-    this.creator = creator;
+    this.contributor = contributor;
   }
 
   @Override
@@ -28,9 +28,9 @@ public class InstanceRequestBuilder implements Builder {
     return new JsonObject()
       .put("id", id.toString())
       .put("title", title)
-      .put("creators", new JsonArray().add(new JsonObject()
-        .put("creatorTypeId", ApiTestSuite.getPersonalCreatorType())
-        .put("name", creator)))
+      .put("contributors", new JsonArray().add(new JsonObject()
+        .put("contributorNameTypeId", ApiTestSuite.getPersonalContributorNameType())
+        .put("name", contributor)))
       .put("source", "Local")
       .put("instanceTypeId", ApiTestSuite.getBooksInstanceType());
   }
@@ -39,13 +39,13 @@ public class InstanceRequestBuilder implements Builder {
     return new InstanceRequestBuilder(
       id,
       this.title,
-      this.creator);
+      this.contributor);
   }
 
   public InstanceRequestBuilder withTitle(String title) {
     return new InstanceRequestBuilder(
       this.id,
       title,
-      this.creator);
+      this.contributor);
   }
 }

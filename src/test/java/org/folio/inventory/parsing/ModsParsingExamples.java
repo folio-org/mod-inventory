@@ -55,8 +55,8 @@ public class ModsParsingExamples {
     assertThat(california.getJsonArray("identifiers").size(), is(1));
     assertThat(hasIdentifier(california, "UkMaC", "69228882"), is(true));
 
-    assertThat(california.getJsonArray("creators").size(), is(1));
-    assertThat(hasCreator(california, "Huntley, Henry Veel"), is(true));
+    assertThat(california.getJsonArray("contributors").size(), is(1));
+    assertThat(hasContributor(california, "Huntley, Henry Veel"), is(true));
 
     JsonObject studien = getRecord(records,
       "Studien zur Geschichte der Notenschrift.", "69247446");
@@ -66,8 +66,8 @@ public class ModsParsingExamples {
     assertThat(studien.getJsonArray("identifiers").size(), is(1));
     assertThat(hasIdentifier(studien, "UkMaC", "69247446"), is(true));
 
-    assertThat(studien.getJsonArray("creators").size(), is(1));
-    assertThat(hasCreator(studien, "Riemann, Karl Wilhelm J. Hugo."), is(true));
+    assertThat(studien.getJsonArray("contributors").size(), is(1));
+    assertThat(hasContributor(studien, "Riemann, Karl Wilhelm J. Hugo."), is(true));
 
     JsonObject essays = getRecord(records,
       "Essays on C.S. Lewis and George MacDonald", "53556908");
@@ -79,8 +79,8 @@ public class ModsParsingExamples {
     assertThat(hasIdentifier(essays, "StGlU", "b13803414"), is(true));
     assertThat(hasIdentifier(essays, "isbn", "0889464944"), is(true));
 
-    assertThat(essays.getJsonArray("creators").size(), is(1));
-    assertThat(hasCreator(essays, "Marshall, Cynthia."), is(true));
+    assertThat(essays.getJsonArray("contributors").size(), is(1));
+    assertThat(hasContributor(essays, "Marshall, Cynthia."), is(true));
 
     JsonObject sketches = getRecord(records,
       "Statistical sketches of Upper Canada", "69077747");
@@ -90,8 +90,8 @@ public class ModsParsingExamples {
     assertThat(sketches.getJsonArray("identifiers").size(), is(1));
     assertThat(hasIdentifier(sketches, "UkMaC", "69077747"), is(true));
 
-    assertThat(sketches.getJsonArray("creators").size(), is(1));
-    assertThat(hasCreator(sketches, "Dunlop, William"), is(true));
+    assertThat(sketches.getJsonArray("contributors").size(), is(1));
+    assertThat(hasContributor(sketches, "Dunlop, William"), is(true));
 
     JsonObject mcGuire = getRecord(records, "Edward McGuire, RHA", "22169083");
 
@@ -102,8 +102,8 @@ public class ModsParsingExamples {
     assertThat(hasIdentifier(mcGuire, "UkMaC", "22169083"), is(true));
     assertThat(hasIdentifier(mcGuire, "StEdNL", "1851914"), is(true));
 
-    assertThat(mcGuire.getJsonArray("creators").size(), is(1));
-    assertThat(hasCreator(mcGuire, "Fallon, Brian."), is(true));
+    assertThat(mcGuire.getJsonArray("contributors").size(), is(1));
+    assertThat(hasContributor(mcGuire, "Fallon, Brian."), is(true));
 
     JsonObject influenza = getRecord(records,
       "Influenza della Poesia sui Costumi", "43620390");
@@ -113,8 +113,8 @@ public class ModsParsingExamples {
     assertThat(influenza.getJsonArray("identifiers").size(), is(1));
     assertThat(hasIdentifier(influenza, "UkMaC", "43620390"), is(true));
 
-    assertThat(influenza.getJsonArray("creators").size(), is(1));
-    assertThat(hasCreator(influenza, "MABIL, Pier Luigi."), is(true));
+    assertThat(influenza.getJsonArray("contributors").size(), is(1));
+    assertThat(hasContributor(influenza, "MABIL, Pier Luigi."), is(true));
 
     JsonObject nikitovic = getRecord(records, "Pavle Nik Nikitović", "37696876");
 
@@ -124,9 +124,9 @@ public class ModsParsingExamples {
     assertThat(hasIdentifier(nikitovic, "UkMaC", "37696876"), is(true));
     assertThat(hasIdentifier(nikitovic, "isbn", "8683385124"), is(true));
 
-    assertThat(nikitovic.getJsonArray("creators").size(), is(2));
-    assertThat(hasCreator(nikitovic, "Nikitović, Pavle"), is(true));
-    assertThat(hasCreator(nikitovic, "Božović, Ratko."), is(true));
+    assertThat(nikitovic.getJsonArray("contributors").size(), is(2));
+    assertThat(hasContributor(nikitovic, "Nikitović, Pavle"), is(true));
+    assertThat(hasContributor(nikitovic, "Božović, Ratko."), is(true));
 
     JsonObject grammar = getRecord(records,
       "Grammaire comparée du grec et du latin", "69250051");
@@ -136,9 +136,9 @@ public class ModsParsingExamples {
     assertThat(grammar.getJsonArray("identifiers").size(), is(1));
     assertThat(hasIdentifier(grammar, "UkMaC", "69250051"), is(true));
 
-    assertThat(grammar.getJsonArray("creators").size(), is(2));
-    assertThat(hasCreator(grammar, "Riemann, Othon."), is(true));
-    assertThat(hasCreator(grammar, "Goelzer, Henri Jules E."), is(true));
+    assertThat(grammar.getJsonArray("contributors").size(), is(2));
+    assertThat(hasContributor(grammar, "Riemann, Othon."), is(true));
+    assertThat(hasContributor(grammar, "Goelzer, Henri Jules E."), is(true));
 
     JsonObject smallAngry = getRecord(records,
       "The Long Way to a Small, Angry Planet", "67437645");
@@ -150,7 +150,7 @@ public class ModsParsingExamples {
     assertThat(hasIdentifier(smallAngry, "isbn", "1473619793"), is(true));
     assertThat(hasIdentifier(smallAngry, "isbn", "9781473619791"), is(true));
 
-    assertThat(smallAngry.getJsonArray("creators").size(), is(0));
+    assertThat(smallAngry.getJsonArray("contributors").size(), is(0));
 
   }
 
@@ -229,12 +229,12 @@ public class ModsParsingExamples {
         && StringUtils.equals(it.getString("value"), value));
   }
 
-  private static boolean hasCreator(
+  private static boolean hasContributor(
     JsonObject record,
     String name) {
 
     return JsonArrayHelper.toList(
-      record.getJsonArray("creators")).stream()
+      record.getJsonArray("contributors")).stream()
       .anyMatch(it -> StringUtils.equals(it.getString("name"), name));
   }
 }

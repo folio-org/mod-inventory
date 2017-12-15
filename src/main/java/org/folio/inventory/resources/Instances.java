@@ -11,7 +11,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
-import org.folio.inventory.domain.Creator;
+import org.folio.inventory.domain.Contributor;
 import org.folio.inventory.domain.Identifier;
 import org.folio.inventory.domain.Instance;
 import org.folio.inventory.domain.InstanceCollection;
@@ -31,7 +31,7 @@ public class Instances {
   private static final String INSTANCES_PATH = "/inventory/instances";
   private static final String TITLE_PROPERTY_NAME = "title";
   private static final String IDENTIFIER_PROPERTY_NAME = "identifiers";
-  private static final String CREATORS_PROPERTY_NAME = "creators";
+  private static final String CONTRIBUTORS_PROPERTY_NAME = "contributors";
 
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
@@ -226,11 +226,11 @@ public class Instances {
           .put("value", identifier.value))
         .collect(Collectors.toList())));
 
-    representation.put(CREATORS_PROPERTY_NAME,
-      new JsonArray(instance.creators.stream()
-        .map(creator -> new JsonObject()
-          .put("creatorTypeId", creator.creatorTypeId)
-          .put("name", creator.name))
+    representation.put(CONTRIBUTORS_PROPERTY_NAME,
+      new JsonArray(instance.contributors.stream()
+        .map(contributor -> new JsonObject()
+          .put("contributorNameTypeId", contributor.contributorNameTypeId)
+          .put("name", contributor.name))
         .collect(Collectors.toList())));
 
     try {
@@ -254,10 +254,10 @@ public class Instances {
           .collect(Collectors.toList())
           : new ArrayList<>();
 
-    List<Creator> creators = instanceRequest.containsKey(CREATORS_PROPERTY_NAME)
-      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(CREATORS_PROPERTY_NAME)).stream()
-      .map(creator -> new Creator(creator.getString("creatorTypeId"),
-        creator.getString("name")))
+    List<Contributor> contributors = instanceRequest.containsKey(CONTRIBUTORS_PROPERTY_NAME)
+      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(CONTRIBUTORS_PROPERTY_NAME)).stream()
+      .map(contributor -> new Contributor(contributor.getString("contributorNameTypeId"),
+        contributor.getString("name")))
       .collect(Collectors.toList())
       : new ArrayList<>();
 
@@ -267,6 +267,6 @@ public class Instances {
       identifiers,
       instanceRequest.getString("source"),
       instanceRequest.getString("instanceTypeId"),
-      creators);
+      contributors);
   }
 }

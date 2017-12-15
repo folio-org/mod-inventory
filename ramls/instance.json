@@ -36,7 +36,7 @@
         ]
       }
     },
-    "creators": {
+    "contributors": {
       "type": "array",
       "minItems": 1,
       "items": {
@@ -45,13 +45,19 @@
           "name": {
             "type": "string"
           },
-          "creatorTypeId": {
+          "contributorNameTypeId": {
             "type": "string"
+          },
+          "contributorTypeId": {
+            "type": "string"
+          },
+          "primary": {
+            "type": "boolean"
           }
         },
         "required": [
           "name",
-          "creatorTypeId"
+          "contributorNameTypeId"
         ]
       }
     },
@@ -70,7 +76,6 @@
   "required": [
     "title",
     "source",
-    "instanceTypeId",
-    "creators"
+    "instanceTypeId"
   ]
 }

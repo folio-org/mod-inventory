@@ -117,7 +117,7 @@
             "inventory-storage.shelf-locations.collection.get",
             "inventory-storage.instance-types.collection.get",
             "inventory-storage.identifier-types.collection.get",
-            "inventory-storage.creator-types.collection.get"]
+            "inventory-storage.contributor-name-types.collection.get"]
         }, {
           "methods": ["GET"],
           "pathPattern": "/inventory/ingest/mods/status/{id}",
@@ -160,7 +160,7 @@
       "version": "1.0"
     },
     {
-      "id": "creator-types",
+      "id": "contributor-name-types",
       "version": "1.0"
     }
   ],
