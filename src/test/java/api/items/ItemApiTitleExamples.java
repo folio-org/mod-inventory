@@ -88,9 +88,19 @@ public class ItemApiTitleExamples extends ApiTests {
     MalformedURLException,
     UnsupportedEncodingException {
 
+    UUID instanceId = instancesClient.create(
+      InstanceRequestExamples.smallAngryPlanet()).getId();
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(instanceId))
+      .getId();
+
+    holdingsStorageClient.delete(holdingId);
+
     IndividualResource response = itemsClient.create(
       ItemRequestExamples.basedUponSmallAngryPlanet()
-        .forHolding(null));
+        .forHolding(holdingId));
 
     JsonObject createdItem = response.getJson();
 

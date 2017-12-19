@@ -72,9 +72,19 @@ public class ItemApiLocationExamples extends ApiTests {
     MalformedURLException,
     UnsupportedEncodingException {
 
+    UUID instanceId = instancesClient.create(
+      InstanceRequestExamples.smallAngryPlanet()).getId();
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(instanceId))
+      .getId();
+
+    holdingsStorageClient.delete(holdingId);
+
     IndividualResource response = itemsClient.create(
       ItemRequestExamples.basedUponSmallAngryPlanet()
-        .forHolding(null)
+        .forHolding(holdingId)
         .withNoTemporaryLocation());
 
     JsonObject createdItem = response.getJson();
@@ -160,35 +170,21 @@ public class ItemApiLocationExamples extends ApiTests {
     TimeoutException,
     ExecutionException {
 
+    UUID instanceId = instancesClient.create(
+      InstanceRequestExamples.smallAngryPlanet()).getId();
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(instanceId))
+      .getId();
+
     UUID itemId = itemsClient.create(
       ItemRequestExamples.basedUponSmallAngryPlanet()
-        .withReadOnlyPermanentLocation(ItemRequestBuilder.annex()) // deliberately different to demonstrate behaviour
         .temporarilyInAnnex()
-        .forHolding(null))
+        .forHolding(holdingId))
       .getId();
 
-    List<JsonObject> fetchedItemsResponse = itemsClient.getAll();
-
-    assertThat(fetchedItemsResponse.size(), is(1));
-
-    JsonObject fetchedItem = getRecordById(
-      fetchedItemsResponse, itemId).get();
-
-    assertThat("has no permanent location",
-      fetchedItem.containsKey("permanentLocation"), is(false));
-  }
-
-  @Test
-  public void noPermanentLocationsWhenNoHoldingForItems()
-    throws InterruptedException,
-    MalformedURLException,
-    TimeoutException,
-    ExecutionException {
-
-    UUID itemId = itemsClient.create(
-      ItemRequestExamples.basedUponSmallAngryPlanet()
-        .forHolding(null))
-      .getId();
+    holdingsStorageClient.delete(holdingId);
 
     List<JsonObject> fetchedItemsResponse = itemsClient.getAll();
 
