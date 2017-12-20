@@ -1,4 +1,4 @@
-## 6.0.0 Unreleased
+## 6.0.0 2017-12-20
 
 * Removes `location` property from `item` record
 * `title` is now optional for an `item` (MODINV-34)
