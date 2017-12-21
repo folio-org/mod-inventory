@@ -1,3 +1,15 @@
+## 7.0.0 Unreleased
+
+* Require `holdingsRecordId` from `item` (MODINV-39)
+* Removes `title` from `item` (MODINV-37)
+* Removes `instanceId` from `item` (MODINV-38)
+* Removes `permanentLocationId` from `item` (MODINV-37)
+* Removes `creators` from `instance` (MODINV-41)
+* Adds `contributorNameTypeId` to `contributors` in `instances` (MODINV-41)
+* Provides inventory interface version 5.0
+* Requires item-storage interface version 5.0
+* Requires instance-storage interface version 4.0
+
 ## 6.0.0 2017-12-20
 
 * Removes `location` property from `item` record
@@ -13,7 +25,7 @@
 * Requires shelf-locations interface version 1.0
 * Requires instance-types interface version 1.0
 * Requires identifier-types interface version 1.0
-* Requires creator-types interface version 1.0
+* Requires contributor-name-types interface version 1.0
 * Adds mod- prefix to names of the built artifacts (FOLIO-813)
 
 ## 5.1.1 2017-09-01

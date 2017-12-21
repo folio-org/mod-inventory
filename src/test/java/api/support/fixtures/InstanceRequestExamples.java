@@ -25,10 +25,10 @@ public class InstanceRequestExamples {
 
   private static InstanceRequestBuilder create(
     String title,
-    String creator) {
+    String contributor) {
 
     return new InstanceRequestBuilder(
       title,
-      creator);
+      contributor);
   }
 }

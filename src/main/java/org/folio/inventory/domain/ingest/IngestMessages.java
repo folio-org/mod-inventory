@@ -17,7 +17,7 @@ public class IngestMessages {
     Map locations,
     Map identifierTypes,
     Map instanceTypes,
-    Map creatorTypes,
+    Map contributorNameTypes,
     String jobId,
     Context context) {
 
@@ -29,7 +29,7 @@ public class IngestMessages {
         .put("locations", locations)
         .put("identifierTypes", identifierTypes)
         .put("instanceTypes", instanceTypes)
-        .put("creatorTypes", creatorTypes));
+        .put("contributorNameTypes", contributorNameTypes));
   }
 
   public static JsonMessage completed(String jobId, Context context) {

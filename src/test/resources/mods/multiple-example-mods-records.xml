@@ -19,7 +19,7 @@
       <mods_ns:namePart>Huntley, Henry Veel</mods_ns:namePart>
       <mods_ns:namePart type="termsOfAddress">sir.</mods_ns:namePart>
       <mods_ns:role>
-        <mods_ns:roleTerm type="text">creator</mods_ns:roleTerm>
+        <mods_ns:roleTerm type="text">contributor</mods_ns:roleTerm>
       </mods_ns:role>
     </mods_ns:name>
     <mods_ns:titleInfo>
@@ -245,7 +245,7 @@
     <mods_ns:name type="personal">
       <mods_ns:namePart>Fallon, Brian.</mods_ns:namePart>
       <mods_ns:role>
-        <mods_ns:roleTerm type="text">creator</mods_ns:roleTerm>
+        <mods_ns:roleTerm type="text">contributor</mods_ns:roleTerm>
       </mods_ns:role>
     </mods_ns:name>
     <mods_ns:titleInfo>
@@ -474,7 +474,7 @@
       <mods_ns:namePart>Dunlop, William</mods_ns:namePart>
       <mods_ns:namePart type="termsOfAddress">M.D.</mods_ns:namePart>
       <mods_ns:role>
-        <mods_ns:roleTerm type="text">creator</mods_ns:roleTerm>
+        <mods_ns:roleTerm type="text">contributor</mods_ns:roleTerm>
       </mods_ns:role>
     </mods_ns:name>
     <mods_ns:titleInfo>

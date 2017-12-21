@@ -7,12 +7,14 @@ import java.util.Collection;
 import java.util.Optional;
 
 public class HoldingsSupport {
-  public static String determinePermanentLocationIdForItem(Item item, JsonObject holding) {
+  private HoldingsSupport() { }
+
+  public static String determinePermanentLocationIdForItem(JsonObject holding) {
     if(holding != null && holding.containsKey("permanentLocationId")) {
       return holding.getString("permanentLocationId");
     }
     else {
-      return item.permanentLocationId;
+      return null;
     }
   }
 

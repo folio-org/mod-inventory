@@ -91,24 +91,24 @@ public class ModsParser {
           .put("value", value));
       }
 
-      JsonArray parsedCreators = new JsonArray();
+      JsonArray parsedContributors = new JsonArray();
 
-      NodeList creators = (NodeList)xpath.compile("name/namePart[not(@type)]")
+      NodeList contributors = (NodeList)xpath.compile("name/namePart[not(@type)]")
         .evaluate(record, XPathConstants.NODESET);
 
-      for(int creatorIndex = 0; creatorIndex < creators.getLength(); creatorIndex++) {
-        Node creator = creators.item(creatorIndex);
+      for(int contributorIndex = 0; contributorIndex < contributors.getLength(); contributorIndex++) {
+        Node contributor = contributors.item(contributorIndex);
 
-        String name = creator.getTextContent();
+        String name = contributor.getTextContent();
 
-        parsedCreators.add(new JsonObject()
+        parsedContributors.add(new JsonObject()
           .put("name", characterEncoding.decode(name)));
       }
 
       parsedRecord.put("title", characterEncoding.decode(title));
       parsedRecord.put("barcode", characterEncoding.decode(barcode));
       parsedRecord.put("identifiers", parsedIdentifiers);
-      parsedRecord.put("creators", parsedCreators);
+      parsedRecord.put("contributors", parsedContributors);
 
       parsedRecords.add(parsedRecord);
     }

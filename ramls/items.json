@@ -3,118 +3,18 @@
   "type": "object",
   "properties": {
     "items": {
+      "id": "items",
       "type": "array",
       "items": {
         "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "instanceId": {
-            "type": "string"
-          },
-          "holdingsRecordId": {
-            "type": "string"
-          },
-          "title": {
-            "type": "string"
-          },
-          "barcode": {
-            "type": "string"
-          },
-          "status": {
-            "type": "object",
-            "properties": {
-              "name": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "name"
-            ]
-          },
-          "materialType": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "name": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "id"
-            ]
-          },
-          "permanentLoanType": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "name": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "id"
-            ]
-          },
-          "temporaryLoanType": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "name": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "id"
-            ]
-          },
-          "permanentLocation": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "name": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "id"
-            ]
-          },
-          "temporaryLocation": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "name": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "id"
-            ]
-          }
-        },
-        "required": [
-          "title",
-          "materialType",
-          "permanentLoanType"
-        ]
+        "$ref": "item.json"
       }
     },
     "totalRecords": {
       "type": "integer"
     }
   },
+  "additionalProperties": false,
   "required": [
     "items",
     "totalRecords"

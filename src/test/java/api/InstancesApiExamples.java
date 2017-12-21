@@ -54,8 +54,8 @@ public class InstancesApiExamples extends ApiTests {
       .put("identifiers", new JsonArray().add(new JsonObject()
         .put("identifierTypeId", ApiTestSuite.getIsbnIdentifierType())
         .put("value", "9781473619777")))
-      .put("creators", new JsonArray().add(new JsonObject()
-        .put("creatorTypeId", ApiTestSuite.getPersonalCreatorType())
+      .put("contributors", new JsonArray().add(new JsonObject()
+        .put("contributorNameTypeId", ApiTestSuite.getPersonalContributorNameType())
         .put("name", "Chambers, Becky")))
       .put("source", "Local")
       .put("instanceTypeId", ApiTestSuite.getBooksInstanceType());
@@ -95,13 +95,13 @@ public class InstancesApiExamples extends ApiTests {
 
     assertThat(firstIdentifier.getString("value"), is("9781473619777"));
 
-    JsonObject firstCreator = createdInstance.getJsonArray("creators")
+    JsonObject firstContributor = createdInstance.getJsonArray("contributors")
       .getJsonObject(0);
 
-    assertThat(firstCreator.getString("creatorTypeId"),
-      is(ApiTestSuite.getPersonalCreatorType()));
+    assertThat(firstContributor.getString("contributorNameTypeId"),
+      is(ApiTestSuite.getPersonalContributorNameType()));
 
-    assertThat(firstCreator.getString("name"), is("Chambers, Becky"));
+    assertThat(firstContributor.getString("name"), is("Chambers, Becky"));
 
     expressesDublinCoreMetadata(createdInstance);
     dublinCoreContextLinkRespectsWayResourceWasReached(createdInstance);
@@ -125,8 +125,8 @@ public class InstancesApiExamples extends ApiTests {
       .put("identifiers", new JsonArray().add(new JsonObject()
       .put("identifierTypeId", ApiTestSuite.getIsbnIdentifierType())
       .put("value", "9781473619777")))
-      .put("creators", new JsonArray().add(new JsonObject()
-      .put("creatorTypeId", ApiTestSuite.getPersonalCreatorType())
+      .put("contributors", new JsonArray().add(new JsonObject()
+      .put("contributorNameTypeId", ApiTestSuite.getPersonalContributorNameType())
       .put("name", "Chambers, Becky")))
       .put("source", "Local")
       .put("instanceTypeId", ApiTestSuite.getBooksInstanceType());
@@ -166,13 +166,13 @@ public class InstancesApiExamples extends ApiTests {
 
     assertThat(firstIdentifier.getString("value"), is("9781473619777"));
 
-    JsonObject firstCreator = createdInstance.getJsonArray("creators")
+    JsonObject firstContributor = createdInstance.getJsonArray("contributors")
       .getJsonObject(0);
 
-    assertThat(firstCreator.getString("creatorTypeId"),
-      is(ApiTestSuite.getPersonalCreatorType()));
+    assertThat(firstContributor.getString("contributorNameTypeId"),
+      is(ApiTestSuite.getPersonalContributorNameType()));
 
-    assertThat(firstCreator.getString("name"), is("Chambers, Becky"));
+    assertThat(firstContributor.getString("name"), is("Chambers, Becky"));
 
     expressesDublinCoreMetadata(createdInstance);
     dublinCoreContextLinkRespectsWayResourceWasReached(createdInstance);

@@ -55,7 +55,7 @@ public class IngestMessageProcessor {
     final JsonObject locations = body.getJsonObject("locations");
     final JsonObject instanceTypes = body.getJsonObject("instanceTypes");
     final JsonObject identifierTypes = body.getJsonObject("identifierTypes");
-    final JsonObject creatorTypes = body.getJsonObject("creatorTypes");
+    final JsonObject contributorNameTypes = body.getJsonObject("contributorNameTypes");
 
     final InstanceCollection instanceCollection = storage.getInstanceCollection(context);
     final ItemCollection itemCollection = storage.getItemCollection(context);
@@ -72,23 +72,23 @@ public class IngestMessageProcessor {
             identifier.getString("value")))
           .collect(Collectors.toList());
 
-        List<JsonObject> creatorsJson = JsonArrayHelper.toList(
-          record.getJsonArray("creators"));
+        List<JsonObject> contributorsJson = JsonArrayHelper.toList(
+          record.getJsonArray("contributors"));
 
-        List<Creator> creators = creatorsJson.stream()
-          .map(creator -> new Creator(
-            creatorTypes.getString("Personal name"),
-            creator.getString("name")))
+        List<Contributor> contributors = contributorsJson.stream()
+          .map(contributor -> new Contributor(
+            contributorNameTypes.getString("Personal name"),
+            contributor.getString("name")))
           .collect(Collectors.toList());
 
-        if(creators.isEmpty()) {
-          creators.add(new Creator(
-            creatorTypes.getString("Personal name"),
-            "Unknown creator"));
+        if(contributors.isEmpty()) {
+          contributors.add(new Contributor(
+            contributorNameTypes.getString("Personal name"),
+            "Unknown contributor"));
         }
 
         return new Instance(UUID.randomUUID().toString(), record.getString(TITLE_PROPERTY),
-          identifiers, "Local: MODS", instanceTypes.getString("Books"), creators);
+          identifiers, "Local: MODS", instanceTypes.getString("Books"), contributors);
       })
       .forEach(instance -> instanceCollection.add(instance, allInstances.receive(),
         failure -> log.error("Instance processing failed: " + failure.getReason())));
@@ -102,6 +102,7 @@ public class IngestMessageProcessor {
 
         allHoldings.collect(holdings ->
           records.stream().map(record -> {
+            //Will fail if have multiple instances with exactly the same title
             Optional<Instance> possibleInstance = instances.stream()
               .filter(instance ->
                 StringUtils.equals(instance.title, record.getString(TITLE_PROPERTY)))
@@ -121,15 +122,13 @@ public class IngestMessageProcessor {
               : null;
 
             return new Item(null,
-              null,
               record.getString("barcode"),
               null, null, new ArrayList<>(), null,
-              instanceId, holdingId, new ArrayList<>(),
+              holdingId, new ArrayList<>(),
               "Available",
               materialTypes.getString("Book") != null
                 ? materialTypes.getString("Book")
                 : materialTypes.getString("book"),
-              null,
               null,
               loanTypes.getString("Can Circulate") != null
                 ? loanTypes.getString("Can Circulate")

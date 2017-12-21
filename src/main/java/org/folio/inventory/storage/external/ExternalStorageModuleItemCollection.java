@@ -33,18 +33,15 @@ class ExternalStorageModuleItemCollection
 
     return new Item(
       itemFromServer.getString("id"),
-      itemFromServer.getString("title"),
       itemFromServer.getString("barcode"),
       itemFromServer.getString("enumeration"),
       itemFromServer.getString("chronology"),
       pieceIdentifierList,
       itemFromServer.getString("numberOfPieces"),
-      itemFromServer.getString("instanceId"),
       itemFromServer.getString("holdingsRecordId"),
       notesList,
       itemFromServer.getJsonObject("status").getString("name"),
       itemFromServer.getString("materialTypeId"),
-      itemFromServer.getString("permanentLocationId"),
       itemFromServer.getString("temporaryLocationId"),
       itemFromServer.getString("permanentLoanTypeId"),
       itemFromServer.getString("temporaryLoanTypeId"));
@@ -64,7 +61,6 @@ class ExternalStorageModuleItemCollection
       ? item.id
       : UUID.randomUUID().toString());
 
-    includeIfPresent(itemToSend, "title", item.title);
     itemToSend.put("status", new JsonObject().put("name", item.status));
     itemToSend.put("pieceIdentifiers", item.pieceIdentifiers);
     itemToSend.put("notes", item.notes);
@@ -72,12 +68,10 @@ class ExternalStorageModuleItemCollection
     includeIfPresent(itemToSend, "enumeration", item.enumeration);
     includeIfPresent(itemToSend, "chronology", item.chronology);
     includeIfPresent(itemToSend, "numberOfPieces", item.numberOfPieces);
-    includeIfPresent(itemToSend, "instanceId", item.instanceId);
     includeIfPresent(itemToSend, "holdingsRecordId", item.holdingId);
     includeIfPresent(itemToSend, "materialTypeId", item.materialTypeId);
     includeIfPresent(itemToSend, "permanentLoanTypeId", item.permanentLoanTypeId);
     includeIfPresent(itemToSend, "temporaryLoanTypeId", item.temporaryLoanTypeId);
-    includeIfPresent(itemToSend, "permanentLocationId", item.permanentLocationId);
     includeIfPresent(itemToSend, "temporaryLocationId", item.temporaryLocationId);
 
     return itemToSend;

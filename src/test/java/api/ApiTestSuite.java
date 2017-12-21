@@ -49,7 +49,7 @@ public class ApiTestSuite {
   private static String isbnIdentifierTypeId;
   private static String asinIdentifierTypeId;
   private static String booksInstanceTypeId;
-  private static String personalCreatorTypeId;
+  private static String personalContributorNameTypeId;
 
   private static VertxAssistant vertxAssistant = new VertxAssistant();
   private static String inventoryModuleDeploymentId;
@@ -83,7 +83,7 @@ public class ApiTestSuite {
     createLocations();
     createIdentifierTypes();
     createInstanceTypes();
-    createCreatorTypes();
+    createContributorNameTypes();
     startInventoryVerticle();
 
     initialised = true;
@@ -140,8 +140,8 @@ public class ApiTestSuite {
     return booksInstanceTypeId;
   }
 
-  public static String getPersonalCreatorType() {
-    return personalCreatorTypeId;
+  public static String getPersonalContributorNameType() {
+    return personalContributorNameTypeId;
   }
 
   public static OkapiHttpClient createOkapiHttpClient()
@@ -323,7 +323,7 @@ public class ApiTestSuite {
     booksInstanceTypeId = instanceTypesPreparation.createOrReferenceTerm("Books");
   }
 
-  private static void createCreatorTypes()
+  private static void createContributorNameTypes()
     throws MalformedURLException,
     InterruptedException,
     ExecutionException,
@@ -331,11 +331,11 @@ public class ApiTestSuite {
 
     OkapiHttpClient client = createOkapiHttpClient();
 
-    URL creatorTypes = new URL(String.format("%s/creator-types", storageOkapiUrl()));
+    URL contributorNameTypes = new URL(String.format("%s/contributor-name-types", storageOkapiUrl()));
 
-    ControlledVocabularyPreparation creatorTypesPreparation =
-      new ControlledVocabularyPreparation(client, creatorTypes, "creatorTypes");
+    ControlledVocabularyPreparation contributorNameTypesPreparation =
+      new ControlledVocabularyPreparation(client, contributorNameTypes, "contributorNameTypes");
 
-    personalCreatorTypeId = creatorTypesPreparation.createOrReferenceTerm("Personal name");
+    personalContributorNameTypeId = contributorNameTypesPreparation.createOrReferenceTerm("Personal name");
   }
 }

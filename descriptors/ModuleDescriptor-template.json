@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "inventory",
-      "version": "4.2",
+      "version": "5.0",
       "handlers": [
         {
           "methods": ["GET"],
@@ -117,7 +117,7 @@
             "inventory-storage.shelf-locations.collection.get",
             "inventory-storage.instance-types.collection.get",
             "inventory-storage.identifier-types.collection.get",
-            "inventory-storage.creator-types.collection.get"]
+            "inventory-storage.contributor-name-types.collection.get"]
         }, {
           "methods": ["GET"],
           "pathPattern": "/inventory/ingest/mods/status/{id}",
@@ -129,11 +129,11 @@
   "requires": [
     {
       "id": "item-storage",
-      "version": "4.1"
+      "version": "5.0"
     },
     {
       "id": "instance-storage",
-      "version": "3.0"
+      "version": "4.0"
     },
     {
       "id": "holdings-storage",
@@ -160,7 +160,7 @@
       "version": "1.0"
     },
     {
-      "id": "creator-types",
+      "id": "contributor-name-types",
       "version": "1.0"
     }
   ],

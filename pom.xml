@@ -2,8 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <artifactId>mod-inventory</artifactId>
   <groupId>org.folio</groupId>
-  <version>6.0.1-SNAPSHOT</version>
-
+  <version>7.0.0-SNAPSHOT</version>
   <licenses>
     <license>
       <name>Apache License 2.0</name>
@@ -29,6 +28,16 @@
       <groupId>io.vertx</groupId>
       <artifactId>vertx-web</artifactId>
       <version>${vertx.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+      <version>1.7.25</version>
+    </dependency>
+    <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+      <version>1.2.17</version>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
@@ -155,7 +164,7 @@
               <resources>
                 <resource>
                   <directory>${basedir}/descriptors</directory>
-                  <include>*Descriptor*-template.json</include>
+                  <include>*-template.json</include>
                   <filtering>true</filtering>
                 </resource>
               </resources>
@@ -183,6 +192,14 @@
                 <fileSet>
                   <sourceFile>${project.build.directory}/DeploymentDescriptor-template.json</sourceFile>
                   <destinationFile>${project.build.directory}/DeploymentDescriptor.json</destinationFile>
+                </fileSet>
+                <fileSet>
+                  <sourceFile>${project.build.directory}/Activate-template.json</sourceFile>
+                  <destinationFile>${project.build.directory}/Activate.json</destinationFile>
+                </fileSet>
+                <fileSet>
+                  <sourceFile>${project.build.directory}/Discovery-template.json</sourceFile>
+                  <destinationFile>${project.build.directory}/Discovery.json</destinationFile>
                 </fileSet>
               </fileSets>
             </configuration>

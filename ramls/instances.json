@@ -7,58 +7,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "properties": {
-          "@context": {
-            "type": "string"
-          },
-          "id": {
-            "type": "string"
-          },
-          "title": {
-            "type": "string"
-          },
-          "instanceTypeId": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "identifiers": {
-            "type": "array",
-            "minItems": 1,
-            "items": {
-              "type": "object",
-              "properties": {
-                "identifierTypeId": {
-                  "type": "string"
-                },
-                "value": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "identifierTypeId",
-                "value"
-              ]
-            }
-          },
-          "links": {
-            "type": "object",
-            "properties": {
-              "self": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "self"
-            ]
-          }
-        },
-        "required": [
-          "title",
-          "source",
-          "instanceTypeId"
-        ]
+        "$ref": "instance.json"
       }
     },
     "totalRecords": {

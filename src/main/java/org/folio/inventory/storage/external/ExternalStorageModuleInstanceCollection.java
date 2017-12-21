@@ -3,7 +3,7 @@ package org.folio.inventory.storage.external;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import org.folio.inventory.domain.Creator;
+import org.folio.inventory.domain.Contributor;
 import org.folio.inventory.domain.Identifier;
 import org.folio.inventory.domain.Instance;
 import org.folio.inventory.domain.InstanceCollection;
@@ -41,7 +41,7 @@ class ExternalStorageModuleInstanceCollection
     includeIfPresent(instanceToSend, "instanceTypeId", instance.instanceTypeId);
     includeIfPresent(instanceToSend, "source", instance.source);
     instanceToSend.put("identifiers", instance.identifiers);
-    instanceToSend.put("creators", instance.creators);
+    instanceToSend.put("contributors", instance.contributors);
 
     return instanceToSend;
   }
@@ -55,11 +55,11 @@ class ExternalStorageModuleInstanceCollection
       .map(it -> new Identifier(it.getString("identifierTypeId"), it.getString("value")))
       .collect(Collectors.toList());
 
-    List<JsonObject> creators = toList(
-      instanceFromServer.getJsonArray("creators", new JsonArray()));
+    List<JsonObject> contributors = toList(
+      instanceFromServer.getJsonArray("contributors", new JsonArray()));
 
-    List<Creator> mappedCreators = creators.stream()
-      .map(it -> new Creator(it.getString("creatorTypeId"), it.getString("name")))
+    List<Contributor> mappedContributors = contributors.stream()
+      .map(it -> new Contributor(it.getString("contributorNameTypeId"), it.getString("name")))
       .collect(Collectors.toList());
 
     return new Instance(
@@ -68,7 +68,7 @@ class ExternalStorageModuleInstanceCollection
       mappedIdentifiers,
       instanceFromServer.getString("source"),
       instanceFromServer.getString("instanceTypeId"),
-      mappedCreators);
+      mappedContributors);
   }
 
   @Override

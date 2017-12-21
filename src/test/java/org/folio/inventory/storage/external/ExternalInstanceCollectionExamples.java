@@ -25,7 +25,7 @@ import static org.junit.Assert.assertThat;
 
 public class ExternalInstanceCollectionExamples {
   private static final String BOOKS_INSTANCE_TYPE = UUID.randomUUID().toString();
-  private static final String PERSONAL_CREATOR_TYPE = UUID.randomUUID().toString();
+  private static final String PERSONAL_CONTRIBUTOR_NAME_TYPE = UUID.randomUUID().toString();
   private static final String ISBN_IDENTIFIER_TYPE = UUID.randomUUID().toString();
   private static final String ASIN_IDENTIFIER_TYPE = UUID.randomUUID().toString();
 
@@ -293,34 +293,34 @@ public class ExternalInstanceCollectionExamples {
   private static Instance nod() {
     return createInstance("Nod")
       .addIdentifier(ASIN_IDENTIFIER_TYPE, "B01D1PLMDO")
-      .addCreator(PERSONAL_CREATOR_TYPE, "Barnes, Adrian");
+      .addContributor(PERSONAL_CONTRIBUTOR_NAME_TYPE, "Barnes, Adrian");
   }
 
   private static Instance uprooted() {
     return createInstance("Uprooted")
       .addIdentifier(ISBN_IDENTIFIER_TYPE, "1447294149")
       .addIdentifier(ISBN_IDENTIFIER_TYPE, "9781447294146")
-      .addCreator(PERSONAL_CREATOR_TYPE, "Novik, Naomi");
+      .addContributor(PERSONAL_CONTRIBUTOR_NAME_TYPE, "Novik, Naomi");
   }
 
   private static Instance smallAngryPlanet() {
     return createInstance("Long Way to a Small Angry Planet")
       .addIdentifier(ISBN_IDENTIFIER_TYPE, "9781473619777")
-      .addCreator(PERSONAL_CREATOR_TYPE, "Chambers, Becky");
+      .addContributor(PERSONAL_CONTRIBUTOR_NAME_TYPE, "Chambers, Becky");
   }
 
   private static Instance temeraire() {
     return createInstance("Temeraire")
       .addIdentifier(ISBN_IDENTIFIER_TYPE, "0007258712")
       .addIdentifier(ISBN_IDENTIFIER_TYPE, "9780007258710")
-      .addCreator(PERSONAL_CREATOR_TYPE, "Novik, Naomi");
+      .addContributor(PERSONAL_CONTRIBUTOR_NAME_TYPE, "Novik, Naomi");
   }
 
   private static Instance interestingTimes() {
     return createInstance("Interesting Times")
       .addIdentifier(ISBN_IDENTIFIER_TYPE, "0552167541")
       .addIdentifier(ISBN_IDENTIFIER_TYPE, "9780552167543")
-      .addCreator(PERSONAL_CREATOR_TYPE, "Pratchett, Terry");
+      .addContributor(PERSONAL_CONTRIBUTOR_NAME_TYPE, "Pratchett, Terry");
   }
 
   private static Instance createInstance(String title) {
