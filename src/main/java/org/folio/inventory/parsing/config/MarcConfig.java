@@ -22,7 +22,7 @@ public class MarcConfig {
   public MarcConfig(String configPath) throws InvalidMarcConfigException, IOException {
     JsonHelper jh = new JsonHelper();
     config = jh.getJsonFileAsJsonObject(configPath);
-    this.validate();
+    validate();
   }
 
   public JsonObject getConfig() {
