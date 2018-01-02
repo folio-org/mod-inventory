@@ -54,11 +54,26 @@ public class CollectionResourceClient {
   public void getMany(String query, Consumer<Response> responseHandler) {
 
     String url = isProvided(query)
-      ? String.format(collectionRoot + "?%s", query)
+      ? String.format("%s?%s", collectionRoot, query)
       : collectionRoot.toString();
 
     client.get(url,
       responseConversationHandler(responseHandler));
+  }
+
+  public void getMany(
+    String cqlQuery,
+    Integer pageLimit,
+    Integer pageOffset,
+    Consumer<Response> responseHandler) {
+
+    //TODO: Replace with query string creator that checks each parameter
+    String url = isProvided(cqlQuery)
+      ? String.format("%s?query=%s&limit=%s&offset=%s", collectionRoot, cqlQuery,
+      pageLimit, pageOffset)
+      : collectionRoot.toString();
+
+    client.get(url, responseConversationHandler(responseHandler));
   }
 
   private boolean isProvided(String query) {

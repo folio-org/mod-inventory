@@ -4,6 +4,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.domain.CollectionProvider;
+import org.folio.inventory.domain.HoldingCollection;
 import org.folio.inventory.domain.InstanceCollection;
 import org.folio.inventory.domain.ItemCollection;
 import org.folio.inventory.domain.ingest.IngestJobCollection;
@@ -53,6 +54,11 @@ public class Storage {
 
   public IngestJobCollection getIngestJobCollection(Context context) {
     return providerFactory.apply(context).getIngestJobCollection(
+      context.getTenantId(), context.getToken());
+  }
+
+  public HoldingCollection getHoldingCollection(Context context) {
+    return providerFactory.apply(context).getHoldingCollection(
       context.getTenantId(), context.getToken());
   }
 }

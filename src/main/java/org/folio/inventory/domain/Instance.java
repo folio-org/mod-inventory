@@ -12,7 +12,7 @@ public class Instance {
   public final String source;
   public final String instanceTypeId;
   public final List<Identifier> identifiers;
-  public final List<Creator> creators;
+  public final List<Contributor> contributors;
 
   public Instance(
     String id,
@@ -20,19 +20,19 @@ public class Instance {
     List<Identifier> identifiers,
     String source,
     String instanceTypeId,
-    List<Creator> creators) {
+    List<Contributor> contributors) {
 
     this.id = id;
     this.title = title;
     this.identifiers = new ArrayList<>(identifiers);
     this.source = source;
     this.instanceTypeId = instanceTypeId;
-    this.creators = new ArrayList<>(creators);
+    this.contributors = new ArrayList<>(contributors);
   }
 
   public Instance copyWithNewId(String newId) {
     return new Instance(newId, this.title, this.identifiers, this.source,
-      this.instanceTypeId, this.creators);
+      this.instanceTypeId, this.contributors);
   }
 
   public Instance addIdentifier(Identifier identifier) {
@@ -41,7 +41,7 @@ public class Instance {
     newIdentifiers.add(identifier);
 
     return new Instance(this.id, this.title, newIdentifiers, this.source,
-      this.instanceTypeId, this.creators);
+      this.instanceTypeId, this.contributors);
   }
 
   public Instance addIdentifier(String identifierTypeId, String value) {
@@ -50,13 +50,13 @@ public class Instance {
     return addIdentifier(identifier);
   }
 
-  public Instance addCreator(String creatorTypeId, String name) {
-    List<Creator> newCreators = new ArrayList<>(this.creators);
+  public Instance addContributor(String contributorNameTypeId, String name) {
+    List<Contributor> newContributors = new ArrayList<>(this.contributors);
 
-    newCreators.add(new Creator(creatorTypeId, name));
+    newContributors.add(new Contributor(contributorNameTypeId, name));
 
     return new Instance(this.id, this.title, new ArrayList<>(this.identifiers),
-      this.source, this.instanceTypeId, newCreators);
+      this.source, this.instanceTypeId, newContributors);
   }
 
   public Instance removeIdentifier(final String identifierTypeId, final String value) {
@@ -66,7 +66,7 @@ public class Instance {
       .collect(Collectors.toList());
 
     return new Instance(this.id, this.title, newIdentifiers, this.source,
-      this.instanceTypeId, this.creators);
+      this.instanceTypeId, this.contributors);
   }
 
   @Override

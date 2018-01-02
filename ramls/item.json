@@ -5,14 +5,40 @@
     "id": {
       "type": "string"
     },
-    "instanceId": {
+    "holdingsRecordId": {
+      "description": "ID of the holding the item is a member of",
       "type": "string"
     },
     "title": {
-      "type": "string"
+      "type": "string",
+      "description": "title of the item (read only, inherited from associated instance)",
+      "readonly": true
     },
     "barcode": {
       "type": "string"
+    },
+    "enumeration": {
+      "type": "string"
+    },
+    "chronology": {
+      "type": "string"
+    },
+    "pieceIdentifiers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "numberOfPieces": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
     },
     "status": {
       "type": "object",
@@ -21,6 +47,7 @@
           "type": "string"
         }
       },
+      "additionalProperties": false,
       "required": [
         "name"
       ]
@@ -35,6 +62,7 @@
           "type": "string"
         }
       },
+      "additionalProperties": false,
       "required": [
         "id"
       ]
@@ -49,6 +77,7 @@
           "type": "string"
         }
       },
+      "additionalProperties": false,
       "required": [
         "id"
       ]
@@ -63,20 +92,26 @@
           "type": "string"
         }
       },
+      "additionalProperties": false,
       "required": [
         "id"
       ]
     },
     "permanentLocation": {
       "type": "object",
+      "description": "permanent location of the item (read only, inherited from associated holding)",
+      "readonly": true,
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "readonly": true
         },
         "name": {
-          "type": "string"
+          "type": "string",
+          "readonly": true
         }
       },
+      "additionalProperties": false,
       "required": [
         "id"
       ]
@@ -91,15 +126,15 @@
           "type": "string"
         }
       },
+      "additionalProperties": false,
       "required": [
         "id"
       ]
     }
   },
+  "additionalProperties": false,
   "required": [
-    "title",
     "materialType",
-    "permanentLoanType",
-    "permanentLocation"
+    "permanentLoanType"
   ]
 }

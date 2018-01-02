@@ -50,7 +50,7 @@ public class ModsIngestion {
   // main library location
   // books instance type
   // isbn identifier type
-  // personal creator type
+  // personal contributor type
   private void ingest(RoutingContext routingContext) {
     if(routingContext.fileUploads().size() > 1) {
       ClientErrorResponse.badRequest(routingContext.response(),
@@ -65,7 +65,7 @@ public class ModsIngestion {
     ReferenceRecordClient locationsClient;
     ReferenceRecordClient instanceTypesClient;
     ReferenceRecordClient identifierTypesClient;
-    ReferenceRecordClient creatorTypesClient;
+    ReferenceRecordClient contributorNameTypesClient;
 
     try {
       client = createHttpClient(routingContext, context);
@@ -85,8 +85,8 @@ public class ModsIngestion {
       instanceTypesClient = new ReferenceRecordClient(new CollectionResourceClient(client,
         new URL(context.getOkapiLocation() + "/instance-types")), "instanceTypes");
 
-      creatorTypesClient = new ReferenceRecordClient(new CollectionResourceClient(client,
-        new URL(context.getOkapiLocation() + "/creator-types")), "creatorTypes");
+      contributorNameTypesClient = new ReferenceRecordClient(new CollectionResourceClient(client,
+        new URL(context.getOkapiLocation() + "/contributor-name-types")), "contributorNameTypes");
     }
     catch (MalformedURLException e) {
       ServerErrorResponse.internalError(routingContext.response(),
@@ -100,7 +100,7 @@ public class ModsIngestion {
     CompletableFuture<ReferenceRecord> locationsRequestCompleted;
     CompletableFuture<ReferenceRecord> instanceTypesRequestCompleted;
     CompletableFuture<ReferenceRecord> identifierTypesRequestCompleted;
-    CompletableFuture<ReferenceRecord> creatorTypesRequestCompleted;
+    CompletableFuture<ReferenceRecord> contributorNameTypesRequestCompleted;
 
     try {
       materialTypesRequestCompleted = wrapWithExceptionHandler(
@@ -118,8 +118,7 @@ public class ModsIngestion {
       identifierTypesRequestCompleted = wrapWithExceptionHandler(
         routingContext, identifierTypesClient.getRecord("ISBN"));
 
-      creatorTypesRequestCompleted = wrapWithExceptionHandler(
-        routingContext, creatorTypesClient.getRecord("Personal name"));
+      contributorNameTypesRequestCompleted = wrapWithExceptionHandler(routingContext, contributorNameTypesClient.getRecord("Personal name"));
 
     } catch (UnsupportedEncodingException e) {
       String error = String.format("Failed to encode query: %s", e.toString());
@@ -132,17 +131,17 @@ public class ModsIngestion {
     CompletableFuture.allOf(materialTypesRequestCompleted,
       loanTypesRequestCompleted, locationsRequestCompleted,
       instanceTypesRequestCompleted, identifierTypesRequestCompleted,
-      creatorTypesRequestCompleted)
+      contributorNameTypesRequestCompleted)
       .thenAccept(v -> {
         ReferenceRecord bookMaterialType = materialTypesRequestCompleted.join();
         ReferenceRecord canCirculateLoanType = loanTypesRequestCompleted.join();
         ReferenceRecord mainLibraryLocation = locationsRequestCompleted.join();
         ReferenceRecord booksInstanceType = instanceTypesRequestCompleted.join();
         ReferenceRecord isbnIdentifierType = identifierTypesRequestCompleted.join();
-        ReferenceRecord personalCreatorType = creatorTypesRequestCompleted.join();
+        ReferenceRecord personalContributorNameType = contributorNameTypesRequestCompleted.join();
 
         if(anyNull(bookMaterialType, canCirculateLoanType, booksInstanceType,
-          isbnIdentifierType, personalCreatorType)) {
+          isbnIdentifierType, personalContributorNameType)) {
           return;
         }
 
@@ -177,7 +176,7 @@ public class ModsIngestion {
                       singleEntryMap(mainLibraryLocation),
                       singleEntryMap(isbnIdentifierType),
                       singleEntryMap(booksInstanceType),
-                      singleEntryMap(personalCreatorType),
+                      singleEntryMap(personalContributorNameType),
                       success.getResult().id, context).send(routingContext.vertx());
 
                     RedirectResponse.accepted(routingContext.response(),

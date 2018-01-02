@@ -6,7 +6,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
-import org.apache.commons.lang3.tuple.ImmutableTriple;
+import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.support.http.server.ClientErrorResponse;
 import org.folio.inventory.support.http.server.JsonResponse;
@@ -14,44 +14,41 @@ import org.folio.inventory.support.http.server.SuccessResponse;
 import org.folio.inventory.support.http.server.ValidationError;
 
 import java.util.*;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class FakeStorageModule extends AbstractVerticle {
   private final String rootPath;
-  private final Collection<String> requiredProperties;
-
-  private final Map<String, Map<String, JsonObject>> storedResourcesByTenant;
   private final String collectionPropertyName;
-
-  public FakeStorageModule(
-    String rootPath,
-    String collectionPropertyName,
-    String tenantId) {
-
-    this(rootPath, collectionPropertyName, tenantId, new ArrayList<>());
-  }
+  private final boolean hasCollectionDelete;
+  private final Collection<String> requiredProperties;
+  private final Map<String, Map<String, JsonObject>> storedResourcesByTenant;
+  private final String recordTypeName;
 
   public FakeStorageModule(
     String rootPath,
     String collectionPropertyName,
     String tenantId,
-    Collection<String> requiredProperties) {
+    Collection<String> requiredProperties,
+    boolean hasCollectionDelete,
+    String recordTypeName) {
 
     this.rootPath = rootPath;
     this.collectionPropertyName = collectionPropertyName;
     this.requiredProperties = requiredProperties;
+    this.hasCollectionDelete = hasCollectionDelete;
+    this.recordTypeName = recordTypeName;
 
     storedResourcesByTenant = new HashMap<>();
     storedResourcesByTenant.put(tenantId, new HashMap<>());
   }
 
   public void register(Router router) {
+    String pathTree = rootPath + "/*";
 
-    router.route().handler(this::checkTokenHeader);
+    router.route(pathTree).handler(this::checkTokenHeader);
 
-    router.post(rootPath + "*").handler(BodyHandler.create());
-    router.put(rootPath + "*").handler(BodyHandler.create());
+    router.post(pathTree).handler(BodyHandler.create());
+    router.put(pathTree).handler(BodyHandler.create());
 
     router.post(rootPath).handler(this::checkRequiredProperties);
     router.post(rootPath).handler(this::create);
@@ -67,6 +64,7 @@ public class FakeStorageModule extends AbstractVerticle {
   }
 
   private void create(RoutingContext routingContext) {
+
     WebContext context = new WebContext(routingContext);
 
     JsonObject body = getJsonFromBody(routingContext);
@@ -77,7 +75,9 @@ public class FakeStorageModule extends AbstractVerticle {
 
     getResourcesForTenant(context).put(id, body);
 
-    JsonResponse.created(routingContext.response(), body);
+    System.out.println(
+      String.format("Created %s resource: %s", recordTypeName, id));
+        JsonResponse.created(routingContext.response(), body);
   }
 
   private void replace(RoutingContext routingContext) {
@@ -90,10 +90,15 @@ public class FakeStorageModule extends AbstractVerticle {
     Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
 
     if(resourcesForTenant.containsKey(id)) {
+      System.out.println(
+        String.format("Replaced %s resource: %s", recordTypeName, id));
+
       resourcesForTenant.replace(id, body);
       SuccessResponse.noContent(routingContext.response());
     }
     else {
+      System.out.println(
+        String.format("Created %s resource: %s", recordTypeName, id));
       resourcesForTenant.put(id, body);
       SuccessResponse.noContent(routingContext.response());
     }
@@ -107,10 +112,14 @@ public class FakeStorageModule extends AbstractVerticle {
     Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
 
     if(resourcesForTenant.containsKey(id)) {
+      System.out.println(
+        String.format("Found %s resource: %s", recordTypeName, id));
       JsonResponse.success(routingContext.response(),
         resourcesForTenant.get(id));
     }
     else {
+      System.out.println(
+        String.format("Failed to find %s resource: %s", recordTypeName, id));
       ClientErrorResponse.notFound(routingContext.response());
     }
   }
@@ -122,13 +131,12 @@ public class FakeStorageModule extends AbstractVerticle {
     Integer offset = context.getIntegerParameter("offset", 0);
     String query = context.getStringParameter("query", null);
 
+    System.out.println(String.format("Handling %s", routingContext.request().uri()));
+
     Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
 
-    List<Predicate<JsonObject>> predicates = filterFromQuery(query);
-
-    List<JsonObject> filteredItems = resourcesForTenant.values().stream()
-      .filter(predicates.stream().reduce(Predicate::and).orElse(t -> false))
-      .collect(Collectors.toList());
+    List<JsonObject> filteredItems = new FakeCQLToJSONInterpreter(false)
+      .filterByQuery(resourcesForTenant.values(), query);
 
     List<JsonObject> pagedItems = filteredItems.stream()
       .skip(offset)
@@ -146,7 +154,12 @@ public class FakeStorageModule extends AbstractVerticle {
   private void empty(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
 
-    Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
+    if(!hasCollectionDelete) {
+      ClientErrorResponse.notFound(routingContext.response());
+      return;
+    }
+
+    Map <String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
 
     resourcesForTenant.clear();
 
@@ -183,77 +196,13 @@ public class FakeStorageModule extends AbstractVerticle {
   }
 
   private static boolean hasBody(RoutingContext routingContext) {
-    return routingContext.getBodyAsString() != null &&
-      routingContext.getBodyAsString().trim() != "";
-  }
-
-  private List<Predicate<JsonObject>> filterFromQuery(String query) {
-
-    if(query == null || query.trim() == "") {
-      ArrayList<Predicate<JsonObject>> predicates = new ArrayList<>();
-      predicates.add(t -> true);
-      return predicates;
-    }
-
-    List<ImmutableTriple<String, String, String>> pairs =
-      Arrays.stream(query.split(" and "))
-        .map( pairText -> {
-          String[] split = pairText.split("=|<>");
-          String searchField = split[0];
-
-          String searchTerm = split[1]
-            .replaceAll("\"", "")
-            .replaceAll("\\*", "");
-
-          if(pairText.contains("=")) {
-            return new ImmutableTriple<>(searchField, searchTerm, "=");
-          }
-          else {
-            return new ImmutableTriple<>(searchField, searchTerm, "<>");
-          }
-        })
-        .collect(Collectors.toList());
-
-    return pairs.stream()
-      .map(pair -> filterByField(pair.getLeft(), pair.getMiddle(), pair.getRight()))
-      .collect(Collectors.toList());
-  }
-
-  private Predicate<JsonObject> filterByField(String field, String term, String operator) {
-    return loan -> {
-      if (term == null || field == null) {
-        return true;
-      } else {
-
-        String propertyValue = "";
-
-        //TODO: Should bomb if property does not exist
-        if(field.contains(".")) {
-          String[] fields = field.split("\\.");
-
-          propertyValue = loan.getJsonObject(String.format("%s", fields[0]))
-            .getString(String.format("%s", fields[1]));
-        }
-        else {
-          propertyValue = loan.getString(String.format("%s", field));
-        }
-
-        switch(operator) {
-          case "=":
-            return propertyValue.contains(term);
-          case "<>":
-            return !propertyValue.contains(term);
-          default:
-            return false;
-        }
-      }
-    };
+    return StringUtils.isNotBlank(routingContext.getBodyAsString());
   }
 
   private void checkTokenHeader(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
 
-    if(context.getToken() == null || context.getToken() == "") {
+    if(StringUtils.isBlank(context.getToken())) {
       ClientErrorResponse.forbidden(routingContext.response());
     }
     else {
@@ -268,7 +217,7 @@ public class FakeStorageModule extends AbstractVerticle {
 
     requiredProperties.stream().forEach(requiredProperty -> {
       if(!body.getMap().containsKey(requiredProperty)) {
-        errors.add(new ValidationError(requiredProperty, null));
+        errors.add(new ValidationError(requiredProperty, ""));
       }
     });
 
@@ -277,7 +226,7 @@ public class FakeStorageModule extends AbstractVerticle {
     }
     else {
       JsonResponse.unprocessableEntity(routingContext.response(),
-        "Missing required properties", errors);
+        "Required properties missing", errors);
     }
   }
 }

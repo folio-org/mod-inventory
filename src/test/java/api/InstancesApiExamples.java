@@ -1,6 +1,7 @@
 package api;
 
 import api.support.ApiRoot;
+import api.support.ApiTests;
 import api.support.InstanceApiClient;
 import api.support.Preparation;
 import com.github.jsonldjava.core.DocumentLoader;
@@ -14,7 +15,6 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
 import org.apache.http.message.BasicHeader;
 import org.folio.inventory.support.JsonArrayHelper;
-import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
 import org.junit.Assert;
@@ -36,21 +36,9 @@ import static api.support.InstanceSamples.*;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
 
-public class InstancesApiExamples {
-  private final OkapiHttpClient okapiClient;
-
+public class InstancesApiExamples extends ApiTests {
   public InstancesApiExamples() throws MalformedURLException {
-    okapiClient = ApiTestSuite.createOkapiHttpClient();
-  }
-
-  @Before
-  public void setup()
-    throws InterruptedException,
-    MalformedURLException,
-    TimeoutException,
-    ExecutionException {
-
-    new Preparation(okapiClient).deleteInstances();
+    super();
   }
 
   @Test
@@ -66,8 +54,8 @@ public class InstancesApiExamples {
       .put("identifiers", new JsonArray().add(new JsonObject()
         .put("identifierTypeId", ApiTestSuite.getIsbnIdentifierType())
         .put("value", "9781473619777")))
-      .put("creators", new JsonArray().add(new JsonObject()
-        .put("creatorTypeId", ApiTestSuite.getPersonalCreatorType())
+      .put("contributors", new JsonArray().add(new JsonObject()
+        .put("contributorNameTypeId", ApiTestSuite.getPersonalContributorNameType())
         .put("name", "Chambers, Becky")))
       .put("source", "Local")
       .put("instanceTypeId", ApiTestSuite.getBooksInstanceType());
@@ -107,13 +95,13 @@ public class InstancesApiExamples {
 
     assertThat(firstIdentifier.getString("value"), is("9781473619777"));
 
-    JsonObject firstCreator = createdInstance.getJsonArray("creators")
+    JsonObject firstContributor = createdInstance.getJsonArray("contributors")
       .getJsonObject(0);
 
-    assertThat(firstCreator.getString("creatorTypeId"),
-      is(ApiTestSuite.getPersonalCreatorType()));
+    assertThat(firstContributor.getString("contributorNameTypeId"),
+      is(ApiTestSuite.getPersonalContributorNameType()));
 
-    assertThat(firstCreator.getString("name"), is("Chambers, Becky"));
+    assertThat(firstContributor.getString("name"), is("Chambers, Becky"));
 
     expressesDublinCoreMetadata(createdInstance);
     dublinCoreContextLinkRespectsWayResourceWasReached(createdInstance);
@@ -137,8 +125,8 @@ public class InstancesApiExamples {
       .put("identifiers", new JsonArray().add(new JsonObject()
       .put("identifierTypeId", ApiTestSuite.getIsbnIdentifierType())
       .put("value", "9781473619777")))
-      .put("creators", new JsonArray().add(new JsonObject()
-      .put("creatorTypeId", ApiTestSuite.getPersonalCreatorType())
+      .put("contributors", new JsonArray().add(new JsonObject()
+      .put("contributorNameTypeId", ApiTestSuite.getPersonalContributorNameType())
       .put("name", "Chambers, Becky")))
       .put("source", "Local")
       .put("instanceTypeId", ApiTestSuite.getBooksInstanceType());
@@ -178,13 +166,13 @@ public class InstancesApiExamples {
 
     assertThat(firstIdentifier.getString("value"), is("9781473619777"));
 
-    JsonObject firstCreator = createdInstance.getJsonArray("creators")
+    JsonObject firstContributor = createdInstance.getJsonArray("contributors")
       .getJsonObject(0);
 
-    assertThat(firstCreator.getString("creatorTypeId"),
-      is(ApiTestSuite.getPersonalCreatorType()));
+    assertThat(firstContributor.getString("contributorNameTypeId"),
+      is(ApiTestSuite.getPersonalContributorNameType()));
 
-    assertThat(firstCreator.getString("name"), is("Chambers, Becky"));
+    assertThat(firstContributor.getString("name"), is("Chambers, Becky"));
 
     expressesDublinCoreMetadata(createdInstance);
     dublinCoreContextLinkRespectsWayResourceWasReached(createdInstance);

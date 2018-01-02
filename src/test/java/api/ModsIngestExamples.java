@@ -1,50 +1,38 @@
 package api;
 
 import api.support.ApiRoot;
-import api.support.Preparation;
+import api.support.ApiTests;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.awaitility.Duration;
 import org.folio.inventory.support.JsonArrayHelper;
-import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Predicate;
 
+import static api.ApiTestSuite.storageOkapiUrl;
 import static io.restassured.RestAssured.given;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertThat;
 
-public class ModsIngestExamples {
-  private final OkapiHttpClient okapiClient;
-
+public class ModsIngestExamples extends ApiTests {
   public ModsIngestExamples() throws MalformedURLException {
-    okapiClient = ApiTestSuite.createOkapiHttpClient();
-  }
-
-  @Before
-  public void setup()
-    throws InterruptedException,
-    MalformedURLException,
-    TimeoutException,
-    ExecutionException {
-
-    Preparation preparation = new Preparation(okapiClient);
-    preparation.deleteInstances();
-    preparation.deleteItems();
+    super();
   }
 
   @Test
@@ -58,7 +46,7 @@ public class ModsIngestExamples {
       "mods/multiple-example-mods-records.xml");
 
     String statusLocation = given()
-      .header("X-Okapi-Url", ApiTestSuite.storageOkapiUrl())
+      .header("X-Okapi-Url", storageOkapiUrl())
       .header("X-Okapi-Tenant", ApiTestSuite.TENANT_ID)
       .header("X-Okapi-Token", ApiTestSuite.TOKEN)
       .multiPart("record", modsFile)
@@ -68,12 +56,61 @@ public class ModsIngestExamples {
       .statusCode(202)
       .extract().header("location");
 
-    await().atMost(new Duration(10, TimeUnit.SECONDS))
-      .untilAsserted(() -> {
-        ingestJobHasCompleted(statusLocation);
-        expectedInstancesCreatedFromIngest();
-        expectedItemsCreatedFromIngest();
-      });
+    await()
+      .pollDelay(new Duration(1, TimeUnit.SECONDS))
+      .atMost(new Duration(10, TimeUnit.SECONDS))
+      .catchUncaughtExceptions()
+      .untilAsserted(() -> ingestJobHasCompleted(statusLocation));
+
+    List<JsonObject> instances = instancesClient.getAll();
+
+    //TODO: Use business logic interface when built
+    //likely after RAML module builder upgrade
+    List<JsonObject> holdings = holdingsStorageClient.getAll();
+
+    List<JsonObject> items = itemsClient.getAll();
+
+    assertThat("Should have right number of instances", instances.size(), is(9));
+    assertThat("Should have right number of holdings", holdings.size(), is(9));
+    assertThat("Should have right number of items", items.size(), is(9));
+
+    expectedRelatedHoldingAndItem(instances, holdings, items,
+      "California: its gold and its inhabitants",
+      "Huntley, Henry Veel", "69228882");
+
+    expectedRelatedHoldingAndItem(instances, holdings, items,
+      "Studien zur Geschichte der Notenschrift.",
+      "Riemann, Karl Wilhelm J. Hugo.", "69247446");
+
+    expectedRelatedHoldingAndItem(instances, holdings, items,
+      "Essays on C.S. Lewis and George MacDonald",
+      "Marshall, Cynthia.", "53556908");
+
+    expectedRelatedHoldingAndItem(instances, holdings, items,
+      "Statistical sketches of Upper Canada",
+      "Dunlop, William", "69077747");
+
+    expectedRelatedHoldingAndItem(instances, holdings, items,
+      "Edward McGuire, RHA", "Fallon, Brian.", "22169083");
+
+    expectedRelatedHoldingAndItem(instances, holdings, items,
+      "Influenza della Poesia sui Costumi",
+      "MABIL, Pier Luigi.", "43620390");
+
+    expectedRelatedHoldingAndItem(instances, holdings, items,
+      "Pavle Nik", "Božović, Ratko.", "37696876");
+
+    expectedRelatedHoldingAndItem(instances, holdings, items,
+      "Grammaire", "Riemann, Othon.", "69250051");
+
+    expectedRelatedHoldingAndItem(instances, holdings, items,
+      "Angry Planet", "Unknown contributor", "67437645");
+
+    instancesHaveExpectedProperties(instances);
+    holdingsHaveExpectedProperties(holdings);
+    itemsHaveExpectedProperties(items);
+    itemsHaveExpectedDerivedProperties(items);
+    storedItemsDoNotHaveDerivedProperties();
   }
 
   @Test
@@ -83,7 +120,7 @@ public class ModsIngestExamples {
     File modsFile = loadFileFromResource("mods/multiple-example-mods-records.xml");
 
     given()
-      .header("X-Okapi-Url", ApiTestSuite.storageOkapiUrl())
+      .header("X-Okapi-Url", storageOkapiUrl())
       .header("X-Okapi-Tenant", ApiTestSuite.TENANT_ID)
       .header("X-Okapi-Token", ApiTestSuite.TOKEN)
       .multiPart("record", modsFile)
@@ -92,6 +129,75 @@ public class ModsIngestExamples {
       .then()
       .statusCode(400)
       .body(is("Cannot parse multiple files in a single request"));
+  }
+
+  private void expectedRelatedHoldingAndItem(
+    List<JsonObject> instances,
+    List<JsonObject> holdings,
+    List<JsonObject> items, String title,
+    String contributor,
+    String barcode) {
+
+    Optional<JsonObject> possibleInstance = instances.stream()
+      .filter(instance -> InstanceEntitled(instance, title))
+      .findFirst();
+
+    assertThat(possibleInstance.isPresent(), is(true));
+
+    JsonObject instance = possibleInstance.get();
+
+    assertThat("instance has contributor",
+      hasContributor(instance, contributor), is(true));
+
+    String instanceId = instance.getString("id");
+    String instanceTitle = instance.getString("title");
+
+    Optional<JsonObject> possibleHolding = findFirst(holdings,
+      holdingForInstance(instanceId));
+
+    assertThat(String.format("Instance %s: %s should have a holding (holdings: %s)",
+      instanceId, instanceTitle, holdings),
+      possibleHolding.isPresent(), is(true));
+
+    String holdingId = possibleHolding.get().getString("id");
+
+    Optional<JsonObject> possibleItem = findFirst(items, itemForHolding(holdingId));
+
+    assertThat(String.format("Holding %s for %s should have an item (items: %s)",
+      holdingId, instanceTitle, items),
+      possibleItem.isPresent(), is(true));
+
+    assertThat("item should have correct barcode",
+      possibleItem.get().getString("barcode"), is(barcode));
+  }
+
+  private boolean hasContributor(
+    JsonObject instance,
+    String expectedContributorName) {
+
+    if(Objects.isNull(instance) || !instance.containsKey("contributors")) {
+      return false;
+    }
+
+    return JsonArrayHelper.toList(instance.getJsonArray("contributors")).stream()
+      .anyMatch(contributor -> contributor.getString("name").contains(expectedContributorName));
+  }
+
+  private Optional<JsonObject> findFirst(
+    Collection<JsonObject> collection,
+    Predicate<JsonObject> predicate) {
+
+    return collection.stream()
+      .filter(predicate)
+      .findFirst();
+  }
+
+  private Predicate<JsonObject> holdingForInstance(String instanceId) {
+    return holding -> StringUtils.equals(holding.getString("instanceId"), instanceId);
+  }
+
+  private Predicate<JsonObject> itemForHolding(String holdingId) {
+    return item -> StringUtils.equals(item.getString("holdingsRecordId"), holdingId);
   }
 
   private void ingestJobHasCompleted(String statusLocation)
@@ -105,127 +211,33 @@ public class ModsIngestExamples {
 
     Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
 
-    assertThat(getResponse.getStatusCode(), is(200));
-    assertThat(getResponse.getJson().getString("status"), is("Completed"));
+    assertThat("Should be able to get ingest job status",
+      getResponse.getStatusCode(), is(200));
+
+    assertThat("Ingest status should be completed",
+      getResponse.getJson().getString("status"), is("Completed"));
   }
 
-  private void expectedItemsCreatedFromIngest()
-    throws MalformedURLException,
-    InterruptedException,
-    ExecutionException,
-    TimeoutException {
-
-    CompletableFuture<Response> getAllCompleted = new CompletableFuture<>();
-
-    okapiClient.get(ApiRoot.items(), ResponseHandler.json(getAllCompleted));
-
-    Response getAllResponse = getAllCompleted.get(5, TimeUnit.SECONDS);
-
-    List<JsonObject> items = JsonArrayHelper.toList(
-      getAllResponse.getJson().getJsonArray("items"));
-
-    assertThat(items.size(), is(8));
-
-    //TODO: Could be replaced with separate loop per property for clearer feedback
-    items.stream().forEach(item -> {
-      assertThat(item.containsKey("id"), is(true));
-      assertThat(item.containsKey("title"), is(true));
-      assertThat(item.containsKey("barcode"), is(true));
-      assertThat(item.containsKey("instanceId"), is(true));
-      assertThat(item.getJsonObject("status").getString("name"), is("Available"));
-
-      assertThat(item.getJsonObject("materialType")
-        .getString("id"), is(ApiTestSuite.getBookMaterialType()));
-
-      assertThat(item.getJsonObject("materialType").getString("name"), is("Book"));
-
-      assertThat(item.getJsonObject("permanentLocation").getString("name"),
-        is("Main Library"));
-    });
-
-    assertThat(items.stream().anyMatch( item ->
-      itemSimilarTo(item, "California: its gold and its inhabitants", "69228882")),
-      is(true));
-
-    assertThat(items.stream().anyMatch(item ->
-      itemSimilarTo(item, "Studien zur Geschichte der Notenschrift.", "69247446")),
-      is(true));
-
-    assertThat(items.stream().anyMatch(item ->
-      itemSimilarTo(item, "Essays on C.S. Lewis and George MacDonald", "53556908")),
-      is(true));
-
-    assertThat(items.stream().anyMatch(item ->
-      itemSimilarTo(item, "Statistical sketches of Upper Canada", "69077747")),
-      is(true));
-
-    assertThat(items.stream().anyMatch(item ->
-      itemSimilarTo(item, "Edward McGuire, RHA", "22169083")), is(true));
-
-    assertThat(items.stream().anyMatch(item ->
-      itemSimilarTo(item, "Influenza della Poesia sui Costumi", "43620390")),
-      is(true));
-
-    assertThat(items.stream().anyMatch(item ->
-      itemSimilarTo(item, "Pavle Nik", "37696876")), is(true));
-
-    assertThat(items.stream().anyMatch(item ->
-      itemSimilarTo(item, "Grammaire", "69250051")), is(true));
-
-    items.stream().forEach(item -> {
-      try {
-        hasCorrectInstanceRelationship(item);
-      } catch (Exception e) {
-        Assert.fail(e.toString());
-      }
-    });
-  }
-
-  private void hasCorrectInstanceRelationship(JsonObject item)
-    throws MalformedURLException,
-    InterruptedException,
-    ExecutionException,
-    TimeoutException {
-
-    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
-
-    okapiClient.get(new URL(String.format("%s/%s", ApiRoot.instances(),
-      item.getString("instanceId"))), ResponseHandler.json(getCompleted));
-
-    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
-
-    assertThat(getResponse.getStatusCode(), is(200));
-    assertThat(getResponse.getJson().getString("title"), is(item.getString("title")));
-  }
-
-  private void expectedInstancesCreatedFromIngest()
-    throws MalformedURLException,
-    InterruptedException,
-    ExecutionException,
-    TimeoutException {
-
-    CompletableFuture<Response> getAllCompleted = new CompletableFuture<>();
-
-    okapiClient.get(ApiRoot.instances(), ResponseHandler.json(getAllCompleted));
-
-    Response getAllResponse = getAllCompleted.get(5, TimeUnit.SECONDS);
-
-    List<JsonObject> instances = JsonArrayHelper.toList(
-      getAllResponse.getJson().getJsonArray("instances"));
-
-    assertThat(instances.size(), is(8));
-
-    //TODO: Could be replaced with separate loop per property for clearer feedback
+  private void instancesHaveExpectedProperties(List<JsonObject> instances) {
     instances.stream().forEach(instance -> {
-      assertThat(instance.containsKey("id"), is(true));
-      assertThat(instance.containsKey("title"), is(true));
+      assertThat("instance identifier should have an ID",
+        instance.containsKey("id"), is(true));
 
-      assertThat(instance.containsKey("instanceTypeId"), is(true));
-      assertThat(instance.getString("instanceTypeId"), is(ApiTestSuite.getBooksInstanceType()));
+      assertThat("instance should have a title",
+        instance.containsKey("title"), is(true));
 
-      assertThat(instance.containsKey("source"), is(true));
+      assertThat("instance should have a type",
+        instance.containsKey("instanceTypeId"), is(true));
 
-      assertThat(instance.containsKey("identifiers"), is(true));
+      assertThat("instance type should be books",
+        instance.getString("instanceTypeId"),
+        is(ApiTestSuite.getBooksInstanceType()));
+
+      assertThat("instance should have a source",
+        instance.containsKey("source"), is(true));
+
+      assertThat("instance should have identifiers",
+        instance.containsKey("identifiers"), is(true));
 
       List<JsonObject> identifiers = JsonArrayHelper.toList(
         instance.getJsonArray("identifiers"));
@@ -233,56 +245,104 @@ public class ModsIngestExamples {
       assertThat(identifiers.size(), is(greaterThan(0)));
 
       identifiers.stream().forEach(identifier -> {
-        assertThat(identifier.containsKey("identifierTypeId"), is(true));
+        assertThat("instance identifier should have a type",
+          identifier.containsKey("identifierTypeId"), is(true));
+
         //Identifier type should be derived from MODS data, however for the moment,
         //default to ISBN
-        assertThat(identifier.getString("identifierTypeId"), is(ApiTestSuite.getIsbnIdentifierType()));
+        assertThat("instance identifier should be ISBN",
+          identifier.getString("identifierTypeId"), is(ApiTestSuite.getIsbnIdentifierType()));
 
-        assertThat(identifier.containsKey("value"), is(true));
+        assertThat("instance identifier should have a value",
+          identifier.containsKey("value"), is(true));
       });
 
-      List<JsonObject> creators = JsonArrayHelper.toList(
-        instance.getJsonArray("creators"));
+      List<JsonObject> contributors = JsonArrayHelper.toList(
+        instance.getJsonArray("contributors"));
 
-      creators.stream().forEach(creator -> {
-        assertThat(creator.containsKey("creatorTypeId"), is(true));
+      contributors.stream().forEach(contributor -> {
+        assertThat(contributor.containsKey("contributorNameTypeId"), is(true));
+
         //Identifier type should be derived from MODS data, however for the moment,
-        //default to Personal name
-        assertThat(creator.getString("creatorTypeId"), is(ApiTestSuite.getPersonalCreatorType()));
+        //default to personal name
+        assertThat(contributor.getString("contributorNameTypeId"),
+          is(ApiTestSuite.getPersonalContributorNameType()));
 
-        assertThat(creator.containsKey("name"), is(true));
+        assertThat(contributor.containsKey("name"), is(true));
       });
     });
+  }
 
-    assertThat(instances.stream().anyMatch(instance ->
-      InstanceSimilarTo(instance, "California: its gold and its inhabitants",
-        "Huntley, Henry Veel")), is(true));
+  private void holdingsHaveExpectedProperties(List<JsonObject> holdings) {
+    //TODO: Could be replaced with separate loop per property for clearer feedback
+    holdings.stream().forEach(holding -> {
+      assertThat("holding should have an ID",
+        holding.containsKey("id"), is(true));
 
-    assertThat(instances.stream().anyMatch(instance ->
-      InstanceSimilarTo(instance, "Studien zur Geschichte der Notenschrift.",
-        "Riemann, Karl Wilhelm J. Hugo.")), is(true));
+      assertThat("holding should have an instance",
+        holding.containsKey("instanceId"), is(true));
 
-    assertThat(instances.stream().anyMatch(instance ->
-      InstanceSimilarTo(instance, "Essays on C.S. Lewis and George MacDonald",
-        "Marshall, Cynthia.")), is(true));
+      assertThat("holding should have a permanent location",
+        holding.containsKey("permanentLocationId"), is(true));
 
-    assertThat(instances.stream().anyMatch(instance ->
-      InstanceSimilarTo(instance, "Statistical sketches of Upper Canada",
-        "Dunlop, William")), is(true));
+      assertThat("holding permanent location should be main library",
+        holding.getString("permanentLocationId"),
+        is(ApiTestSuite.getMainLibraryLocation()));
+    });
+  }
 
-    assertThat(instances.stream().anyMatch(instance ->
-      InstanceSimilarTo(instance, "Edward McGuire, RHA", "Fallon, Brian.")),
-      is(true));
+  private void itemsHaveExpectedProperties(List<JsonObject> items) {
+    //TODO: Could be replaced with separate loop per property for clearer feedback
+    items.stream().forEach(item -> {
+      assertThat("item should have an ID",
+        item.containsKey("id"), is(true));
 
-    assertThat(instances.stream().anyMatch(instance ->
-      InstanceSimilarTo(instance, "Influenza della Poesia sui Costumi",
-      "MABIL, Pier Luigi.")), is(true));
+      assertThat("item should have a barcode",
+        item.containsKey("barcode"), is(true));
 
-    assertThat(instances.stream().anyMatch(instance ->
-      InstanceSimilarTo(instance, "Pavle Nik", "Božović, Ratko.")), is(true));
+      assertThat("item should have a holding",
+        item.containsKey("holdingsRecordId"), is(true));
 
-    assertThat(instances.stream().anyMatch(instance ->
-      InstanceSimilarTo(instance, "Grammaire", "Riemann, Othon.")), is(true));
+      assertThat("item should have a status",
+        item.getJsonObject("status").getString("name"), is("Available"));
+
+      assertThat("item should be a book material type",
+        item.getJsonObject("materialType").getString("id"),
+        is(ApiTestSuite.getBookMaterialType()));
+
+      assertThat("item should be a book material type",
+        item.getJsonObject("materialType").getString("name"), is("Book"));
+    });
+  }
+
+  private void itemsHaveExpectedDerivedProperties(List<JsonObject> items) {
+    //TODO: Could be replaced with separate loop per property for clearer feedback
+    items.stream().forEach(item -> {
+      assertThat("item should not have a derived title",
+        item.containsKey("title"), is(true));
+
+      assertThat("item should have a derived permanent location",
+        item.getJsonObject("permanentLocation").getString("name"),
+        is("Main Library"));
+    });
+  }
+
+  private void storedItemsDoNotHaveDerivedProperties()
+    throws MalformedURLException,
+    InterruptedException,
+    ExecutionException,
+    TimeoutException {
+
+    List<JsonObject> storedItems = itemsStorageClient.getAll();
+
+    //TODO: Could be replaced with separate loop per property for clearer feedback
+    storedItems.stream().forEach(item -> {
+      assertThat("Stored item should not have a title",
+        item.containsKey("title"), is(false));
+
+      assertThat("Stored item should not have a permanent location",
+        item.containsKey("permanentLocationId"), is(false));
+    });
   }
 
   private static URL getIngestUrl() throws MalformedURLException {
@@ -295,23 +355,10 @@ public class ModsIngestExamples {
     return new File(classLoader.getResource(filename).getFile());
   }
 
-  private static boolean itemSimilarTo(
-    JsonObject record,
-    String expectedSimilarTitle,
-    String expectedBarcode) {
+  private static boolean InstanceEntitled(
+    JsonObject instance,
+    String title) {
 
-    return record.getString("title").contains(expectedSimilarTitle) &&
-      StringUtils.equals(record.getString("barcode"), expectedBarcode);
-  }
-
-  private static boolean InstanceSimilarTo(
-    JsonObject record,
-    String expectedSimilarTitle,
-    String expectedCreatorSimilarTo) {
-
-    return record.getString("title").contains(expectedSimilarTitle) &&
-      JsonArrayHelper.toList(record.getJsonArray("creators")).stream()
-        .anyMatch(creator -> creator.getString("name")
-          .contains(expectedCreatorSimilarTo));
+    return instance.getString("title").contains(title);
   }
 }

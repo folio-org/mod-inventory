@@ -158,6 +158,6 @@ public class OkapiHttpClient {
 
   private void jsonContentType(HttpClientRequest request) {
     request.putHeader(HttpHeaders.CONTENT_TYPE.toString(),
-      ContentType.APPLICATION_JSON.toString());
+      ContentType.APPLICATION_JSON);
   }
 }

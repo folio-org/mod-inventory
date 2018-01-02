@@ -15,9 +15,9 @@
           "value": "9781466636897"
         }
       ],
-      "creators": [
+      "contributors": [
         {
-          "creatorTypeId": "2b94c631-fca9-a892-c730-03ee529ffe2a",
+          "contributorNameTypeId": "2b94c631-fca9-a892-c730-03ee529ffe2a",
           "name": "Samuels, Simon"
         }
       ]
@@ -37,9 +37,9 @@
           "value": "9781466639195"
         }
       ],
-      "creators": [
+      "contributors": [
         {
-          "creatorTypeId": "2b94c631-fca9-a892-c730-03ee529ffe2a",
+          "contributorNameTypeId": "2b94c631-fca9-a892-c730-03ee529ffe2a",
           "name": "Jules, Julian"
         }
       ]

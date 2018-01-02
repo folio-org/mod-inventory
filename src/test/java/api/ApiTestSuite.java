@@ -1,5 +1,8 @@
 package api;
 
+import api.items.ItemApiExamples;
+import api.items.ItemApiLocationExamples;
+import api.items.ItemApiTitleExamples;
 import api.support.ControlledVocabularyPreparation;
 import io.vertx.core.Vertx;
 import org.folio.inventory.InventoryVerticle;
@@ -24,6 +27,8 @@ import java.util.concurrent.TimeoutException;
 @Suite.SuiteClasses({
   InstancesApiExamples.class,
   ItemApiExamples.class,
+  ItemApiLocationExamples.class,
+  ItemApiTitleExamples.class,
   ModsIngestExamples.class
 })
 public class ApiTestSuite {
@@ -44,7 +49,7 @@ public class ApiTestSuite {
   private static String isbnIdentifierTypeId;
   private static String asinIdentifierTypeId;
   private static String booksInstanceTypeId;
-  private static String personalCreatorTypeId;
+  private static String personalContributorNameTypeId;
 
   private static VertxAssistant vertxAssistant = new VertxAssistant();
   private static String inventoryModuleDeploymentId;
@@ -55,6 +60,8 @@ public class ApiTestSuite {
   private static Boolean useOkapiForStorageRequests =
     Boolean.parseBoolean(System.getProperty("use.okapi.storage.requests", ""));
   private static String okapiAddress = System.getProperty("okapi.address", "");
+
+  private static boolean initialised;
 
   @BeforeClass
   public static void before()
@@ -76,8 +83,10 @@ public class ApiTestSuite {
     createLocations();
     createIdentifierTypes();
     createInstanceTypes();
-    createCreatorTypes();
+    createContributorNameTypes();
     startInventoryVerticle();
+
+    initialised = true;
   }
 
   @AfterClass
@@ -87,7 +96,13 @@ public class ApiTestSuite {
     stopInventoryVerticle();
     stopFakeModules();
     stopVertx();
+
+    initialised = false;
   };
+
+  public static boolean isNotInitialised() {
+    return !initialised;
+  }
 
   public static String getBookMaterialType() {
     return bookMaterialTypeId;
@@ -125,8 +140,8 @@ public class ApiTestSuite {
     return booksInstanceTypeId;
   }
 
-  public static String getPersonalCreatorType() {
-    return personalCreatorTypeId;
+  public static String getPersonalContributorNameType() {
+    return personalContributorNameTypeId;
   }
 
   public static OkapiHttpClient createOkapiHttpClient()
@@ -140,7 +155,7 @@ public class ApiTestSuite {
           it.toString())));
   }
 
-  static String storageOkapiUrl() {
+  public static String storageOkapiUrl() {
     if(useOkapiForStorageRequests) {
       return okapiAddress;
     }
@@ -308,7 +323,7 @@ public class ApiTestSuite {
     booksInstanceTypeId = instanceTypesPreparation.createOrReferenceTerm("Books");
   }
 
-  private static void createCreatorTypes()
+  private static void createContributorNameTypes()
     throws MalformedURLException,
     InterruptedException,
     ExecutionException,
@@ -316,11 +331,11 @@ public class ApiTestSuite {
 
     OkapiHttpClient client = createOkapiHttpClient();
 
-    URL creatorTypes = new URL(String.format("%s/creator-types", storageOkapiUrl()));
+    URL contributorNameTypes = new URL(String.format("%s/contributor-name-types", storageOkapiUrl()));
 
-    ControlledVocabularyPreparation creatorTypesPreparation =
-      new ControlledVocabularyPreparation(client, creatorTypes, "creatorTypes");
+    ControlledVocabularyPreparation contributorNameTypesPreparation =
+      new ControlledVocabularyPreparation(client, contributorNameTypes, "contributorNameTypes");
 
-    personalCreatorTypeId = creatorTypesPreparation.createOrReferenceTerm("Personal name");
+    personalContributorNameTypeId = contributorNameTypesPreparation.createOrReferenceTerm("Personal name");
   }
 }

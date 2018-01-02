@@ -10,6 +10,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -93,37 +94,28 @@ public class ExternalItemCollectionExamples {
     assertThat(allItems.size(), is(3));
     assertThat(wrappedItems.totalRecords, is(3));
 
-    Item smallAngry = getItem(allItems, "Long Way to a Small Angry Planet");
+    Item smallAngry = getItem(allItems, "036000291452");
 
     assertThat(smallAngry, notNullValue());
-    assertThat(smallAngry.barcode, is("036000291452"));
     assertThat(smallAngry.status, is("Available"));
-    assertThat(smallAngry.instanceId, is(notNullValue()));
     assertThat(smallAngry.materialTypeId, is(bookMaterialTypeId));
     assertThat(smallAngry.permanentLoanTypeId, is(canCirculateLoanTypeId));
-    assertThat(smallAngry.permanentLocationId, is(mainLibraryLocationId));
     assertThat(smallAngry.temporaryLocationId, is(annexLibraryLocationId));
 
-    Item nod = getItem(allItems, "Nod");
+    Item nod = getItem(allItems, "565578437802");
 
     assertThat(nod, notNullValue());
-    assertThat(nod.barcode, is("565578437802"));
     assertThat(nod.status, is("Available"));
-    assertThat(nod.instanceId, is(notNullValue()));
     assertThat(nod.materialTypeId, is(bookMaterialTypeId));
     assertThat(nod.permanentLoanTypeId, is(canCirculateLoanTypeId));
-    assertThat(nod.permanentLocationId, is(mainLibraryLocationId));
     assertThat(nod.temporaryLocationId, is(annexLibraryLocationId));
 
-    Item uprooted = getItem(allItems, "Uprooted");
+    Item uprooted = getItem(allItems, "657670342075");
 
     assertThat(uprooted, notNullValue());
-    assertThat(uprooted.barcode, is("657670342075"));
     assertThat(uprooted.status, is("Available"));
-    assertThat(uprooted.instanceId, is(notNullValue()));
     assertThat(uprooted.materialTypeId, is(bookMaterialTypeId));
     assertThat(uprooted.permanentLoanTypeId, is(canCirculateLoanTypeId));
-    assertThat(uprooted.permanentLocationId, is(mainLibraryLocationId));
     assertThat(uprooted.temporaryLocationId, is(annexLibraryLocationId));
   }
 
@@ -171,9 +163,7 @@ public class ExternalItemCollectionExamples {
     Item updated = getOnCompletion(gotUpdated);
 
     assertThat(updated.id, is(added.id));
-    assertThat(updated.title, is(added.title));
     assertThat(updated.barcode, is(added.barcode));
-    assertThat(updated.permanentLocationId, is(added.permanentLocationId));
     assertThat(updated.temporaryLocationId, is(added.temporaryLocationId));
     assertThat(updated.materialTypeId, is(added.materialTypeId));
     assertThat(updated.permanentLoanTypeId, is(added.permanentLoanTypeId));
@@ -254,44 +244,6 @@ public class ExternalItemCollectionExamples {
   }
 
   @Test
-  public void itemsCanBeFoundByByPartialName()
-    throws InterruptedException,
-    ExecutionException,
-    TimeoutException,
-    UnsupportedEncodingException {
-
-    CompletableFuture<Item> firstAddFuture = new CompletableFuture<>();
-    CompletableFuture<Item> secondAddFuture = new CompletableFuture<>();
-    CompletableFuture<Item> thirdAddFuture = new CompletableFuture<>();
-
-    collection.add(smallAngryPlanet, succeed(firstAddFuture),
-      fail(firstAddFuture));
-    collection.add(nod, succeed(secondAddFuture),
-      fail(secondAddFuture));
-    collection.add(uprooted, succeed(thirdAddFuture),
-      fail(thirdAddFuture));
-
-    CompletableFuture<Void> allAddsFuture = CompletableFuture.allOf(firstAddFuture,
-      secondAddFuture, thirdAddFuture);
-
-    getOnCompletion(allAddsFuture);
-
-    Item addedSmallAngryPlanet = getOnCompletion(firstAddFuture);
-
-    CompletableFuture<MultipleRecords<Item>> findFuture = new CompletableFuture<>();
-
-    collection.findByCql("title=\"*Small Angry*\"", new PagingParameters(10, 0),
-      succeed(findFuture), fail(findFuture));
-
-    MultipleRecords<Item> wrappedItems = getOnCompletion(findFuture);
-
-    assertThat(wrappedItems.records.size(), is(1));
-    assertThat(wrappedItems.totalRecords, is(1));
-
-    assertThat(wrappedItems.records.stream().findFirst().get().id, is(addedSmallAngryPlanet.id));
-  }
-
-  @Test
   public void itemsCanBeFoundByBarcode()
     throws InterruptedException,
     ExecutionException,
@@ -358,23 +310,17 @@ public class ExternalItemCollectionExamples {
     Item otherFoundItem = getOnCompletion(otherFindFuture);
 
     assertThat(foundItem, notNullValue());
-    assertThat(foundItem.title, is("Long Way to a Small Angry Planet"));
-    assertThat(foundItem.instanceId, is(smallAngryPlanet.instanceId));
     assertThat(foundItem.barcode, is("036000291452"));
     assertThat(foundItem.status, is("Available"));
     assertThat(foundItem.materialTypeId, is(bookMaterialTypeId));
     assertThat(foundItem.permanentLoanTypeId, is(canCirculateLoanTypeId));
-    assertThat(foundItem.permanentLocationId, is(mainLibraryLocationId));
     assertThat(foundItem.temporaryLocationId, is(annexLibraryLocationId));
 
     assertThat(otherFoundItem, notNullValue());
-    assertThat(otherFoundItem.title, is("Nod"));
-    assertThat(otherFoundItem.instanceId, is(nod.instanceId));
     assertThat(otherFoundItem.barcode, is("565578437802"));
     assertThat(otherFoundItem.status, is("Available"));
     assertThat(otherFoundItem.materialTypeId, is(bookMaterialTypeId));
     assertThat(otherFoundItem.permanentLoanTypeId, is(canCirculateLoanTypeId));
-    assertThat(otherFoundItem.permanentLocationId, is(mainLibraryLocationId));
     assertThat(otherFoundItem.temporaryLocationId, is(annexLibraryLocationId));
   }
 
@@ -391,38 +337,48 @@ public class ExternalItemCollectionExamples {
   }
 
   private Item smallAngryPlanet() {
-    return new Item(null, "Long Way to a Small Angry Planet", "036000291452",
-      UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
-      mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null);
+    return new Item(null, "036000291452",
+      null, null, new ArrayList<>(), null,
+      null, new ArrayList<>(),
+      "Available", bookMaterialTypeId,
+      annexLibraryLocationId, canCirculateLoanTypeId, null);
   }
 
   private Item nod() {
-    return new Item(null, "Nod", "565578437802",
-      UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
-      mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null);
+    return new Item(null, "565578437802",
+      null, null, new ArrayList<>(), null,
+      null, new ArrayList<>(),
+      "Available", bookMaterialTypeId,
+      annexLibraryLocationId, canCirculateLoanTypeId, null);
   }
 
   private Item uprooted() {
-    return new Item(null, "Uprooted", "657670342075",
-      UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
-      mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null);
+    return new Item(null, "657670342075",
+      null, null, new ArrayList<>(), null,
+      null, new ArrayList<>(),
+      "Available", bookMaterialTypeId,
+      annexLibraryLocationId, canCirculateLoanTypeId, null);
   }
 
   private Item temeraire() {
-    return new Item(null, "Temeraire", "232142443432",
-      UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
-      mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null);
+    return new Item(null, "232142443432",
+      null, null, new ArrayList<>(), null,
+      null, new ArrayList<>(),
+      "Available", bookMaterialTypeId,
+      annexLibraryLocationId, canCirculateLoanTypeId, null);
   }
 
   private Item interestingTimes() {
-    return new Item(null, "Interesting Times", "56454543534",
-      UUID.randomUUID().toString(), "Available", bookMaterialTypeId,
-      mainLibraryLocationId, annexLibraryLocationId, canCirculateLoanTypeId, null);
+    return new Item(null, "56454543534",
+      null, null, new ArrayList<>(), null,
+      null, new ArrayList<>(),
+      "Available", bookMaterialTypeId,
+      annexLibraryLocationId, canCirculateLoanTypeId, null);
   }
 
-  private Item getItem(List<Item> allItems, String title) {
+  private Item getItem(List<Item> allItems, String barcode) {
     return allItems.stream()
-      .filter(it -> StringUtils.equals(it.title, title))
+      .filter(it -> StringUtils.equals(it.barcode, barcode))
       .findFirst().orElse(null);
   }
 }

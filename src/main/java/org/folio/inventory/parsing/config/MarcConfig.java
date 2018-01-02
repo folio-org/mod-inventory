@@ -26,7 +26,7 @@ public class MarcConfig {
     catch (IOException e) {
       throw new InvalidMarcConfigException(configPath, e);
     }
-    this.validate();
+    validate();
   }
 
   public JsonObject getConfig() {

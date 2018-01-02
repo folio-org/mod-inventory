@@ -12,12 +12,14 @@
           "type": "string"
         }
       },
+      "additionalProperties": false,
       "required": [
         "dcterms",
         "title"
       ]
     }
   },
+  "additionalProperties": false,
   "required": [
     "@context"
   ]

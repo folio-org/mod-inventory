@@ -6,7 +6,6 @@ import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
-import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
@@ -14,6 +13,9 @@ import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.Item;
 import org.folio.inventory.domain.ItemCollection;
 import org.folio.inventory.storage.Storage;
+import org.folio.inventory.storage.external.CollectionResourceClient;
+import org.folio.inventory.support.HoldingsSupport;
+import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.server.*;
@@ -22,15 +24,13 @@ import java.io.UnsupportedEncodingException;
 import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.folio.inventory.common.FutureAssistance.allOf;
+import static org.folio.inventory.support.CqlHelper.multipleRecordsCqlQuery;
 
 public class Items {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
@@ -183,12 +183,16 @@ public class Items {
 
   private void getById(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
+    CollectionResourceClient holdingsClient;
+    CollectionResourceClient instancesClient;
     CollectionResourceClient materialTypesClient;
     CollectionResourceClient loanTypesClient;
     CollectionResourceClient locationsClient;
 
     try {
       OkapiHttpClient client = createHttpClient(routingContext, context);
+      holdingsClient = createHoldingsClient(client, context);
+      instancesClient = createInstancesClient(client, context);
       materialTypesClient = createMaterialTypesClient(client, context);
       loanTypesClient = createLoanTypesClient(client, context);
       locationsClient = createLocationsClient(client, context);
@@ -205,36 +209,55 @@ public class Items {
         Item item = itemResponse.getResult();
 
         if(item != null) {
-          ArrayList<CompletableFuture<Response>> allFutures = new ArrayList<>();
+          holdingsClient.get(item.holdingId, holdingResponse -> {
+            String instanceId = holdingResponse.getStatusCode() == 200
+              ? holdingResponse.getJson().getString("instanceId")
+              : null;
 
-          CompletableFuture<Response> materialTypeFuture = getReferenceRecord(
-            item.materialTypeId, materialTypesClient, allFutures);
+            instancesClient.get(instanceId, instanceResponse -> {
+              final JsonObject instance = instanceResponse.getStatusCode() == 200
+                ? instanceResponse.getJson()
+                : null;
 
-          CompletableFuture<Response> permanentLoanTypeFuture = getReferenceRecord(
-            item.permanentLoanTypeId, loanTypesClient, allFutures);
+              String permanentLocationId = holdingResponse.getStatusCode() == 200
+                && holdingResponse.getJson().containsKey("permanentLocationId")
+                ? holdingResponse.getJson().getString("permanentLocationId")
+                : null;
 
-          CompletableFuture<Response> temporaryLoanTypeFuture = getReferenceRecord(
-            item.temporaryLoanTypeId, loanTypesClient, allFutures);
+              ArrayList<CompletableFuture<Response>> allFutures = new ArrayList<>();
 
-          CompletableFuture<Response> temporaryLocationFuture = getReferenceRecord(
-            item.temporaryLocationId, locationsClient, allFutures);
+              CompletableFuture<Response> materialTypeFuture = getReferenceRecord(
+                item.materialTypeId, materialTypesClient, allFutures);
 
-          CompletableFuture<Response> permanentLocationFuture = getReferenceRecord(
-            item.permanentLocationId, locationsClient, allFutures);
+              CompletableFuture<Response> permanentLoanTypeFuture = getReferenceRecord(
+                item.permanentLoanTypeId, loanTypesClient, allFutures);
 
-          CompletableFuture<Void> allDoneFuture = allOf(allFutures);
+              CompletableFuture<Response> temporaryLoanTypeFuture = getReferenceRecord(
+                item.temporaryLoanTypeId, loanTypesClient, allFutures);
 
-          allDoneFuture.thenAccept(v -> {
-            try {
-              JsonObject representation = includeReferenceRecordInformationInItem(
-                context, item, materialTypeFuture, permanentLoanTypeFuture,
-                temporaryLoanTypeFuture, temporaryLocationFuture, permanentLocationFuture);
+              CompletableFuture<Response> permanentLocationFuture = getReferenceRecord(
+                permanentLocationId, locationsClient, allFutures);
 
-              JsonResponse.success(routingContext.response(), representation);
-            } catch (Exception e) {
-              ServerErrorResponse.internalError(routingContext.response(),
-                "Error creating Item Representation: " + e.getLocalizedMessage());
-            }
+              CompletableFuture<Response> temporaryLocationFuture = getReferenceRecord(
+                item.temporaryLocationId, locationsClient, allFutures);
+
+              CompletableFuture<Void> allDoneFuture = allOf(allFutures);
+
+              allDoneFuture.thenAccept(v -> {
+                try {
+                  JsonObject representation = includeReferenceRecordInformationInItem(
+                    context, item, instance, materialTypeFuture, permanentLocationId,
+                    permanentLoanTypeFuture, temporaryLoanTypeFuture,
+                    temporaryLocationFuture, permanentLocationFuture);
+
+                  JsonResponse.success(routingContext.response(), representation);
+                } catch (Exception e) {
+                  ServerErrorResponse.internalError(routingContext.response(),
+                    String.format("Error creating Item Representation: %s", e));
+                }
+              });
+              });
+
           });
         }
         else {
@@ -244,21 +267,27 @@ public class Items {
   }
 
   private Item requestToItem(JsonObject itemRequest) {
+    List<String> pieceIdentifiers;
+    pieceIdentifiers = JsonArrayHelper.toListOfStrings(itemRequest.getJsonArray("pieceIdentifiers"));
     String status = getNestedProperty(itemRequest, "status", "name");
+    List<String> notes;
+    notes = JsonArrayHelper.toListOfStrings(itemRequest.getJsonArray("notes"));
     String materialTypeId = getNestedProperty(itemRequest, "materialType", "id");
-    String permanentLocationId = getNestedProperty(itemRequest, "permanentLocation", "id");
     String temporaryLocationId = getNestedProperty(itemRequest, "temporaryLocation", "id");
     String permanentLoanTypeId = getNestedProperty(itemRequest, "permanentLoanType", "id");
     String temporaryLoanTypeId = getNestedProperty(itemRequest, "temporaryLoanType", "id");
 
     return new Item(
       itemRequest.getString("id"),
-      itemRequest.getString("title"),
       itemRequest.getString("barcode"),
-      itemRequest.getString("instanceId"),
+      itemRequest.getString("enumeration"),
+      itemRequest.getString("chronology"),
+      pieceIdentifiers,
+      itemRequest.getString("numberOfPieces"),
+      itemRequest.getString("holdingsRecordId"),
+      notes,
       status,
       materialTypeId,
-      permanentLocationId,
       temporaryLocationId,
       permanentLoanTypeId,
       temporaryLoanTypeId);
@@ -278,12 +307,16 @@ public class Items {
     WebContext context,
     MultipleRecords<Item> wrappedItems) {
 
+    CollectionResourceClient holdingsClient;
+    CollectionResourceClient instancesClient;
     CollectionResourceClient materialTypesClient;
     CollectionResourceClient loanTypesClient;
     CollectionResourceClient locationsClient;
 
     try {
       OkapiHttpClient client = createHttpClient(routingContext, context);
+      holdingsClient = createHoldingsClient(client, context);
+      instancesClient = createInstancesClient(client, context);
       materialTypesClient = createMaterialTypesClient(client, context);
       loanTypesClient = createLoanTypesClient(client, context);
       locationsClient = createLocationsClient(client, context);
@@ -299,103 +332,156 @@ public class Items {
     ArrayList<CompletableFuture<Response>> allLocationsFutures = new ArrayList<>();
     ArrayList<CompletableFuture<Response>> allFutures = new ArrayList<>();
 
-    List<String> materialTypeIds = wrappedItems.records.stream()
-      .map(item -> item.materialTypeId)
+    List<String> holdingsIds = wrappedItems.records.stream()
+      .map(item -> item.holdingId)
       .filter(Objects::nonNull)
       .distinct()
       .collect(Collectors.toList());
 
-    materialTypeIds.stream().forEach(id -> {
-      CompletableFuture<Response> newFuture = new CompletableFuture<>();
+    CompletableFuture<Response> holdingsFetched =
+      new CompletableFuture<>();
 
-    allFutures.add(newFuture);
-    allMaterialTypeFutures.add(newFuture);
+    String holdingsQuery = multipleRecordsCqlQuery(holdingsIds);
 
-    materialTypesClient.get(id, newFuture::complete);
-    });
+    holdingsClient.getMany(holdingsQuery, holdingsIds.size(), 0,
+      holdingsFetched::complete);
 
-    List<String> permanentLoanTypeIds = wrappedItems.records.stream()
-      .map(item -> item.permanentLoanTypeId)
-      .filter(Objects::nonNull)
-      .distinct()
-      .collect(Collectors.toList());
+    holdingsFetched.thenAccept(holdingsResponse -> {
+      if (holdingsResponse.getStatusCode() != 200) {
+        ServerErrorResponse.internalError(routingContext.response(),
+          String.format("Holdings request (%s) failed %s: %s",
+            holdingsQuery, holdingsResponse.getStatusCode(),
+            holdingsResponse.getBody()));
+      }
 
-    List<String> temporaryLoanTypeIds = wrappedItems.records.stream()
-      .map(item -> item.temporaryLoanTypeId)
-      .filter(Objects::nonNull)
-      .distinct()
-      .collect(Collectors.toList());
+      final List<JsonObject> holdings = JsonArrayHelper.toList(
+        holdingsResponse.getJson().getJsonArray("holdingsRecords"));
 
-    Stream.concat(permanentLoanTypeIds.stream(), temporaryLoanTypeIds.stream())
-      .distinct()
-      .forEach(id -> {
+      List<String> instanceIds = holdings.stream()
+        .map(holding -> holding.getString("instanceId"))
+        .filter(Objects::nonNull)
+        .distinct()
+        .collect(Collectors.toList());
 
-        CompletableFuture<Response> newFuture = new CompletableFuture<>();
+      CompletableFuture<Response> instancesFetched =
+        new CompletableFuture<>();
 
-        allFutures.add(newFuture);
-        allLoanTypeFutures.add(newFuture);
+      String instancesQuery = multipleRecordsCqlQuery(instanceIds);
 
-      loanTypesClient.get(id, newFuture::complete);
-    });
+      instancesClient.getMany(instancesQuery, instanceIds.size(), 0,
+        instancesFetched::complete);
 
-    List<String> permanentLocationIds = wrappedItems.records.stream()
-      .map(item -> item.permanentLocationId)
-      .filter(Objects::nonNull)
-      .distinct()
-      .collect(Collectors.toList());
+      instancesFetched.thenAccept(instancesResponse -> {
+        if (instancesResponse.getStatusCode() != 200) {
+          ServerErrorResponse.internalError(routingContext.response(),
+            String.format("Instances request (%s) failed %s: %s",
+              instancesQuery, instancesResponse.getStatusCode(),
+              instancesResponse.getBody()));
+        }
 
-    List<String> temporaryLocationIds = wrappedItems.records.stream()
-      .map(item -> item.temporaryLocationId)
-      .filter(Objects::nonNull)
-      .distinct()
-      .collect(Collectors.toList());
+        final List<JsonObject> instances = JsonArrayHelper.toList(
+          instancesResponse.getJson().getJsonArray("instances"));
 
-    Stream.concat(permanentLocationIds.stream(), temporaryLocationIds.stream())
-      .distinct()
-      .forEach(id -> {
+        List<String> materialTypeIds = wrappedItems.records.stream()
+          .map(item -> item.materialTypeId)
+          .filter(Objects::nonNull)
+          .distinct()
+          .collect(Collectors.toList());
 
-        CompletableFuture<Response> newFuture = new CompletableFuture<>();
+        materialTypeIds.stream().forEach(id -> {
+          CompletableFuture<Response> newFuture = new CompletableFuture<>();
 
-        allFutures.add(newFuture);
-        allLocationsFutures.add(newFuture);
+          allFutures.add(newFuture);
+          allMaterialTypeFutures.add(newFuture);
 
-        locationsClient.get(id, newFuture::complete);
+          materialTypesClient.get(id, newFuture::complete);
+        });
+
+        List<String> permanentLoanTypeIds = wrappedItems.records.stream()
+          .map(item -> item.permanentLoanTypeId)
+          .filter(Objects::nonNull)
+          .distinct()
+          .collect(Collectors.toList());
+
+        List<String> temporaryLoanTypeIds = wrappedItems.records.stream()
+          .map(item -> item.temporaryLoanTypeId)
+          .filter(Objects::nonNull)
+          .distinct()
+          .collect(Collectors.toList());
+
+        Stream.concat(permanentLoanTypeIds.stream(), temporaryLoanTypeIds.stream())
+          .distinct()
+          .forEach(id -> {
+
+            CompletableFuture<Response> newFuture = new CompletableFuture<>();
+
+            allFutures.add(newFuture);
+            allLoanTypeFutures.add(newFuture);
+
+            loanTypesClient.get(id, newFuture::complete);
+          });
+
+        List<String> permanentLocationIds = wrappedItems.records.stream()
+          .map(item -> HoldingsSupport.determinePermanentLocationIdForItem(
+            HoldingsSupport.holdingForItem(item, holdings).orElse(null)))
+          .filter(Objects::nonNull)
+          .distinct()
+          .collect(Collectors.toList());
+
+        List<String> temporaryLocationIds = wrappedItems.records.stream()
+          .map(item -> item.temporaryLocationId)
+          .filter(Objects::nonNull)
+          .distinct()
+          .collect(Collectors.toList());
+
+        Stream.concat(permanentLocationIds.stream(), temporaryLocationIds.stream())
+          .distinct()
+          .forEach(id -> {
+
+            CompletableFuture<Response> newFuture = new CompletableFuture<>();
+
+            allFutures.add(newFuture);
+            allLocationsFutures.add(newFuture);
+
+            locationsClient.get(id, newFuture::complete);
+          });
+
+        CompletableFuture<Void> allDoneFuture = allOf(allFutures);
+
+        allDoneFuture.thenAccept(v -> {
+          log.info("GET all items: all futures completed");
+
+          try {
+            Map<String, JsonObject> foundMaterialTypes
+              = allMaterialTypeFutures.stream()
+              .map(CompletableFuture::join)
+              .filter(response -> response.getStatusCode() == 200)
+              .map(Response::getJson)
+              .collect(Collectors.toMap(r -> r.getString("id"), r -> r));
+
+            Map<String, JsonObject> foundLoanTypes
+              = allLoanTypeFutures.stream()
+              .map(CompletableFuture::join)
+              .filter(response -> response.getStatusCode() == 200)
+              .map(Response::getJson)
+              .collect(Collectors.toMap(r -> r.getString("id"), r -> r));
+
+            Map<String, JsonObject> foundLocations
+              = allLocationsFutures.stream()
+              .map(CompletableFuture::join)
+              .filter(response -> response.getStatusCode() == 200)
+              .map(Response::getJson)
+              .collect(Collectors.toMap(r -> r.getString("id"), r -> r));
+
+            JsonResponse.success(routingContext.response(),
+              new ItemRepresentation(RELATIVE_ITEMS_PATH)
+                .toJson(wrappedItems, holdings, instances, foundMaterialTypes,
+                  foundLoanTypes, foundLocations, context));
+          } catch (Exception e) {
+            ServerErrorResponse.internalError(routingContext.response(), e.toString());
+          }
+        });
       });
-
-    CompletableFuture<Void> allDoneFuture = allOf(allFutures);
-
-    allDoneFuture.thenAccept(v -> {
-      log.info("GET all items: all futures completed");
-
-      try {
-        Map<String, JsonObject> foundMaterialTypes
-          = allMaterialTypeFutures.stream()
-            .map(CompletableFuture::join)
-            .filter(response -> response.getStatusCode() == 200)
-            .map(Response::getJson)
-            .collect(Collectors.toMap(r -> r.getString("id"), r -> r));
-
-        Map<String, JsonObject> foundLoanTypes
-          = allLoanTypeFutures.stream()
-          .map(CompletableFuture::join)
-          .filter(response -> response.getStatusCode() == 200)
-          .map(Response::getJson)
-          .collect(Collectors.toMap(r -> r.getString("id"), r -> r));
-
-        Map<String, JsonObject> foundLocations
-          = allLocationsFutures.stream()
-          .map(CompletableFuture::join)
-          .filter(response -> response.getStatusCode() == 200)
-          .map(Response::getJson)
-          .collect(Collectors.toMap(r -> r.getString("id"), r -> r));
-
-        JsonResponse.success(routingContext.response(),
-          new ItemRepresentation(RELATIVE_ITEMS_PATH)
-            .toJson(wrappedItems, foundMaterialTypes, foundLoanTypes, foundLocations, context));
-      }
-      catch(Exception e) {
-        ServerErrorResponse.internalError(routingContext.response(), e.toString());
-      }
     });
   }
 
@@ -419,6 +505,24 @@ public class Items {
 
     return createCollectionResourceClient(client, context,
       "/item-storage/items");
+  }
+
+  private CollectionResourceClient createHoldingsClient(
+    OkapiHttpClient client,
+    WebContext context)
+    throws MalformedURLException {
+
+    return createCollectionResourceClient(client, context,
+      "/holdings-storage/holdings");
+  }
+
+  private CollectionResourceClient createInstancesClient(
+    OkapiHttpClient client,
+    WebContext context)
+    throws MalformedURLException {
+
+    return createCollectionResourceClient(client, context,
+      "/instance-storage/instances");
   }
 
   private CollectionResourceClient createMaterialTypesClient(
@@ -462,9 +566,12 @@ public class Items {
     String id,
     CompletableFuture<Response> requestFuture) {
 
-    return id != null &&
-      requestFuture.join().getStatusCode() == 200 ?
-      requestFuture.join().getJson() : null;
+    return id != null
+      && requestFuture != null
+      && requestFuture.join() != null
+      && requestFuture.join().getStatusCode() == 200
+      ? requestFuture.join().getJson()
+      : null;
   }
 
   private void addItem(
@@ -511,7 +618,9 @@ public class Items {
   private JsonObject includeReferenceRecordInformationInItem(
     WebContext context,
     Item item,
+    JsonObject instance,
     CompletableFuture<Response> materialTypeFuture,
+    String permanentLocationId,
     CompletableFuture<Response> permanentLoanTypeFuture,
     CompletableFuture<Response> temporaryLoanTypeFuture,
     CompletableFuture<Response> temporaryLocationFuture,
@@ -527,13 +636,14 @@ public class Items {
       referenceRecordFrom(item.temporaryLoanTypeId, temporaryLoanTypeFuture);
 
     JsonObject foundPermanentLocation =
-      referenceRecordFrom(item.permanentLocationId, permanentLocationFuture);
+      referenceRecordFrom(permanentLocationId, permanentLocationFuture);
 
     JsonObject foundTemporaryLocation =
       referenceRecordFrom(item.temporaryLocationId, temporaryLocationFuture);
 
     return new ItemRepresentation(RELATIVE_ITEMS_PATH)
         .toJson(item,
+          instance,
           foundMaterialType,
           foundPermanentLoanType,
           foundTemporaryLoanType,
@@ -580,4 +690,7 @@ public class Items {
         }
       }, FailureResponseConsumer.serverError(routingContext.response()));
   }
+
 }
+
+

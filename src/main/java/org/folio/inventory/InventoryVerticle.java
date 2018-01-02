@@ -6,6 +6,8 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.Router;
 import org.folio.inventory.common.WebRequestDiagnostics;
 import org.folio.inventory.domain.ingest.IngestMessageProcessor;
@@ -14,22 +16,27 @@ import org.folio.inventory.resources.Items;
 import org.folio.inventory.resources.ingest.ModsIngestion;
 import org.folio.inventory.storage.Storage;
 
+import java.lang.invoke.MethodHandles;
+
 public class InventoryVerticle extends AbstractVerticle {
   private HttpServer server;
 
   @Override
   public void start(Future<Void> started) {
+    Logging.initialiseFormat();
+
+    final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+
     Router router = Router.router(vertx);
 
     server = vertx.createHttpServer();
 
     JsonObject config = vertx.getOrCreateContext().config();
 
-    System.out.print("Received Config");
+    log.info("Received Config");
 
-    config.fieldNames().stream().forEach(key -> {
-      System.out.println(String.format("%s:%s", key, config.getValue(key).toString()));
-    });
+    config.fieldNames().stream().forEach(key ->
+      log.info(String.format("%s:%s", key, config.getValue(key).toString())));
 
     Storage storage = Storage.basedUpon(vertx, config);
 
@@ -43,7 +50,7 @@ public class InventoryVerticle extends AbstractVerticle {
 
     Handler<AsyncResult<HttpServer>> onHttpServerStart = result -> {
       if (result.succeeded()) {
-        System.out.println(String.format("Listening on %s", server.actualPort()));
+        log.info(String.format("Listening on %s", server.actualPort()));
         started.complete();
       } else {
         started.fail(result.cause());
@@ -56,10 +63,12 @@ public class InventoryVerticle extends AbstractVerticle {
 
   @Override
   public void stop(Future<Void> stopped) {
-    System.out.println("Stopping inventory module");
+    final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+
+    log.info("Stopping inventory module");
     server.close(result -> {
       if (result.succeeded()) {
-        System.out.println("Inventory module stopped");
+        log.info("Inventory module stopped");
         stopped.complete();
       } else {
         stopped.fail(result.cause());

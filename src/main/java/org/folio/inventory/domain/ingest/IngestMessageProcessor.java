@@ -16,9 +16,7 @@ import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.JsonArrayHelper;
 
 import java.lang.invoke.MethodHandles;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class IngestMessageProcessor {
@@ -43,6 +41,7 @@ public class IngestMessageProcessor {
   private void processRecordsMessage(Message<JsonObject> message, final EventBus eventBus) {
     final CollectAll<Item> allItems = new CollectAll<>();
     final CollectAll<Instance> allInstances = new CollectAll<>();
+    final CollectAll<Holding> allHoldings = new CollectAll<>();
 
     final MessagingContext context = new MessagingContext(message.headers());
     final JsonObject body = message.body();
@@ -50,15 +49,17 @@ public class IngestMessageProcessor {
     IngestMessages.completed(context.getJobId(), context).send(eventBus);
 
     final List<JsonObject> records = JsonArrayHelper.toList(body.getJsonArray("records"));
+
     final JsonObject materialTypes = body.getJsonObject("materialTypes");
     final JsonObject loanTypes = body.getJsonObject("loanTypes");
     final JsonObject locations = body.getJsonObject("locations");
     final JsonObject instanceTypes = body.getJsonObject("instanceTypes");
     final JsonObject identifierTypes = body.getJsonObject("identifierTypes");
-    final JsonObject creatorTypes = body.getJsonObject("creatorTypes");
+    final JsonObject contributorNameTypes = body.getJsonObject("contributorNameTypes");
 
     final InstanceCollection instanceCollection = storage.getInstanceCollection(context);
     final ItemCollection itemCollection = storage.getItemCollection(context);
+    final HoldingCollection holdingCollection = storage.getHoldingCollection(context);
 
     records.stream()
       .map(record -> {
@@ -71,45 +72,73 @@ public class IngestMessageProcessor {
             identifier.getString("value")))
           .collect(Collectors.toList());
 
-        List<JsonObject> creatorsJson = JsonArrayHelper.toList(
-          record.getJsonArray("creators"));
+        List<JsonObject> contributorsJson = JsonArrayHelper.toList(
+          record.getJsonArray("contributors"));
 
-        List<Creator> creators = creatorsJson.stream()
-          .map(creator -> new Creator(
-            creatorTypes.getString("Personal name"),
-            creator.getString("name")))
+        List<Contributor> contributors = contributorsJson.stream()
+          .map(contributor -> new Contributor(
+            contributorNameTypes.getString("Personal name"),
+            contributor.getString("name")))
           .collect(Collectors.toList());
 
+        if(contributors.isEmpty()) {
+          contributors.add(new Contributor(
+            contributorNameTypes.getString("Personal name"),
+            "Unknown contributor"));
+        }
+
         return new Instance(UUID.randomUUID().toString(), record.getString(TITLE_PROPERTY),
-          identifiers, "Local: MODS", instanceTypes.getString("Books"), creators);
+          identifiers, "Local: MODS", instanceTypes.getString("Books"), contributors);
       })
       .forEach(instance -> instanceCollection.add(instance, allInstances.receive(),
         failure -> log.error("Instance processing failed: " + failure.getReason())));
 
-      allInstances.collect(instances ->
-        records.stream().map(record -> {
-          Optional<Instance> possibleInstance = instances.stream()
-            .filter(instance ->
-              StringUtils.equals(instance.title, record.getString(TITLE_PROPERTY)))
-            .findFirst();
+      allInstances.collect(instances -> {
+        instances.stream().map(instance ->
+          new Holding(UUID.randomUUID().toString(), instance.id,
+            locations.getString("Main Library")))
+          .forEach(holding -> holdingCollection.add(holding, allHoldings.receive(),
+            failure -> log.error("Holding processing failed: " + failure.getReason())));
 
-          String instanceId = possibleInstance.isPresent()
-            ? possibleInstance.get().id
-            : null;
+        allHoldings.collect(holdings ->
+          records.stream().map(record -> {
+            //Will fail if have multiple instances with exactly the same title
+            Optional<Instance> possibleInstance = instances.stream()
+              .filter(instance ->
+                StringUtils.equals(instance.title, record.getString(TITLE_PROPERTY)))
+              .findFirst();
 
-          return new Item(null,
-            record.getString(TITLE_PROPERTY),
-            record.getString("barcode"),
-            instanceId,
-            "Available",
-            materialTypes.getString("Book"),
-            locations.getString("Main Library"),
-            null,
-            loanTypes.getString("Can Circulate"),
-            null);
-      })
-      .forEach(item -> itemCollection.add(item, allItems.receive(),
-        failure -> log.error("Item processing failed: " + failure.getReason()))));
+            String instanceId = possibleInstance.isPresent()
+              ? possibleInstance.get().id
+              : null;
+
+            Optional<Holding> possibleHolding = holdings.stream()
+              .filter(holding ->
+                StringUtils.equals(instanceId, holding.instanceId))
+              .findFirst();
+
+            String holdingId = possibleHolding.isPresent()
+              ? possibleHolding.get().id
+              : null;
+
+            return new Item(null,
+              record.getString("barcode"),
+              null, null, new ArrayList<>(), null,
+              holdingId, new ArrayList<>(),
+              "Available",
+              materialTypes.getString("Book") != null
+                ? materialTypes.getString("Book")
+                : materialTypes.getString("book"),
+              null,
+              loanTypes.getString("Can Circulate") != null
+                ? loanTypes.getString("Can Circulate")
+                : loanTypes.getString("Can circulate"),
+              null);
+        })
+        .forEach(item -> itemCollection.add(item, allItems.receive(),
+          failure -> log.error("Item processing failed: " + failure.getReason()))));
+      });
+
 
     allItems.collect(items ->
       IngestMessages.completed(context.getJobId(), context).send(eventBus));

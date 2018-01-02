@@ -6,29 +6,24 @@ import org.junit.Test;
 public class MarcConfigTest {
 
   @Test(expected = InvalidMarcConfigException.class)
-  public void validateInvalid1() throws Exception {
+  public void validateConfigNoKeyMarcFields() throws Exception {
     new MarcConfig(
-      "config/marc-config-invalid_1.json");
+      "config/config-no-key-marc-fields.json");
   }
   @Test(expected = InvalidMarcConfigException.class)
-  public void validateInvalid2() throws Exception {
+  public void validateConfigNoKeyInstanceFields() throws Exception {
     new MarcConfig(
-      "config/marc-config-invalid_2.json");
+      "config/config-no-key-instance-fields.json");
   }
   @Test(expected = InvalidMarcConfigException.class)
-  public void validateInvalid3() throws Exception {
+  public void validateConfigInstanceFieldsNoArray() throws Exception {
     new MarcConfig(
-      "config/marc-config-invalid_3.json");
+      "config/config-instance-fields-no-array.json");
   }
   @Test(expected = InvalidMarcConfigException.class)
-  public void validateInvalid4() throws Exception {
+  public void validateConfigNoJsonObjectInArray() throws Exception {
     new MarcConfig(
-      "config/marc-config-invalid_4.json");
-  }
-  @Test(expected = InvalidMarcConfigException.class)
-  public void validateInvalid5() throws Exception {
-    new MarcConfig(
-      "config/marc-config-invalid_5.json");
+      "config/config-no-jsonobject-in-array.json");
   }
   @Test
   public void validateValid() throws Exception {
