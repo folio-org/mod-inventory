@@ -1,0 +1,296 @@
+# MM SIG Working Groups - Metadata Elements and MARC mapping
+# https://docs.google.com/spreadsheets/d/1kdYx63J0KoqR3-LUHuPAzERgj8WE0OQ08rzuCaJaHWs/
+
+title (NR)
+
+245 (NR)
+$a - Title (NR)
+$b - Remainder of title (NR)
+$c - Statement of responsibility, etc. (NR)
+$f - Inclusive dates (NR)
+$g - Bulk dates (NR)
+$h - Medium (NR)
+$k - Form (R)
+$n - Number of part/section of a work (R)
+$p - Name of part/section of a work (R)
+$s - Version (NR)
+
+altTitle (R)
+
+246 - Varying Form of Title (R)
+$a - Title (NR)
+$b - Remainder of title (NR)
+$f - Inclusive dates (NR)
+$g - Bulk dates (NR)
+$h - Medium (NR)
+$i - Display text (NR)
+$n - Number of part/section of a work (R)
+$p - Name of part/section of a work (R)
+
+247 - Former Title (R)
+$a - Title (NR)
+$b - Remainder of title (NR)
+$f - Inclusive dates (NR)
+$g - Miscellaneous information (R)
+$h - Medium (NR)
+$n - Number of part/section of a work (R)
+$p - Name of part/section of a work (R)
+
+240 - Uniform Title (NR)
+$a - Uniform title (NR)
+$d - Date of treaty signing (R)
+$f - Date of a work (NR)
+$g - Miscellaneous information (R)
+$k - Form subheading (R)
+$l - Language of a work (NR)
+$m - Medium of performance for music (R)
+$n - Number of part/section of a work (R)
+$o - Arranged statement for music (NR)
+$p - Name of part/section of a work (R)
+$r - Key for music (NR)
+$s - Version (NR)
+
+130 - Main Entry-Uniform Title (NR)
+$a - Uniform title (NR)
+$d - Date of treaty signing (R)
+$f - Date of a work (NR)
+$g - Miscellaneous information (R)
+$h - Medium (NR)
+$k - Form subheading (R)
+$l - Language of a work (NR)
+$m - Medium of performance for music (R)
+$n - Number of part/section of a work (R)
+$o - Arranged statement for music (NR)
+$p - Name of part/section of a work (R)
+$r - Key for music (NR)
+$s - Version (NR)
+$t - title of a work (NR)
+
+version
+
+250
+$a - Edition statement (NR)
+$b - Remainder of edition statement (NR)
+
+series
+
+490
+$a - Series statement (R)
+$v - Volume/sequential designation (R)
+
+830
+$a - Uniform title (NR)
+$d - Date of treaty signing (R)
+$f - Date of work (NR)
+$g - Miscellaneous information (R)
+$h - Medium (NR)
+$k - form subheading (R)
+$l - Language of a work (NR)
+$m - Medium of performance for music (NR)
+$n - Number of part/section of a work (R)
+$o - Arranged statement for music (NR)
+$p - Name of part/section of a work (R)
+$r - Key for music (NR)
+$s - Version (NR)
+$t - Title of a work (NR)
+$v - Volume/sequential designation (NR)
+
+identifier
+
+001 Control Number
+010 - LCCN
+$a - LCCN
+$z - LCCN cancelled
+020 - ISBN
+$a - ISBN
+$z - cancelled/invalid
+022 - ISSN
+$a - International Standard Serial Number
+$l - ISSN-L
+$m - Canceled ISSN-L
+$y - Incorrect ISSN
+$z - Canceled ISSN
+024 - Other Standard Identifier (R)
+$a - Standard number or code
+$z - Canceled/invalid standard number or code
+027 - Standard Technical Report Number (R)
+$a - Standard technical report number
+$z - Canceled/invalid number
+028 - Publisher or Distributor Number (R)
+$a - Publisher or distributor number (NR)
+$b - Source (NR)
+030 - CODEN Designation (R)
+$a - CODEN (NR)
+$z - Canceled/invalid CODEN (R)
+035 - System Control Number (R)
+$a - System control number (NR)
+$z - Canceled/invalid control number (R)
+074 - GPO Item Number (R)
+$a - GPO item number (NR)
+$z - Canceled/invalid GPO item number (R)
+
+contributor (R)
+
+110 - Main Entry-Corporate Name (NR)
+$a - Corporate name or jurisdiction name as entry element (NR)
+$b - Subordinate unit (R)
+$c - Location of meeting (R)
+$d - Date of meeting or treaty signing (R)
+$e - Relator term (R)
+$f - Date of a work (NR)
+$g - Miscellaneous information (R)
+$k - Form subheading (R)
+$l - Language of a work (NR)
+$n - Number of part/section/meeting (R)
+$p - Name of part/section of a work (R)
+$t - Title of a work (NR)
+$u - Affiliation (NR)
+
+111 - Main Entry-Meeting or Conference Name (NR)
+$a - Meeting name or jurisdiction name as entry element (NR)
+$c - Location of meeting (R)
+$d - Date of meeting (NR)
+$e - Subordinate unit (R)
+$f - Date of a work (NR)
+$g - Miscellaneous information (R)
+$k - Form subheading (R)
+$l - Language of a work (NR)
+$n - Number of part/section/meeting (R)
+$p - Name of part/section of a work (R)
+$q - Name of meeting following jurisdiction name entry element (NR)
+$t - Title of a work (NR)
+$u - Affiliation (NR)
+
+100 - Main Entry-Personal Name (NR)
+$a - Personal name (NR)
+$b - Numeration (NR)
+$c - Titles and words associated with a name (R)
+$d - Dates associated with a name (NR)
+$e - Relator term (R)
+$f - Date of a work (NR)
+$g - Miscellaneous information (R)
+$k - Form subheading (R)
+$l - Language of a work (NR)
+$n - Number of part/section of a work (R)
+$p - Name of part/section of a work (R)
+$q - Fuller form of name (NR)
+$t - Title of a work (NR)
+$u - Affiliation (NR)
+
+700 - Added Entry-Personal Name (R)
+$a - Personal name (NR)
+$b - Numeration (NR)
+$c - Titles another words associated witha name (R)
+$d - Dates associated with a name (NR)
+$e - Relator term (R)
+$f - Date of a work (NR)
+$g - Miscellaneous information (R)
+$h - Medium (NR)
+$k - Form subheading (R)
+$l - Language of a work (NR)
+$m - Medium of performance for music (R)
+$n - Number of part/section of a work (R)
+$o - Arranged statement for music (NR)
+$p - Name of part/section of a work (R)
+$q - Fuller form of name (NR)
+$r - Key for music (NR)
+$s - Version (NR)
+$t - Title of a work (NR)
+$u - Affiliation (NR)
+
+710 - Added Entry-Corporate Name (R)
+$a - Corporate name or jurisdiction name as entry element (NR)
+$b - Subordinate unit (R)
+$c - Location of meeting (R)
+$d - Date of meeting or treaty signing (R)
+$e - Relator term (R)
+$f - Dateof a work (NR)
+$g - Mischellaneous information (R)
+$h - Medium (NR)
+$k - Form subheading (R)
+$l - Language of a work (NR)
+$m - Medium of performance for music (R)
+$n - Number of part/section/meeting (R)
+$o - Arranged statement for music (NR)
+$p - Name of part/section of a work (R)
+$r - Key for music (NR)
+$s - Version (NR)
+$t - Title of a work (NR)
+$u - Affiliation (NR)
+
+711 - Added Entry-Meeting Name (R)
+$a - Meeting name or jurisdiction name as entry element (NR)
+$b - ? On KH's list, but not on MARC21 (LOC)
+$c - Location of meeting (R)
+$d - Date of meeting (NR)
+$e - Subordinate unit (R)
+$f - Date of a work (NR)
+$g - Miscellaneous information (R)
+$h - Medium (NR)
+$k - Form subheading (R)
+$l - Language of a work (NR)
+$n - Number of part/section/meeting (R)
+$p - Name of part/section of a work (R)
+$q - Name of meeting following jurisdiction name entry element (NR)
+$s - Version (NR)
+$t - Title of a work (NR)
+$u - Affiliation (NR)
+
+720 - Added Entry-Uncontrolled Name (R)
+$a - Name (NR)
+$d - ? On KH's list, but not on MARC21 (LOC)
+$e - Relator term (R) ? Not on KH's list, but in MARC21 (LOC)
+$f - ? On KH's list, but not on MARC21 (LOC)
+$g - ? On KH's list, but not on MARC21 (LOC)
+$h - ? On KH's list, but not on MARC21 (LOC)
+$k - ? On KH's list, but not on MARC21 (LOC)
+$l - ? On KH's list, but not on MARC21 (LOC)
+$m - ? On KH's list, but not on MARC21 (LOC)
+$n - ? On KH's list, but not on MARC21 (LOC)
+$o - ? On KH's list, but not on MARC21 (LOC)
+$p - ? On KH's list, but not on MARC21 (LOC)
+$r - ? On KH's list, but not on MARC21 (LOC)
+$s - ? On KH's list, but not on MARC21 (LOC)
+$t - ? On KH's list, but not on MARC21 (LOC)
+$x - ? On KH's list, but not on MARC21 (LOC)
+
+publisher (R)
+
+260 - Publication, Distribution, etc. (Imprint) (R)
+$b - Name of publisher, distributor, etc. (R)
+264 - Production, Publication, Distribution, Manufacture, and Copyright Notice (R)
+$b - Name of producer, publisher, distributor, manufacturer (R)
+
+# date is hardcoded and cannot be changed in this config file:
+# 008/07-14
+
+# material type is hardcoded and cannot be changed in this config file:
+# 008/18-34
+
+# format is hardcoded and cannot be changed in this config file
+# 007/00
+
+language (R)
+
+# If there is no 041 then 008/35-37 is used (this is hardcoded).
+041 - Language Code (R)
+$a - Language code of text/sound track or separate title (R)
+$b - Language code of summary or abstract (R)
+$d - Language code of sung or spoken text (R)
+$e - Language code of librettos (R)
+$f - Language code of table of contents (R)
+$g - Language code of accompanying material other than librettos (R)
+$h - Language code of original (R)
+$j - Language code of subtitles or captions (R)
+$k - Language code of intermediate translations (R)
+$m - Language code of original accompanying materials other than librettos (R)
+$n - Language code of original libretto (R)
+
+rights (R)
+
+506 - Restrictions on Access Note (R)
+$a - Terms governing access (NR)
+$c - Physical access provisions (R)
+$f - Standardized terminology for access restriction (R)
+$3 - Materials specified (NR)
+$5 - Institution to which field applies (NR)

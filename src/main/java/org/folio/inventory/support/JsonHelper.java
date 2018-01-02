@@ -1,28 +1,26 @@
 package org.folio.inventory.support;
 
-import io.vertx.core.json.JsonObject;
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 
-public class JsonHelper {
+import org.folio.util.ResourceUtil;
 
-  public JsonObject getJsonFileAsJsonObject(String filePath) throws IOException {
-    InputStream is = this.getClass().getResourceAsStream(filePath);
-    return new JsonObject(readFile(is));
+import io.vertx.core.json.JsonObject;
+
+/**
+ * Create JsonObject from a resource file.
+ */
+public final class JsonHelper {
+  private JsonHelper() {
+    throw new UnsupportedOperationException("Invoking the constructor of a utility class is forbidden");
   }
 
-  private String readFile(InputStream is) throws IOException {
-    try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
-      StringBuilder sb = new StringBuilder();
-      String line = br.readLine();
-      while (line != null) {
-        sb.append(line);
-        sb.append("\n");
-        line = br.readLine();
-      }
-      return sb.toString();
-    }
+  /**
+   * Return a resource file as JsonObject.
+   * @param resourcePath  file to read
+   * @return the JsonObject
+   * @throws IOException  on file read error
+   */
+  public static JsonObject getJsonFileAsJsonObject(String resourcePath) throws IOException {
+    return new JsonObject(ResourceUtil.asString(resourcePath));
   }
 }

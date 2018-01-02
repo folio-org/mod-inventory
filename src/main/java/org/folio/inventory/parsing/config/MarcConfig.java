@@ -13,16 +13,20 @@ public class MarcConfig {
   private static final String INSTANCE_FIELDS = "instance-fields";
 
   private final JsonObject config;
-  private static final String STD_CONFIG_FILE = "/config/marc-config.json";
+  private static final String STD_CONFIG_FILE = "config/marc-config.json";
 
-  public MarcConfig() throws InvalidMarcConfigException, IOException {
+  public MarcConfig() throws InvalidMarcConfigException {
     this(STD_CONFIG_FILE);
   }
 
-  public MarcConfig(String configPath) throws InvalidMarcConfigException, IOException {
-    JsonHelper jh = new JsonHelper();
-    config = jh.getJsonFileAsJsonObject(configPath);
-    this.validate();
+  public MarcConfig(String configPath) throws InvalidMarcConfigException {
+    try {
+      config = JsonHelper.getJsonFileAsJsonObject(configPath);
+    }
+    catch (IOException e) {
+      throw new InvalidMarcConfigException(configPath, e);
+    }
+    validate();
   }
 
   public JsonObject getConfig() {
