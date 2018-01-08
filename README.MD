@@ -10,7 +10,7 @@ FOLIO compatible inventory module.
 
 Provides basic physical item inventory management, currently limited to basic representations of local instances and items, which can only be created via a MODS import.
 
-Written in Groovy and uses Maven as its build system.
+Written in Java and uses Maven as its build system.
 
 # Further Documentation
 
@@ -21,16 +21,13 @@ This readme is intended to get these modules up and running. For further informa
 ## Required
 
 - Java 8 JDK
-- Apache Groovy 2.4.8
 - Maven 3.5.0
 
 ## Optional
 
-- [SDKMan](http://sdkman.io/) (recommended for installing Gradle and Groovy)
 - Node 6.4.0 (for API linting and documentation generation)
 - NPM 3.10.3 (for API linting and documentation generation)
-- Python 3.6.0 (for nice to have parts of deployment scripts, e.g. is used to remove environment variables from Okapi)
-- Gradle 3.3 (for the `test-via-okapi-gradle.sh` script which produces nicer output)
+- Python 3.6.0 (for deployment scripts and tests via okapi setup)
 
 # Preparation
 
@@ -117,79 +114,7 @@ at the [FOLIO issue tracker](http://dev.folio.org/community/guide-issues).
 
 Other FOLIO Developer documentation is at [dev.folio.org](http://dev.folio.org/)
 
-# Appendix 1 - Okapi Registration
-
-As an alternative to the demo scripts, it is possible to perform Okapi tenant and module setup via a set of smaller scripts, see below for more information on these steps.
-
-### Preparing a Tenant
-
-Run `./create-tenant.sh` from the root directory to set up a test tenant (named our).
-
-The output should be something similar to:
-
-```
-HTTP/1.1 201 Created
-Content-Type: application/json
-Location: /_/proxy/tenants/demo_tenant
-Content-Length: 81
-
-{
-  "id" : "demo_tenant",
-  "name" : "A Library",
-  "description" : "A library"
-}
-```
-
-The tenant can be deleted by running `./delete-tenant.sh`
-
-### Registering the Modules With Okapi
-
-Run `./register.sh` from the root directory.
-
-The last output should be something similar to:
-
-```
-HTTP/1.1 201 Created
-Content-Type: application/json
-Location: /_/discovery/modules/knowledge-base-core/localhost-9401
-Content-Length: 104
-
-{
-  "instId" : "localhost-9401",
-  "srvcId" : "knowledge-base-core",
-  "url" : "http://localhost:9401"
-}
-HTTP/1.1 201 Created
-Content-Type: application/json
-Location: /_/proxy/modules/knowledge-base-core
-Content-Length: 375
-
-{
-  "id" : "knowledge-base-core",
-  "name" : "Core Knowledge Base Module",
-  "provides" : [ {
-    "id" : "knowledge-base-core",
-    "version" : "0.1"
-  } ],
-  "routingEntries" : [ {
-    "methods" : [ "GET", "POST" ],
-    "path" : "/knowledge-base",
-    "level" : "30",
-    "type" : "request-response",
-    "permissionsRequired" : null,
-    "permissionsDesired" : null
-  } ]
-}
-HTTP/1.1 200 OK
-Content-Type: application/json
-Content-Length: 34
-
-{
-  "id" : "knowledge-base-core"
-}
-```
-
-# Appendix 2 - Docker Information
+# Appendix 1 - Docker Information
 
 ## When Using the Modules as Docker Containers
 

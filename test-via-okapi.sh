@@ -32,7 +32,11 @@ echo "Generate Descriptors from Templates"
 mvn clean compile -Dmaven.test.skip=true -q
 
 echo "Register inventory module"
-./register.sh ${inventory_direct_address} ${inventory_instance_id} ${tenant_id}
+./okapi-registration/unmanaged-deployment/register.sh \
+  ${inventory_direct_address} \
+  ${inventory_instance_id} \
+  ${okapi_proxy_address} \
+  ${tenant_id}
 
 echo "Run tests via Okapi"
 #Potentially move to use integration test phase
@@ -42,7 +46,7 @@ mvn -Dokapi.address="${okapi_proxy_address}" -Duse.okapi.initial.requests="true"
 test_results=$?
 
 echo "Unregister inventory module"
-./unregister.sh ${inventory_instance_id} ${tenant_id}
+./okapi-registration/unmanaged-deployment/unregister.sh ${tenant_id}
 
 echo "Deactivate inventory storage for ${tenant_id}"
 curl -X DELETE -D - -w '\n' "${okapi_proxy_address}/_/proxy/tenants/${tenant_id}/modules/${inventory_storage_module_id}"
