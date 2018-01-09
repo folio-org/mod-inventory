@@ -270,7 +270,7 @@ public class ExternalItemCollectionExamples {
 
     CompletableFuture<MultipleRecords<Item>> findFuture = new CompletableFuture<>();
 
-    collection.findByCql("barcode=036000291452", new PagingParameters(10, 0),
+    collection.findByCql("barcode==036000291452", new PagingParameters(10, 0),
       succeed(findFuture), fail(findFuture));
 
     MultipleRecords<Item> wrappedItems = getOnCompletion(findFuture);

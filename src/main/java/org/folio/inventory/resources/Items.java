@@ -14,6 +14,7 @@ import org.folio.inventory.domain.Item;
 import org.folio.inventory.domain.ItemCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
+import org.folio.inventory.support.CqlHelper;
 import org.folio.inventory.support.HoldingsSupport;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
@@ -107,7 +108,7 @@ public class Items {
 
     if(newItem.barcode != null) {
       try {
-        itemCollection.findByCql(String.format("barcode=%s", newItem.barcode),
+        itemCollection.findByCql(CqlHelper.barcodeIs(newItem.barcode),
           PagingParameters.defaults(), findResult -> {
 
             if(findResult.getResult().records.isEmpty()) {
@@ -675,7 +676,7 @@ public class Items {
     throws UnsupportedEncodingException {
 
     itemCollection.findByCql(
-      String.format("barcode=%s and id<>%s", updatedItem.barcode, updatedItem.id),
+      CqlHelper.barcodeIs(updatedItem.barcode) + " and id<>" + updatedItem.id,
       PagingParameters.defaults(), it -> {
 
         List<Item> items = it.getResult().records;
