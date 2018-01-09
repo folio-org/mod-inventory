@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
 
-inventory_instance_id=${1:-}
-tenant_id=${2:-demo_tenant}
+okapi_proxy_address=${1:-http://localhost:9130}
+tenant_id="demo_tenant"
 
-echo "Unregistering Inventory Module"
-./unregister-managed.sh ${inventory_instance_id} ${tenant_id}
-
-echo "Deleting Tenant"
-./delete-tenant.sh
+./okapi-registration/managed-deployment/unregister.sh \
+  ${okapi_proxy_address} \
+  ${tenant_id}

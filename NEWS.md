@@ -1,4 +1,4 @@
-## 7.0.0 Unreleased
+## 7.0.0 2018-01-09
 
 * Require `holdingsRecordId` from `item` (MODINV-39)
 * Removes `title` from `item` (MODINV-37)

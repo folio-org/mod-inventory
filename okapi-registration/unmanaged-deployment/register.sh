@@ -21,8 +21,11 @@ curl -w '\n' -D - -s \
      -d @./target/ModuleDescriptor.json \
      "${okapi_proxy_address}/_/proxy/modules"
 
+activate_json=$(cat ./target/activate.json)
+activate_json="${activate_json/moduleidhere/$module_id}"
+
 curl -w '\n' -X POST -D - \
      -H "Content-type: application/json" \
-     -d @./target/Activate.json \
+     -d "${activate_json}"  \
      "${okapi_proxy_address}/_/proxy/tenants/${tenant_id}/modules"
 
