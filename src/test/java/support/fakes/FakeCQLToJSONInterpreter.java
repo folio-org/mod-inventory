@@ -84,8 +84,10 @@ public class FakeCQLToJSONInterpreter {
 
           switch (operator) {
             case "=":
-            case "==":
               result = propertyValue.contains(cleanTerm);
+              break;
+            case "==":
+              result = propertyValue.equals(cleanTerm);
               break;
             case "<>":
               result = !propertyValue.contains(cleanTerm);
