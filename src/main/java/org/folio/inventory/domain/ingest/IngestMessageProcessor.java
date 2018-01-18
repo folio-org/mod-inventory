@@ -19,10 +19,13 @@ import java.lang.invoke.MethodHandles;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static org.folio.inventory.domain.Instance.SOURCE_BINARY_BASE64_NAME;
+import static org.folio.inventory.domain.Instance.SOURCE_BINARY_FORMAT_NAME;
+import static org.folio.inventory.domain.Instance.TITLE_PROPERTY_NAME;
+
 public class IngestMessageProcessor {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
-  private static final String TITLE_PROPERTY = "title";
   private final Storage storage;
 
   public IngestMessageProcessor(final Storage storage) {
@@ -87,8 +90,9 @@ public class IngestMessageProcessor {
             "Unknown contributor"));
         }
 
-        return new Instance(UUID.randomUUID().toString(), record.getString(TITLE_PROPERTY),
-          identifiers, "Local: MODS", instanceTypes.getString("Books"), contributors);
+        return new Instance(UUID.randomUUID().toString(), record.getString(TITLE_PROPERTY_NAME),
+          identifiers, "Local: MODS", instanceTypes.getString("Books"), contributors,
+          record.getString(SOURCE_BINARY_BASE64_NAME), record.getString(SOURCE_BINARY_FORMAT_NAME));
       })
       .forEach(instance -> instanceCollection.add(instance, allInstances.receive(),
         failure -> log.error("Instance processing failed: " + failure.getReason())));
@@ -105,7 +109,7 @@ public class IngestMessageProcessor {
             //Will fail if have multiple instances with exactly the same title
             Optional<Instance> possibleInstance = instances.stream()
               .filter(instance ->
-                StringUtils.equals(instance.title, record.getString(TITLE_PROPERTY)))
+                StringUtils.equals(instance.title, record.getString(TITLE_PROPERTY_NAME)))
               .findFirst();
 
             String instanceId = possibleInstance.isPresent()
@@ -149,7 +153,7 @@ public class IngestMessageProcessor {
 
     storage.getIngestJobCollection(context).update(
       new IngestJob(context.getJobId(), IngestJobState.COMPLETED),
-      v -> log.info(String.format("Ingest job %s completed", context.getJobId())),
+      v -> log.debug(String.format("Ingest job %s completed", context.getJobId())),
       failure -> log.error(
         String.format("Updating ingest job failed: %s", failure.getReason())));
   }

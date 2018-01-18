@@ -1,6 +1,9 @@
 package org.folio.inventory.storage.external;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+
 import org.folio.inventory.common.VertxAssistant;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.junit.AfterClass;
@@ -9,6 +12,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 import support.fakes.FakeOkapi;
 
+import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
@@ -25,6 +29,8 @@ import java.util.function.Function;
   ReferenceRecordClientExamples.class
 })
 public class ExternalStorageSuite {
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+
   static final String TENANT_ID = "test_tenant";
   static final String TENANT_TOKEN = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsInRlbmFudCI6ImRlbW9fdGVuYW50In0.29VPjLI6fLJzxQW0UhQ0jsvAn8xHz501zyXAxRflXfJ9wuDzT8TDf-V75PjzD7fe2kHjSV2dzRXbstt3BTtXIQ";
 
@@ -50,7 +56,7 @@ public class ExternalStorageSuite {
     vertxAssistant.start();
 
     if (useFakeStorageModule()) {
-      System.out.println("Starting Fake Storage Module");
+      log.info("Starting Fake Storage Module");
 
       CompletableFuture<String> deployed = new CompletableFuture<>();
 
@@ -86,7 +92,7 @@ public class ExternalStorageSuite {
     return new OkapiHttpClient(
       vertxAssistant.createUsingVertx(Vertx::createHttpClient),
       new URL(getStorageAddress()), TENANT_ID, TENANT_TOKEN, it ->
-      System.out.println(
+      log.fatal(
         String.format("Request failed: %s",
           it.toString())));
   }

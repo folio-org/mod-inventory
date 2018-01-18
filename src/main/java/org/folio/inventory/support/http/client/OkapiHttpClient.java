@@ -59,7 +59,7 @@ public class OkapiHttpClient {
     if(body != null) {
       String encodedBody = Json.encodePrettily(body);
 
-      log.info(String.format("POST %s, Request: %s",
+      log.debug(String.format("POST %s, Request: %s",
         url.toString(), encodedBody));
 
       request.end(encodedBody);
@@ -88,7 +88,7 @@ public class OkapiHttpClient {
 
     String encodedBody = Json.encodePrettily(body);
 
-    log.info(String.format("PUT %s, Request: %s", url, encodedBody));
+    log.debug(String.format("PUT %s, Request: %s", url, encodedBody));
 
     request.end(encodedBody);
   }
@@ -116,7 +116,7 @@ public class OkapiHttpClient {
 
     okapiHeaders(request);
 
-    log.info(String.format("GET %s", url));
+    log.debug(String.format("GET %s", url));
 
     request.end();
   }

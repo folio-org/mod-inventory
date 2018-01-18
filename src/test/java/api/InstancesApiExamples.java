@@ -3,13 +3,16 @@ package api;
 import api.support.ApiRoot;
 import api.support.ApiTests;
 import api.support.InstanceApiClient;
-import api.support.Preparation;
+import api.support.InstanceSamples;
 import com.github.jsonldjava.core.DocumentLoader;
 import com.github.jsonldjava.core.JsonLdError;
 import com.github.jsonldjava.core.JsonLdOptions;
 import com.github.jsonldjava.core.JsonLdProcessor;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+
 import org.apache.http.Header;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
@@ -18,9 +21,9 @@ import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
+import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -37,6 +40,8 @@ import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
 
 public class InstancesApiExamples extends ApiTests {
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+
   public InstancesApiExamples() throws MalformedURLException {
     super();
   }
@@ -178,6 +183,65 @@ public class InstancesApiExamples extends ApiTests {
     dublinCoreContextLinkRespectsWayResourceWasReached(createdInstance);
     selfLinkRespectsWayResourceWasReached(createdInstance);
     selfLinkShouldBeReachable(createdInstance);
+  }
+
+  private void isTemeraire(JsonObject instance, UUID uuid) throws Exception {
+    log.debug("instance: " + instance);
+
+    assertThat(instance.getString("id"), is(uuid.toString()));
+    assertThat(instance.getString("title"), is("Temeraire"));
+    assertThat(instance.getString("source"), is("Local"));
+
+    assertThat(instance.getString("sourceBinaryBase64"), is(InstanceSamples.TEMERAIRE_SOURCE_BINARY_BASE64));
+    assertThat(instance.getString("sourceBinaryFormat"), is("marc21"));
+    assertThat(instance.getString("instanceTypeId"), is(ApiTestSuite.getBooksInstanceType()));
+
+    JsonArray identifiers = instance.getJsonArray("identifiers");
+    String isbnId = ApiTestSuite.getIsbnIdentifierType();
+    assertThat(identifiers.getJsonObject(0).getString("identifierTypeId"), is(isbnId));
+    assertThat(identifiers.getJsonObject(1).getString("identifierTypeId"), is(isbnId));
+    assertThat(identifiers.getJsonObject(0).getString("value"), is("0007258712"));
+    assertThat(identifiers.getJsonObject(1).getString("value"), is("9780007258710"));
+
+    JsonObject contributor = instance.getJsonArray("contributors").getJsonObject(0);
+    String nameTypeId = ApiTestSuite.getPersonalContributorNameType();
+    assertThat(contributor.getString("contributorNameTypeId"), is(nameTypeId));
+    assertThat(contributor.getString("name"), is("Novik, Naomi"));
+
+    expressesDublinCoreMetadata(instance);
+    dublinCoreContextLinkRespectsWayResourceWasReached(instance);
+    selfLinkRespectsWayResourceWasReached(instance);
+    selfLinkShouldBeReachable(instance);
+  }
+
+  @Test
+  public void canCreateInstanceWithSourceBinary() throws Exception {
+    UUID uuid = UUID.randomUUID();
+
+    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+
+    okapiClient.post(ApiRoot.instances(),
+      InstanceSamples.temeraire(uuid), ResponseHandler.any(postCompleted));
+
+    Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
+
+    String location = postResponse.getLocation();
+
+    assertThat(postResponse.getStatusCode(), is(201));
+    assertThat(location, is(notNullValue()));
+
+    // okapiClient is a mock that doesn't return the content
+    // isTemeraire(postResponse.getJson(), uuid);
+
+    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+
+    okapiClient.get(location, ResponseHandler.json(getCompleted));
+
+    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(getResponse.getStatusCode(), is(200));
+
+    isTemeraire(getResponse.getJson(), uuid);
   }
 
   @Test

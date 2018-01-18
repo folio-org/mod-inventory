@@ -450,7 +450,7 @@ public class Items {
         CompletableFuture<Void> allDoneFuture = allOf(allFutures);
 
         allDoneFuture.thenAccept(v -> {
-          log.info("GET all items: all futures completed");
+          log.debug("GET all items: all futures completed");
 
           try {
             Map<String, JsonObject> foundMaterialTypes
