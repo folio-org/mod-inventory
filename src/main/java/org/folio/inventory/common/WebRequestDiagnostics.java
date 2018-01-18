@@ -1,16 +1,21 @@
 package org.folio.inventory.common;
 
 import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.RoutingContext;
 
-import java.lang.invoke.MethodHandles;
-
+/**
+ * Log details of a io.vertx.ext.web.RoutingContext.
+ */
 public class WebRequestDiagnostics {
   private WebRequestDiagnostics() {
-
+    throw new UnsupportedOperationException("Cannot instantiate utility class.");
   }
 
+  /**
+   * Write method, path and headers of routingContext to log.
+   * @param log  where to log
+   * @param routingContext  the context
+   */
   public static void outputDiagnostics(Logger log, RoutingContext routingContext) {
 
     log.debug(String.format("Handling %s %s", routingContext.request().rawMethod(),

@@ -33,6 +33,7 @@ public class Instance {
   public final String sourceBinaryBase64;
   public final String sourceBinaryFormat;
 
+  @java.lang.SuppressWarnings("squid:S00107")  // suppress "Methods should not have too many parameters"
   public Instance(
       String id,
       String title,
