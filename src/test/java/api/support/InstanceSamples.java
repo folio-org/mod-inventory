@@ -5,9 +5,15 @@ import io.vertx.core.json.JsonObject;
 
 import java.util.UUID;
 
+import org.folio.inventory.domain.Instance;
+
 import static api.ApiTestSuite.*;
 
 public class InstanceSamples {
+  public static final String TEMERAIRE_SOURCE_BINARY_BASE64 =
+      "MDAxMzluYW0gIDIyMDAwNzNJYSA0NTAwMDIwMDAxNTAwMDAwMDIwMDAxODAwMDE1MTAwMDAxNzAwMDMzMjQ1MDAxNTAwM" +
+      "DUwHiAgH2ExNDQ3Mjk0MTMwHiAgH2E5NzgxNDQ3Mjk0MTMwHjEgH2FOb3ZpaywgTmFvbWkeMDAfYVRlbWVyYWlyZSAeHQ==";
+
   public static JsonObject createInstanceRequest(
     UUID id,
     String title,
@@ -72,8 +78,11 @@ public class InstanceSamples {
 
     contributors.add(contributor("Novik, Naomi"));
 
-    return createInstanceRequest(id, "Temeraire",
+    JsonObject jsonObject = createInstanceRequest(id, "Temeraire",
       identifiers, contributors);
+    jsonObject.put(Instance.SOURCE_BINARY_BASE64_NAME, TEMERAIRE_SOURCE_BINARY_BASE64);
+    jsonObject.put(Instance.SOURCE_BINARY_FORMAT_NAME, "marc21");
+    return jsonObject;
   }
 
   public static JsonObject leviathanWakes(UUID id) {

@@ -19,13 +19,13 @@ import org.folio.inventory.storage.Storage;
 import java.lang.invoke.MethodHandles;
 
 public class InventoryVerticle extends AbstractVerticle {
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+
   private HttpServer server;
 
   @Override
   public void start(Future<Void> started) {
     Logging.initialiseFormat();
-
-    final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
     Router router = Router.router(vertx);
 
@@ -33,16 +33,17 @@ public class InventoryVerticle extends AbstractVerticle {
 
     JsonObject config = vertx.getOrCreateContext().config();
 
-    log.info("Received Config");
+    log.debug("Received Config");
 
     config.fieldNames().stream().forEach(key ->
-      log.info(String.format("%s:%s", key, config.getValue(key).toString())));
+      log.debug(String.format("%s:%s", key, config.getValue(key).toString())));
 
     Storage storage = Storage.basedUpon(vertx, config);
 
     new IngestMessageProcessor(storage).register(vertx.eventBus());
 
-    router.route().handler(WebRequestDiagnostics::outputDiagnostics);
+    router.route().handler(routingContext ->
+      WebRequestDiagnostics.outputDiagnostics(log, routingContext));
 
     new ModsIngestion(storage).register(router);
     new Items(storage).register(router);
@@ -63,9 +64,7 @@ public class InventoryVerticle extends AbstractVerticle {
 
   @Override
   public void stop(Future<Void> stopped) {
-    final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
-
-    log.info("Stopping inventory module");
+    log.debug("Stopping inventory module");
     server.close(result -> {
       if (result.succeeded()) {
         log.info("Inventory module stopped");

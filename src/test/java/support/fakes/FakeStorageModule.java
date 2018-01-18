@@ -3,6 +3,8 @@ package support.fakes;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
@@ -13,10 +15,13 @@ import org.folio.inventory.support.http.server.JsonResponse;
 import org.folio.inventory.support.http.server.SuccessResponse;
 import org.folio.inventory.support.http.server.ValidationError;
 
+import java.lang.invoke.MethodHandles;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class FakeStorageModule extends AbstractVerticle {
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+
   private final String rootPath;
   private final String collectionPropertyName;
   private final boolean hasCollectionDelete;
@@ -75,9 +80,10 @@ public class FakeStorageModule extends AbstractVerticle {
 
     getResourcesForTenant(context).put(id, body);
 
-    System.out.println(
+    log.info(
       String.format("Created %s resource: %s", recordTypeName, id));
-        JsonResponse.created(routingContext.response(), body);
+
+    JsonResponse.created(routingContext.response(), body);
   }
 
   private void replace(RoutingContext routingContext) {
@@ -90,14 +96,14 @@ public class FakeStorageModule extends AbstractVerticle {
     Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
 
     if(resourcesForTenant.containsKey(id)) {
-      System.out.println(
+      log.info(
         String.format("Replaced %s resource: %s", recordTypeName, id));
 
       resourcesForTenant.replace(id, body);
       SuccessResponse.noContent(routingContext.response());
     }
     else {
-      System.out.println(
+      log.info(
         String.format("Created %s resource: %s", recordTypeName, id));
       resourcesForTenant.put(id, body);
       SuccessResponse.noContent(routingContext.response());
@@ -112,13 +118,13 @@ public class FakeStorageModule extends AbstractVerticle {
     Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
 
     if(resourcesForTenant.containsKey(id)) {
-      System.out.println(
+      log.info(
         String.format("Found %s resource: %s", recordTypeName, id));
       JsonResponse.success(routingContext.response(),
         resourcesForTenant.get(id));
     }
     else {
-      System.out.println(
+      log.info(
         String.format("Failed to find %s resource: %s", recordTypeName, id));
       ClientErrorResponse.notFound(routingContext.response());
     }
@@ -131,7 +137,7 @@ public class FakeStorageModule extends AbstractVerticle {
     Integer offset = context.getIntegerParameter("offset", 0);
     String query = context.getStringParameter("query", null);
 
-    System.out.println(String.format("Handling %s", routingContext.request().uri()));
+    log.info(String.format("Handling %s", routingContext.request().uri()));
 
     Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
 

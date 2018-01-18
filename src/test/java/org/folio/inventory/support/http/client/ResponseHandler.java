@@ -2,13 +2,19 @@ package org.folio.inventory.support.http.client;
 
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpClientResponse;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+
 import org.folio.inventory.support.http.ContentType;
 
+import java.lang.invoke.MethodHandles;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
 public class ResponseHandler {
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+
   private ResponseHandler() { }
 
   public static Handler<HttpClientResponse> any(
@@ -55,9 +61,9 @@ public class ResponseHandler {
 
           Response response = Response.from(vertxResponse, buffer);
 
-          System.out.println(String.format("Received Response: %s: %s",
+          log.debug(String.format("Received Response: %s: %s",
             response.getStatusCode(), response.getContentType()));
-          System.out.println(String.format("Received Response Body: %s",
+          log.debug(String.format("Received Response Body: %s",
             response.getBody()));
 
           if(expectation.test(response)) {

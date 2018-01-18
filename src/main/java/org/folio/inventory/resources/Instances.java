@@ -27,11 +27,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static org.folio.inventory.domain.Instance.CONTRIBUTORS_PROPERTY_NAME;
+import static org.folio.inventory.domain.Instance.ID_NAME;
+import static org.folio.inventory.domain.Instance.IDENTIFIER_PROPERTY_NAME;
+import static org.folio.inventory.domain.Instance.INSTANCE_TYPE_ID_NAME;
+import static org.folio.inventory.domain.Instance.SOURCE_BINARY_BASE64_NAME;
+import static org.folio.inventory.domain.Instance.SOURCE_BINARY_FORMAT_NAME;
+import static org.folio.inventory.domain.Instance.SOURCE_NAME;
+import static org.folio.inventory.domain.Instance.TITLE_PROPERTY_NAME;
+
 public class Instances {
   private static final String INSTANCES_PATH = "/inventory/instances";
-  private static final String TITLE_PROPERTY_NAME = "title";
-  private static final String IDENTIFIER_PROPERTY_NAME = "identifiers";
-  private static final String CONTRIBUTORS_PROPERTY_NAME = "contributors";
 
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
@@ -137,7 +143,7 @@ public class Instances {
 
     InstanceCollection instanceCollection = storage.getInstanceCollection(context);
 
-    instanceCollection.findById(routingContext.request().getParam("id"),
+    instanceCollection.findById(routingContext.request().getParam(ID_NAME),
       it -> {
         if(it.getResult() != null) {
           instanceCollection.update(updatedInstance,
@@ -162,7 +168,7 @@ public class Instances {
     WebContext context = new WebContext(routingContext);
 
     storage.getInstanceCollection(context).delete(
-      routingContext.request().getParam("id"),
+      routingContext.request().getParam(ID_NAME),
       v -> SuccessResponse.noContent(routingContext.response()),
       FailureResponseConsumer.serverError(routingContext.response()));
   }
@@ -171,7 +177,7 @@ public class Instances {
     WebContext context = new WebContext(routingContext);
 
     storage.getInstanceCollection(context).findById(
-      routingContext.request().getParam("id"),
+      routingContext.request().getParam(ID_NAME),
       it -> {
         if(it.getResult() != null) {
           JsonResponse.success(routingContext.response(),
@@ -214,10 +220,12 @@ public class Instances {
         String.format("Failed to create context link for instance: %s", e.toString()));
     }
 
-    representation.put("id", instance.id);
+    representation.put(ID_NAME, instance.id);
     representation.put(TITLE_PROPERTY_NAME, instance.title);
-    representation.put("source", instance.source);
-    representation.put("instanceTypeId", instance.instanceTypeId);
+    representation.put(SOURCE_NAME, instance.source);
+    representation.put(SOURCE_BINARY_BASE64_NAME, instance.sourceBinaryBase64);
+    representation.put(SOURCE_BINARY_FORMAT_NAME, instance.sourceBinaryFormat);
+    representation.put(INSTANCE_TYPE_ID_NAME, instance.instanceTypeId);
 
     representation.put(IDENTIFIER_PROPERTY_NAME,
       new JsonArray(instance.identifiers.stream()
@@ -247,26 +255,28 @@ public class Instances {
   }
 
   private Instance requestToInstance(JsonObject instanceRequest) {
-    List<Identifier> identifiers = instanceRequest.containsKey(IDENTIFIER_PROPERTY_NAME)
-      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(IDENTIFIER_PROPERTY_NAME)).stream()
-          .map(identifier -> new Identifier(identifier.getString("identifierTypeId"),
-          identifier.getString("value")))
-          .collect(Collectors.toList())
-          : new ArrayList<>();
+    List<Identifier> identifiers =
+      JsonArrayHelper.toList(instanceRequest.getJsonArray(IDENTIFIER_PROPERTY_NAME))
+        .stream()
+        .map(identifier -> new Identifier(identifier.getString("identifierTypeId"),
+            identifier.getString("value")))
+        .collect(Collectors.toCollection(ArrayList::new));  // modifiable List
 
-    List<Contributor> contributors = instanceRequest.containsKey(CONTRIBUTORS_PROPERTY_NAME)
-      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(CONTRIBUTORS_PROPERTY_NAME)).stream()
-      .map(contributor -> new Contributor(contributor.getString("contributorNameTypeId"),
-        contributor.getString("name")))
-      .collect(Collectors.toList())
-      : new ArrayList<>();
+    List<Contributor> contributors =
+      JsonArrayHelper.toList(instanceRequest.getJsonArray(CONTRIBUTORS_PROPERTY_NAME))
+        .stream()
+        .map(contributor -> new Contributor(contributor.getString("contributorNameTypeId"),
+            contributor.getString("name")))
+        .collect(Collectors.toCollection(ArrayList::new));  // modifiable List
 
     return new Instance(
-      instanceRequest.getString("id"),
+      instanceRequest.getString(ID_NAME),
       instanceRequest.getString(TITLE_PROPERTY_NAME),
       identifiers,
-      instanceRequest.getString("source"),
-      instanceRequest.getString("instanceTypeId"),
-      contributors);
+      instanceRequest.getString(SOURCE_NAME),
+      instanceRequest.getString(INSTANCE_TYPE_ID_NAME),
+      contributors,
+      instanceRequest.getString(SOURCE_BINARY_BASE64_NAME),
+      instanceRequest.getString(SOURCE_BINARY_FORMAT_NAME) );
   }
 }
