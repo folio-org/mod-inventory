@@ -256,5 +256,15 @@
         "inventory.ingest.mods.status.get"
       ]
     }
-  ]
+  ],
+  "launchDescriptor": {
+    "dockerImage": "${artifactId}:${version}",
+    "dockerArgs": {
+      "HostConfig": { "PortBindings": { "9403/tcp":  [{ "HostPort": "%p" }] } } 
+    },
+    "env": [
+      { "name": "JAVA_OPTIONS", "value": "-Dorg.folio.metadata.inventory.storage.type=okapi" }
+    ],
+    "dockerPull" : false
+  }
 }
