@@ -1,6 +1,7 @@
 ## 7.0.1 Unreleased
 
 * Use exact match for barcode and ID lookups using CQL (MODINV-43)
+* Add optional field `contributorTypeText` to `instance.contributors` (MODINV-52)
 
 ## 7.0.0 2018-01-09
 

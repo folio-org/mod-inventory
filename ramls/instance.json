@@ -52,6 +52,9 @@
           "contributorTypeId": {
             "type": "string"
           },
+          "contributorTypeText": {
+            "type": "string"
+          }
           "primary": {
             "type": "boolean"
           }
