@@ -230,7 +230,9 @@ public class Instances {
       new JsonArray(instance.contributors.stream()
         .map(contributor -> new JsonObject()
           .put("contributorNameTypeId", contributor.contributorNameTypeId)
-          .put("name", contributor.name))
+          .put("name", contributor.name)
+          .put("contributorTypeId", contributor.contributorTypeId)
+          .put("contributorTypeText", contributor.contributorTypeText))
         .collect(Collectors.toList())));
 
     try {
@@ -257,7 +259,7 @@ public class Instances {
     List<Contributor> contributors = instanceRequest.containsKey(CONTRIBUTORS_PROPERTY_NAME)
       ? JsonArrayHelper.toList(instanceRequest.getJsonArray(CONTRIBUTORS_PROPERTY_NAME)).stream()
       .map(contributor -> new Contributor(contributor.getString("contributorNameTypeId"),
-        contributor.getString("name")))
+        contributor.getString("name"), contributor.getString("contributorTypeId"), contributor.getString("contributorTypeText")))
       .collect(Collectors.toList())
       : new ArrayList<>();
 
