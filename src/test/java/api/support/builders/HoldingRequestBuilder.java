@@ -13,7 +13,7 @@ public class HoldingRequestBuilder implements Builder {
   public HoldingRequestBuilder() {
     this(
       null,
-      UUID.fromString(ApiTestSuite.getMainLibraryLocation()));
+      UUID.fromString(ApiTestSuite.getThirdFloorLocation()));
   }
 
   private HoldingRequestBuilder(
@@ -38,11 +38,11 @@ public class HoldingRequestBuilder implements Builder {
   }
 
   public HoldingRequestBuilder inMainLibrary() {
-    return withPermanentLocation(UUID.fromString(ApiTestSuite.getMainLibraryLocation()));
+    return withPermanentLocation(UUID.fromString(ApiTestSuite.getThirdFloorLocation()));
   }
 
   public HoldingRequestBuilder inAnnex() {
-    return withPermanentLocation(UUID.fromString(ApiTestSuite.getAnnexLocation()));
+    return withPermanentLocation(UUID.fromString(ApiTestSuite.getMezzanineDisplayCaseLocation()));
   }
 
   public HoldingRequestBuilder forInstance(UUID instanceId) {

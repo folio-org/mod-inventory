@@ -77,8 +77,8 @@ public class ItemApiExamples extends ApiTests {
     assertThat(temporaryLoanType.getString("id"), is(ApiTestSuite.getCourseReserveLoanType()));
     assertThat(temporaryLoanType.getString("name"), is("Course Reserves"));
 
-    assertThat(createdItem.getJsonObject("permanentLocation").getString("name"), is("Main Library"));
-    assertThat(createdItem.getJsonObject("temporaryLocation").getString("name"), is("Annex Library"));
+    assertThat(createdItem.getJsonObject("permanentLocation").getString("name"), is("3rd Floor"));
+    assertThat(createdItem.getJsonObject("temporaryLocation").getString("name"), is("Display Case, Mezzanine"));
 
     selfLinkRespectsWayResourceWasReached(createdItem);
     selfLinkShouldBeReachable(createdItem);
@@ -130,8 +130,8 @@ public class ItemApiExamples extends ApiTests {
     assertThat(temporaryLoanType.getString("id"), is(ApiTestSuite.getCourseReserveLoanType()));
     assertThat(temporaryLoanType.getString("name"), is("Course Reserves"));
 
-    assertThat(createdItem.getJsonObject("permanentLocation").getString("name"), is("Main Library"));
-    assertThat(createdItem.getJsonObject("temporaryLocation").getString("name"), is("Annex Library"));
+    assertThat(createdItem.getJsonObject("permanentLocation").getString("name"), is("3rd Floor"));
+    assertThat(createdItem.getJsonObject("temporaryLocation").getString("name"), is("Display Case, Mezzanine"));
 
     selfLinkRespectsWayResourceWasReached(createdItem);
     selfLinkShouldBeReachable(createdItem);
@@ -343,8 +343,8 @@ public class ItemApiExamples extends ApiTests {
     assertThat(permanentLoanType.getString("id"), is(ApiTestSuite.getCanCirculateLoanType()));
     assertThat(permanentLoanType.getString("name"), is("Can Circulate"));
 
-    assertThat(updatedItem.getJsonObject("permanentLocation").getString("name"), is("Main Library"));
-    assertThat(updatedItem.getJsonObject("temporaryLocation").getString("name"), is("Annex Library"));
+    assertThat(updatedItem.getJsonObject("permanentLocation").getString("name"), is("3rd Floor"));
+    assertThat(updatedItem.getJsonObject("temporaryLocation").getString("name"), is("Display Case, Mezzanine"));
 
     selfLinkRespectsWayResourceWasReached(updatedItem);
     selfLinkShouldBeReachable(updatedItem);
@@ -994,13 +994,13 @@ public class ItemApiExamples extends ApiTests {
 
     String locationId = location.getString("id");
 
-    if (locationId.equals(ApiTestSuite.getMainLibraryLocation())) {
-      assertThat(location.getString("id"), is(ApiTestSuite.getMainLibraryLocation()));
-      assertThat(location.getString("name"), is("Main Library"));
+    if (locationId.equals(ApiTestSuite.getThirdFloorLocation())) {
+      assertThat(location.getString("id"), is(ApiTestSuite.getThirdFloorLocation()));
+      assertThat(location.getString("name"), is("3rd Floor"));
 
-    } else if (locationId.equals(ApiTestSuite.getAnnexLocation())) {
-      assertThat(location.getString("id"), is(ApiTestSuite.getAnnexLocation()));
-      assertThat(location.getString("name"), is("Annex Library"));
+    } else if (locationId.equals(ApiTestSuite.getMezzanineDisplayCaseLocation())) {
+      assertThat(location.getString("id"), is(ApiTestSuite.getMezzanineDisplayCaseLocation()));
+      assertThat(location.getString("name"), is("Display Case, Mezzanine"));
 
     } else {
       assertThat(location.getString("id"), is(nullValue()));
@@ -1019,13 +1019,13 @@ public class ItemApiExamples extends ApiTests {
 
   private static JsonObject temporaryLocation() {
 		return new JsonObject()
-			.put("id", ApiTestSuite.getAnnexLocation())
-			.put("name", "Annex Library");
+			.put("id", ApiTestSuite.getMezzanineDisplayCaseLocation())
+			.put("name", "Display Case, Mezzanine");
   }
 
   private static JsonObject permanentLocation() {
 		return new JsonObject()
-			.put("id", ApiTestSuite.getMainLibraryLocation())
-			.put("name", "Main Library");
+			.put("id", ApiTestSuite.getThirdFloorLocation())
+			.put("name", "3rd Floor");
 	}
 }

@@ -287,7 +287,7 @@ public class ModsIngestExamples extends ApiTests {
 
       assertThat("holding permanent location should be main library",
         holding.getString("permanentLocationId"),
-        is(ApiTestSuite.getMainLibraryLocation()));
+        is(ApiTestSuite.getThirdFloorLocation()));
     });
   }
 
@@ -323,7 +323,7 @@ public class ModsIngestExamples extends ApiTests {
 
       assertThat("item should have a derived permanent location",
         item.getJsonObject("permanentLocation").getString("name"),
-        is("Main Library"));
+        is("3rd Floor"));
     });
   }
 

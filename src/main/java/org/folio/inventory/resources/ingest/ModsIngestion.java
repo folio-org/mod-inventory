@@ -110,7 +110,7 @@ public class ModsIngestion {
         routingContext, loanTypesClient.getRecord("Can Circulate"));
 
       locationsRequestCompleted = wrapWithExceptionHandler(
-        routingContext, locationsClient.getRecord("Main Library"));
+        routingContext, locationsClient.getRecord("3rd Floor"));
 
       instanceTypesRequestCompleted = wrapWithExceptionHandler(
         routingContext, instanceTypesClient.getRecord("Books"));

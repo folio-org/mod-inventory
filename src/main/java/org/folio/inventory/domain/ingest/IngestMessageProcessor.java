@@ -96,7 +96,7 @@ public class IngestMessageProcessor {
       allInstances.collect(instances -> {
         instances.stream().map(instance ->
           new Holding(UUID.randomUUID().toString(), instance.id,
-            locations.getString("Main Library")))
+            locations.getString("3rd Floor")))
           .forEach(holding -> holdingCollection.add(holding, allHoldings.receive(),
             failure -> log.error("Holding processing failed: " + failure.getReason())));
 
