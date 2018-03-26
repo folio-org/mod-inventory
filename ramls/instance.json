@@ -54,7 +54,7 @@
           },
           "contributorTypeText": {
             "type": "string"
-          }
+          },
           "primary": {
             "type": "boolean"
           }
