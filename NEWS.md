@@ -1,7 +1,9 @@
-## 7.0.1 Unreleased
+## 7.1.0 Unreleased
 
 * Use exact match for barcode and ID lookups using CQL (MODINV-43)
 * Add optional field `contributorTypeText` to `instance.contributors` (MODINV-52)
+* Provides inventory interface version 5.1
+* Requires instance-storage interface version 4.2
 
 ## 7.0.0 2018-01-09
 
