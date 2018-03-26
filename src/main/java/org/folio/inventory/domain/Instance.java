@@ -50,10 +50,10 @@ public class Instance {
     return addIdentifier(identifier);
   }
 
-  public Instance addContributor(String contributorNameTypeId, String name) {
+  public Instance addContributor(String contributorNameTypeId, String name, String contributorTypeId, String contributorTypeText) {
     List<Contributor> newContributors = new ArrayList<>(this.contributors);
 
-    newContributors.add(new Contributor(contributorNameTypeId, name));
+    newContributors.add(new Contributor(contributorNameTypeId, name, contributorTypeId, contributorTypeText));
 
     return new Instance(this.id, this.title, new ArrayList<>(this.identifiers),
       this.source, this.instanceTypeId, newContributors);

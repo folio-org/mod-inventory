@@ -59,7 +59,7 @@ class ExternalStorageModuleInstanceCollection
       instanceFromServer.getJsonArray("contributors", new JsonArray()));
 
     List<Contributor> mappedContributors = contributors.stream()
-      .map(it -> new Contributor(it.getString("contributorNameTypeId"), it.getString("name")))
+      .map(it -> new Contributor(it.getString("contributorNameTypeId"), it.getString("name"), it.getString("contributorTypeId"), it.getString("contributorTypeText")))
       .collect(Collectors.toList());
 
     return new Instance(

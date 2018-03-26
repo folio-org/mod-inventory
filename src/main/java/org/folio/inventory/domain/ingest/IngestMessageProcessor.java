@@ -78,13 +78,13 @@ public class IngestMessageProcessor {
         List<Contributor> contributors = contributorsJson.stream()
           .map(contributor -> new Contributor(
             contributorNameTypes.getString("Personal name"),
-            contributor.getString("name")))
+            contributor.getString("name"), "", ""))
           .collect(Collectors.toList());
 
         if(contributors.isEmpty()) {
           contributors.add(new Contributor(
             contributorNameTypes.getString("Personal name"),
-            "Unknown contributor"));
+            "Unknown contributor", "", ""));
         }
 
         return new Instance(UUID.randomUUID().toString(), record.getString(TITLE_PROPERTY),
