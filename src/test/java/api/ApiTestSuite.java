@@ -53,6 +53,7 @@ public class ApiTestSuite {
   private static UUID businessLibrary;
   private static UUID thirdFloorLocationId;
   private static UUID mezzanineDisplayCaseLocationId;
+  private static UUID mainLibraryLocationId;
 
   private static String isbnIdentifierTypeId;
   private static String asinIdentifierTypeId;
@@ -135,6 +136,10 @@ public class ApiTestSuite {
   public static String getMezzanineDisplayCaseLocation() {
 		return mezzanineDisplayCaseLocationId.toString();
 	}
+
+  public static String getMainLibraryLocation() {
+    return mainLibraryLocationId.toString();
+  }
 
   public static String getIsbnIdentifierType() {
     return isbnIdentifierTypeId;
@@ -330,6 +335,16 @@ public class ApiTestSuite {
         .put("institutionId", nottinghamUniversityInstitution.toString())
         .put("campusId", jubileeCampus.toString())
         .put("libraryId", businessLibrary.toString()));
+
+    //Need to create a main library location otherwise MODS ingestion will fail
+    //TODO: Need to remove this when MODS uses different example location
+    mainLibraryLocationId = createReferenceRecord(locationsClient,
+      new JsonObject()
+        .put("name", "Main Library")
+        .put("code", "NU/JC/DL/ML")
+        .put("institutionId", nottinghamUniversityInstitution.toString())
+        .put("campusId", jubileeCampus.toString())
+        .put("libraryId", djanoglyLibrary.toString()));
   }
 
   private static void createIdentifierTypes()

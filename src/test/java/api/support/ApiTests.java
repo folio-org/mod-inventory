@@ -46,8 +46,7 @@ public abstract class ApiTests {
   public static void after()
     throws InterruptedException,
     ExecutionException,
-    TimeoutException,
-    MalformedURLException {
+    TimeoutException {
 
     if(runningOnOwn) {
       System.out.println("Running test on own, un-initialising suite manually");
