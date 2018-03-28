@@ -788,7 +788,7 @@ public class ItemApiExamples extends ApiTests {
     CompletableFuture<Response> putItemCompleted = new CompletableFuture<>();
 
     okapiClient.put(nodItemLocation, changedNodItem,
-      ResponseHandler.text(putItemCompleted));
+      ResponseHandler.any(putItemCompleted));
 
     Response putItemResponse = putItemCompleted.get(5, TimeUnit.SECONDS);
 
