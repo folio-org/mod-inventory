@@ -9,7 +9,6 @@ import io.vertx.core.json.JsonObject;
 import org.folio.inventory.support.http.ContentType;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class JsonResponse {
   private JsonResponse() { }
@@ -28,19 +27,28 @@ public class JsonResponse {
 
   public static void unprocessableEntity(
     HttpServerResponse response,
-    String message, List<ValidationError> errors) {
+    String message,
+    String propertyName,
+    String value) {
 
-    JsonArray parameters = new JsonArray(errors.stream()
-      .map(error -> new JsonObject()
-        .put("key", error.propertyName)
-        .put("value", error.value))
-      .collect(Collectors.toList()));
+    ValidationError error = new ValidationError(message, propertyName, value);
 
-    JsonObject wrappedErrors = new JsonObject()
-      .put("message", message)
-      .put("parameters", parameters);
+    JsonArray errors = new JsonArray();
 
-    response(response, wrappedErrors, 422);
+    errors.add(error.toJson());
+
+    response(response, new JsonObject().put("errors", errors), 422);
+  }
+
+  public static void unprocessableEntity(
+    HttpServerResponse response,
+    List<ValidationError> errors) {
+
+    JsonArray errorsArray = new JsonArray();
+
+    errors.forEach(error -> errorsArray.add(error.toJson()));
+
+    response(response, new JsonObject().put("errors", errors), 422);
   }
 
   private static void response(HttpServerResponse response,

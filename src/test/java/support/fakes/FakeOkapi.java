@@ -5,8 +5,6 @@ import io.vertx.core.Future;
 import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.Router;
 
-import java.util.ArrayList;
-
 public class FakeOkapi extends AbstractVerticle {
 
   private static final String TENANT_ID = "test_tenant";
@@ -32,7 +30,7 @@ public class FakeOkapi extends AbstractVerticle {
     registerFakeItemsStorageModule(router);
     registerFakeMaterialTypesModule(router);
     registerFakeLoanTypesModule(router);
-    registerFakeShelfLocationsModule(router);
+    registerFakeLocationsModule(router);
     registerFakeInstanceTypesModule(router);
     registerFakeIdentifierTypesModule(router);
     registerFakeContributorNameTypesModule(router);
@@ -109,13 +107,43 @@ public class FakeOkapi extends AbstractVerticle {
       .create().register(router);
   }
 
-  private void registerFakeShelfLocationsModule(Router router) {
+  private void registerFakeLocationsModule(Router router) {
 
     new FakeStorageModuleBuilder()
-      .withRecordName("location")
-      .withRootPath("/shelf-locations")
-      .withCollectionPropertyName("shelflocations")
+      .withRecordName("institution")
+      .withRootPath("/location-units/institutions")
+      .withCollectionPropertyName("locinsts")
+      .withRequiredProperties("name")
       .create().register(router);
+
+    new FakeStorageModuleBuilder()
+      .withRecordName("campus")
+      .withRootPath("/location-units/campuses")
+      .withCollectionPropertyName("loccamps")
+      .withRequiredProperties("name", "institutionId")
+      .create().register(router);
+
+    new FakeStorageModuleBuilder()
+      .withRecordName("library")
+      .withRootPath("/location-units/libraries")
+      .withCollectionPropertyName("loclibs")
+      .withRequiredProperties("name", "campusId")
+      .create().register(router);
+
+    //Also proxies as shelf-locations (see method just prior to register)
+    new FakeStorageModuleBuilder()
+      .withRecordName("locations")
+      .withRootPath("/locations")
+      .withCollectionPropertyName("locations")
+      .withRequiredProperties(
+        "name",
+        "code",
+        "institutionId",
+        "campusId",
+        "libraryId")
+      .create()
+      .proxyAs("/shelf-locations", "shelflocations", "id", "name")
+      .register(router);
   }
 
   private void registerFakeIdentifierTypesModule(Router router) {

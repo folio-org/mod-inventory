@@ -7,7 +7,7 @@ okapi_proxy_address="http://localhost:9130"
 inventory_direct_address=http://localhost:9603
 inventory_instance_id=localhost-9603
 #Needs to be the specific version of Inventory Storage you want to use for testing
-inventory_storage_module_id="mod-inventory-storage-7.1.1-SNAPSHOT"
+inventory_storage_module_id="mod-inventory-storage-9.0.0-SNAPSHOT"
 
 echo "Check if Okapi is contactable"
 curl -w '\n' -X GET -D -   \

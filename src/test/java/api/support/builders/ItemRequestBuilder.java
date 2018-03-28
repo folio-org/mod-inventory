@@ -261,14 +261,14 @@ public class ItemRequestBuilder implements Builder {
 
   public static JsonObject mainLibrary() {
     return new JsonObject()
-      .put("id", ApiTestSuite.getMainLibraryLocation())
-      .put("name", "Main Library");
+      .put("id", ApiTestSuite.getThirdFloorLocation())
+      .put("name", "3rd Floor");
   }
 
   public static JsonObject annex() {
     return new JsonObject()
-      .put("id", ApiTestSuite.getAnnexLocation())
-      .put("name", "Annex Library");
+      .put("id", ApiTestSuite.getMezzanineDisplayCaseLocation())
+      .put("name", "Display Case, Mezzanine");
   }
 
   private static JsonObject canCirculateLoanType() {

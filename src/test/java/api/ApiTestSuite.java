@@ -4,7 +4,9 @@ import api.items.ItemApiExamples;
 import api.items.ItemApiLocationExamples;
 import api.items.ItemApiTitleExamples;
 import api.support.ControlledVocabularyPreparation;
+import api.support.http.ResourceClient;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 import org.folio.inventory.InventoryVerticle;
 import org.folio.inventory.common.VertxAssistant;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
@@ -17,7 +19,9 @@ import support.fakes.FakeOkapi;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -43,8 +47,13 @@ public class ApiTestSuite {
   private static String canCirculateLoanTypeId;
   private static String courseReserveLoanTypeId;
 
-  private static String mainLibraryLocationId;
-  private static String annexLocationId;
+  private static UUID nottinghamUniversityInstitution;
+  private static UUID jubileeCampus;
+  private static UUID djanoglyLibrary;
+  private static UUID businessLibrary;
+  private static UUID thirdFloorLocationId;
+  private static UUID mezzanineDisplayCaseLocationId;
+  private static UUID mainLibraryLocationId;
 
   private static String isbnIdentifierTypeId;
   private static String asinIdentifierTypeId;
@@ -120,13 +129,17 @@ public class ApiTestSuite {
     return courseReserveLoanTypeId;
   }
 
-  public static String getMainLibraryLocation() {
-		return mainLibraryLocationId;
+  public static String getThirdFloorLocation() {
+		return thirdFloorLocationId.toString();
   }
 
-  public static String getAnnexLocation() {
-		return annexLocationId;
+  public static String getMezzanineDisplayCaseLocation() {
+		return mezzanineDisplayCaseLocationId.toString();
 	}
+
+  public static String getMainLibraryLocation() {
+    return mainLibraryLocationId.toString();
+  }
 
   public static String getIsbnIdentifierType() {
     return isbnIdentifierTypeId;
@@ -279,15 +292,59 @@ public class ApiTestSuite {
     ExecutionException,
     TimeoutException {
 
-    OkapiHttpClient client = createOkapiHttpClient();
+    final OkapiHttpClient client = createOkapiHttpClient();
 
-    URL locationsUrl = new URL(String.format("%s/shelf-locations", storageOkapiUrl()));
+    ResourceClient institutionsClient = ResourceClient.forInstitutions(client);
 
-		ControlledVocabularyPreparation locationPreparation =
-      new ControlledVocabularyPreparation(client, locationsUrl, "shelflocations");
+    nottinghamUniversityInstitution = createReferenceRecord(institutionsClient,
+      "Nottingham University");
 
-		mainLibraryLocationId = locationPreparation.createOrReferenceTerm("Main Library");
-		annexLocationId = locationPreparation.createOrReferenceTerm("Annex Library");
+    ResourceClient campusesClient = ResourceClient.forCampuses(client);
+
+    jubileeCampus = createReferenceRecord(campusesClient,
+      new JsonObject()
+        .put("name", "Jubilee Campus")
+        .put("institutionId", nottinghamUniversityInstitution.toString()));
+
+    ResourceClient librariesClient = ResourceClient.forLibraries(client);
+
+    djanoglyLibrary = createReferenceRecord(librariesClient,
+      new JsonObject()
+        .put("name", "Djanogly Learning Resource Centre")
+        .put("campusId", jubileeCampus.toString()));
+
+    businessLibrary = createReferenceRecord(librariesClient,
+      new JsonObject()
+        .put("name", "Business Library")
+        .put("campusId", jubileeCampus.toString()));
+
+    ResourceClient locationsClient = ResourceClient.forLocations(client);
+
+    thirdFloorLocationId = createReferenceRecord(locationsClient,
+      new JsonObject()
+        .put("name", "3rd Floor")
+        .put("code", "NU/JC/DL/3F")
+        .put("institutionId", nottinghamUniversityInstitution.toString())
+        .put("campusId", jubileeCampus.toString())
+        .put("libraryId", djanoglyLibrary.toString()));
+
+    mezzanineDisplayCaseLocationId = createReferenceRecord(locationsClient,
+      new JsonObject()
+        .put("name", "Display Case, Mezzanine")
+        .put("code", "NU/JC/BL/DM")
+        .put("institutionId", nottinghamUniversityInstitution.toString())
+        .put("campusId", jubileeCampus.toString())
+        .put("libraryId", businessLibrary.toString()));
+
+    //Need to create a main library location otherwise MODS ingestion will fail
+    //TODO: Need to remove this when MODS uses different example location
+    mainLibraryLocationId = createReferenceRecord(locationsClient,
+      new JsonObject()
+        .put("name", "Main Library")
+        .put("code", "NU/JC/DL/ML")
+        .put("institutionId", nottinghamUniversityInstitution.toString())
+        .put("campusId", jubileeCampus.toString())
+        .put("libraryId", djanoglyLibrary.toString()));
   }
 
   private static void createIdentifierTypes()
@@ -337,5 +394,54 @@ public class ApiTestSuite {
       new ControlledVocabularyPreparation(client, contributorNameTypes, "contributorNameTypes");
 
     personalContributorNameTypeId = contributorNameTypesPreparation.createOrReferenceTerm("Personal name");
+  }
+
+  private static UUID createReferenceRecord(
+    ResourceClient client,
+    JsonObject record)
+    throws MalformedURLException,
+    InterruptedException,
+    ExecutionException,
+    TimeoutException {
+
+    List<JsonObject> existingRecords = client.getAll();
+
+    String name = record.getString("name");
+
+    if(name == null) {
+      throw new IllegalArgumentException("Reference records must have a name");
+    }
+
+    if(existsInList(existingRecords, name)) {
+      return client.create(record).getId();
+    }
+    else {
+      return findFirstByName(existingRecords, name);
+    }
+  }
+
+  private static UUID createReferenceRecord(
+    ResourceClient client,
+    String name)
+    throws MalformedURLException,
+    InterruptedException,
+    ExecutionException,
+    TimeoutException {
+
+    return createReferenceRecord(client, new JsonObject()
+      .put("name", name));
+  }
+
+  private static UUID findFirstByName(List<JsonObject> existingRecords, String name) {
+    return UUID.fromString(existingRecords.stream()
+      .filter(record -> record.getString("name").equals(name))
+      .findFirst()
+      .get()
+      .getString("id"));
+  }
+
+  private static boolean existsInList(List<JsonObject> existingRecords, String name) {
+    return existingRecords.stream()
+      .noneMatch(materialType -> materialType.getString("name").equals(name));
   }
 }

@@ -49,6 +49,26 @@ public class ResourceClient {
       "instances");
   }
 
+  public static ResourceClient forInstitutions(OkapiHttpClient client) {
+    return new ResourceClient(client, StorageInterfaceUrls::institutionsStorageUrl,
+      "institutions", "locinsts");
+  }
+
+  public static ResourceClient forCampuses(OkapiHttpClient client) {
+    return new ResourceClient(client, StorageInterfaceUrls::campusesStorageUrl,
+      "campuses", "loccamps");
+  }
+
+  public static ResourceClient forLibraries(OkapiHttpClient client) {
+    return new ResourceClient(client, StorageInterfaceUrls::librariesStorageUrl,
+      "libraries", "loclibs");
+  }
+
+  public static ResourceClient forLocations(OkapiHttpClient client) {
+    return new ResourceClient(client, StorageInterfaceUrls::locationsStorageUrl,
+      "locations");
+  }
+
   private ResourceClient(
     OkapiHttpClient client,
     UrlMaker urlMaker, String resourceName,

@@ -57,11 +57,11 @@ public class ItemApiLocationExamples extends ApiTests {
 
     assertThat("location is taken from holding",
       createdItem.getJsonObject("permanentLocation").getString("id"),
-      is(ApiTestSuite.getMainLibraryLocation()));
+      is(ApiTestSuite.getThirdFloorLocation()));
 
     assertThat("location is taken from holding",
       createdItem.getJsonObject("permanentLocation").getString("name"),
-      is("Main Library"));
+      is("3rd Floor"));
   }
 
   @Test
@@ -142,11 +142,11 @@ public class ItemApiLocationExamples extends ApiTests {
 
     assertThat("location is taken from holding",
       firstFetchedItem.getJsonObject("permanentLocation").getString("id"),
-      is(ApiTestSuite.getMainLibraryLocation()));
+      is(ApiTestSuite.getThirdFloorLocation()));
 
     assertThat("location is taken from holding",
       firstFetchedItem.getJsonObject("permanentLocation").getString("name"),
-      is("Main Library"));
+      is("3rd Floor"));
 
     JsonObject secondFetchedItem = getRecordById(
       fetchedItemsResponse, secondItemId).get();
@@ -156,11 +156,11 @@ public class ItemApiLocationExamples extends ApiTests {
 
     assertThat("location is taken from holding",
       secondFetchedItem.getJsonObject("permanentLocation").getString("id"),
-      is(ApiTestSuite.getAnnexLocation()));
+      is(ApiTestSuite.getMezzanineDisplayCaseLocation()));
 
     assertThat("location is taken from holding",
       secondFetchedItem.getJsonObject("permanentLocation").getString("name"),
-      is("Annex Library"));
+      is("Display Case, Mezzanine"));
   }
 
   @Test

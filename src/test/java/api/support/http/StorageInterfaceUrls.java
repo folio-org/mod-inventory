@@ -7,18 +7,32 @@ import static api.ApiTestSuite.storageOkapiUrl;
 
 public class StorageInterfaceUrls {
   public static URL holdingStorageUrl(String subPath) {
-    try {
-      return URLHelper.joinPath(new URL(storageOkapiUrl()), String.format(
-        "/holdings-storage/holdings%s", subPath));
-    } catch (MalformedURLException e) {
-      return null;
-    }
+    return viaOkapiURL(String.format("/holdings-storage/holdings%s", subPath));
   }
 
   public static URL itemsStorageUrl(String subPath) {
+    return viaOkapiURL(String.format("/item-storage/items%s", subPath));
+  }
+
+  public static URL institutionsStorageUrl(String subPath) {
+    return viaOkapiURL("/location-units/institutions" + subPath);
+  }
+
+  public static URL campusesStorageUrl(String subPath) {
+    return viaOkapiURL("/location-units/campuses" + subPath);
+  }
+
+  public static URL librariesStorageUrl(String subPath) {
+    return viaOkapiURL("/location-units/libraries" + subPath);
+  }
+
+  public static URL locationsStorageUrl(String subPath) {
+    return viaOkapiURL("/locations" + subPath);
+  }
+
+  private static URL viaOkapiURL(String path) {
     try {
-      return URLHelper.joinPath(new URL(storageOkapiUrl()), String.format(
-        "/item-storage/items%s", subPath));
+      return URLHelper.joinPath(new URL(storageOkapiUrl()), path);
     } catch (MalformedURLException e) {
       return null;
     }
