@@ -341,7 +341,7 @@ public class ExternalItemCollectionExamples {
       null, null, new ArrayList<>(), null,
       null, new ArrayList<>(),
       "Available", bookMaterialTypeId,
-      annexLibraryLocationId, canCirculateLoanTypeId, null);
+      annexLibraryLocationId, canCirculateLoanTypeId, null, null);
   }
 
   private Item nod() {
@@ -349,7 +349,7 @@ public class ExternalItemCollectionExamples {
       null, null, new ArrayList<>(), null,
       null, new ArrayList<>(),
       "Available", bookMaterialTypeId,
-      annexLibraryLocationId, canCirculateLoanTypeId, null);
+      annexLibraryLocationId, canCirculateLoanTypeId, null, null);
   }
 
   private Item uprooted() {
@@ -357,7 +357,7 @@ public class ExternalItemCollectionExamples {
       null, null, new ArrayList<>(), null,
       null, new ArrayList<>(),
       "Available", bookMaterialTypeId,
-      annexLibraryLocationId, canCirculateLoanTypeId, null);
+      annexLibraryLocationId, canCirculateLoanTypeId, null, null);
   }
 
   private Item temeraire() {
@@ -365,7 +365,7 @@ public class ExternalItemCollectionExamples {
       null, null, new ArrayList<>(), null,
       null, new ArrayList<>(),
       "Available", bookMaterialTypeId,
-      annexLibraryLocationId, canCirculateLoanTypeId, null);
+      annexLibraryLocationId, canCirculateLoanTypeId, null, null);
   }
 
   private Item interestingTimes() {
@@ -373,7 +373,7 @@ public class ExternalItemCollectionExamples {
       null, null, new ArrayList<>(), null,
       null, new ArrayList<>(),
       "Available", bookMaterialTypeId,
-      annexLibraryLocationId, canCirculateLoanTypeId, null);
+      annexLibraryLocationId, canCirculateLoanTypeId, null, null);
   }
 
   private Item getItem(List<Item> allItems, String barcode) {

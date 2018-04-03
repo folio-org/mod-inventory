@@ -133,7 +133,7 @@ public class IngestMessageProcessor {
               loanTypes.getString("Can Circulate") != null
                 ? loanTypes.getString("Can Circulate")
                 : loanTypes.getString("Can circulate"),
-              null);
+              null, null);
         })
         .forEach(item -> itemCollection.add(item, allItems.receive(),
           failure -> log.error("Item processing failed: " + failure.getReason()))));

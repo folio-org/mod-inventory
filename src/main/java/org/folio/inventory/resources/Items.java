@@ -291,7 +291,7 @@ public class Items {
       materialTypeId,
       temporaryLocationId,
       permanentLoanTypeId,
-      temporaryLoanTypeId);
+      temporaryLoanTypeId, itemRequest);
   }
 
   private String getNestedProperty(

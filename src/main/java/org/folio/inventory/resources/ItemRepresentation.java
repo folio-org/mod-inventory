@@ -110,6 +110,8 @@ class ItemRepresentation {
     includeReferenceIfPresent(representation, "temporaryLocation",
       item.temporaryLocationId);
 
+    includeIfPresent(representation, "metadata", item.metadata);
+
     try {
       URL selfUrl = context.absoluteUrl(String.format("%s/%s",
         relativeItemsPath, item.id));
@@ -179,6 +181,16 @@ class ItemRepresentation {
     JsonObject representation,
     String propertyName,
     String propertyValue) {
+
+    if (propertyValue != null) {
+      representation.put(propertyName, propertyValue);
+    }
+  }
+
+  private void includeIfPresent(
+    JsonObject representation,
+    String propertyName,
+    JsonObject propertyValue) {
 
     if (propertyValue != null) {
       representation.put(propertyName, propertyValue);

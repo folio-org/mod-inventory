@@ -1,3 +1,9 @@
+## 7.2.0 Unreleased
+
+* Expose change `metadata` property for items (MODINV-47)
+* Extend the offset and limit paging query parameters to allow maximum integer values (MODINV-55)
+* Provides inventory interface 5.2 (MODINV-47, MODINV-55)
+
 ## 7.1.0 2018-04-03
 
 * Use exact match for barcode and ID lookups using CQL (MODINV-43)
