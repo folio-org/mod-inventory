@@ -531,8 +531,7 @@ public class Items {
     WebContext context)
     throws MalformedURLException {
 
-    return createCollectionResourceClient(client, context,
-      "/material-types");
+    return createCollectionResourceClient(client, context, "/material-types");
   }
 
   private CollectionResourceClient createLoanTypesClient(
@@ -540,8 +539,7 @@ public class Items {
     WebContext context)
     throws MalformedURLException {
 
-    return createCollectionResourceClient(client, context,
-      "/loan-types");
+    return createCollectionResourceClient(client, context, "/loan-types");
   }
 
   private CollectionResourceClient createLocationsClient(
@@ -549,8 +547,7 @@ public class Items {
     WebContext context)
     throws MalformedURLException {
 
-    return createCollectionResourceClient(client, context,
-      "/shelf-locations");
+    return createCollectionResourceClient(client, context, "/locations");
   }
 
   private CollectionResourceClient createCollectionResourceClient(
