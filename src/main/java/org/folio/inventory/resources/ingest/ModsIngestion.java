@@ -77,7 +77,7 @@ public class ModsIngestion {
         new URL(context.getOkapiLocation() + "/loan-types")), "loantypes");
 
       locationsClient = new ReferenceRecordClient(new CollectionResourceClient(client,
-        new URL(context.getOkapiLocation() + "/shelf-locations")), "shelflocations");
+        new URL(context.getOkapiLocation() + "/locations")), "locations");
 
       identifierTypesClient = new ReferenceRecordClient(new CollectionResourceClient(client,
         new URL(context.getOkapiLocation() + "/identifier-types")), "identifierTypes");

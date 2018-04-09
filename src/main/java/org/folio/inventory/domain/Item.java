@@ -1,5 +1,7 @@
 package org.folio.inventory.domain;
 
+import io.vertx.core.json.JsonObject;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,6 +19,7 @@ public class Item {
   public final String permanentLoanTypeId;
   public final String temporaryLoanTypeId;
   public final String temporaryLocationId;
+  public final JsonObject metadata;
 
   public Item(String id,
               String barcode,
@@ -30,7 +33,8 @@ public class Item {
               String materialTypeId,
               String temporaryLocationId,
               String permanentLoanTypeId,
-              String temporaryLoanTypeId) {
+              String temporaryLoanTypeId,
+              JsonObject metadata) {
 
     this.id = id;
     this.barcode = barcode;
@@ -45,6 +49,7 @@ public class Item {
     this.temporaryLocationId = temporaryLocationId;
     this.permanentLoanTypeId = permanentLoanTypeId;
     this.temporaryLoanTypeId = temporaryLoanTypeId;
+    this.metadata = metadata;
   }
 
   public Item copyWithNewId(String newId) {
@@ -52,7 +57,7 @@ public class Item {
       this.chronology, this.pieceIdentifiers, this.numberOfPieces,
       holdingId, this.notes, this.status, this.materialTypeId,
       this.temporaryLocationId, this.permanentLoanTypeId,
-      this.temporaryLoanTypeId);
+      this.temporaryLoanTypeId, this.metadata);
   }
 
   public Item changeStatus(String newStatus) {
@@ -60,7 +65,7 @@ public class Item {
       this.chronology, this.pieceIdentifiers, this.numberOfPieces,
       holdingId, this.notes, newStatus, this.materialTypeId,
       this.temporaryLocationId, this.permanentLoanTypeId,
-      this.temporaryLoanTypeId);
+      this.temporaryLoanTypeId, this.metadata);
   }
 
   @Override

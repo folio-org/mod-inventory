@@ -44,7 +44,8 @@ class ExternalStorageModuleItemCollection
       itemFromServer.getString("materialTypeId"),
       itemFromServer.getString("temporaryLocationId"),
       itemFromServer.getString("permanentLoanTypeId"),
-      itemFromServer.getString("temporaryLoanTypeId"));
+      itemFromServer.getString("temporaryLoanTypeId"),
+      itemFromServer.getJsonObject("metadata"));
   }
 
   @Override
