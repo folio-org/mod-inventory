@@ -4,6 +4,7 @@
 * Extend the offset and limit paging query parameters to allow maximum integer values (MODINV-55)
 * Provides `inventory` interface 5.2 (MODINV-47, MODINV-55)
 * Requires `locations` interface 1.0 or 2.0 (MODINV-49) 
+* No longer requires `shelf-locations` interface (MODINV-49)
 
 ## 7.1.0 2018-04-03
 
