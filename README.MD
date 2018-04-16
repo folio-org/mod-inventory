@@ -40,7 +40,7 @@ To initialise these please run `git submodule init && git submodule update` in t
 
 If these are not initialised, document generation and API linting operations may fail.
 
-More information is available on the [developer site](http://dev.folio.org/doc/setup#update-git-submodules).
+More information is available on the [developer site](https://dev.folio.org/guides/developer-setup#update-git-submodules).
 
 ## Groovy and Gradle
 
@@ -108,12 +108,12 @@ The inventory.all permission set currently represents all of the permissions nee
 
 The guide and other [documentation](doc) for this module.
 
-Other [modules](http://dev.folio.org/source-code/#server-side).
+Other [modules](https://dev.folio.org/source-code/#server-side).
 
 See project [MODINV](https://issues.folio.org/browse/MODINV)
-at the [FOLIO issue tracker](http://dev.folio.org/community/guide-issues).
+at the [FOLIO issue tracker](https://dev.folio.org/guidelines/issue-tracker/).
 
-Other FOLIO Developer documentation is at [dev.folio.org](http://dev.folio.org/)
+Other FOLIO Developer documentation is at [dev.folio.org](https://dev.folio.org/)
 
 # Appendix 1 - Docker Information
 
