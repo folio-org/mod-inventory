@@ -25,13 +25,18 @@ import java.io.UnsupportedEncodingException;
 import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.folio.inventory.common.FutureAssistance.allOf;
 import static org.folio.inventory.support.CqlHelper.multipleRecordsCqlQuery;
+import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
+import static org.folio.inventory.support.JsonHelper.getNestedProperty;
 
 public class Items {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
@@ -268,11 +273,13 @@ public class Items {
   }
 
   private Item requestToItem(JsonObject itemRequest) {
-    List<String> pieceIdentifiers;
-    pieceIdentifiers = JsonArrayHelper.toListOfStrings(itemRequest.getJsonArray("pieceIdentifiers"));
+    List<String> pieceIdentifiers = toListOfStrings(
+      itemRequest.getJsonArray("pieceIdentifiers"));
+
     String status = getNestedProperty(itemRequest, "status", "name");
-    List<String> notes;
-    notes = JsonArrayHelper.toListOfStrings(itemRequest.getJsonArray("notes"));
+
+    List<String> notes = toListOfStrings(itemRequest.getJsonArray("notes"));
+
     String materialTypeId = getNestedProperty(itemRequest, "materialType", "id");
     String temporaryLocationId = getNestedProperty(itemRequest, "temporaryLocation", "id");
     String permanentLoanTypeId = getNestedProperty(itemRequest, "permanentLoanType", "id");
@@ -293,15 +300,6 @@ public class Items {
       permanentLoanTypeId,
       temporaryLoanTypeId,
       null);
-  }
-
-  private String getNestedProperty(
-    JsonObject itemRequest,
-    String objectPropertyName, String nestedPropertyName) {
-
-    return itemRequest.containsKey(objectPropertyName)
-      ? itemRequest.getJsonObject(objectPropertyName).getString(nestedPropertyName)
-      : null;
   }
 
   private void respondWithManyItems(

@@ -9,6 +9,8 @@ import org.folio.inventory.support.JsonArrayHelper;
 import java.util.List;
 import java.util.UUID;
 
+import static org.folio.inventory.support.JsonHelper.getNestedProperty;
+
 class ExternalStorageModuleItemCollection
   extends ExternalStorageModuleCollection<Item>
   implements ItemCollection {
@@ -40,7 +42,7 @@ class ExternalStorageModuleItemCollection
       itemFromServer.getString("numberOfPieces"),
       itemFromServer.getString("holdingsRecordId"),
       notesList,
-      itemFromServer.getJsonObject("status").getString("name"),
+      getNestedProperty(itemFromServer, "status", "name"),
       itemFromServer.getString("materialTypeId"),
       itemFromServer.getString("temporaryLocationId"),
       itemFromServer.getString("permanentLoanTypeId"),
@@ -62,7 +64,10 @@ class ExternalStorageModuleItemCollection
       ? item.id
       : UUID.randomUUID().toString());
 
-    itemToSend.put("status", new JsonObject().put("name", item.status));
+    if(item.status != null) {
+      itemToSend.put("status", new JsonObject().put("name", item.status));
+    }
+
     itemToSend.put("pieceIdentifiers", item.pieceIdentifiers);
     itemToSend.put("notes", item.notes);
     includeIfPresent(itemToSend, "barcode", item.barcode);

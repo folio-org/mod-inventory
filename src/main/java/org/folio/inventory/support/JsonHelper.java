@@ -7,6 +7,15 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 
 public class JsonHelper {
+  public static String getNestedProperty(
+    JsonObject representation,
+    String objectPropertyName,
+    String nestedPropertyName) {
+
+    return representation.containsKey(objectPropertyName)
+      ? representation.getJsonObject(objectPropertyName).getString(nestedPropertyName)
+      : null;
+  }
 
   public JsonObject getJsonFileAsJsonObject(String filePath) throws IOException {
     InputStream is = this.getClass().getResourceAsStream(filePath);

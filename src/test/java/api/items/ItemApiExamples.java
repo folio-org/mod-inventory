@@ -292,6 +292,33 @@ public class ItemApiExamples extends ApiTests {
   }
 
   @Test
+  public void canCreateAnItemWithoutStatus()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    JsonObject createdInstance = createInstance(
+      smallAngryPlanet(UUID.randomUUID()));
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
+
+    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withNoStatus());
+
+    Response getResponse = itemsClient.getById(postResponse.getId());
+
+    JsonObject createdItem = getResponse.getJson();
+
+    assertThat("Should not have a status property",
+      createdItem.containsKey("status"), is(false));
+  }
+
+  @Test
   public void canUpdateExistingItem()
     throws InterruptedException,
     MalformedURLException,
@@ -547,24 +574,24 @@ public class ItemApiExamples extends ApiTests {
     assertThat(secondPageItems.size(), is(2));
     assertThat(secondPageResponse.getJson().getInteger("totalRecords"), is(5));
 
-    firstPageItems.stream().forEach(ItemApiExamples::selfLinkRespectsWayResourceWasReached);
-    firstPageItems.stream().forEach(this::selfLinkShouldBeReachable);
-    firstPageItems.stream().forEach(ItemApiExamples::hasConsistentMaterialType);
-    firstPageItems.stream().forEach(ItemApiExamples::hasConsistentPermanentLoanType);
-    firstPageItems.stream().forEach(ItemApiExamples::hasConsistentTemporaryLoanType);
+    firstPageItems.forEach(ItemApiExamples::selfLinkRespectsWayResourceWasReached);
+    firstPageItems.forEach(this::selfLinkShouldBeReachable);
+    firstPageItems.forEach(ItemApiExamples::hasConsistentMaterialType);
+    firstPageItems.forEach(ItemApiExamples::hasConsistentPermanentLoanType);
+    firstPageItems.forEach(ItemApiExamples::hasConsistentTemporaryLoanType);
 
-    firstPageItems.stream().forEach(ItemApiExamples::hasStatus);
-    firstPageItems.stream().forEach(ItemApiExamples::hasConsistentPermanentLocation);
-    firstPageItems.stream().forEach(ItemApiExamples::hasConsistentTemporaryLocation);
+    firstPageItems.forEach(ItemApiExamples::hasStatus);
+    firstPageItems.forEach(ItemApiExamples::hasConsistentPermanentLocation);
+    firstPageItems.forEach(ItemApiExamples::hasConsistentTemporaryLocation);
 
-    secondPageItems.stream().forEach(ItemApiExamples::selfLinkRespectsWayResourceWasReached);
-    secondPageItems.stream().forEach(this::selfLinkShouldBeReachable);
-    secondPageItems.stream().forEach(ItemApiExamples::hasConsistentMaterialType);
-    secondPageItems.stream().forEach(ItemApiExamples::hasConsistentPermanentLoanType);
-    secondPageItems.stream().forEach(ItemApiExamples::hasConsistentTemporaryLoanType);
-    secondPageItems.stream().forEach(ItemApiExamples::hasStatus);
-    secondPageItems.stream().forEach(ItemApiExamples::hasConsistentPermanentLocation);
-    secondPageItems.stream().forEach(ItemApiExamples::hasConsistentTemporaryLocation);
+    secondPageItems.forEach(ItemApiExamples::selfLinkRespectsWayResourceWasReached);
+    secondPageItems.forEach(this::selfLinkShouldBeReachable);
+    secondPageItems.forEach(ItemApiExamples::hasConsistentMaterialType);
+    secondPageItems.forEach(ItemApiExamples::hasConsistentPermanentLoanType);
+    secondPageItems.forEach(ItemApiExamples::hasConsistentTemporaryLoanType);
+    secondPageItems.forEach(ItemApiExamples::hasStatus);
+    secondPageItems.forEach(ItemApiExamples::hasConsistentPermanentLocation);
+    secondPageItems.forEach(ItemApiExamples::hasConsistentTemporaryLocation);
   }
 
   @Test
@@ -627,10 +654,10 @@ public class ItemApiExamples extends ApiTests {
       .findFirst().get().getJsonObject("temporaryLoanType").getString("id"),
       is(ApiTestSuite.getCourseReserveLoanType()));
 
-    items.stream().forEach(ItemApiExamples::hasConsistentPermanentLoanType);
-    items.stream().forEach(ItemApiExamples::hasConsistentTemporaryLoanType);
-    items.stream().forEach(ItemApiExamples::hasConsistentPermanentLocation);
-    items.stream().forEach(ItemApiExamples::hasConsistentTemporaryLocation);
+    items.forEach(ItemApiExamples::hasConsistentPermanentLoanType);
+    items.forEach(ItemApiExamples::hasConsistentTemporaryLoanType);
+    items.forEach(ItemApiExamples::hasConsistentPermanentLocation);
+    items.forEach(ItemApiExamples::hasConsistentTemporaryLocation);
   }
 
   @Test
@@ -1016,16 +1043,4 @@ public class ItemApiExamples extends ApiTests {
 
     return InstanceApiClient.createInstance(okapiClient, newInstanceRequest);
   }
-
-  private static JsonObject temporaryLocation() {
-		return new JsonObject()
-			.put("id", ApiTestSuite.getMezzanineDisplayCaseLocation())
-			.put("name", "Display Case, Mezzanine");
-  }
-
-  private static JsonObject permanentLocation() {
-		return new JsonObject()
-			.put("id", ApiTestSuite.getThirdFloorLocation())
-			.put("name", "3rd Floor");
-	}
 }

@@ -59,7 +59,9 @@ public class ItemRequestBuilder implements Builder {
     includeWhenPresent(itemRequest, "holdingsRecordId", holdingId);
     includeWhenPresent(itemRequest, "barcode", barcode);
 
-    itemRequest.put("status", new JsonObject().put("name", status));
+    if(status != null) {
+      itemRequest.put("status", new JsonObject().put("name", status));
+    }
 
     includeWhenPresent(itemRequest, "materialType", materialType);
     includeWhenPresent(itemRequest, "permanentLoanType", permanentLoanType);
@@ -131,6 +133,20 @@ public class ItemRequestBuilder implements Builder {
 
   public ItemRequestBuilder withNoBarcode() {
     return withBarcode(null);
+  }
+
+  public ItemRequestBuilder withNoStatus() {
+    return new ItemRequestBuilder(
+      this.id,
+      this.holdingId,
+      this.readOnlyTitle,
+      this.barcode,
+      null,
+      this.materialType,
+      this.readOnlyPermanentLocation,
+      this.temporaryLocation,
+      this.permanentLoanType,
+      this.temporaryLoanType);
   }
 
   private ItemRequestBuilder withMaterialType(JsonObject materialType) {
