@@ -292,6 +292,33 @@ public class ItemApiExamples extends ApiTests {
   }
 
   @Test
+  public void canCreateAnItemWithoutStatus()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    JsonObject createdInstance = createInstance(
+      smallAngryPlanet(UUID.randomUUID()));
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
+
+    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withNoStatus());
+
+    Response getResponse = itemsClient.getById(postResponse.getId());
+
+    JsonObject createdItem = getResponse.getJson();
+
+    assertThat("Should not have a status property",
+      createdItem.containsKey("status"), is(false));
+  }
+
+  @Test
   public void canUpdateExistingItem()
     throws InterruptedException,
     MalformedURLException,
