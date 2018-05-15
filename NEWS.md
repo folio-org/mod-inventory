@@ -1,4 +1,4 @@
-## 8.0.0 Unreleased
+## 8.0.0 2018-05-15
 
 * Expose change `metadata` property for items (MODINV-47)
 * Extend the offset and limit paging query parameters to allow maximum integer values (MODINV-55)
