@@ -1,3 +1,7 @@
+## 8.0.1 Unreleased 
+
+* Requires `instance-types` interface 1.0 or 2.0 (MODINV-60)
+
 ## 8.0.0 2018-05-15
 
 * Expose change `metadata` property for items (MODINV-47)
