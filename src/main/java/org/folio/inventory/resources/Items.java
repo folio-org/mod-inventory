@@ -225,11 +225,12 @@ public class Items {
                 ? instanceResponse.getJson()
                 : null;
 
-              String permanentLocationId = holdingResponse.getStatusCode() == 200
-                && holdingResponse.getJson().containsKey("permanentLocationId")
-                ? holdingResponse.getJson().getString("permanentLocationId")
+              String effectiveLocationId = holdingResponse.getStatusCode() == 200
+                ? HoldingsSupport.determineEffectiveLocationIdForItem(
+                        holdingResponse.getJson(),
+                        item)
                 : null;
-
+              log.info("Effective location ID in Items: " + effectiveLocationId);
               ArrayList<CompletableFuture<Response>> allFutures = new ArrayList<>();
 
               CompletableFuture<Response> materialTypeFuture = getReferenceRecord(
@@ -247,14 +248,19 @@ public class Items {
               CompletableFuture<Response> temporaryLocationFuture = getReferenceRecord(
                 item.temporaryLocationId, locationsClient, allFutures);
 
+              CompletableFuture<Response> effectiveLocationFuture = getReferenceRecord(
+                effectiveLocationId, locationsClient, allFutures);
+
               CompletableFuture<Void> allDoneFuture = allOf(allFutures);
 
               allDoneFuture.thenAccept(v -> {
                 try {
                   JsonObject representation = includeReferenceRecordInformationInItem(
-                    context, item, instance, materialTypeFuture, 
+                    context, item, instance, materialTypeFuture,
+                    effectiveLocationId,
                     permanentLoanTypeFuture, temporaryLoanTypeFuture,
-                    temporaryLocationFuture, permanentLocationFuture);
+                    temporaryLocationFuture, permanentLocationFuture,
+                    effectiveLocationFuture);
 
                   JsonResponse.success(routingContext.response(), representation);
                 } catch (Exception e) {
@@ -425,7 +431,7 @@ public class Items {
 
         List<String> effectiveLocationIds = wrappedItems.records.stream()
           .map(item -> HoldingsSupport.determineEffectiveLocationIdForItem(
-            HoldingsSupport.holdingForItem(item, holdings).orElse(null)))
+            HoldingsSupport.holdingForItem(item, holdings).orElse(null), item))
           .filter(Objects::nonNull)
           .distinct()
           .collect(Collectors.toList());
@@ -625,10 +631,12 @@ public class Items {
     Item item,
     JsonObject instance,
     CompletableFuture<Response> materialTypeFuture,
+    String effectiveLocationId,
     CompletableFuture<Response> permanentLoanTypeFuture,
     CompletableFuture<Response> temporaryLoanTypeFuture,
     CompletableFuture<Response> temporaryLocationFuture,
-    CompletableFuture<Response> permanentLocationFuture) {
+    CompletableFuture<Response> permanentLocationFuture,
+    CompletableFuture<Response> effectiveLocationFuture) {
 
     JsonObject foundMaterialType =
       referenceRecordFrom(item.materialTypeId, materialTypeFuture);
@@ -645,6 +653,9 @@ public class Items {
     JsonObject foundTemporaryLocation =
       referenceRecordFrom(item.temporaryLocationId, temporaryLocationFuture);
 
+    JsonObject foundEffectiveLocation =
+      referenceRecordFrom(effectiveLocationId, effectiveLocationFuture);
+
     return new ItemRepresentation(RELATIVE_ITEMS_PATH)
         .toJson(item,
           instance,
@@ -653,6 +664,7 @@ public class Items {
           foundTemporaryLoanType,
           foundPermanentLocation,
           foundTemporaryLocation,
+          foundEffectiveLocation,
           context);
   }
 
