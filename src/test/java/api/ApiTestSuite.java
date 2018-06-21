@@ -1,7 +1,7 @@
 package api;
 
 import api.items.ItemApiExamples;
-import api.items.ItemApiLocationExamples;
+//import api.items.ItemApiLocationExamples; Use for 'effectiveLocation' test
 import api.items.ItemApiTitleExamples;
 import api.support.ControlledVocabularyPreparation;
 import api.support.http.ResourceClient;
@@ -31,7 +31,7 @@ import java.util.concurrent.TimeoutException;
 @Suite.SuiteClasses({
   InstancesApiExamples.class,
   ItemApiExamples.class,
-  ItemApiLocationExamples.class,
+  //ItemApiLocationExamples.class, Use for 'effectiveLocation' test
   ItemApiTitleExamples.class,
   ModsIngestExamples.class
 })

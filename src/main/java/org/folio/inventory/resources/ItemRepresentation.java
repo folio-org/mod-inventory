@@ -58,14 +58,9 @@ class ItemRepresentation {
     }
 
     if(permanentLocation != null) {
-      if(representation.containsKey("permanentLocation")) {
-        representation.getJsonObject("permanentLocation")
-          .put("id", permanentLocation.getString("id"))
-          .put("name", permanentLocation.getString("name"));
-      }
-      representation.put("permanentLocation", new JsonObject()
+      representation.getJsonObject("permanentLocation")
         .put("id", permanentLocation.getString("id"))
-        .put("name", permanentLocation.getString("name")));
+        .put("name", permanentLocation.getString("name"));
     }
 
     if(temporaryLocation != null) {
@@ -106,7 +101,10 @@ class ItemRepresentation {
 
     includeReferenceIfPresent(representation, "temporaryLoanType",
       item.temporaryLoanTypeId);
-
+    
+    includeReferenceIfPresent(representation, "permanentLocation",
+      item.permanentLocationId);
+    
     includeReferenceIfPresent(representation, "temporaryLocation",
       item.temporaryLocationId);
 
@@ -148,11 +146,10 @@ class ItemRepresentation {
 
       JsonObject instance = instanceForHolding(holding, instances).orElse(null);
 
-      String permanentLocationId = determinePermanentLocationIdForItem(
+      String effectiveLocationId = determineEffectiveLocationIdForItem(
         holding);
 
-      JsonObject permanentLocation = locations.get(permanentLocationId);
-
+      JsonObject permanentLocation = locations.get(item.permanentLocationId);
       JsonObject temporaryLocation = locations.get(item.temporaryLocationId);
 
       results.add(toJson(item, instance, materialType, permanentLoanType,

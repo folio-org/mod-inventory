@@ -242,7 +242,7 @@ public class Items {
                 item.temporaryLoanTypeId, loanTypesClient, allFutures);
 
               CompletableFuture<Response> permanentLocationFuture = getReferenceRecord(
-                permanentLocationId, locationsClient, allFutures);
+                item.permanentLocationId, locationsClient, allFutures);
 
               CompletableFuture<Response> temporaryLocationFuture = getReferenceRecord(
                 item.temporaryLocationId, locationsClient, allFutures);
@@ -252,7 +252,7 @@ public class Items {
               allDoneFuture.thenAccept(v -> {
                 try {
                   JsonObject representation = includeReferenceRecordInformationInItem(
-                    context, item, instance, materialTypeFuture, permanentLocationId,
+                    context, item, instance, materialTypeFuture, 
                     permanentLoanTypeFuture, temporaryLoanTypeFuture,
                     temporaryLocationFuture, permanentLocationFuture);
 
@@ -281,6 +281,7 @@ public class Items {
     List<String> notes = toListOfStrings(itemRequest.getJsonArray("notes"));
 
     String materialTypeId = getNestedProperty(itemRequest, "materialType", "id");
+    String permanentLocationId = getNestedProperty(itemRequest, "permanentLocation", "id");
     String temporaryLocationId = getNestedProperty(itemRequest, "temporaryLocation", "id");
     String permanentLoanTypeId = getNestedProperty(itemRequest, "permanentLoanType", "id");
     String temporaryLoanTypeId = getNestedProperty(itemRequest, "temporaryLoanType", "id");
@@ -296,6 +297,7 @@ public class Items {
       notes,
       status,
       materialTypeId,
+      permanentLocationId,
       temporaryLocationId,
       permanentLoanTypeId,
       temporaryLoanTypeId,
@@ -421,13 +423,19 @@ public class Items {
             loanTypesClient.get(id, newFuture::complete);
           });
 
-        List<String> permanentLocationIds = wrappedItems.records.stream()
-          .map(item -> HoldingsSupport.determinePermanentLocationIdForItem(
+        List<String> effectiveLocationIds = wrappedItems.records.stream()
+          .map(item -> HoldingsSupport.determineEffectiveLocationIdForItem(
             HoldingsSupport.holdingForItem(item, holdings).orElse(null)))
           .filter(Objects::nonNull)
           .distinct()
           .collect(Collectors.toList());
 
+        List<String> permanentLocationIds = wrappedItems.records.stream()
+          .map(item -> item.permanentLocationId)
+          .filter(Objects::nonNull)
+          .distinct()
+          .collect(Collectors.toList());
+        
         List<String> temporaryLocationIds = wrappedItems.records.stream()
           .map(item -> item.temporaryLocationId)
           .filter(Objects::nonNull)
@@ -617,7 +625,6 @@ public class Items {
     Item item,
     JsonObject instance,
     CompletableFuture<Response> materialTypeFuture,
-    String permanentLocationId,
     CompletableFuture<Response> permanentLoanTypeFuture,
     CompletableFuture<Response> temporaryLoanTypeFuture,
     CompletableFuture<Response> temporaryLocationFuture,
@@ -633,7 +640,7 @@ public class Items {
       referenceRecordFrom(item.temporaryLoanTypeId, temporaryLoanTypeFuture);
 
     JsonObject foundPermanentLocation =
-      referenceRecordFrom(permanentLocationId, permanentLocationFuture);
+      referenceRecordFrom(item.permanentLocationId, permanentLocationFuture);
 
     JsonObject foundTemporaryLocation =
       referenceRecordFrom(item.temporaryLocationId, temporaryLocationFuture);

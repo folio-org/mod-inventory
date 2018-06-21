@@ -9,7 +9,7 @@ import java.util.Optional;
 public class HoldingsSupport {
   private HoldingsSupport() { }
 
-  public static String determinePermanentLocationIdForItem(JsonObject holding) {
+  public static String determineEffectiveLocationIdForItem(JsonObject holding) {
     if(holding != null && holding.containsKey("permanentLocationId")) {
       return holding.getString("permanentLocationId");
     }

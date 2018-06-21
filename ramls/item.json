@@ -99,16 +99,12 @@
     },
     "permanentLocation": {
       "type": "object",
-      "description": "permanent location of the item (read only, inherited from associated holding)",
-      "readonly": true,
       "properties": {
         "id": {
           "type": "string",
-          "readonly": true
         },
         "name": {
           "type": "string",
-          "readonly": true
         }
       },
       "additionalProperties": false,
