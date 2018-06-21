@@ -18,6 +18,7 @@ public class Item {
   public final String materialTypeId;
   public final String permanentLoanTypeId;
   public final String temporaryLoanTypeId;
+  public final String permanentLocationId;
   public final String temporaryLocationId;
   public final JsonObject metadata;
 
@@ -31,6 +32,7 @@ public class Item {
               List<String> notes,
               String status,
               String materialTypeId,
+              String permanentLocationId,
               String temporaryLocationId,
               String permanentLoanTypeId,
               String temporaryLoanTypeId,
@@ -46,6 +48,7 @@ public class Item {
     this.notes = new ArrayList<>(notes);
     this.status = status;
     this.materialTypeId = materialTypeId;
+    this.permanentLocationId = permanentLocationId;
     this.temporaryLocationId = temporaryLocationId;
     this.permanentLoanTypeId = permanentLoanTypeId;
     this.temporaryLoanTypeId = temporaryLoanTypeId;
@@ -56,16 +59,16 @@ public class Item {
     return new Item(newId, this.barcode, this.enumeration,
       this.chronology, this.pieceIdentifiers, this.numberOfPieces,
       holdingId, this.notes, this.status, this.materialTypeId,
-      this.temporaryLocationId, this.permanentLoanTypeId,
-      this.temporaryLoanTypeId, this.metadata);
+      this.permanentLocationId, this.temporaryLocationId,  
+      this.permanentLoanTypeId, this.temporaryLoanTypeId, this.metadata);
   }
 
   public Item changeStatus(String newStatus) {
     return new Item(this.id, this.barcode, this.enumeration,
       this.chronology, this.pieceIdentifiers, this.numberOfPieces,
       holdingId, this.notes, newStatus, this.materialTypeId,
-      this.temporaryLocationId, this.permanentLoanTypeId,
-      this.temporaryLoanTypeId, this.metadata);
+      this.permanentLocationId, this.temporaryLocationId, 
+      this.permanentLoanTypeId, this.temporaryLoanTypeId, this.metadata);
   }
 
   @Override

@@ -340,7 +340,7 @@ public class ExternalItemCollectionExamples {
     return new Item(null, "036000291452",
       null, null, new ArrayList<>(), null,
       null, new ArrayList<>(),
-      "Available", bookMaterialTypeId,
+      "Available", bookMaterialTypeId, null,
       annexLibraryLocationId, canCirculateLoanTypeId, null, null);
   }
 
@@ -348,7 +348,7 @@ public class ExternalItemCollectionExamples {
     return new Item(null, "565578437802",
       null, null, new ArrayList<>(), null,
       null, new ArrayList<>(),
-      "Available", bookMaterialTypeId,
+      "Available", bookMaterialTypeId, null,
       annexLibraryLocationId, canCirculateLoanTypeId, null, null);
   }
 
@@ -356,7 +356,7 @@ public class ExternalItemCollectionExamples {
     return new Item(null, "657670342075",
       null, null, new ArrayList<>(), null,
       null, new ArrayList<>(),
-      "Available", bookMaterialTypeId,
+      "Available", bookMaterialTypeId, null,
       annexLibraryLocationId, canCirculateLoanTypeId, null, null);
   }
 
@@ -364,7 +364,7 @@ public class ExternalItemCollectionExamples {
     return new Item(null, "232142443432",
       null, null, new ArrayList<>(), null,
       null, new ArrayList<>(),
-      "Available", bookMaterialTypeId,
+      "Available", bookMaterialTypeId, null,
       annexLibraryLocationId, canCirculateLoanTypeId, null, null);
   }
 
@@ -372,7 +372,7 @@ public class ExternalItemCollectionExamples {
     return new Item(null, "56454543534",
       null, null, new ArrayList<>(), null,
       null, new ArrayList<>(),
-      "Available", bookMaterialTypeId,
+      "Available", bookMaterialTypeId, null,
       annexLibraryLocationId, canCirculateLoanTypeId, null, null);
   }
 

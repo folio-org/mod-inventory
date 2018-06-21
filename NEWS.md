@@ -1,3 +1,9 @@
+## 8.1.0 Unreleased
+
+* Requires `item-storage` interface 5.3 (MODINV-56)
+* Requires `holdings-storage` interface 1.3 (MODINV-56)
+* Provides `inventory` interface 5.3 (MODINV-56)
+
 ## 8.0.0 2018-05-15
 
 * Expose change `metadata` property for items (MODINV-47)

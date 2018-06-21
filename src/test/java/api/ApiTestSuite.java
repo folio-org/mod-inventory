@@ -1,7 +1,7 @@
 package api;
 
 import api.items.ItemApiExamples;
-import api.items.ItemApiLocationExamples;
+import api.items.ItemApiLocationExamples; 
 import api.items.ItemApiTitleExamples;
 import api.support.ControlledVocabularyPreparation;
 import api.support.http.ResourceClient;
@@ -53,6 +53,7 @@ public class ApiTestSuite {
   private static UUID businessLibrary;
   private static UUID thirdFloorLocationId;
   private static UUID mezzanineDisplayCaseLocationId;
+  private static UUID readingRoomLocationId;
   private static UUID mainLibraryLocationId;
 
   private static String isbnIdentifierTypeId;
@@ -130,12 +131,16 @@ public class ApiTestSuite {
   }
 
   public static String getThirdFloorLocation() {
-		return thirdFloorLocationId.toString();
+    return thirdFloorLocationId.toString();
   }
 
   public static String getMezzanineDisplayCaseLocation() {
-		return mezzanineDisplayCaseLocationId.toString();
-	}
+    return mezzanineDisplayCaseLocationId.toString();
+  }
+  
+  public static String getReadingRoomLocation() {
+    return readingRoomLocationId.toString();
+  }
 
   public static String getMainLibraryLocation() {
     return mainLibraryLocationId.toString();
@@ -336,6 +341,14 @@ public class ApiTestSuite {
         .put("campusId", jubileeCampus.toString())
         .put("libraryId", businessLibrary.toString()));
 
+    readingRoomLocationId = createReferenceRecord(locationsClient, 
+      new JsonObject()
+         .put("name", "Reading Room")
+         .put("code","NU/JC/BL/PR")
+         .put("institutionId", nottinghamUniversityInstitution.toString())
+         .put("campusId", jubileeCampus.toString())
+         .put("libraryId", businessLibrary.toString()));
+                 
     //Need to create a main library location otherwise MODS ingestion will fail
     //TODO: Need to remove this when MODS uses different example location
     mainLibraryLocationId = createReferenceRecord(locationsClient,

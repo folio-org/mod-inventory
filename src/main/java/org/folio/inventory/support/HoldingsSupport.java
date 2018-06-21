@@ -9,13 +9,18 @@ import java.util.Optional;
 public class HoldingsSupport {
   private HoldingsSupport() { }
 
-  public static String determinePermanentLocationIdForItem(JsonObject holding) {
-    if(holding != null && holding.containsKey("permanentLocationId")) {
-      return holding.getString("permanentLocationId");
+  public static String determineEffectiveLocationIdForItem(JsonObject holding, Item item) {
+    String effectiveLocationId = null;
+    if (item.temporaryLocationId != null) {
+      effectiveLocationId = item.temporaryLocationId;
+    } else if (item.permanentLocationId != null) {
+      effectiveLocationId = item.permanentLocationId;
+    } else if (holding != null && holding.containsKey("temporaryLocationId")) {
+      effectiveLocationId = holding.getString("temporaryLocationId");
+    } else if (holding != null && holding.containsKey("permanentLocationId")) {
+      effectiveLocationId = holding.getString("permanentLocationId");
     }
-    else {
-      return null;
-    }
+    return effectiveLocationId;
   }
 
   public static Optional<JsonObject> holdingForItem(
