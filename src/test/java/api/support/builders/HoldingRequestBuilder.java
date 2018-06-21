@@ -9,45 +9,68 @@ public class HoldingRequestBuilder implements Builder {
 
   private final UUID instanceId;
   private final UUID permanentLocationId;
+  private final UUID temporaryLocationId;
 
   public HoldingRequestBuilder() {
     this(
       null,
-      UUID.fromString(ApiTestSuite.getThirdFloorLocation()));
+      UUID.fromString(ApiTestSuite.getThirdFloorLocation()),
+      UUID.fromString(ApiTestSuite.getReadingRoomLocation()));
   }
 
   private HoldingRequestBuilder(
     UUID instanceId,
-    UUID permanentLocationId) {
+    UUID permanentLocationId,
+    UUID temporaryLocationId) {
 
     this.instanceId = instanceId;
     this.permanentLocationId = permanentLocationId;
+    this.temporaryLocationId = temporaryLocationId;
   }
 
   @Override
   public JsonObject create() {
-    return new JsonObject()
-      .put("instanceId", instanceId.toString())
-      .put("permanentLocationId", permanentLocationId.toString());
+    JsonObject holding = new JsonObject();
+
+    holding.put("instanceId", instanceId.toString())
+           .put("permanentLocationId", permanentLocationId.toString());
+    
+    if (temporaryLocationId != null) 
+      holding.put("temporaryLocationId", temporaryLocationId.toString());
+    
+    return holding;
   }
 
   public HoldingRequestBuilder withPermanentLocation(UUID permanentLocationId) {
     return new HoldingRequestBuilder(
       this.instanceId,
-      permanentLocationId);
+      permanentLocationId,
+      this.temporaryLocationId);
   }
-
-  public HoldingRequestBuilder inMainLibrary() {
-    return withPermanentLocation(UUID.fromString(ApiTestSuite.getThirdFloorLocation()));
+  
+  public HoldingRequestBuilder withTemporaryLocation(UUID temporaryLocationId) {
+    return new HoldingRequestBuilder(
+            this.instanceId,
+            this.permanentLocationId,
+            temporaryLocationId);
   }
-
-  public HoldingRequestBuilder inAnnex() {
-    return withPermanentLocation(UUID.fromString(ApiTestSuite.getMezzanineDisplayCaseLocation()));
+    
+  public HoldingRequestBuilder permanentlyInMainLibrary() {
+    return withPermanentLocation(UUID.fromString(ApiTestSuite.getMainLibraryLocation()));
+  }
+  
+  public HoldingRequestBuilder temporarilyInMezzanine() {
+    return withTemporaryLocation(UUID.fromString(ApiTestSuite.getMezzanineDisplayCaseLocation()));
+  }
+  
+  public HoldingRequestBuilder withNoTemporaryLocation() {
+    return withTemporaryLocation(null);
   }
 
   public HoldingRequestBuilder forInstance(UUID instanceId) {
     return new HoldingRequestBuilder(
       instanceId,
-      this.permanentLocationId);
+      this.permanentLocationId,
+      this.temporaryLocationId);
   }
 }

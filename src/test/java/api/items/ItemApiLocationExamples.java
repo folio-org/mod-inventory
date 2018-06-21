@@ -29,7 +29,7 @@ public class ItemApiLocationExamples extends ApiTests {
   }
 
   @Test
-  public void locationIsBasedUponHolding()
+  public void effectiveLocationIsPermanentLocationFromHolding()
     throws InterruptedException,
     ExecutionException,
     TimeoutException,
@@ -42,30 +42,28 @@ public class ItemApiLocationExamples extends ApiTests {
     UUID holdingId = holdingsStorageClient.create(
       new HoldingRequestBuilder()
         .forInstance(instanceId)
-        .inMainLibrary())
+        .permanentlyInMainLibrary()
+        .withNoTemporaryLocation())
       .getId();
 
     IndividualResource response = itemsClient.create(
       ItemRequestExamples.basedUponSmallAngryPlanet()
         .forHolding(holdingId)
-        .withNoTemporaryLocation());
+        .withNoTemporaryLocation()
+        .withNoPermanentLocation());
 
     JsonObject createdItem = response.getJson();
 
-    assertThat("has location",
-      createdItem.containsKey("permanentLocation"), is(true));
+    assertThat("has effective location",
+      createdItem.containsKey("effectiveLocation"), is(true));
 
-    assertThat("location is taken from holding",
-      createdItem.getJsonObject("permanentLocation").getString("id"),
-      is(ApiTestSuite.getThirdFloorLocation()));
-
-    assertThat("location is taken from holding",
-      createdItem.getJsonObject("permanentLocation").getString("name"),
-      is("3rd Floor"));
+    assertThat("effective location is permanent location from holding",
+      createdItem.getJsonObject("effectiveLocation").getString("id"),
+      is(ApiTestSuite.getMainLibraryLocation()));
   }
-
+  
   @Test
-  public void noPermanentLocationWhenNoHolding()
+  public void effectiveLocationIsTemporaryLocationFromHolding()
     throws InterruptedException,
     ExecutionException,
     TimeoutException,
@@ -77,23 +75,97 @@ public class ItemApiLocationExamples extends ApiTests {
 
     UUID holdingId = holdingsStorageClient.create(
       new HoldingRequestBuilder()
-        .forInstance(instanceId))
+        .forInstance(instanceId)
+        .permanentlyInMainLibrary()
+        .temporarilyInMezzanine())
       .getId();
-
-    holdingsStorageClient.delete(holdingId);
 
     IndividualResource response = itemsClient.create(
       ItemRequestExamples.basedUponSmallAngryPlanet()
         .forHolding(holdingId)
-        .withNoTemporaryLocation());
+        .withNoTemporaryLocation()
+        .withNoPermanentLocation());
 
     JsonObject createdItem = response.getJson();
 
-    assertThat("does not have permanent location",
-      createdItem.containsKey("permanentLocation"), is(false));
+    assertThat("has effective location",
+      createdItem.containsKey("effectiveLocation"), is(true));
+
+    assertThat("effective location is temporary location from holding",
+      createdItem.getJsonObject("effectiveLocation").getString("id"),
+      is(ApiTestSuite.getMezzanineDisplayCaseLocation()));
+
   }
 
   @Test
+  public void effectiveLocationIsPermanentLocationFromItem()
+    throws InterruptedException,
+    ExecutionException,
+    TimeoutException,
+    MalformedURLException,
+    UnsupportedEncodingException {
+
+    UUID instanceId = instancesClient.create(
+      InstanceRequestExamples.smallAngryPlanet()).getId();
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(instanceId)
+        .permanentlyInMainLibrary()
+        .temporarilyInMezzanine())
+      .getId();
+
+    IndividualResource response = itemsClient.create(
+      ItemRequestExamples.basedUponSmallAngryPlanet()
+        .forHolding(holdingId)
+        .withNoTemporaryLocation()
+        .permanentlyInThirdFloor());
+
+    JsonObject createdItem = response.getJson();
+
+    assertThat("has effective location",
+      createdItem.containsKey("effectiveLocation"), is(true));
+
+    assertThat("effective location is permanent location from item",
+      createdItem.getJsonObject("effectiveLocation").getString("id"),
+      is(ApiTestSuite.getThirdFloorLocation()));
+  }
+
+  @Test
+  public void effectiveLocationIsTemporaryLocationFromItem()
+    throws InterruptedException,
+    ExecutionException,
+    TimeoutException,
+    MalformedURLException,
+    UnsupportedEncodingException {
+
+    UUID instanceId = instancesClient.create(
+      InstanceRequestExamples.smallAngryPlanet()).getId();
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(instanceId)
+        .permanentlyInMainLibrary()
+        .temporarilyInMezzanine())
+      .getId();
+
+    IndividualResource response = itemsClient.create(
+      ItemRequestExamples.basedUponSmallAngryPlanet()
+        .forHolding(holdingId)
+        .temporarilyInReadingRoom()
+        .permanentlyInThirdFloor());
+
+    JsonObject createdItem = response.getJson();
+
+    assertThat("has effective location",
+      createdItem.containsKey("effectiveLocation"), is(true));
+
+    assertThat("effective location is temporary location from item",
+      createdItem.getJsonObject("effectiveLocation").getString("id"),
+      is(ApiTestSuite.getReadingRoomLocation()));
+  }
+  
+  //@Test
   public void permanentLocationsComeFromHoldingsForMultipleItems()
     throws InterruptedException,
     MalformedURLException,
@@ -106,12 +178,12 @@ public class ItemApiLocationExamples extends ApiTests {
     UUID firstHoldingId = holdingsStorageClient.create(
       new HoldingRequestBuilder()
         .forInstance(firstInstanceId)
-        .inMainLibrary())
+        .permanentlyInMainLibrary())
       .getId();
 
     UUID firstItemId = itemsClient.create(
       ItemRequestExamples.basedUponSmallAngryPlanet()
-        .temporarilyInAnnex()
+        .temporarilyInReadingRoom()
         .forHolding(firstHoldingId))
       .getId();
 
@@ -121,12 +193,12 @@ public class ItemApiLocationExamples extends ApiTests {
     UUID secondHoldingId = holdingsStorageClient.create(
       new HoldingRequestBuilder()
         .forInstance(secondInstanceId)
-        .inAnnex())
+        .permanentlyInMainLibrary())
       .getId();
 
     UUID secondItemId = itemsClient.create(
       ItemRequestExamples.basedUponTemeraire()
-        .temporarilyInMainLibrary()
+        .temporarilyInReadingRoom()
         .forHolding(secondHoldingId))
       .getId();
 
@@ -164,41 +236,7 @@ public class ItemApiLocationExamples extends ApiTests {
   }
 
   @Test
-  public void noPermanentLocationWhenNoHoldingForItems()
-    throws InterruptedException,
-    MalformedURLException,
-    TimeoutException,
-    ExecutionException {
-
-    UUID instanceId = instancesClient.create(
-      InstanceRequestExamples.smallAngryPlanet()).getId();
-
-    UUID holdingId = holdingsStorageClient.create(
-      new HoldingRequestBuilder()
-        .forInstance(instanceId))
-      .getId();
-
-    UUID itemId = itemsClient.create(
-      ItemRequestExamples.basedUponSmallAngryPlanet()
-        .temporarilyInAnnex()
-        .forHolding(holdingId))
-      .getId();
-
-    holdingsStorageClient.delete(holdingId);
-
-    List<JsonObject> fetchedItemsResponse = itemsClient.getAll();
-
-    assertThat(fetchedItemsResponse.size(), is(1));
-
-    JsonObject fetchedItem = getRecordById(
-      fetchedItemsResponse, itemId).get();
-
-    assertThat("has no permanent location",
-      fetchedItem.containsKey("permanentLocation"), is(false));
-  }
-
-  @Test
-  public void readOnlyPermanentLocationIsNotStoredWhenCreated()
+  public void readOnlyEffectiveLocationIsNotStoredWhenCreated()
     throws InterruptedException,
     ExecutionException,
     TimeoutException,
@@ -215,17 +253,17 @@ public class ItemApiLocationExamples extends ApiTests {
 
     IndividualResource response = itemsClient.create(
       ItemRequestExamples.basedUponSmallAngryPlanet()
-        .withReadOnlyPermanentLocation(ItemRequestBuilder.annex())
+        .withReadOnlyEffectiveLocation(ItemRequestBuilder.readingRoom())
         .forHolding(holdingId));
 
     Response storedItemResponse = itemsStorageClient.getById(response.getId());
 
-    assertThat("permanent location should not be stored",
-      storedItemResponse.getJson().containsKey("permanentLocationId"), is(false));
+    assertThat("effective location should not be stored",
+      storedItemResponse.getJson().containsKey("effectiveLocationId"), is(false));
   }
 
   @Test
-  public void readOnlyPermanentLocationIsNotStoredWhenUpdated()
+  public void readOnlyEffectiveLocationIsNotStoredWhenUpdated()
     throws InterruptedException,
     ExecutionException,
     TimeoutException,
@@ -242,14 +280,14 @@ public class ItemApiLocationExamples extends ApiTests {
 
     IndividualResource response = itemsClient.create(
       ItemRequestExamples.basedUponSmallAngryPlanet()
-        .withReadOnlyPermanentLocation(ItemRequestBuilder.annex())
+        .withReadOnlyEffectiveLocation(ItemRequestBuilder.readingRoom())
         .forHolding(holdingId));
 
     itemsClient.replace(response.getId(), response.getJson());
 
     Response storedItemResponse = itemsStorageClient.getById(response.getId());
 
-    assertThat("permanent location should not be stored",
-      storedItemResponse.getJson().containsKey("permanentLocationId"), is(false));
+    assertThat("effective location should not be stored",
+      storedItemResponse.getJson().containsKey("effectiveLocationId"), is(false));
   }
 }
