@@ -377,7 +377,8 @@ public class ApiTestSuite {
     ControlledVocabularyPreparation instanceTypesPreparation =
       new ControlledVocabularyPreparation(client, instanceTypes, "instanceTypes");
 
-    textInstanceTypeId = instanceTypesPreparation.createOrReferenceTerm("text");
+    textInstanceTypeId = instanceTypesPreparation.createOrReferenceTerm("text",
+      "txt", "rdacontent");
   }
 
   private static void createContributorNameTypes()
