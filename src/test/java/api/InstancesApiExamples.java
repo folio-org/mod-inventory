@@ -3,7 +3,6 @@ package api;
 import api.support.ApiRoot;
 import api.support.ApiTests;
 import api.support.InstanceApiClient;
-import api.support.Preparation;
 import com.github.jsonldjava.core.DocumentLoader;
 import com.github.jsonldjava.core.JsonLdError;
 import com.github.jsonldjava.core.JsonLdOptions;
@@ -18,7 +17,6 @@ import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.net.MalformedURLException;
@@ -58,7 +56,7 @@ public class InstancesApiExamples extends ApiTests {
         .put("contributorNameTypeId", ApiTestSuite.getPersonalContributorNameType())
         .put("name", "Chambers, Becky")))
       .put("source", "Local")
-      .put("instanceTypeId", ApiTestSuite.getBooksInstanceType());
+      .put("instanceTypeId", ApiTestSuite.getTextInstanceType());
 
     CompletableFuture<Response> postCompleted = new CompletableFuture<>();
 
@@ -85,7 +83,7 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(createdInstance.containsKey("id"), is(true));
     assertThat(createdInstance.getString("title"), is("Long Way to a Small Angry Planet"));
     assertThat(createdInstance.getString("source"), is("Local"));
-    assertThat(createdInstance.getString("instanceTypeId"), is(ApiTestSuite.getBooksInstanceType()));
+    assertThat(createdInstance.getString("instanceTypeId"), is(ApiTestSuite.getTextInstanceType()));
 
     JsonObject firstIdentifier = createdInstance.getJsonArray("identifiers")
       .getJsonObject(0);
@@ -129,7 +127,7 @@ public class InstancesApiExamples extends ApiTests {
       .put("contributorNameTypeId", ApiTestSuite.getPersonalContributorNameType())
       .put("name", "Chambers, Becky")))
       .put("source", "Local")
-      .put("instanceTypeId", ApiTestSuite.getBooksInstanceType());
+      .put("instanceTypeId", ApiTestSuite.getTextInstanceType());
 
     CompletableFuture<Response> postCompleted = new CompletableFuture<>();
 
@@ -156,7 +154,7 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(createdInstance.containsKey("id"), is(true));
     assertThat(createdInstance.getString("title"), is("Long Way to a Small Angry Planet"));
     assertThat(createdInstance.getString("source"), is("Local"));
-    assertThat(createdInstance.getString("instanceTypeId"), is(ApiTestSuite.getBooksInstanceType()));
+    assertThat(createdInstance.getString("instanceTypeId"), is(ApiTestSuite.getTextInstanceType()));
 
     JsonObject firstIdentifier = createdInstance.getJsonArray("identifiers")
       .getJsonObject(0);
