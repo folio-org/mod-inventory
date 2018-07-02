@@ -1,6 +1,8 @@
-## 8.2.0 Unreleased
+## 9.0.0 Unreleased
 
-* Provides `inventory` interface 5.3 (MODINV-56)
+* Includes item `effectiveLocation` property for overall location of item (MODINV-56)
+* Changes item `permanentLocation` to be property from storage instead of derived (MODINV-56) 
+* Provides `inventory` interface 6.0 (MODINV-56)
 * Requires `item-storage` interface 5.3 (MODINV-56)
 * Requires `holdings-storage` interface 1.3 (MODINV-56)
 * Requires `instance-types` interface 1.0 or 2.0 (MODINV-60)
