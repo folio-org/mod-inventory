@@ -35,6 +35,7 @@ class ItemRepresentation {
     JsonObject temporaryLoanType,
     JsonObject permanentLocation,
     JsonObject temporaryLocation,
+    JsonObject effectiveLocation,
     WebContext context) {
 
     JsonObject representation = toJson(item, instance, context);
@@ -58,20 +59,26 @@ class ItemRepresentation {
     }
 
     if(permanentLocation != null) {
-      if(representation.containsKey("permanentLocation")) {
-        representation.getJsonObject("permanentLocation")
-          .put("id", permanentLocation.getString("id"))
-          .put("name", permanentLocation.getString("name"));
-      }
-      representation.put("permanentLocation", new JsonObject()
+      representation.getJsonObject("permanentLocation")
         .put("id", permanentLocation.getString("id"))
-        .put("name", permanentLocation.getString("name")));
+        .put("name", permanentLocation.getString("name"));
     }
 
     if(temporaryLocation != null) {
       representation.getJsonObject("temporaryLocation")
         .put("id", temporaryLocation.getString("id"))
         .put("name", temporaryLocation.getString("name"));
+    }
+
+    if (effectiveLocation != null) {
+      if(representation.containsKey("effectiveLocation")) {
+        representation.getJsonObject("effectiveLocation")
+          .put("id", effectiveLocation.getString("id"))
+          .put("name", effectiveLocation.getString("name"));
+      }
+      representation.put("effectiveLocation", new JsonObject()
+        .put("id", effectiveLocation.getString("id"))
+        .put("name", effectiveLocation.getString("name")));
     }
 
     return representation;
@@ -106,7 +113,10 @@ class ItemRepresentation {
 
     includeReferenceIfPresent(representation, "temporaryLoanType",
       item.temporaryLoanTypeId);
-
+    
+    includeReferenceIfPresent(representation, "permanentLocation",
+      item.permanentLocationId);
+    
     includeReferenceIfPresent(representation, "temporaryLocation",
       item.temporaryLocationId);
 
@@ -131,6 +141,7 @@ class ItemRepresentation {
     Map<String, JsonObject> materialTypes,
     Map<String, JsonObject> loanTypes,
     Map<String, JsonObject> locations,
+    Map<String, JsonObject> effectiveLocations,
     WebContext context) {
 
     JsonObject representation = new JsonObject();
@@ -148,15 +159,14 @@ class ItemRepresentation {
 
       JsonObject instance = instanceForHolding(holding, instances).orElse(null);
 
-      String permanentLocationId = determinePermanentLocationIdForItem(
-        holding);
-
-      JsonObject permanentLocation = locations.get(permanentLocationId);
-
+      String effectiveLocationId = determineEffectiveLocationIdForItem(
+        holding, item);
+      JsonObject effectiveLocation = effectiveLocations.get(effectiveLocationId);
+      JsonObject permanentLocation = locations.get(item.permanentLocationId);
       JsonObject temporaryLocation = locations.get(item.temporaryLocationId);
 
       results.add(toJson(item, instance, materialType, permanentLoanType,
-        temporaryLoanType, permanentLocation, temporaryLocation, context));
+        temporaryLoanType, permanentLocation, temporaryLocation, effectiveLocation, context));
     });
 
     representation

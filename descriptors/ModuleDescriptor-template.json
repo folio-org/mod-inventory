@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "inventory",
-      "version": "5.2",
+      "version": "5.3",
       "handlers": [
         {
           "methods": ["GET"],
@@ -129,7 +129,7 @@
   "requires": [
     {
       "id": "item-storage",
-      "version": "5.0"
+      "version": "5.3"
     },
     {
       "id": "instance-storage",
@@ -137,7 +137,7 @@
     },
     {
       "id": "holdings-storage",
-      "version": "1.0"
+      "version": "1.3"
     },
     {
       "id": "material-types",

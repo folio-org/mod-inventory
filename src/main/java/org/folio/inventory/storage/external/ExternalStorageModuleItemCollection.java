@@ -44,6 +44,7 @@ class ExternalStorageModuleItemCollection
       notesList,
       getNestedProperty(itemFromServer, "status", "name"),
       itemFromServer.getString("materialTypeId"),
+      itemFromServer.getString("permanentLocationId"),
       itemFromServer.getString("temporaryLocationId"),
       itemFromServer.getString("permanentLoanTypeId"),
       itemFromServer.getString("temporaryLoanTypeId"),
@@ -78,6 +79,7 @@ class ExternalStorageModuleItemCollection
     includeIfPresent(itemToSend, "materialTypeId", item.materialTypeId);
     includeIfPresent(itemToSend, "permanentLoanTypeId", item.permanentLoanTypeId);
     includeIfPresent(itemToSend, "temporaryLoanTypeId", item.temporaryLoanTypeId);
+    includeIfPresent(itemToSend, "permanentLocationId", item.permanentLocationId);
     includeIfPresent(itemToSend, "temporaryLocationId", item.temporaryLocationId);
 
     return itemToSend;

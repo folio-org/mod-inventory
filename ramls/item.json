@@ -99,16 +99,12 @@
     },
     "permanentLocation": {
       "type": "object",
-      "description": "permanent location of the item (read only, inherited from associated holding)",
-      "readonly": true,
       "properties": {
         "id": {
-          "type": "string",
-          "readonly": true
+          "type": "string"
         },
         "name": {
-          "type": "string",
-          "readonly": true
+          "type": "string"
         }
       },
       "additionalProperties": false,
@@ -130,6 +126,21 @@
       "required": [
         "id"
       ]
+    },
+    "effectiveLocation": {
+       "type": "object",
+       "description": "effective location of the item (read only, derived from locations on HoldingsRecord and Item)",
+       "readonly": true,
+       "properties": {
+         "id": {
+           "type": "string",
+           "readonly": true
+         },
+         "name": {
+           "type": "string",
+           "readonly": true
+         }
+       }
     },
     "metadata": {
       "description": "Metadata about creation and changes, provided by the server (client should not provide)",

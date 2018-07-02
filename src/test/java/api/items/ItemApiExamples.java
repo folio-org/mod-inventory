@@ -51,7 +51,7 @@ public class ItemApiExamples extends ApiTests {
     IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)
       .withBarcode("645398607547")
-      .temporarilyInAnnex()
+      .temporarilyInReadingRoom()
       .canCirculate()
       .temporarilyCourseReserves());
 
@@ -77,8 +77,8 @@ public class ItemApiExamples extends ApiTests {
     assertThat(temporaryLoanType.getString("id"), is(ApiTestSuite.getCourseReserveLoanType()));
     assertThat(temporaryLoanType.getString("name"), is("Course Reserves"));
 
-    assertThat(createdItem.getJsonObject("permanentLocation").getString("name"), is("3rd Floor"));
-    assertThat(createdItem.getJsonObject("temporaryLocation").getString("name"), is("Display Case, Mezzanine"));
+    //assertThat(createdItem.getJsonObject("permanentLocation").getString("name"), is("3rd Floor"));
+    assertThat(createdItem.getJsonObject("temporaryLocation").getString("name"), is("Reading Room"));
 
     selfLinkRespectsWayResourceWasReached(createdItem);
     selfLinkShouldBeReachable(createdItem);
@@ -104,7 +104,7 @@ public class ItemApiExamples extends ApiTests {
       .withId(itemId)
       .forHolding(holdingId)
       .withBarcode("645398607547")
-      .temporarilyInAnnex()
+      .temporarilyInReadingRoom()
       .canCirculate()
       .temporarilyCourseReserves());
 
@@ -130,8 +130,8 @@ public class ItemApiExamples extends ApiTests {
     assertThat(temporaryLoanType.getString("id"), is(ApiTestSuite.getCourseReserveLoanType()));
     assertThat(temporaryLoanType.getString("name"), is("Course Reserves"));
 
-    assertThat(createdItem.getJsonObject("permanentLocation").getString("name"), is("3rd Floor"));
-    assertThat(createdItem.getJsonObject("temporaryLocation").getString("name"), is("Display Case, Mezzanine"));
+    //assertThat(createdItem.getJsonObject("permanentLocation").getString("name"), is("3rd Floor"));
+    assertThat(createdItem.getJsonObject("temporaryLocation").getString("name"), is("Reading Room"));
 
     selfLinkRespectsWayResourceWasReached(createdItem);
     selfLinkShouldBeReachable(createdItem);
@@ -340,7 +340,7 @@ public class ItemApiExamples extends ApiTests {
       .forHolding(holdingId)
       .withBarcode("645398607547")
       .canCirculate()
-      .temporarilyInAnnex()
+      .temporarilyInReadingRoom()
       .create();
 
     itemsClient.create(newItemRequest);
@@ -370,8 +370,8 @@ public class ItemApiExamples extends ApiTests {
     assertThat(permanentLoanType.getString("id"), is(ApiTestSuite.getCanCirculateLoanType()));
     assertThat(permanentLoanType.getString("name"), is("Can Circulate"));
 
-    assertThat(updatedItem.getJsonObject("permanentLocation").getString("name"), is("3rd Floor"));
-    assertThat(updatedItem.getJsonObject("temporaryLocation").getString("name"), is("Display Case, Mezzanine"));
+    //assertThat(updatedItem.getJsonObject("permanentLocation").getString("name"), is("3rd Floor"));
+    assertThat(updatedItem.getJsonObject("temporaryLocation").getString("name"), is("Reading Room"));
 
     selfLinkRespectsWayResourceWasReached(updatedItem);
     selfLinkShouldBeReachable(updatedItem);
@@ -398,7 +398,7 @@ public class ItemApiExamples extends ApiTests {
       .withId(itemId)
       .forHolding(holdingId)
       .canCirculate()
-      .temporarilyInAnnex()
+      .temporarilyInReadingRoom()
       .create();
 
     CompletableFuture<Response> putCompleted = new CompletableFuture<>();

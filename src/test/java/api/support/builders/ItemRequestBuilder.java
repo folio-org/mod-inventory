@@ -15,14 +15,15 @@ public class ItemRequestBuilder implements Builder {
   private final String barcode;
   private final String status;
   private final JsonObject materialType;
-  private final JsonObject readOnlyPermanentLocation;
+  private final JsonObject readOnlyEffectiveLocation;
+  private final JsonObject permanentLocation;
   private final JsonObject temporaryLocation;
   private final JsonObject permanentLoanType;
   private final JsonObject temporaryLoanType;
 
   public ItemRequestBuilder() {
     this(UUID.randomUUID(), null, null, "645398607547",
-      AVAILABLE_STATUS, bookMaterialType(), null, null,
+      AVAILABLE_STATUS, bookMaterialType(), null, null, null,
       canCirculateLoanType(), null
     );
   }
@@ -34,7 +35,8 @@ public class ItemRequestBuilder implements Builder {
     String barcode,
     String status,
     JsonObject materialType,
-    JsonObject readOnlyPermanentLocation,
+    JsonObject readOnlyEffectiveLocation,
+    JsonObject permanentLocation,
     JsonObject temporaryLocation,
     JsonObject permanentLoanType,
     JsonObject temporaryLoanType) {
@@ -44,7 +46,8 @@ public class ItemRequestBuilder implements Builder {
     this.readOnlyTitle = readOnlyTitle;
     this.barcode = barcode;
     this.status = status;
-    this.readOnlyPermanentLocation = readOnlyPermanentLocation;
+    this.readOnlyEffectiveLocation = readOnlyEffectiveLocation;
+    this.permanentLocation = permanentLocation;
     this.temporaryLocation = temporaryLocation;
     this.permanentLoanType = permanentLoanType;
     this.temporaryLoanType = temporaryLoanType;
@@ -66,11 +69,12 @@ public class ItemRequestBuilder implements Builder {
     includeWhenPresent(itemRequest, "materialType", materialType);
     includeWhenPresent(itemRequest, "permanentLoanType", permanentLoanType);
     includeWhenPresent(itemRequest, "temporaryLoanType", temporaryLoanType);
+    includeWhenPresent(itemRequest, "permanentLocation", permanentLocation);
     includeWhenPresent(itemRequest, "temporaryLocation", temporaryLocation);
 
     //Read only properties
     includeWhenPresent(itemRequest, "title", readOnlyTitle);
-    includeWhenPresent(itemRequest, "permanentLocation", readOnlyPermanentLocation);
+    includeWhenPresent(itemRequest, "effectiveLocation", readOnlyEffectiveLocation);
 
     return itemRequest;
   }
@@ -83,7 +87,8 @@ public class ItemRequestBuilder implements Builder {
       this.barcode,
       this.status,
       this.materialType,
-      this.readOnlyPermanentLocation,
+      this.readOnlyEffectiveLocation,
+      this.permanentLocation,
       this.temporaryLocation,
       this.permanentLoanType,
       this.temporaryLoanType);
@@ -97,7 +102,8 @@ public class ItemRequestBuilder implements Builder {
       this.barcode,
       this.status,
       this.materialType,
-      this.readOnlyPermanentLocation,
+      this.readOnlyEffectiveLocation,
+      this.permanentLocation,
       this.temporaryLocation,
       this.permanentLoanType,
       this.temporaryLoanType);
@@ -111,7 +117,8 @@ public class ItemRequestBuilder implements Builder {
       this.barcode,
       this.status,
       this.materialType,
-      this.readOnlyPermanentLocation,
+      this.readOnlyEffectiveLocation,
+      this.permanentLocation,
       this.temporaryLocation,
       this.permanentLoanType,
       this.temporaryLoanType);
@@ -125,7 +132,8 @@ public class ItemRequestBuilder implements Builder {
       barcode,
       this.status,
       this.materialType,
-      this.readOnlyPermanentLocation,
+      this.readOnlyEffectiveLocation,
+      this.permanentLocation,
       this.temporaryLocation,
       this.permanentLoanType,
       this.temporaryLoanType);
@@ -143,7 +151,8 @@ public class ItemRequestBuilder implements Builder {
       this.barcode,
       null,
       this.materialType,
-      this.readOnlyPermanentLocation,
+      this.readOnlyEffectiveLocation,
+      this.permanentLocation,
       this.temporaryLocation,
       this.permanentLoanType,
       this.temporaryLoanType);
@@ -157,7 +166,8 @@ public class ItemRequestBuilder implements Builder {
       this.barcode,
       this.status,
       materialType,
-      this.readOnlyPermanentLocation,
+      this.readOnlyEffectiveLocation,
+      this.permanentLocation,
       this.temporaryLocation,
       this.permanentLoanType,
       this.temporaryLoanType);
@@ -175,7 +185,7 @@ public class ItemRequestBuilder implements Builder {
     return withMaterialType(null);
   }
 
-  public ItemRequestBuilder withReadOnlyPermanentLocation(JsonObject location) {
+  public ItemRequestBuilder withReadOnlyEffectiveLocation(JsonObject location) {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
@@ -184,6 +194,7 @@ public class ItemRequestBuilder implements Builder {
       this.status,
       this.materialType,
       location,
+      this.permanentLocation,
       this.temporaryLocation,
       this.permanentLoanType,
       this.temporaryLoanType);
@@ -197,24 +208,44 @@ public class ItemRequestBuilder implements Builder {
       this.barcode,
       this.status,
       this.materialType,
-      this.readOnlyPermanentLocation,
+      this.readOnlyEffectiveLocation,
+      this.permanentLocation,
       location,
       this.permanentLoanType,
       this.temporaryLoanType);
   }
-
-  public ItemRequestBuilder temporarilyInMainLibrary() {
-    return withTemporaryLocation(mainLibrary());
+  
+    private ItemRequestBuilder withPermanentLocation(JsonObject location) {
+    return new ItemRequestBuilder(
+      this.id,
+      this.holdingId,
+      this.readOnlyTitle,
+      this.barcode,
+      this.status,
+      this.materialType,
+      this.readOnlyEffectiveLocation,
+      location,
+      this.temporaryLocation,
+      this.permanentLoanType,
+      this.temporaryLoanType);
+  }
+      
+  public ItemRequestBuilder permanentlyInThirdFloor() {
+    return withPermanentLocation(thirdFloor());
   }
 
-  public ItemRequestBuilder temporarilyInAnnex() {
-    return withTemporaryLocation(annex());
+  public ItemRequestBuilder temporarilyInReadingRoom() {
+    return withTemporaryLocation(readingRoom());
+  }
+  
+  public ItemRequestBuilder withNoPermanentLocation() {
+    return withPermanentLocation(null);
   }
 
   public ItemRequestBuilder withNoTemporaryLocation() {
     return withTemporaryLocation(null);
   }
-
+  
   private ItemRequestBuilder withPermanentLoanType(JsonObject loanType) {
     return new ItemRequestBuilder(
       this.id,
@@ -223,7 +254,8 @@ public class ItemRequestBuilder implements Builder {
       this.barcode,
       this.status,
       this.materialType,
-      this.readOnlyPermanentLocation,
+      this.readOnlyEffectiveLocation,
+      this.permanentLocation,
       this.temporaryLocation,
       loanType,
       this.temporaryLoanType);
@@ -249,7 +281,8 @@ public class ItemRequestBuilder implements Builder {
       this.barcode,
       this.status,
       this.materialType,
-      this.readOnlyPermanentLocation,
+      this.readOnlyEffectiveLocation,
+      this.permanentLocation,
       this.temporaryLocation,
       this.permanentLoanType,
       loanType);
@@ -275,16 +308,17 @@ public class ItemRequestBuilder implements Builder {
       .put("name", "DVD");
   }
 
-  public static JsonObject mainLibrary() {
+  public static JsonObject thirdFloor() {
     return new JsonObject()
       .put("id", ApiTestSuite.getThirdFloorLocation())
       .put("name", "3rd Floor");
   }
-
-  public static JsonObject annex() {
+    
+  public static JsonObject readingRoom() {
     return new JsonObject()
-      .put("id", ApiTestSuite.getMezzanineDisplayCaseLocation())
-      .put("name", "Display Case, Mezzanine");
+      .put("id", ApiTestSuite.getReadingRoomLocation())
+      .put("name", "Reading Room");
+    
   }
 
   private static JsonObject canCirculateLoanType() {

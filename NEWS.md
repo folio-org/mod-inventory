@@ -1,5 +1,8 @@
-## 8.0.1 Unreleased 
+## 8.2.0 Unreleased
 
+* Provides `inventory` interface 5.3 (MODINV-56)
+* Requires `item-storage` interface 5.3 (MODINV-56)
+* Requires `holdings-storage` interface 1.3 (MODINV-56)
 * Requires `instance-types` interface 1.0 or 2.0 (MODINV-60)
 
 ## 8.0.0 2018-05-15

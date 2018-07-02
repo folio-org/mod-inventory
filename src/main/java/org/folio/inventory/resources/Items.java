@@ -225,11 +225,12 @@ public class Items {
                 ? instanceResponse.getJson()
                 : null;
 
-              String permanentLocationId = holdingResponse.getStatusCode() == 200
-                && holdingResponse.getJson().containsKey("permanentLocationId")
-                ? holdingResponse.getJson().getString("permanentLocationId")
+              String effectiveLocationId = holdingResponse.getStatusCode() == 200
+                ? HoldingsSupport.determineEffectiveLocationIdForItem(
+                        holdingResponse.getJson(),
+                        item)
                 : null;
-
+              log.info("Effective location ID in Items: " + effectiveLocationId);
               ArrayList<CompletableFuture<Response>> allFutures = new ArrayList<>();
 
               CompletableFuture<Response> materialTypeFuture = getReferenceRecord(
@@ -242,19 +243,24 @@ public class Items {
                 item.temporaryLoanTypeId, loanTypesClient, allFutures);
 
               CompletableFuture<Response> permanentLocationFuture = getReferenceRecord(
-                permanentLocationId, locationsClient, allFutures);
+                item.permanentLocationId, locationsClient, allFutures);
 
               CompletableFuture<Response> temporaryLocationFuture = getReferenceRecord(
                 item.temporaryLocationId, locationsClient, allFutures);
+
+              CompletableFuture<Response> effectiveLocationFuture = getReferenceRecord(
+                effectiveLocationId, locationsClient, allFutures);
 
               CompletableFuture<Void> allDoneFuture = allOf(allFutures);
 
               allDoneFuture.thenAccept(v -> {
                 try {
                   JsonObject representation = includeReferenceRecordInformationInItem(
-                    context, item, instance, materialTypeFuture, permanentLocationId,
+                    context, item, instance, materialTypeFuture,
+                    effectiveLocationId,
                     permanentLoanTypeFuture, temporaryLoanTypeFuture,
-                    temporaryLocationFuture, permanentLocationFuture);
+                    temporaryLocationFuture, permanentLocationFuture,
+                    effectiveLocationFuture);
 
                   JsonResponse.success(routingContext.response(), representation);
                 } catch (Exception e) {
@@ -281,6 +287,7 @@ public class Items {
     List<String> notes = toListOfStrings(itemRequest.getJsonArray("notes"));
 
     String materialTypeId = getNestedProperty(itemRequest, "materialType", "id");
+    String permanentLocationId = getNestedProperty(itemRequest, "permanentLocation", "id");
     String temporaryLocationId = getNestedProperty(itemRequest, "temporaryLocation", "id");
     String permanentLoanTypeId = getNestedProperty(itemRequest, "permanentLoanType", "id");
     String temporaryLoanTypeId = getNestedProperty(itemRequest, "temporaryLoanType", "id");
@@ -296,6 +303,7 @@ public class Items {
       notes,
       status,
       materialTypeId,
+      permanentLocationId,
       temporaryLocationId,
       permanentLoanTypeId,
       temporaryLoanTypeId,
@@ -312,6 +320,7 @@ public class Items {
     CollectionResourceClient materialTypesClient;
     CollectionResourceClient loanTypesClient;
     CollectionResourceClient locationsClient;
+    CollectionResourceClient effectiveLocationsClient;
 
     try {
       OkapiHttpClient client = createHttpClient(routingContext, context);
@@ -320,6 +329,7 @@ public class Items {
       materialTypesClient = createMaterialTypesClient(client, context);
       loanTypesClient = createLoanTypesClient(client, context);
       locationsClient = createLocationsClient(client, context);
+      effectiveLocationsClient = createLocationsClient(client, context);
     }
     catch (MalformedURLException e) {
       invalidOkapiUrlResponse(routingContext, context);
@@ -329,6 +339,7 @@ public class Items {
 
     ArrayList<CompletableFuture<Response>> allMaterialTypeFutures = new ArrayList<>();
     ArrayList<CompletableFuture<Response>> allLoanTypeFutures = new ArrayList<>();
+    ArrayList<CompletableFuture<Response>> allEffectiveLocationsFutures = new ArrayList<>();
     ArrayList<CompletableFuture<Response>> allLocationsFutures = new ArrayList<>();
     ArrayList<CompletableFuture<Response>> allFutures = new ArrayList<>();
 
@@ -421,13 +432,28 @@ public class Items {
             loanTypesClient.get(id, newFuture::complete);
           });
 
-        List<String> permanentLocationIds = wrappedItems.records.stream()
-          .map(item -> HoldingsSupport.determinePermanentLocationIdForItem(
-            HoldingsSupport.holdingForItem(item, holdings).orElse(null)))
+        List<String> effectiveLocationIds = wrappedItems.records.stream()
+          .map(item -> HoldingsSupport.determineEffectiveLocationIdForItem(
+            HoldingsSupport.holdingForItem(item, holdings).orElse(null), item))
           .filter(Objects::nonNull)
           .distinct()
           .collect(Collectors.toList());
 
+        effectiveLocationIds.stream().forEach(id -> {
+          CompletableFuture<Response> newFuture = new CompletableFuture<>();
+
+          allFutures.add(newFuture);
+          allEffectiveLocationsFutures.add(newFuture);
+
+          effectiveLocationsClient.get(id, newFuture::complete);
+        });
+
+        List<String> permanentLocationIds = wrappedItems.records.stream()
+          .map(item -> item.permanentLocationId)
+          .filter(Objects::nonNull)
+          .distinct()
+          .collect(Collectors.toList());
+        
         List<String> temporaryLocationIds = wrappedItems.records.stream()
           .map(item -> item.temporaryLocationId)
           .filter(Objects::nonNull)
@@ -466,6 +492,13 @@ public class Items {
               .map(Response::getJson)
               .collect(Collectors.toMap(r -> r.getString("id"), r -> r));
 
+            Map<String, JsonObject> foundEffectiveLocations
+              = allEffectiveLocationsFutures.stream()
+              .map(CompletableFuture::join)
+              .filter(response -> response.getStatusCode() == 200)
+              .map(Response::getJson)
+              .collect(Collectors.toMap(r -> r.getString("id"), r-> r));
+
             Map<String, JsonObject> foundLocations
               = allLocationsFutures.stream()
               .map(CompletableFuture::join)
@@ -476,7 +509,7 @@ public class Items {
             JsonResponse.success(routingContext.response(),
               new ItemRepresentation(RELATIVE_ITEMS_PATH)
                 .toJson(wrappedItems, holdings, instances, foundMaterialTypes,
-                  foundLoanTypes, foundLocations, context));
+                  foundLoanTypes, foundLocations, foundEffectiveLocations, context));
           } catch (Exception e) {
             ServerErrorResponse.internalError(routingContext.response(), e.toString());
           }
@@ -617,11 +650,12 @@ public class Items {
     Item item,
     JsonObject instance,
     CompletableFuture<Response> materialTypeFuture,
-    String permanentLocationId,
+    String effectiveLocationId,
     CompletableFuture<Response> permanentLoanTypeFuture,
     CompletableFuture<Response> temporaryLoanTypeFuture,
     CompletableFuture<Response> temporaryLocationFuture,
-    CompletableFuture<Response> permanentLocationFuture) {
+    CompletableFuture<Response> permanentLocationFuture,
+    CompletableFuture<Response> effectiveLocationFuture) {
 
     JsonObject foundMaterialType =
       referenceRecordFrom(item.materialTypeId, materialTypeFuture);
@@ -633,10 +667,13 @@ public class Items {
       referenceRecordFrom(item.temporaryLoanTypeId, temporaryLoanTypeFuture);
 
     JsonObject foundPermanentLocation =
-      referenceRecordFrom(permanentLocationId, permanentLocationFuture);
+      referenceRecordFrom(item.permanentLocationId, permanentLocationFuture);
 
     JsonObject foundTemporaryLocation =
       referenceRecordFrom(item.temporaryLocationId, temporaryLocationFuture);
+
+    JsonObject foundEffectiveLocation =
+      referenceRecordFrom(effectiveLocationId, effectiveLocationFuture);
 
     return new ItemRepresentation(RELATIVE_ITEMS_PATH)
         .toJson(item,
@@ -646,6 +683,7 @@ public class Items {
           foundTemporaryLoanType,
           foundPermanentLocation,
           foundTemporaryLocation,
+          foundEffectiveLocation,
           context);
   }
 
