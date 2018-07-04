@@ -231,7 +231,7 @@ public class ModsIngestExamples extends ApiTests {
 
       assertThat("instance type should be books",
         instance.getString("instanceTypeId"),
-        is(ApiTestSuite.getBooksInstanceType()));
+        is(ApiTestSuite.getTextInstanceType()));
 
       assertThat("instance should have a source",
         instance.containsKey("source"), is(true));

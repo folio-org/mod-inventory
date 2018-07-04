@@ -20,7 +20,7 @@ public class InstanceSamples {
       .put("identifiers", identifiers)
       .put("contributors", contributors)
       .put("source", "Local")
-      .put("instanceTypeId", getBooksInstanceType());
+      .put("instanceTypeId", getTextInstanceType());
   }
 
   public static JsonObject smallAngryPlanet(UUID id) {

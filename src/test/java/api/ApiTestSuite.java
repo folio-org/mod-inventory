@@ -58,7 +58,7 @@ public class ApiTestSuite {
 
   private static String isbnIdentifierTypeId;
   private static String asinIdentifierTypeId;
-  private static String booksInstanceTypeId;
+  private static String textInstanceTypeId;
   private static String personalContributorNameTypeId;
 
   private static VertxAssistant vertxAssistant = new VertxAssistant();
@@ -154,8 +154,8 @@ public class ApiTestSuite {
     return asinIdentifierTypeId;
   }
 
-  public static String getBooksInstanceType() {
-    return booksInstanceTypeId;
+  public static String getTextInstanceType() {
+    return textInstanceTypeId;
   }
 
   public static String getPersonalContributorNameType() {
@@ -390,7 +390,8 @@ public class ApiTestSuite {
     ControlledVocabularyPreparation instanceTypesPreparation =
       new ControlledVocabularyPreparation(client, instanceTypes, "instanceTypes");
 
-    booksInstanceTypeId = instanceTypesPreparation.createOrReferenceTerm("Books");
+    textInstanceTypeId = instanceTypesPreparation.createOrReferenceTerm("text",
+      "txt", "rdacontent");
   }
 
   private static void createContributorNameTypes()

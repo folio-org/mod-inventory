@@ -32,7 +32,7 @@ public class InstanceRequestBuilder implements Builder {
         .put("contributorNameTypeId", ApiTestSuite.getPersonalContributorNameType())
         .put("name", contributor)))
       .put("source", "Local")
-      .put("instanceTypeId", ApiTestSuite.getBooksInstanceType());
+      .put("instanceTypeId", ApiTestSuite.getTextInstanceType());
   }
 
   public InstanceRequestBuilder withId(UUID id) {

@@ -113,12 +113,13 @@ public class ModsIngestion {
         routingContext, locationsClient.getRecord("Main Library"));
 
       instanceTypesRequestCompleted = wrapWithExceptionHandler(
-        routingContext, instanceTypesClient.getRecord("Books"));
+        routingContext, instanceTypesClient.getRecord("text"));
 
       identifierTypesRequestCompleted = wrapWithExceptionHandler(
         routingContext, identifierTypesClient.getRecord("ISBN"));
 
-      contributorNameTypesRequestCompleted = wrapWithExceptionHandler(routingContext, contributorNameTypesClient.getRecord("Personal name"));
+      contributorNameTypesRequestCompleted = wrapWithExceptionHandler(
+        routingContext, contributorNameTypesClient.getRecord("Personal name"));
 
     } catch (UnsupportedEncodingException e) {
       String error = String.format("Failed to encode query: %s", e.toString());

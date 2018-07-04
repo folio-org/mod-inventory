@@ -88,7 +88,7 @@ public class IngestMessageProcessor {
         }
 
         return new Instance(UUID.randomUUID().toString(), record.getString(TITLE_PROPERTY),
-          identifiers, "Local: MODS", instanceTypes.getString("Books"), contributors);
+          identifiers, "Local: MODS", instanceTypes.getString("text"), contributors);
       })
       .forEach(instance -> instanceCollection.add(instance, allInstances.receive(),
         failure -> log.error("Instance processing failed: " + failure.getReason())));

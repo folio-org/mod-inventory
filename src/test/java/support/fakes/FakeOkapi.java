@@ -158,6 +158,7 @@ public class FakeOkapi extends AbstractVerticle {
       .withRecordName("instance type")
       .withRootPath("/instance-types")
       .withCollectionPropertyName("instanceTypes")
+      .withRequiredProperties("name", "code", "source")
       .create().register(router);
   }
 

@@ -68,6 +68,46 @@ public class ControlledVocabularyPreparation {
     }
   }
 
+  public String createOrReferenceTerm(String name, String code, String source)
+    throws InterruptedException, ExecutionException, TimeoutException {
+
+    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+
+    client.get(controlledVocabularyRoot, ResponseHandler.json(getCompleted));
+
+    Response response = getCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat("Controlled vocabulary API unavailable",
+      response.getStatusCode(), is(200));
+
+    List<JsonObject> existingTerms = JsonArrayHelper.toList(
+      response.getJson().getJsonArray(this.collectionWrapperProperty));
+
+    if (doesNotExist(existingTerms, name)) {
+      JsonObject vocabularyEntryRequest = new JsonObject()
+        .put("name", name)
+        .put("code", code)
+        .put("source", source);
+
+      CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+
+      client.post(controlledVocabularyRoot,
+        vocabularyEntryRequest, ResponseHandler.json(postCompleted));
+
+      Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
+
+      assertThat("Failed to create reference record",
+        postResponse.getStatusCode(), is(201));
+
+      return postResponse.getJson().getString("id");
+
+    } else {
+      return existingTerms.stream()
+        .filter(it -> it.getString("name").equals(name))
+        .findFirst().get().getString("id");
+    }
+  }
+
   private boolean doesNotExist(List<JsonObject> existingTerms, String name) {
     return existingTerms.stream()
       .noneMatch(it -> it.getString("name").equals(name));
