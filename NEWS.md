@@ -1,4 +1,4 @@
-## 9.0.0 Unreleased
+## 9.0.0 2018-07-06
 
 * Includes item `effectiveLocation` property for overall location of item (MODINV-56)
 * Changes item `permanentLocation` to be property from storage instead of derived (MODINV-56) 
