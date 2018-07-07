@@ -21,6 +21,7 @@ import static org.folio.inventory.storage.external.ReferenceRecordClientExamples
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
 public class ReferenceRecordClientExamples {
 
@@ -102,6 +103,25 @@ public class ReferenceRecordClientExamples {
       "Failed to get reference record: Book"));
 
     waitForCompletion(recordFuture);
+  }
+
+  @Test
+  public void doesntGetReferenceRecordBySubstring()
+    throws InterruptedException,
+    ExecutionException,
+    TimeoutException,
+    UnsupportedEncodingException {
+
+    preparation.createOrReferenceTerm("Tactile Book");
+    preparation.createOrReferenceTerm("Book in Electronic Form");
+
+    CompletableFuture<ReferenceRecord> recordFuture
+      = referenceClient.getRecord("Book");
+
+    thrown.expectMessage("Failed to get reference record: Book");
+
+    ReferenceRecord record = recordFuture.join();
+    fail("Got unexpected record: " + record);
   }
 
   static class CauseMatcher extends TypeSafeMatcher<Throwable> {

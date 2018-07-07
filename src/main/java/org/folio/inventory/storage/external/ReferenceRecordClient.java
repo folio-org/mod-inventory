@@ -71,7 +71,7 @@ public class ReferenceRecordClient {
   private static String getReferenceRecordQuery(String name)
     throws UnsupportedEncodingException {
 
-    return "query=" + URLEncoder.encode(String.format("name=\"%s\"", name), "UTF-8");
+    return "query=" + URLEncoder.encode(String.format("name==\"%s\"", name), "UTF-8");
   }
 
   public class ReferenceRecordClientException extends Exception {

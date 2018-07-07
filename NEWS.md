@@ -1,3 +1,7 @@
+## 9.1.0 Unreleased
+
+* Reference record lookups use == CQL relation, instead of = (MODINV-64)
+
 ## 9.0.0 2018-07-06
 
 * Includes item `effectiveLocation` property for overall location of item (MODINV-56)
