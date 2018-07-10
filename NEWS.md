@@ -1,4 +1,4 @@
-## 9.1.0 Unreleased
+## 9.1.0 2018-07-10
 
 * Reference record lookups use == CQL relation, instead of = (MODINV-64)
 
