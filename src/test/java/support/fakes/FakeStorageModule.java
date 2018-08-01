@@ -14,6 +14,7 @@ import org.folio.inventory.support.http.server.SuccessResponse;
 import org.folio.inventory.support.http.server.ValidationError;
 
 import java.util.*;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 class FakeStorageModule extends AbstractVerticle {
@@ -24,7 +25,7 @@ class FakeStorageModule extends AbstractVerticle {
   private final Map<String, Map<String, JsonObject>> storedResourcesByTenant;
   private final String recordTypeName;
   private final Collection<String> uniqueProperties;
-  private final Map<String, Object> defaultProperties;
+  private final Map<String, Supplier<Object>> defaultProperties;
 
   FakeStorageModule(
     String rootPath,
@@ -34,7 +35,7 @@ class FakeStorageModule extends AbstractVerticle {
     boolean hasCollectionDelete,
     String recordTypeName,
     Collection<String> uniqueProperties,
-    Map<String, Object> defaultProperties) {
+    Map<String, Supplier<Object>> defaultProperties) {
 
     this.rootPath = rootPath;
     this.collectionPropertyName = collectionPropertyName;
@@ -284,9 +285,9 @@ class FakeStorageModule extends AbstractVerticle {
   }
 
   private void setDefaultProperties(JsonObject representation) {
-    defaultProperties.forEach((property, value) -> {
+    defaultProperties.forEach((property, valueSupplier) -> {
       if(!representation.containsKey(property)) {
-        representation.put(property, value);
+        representation.put(property, valueSupplier.get());
       }
     });
   }

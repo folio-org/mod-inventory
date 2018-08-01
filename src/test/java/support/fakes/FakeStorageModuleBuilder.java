@@ -3,6 +3,7 @@ package support.fakes;
 import api.ApiTestSuite;
 
 import java.util.*;
+import java.util.function.Supplier;
 
 public class FakeStorageModuleBuilder {
   private final String rootPath;
@@ -10,7 +11,7 @@ public class FakeStorageModuleBuilder {
   private final String tenantId;
   private final Collection<String> requiredProperties;
   private final Collection<String> uniqueProperties;
-  private final Map<String, Object> defaultProperties;
+  private final Map<String, Supplier<Object>> defaultProperties;
   private final Boolean hasCollectionDelete;
   private final String recordName;
 
@@ -27,7 +28,7 @@ public class FakeStorageModuleBuilder {
     boolean hasCollectionDelete,
     String recordName,
     Collection<String> uniqueProperties,
-    Map<String, Object> defaultProperties) {
+    Map<String, Supplier<Object>> defaultProperties) {
 
     this.rootPath = rootPath;
     this.collectionPropertyName = collectionPropertyName;
@@ -104,9 +105,9 @@ public class FakeStorageModuleBuilder {
   }
 
   FakeStorageModuleBuilder withDefault(String property, Object value) {
-    final Map<String, Object> newDefaults = new HashMap<>(this.defaultProperties);
+    final Map<String, Supplier<Object>> newDefaults = new HashMap<>(this.defaultProperties);
 
-    newDefaults.put(property, value);
+    newDefaults.put(property, () -> value);
 
     return new FakeStorageModuleBuilder(
       this.rootPath,
