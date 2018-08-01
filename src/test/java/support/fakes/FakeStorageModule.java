@@ -16,7 +16,7 @@ import org.folio.inventory.support.http.server.ValidationError;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class FakeStorageModule extends AbstractVerticle {
+class FakeStorageModule extends AbstractVerticle {
   private final String rootPath;
   private final String collectionPropertyName;
   private final boolean hasCollectionDelete;
@@ -24,16 +24,17 @@ public class FakeStorageModule extends AbstractVerticle {
   private final Map<String, Map<String, JsonObject>> storedResourcesByTenant;
   private final String recordTypeName;
   private final Collection<String> uniqueProperties;
-  private Proxy proxyAs;
+  private final Map<String, Object> defaultProperties;
 
-  public FakeStorageModule(
+  FakeStorageModule(
     String rootPath,
     String collectionPropertyName,
     String tenantId,
     Collection<String> requiredProperties,
     boolean hasCollectionDelete,
     String recordTypeName,
-    Collection<String> uniqueProperties) {
+    Collection<String> uniqueProperties,
+    Map<String, Object> defaultProperties) {
 
     this.rootPath = rootPath;
     this.collectionPropertyName = collectionPropertyName;
@@ -41,12 +42,13 @@ public class FakeStorageModule extends AbstractVerticle {
     this.hasCollectionDelete = hasCollectionDelete;
     this.recordTypeName = recordTypeName;
     this.uniqueProperties = uniqueProperties;
+    this.defaultProperties = defaultProperties;
 
     storedResourcesByTenant = new HashMap<>();
     storedResourcesByTenant.put(tenantId, new HashMap<>());
   }
 
-  public void register(Router router) {
+  void register(Router router) {
     String pathTree = rootPath + "/*";
 
     router.route(pathTree).handler(this::checkTokenHeader);
@@ -66,11 +68,6 @@ public class FakeStorageModule extends AbstractVerticle {
 
     router.get(rootPath + "/:id").handler(this::get);
     router.delete(rootPath + "/:id").handler(this::delete);
-
-    if(proxyAs != null) {
-      router.get(proxyAs.path).handler(this::getManyProxy);
-      router.get(proxyAs.path + "/:id").handler(this::getProxy);
-    }
   }
 
   private void create(RoutingContext routingContext) {
@@ -82,7 +79,9 @@ public class FakeStorageModule extends AbstractVerticle {
     String id = body.getString("id", UUID.randomUUID().toString());
 
     body.put("id", id);
-
+    
+    setDefaultProperties(body);
+    
     getResourcesForTenant(context).put(id, body);
 
     System.out.println(
@@ -97,6 +96,8 @@ public class FakeStorageModule extends AbstractVerticle {
     String id = routingContext.request().getParam("id");
 
     JsonObject body = getJsonFromBody(routingContext);
+
+    setDefaultProperties(body);
 
     Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
 
@@ -203,80 +204,6 @@ public class FakeStorageModule extends AbstractVerticle {
     }
   }
 
-  private void getProxy(RoutingContext routingContext) {
-    WebContext context = new WebContext(routingContext);
-
-    String id = routingContext.request().getParam("id");
-
-    Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
-
-    if(resourcesForTenant.containsKey(id)) {
-      final JsonObject resourceRepresentation = resourcesForTenant.get(id);
-
-      JsonObject mapped = new JsonObject();
-
-      proxyAs.propertiesToMap.forEach(property -> {
-        if(resourceRepresentation.containsKey(property)) {
-          mapped.put(property, resourceRepresentation.getString(property));
-        }
-      });
-
-      System.out.println(
-        String.format("Proxying %s resource: %s", recordTypeName,
-          mapped.encodePrettily()));
-
-      JsonResponse.success(routingContext.response(), mapped);
-    }
-    else {
-      System.out.println(
-        String.format("Failed to proxy %s resource: %s", recordTypeName, id));
-
-      ClientErrorResponse.notFound(routingContext.response());
-    }
-  }
-
-  private void getManyProxy(RoutingContext routingContext) {
-    WebContext context = new WebContext(routingContext);
-
-    Integer limit = context.getIntegerParameter("limit", 10);
-    Integer offset = context.getIntegerParameter("offset", 0);
-    String query = context.getStringParameter("query", null);
-
-    System.out.println(String.format("Proxying %s", routingContext.request().uri()));
-
-    Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
-
-    List<JsonObject> filteredItems = new FakeCQLToJSONInterpreter(false)
-      .execute(resourcesForTenant.values(), query);
-
-    List<JsonObject> pagedItems = filteredItems.stream()
-      .skip(offset)
-      .limit(limit)
-      .map(record -> {
-        JsonObject mapped = new JsonObject();
-
-        proxyAs.propertiesToMap.forEach(property -> {
-          if(record.containsKey(property)) {
-            mapped.put(property, record.getString(property));
-          }
-        });
-
-        return mapped;
-      })
-      .collect(Collectors.toList());
-
-    JsonObject result = new JsonObject();
-
-    result.put(proxyAs.collectionPropertyName, new JsonArray(pagedItems));
-    result.put("totalRecords", filteredItems.size());
-
-    System.out.println(
-      String.format("Found proxied %s resources: %s", recordTypeName,
-        result.encodePrettily()));
-
-    JsonResponse.success(routingContext.response(), result);
-  }
-
   private Map<String, JsonObject> getResourcesForTenant(WebContext context) {
     return storedResourcesByTenant.get(context.getTenantId());
   }
@@ -356,26 +283,12 @@ public class FakeStorageModule extends AbstractVerticle {
     }
   }
 
-  public FakeStorageModule proxyAs(
-    String path,
-    String collectionPropertyName,
-    String... propertiesToMap) {
-
-    proxyAs = new Proxy(path, collectionPropertyName, Arrays.asList(propertiesToMap));
-
-    return this;
-  }
-
-  private class Proxy {
-    final String path;
-    final String collectionPropertyName;
-    final Collection<String> propertiesToMap;
-
-    private Proxy(String path, String collectionPropertyName, Collection<String> propertiesToMap) {
-      this.path = path;
-      this.collectionPropertyName = collectionPropertyName;
-      this.propertiesToMap = propertiesToMap;
-    }
+  private void setDefaultProperties(JsonObject representation) {
+    defaultProperties.forEach((property, value) -> {
+      if(!representation.containsKey(property)) {
+        representation.put(property, value);
+      }
+    });
   }
 }
 

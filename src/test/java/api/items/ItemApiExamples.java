@@ -314,8 +314,10 @@ public class ItemApiExamples extends ApiTests {
 
     JsonObject createdItem = getResponse.getJson();
 
-    assertThat("Should not have a status property",
-      createdItem.containsKey("status"), is(false));
+    assertThat("Should have a defaulted status property",
+      createdItem.containsKey("status"), is(true));
+
+    assertThat(createdItem.getJsonObject("status").getString("name"), is("Available"));
   }
 
   @Test

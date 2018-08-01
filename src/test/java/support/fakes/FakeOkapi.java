@@ -3,11 +3,10 @@ package support.fakes;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServer;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 
 public class FakeOkapi extends AbstractVerticle {
-
-  private static final String TENANT_ID = "test_tenant";
   private static final int PORT_TO_USE = 9493;
   private static final String address =
     String.format("http://localhost:%s", PORT_TO_USE);
@@ -86,6 +85,7 @@ public class FakeOkapi extends AbstractVerticle {
       .withRecordName("item")
       .withRootPath("/item-storage/items")
       .withRequiredProperties("materialTypeId", "permanentLoanTypeId")
+      .withDefault("status", new JsonObject().put("name", "Available"))
       .create().register(router);
   }
 
