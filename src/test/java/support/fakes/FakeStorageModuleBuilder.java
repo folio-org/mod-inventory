@@ -2,9 +2,8 @@ package support.fakes;
 
 import api.ApiTestSuite;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.*;
+import java.util.function.Supplier;
 
 public class FakeStorageModuleBuilder {
   private final String rootPath;
@@ -12,12 +11,13 @@ public class FakeStorageModuleBuilder {
   private final String tenantId;
   private final Collection<String> requiredProperties;
   private final Collection<String> uniqueProperties;
+  private final Map<String, Supplier<Object>> defaultProperties;
   private final Boolean hasCollectionDelete;
   private final String recordName;
 
-  public FakeStorageModuleBuilder() {
+  FakeStorageModuleBuilder() {
     this(null, null, ApiTestSuite.TENANT_ID, new ArrayList<>(), true, "",
-      new ArrayList<>());
+      new ArrayList<>(), new HashMap<>());
   }
 
   private FakeStorageModuleBuilder(
@@ -27,7 +27,8 @@ public class FakeStorageModuleBuilder {
     Collection<String> requiredProperties,
     boolean hasCollectionDelete,
     String recordName,
-    Collection<String> uniqueProperties) {
+    Collection<String> uniqueProperties,
+    Map<String, Supplier<Object>> defaultProperties) {
 
     this.rootPath = rootPath;
     this.collectionPropertyName = collectionPropertyName;
@@ -36,15 +37,16 @@ public class FakeStorageModuleBuilder {
     this.hasCollectionDelete = hasCollectionDelete;
     this.recordName = recordName;
     this.uniqueProperties = uniqueProperties;
+    this.defaultProperties = defaultProperties;
   }
 
   public FakeStorageModule create() {
     return new FakeStorageModule(rootPath, collectionPropertyName, tenantId,
-      requiredProperties, hasCollectionDelete, recordName, uniqueProperties);
+      requiredProperties, hasCollectionDelete, recordName, uniqueProperties,
+      defaultProperties);
   }
 
-  public FakeStorageModuleBuilder withRootPath(String rootPath) {
-
+  FakeStorageModuleBuilder withRootPath(String rootPath) {
     String newCollectionPropertyName = collectionPropertyName == null
       ? rootPath.substring(rootPath.lastIndexOf("/") + 1)
       : collectionPropertyName;
@@ -56,10 +58,11 @@ public class FakeStorageModuleBuilder {
       this.requiredProperties,
       this.hasCollectionDelete,
       this.recordName,
-      this.uniqueProperties);
+      this.uniqueProperties,
+      this.defaultProperties);
   }
 
-  public FakeStorageModuleBuilder withCollectionPropertyName(String collectionPropertyName) {
+  FakeStorageModuleBuilder withCollectionPropertyName(String collectionPropertyName) {
     return new FakeStorageModuleBuilder(
       this.rootPath,
       collectionPropertyName,
@@ -67,10 +70,11 @@ public class FakeStorageModuleBuilder {
       this.requiredProperties,
       this.hasCollectionDelete,
       this.recordName,
-      this.uniqueProperties);
+      this.uniqueProperties,
+      this.defaultProperties);
   }
 
-  public FakeStorageModuleBuilder withRecordName(String recordName) {
+  FakeStorageModuleBuilder withRecordName(String recordName) {
     return new FakeStorageModuleBuilder(
       this.rootPath,
       this.collectionPropertyName,
@@ -78,10 +82,13 @@ public class FakeStorageModuleBuilder {
       this.requiredProperties,
       this.hasCollectionDelete,
       recordName,
-      this.uniqueProperties);
+      this.uniqueProperties,
+      this.defaultProperties);
   }
 
-  public FakeStorageModuleBuilder withRequiredProperties(Collection<String> requiredProperties) {
+  private FakeStorageModuleBuilder withRequiredProperties(
+    Collection<String> requiredProperties) {
+
     return new FakeStorageModuleBuilder(
       this.rootPath,
       this.collectionPropertyName,
@@ -89,14 +96,19 @@ public class FakeStorageModuleBuilder {
       requiredProperties,
       this.hasCollectionDelete,
       this.recordName,
-      this.uniqueProperties);
+      this.uniqueProperties,
+      this.defaultProperties);
   }
 
-  public FakeStorageModuleBuilder withRequiredProperties(String... requiredProperties) {
+  FakeStorageModuleBuilder withRequiredProperties(String... requiredProperties) {
     return withRequiredProperties(Arrays.asList(requiredProperties));
   }
 
-  public FakeStorageModuleBuilder withUniqueProperties(Collection<String> uniqueProperties) {
+  FakeStorageModuleBuilder withDefault(String property, Object value) {
+    final Map<String, Supplier<Object>> newDefaults = new HashMap<>(this.defaultProperties);
+
+    newDefaults.put(property, () -> value);
+
     return new FakeStorageModuleBuilder(
       this.rootPath,
       this.collectionPropertyName,
@@ -104,22 +116,8 @@ public class FakeStorageModuleBuilder {
       this.requiredProperties,
       this.hasCollectionDelete,
       this.recordName,
-      uniqueProperties);
-  }
-
-  public FakeStorageModuleBuilder withUniqueProperties(String... uniqueProperties) {
-    return withUniqueProperties(Arrays.asList(uniqueProperties));
-  }
-
-  public FakeStorageModuleBuilder disallowCollectionDelete() {
-    return new FakeStorageModuleBuilder(
-      this.rootPath,
-      this.collectionPropertyName,
-      this.tenantId,
-      this.requiredProperties,
-      false,
-      this.recordName,
-      this.uniqueProperties);
+      this.uniqueProperties,
+      newDefaults);
   }
 }
 
