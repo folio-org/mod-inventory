@@ -43,7 +43,12 @@ class FakeStorageModule extends AbstractVerticle {
     this.hasCollectionDelete = hasCollectionDelete;
     this.recordTypeName = recordTypeName;
     this.uniqueProperties = uniqueProperties;
-    this.defaultProperties = defaultProperties;
+
+    HashMap<String, Supplier<Object>> defaultPropertiesWithId = new HashMap<>(defaultProperties);
+
+    defaultPropertiesWithId.put("id", () -> UUID.randomUUID().toString());
+
+    this.defaultProperties = defaultPropertiesWithId;
 
     storedResourcesByTenant = new HashMap<>();
     storedResourcesByTenant.put(tenantId, new HashMap<>());
@@ -77,12 +82,10 @@ class FakeStorageModule extends AbstractVerticle {
 
     JsonObject body = getJsonFromBody(routingContext);
 
-    String id = body.getString("id", UUID.randomUUID().toString());
-
-    body.put("id", id);
-    
     setDefaultProperties(body);
-    
+
+    String id = body.getString("id");
+
     getResourcesForTenant(context).put(id, body);
 
     System.out.println(
