@@ -90,8 +90,12 @@ public class IngestMessageProcessor {
             "Unknown contributor", "", ""));
         }
 
-        return new Instance(UUID.randomUUID().toString(), "Local: MODS", record.getString(TITLE_PROPERTY),
-          alternativeTitles, identifiers, instanceTypes.getString("text"), contributors);
+        return new Instance(UUID.randomUUID().toString(), "Local: MODS",
+                record.getString(TITLE_PROPERTY),
+                instanceTypes.getString("text"))
+                .setAlternativeTitles(alternativeTitles)
+                .setIdentifiers(identifiers)
+                .setContributors(contributors);
       })
       .forEach(instance -> instanceCollection.add(instance, allInstances.receive(),
         failure -> log.error("Instance processing failed: " + failure.getReason())));

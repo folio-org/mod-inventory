@@ -13,6 +13,7 @@ import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.domain.Contributor;
 import org.folio.inventory.domain.Identifier;
+import org.folio.inventory.domain.Classification;
 import org.folio.inventory.domain.Instance;
 import org.folio.inventory.domain.InstanceCollection;
 import org.folio.inventory.storage.Storage;
@@ -26,13 +27,15 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.folio.inventory.domain.Publication;
 
 public class Instances {
   private static final String INSTANCES_PATH = "/inventory/instances";
   private static final String TITLE_PROPERTY_NAME = "title";
-  private static final String ALTERNATIVE_TITLES_PROPERTY_NAME = "alternativeTitles";
   private static final String IDENTIFIER_PROPERTY_NAME = "identifiers";
   private static final String CONTRIBUTORS_PROPERTY_NAME = "contributors";
+  private static final String CLASSIFICATIONS_PROPERTY_NAME = "classifications";
+  private static final String PUBLICATION_PROPERTY_NAME = "publication";
 
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
@@ -219,7 +222,8 @@ public class Instances {
     representation.put("source", instance.source);
     representation.put(TITLE_PROPERTY_NAME, instance.title);
     representation.put("alternativeTitles", instance.alternativeTitles);
-    representation.put("instanceTypeId", instance.instanceTypeId);
+    putIfNotNull(representation, "edition", instance.edition);
+    representation.put("series", instance.series);
 
     representation.put(IDENTIFIER_PROPERTY_NAME,
       new JsonArray(instance.identifiers.stream()
@@ -236,6 +240,31 @@ public class Instances {
           .put("contributorTypeId", contributor.contributorTypeId)
           .put("contributorTypeText", contributor.contributorTypeText))
         .collect(Collectors.toList())));
+
+    representation.put("subjects", instance.subjects);
+
+    representation.put(CLASSIFICATIONS_PROPERTY_NAME,
+      new JsonArray(instance.classifications.stream()
+        .map(classification -> new JsonObject()
+          .put("classificationTypeId", classification.classificationTypeId)
+          .put("classificationNumber", classification.classificationNumber))
+        .collect(Collectors.toList())));
+
+    representation.put(PUBLICATION_PROPERTY_NAME,
+      new JsonArray(instance.publications.stream()
+        .map(publication -> new JsonObject()
+          .put("publisher", publication.publisher)
+          .put("place", publication.place)
+          .put("dateOfPublication", publication.dateOfPublication))
+        .collect(Collectors.toList())));
+
+    representation.put("urls", instance.urls);
+    representation.put("instanceTypeId", instance.instanceTypeId);
+    putIfNotNull(representation, "instanceFormatId", instance.instanceFormatId);
+    representation.put("physicalDescriptions", instance.physicalDescriptions);
+    representation.put("languages", instance.languages);
+    representation.put("notes", instance.notes);
+    putIfNotNull(representation, "sourceRecordFormat", instance.sourceRecordFormat);
 
     try {
       URL selfUrl = context.absoluteUrl(String.format("%s/%s",
@@ -265,17 +294,49 @@ public class Instances {
       .collect(Collectors.toList())
       : new ArrayList<>();
 
-    List<String> alternativeTitles = instanceRequest.containsKey(ALTERNATIVE_TITLES_PROPERTY_NAME)
-      ? JsonArrayHelper.toListOfStrings(instanceRequest.getJsonArray(ALTERNATIVE_TITLES_PROPERTY_NAME))
-       : new ArrayList<>();
+    List<Classification> classifications = instanceRequest.containsKey(CLASSIFICATIONS_PROPERTY_NAME)
+      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(CLASSIFICATIONS_PROPERTY_NAME)).stream()
+      .map(classification -> new Classification(classification.getString("classificationTypeId"),
+                                                classification.getString("classificationNumber")))
+      .collect(Collectors.toList())
+      : new ArrayList<>();
+
+    List<Publication> publications = instanceRequest.containsKey(PUBLICATION_PROPERTY_NAME)
+      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(PUBLICATION_PROPERTY_NAME)).stream()
+      .map(publication -> new Publication(publication.getString("publisher"),
+                                          publication.getString("place"),
+                                          publication.getString("dateOfPublication")))
+      .collect(Collectors.toList())
+      : new ArrayList<>();
 
     return new Instance(
       instanceRequest.getString("id"),
       instanceRequest.getString("source"),
       instanceRequest.getString(TITLE_PROPERTY_NAME),
-      alternativeTitles,
-      identifiers,
-      instanceRequest.getString("instanceTypeId"),
-      contributors);
+      instanceRequest.getString("instanceTypeId"))
+      .setAlternativeTitles(jsonArrayAsListOfStrings(instanceRequest, "alternativeTitles"))
+      .setEdition(instanceRequest.getString("edition"))
+      .setSeries(jsonArrayAsListOfStrings(instanceRequest, "series"))
+      .setIdentifiers(identifiers)
+      .setContributors(contributors)
+      .setSubjects(jsonArrayAsListOfStrings(instanceRequest, "subjects"))
+      .setClassifications(classifications)
+      .setPublication(publications)
+      .setUrls(jsonArrayAsListOfStrings(instanceRequest, "urls"))
+      .setInstanceFormatId(instanceRequest.getString("instanceFormatId"))
+      .setPhysicalDescriptions(jsonArrayAsListOfStrings(instanceRequest, "physicalDescriptions"))
+      .setLanguages(jsonArrayAsListOfStrings(instanceRequest, "languages"))
+      .setNotes(jsonArrayAsListOfStrings(instanceRequest, "notes"))
+      .setSourceRecordFormat(instanceRequest.getString("sourceRecordFormat"));
+  }
+
+  private void putIfNotNull (JsonObject target, String propertyName, String value) {
+    if (value != null) target.put(propertyName, value);
+  }
+
+  private List<String> jsonArrayAsListOfStrings(JsonObject source, String propertyName) {
+    return source.containsKey(propertyName)
+      ? JsonArrayHelper.toListOfStrings(source.getJsonArray(propertyName))
+      : new ArrayList<>();
   }
 }

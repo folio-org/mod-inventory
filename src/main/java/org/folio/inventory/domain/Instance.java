@@ -13,8 +13,8 @@ public class Instance {
   public List<String> alternativeTitles;
   public String edition;
   public List<String> series;
-  public final List<Identifier> identifiers;
-  public final List<Contributor> contributors;
+  public List<Identifier> identifiers;
+  public List<Contributor> contributors;
   public List<String> subjects;
   public List<Classification> classifications;
   public List<Publication> publications;
@@ -26,27 +26,124 @@ public class Instance {
   public List<String> notes;
   public String sourceRecordFormat;
 
+
   public Instance(
     String id,
     String source,
     String title,
-    List<String> alternativeTitles,
-    List<Identifier> identifiers,
-    String instanceTypeId,
-    List<Contributor> contributors) {
+    String instanceTypeId) {
 
     this.id = id;
     this.source = source;
     this.title = title;
-    this.alternativeTitles = new ArrayList<>(alternativeTitles);
-    this.identifiers = new ArrayList<>(identifiers);
     this.instanceTypeId = instanceTypeId;
-    this.contributors = new ArrayList<>(contributors);
+  }
+
+  public Instance setAlternativeTitles(List<String> alternativeTitles) {
+    this.alternativeTitles = alternativeTitles;
+    return this;
+  }
+
+  public Instance setEdition(String edition) {
+    this.edition = edition;
+    return this;
+  }
+
+  public Instance setSeries(List<String> series) {
+    this.series = series;
+    return this;
+  }
+
+  public Instance setIdentifiers(List<Identifier> identifiers) {
+    this.identifiers = identifiers;
+    return this;
+  }
+
+  public Instance setContributors(List<Contributor> contributors) {
+    this.contributors = contributors;
+    return this;
+  }
+
+  public Instance setSubjects(List<String> subjects) {
+    this.subjects = subjects;
+    return this;
+  }
+
+  public Instance setClassifications(List<Classification> classifications) {
+    this.classifications = classifications;
+    return this;
+  }
+
+  public Instance setPublication(List<Publication> publications) {
+    this.publications = publications;
+    return this;
+  }
+
+  public Instance setUrls(List<String> urls) {
+    this.urls = urls;
+    return this;
+  }
+
+  public Instance setInstanceFormatId(String instanceFormatId) {
+    this.instanceFormatId = instanceFormatId;
+    return this;
+  }
+
+
+  public Instance setPhysicalDescriptions(List<String> physicalDescriptions) {
+    this.physicalDescriptions = physicalDescriptions;
+    return this;
+  }
+
+  public Instance setLanguages(List<String> languages) {
+    this.languages = languages;
+    return this;
+  }
+
+  public Instance setNotes(List<String> notes) {
+    this.notes = notes;
+    return this;
+  }
+
+  public Instance setSourceRecordFormat(String sourceRecordFormat) {
+    this.sourceRecordFormat = sourceRecordFormat;
+    return this;
   }
 
   public Instance copyWithNewId(String newId) {
-    return new Instance(newId, this.source, this.title, this.alternativeTitles, this.identifiers,
-      this.instanceTypeId, this.contributors);
+    return new Instance(newId, this.source, this.title, this.instanceTypeId)
+            .setAlternativeTitles(alternativeTitles)
+            .setEdition(edition)
+            .setSeries(series)
+            .setIdentifiers(identifiers)
+            .setContributors(contributors)
+            .setSubjects(subjects)
+            .setClassifications(classifications)
+            .setPublication(publications)
+            .setUrls(urls)
+            .setInstanceFormatId(instanceFormatId)
+            .setPhysicalDescriptions(physicalDescriptions)
+            .setLanguages(languages)
+            .setNotes(notes)
+            .setSourceRecordFormat(sourceRecordFormat);
+  }
+
+  public Instance copyInstance() {
+    return new Instance(this.id, this.source, this.title, this.instanceTypeId)
+            .setAlternativeTitles(alternativeTitles)
+            .setEdition(edition)
+            .setSeries(series)
+            .setIdentifiers(identifiers)
+            .setContributors(contributors)
+            .setSubjects(subjects)
+            .setClassifications(classifications)
+            .setPublication(publications)
+            .setUrls(urls)
+            .setInstanceFormatId(instanceFormatId)
+            .setPhysicalDescriptions(physicalDescriptions)
+            .setLanguages(languages)
+            .setNotes(notes)
+            .setSourceRecordFormat(sourceRecordFormat);
   }
 
   public Instance addIdentifier(Identifier identifier) {
@@ -54,8 +151,7 @@ public class Instance {
 
     newIdentifiers.add(identifier);
 
-    return new Instance(this.id, this.source, this.title, this.alternativeTitles, newIdentifiers,
-      this.instanceTypeId, this.contributors);
+    return copyInstance().setIdentifiers(newIdentifiers);
   }
 
   public Instance addIdentifier(String identifierTypeId, String value) {
@@ -69,8 +165,7 @@ public class Instance {
 
     newContributors.add(new Contributor(contributorNameTypeId, name, contributorTypeId, contributorTypeText));
 
-    return new Instance(this.id, this.source, this.title, this.alternativeTitles, new ArrayList<>(this.identifiers),
-       this.instanceTypeId, newContributors);
+    return copyInstance().setContributors(newContributors);
   }
 
   public Instance removeIdentifier(final String identifierTypeId, final String value) {
@@ -79,8 +174,7 @@ public class Instance {
         && StringUtils.equals(it.value, value)))
       .collect(Collectors.toList());
 
-    return new Instance(this.id, this.source, this.title, this.alternativeTitles, newIdentifiers,
-      this.instanceTypeId, this.contributors);
+    return copyInstance().setIdentifiers(newIdentifiers);
   }
 
   @Override
