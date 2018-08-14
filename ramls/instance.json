@@ -19,40 +19,40 @@
     },
     "identifiers": {
       "type": "array",
-      "minItems": 1,
+      "minItems": 0,
       "items": {
         "type": "object",
         "properties": {
-          "identifierTypeId": {
+          "value": {
             "type": "string"
           },
-          "value": {
+          "identifierTypeId": {
             "type": "string"
           }
         },
         "additionalProperties": false,
         "required": [
-          "identifierTypeId",
-          "value"
+          "value",
+          "identifierTypeId"
         ]
       }
     },
     "contributors": {
       "type": "array",
-      "minItems": 1,
+      "minItems": 0,
       "items": {
         "type": "object",
         "properties": {
           "name": {
             "type": "string"
           },
-          "contributorNameTypeId": {
-            "type": "string"
-          },
           "contributorTypeId": {
             "type": "string"
           },
           "contributorTypeText": {
+            "type": "string"
+          },
+          "contributorNameTypeId": {
             "type": "string"
           },
           "primary": {
@@ -81,8 +81,8 @@
   },
   "additionalProperties": false,
   "required": [
-    "title",
     "source",
+    "title",
     "instanceTypeId"
   ]
 }
