@@ -325,8 +325,8 @@ public class ExternalInstanceCollectionExamples {
   }
 
   private static Instance createInstance(String title) {
-    return new Instance(UUID.randomUUID().toString(), title, new ArrayList<>(),
-      "Local", BOOKS_INSTANCE_TYPE, new ArrayList<>());
+    return new Instance(UUID.randomUUID().toString(), "local", title, new ArrayList<>(), new ArrayList<>(),
+       BOOKS_INSTANCE_TYPE, new ArrayList<>());
   }
 
   private static boolean hasIdentifier(

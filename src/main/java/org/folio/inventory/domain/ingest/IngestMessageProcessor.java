@@ -63,6 +63,9 @@ public class IngestMessageProcessor {
 
     records.stream()
       .map(record -> {
+        List<String> alternativeTitles = JsonArrayHelper.toListOfStrings(
+          record.getJsonArray("alternativeTitles"));
+
         List<JsonObject> identifiersJson = JsonArrayHelper.toList(
           record.getJsonArray("identifiers"));
 
@@ -87,8 +90,8 @@ public class IngestMessageProcessor {
             "Unknown contributor", "", ""));
         }
 
-        return new Instance(UUID.randomUUID().toString(), record.getString(TITLE_PROPERTY),
-          identifiers, "Local: MODS", instanceTypes.getString("text"), contributors);
+        return new Instance(UUID.randomUUID().toString(), "Local: MODS", record.getString(TITLE_PROPERTY),
+          alternativeTitles, identifiers, instanceTypes.getString("text"), contributors);
       })
       .forEach(instance -> instanceCollection.add(instance, allInstances.receive(),
         failure -> log.error("Instance processing failed: " + failure.getReason())));

@@ -8,14 +8,28 @@
     "id": {
       "type": "string"
     },
+    "source": {
+      "type": "string"
+    },
     "title": {
       "type": "string"
     },
-    "instanceTypeId": {
+    "alternativeTitles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "edition": {
       "type": "string"
     },
-    "source": {
-      "type": "string"
+    "series": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
     },
     "identifiers": {
       "type": "array",
@@ -66,17 +80,104 @@
         ]
       }
     },
-    "links": {
-      "type": "object",
-      "properties": {
-        "self": {
-          "type": "string"
-        }
+    "subjects": {
+      "type": "array",
+      "items": {
+        "type": "string"
       },
-      "additionalProperties": false,
-      "required": [
-        "self"
-      ]
+      "uniqueItems": true
+    },
+    "classifications": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "type": "object",
+        "properties": {
+          "classificationNumber": {
+            "type": "string"
+          },
+          "classificationTypeId": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "classificationNumber",
+          "classificationTypeId"
+        ]
+      }
+    },
+    "publication": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "publisher": {
+            "type": "string"
+          },
+          "place": {
+            "type": "string"
+          },
+          "dateOfPublication": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "instanceTypeId": {
+      "type": "string"
+    },
+    "instanceFormatId": {
+      "type": "string"
+    },
+    "physicalDescriptions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "languages": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "type": "string"
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "sourceRecordFormat": {
+      "description": "Format of the instance source record, if a source record exists",
+      "type": "string",
+      "enum": ["MARC-JSON"],
+      "readonly": true
+    },
+    "metadata": {
+      "type": "object",
+      "$ref": "raml-util/schemas/metadata.schema",
+      "readonly": true
+    },
+    "links": {
+        "type": "object",
+        "properties": {
+          "self": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "self"
+        ]
     }
   },
   "additionalProperties": false,

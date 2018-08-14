@@ -13,6 +13,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.folio.inventory.support.JsonArrayHelper.toList;
+import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
 
 class ExternalStorageModuleInstanceCollection
   extends ExternalStorageModuleCollection<Instance>
@@ -62,11 +63,15 @@ class ExternalStorageModuleInstanceCollection
       .map(it -> new Contributor(it.getString("contributorNameTypeId"), it.getString("name"), it.getString("contributorTypeId"), it.getString("contributorTypeText")))
       .collect(Collectors.toList());
 
+    List<String> alternativeTitles = toListOfStrings(
+      instanceFromServer.getJsonArray("alternativeTitles", new JsonArray()));
+
     return new Instance(
       instanceFromServer.getString("id"),
-      instanceFromServer.getString("title"),
-      mappedIdentifiers,
       instanceFromServer.getString("source"),
+      instanceFromServer.getString("title"),
+      alternativeTitles,
+      mappedIdentifiers,
       instanceFromServer.getString("instanceTypeId"),
       mappedContributors);
   }

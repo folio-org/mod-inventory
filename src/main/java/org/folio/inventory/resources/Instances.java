@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 public class Instances {
   private static final String INSTANCES_PATH = "/inventory/instances";
   private static final String TITLE_PROPERTY_NAME = "title";
+  private static final String ALTERNATIVE_TITLES_PROPERTY_NAME = "alternativeTitles";
   private static final String IDENTIFIER_PROPERTY_NAME = "identifiers";
   private static final String CONTRIBUTORS_PROPERTY_NAME = "contributors";
 
@@ -215,8 +216,9 @@ public class Instances {
     }
 
     representation.put("id", instance.id);
-    representation.put(TITLE_PROPERTY_NAME, instance.title);
     representation.put("source", instance.source);
+    representation.put(TITLE_PROPERTY_NAME, instance.title);
+    representation.put("alternativeTitles", instance.alternativeTitles);
     representation.put("instanceTypeId", instance.instanceTypeId);
 
     representation.put(IDENTIFIER_PROPERTY_NAME,
@@ -263,11 +265,16 @@ public class Instances {
       .collect(Collectors.toList())
       : new ArrayList<>();
 
+    List<String> alternativeTitles = instanceRequest.containsKey(ALTERNATIVE_TITLES_PROPERTY_NAME)
+      ? JsonArrayHelper.toListOfStrings(instanceRequest.getJsonArray(ALTERNATIVE_TITLES_PROPERTY_NAME))
+       : new ArrayList<>();
+
     return new Instance(
       instanceRequest.getString("id"),
-      instanceRequest.getString(TITLE_PROPERTY_NAME),
-      identifiers,
       instanceRequest.getString("source"),
+      instanceRequest.getString(TITLE_PROPERTY_NAME),
+      alternativeTitles,
+      identifiers,
       instanceRequest.getString("instanceTypeId"),
       contributors);
   }

@@ -8,30 +8,44 @@ import java.util.stream.Collectors;
 
 public class Instance {
   public final String id;
-  public final String title;
   public final String source;
-  public final String instanceTypeId;
+  public final String title;
+  public List<String> alternativeTitles;
+  public String edition;
+  public List<String> series;
   public final List<Identifier> identifiers;
   public final List<Contributor> contributors;
+  public List<String> subjects;
+  public List<Classification> classifications;
+  public List<Publication> publications;
+  public List<String> urls;
+  public final String instanceTypeId;
+  public String instanceFormatId;
+  public List<String> physicalDescriptions;
+  public List<String> languages;
+  public List<String> notes;
+  public String sourceRecordFormat;
 
   public Instance(
     String id,
-    String title,
-    List<Identifier> identifiers,
     String source,
+    String title,
+    List<String> alternativeTitles,
+    List<Identifier> identifiers,
     String instanceTypeId,
     List<Contributor> contributors) {
 
     this.id = id;
-    this.title = title;
-    this.identifiers = new ArrayList<>(identifiers);
     this.source = source;
+    this.title = title;
+    this.alternativeTitles = new ArrayList<>(alternativeTitles);
+    this.identifiers = new ArrayList<>(identifiers);
     this.instanceTypeId = instanceTypeId;
     this.contributors = new ArrayList<>(contributors);
   }
 
   public Instance copyWithNewId(String newId) {
-    return new Instance(newId, this.title, this.identifiers, this.source,
+    return new Instance(newId, this.source, this.title, this.alternativeTitles, this.identifiers,
       this.instanceTypeId, this.contributors);
   }
 
@@ -40,7 +54,7 @@ public class Instance {
 
     newIdentifiers.add(identifier);
 
-    return new Instance(this.id, this.title, newIdentifiers, this.source,
+    return new Instance(this.id, this.source, this.title, this.alternativeTitles, newIdentifiers,
       this.instanceTypeId, this.contributors);
   }
 
@@ -55,8 +69,8 @@ public class Instance {
 
     newContributors.add(new Contributor(contributorNameTypeId, name, contributorTypeId, contributorTypeText));
 
-    return new Instance(this.id, this.title, new ArrayList<>(this.identifiers),
-      this.source, this.instanceTypeId, newContributors);
+    return new Instance(this.id, this.source, this.title, this.alternativeTitles, new ArrayList<>(this.identifiers),
+       this.instanceTypeId, newContributors);
   }
 
   public Instance removeIdentifier(final String identifierTypeId, final String value) {
@@ -65,7 +79,7 @@ public class Instance {
         && StringUtils.equals(it.value, value)))
       .collect(Collectors.toList());
 
-    return new Instance(this.id, this.title, newIdentifiers, this.source,
+    return new Instance(this.id, this.source, this.title, this.alternativeTitles, newIdentifiers,
       this.instanceTypeId, this.contributors);
   }
 

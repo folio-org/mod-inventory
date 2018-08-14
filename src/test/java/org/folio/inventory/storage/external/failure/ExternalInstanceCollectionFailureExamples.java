@@ -151,8 +151,8 @@ public abstract class ExternalInstanceCollectionFailureExamples {
   protected abstract void check(Failure failure);
 
   private static Instance createInstance() {
-    return new Instance(UUID.randomUUID().toString(), "Nod",
-      new ArrayList<>(), null, UUID.randomUUID().toString(),
+    return new Instance(UUID.randomUUID().toString(), null, "Nod",
+      new ArrayList<>(), new ArrayList<>(), UUID.randomUUID().toString(),
       new ArrayList<>());
   }
 
