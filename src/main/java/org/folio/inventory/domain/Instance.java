@@ -7,23 +7,41 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class Instance {
+  public static final String SOURCE = "source";
+  public static final String TITLE = "title";
+  public static final String ALTERNATIVE_TITLES = "alternativeTitles";
+  public static final String EDITION = "edition";
+  public static final String SERIES = "series";
+  public static final String IDENTIFIERS = "identifiers";
+  public static final String CONTRIBUTORS = "contributors";
+  public static final String SUBJECTS = "subjects";
+  public static final String CLASSIFICATIONS = "classifications";
+  public static final String PUBLICATION = "publication";
+  public static final String URLS = "urls";
+  public static final String INSTANCE_TYPE_ID = "instanceTypeId";
+  public static final String INSTANCE_FORMAT_ID = "instanceFormatId";
+  public static final String PHYSICAL_DESCRIPTIONS = "physicalDescriptions";
+  public static final String LANGUAGES = "languages";
+  public static final String NOTES = "notes";
+  public static final String SOURCE_RECORD_FORMAT = "sourceRecordFormat";
+
   public final String id;
   public final String source;
   public final String title;
-  public List<String> alternativeTitles;
+  public List<String> alternativeTitles = new ArrayList();
   public String edition;
-  public List<String> series;
-  public List<Identifier> identifiers;
-  public List<Contributor> contributors;
-  public List<String> subjects;
-  public List<Classification> classifications;
-  public List<Publication> publications;
-  public List<String> urls;
+  public List<String> series = new ArrayList();
+  public List<Identifier> identifiers = new ArrayList();
+  public List<Contributor> contributors = new ArrayList();
+  public List<String> subjects = new ArrayList();
+  public List<Classification> classifications = new ArrayList();
+  public List<Publication> publication = new ArrayList();
+  public List<String> urls = new ArrayList();
   public final String instanceTypeId;
   public String instanceFormatId;
-  public List<String> physicalDescriptions;
-  public List<String> languages;
-  public List<String> notes;
+  public List<String> physicalDescriptions = new ArrayList();
+  public List<String> languages = new ArrayList();
+  public List<String> notes = new ArrayList();
   public String sourceRecordFormat;
 
 
@@ -74,8 +92,8 @@ public class Instance {
     return this;
   }
 
-  public Instance setPublication(List<Publication> publications) {
-    this.publications = publications;
+  public Instance setPublication(List<Publication> publication) {
+    this.publication = publication;
     return this;
   }
 
@@ -113,13 +131,13 @@ public class Instance {
   public Instance copyWithNewId(String newId) {
     return new Instance(newId, this.source, this.title, this.instanceTypeId)
             .setAlternativeTitles(alternativeTitles)
-            .setEdition(edition)
+            .setEdition(EDITION)
             .setSeries(series)
             .setIdentifiers(identifiers)
             .setContributors(contributors)
             .setSubjects(subjects)
             .setClassifications(classifications)
-            .setPublication(publications)
+            .setPublication(publication)
             .setUrls(urls)
             .setInstanceFormatId(instanceFormatId)
             .setPhysicalDescriptions(physicalDescriptions)
@@ -131,13 +149,13 @@ public class Instance {
   public Instance copyInstance() {
     return new Instance(this.id, this.source, this.title, this.instanceTypeId)
             .setAlternativeTitles(alternativeTitles)
-            .setEdition(edition)
+            .setEdition(EDITION)
             .setSeries(series)
             .setIdentifiers(identifiers)
             .setContributors(contributors)
             .setSubjects(subjects)
             .setClassifications(classifications)
-            .setPublication(publications)
+            .setPublication(publication)
             .setUrls(urls)
             .setInstanceFormatId(instanceFormatId)
             .setPhysicalDescriptions(physicalDescriptions)

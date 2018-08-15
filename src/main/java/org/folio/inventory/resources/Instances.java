@@ -31,11 +31,6 @@ import org.folio.inventory.domain.Publication;
 
 public class Instances {
   private static final String INSTANCES_PATH = "/inventory/instances";
-  private static final String TITLE_PROPERTY_NAME = "title";
-  private static final String IDENTIFIER_PROPERTY_NAME = "identifiers";
-  private static final String CONTRIBUTORS_PROPERTY_NAME = "contributors";
-  private static final String CLASSIFICATIONS_PROPERTY_NAME = "classifications";
-  private static final String PUBLICATION_PROPERTY_NAME = "publication";
 
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
@@ -66,7 +61,7 @@ public class Instances {
 
     representation.put("@context", new JsonObject()
       .put("dcterms", "http://purl.org/dc/terms/")
-      .put(TITLE_PROPERTY_NAME, "dcterms:title"));
+      .put(Instance.TITLE, "dcterms:title"));
 
     JsonResponse.success(routingContext.response(), representation);
   }
@@ -110,7 +105,7 @@ public class Instances {
 
     JsonObject instanceRequest = routingContext.getBodyAsJson();
 
-    if(StringUtils.isBlank(instanceRequest.getString(TITLE_PROPERTY_NAME))) {
+    if(StringUtils.isBlank(instanceRequest.getString(Instance.TITLE))) {
       ClientErrorResponse.badRequest(routingContext.response(),
         "Title must be provided for an instance");
       return;
@@ -219,52 +214,52 @@ public class Instances {
     }
 
     representation.put("id", instance.id);
-    representation.put("source", instance.source);
-    representation.put(TITLE_PROPERTY_NAME, instance.title);
-    representation.put("alternativeTitles", instance.alternativeTitles);
-    putIfNotNull(representation, "edition", instance.edition);
-    representation.put("series", instance.series);
+    representation.put(Instance.SOURCE, instance.source);
+    representation.put(Instance.TITLE, instance.title);
+    representation.put(Instance.ALTERNATIVE_TITLES, instance.alternativeTitles);
+    putIfNotNull(representation, Instance.EDITION, instance.edition);
+    representation.put(Instance.SERIES, instance.series);
 
-    representation.put(IDENTIFIER_PROPERTY_NAME,
+    representation.put(Instance.IDENTIFIERS,
       new JsonArray(instance.identifiers.stream()
         .map(identifier -> new JsonObject()
-          .put("identifierTypeId", identifier.identifierTypeId)
-          .put("value", identifier.value))
+          .put(Identifier.IDENTIFIER_TYPE_ID, identifier.identifierTypeId)
+          .put(Identifier.VALUE, identifier.value))
         .collect(Collectors.toList())));
 
-    representation.put(CONTRIBUTORS_PROPERTY_NAME,
+    representation.put(Instance.CONTRIBUTORS,
       new JsonArray(instance.contributors.stream()
         .map(contributor -> new JsonObject()
-          .put("contributorNameTypeId", contributor.contributorNameTypeId)
-          .put("name", contributor.name)
-          .put("contributorTypeId", contributor.contributorTypeId)
-          .put("contributorTypeText", contributor.contributorTypeText))
+          .put(Contributor.CONTRIBUTOR_NAME_TYPE_ID, contributor.contributorNameTypeId)
+          .put(Contributor.NAME, contributor.name)
+          .put(Contributor.CONTRIBUTOR_TYPE_ID, contributor.contributorTypeId)
+          .put(Contributor.CONTRIBUTOR_TYPE_TEXT, contributor.contributorTypeText))
         .collect(Collectors.toList())));
 
-    representation.put("subjects", instance.subjects);
+    representation.put(Instance.SUBJECTS, instance.subjects);
+    if (instance.classifications != null)
+      representation.put(Instance.CLASSIFICATIONS,
+        new JsonArray(instance.classifications.stream()
+          .map(classification -> new JsonObject()
+            .put(Classification.CLASSIFICATION_TYPE_ID, classification.classificationTypeId)
+            .put(Classification.CLASSIFICATION_NUMBER, classification.classificationNumber))
+          .collect(Collectors.toList())));
 
-    representation.put(CLASSIFICATIONS_PROPERTY_NAME,
-      new JsonArray(instance.classifications.stream()
-        .map(classification -> new JsonObject()
-          .put("classificationTypeId", classification.classificationTypeId)
-          .put("classificationNumber", classification.classificationNumber))
-        .collect(Collectors.toList())));
-
-    representation.put(PUBLICATION_PROPERTY_NAME,
-      new JsonArray(instance.publications.stream()
+    representation.put(Instance.PUBLICATION,
+      new JsonArray(instance.publication.stream()
         .map(publication -> new JsonObject()
-          .put("publisher", publication.publisher)
-          .put("place", publication.place)
-          .put("dateOfPublication", publication.dateOfPublication))
+          .put(Publication.PUBLISHER, publication.publisher)
+          .put(Publication.PLACE, publication.place)
+          .put(Publication.DATE_OF_PUBLICATION, publication.dateOfPublication))
         .collect(Collectors.toList())));
 
-    representation.put("urls", instance.urls);
-    representation.put("instanceTypeId", instance.instanceTypeId);
-    putIfNotNull(representation, "instanceFormatId", instance.instanceFormatId);
-    representation.put("physicalDescriptions", instance.physicalDescriptions);
-    representation.put("languages", instance.languages);
-    representation.put("notes", instance.notes);
-    putIfNotNull(representation, "sourceRecordFormat", instance.sourceRecordFormat);
+    representation.put(Instance.URLS, instance.urls);
+    representation.put(Instance.INSTANCE_TYPE_ID, instance.instanceTypeId);
+    putIfNotNull(representation, Instance.INSTANCE_FORMAT_ID, instance.instanceFormatId);
+    representation.put(Instance.PHYSICAL_DESCRIPTIONS, instance.physicalDescriptions);
+    representation.put(Instance.LANGUAGES, instance.languages);
+    representation.put(Instance.NOTES, instance.notes);
+    putIfNotNull(representation, Instance.SOURCE_RECORD_FORMAT, instance.sourceRecordFormat);
 
     try {
       URL selfUrl = context.absoluteUrl(String.format("%s/%s",
@@ -280,54 +275,54 @@ public class Instances {
   }
 
   private Instance requestToInstance(JsonObject instanceRequest) {
-    List<Identifier> identifiers = instanceRequest.containsKey(IDENTIFIER_PROPERTY_NAME)
-      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(IDENTIFIER_PROPERTY_NAME)).stream()
-          .map(identifier -> new Identifier(identifier.getString("identifierTypeId"),
-          identifier.getString("value")))
+    List<Identifier> identifiers = instanceRequest.containsKey(Instance.IDENTIFIERS)
+      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.IDENTIFIERS)).stream()
+          .map(identifier -> new Identifier(identifier.getString(Identifier.IDENTIFIER_TYPE_ID),
+          identifier.getString(Identifier.VALUE)))
           .collect(Collectors.toList())
           : new ArrayList<>();
 
-    List<Contributor> contributors = instanceRequest.containsKey(CONTRIBUTORS_PROPERTY_NAME)
-      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(CONTRIBUTORS_PROPERTY_NAME)).stream()
-      .map(contributor -> new Contributor(contributor.getString("contributorNameTypeId"),
-        contributor.getString("name"), contributor.getString("contributorTypeId"), contributor.getString("contributorTypeText")))
+    List<Contributor> contributors = instanceRequest.containsKey(Instance.CONTRIBUTORS)
+      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.CONTRIBUTORS)).stream()
+      .map(contributor -> new Contributor(contributor.getString(Contributor.CONTRIBUTOR_NAME_TYPE_ID),
+        contributor.getString("name"), contributor.getString(Contributor.CONTRIBUTOR_TYPE_ID), contributor.getString(Contributor.CONTRIBUTOR_TYPE_TEXT)))
       .collect(Collectors.toList())
       : new ArrayList<>();
 
-    List<Classification> classifications = instanceRequest.containsKey(CLASSIFICATIONS_PROPERTY_NAME)
-      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(CLASSIFICATIONS_PROPERTY_NAME)).stream()
-      .map(classification -> new Classification(classification.getString("classificationTypeId"),
-                                                classification.getString("classificationNumber")))
+    List<Classification> classifications = instanceRequest.containsKey(Instance.CLASSIFICATIONS)
+      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.CLASSIFICATIONS)).stream()
+      .map(classification -> new Classification(classification.getString(Classification.CLASSIFICATION_TYPE_ID),
+                                                classification.getString(Classification.CLASSIFICATION_NUMBER)))
       .collect(Collectors.toList())
       : new ArrayList<>();
 
-    List<Publication> publications = instanceRequest.containsKey(PUBLICATION_PROPERTY_NAME)
-      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(PUBLICATION_PROPERTY_NAME)).stream()
-      .map(publication -> new Publication(publication.getString("publisher"),
-                                          publication.getString("place"),
-                                          publication.getString("dateOfPublication")))
+    List<Publication> publications = instanceRequest.containsKey(Instance.PUBLICATION)
+      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.PUBLICATION)).stream()
+      .map(publication -> new Publication(publication.getString(Publication.PUBLISHER),
+                                          publication.getString(Publication.PLACE),
+                                          publication.getString(Publication.DATE_OF_PUBLICATION)))
       .collect(Collectors.toList())
       : new ArrayList<>();
 
     return new Instance(
       instanceRequest.getString("id"),
-      instanceRequest.getString("source"),
-      instanceRequest.getString(TITLE_PROPERTY_NAME),
-      instanceRequest.getString("instanceTypeId"))
-      .setAlternativeTitles(jsonArrayAsListOfStrings(instanceRequest, "alternativeTitles"))
-      .setEdition(instanceRequest.getString("edition"))
-      .setSeries(jsonArrayAsListOfStrings(instanceRequest, "series"))
+      instanceRequest.getString(Instance.SOURCE),
+      instanceRequest.getString(Instance.TITLE),
+      instanceRequest.getString(Instance.INSTANCE_TYPE_ID))
+      .setAlternativeTitles(jsonArrayAsListOfStrings(instanceRequest, Instance.ALTERNATIVE_TITLES))
+      .setEdition(instanceRequest.getString(Instance.EDITION))
+      .setSeries(jsonArrayAsListOfStrings(instanceRequest, Instance.SERIES))
       .setIdentifiers(identifiers)
       .setContributors(contributors)
-      .setSubjects(jsonArrayAsListOfStrings(instanceRequest, "subjects"))
+      .setSubjects(jsonArrayAsListOfStrings(instanceRequest, Instance.SUBJECTS))
       .setClassifications(classifications)
       .setPublication(publications)
-      .setUrls(jsonArrayAsListOfStrings(instanceRequest, "urls"))
-      .setInstanceFormatId(instanceRequest.getString("instanceFormatId"))
-      .setPhysicalDescriptions(jsonArrayAsListOfStrings(instanceRequest, "physicalDescriptions"))
-      .setLanguages(jsonArrayAsListOfStrings(instanceRequest, "languages"))
-      .setNotes(jsonArrayAsListOfStrings(instanceRequest, "notes"))
-      .setSourceRecordFormat(instanceRequest.getString("sourceRecordFormat"));
+      .setUrls(jsonArrayAsListOfStrings(instanceRequest, Instance.URLS))
+      .setInstanceFormatId(instanceRequest.getString(Instance.INSTANCE_FORMAT_ID))
+      .setPhysicalDescriptions(jsonArrayAsListOfStrings(instanceRequest, Instance.PHYSICAL_DESCRIPTIONS))
+      .setLanguages(jsonArrayAsListOfStrings(instanceRequest, Instance.LANGUAGES))
+      .setNotes(jsonArrayAsListOfStrings(instanceRequest, Instance.NOTES))
+      .setSourceRecordFormat(instanceRequest.getString(Instance.SOURCE_RECORD_FORMAT));
   }
 
   private void putIfNotNull (JsonObject target, String propertyName, String value) {

@@ -64,7 +64,7 @@ public class IngestMessageProcessor {
     records.stream()
       .map(record -> {
         List<String> alternativeTitles = JsonArrayHelper.toListOfStrings(
-          record.getJsonArray("alternativeTitles"));
+          record.getJsonArray(Instance.ALTERNATIVE_TITLES));
 
         List<JsonObject> identifiersJson = JsonArrayHelper.toList(
           record.getJsonArray("identifiers"));

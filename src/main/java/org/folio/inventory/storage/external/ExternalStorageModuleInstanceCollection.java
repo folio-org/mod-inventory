@@ -40,12 +40,23 @@ class ExternalStorageModuleInstanceCollection
     instanceToSend.put("id", instance.id != null
       ? instance.id
       : UUID.randomUUID().toString());
-
-    instanceToSend.put("title", instance.title);
-    includeIfPresent(instanceToSend, "instanceTypeId", instance.instanceTypeId);
-    includeIfPresent(instanceToSend, "source", instance.source);
-    instanceToSend.put("identifiers", instance.identifiers);
-    instanceToSend.put("contributors", instance.contributors);
+    includeIfPresent(instanceToSend, Instance.SOURCE, instance.source);
+    instanceToSend.put(Instance.TITLE, instance.title);
+    instanceToSend.put(Instance.ALTERNATIVE_TITLES, instance.alternativeTitles);
+    includeIfPresent(instanceToSend, Instance.EDITION, instance.edition);
+    instanceToSend.put(Instance.SERIES, instance.series);
+    instanceToSend.put(Instance.IDENTIFIERS, instance.identifiers);
+    instanceToSend.put(Instance.CONTRIBUTORS, instance.contributors);
+    instanceToSend.put(Instance.SUBJECTS, instance.subjects);
+    instanceToSend.put(Instance.CLASSIFICATIONS, instance.classifications);
+    instanceToSend.put(Instance.PUBLICATION, instance.publication);
+    instanceToSend.put(Instance.URLS, instance.urls);
+    includeIfPresent(instanceToSend, Instance.INSTANCE_TYPE_ID, instance.instanceTypeId);
+    includeIfPresent(instanceToSend, Instance.INSTANCE_FORMAT_ID, instance.instanceFormatId);
+    instanceToSend.put(Instance.PHYSICAL_DESCRIPTIONS, instance.physicalDescriptions);
+    instanceToSend.put(Instance.LANGUAGES, instance.languages);
+    instanceToSend.put(Instance.NOTES, instance.notes);
+    includeIfPresent(instanceToSend, Instance.SOURCE_RECORD_FORMAT, instance.sourceRecordFormat);
 
     return instanceToSend;
   }
@@ -53,52 +64,52 @@ class ExternalStorageModuleInstanceCollection
   @Override
   protected Instance mapFromJson(JsonObject instanceFromServer) {
     List<JsonObject> identifiers = toList(
-      instanceFromServer.getJsonArray("identifiers", new JsonArray()));
+      instanceFromServer.getJsonArray(Instance.IDENTIFIERS, new JsonArray()));
 
     List<Identifier> mappedIdentifiers = identifiers.stream()
-      .map(it -> new Identifier(it.getString("identifierTypeId"), it.getString("value")))
+      .map(it -> new Identifier(it.getString(Identifier.IDENTIFIER_TYPE_ID), it.getString(Identifier.VALUE)))
       .collect(Collectors.toList());
 
     List<JsonObject> contributors = toList(
-      instanceFromServer.getJsonArray("contributors", new JsonArray()));
+      instanceFromServer.getJsonArray(Instance.CONTRIBUTORS, new JsonArray()));
 
     List<Contributor> mappedContributors = contributors.stream()
-      .map(it -> new Contributor(it.getString("contributorNameTypeId"), it.getString("name"), it.getString("contributorTypeId"), it.getString("contributorTypeText")))
+      .map(it -> new Contributor(it.getString(Contributor.CONTRIBUTOR_NAME_TYPE_ID), it.getString(Contributor.NAME), it.getString(Contributor.CONTRIBUTOR_TYPE_ID), it.getString(Contributor.CONTRIBUTOR_TYPE_TEXT)))
       .collect(Collectors.toList());
 
     List<JsonObject> classifications = toList(
-      instanceFromServer.getJsonArray("classifications", new JsonArray()));
+      instanceFromServer.getJsonArray(Instance.CLASSIFICATIONS, new JsonArray()));
 
     List<Classification> mappedClassifications = classifications.stream()
-      .map(it -> new Classification(it.getString("classificationTypeId"), it.getString("classificationNumber")))
+      .map(it -> new Classification(it.getString(Classification.CLASSIFICATION_TYPE_ID), it.getString(Classification.CLASSIFICATION_NUMBER)))
       .collect(Collectors.toList());
 
     List<JsonObject> publications = toList(
-      instanceFromServer.getJsonArray("publication", new JsonArray()));
+      instanceFromServer.getJsonArray(Instance.PUBLICATION, new JsonArray()));
 
     List<Publication> mappedPublications = publications.stream()
-      .map(it -> new Publication(it.getString("publisher"), it.getString("place"), it.getString("dateOfPublication")))
+      .map(it -> new Publication(it.getString(Publication.PUBLISHER), it.getString(Publication.PLACE), it.getString(Publication.DATE_OF_PUBLICATION)))
       .collect(Collectors.toList());
 
     return new Instance(
       instanceFromServer.getString("id"),
-      instanceFromServer.getString("source"),
-      instanceFromServer.getString("title"),
-      instanceFromServer.getString("instanceTypeId"))
-      .setAlternativeTitles(jsonArrayAsListOfStrings(instanceFromServer, "alternativeTitles"))
-      .setEdition(instanceFromServer.getString("edition"))
-      .setSeries(jsonArrayAsListOfStrings(instanceFromServer, "series"))
+      instanceFromServer.getString(Instance.SOURCE),
+      instanceFromServer.getString(Instance.TITLE),
+      instanceFromServer.getString(Instance.INSTANCE_TYPE_ID))
+      .setAlternativeTitles(jsonArrayAsListOfStrings(instanceFromServer, Instance.ALTERNATIVE_TITLES))
+      .setEdition(instanceFromServer.getString(Instance.EDITION))
+      .setSeries(jsonArrayAsListOfStrings(instanceFromServer, Instance.SERIES))
       .setIdentifiers(mappedIdentifiers)
       .setContributors(mappedContributors)
-      .setSubjects(jsonArrayAsListOfStrings(instanceFromServer, "subjects"))
+      .setSubjects(jsonArrayAsListOfStrings(instanceFromServer, Instance.SUBJECTS))
       .setClassifications(mappedClassifications)
       .setPublication(mappedPublications)
-      .setUrls(jsonArrayAsListOfStrings(instanceFromServer, "urls"))
-      .setInstanceFormatId(instanceFromServer.getString("instanceFormatId"))
-      .setPhysicalDescriptions(jsonArrayAsListOfStrings(instanceFromServer, "physicalDescriptions"))
-      .setLanguages(jsonArrayAsListOfStrings(instanceFromServer, "languages"))
-      .setNotes(jsonArrayAsListOfStrings(instanceFromServer, "notes"))
-      .setSourceRecordFormat(instanceFromServer.getString("sourceRecordFormat"));
+      .setUrls(jsonArrayAsListOfStrings(instanceFromServer, Instance.URLS))
+      .setInstanceFormatId(instanceFromServer.getString(Instance.INSTANCE_FORMAT_ID))
+      .setPhysicalDescriptions(jsonArrayAsListOfStrings(instanceFromServer, Instance.PHYSICAL_DESCRIPTIONS))
+      .setLanguages(jsonArrayAsListOfStrings(instanceFromServer, Instance.LANGUAGES))
+      .setNotes(jsonArrayAsListOfStrings(instanceFromServer, Instance.NOTES))
+      .setSourceRecordFormat(instanceFromServer.getString(Instance.SOURCE_RECORD_FORMAT));
   }
 
   @Override
