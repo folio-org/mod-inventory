@@ -1,3 +1,11 @@
+## 9.2.0
+
+* Add properties `alternativeTitles`, `edition`, `series`, `subjects`, `classifications`, 
+  `publication`, `urls`, `instanceFormatId`, `physicalDescriptions`, `languages`, 
+  `notes`, `sourceRecordFormat`, `metadata` to `Instance` schema (MODINV-68)
+* Provides `inventory` interface 6.0 (MODINV-68)
+* Requires `instance-storage` interface version 4.4 (MODINV-68)
+
 ## 9.1.0 2018-07-10
 
 * Reference record lookups use == CQL relation, instead of = (MODINV-64)
