@@ -19,6 +19,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import static org.folio.inventory.common.FutureAssistance.*;
+import org.folio.inventory.domain.Identifier;
 import static org.folio.inventory.storage.external.ExternalStorageSuite.getStorageAddress;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -337,8 +338,8 @@ public class ExternalInstanceCollectionExamples {
     final String value) {
 
     return instance.identifiers.stream().anyMatch(it ->
-      StringUtils.equals(it.identifierTypeId, identifierTypeId)
-        && StringUtils.equals(it.value, value));
+      StringUtils.equals(((Identifier)it).identifierTypeId, identifierTypeId)
+        && StringUtils.equals(((Identifier)it).value, value));
   }
 
   private Instance getInstance(List<Instance> allInstances, final String title) {

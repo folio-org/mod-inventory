@@ -1,5 +1,6 @@
 package org.folio.inventory.resources;
 
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -27,6 +28,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.folio.inventory.domain.Metadata;
 import org.folio.inventory.domain.Publication;
 
 public class Instances {
@@ -203,104 +205,71 @@ public class Instances {
   }
 
   private JsonObject toRepresentation(Instance instance, WebContext context) {
-    JsonObject representation = new JsonObject();
+    JsonObject resp = new JsonObject();
 
     try {
-      representation.put("@context", context.absoluteUrl(
+      resp.put("@context", context.absoluteUrl(
         INSTANCES_PATH + "/context").toString());
     } catch (MalformedURLException e) {
       log.warn(
         String.format("Failed to create context link for instance: %s", e.toString()));
     }
 
-    representation.put("id", instance.id);
-    representation.put(Instance.SOURCE, instance.source);
-    representation.put(Instance.TITLE, instance.title);
-    representation.put(Instance.ALTERNATIVE_TITLES, instance.alternativeTitles);
-    putIfNotNull(representation, Instance.EDITION, instance.edition);
-    representation.put(Instance.SERIES, instance.series);
-
-    representation.put(Instance.IDENTIFIERS,
-      new JsonArray(instance.identifiers.stream()
-        .map(identifier -> new JsonObject()
-          .put(Identifier.IDENTIFIER_TYPE_ID, identifier.identifierTypeId)
-          .put(Identifier.VALUE, identifier.value))
-        .collect(Collectors.toList())));
-
-    representation.put(Instance.CONTRIBUTORS,
-      new JsonArray(instance.contributors.stream()
-        .map(contributor -> new JsonObject()
-          .put(Contributor.CONTRIBUTOR_NAME_TYPE_ID, contributor.contributorNameTypeId)
-          .put(Contributor.NAME, contributor.name)
-          .put(Contributor.CONTRIBUTOR_TYPE_ID, contributor.contributorTypeId)
-          .put(Contributor.CONTRIBUTOR_TYPE_TEXT, contributor.contributorTypeText))
-        .collect(Collectors.toList())));
-
-    representation.put(Instance.SUBJECTS, instance.subjects);
-    if (instance.classifications != null)
-      representation.put(Instance.CLASSIFICATIONS,
-        new JsonArray(instance.classifications.stream()
-          .map(classification -> new JsonObject()
-            .put(Classification.CLASSIFICATION_TYPE_ID, classification.classificationTypeId)
-            .put(Classification.CLASSIFICATION_NUMBER, classification.classificationNumber))
-          .collect(Collectors.toList())));
-
-    representation.put(Instance.PUBLICATION,
-      new JsonArray(instance.publication.stream()
-        .map(publication -> new JsonObject()
-          .put(Publication.PUBLISHER, publication.publisher)
-          .put(Publication.PLACE, publication.place)
-          .put(Publication.DATE_OF_PUBLICATION, publication.dateOfPublication))
-        .collect(Collectors.toList())));
-
-    representation.put(Instance.URLS, instance.urls);
-    representation.put(Instance.INSTANCE_TYPE_ID, instance.instanceTypeId);
-    putIfNotNull(representation, Instance.INSTANCE_FORMAT_ID, instance.instanceFormatId);
-    representation.put(Instance.PHYSICAL_DESCRIPTIONS, instance.physicalDescriptions);
-    representation.put(Instance.LANGUAGES, instance.languages);
-    representation.put(Instance.NOTES, instance.notes);
-    putIfNotNull(representation, Instance.SOURCE_RECORD_FORMAT, instance.sourceRecordFormat);
+    resp.put("id", instance.id);
+    resp.put(Instance.SOURCE, instance.source);
+    resp.put(Instance.TITLE, instance.title);
+    putIfNotNull(resp, Instance.ALTERNATIVE_TITLES, instance.alternativeTitles);
+    putIfNotNull(resp, Instance.EDITION, instance.edition);
+    putIfNotNull(resp, Instance.SERIES, instance.series);
+    putIfNotNull(resp, Instance.IDENTIFIERS, instance.identifiers);
+    putIfNotNull(resp, Instance.CONTRIBUTORS, instance.contributors);
+    putIfNotNull(resp, Instance.SUBJECTS, instance.subjects);
+    putIfNotNull(resp, Instance.CLASSIFICATIONS, instance.classifications);
+    putIfNotNull(resp, Instance.PUBLICATION, instance.publication);
+    putIfNotNull(resp, Instance.URLS, instance.urls);
+    putIfNotNull(resp, Instance.INSTANCE_TYPE_ID, instance.instanceTypeId);
+    putIfNotNull(resp, Instance.INSTANCE_FORMAT_ID, instance.instanceFormatId);
+    putIfNotNull(resp, Instance.PHYSICAL_DESCRIPTIONS, instance.physicalDescriptions);
+    putIfNotNull(resp, Instance.LANGUAGES, instance.languages);
+    putIfNotNull(resp, Instance.NOTES, instance.notes);
+    putIfNotNull(resp, Instance.SOURCE_RECORD_FORMAT, instance.sourceRecordFormat);
+    putIfNotNull(resp, Instance.METADATA, instance.metadata);
 
     try {
       URL selfUrl = context.absoluteUrl(String.format("%s/%s",
         INSTANCES_PATH, instance.id));
 
-      representation.put("links", new JsonObject().put("self", selfUrl.toString()));
+      resp.put("links", new JsonObject().put("self", selfUrl.toString()));
     } catch (MalformedURLException e) {
       log.warn(
         String.format("Failed to create self link for instance: %s", e.toString()));
     }
 
-    return representation;
+    return resp;
   }
 
   private Instance requestToInstance(JsonObject instanceRequest) {
     List<Identifier> identifiers = instanceRequest.containsKey(Instance.IDENTIFIERS)
       ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.IDENTIFIERS)).stream()
-          .map(identifier -> new Identifier(identifier.getString(Identifier.IDENTIFIER_TYPE_ID),
-          identifier.getString(Identifier.VALUE)))
+          .map(json -> new Identifier(json))
           .collect(Collectors.toList())
           : new ArrayList<>();
 
     List<Contributor> contributors = instanceRequest.containsKey(Instance.CONTRIBUTORS)
       ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.CONTRIBUTORS)).stream()
-      .map(contributor -> new Contributor(contributor.getString(Contributor.CONTRIBUTOR_NAME_TYPE_ID),
-        contributor.getString("name"), contributor.getString(Contributor.CONTRIBUTOR_TYPE_ID), contributor.getString(Contributor.CONTRIBUTOR_TYPE_TEXT)))
+      .map(json -> new Contributor(json))
       .collect(Collectors.toList())
       : new ArrayList<>();
 
     List<Classification> classifications = instanceRequest.containsKey(Instance.CLASSIFICATIONS)
       ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.CLASSIFICATIONS)).stream()
-      .map(classification -> new Classification(classification.getString(Classification.CLASSIFICATION_TYPE_ID),
-                                                classification.getString(Classification.CLASSIFICATION_NUMBER)))
+      .map(json -> new Classification(json))
       .collect(Collectors.toList())
       : new ArrayList<>();
 
     List<Publication> publications = instanceRequest.containsKey(Instance.PUBLICATION)
       ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.PUBLICATION)).stream()
-      .map(publication -> new Publication(publication.getString(Publication.PUBLISHER),
-                                          publication.getString(Publication.PLACE),
-                                          publication.getString(Publication.DATE_OF_PUBLICATION)))
+      .map(json -> new Publication(json))
       .collect(Collectors.toList())
       : new ArrayList<>();
 
@@ -309,27 +278,41 @@ public class Instances {
       instanceRequest.getString(Instance.SOURCE),
       instanceRequest.getString(Instance.TITLE),
       instanceRequest.getString(Instance.INSTANCE_TYPE_ID))
-      .setAlternativeTitles(jsonArrayAsListOfStrings(instanceRequest, Instance.ALTERNATIVE_TITLES))
+      .setAlternativeTitles(toListOfStrings(instanceRequest, Instance.ALTERNATIVE_TITLES))
       .setEdition(instanceRequest.getString(Instance.EDITION))
-      .setSeries(jsonArrayAsListOfStrings(instanceRequest, Instance.SERIES))
+      .setSeries(toListOfStrings(instanceRequest, Instance.SERIES))
       .setIdentifiers(identifiers)
       .setContributors(contributors)
-      .setSubjects(jsonArrayAsListOfStrings(instanceRequest, Instance.SUBJECTS))
+      .setSubjects(toListOfStrings(instanceRequest, Instance.SUBJECTS))
       .setClassifications(classifications)
       .setPublication(publications)
-      .setUrls(jsonArrayAsListOfStrings(instanceRequest, Instance.URLS))
+      .setUrls(toListOfStrings(instanceRequest, Instance.URLS))
       .setInstanceFormatId(instanceRequest.getString(Instance.INSTANCE_FORMAT_ID))
-      .setPhysicalDescriptions(jsonArrayAsListOfStrings(instanceRequest, Instance.PHYSICAL_DESCRIPTIONS))
-      .setLanguages(jsonArrayAsListOfStrings(instanceRequest, Instance.LANGUAGES))
-      .setNotes(jsonArrayAsListOfStrings(instanceRequest, Instance.NOTES))
+      .setPhysicalDescriptions(toListOfStrings(instanceRequest, Instance.PHYSICAL_DESCRIPTIONS))
+      .setLanguages(toListOfStrings(instanceRequest, Instance.LANGUAGES))
+      .setNotes(toListOfStrings(instanceRequest, Instance.NOTES))
       .setSourceRecordFormat(instanceRequest.getString(Instance.SOURCE_RECORD_FORMAT));
   }
 
   private void putIfNotNull (JsonObject target, String propertyName, String value) {
     if (value != null) target.put(propertyName, value);
   }
+    
+  private void putIfNotNull (JsonObject target, String propertyName, List<String> value) {
+    if (value != null) target.put(propertyName, value);
+  }
+    
+  private void putIfNotNull (JsonObject target, String propertyName, Object value) {
+    if (value != null) {
+      if (value instanceof List) {
+        target.put(propertyName, value);
+      } else {
+        target.put(propertyName, new JsonObject(Json.encode(value)));        
+      }
+    }
+  }
 
-  private List<String> jsonArrayAsListOfStrings(JsonObject source, String propertyName) {
+  private List<String> toListOfStrings(JsonObject source, String propertyName) {
     return source.containsKey(propertyName)
       ? JsonArrayHelper.toListOfStrings(source.getJsonArray(propertyName))
       : new ArrayList<>();

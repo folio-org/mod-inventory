@@ -14,6 +14,7 @@ import org.folio.inventory.domain.InstanceCollection;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.folio.inventory.domain.Metadata;
 
 import static org.folio.inventory.support.JsonArrayHelper.toList;
 import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
@@ -35,7 +36,6 @@ class ExternalStorageModuleInstanceCollection
   @Override
   protected JsonObject mapToRequest(Instance instance) {
     JsonObject instanceToSend = new JsonObject();
-
     //TODO: Review if this shouldn't be defaulting here
     instanceToSend.put("id", instance.id != null
       ? instance.id
@@ -67,31 +67,33 @@ class ExternalStorageModuleInstanceCollection
       instanceFromServer.getJsonArray(Instance.IDENTIFIERS, new JsonArray()));
 
     List<Identifier> mappedIdentifiers = identifiers.stream()
-      .map(it -> new Identifier(it.getString(Identifier.IDENTIFIER_TYPE_ID), it.getString(Identifier.VALUE)))
+      .map(it -> new Identifier(it))
       .collect(Collectors.toList());
 
     List<JsonObject> contributors = toList(
       instanceFromServer.getJsonArray(Instance.CONTRIBUTORS, new JsonArray()));
 
     List<Contributor> mappedContributors = contributors.stream()
-      .map(it -> new Contributor(it.getString(Contributor.CONTRIBUTOR_NAME_TYPE_ID), it.getString(Contributor.NAME), it.getString(Contributor.CONTRIBUTOR_TYPE_ID), it.getString(Contributor.CONTRIBUTOR_TYPE_TEXT)))
+      .map(it -> new Contributor(it))
       .collect(Collectors.toList());
 
     List<JsonObject> classifications = toList(
       instanceFromServer.getJsonArray(Instance.CLASSIFICATIONS, new JsonArray()));
 
     List<Classification> mappedClassifications = classifications.stream()
-      .map(it -> new Classification(it.getString(Classification.CLASSIFICATION_TYPE_ID), it.getString(Classification.CLASSIFICATION_NUMBER)))
+      .map(it -> new Classification(it))
       .collect(Collectors.toList());
 
     List<JsonObject> publications = toList(
       instanceFromServer.getJsonArray(Instance.PUBLICATION, new JsonArray()));
 
     List<Publication> mappedPublications = publications.stream()
-      .map(it -> new Publication(it.getString(Publication.PUBLISHER), it.getString(Publication.PLACE), it.getString(Publication.DATE_OF_PUBLICATION)))
+      .map(it -> new Publication(it))
       .collect(Collectors.toList());
 
-    return new Instance(
+    JsonObject metadataJson = instanceFromServer.getJsonObject(Instance.METADATA);
+
+    Instance response = new Instance(
       instanceFromServer.getString("id"),
       instanceFromServer.getString(Instance.SOURCE),
       instanceFromServer.getString(Instance.TITLE),
@@ -109,7 +111,9 @@ class ExternalStorageModuleInstanceCollection
       .setPhysicalDescriptions(jsonArrayAsListOfStrings(instanceFromServer, Instance.PHYSICAL_DESCRIPTIONS))
       .setLanguages(jsonArrayAsListOfStrings(instanceFromServer, Instance.LANGUAGES))
       .setNotes(jsonArrayAsListOfStrings(instanceFromServer, Instance.NOTES))
-      .setSourceRecordFormat(instanceFromServer.getString(Instance.SOURCE_RECORD_FORMAT));
+      .setSourceRecordFormat(instanceFromServer.getString(Instance.SOURCE_RECORD_FORMAT))
+      .setMetadata(new Metadata(metadataJson));
+    return response;
   }
 
   @Override

@@ -1,12 +1,15 @@
 package org.folio.inventory.domain;
 
+import io.vertx.core.json.JsonArray;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.folio.inventory.domain.Metadata;
 
 public class Instance {
+  // JSON property names
   public static final String SOURCE = "source";
   public static final String TITLE = "title";
   public static final String ALTERNATIVE_TITLES = "alternativeTitles";
@@ -24,6 +27,7 @@ public class Instance {
   public static final String LANGUAGES = "languages";
   public static final String NOTES = "notes";
   public static final String SOURCE_RECORD_FORMAT = "sourceRecordFormat";
+  public static final String METADATA = "metadata";
 
   public final String id;
   public final String source;
@@ -43,6 +47,7 @@ public class Instance {
   public List<String> languages = new ArrayList();
   public List<String> notes = new ArrayList();
   public String sourceRecordFormat;
+  public Metadata metadata = null;
 
 
   public Instance(
@@ -127,11 +132,20 @@ public class Instance {
     this.sourceRecordFormat = sourceRecordFormat;
     return this;
   }
+  
+  public Instance setMetadata (Metadata metadata) {
+    this.metadata = metadata;
+    return this;
+  }
+  
+  public boolean hasMetadata () {
+    return this.metadata != null;
+  }
 
   public Instance copyWithNewId(String newId) {
     return new Instance(newId, this.source, this.title, this.instanceTypeId)
             .setAlternativeTitles(alternativeTitles)
-            .setEdition(EDITION)
+            .setEdition(edition)
             .setSeries(series)
             .setIdentifiers(identifiers)
             .setContributors(contributors)
@@ -149,7 +163,7 @@ public class Instance {
   public Instance copyInstance() {
     return new Instance(this.id, this.source, this.title, this.instanceTypeId)
             .setAlternativeTitles(alternativeTitles)
-            .setEdition(EDITION)
+            .setEdition(edition)
             .setSeries(series)
             .setIdentifiers(identifiers)
             .setContributors(contributors)
@@ -161,7 +175,8 @@ public class Instance {
             .setPhysicalDescriptions(physicalDescriptions)
             .setLanguages(languages)
             .setNotes(notes)
-            .setSourceRecordFormat(sourceRecordFormat);
+            .setSourceRecordFormat(sourceRecordFormat)
+            .setMetadata(metadata);
   }
 
   public Instance addIdentifier(Identifier identifier) {
