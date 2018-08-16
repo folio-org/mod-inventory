@@ -93,7 +93,7 @@ class ExternalStorageModuleInstanceCollection
 
     JsonObject metadataJson = instanceFromServer.getJsonObject(Instance.METADATA_KEY);
 
-    Instance response = new Instance(
+    return new Instance(
       instanceFromServer.getString("id"),
       instanceFromServer.getString(Instance.SOURCE_KEY),
       instanceFromServer.getString(Instance.TITLE_KEY),
@@ -113,7 +113,6 @@ class ExternalStorageModuleInstanceCollection
       .setNotes(jsonArrayAsListOfStrings(instanceFromServer, Instance.NOTES_KEY))
       .setSourceRecordFormat(instanceFromServer.getString(Instance.SOURCE_RECORD_FORMAT_KEY))
       .setMetadata(new Metadata(metadataJson));
-    return response;
   }
 
   @Override

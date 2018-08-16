@@ -39,15 +39,4 @@ public class Metadata {
       this.updatedByUserId = null;
     }
   }
-/*
-  public JsonObject getJson() {
-    return (this.createdDate != null 
-            ? new JsonObject()
-              .put(CREATED_DATE_KEY, this.createdDate)
-              .put(CREATED_BY_USER_ID_KEY, this.createdByUserId)
-              .put(UPDATED_DATE_KEY, this.updatedDate)
-              .put(UPDATED_BY_USER_ID_KEY, this.updatedByUserId)
-            : null);
-  }
-*/
 }
