@@ -63,7 +63,7 @@ public class Instances {
 
     representation.put("@context", new JsonObject()
       .put("dcterms", "http://purl.org/dc/terms/")
-      .put(Instance.TITLE, "dcterms:title"));
+      .put(Instance.TITLE_KEY, "dcterms:title"));
 
     JsonResponse.success(routingContext.response(), representation);
   }
@@ -107,7 +107,7 @@ public class Instances {
 
     JsonObject instanceRequest = routingContext.getBodyAsJson();
 
-    if(StringUtils.isBlank(instanceRequest.getString(Instance.TITLE))) {
+    if(StringUtils.isBlank(instanceRequest.getString(Instance.TITLE_KEY))) {
       ClientErrorResponse.badRequest(routingContext.response(),
         "Title must be provided for an instance");
       return;
@@ -119,7 +119,7 @@ public class Instances {
       success -> {
         try {
           URL url = context.absoluteUrl(String.format("%s/%s",
-            INSTANCES_PATH, success.getResult().id));
+            INSTANCES_PATH, success.getResult().getId()));
 
           RedirectResponse.created(routingContext.response(), url.toString());
         } catch (MalformedURLException e) {
@@ -215,29 +215,29 @@ public class Instances {
         String.format("Failed to create context link for instance: %s", e.toString()));
     }
 
-    resp.put("id", instance.id);
-    resp.put(Instance.SOURCE, instance.source);
-    resp.put(Instance.TITLE, instance.title);
-    putIfNotNull(resp, Instance.ALTERNATIVE_TITLES, instance.alternativeTitles);
-    putIfNotNull(resp, Instance.EDITION, instance.edition);
-    putIfNotNull(resp, Instance.SERIES, instance.series);
-    putIfNotNull(resp, Instance.IDENTIFIERS, instance.identifiers);
-    putIfNotNull(resp, Instance.CONTRIBUTORS, instance.contributors);
-    putIfNotNull(resp, Instance.SUBJECTS, instance.subjects);
-    putIfNotNull(resp, Instance.CLASSIFICATIONS, instance.classifications);
-    putIfNotNull(resp, Instance.PUBLICATION, instance.publication);
-    putIfNotNull(resp, Instance.URLS, instance.urls);
-    putIfNotNull(resp, Instance.INSTANCE_TYPE_ID, instance.instanceTypeId);
-    putIfNotNull(resp, Instance.INSTANCE_FORMAT_ID, instance.instanceFormatId);
-    putIfNotNull(resp, Instance.PHYSICAL_DESCRIPTIONS, instance.physicalDescriptions);
-    putIfNotNull(resp, Instance.LANGUAGES, instance.languages);
-    putIfNotNull(resp, Instance.NOTES, instance.notes);
-    putIfNotNull(resp, Instance.SOURCE_RECORD_FORMAT, instance.sourceRecordFormat);
-    putIfNotNull(resp, Instance.METADATA, instance.metadata);
+    resp.put("id", instance.getId());
+    resp.put(Instance.SOURCE_KEY, instance.getSource());
+    resp.put(Instance.TITLE_KEY, instance.getTitle());
+    putIfNotNull(resp, Instance.ALTERNATIVE_TITLES_KEY, instance.getAlternativeTitles());
+    putIfNotNull(resp, Instance.EDITION_KEY, instance.getEdition());
+    putIfNotNull(resp, Instance.SERIES_KEY, instance.getSeries());
+    putIfNotNull(resp, Instance.IDENTIFIERS_KEY, instance.getIdentifiers());
+    putIfNotNull(resp, Instance.CONTRIBUTORS_KEY, instance.getContributors());
+    putIfNotNull(resp, Instance.SUBJECTS_KEY, instance.getSubjects());
+    putIfNotNull(resp, Instance.CLASSIFICATIONS_KEY, instance.getClassifications());
+    putIfNotNull(resp, Instance.PUBLICATION_KEY, instance.getPublication());
+    putIfNotNull(resp, Instance.URLS_KEY, instance.getUrls());
+    putIfNotNull(resp, Instance.INSTANCE_TYPE_ID_KEY, instance.getInstanceTypeId());
+    putIfNotNull(resp, Instance.INSTANCE_FORMAT_ID_KEY, instance.getInstanceFormatId());
+    putIfNotNull(resp, Instance.PHYSICAL_DESCRIPTIONS_KEY, instance.getPhysicalDescriptions());
+    putIfNotNull(resp, Instance.LANGUAGES_KEY, instance.getLanguages());
+    putIfNotNull(resp, Instance.NOTES_KEY, instance.getNotes());
+    putIfNotNull(resp, Instance.SOURCE_RECORD_FORMAT_KEY, instance.getSourceRecordFormat());
+    putIfNotNull(resp, Instance.METADATA_KEY, instance.getMetadata());
 
     try {
       URL selfUrl = context.absoluteUrl(String.format("%s/%s",
-        INSTANCES_PATH, instance.id));
+        INSTANCES_PATH, instance.getId()));
 
       resp.put("links", new JsonObject().put("self", selfUrl.toString()));
     } catch (MalformedURLException e) {
@@ -249,49 +249,49 @@ public class Instances {
   }
 
   private Instance requestToInstance(JsonObject instanceRequest) {
-    List<Identifier> identifiers = instanceRequest.containsKey(Instance.IDENTIFIERS)
-      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.IDENTIFIERS)).stream()
+    List<Identifier> identifiers = instanceRequest.containsKey(Instance.IDENTIFIERS_KEY)
+      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.IDENTIFIERS_KEY)).stream()
           .map(json -> new Identifier(json))
           .collect(Collectors.toList())
           : new ArrayList<>();
 
-    List<Contributor> contributors = instanceRequest.containsKey(Instance.CONTRIBUTORS)
-      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.CONTRIBUTORS)).stream()
+    List<Contributor> contributors = instanceRequest.containsKey(Instance.CONTRIBUTORS_KEY)
+      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.CONTRIBUTORS_KEY)).stream()
       .map(json -> new Contributor(json))
       .collect(Collectors.toList())
       : new ArrayList<>();
 
-    List<Classification> classifications = instanceRequest.containsKey(Instance.CLASSIFICATIONS)
-      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.CLASSIFICATIONS)).stream()
+    List<Classification> classifications = instanceRequest.containsKey(Instance.CLASSIFICATIONS_KEY)
+      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.CLASSIFICATIONS_KEY)).stream()
       .map(json -> new Classification(json))
       .collect(Collectors.toList())
       : new ArrayList<>();
 
-    List<Publication> publications = instanceRequest.containsKey(Instance.PUBLICATION)
-      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.PUBLICATION)).stream()
+    List<Publication> publications = instanceRequest.containsKey(Instance.PUBLICATION_KEY)
+      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.PUBLICATION_KEY)).stream()
       .map(json -> new Publication(json))
       .collect(Collectors.toList())
       : new ArrayList<>();
 
     return new Instance(
       instanceRequest.getString("id"),
-      instanceRequest.getString(Instance.SOURCE),
-      instanceRequest.getString(Instance.TITLE),
-      instanceRequest.getString(Instance.INSTANCE_TYPE_ID))
-      .setAlternativeTitles(toListOfStrings(instanceRequest, Instance.ALTERNATIVE_TITLES))
-      .setEdition(instanceRequest.getString(Instance.EDITION))
-      .setSeries(toListOfStrings(instanceRequest, Instance.SERIES))
+      instanceRequest.getString(Instance.SOURCE_KEY),
+      instanceRequest.getString(Instance.TITLE_KEY),
+      instanceRequest.getString(Instance.INSTANCE_TYPE_ID_KEY))
+      .setAlternativeTitles(toListOfStrings(instanceRequest, Instance.ALTERNATIVE_TITLES_KEY))
+      .setEdition(instanceRequest.getString(Instance.EDITION_KEY))
+      .setSeries(toListOfStrings(instanceRequest, Instance.SERIES_KEY))
       .setIdentifiers(identifiers)
       .setContributors(contributors)
-      .setSubjects(toListOfStrings(instanceRequest, Instance.SUBJECTS))
+      .setSubjects(toListOfStrings(instanceRequest, Instance.SUBJECTS_KEY))
       .setClassifications(classifications)
       .setPublication(publications)
-      .setUrls(toListOfStrings(instanceRequest, Instance.URLS))
-      .setInstanceFormatId(instanceRequest.getString(Instance.INSTANCE_FORMAT_ID))
-      .setPhysicalDescriptions(toListOfStrings(instanceRequest, Instance.PHYSICAL_DESCRIPTIONS))
-      .setLanguages(toListOfStrings(instanceRequest, Instance.LANGUAGES))
-      .setNotes(toListOfStrings(instanceRequest, Instance.NOTES))
-      .setSourceRecordFormat(instanceRequest.getString(Instance.SOURCE_RECORD_FORMAT));
+      .setUrls(toListOfStrings(instanceRequest, Instance.URLS_KEY))
+      .setInstanceFormatId(instanceRequest.getString(Instance.INSTANCE_FORMAT_ID_KEY))
+      .setPhysicalDescriptions(toListOfStrings(instanceRequest, Instance.PHYSICAL_DESCRIPTIONS_KEY))
+      .setLanguages(toListOfStrings(instanceRequest, Instance.LANGUAGES_KEY))
+      .setNotes(toListOfStrings(instanceRequest, Instance.NOTES_KEY))
+      .setSourceRecordFormat(instanceRequest.getString(Instance.SOURCE_RECORD_FORMAT_KEY));
   }
 
   private void putIfNotNull (JsonObject target, String propertyName, String value) {

@@ -3,8 +3,8 @@ package org.folio.inventory.domain;
 import io.vertx.core.json.JsonObject;
 
 public class Identifier {
-  public static final String IDENTIFIER_TYPE_ID = "identifierTypeId";
-  public static final String VALUE = "value";
+  public static final String IDENTIFIER_TYPE_ID_KEY = "identifierTypeId";
+  public static final String VALUE_KEY = "value";
 
   public final String identifierTypeId;
   public final String value;
@@ -15,7 +15,7 @@ public class Identifier {
   }
 
   public Identifier (JsonObject json) {
-    this(json.getString(IDENTIFIER_TYPE_ID), json.getString(VALUE));
+    this(json.getString(IDENTIFIER_TYPE_ID_KEY), json.getString(VALUE_KEY));
   }
 
 }

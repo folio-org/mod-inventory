@@ -8,10 +8,10 @@ import io.vertx.core.json.JsonObject;
  */
 public class Metadata {
   // JSON property names
-  public static final String CREATED_DATE = "createdDate";
-  public static final String CREATED_BY_USER_ID = "createdByUserId";
-  public static final String UPDATED_DATE = "updatedDate";
-  public static final String UPDATED_BY_USER_ID = "updatedByUserId";  
+  public static final String CREATED_DATE_KEY = "createdDate";
+  public static final String CREATED_BY_USER_ID_KEY = "createdByUserId";
+  public static final String UPDATED_DATE_KEY = "updatedDate";
+  public static final String UPDATED_BY_USER_ID_KEY = "updatedByUserId";
   
   public final String createdDate;
   public final String createdByUserId;
@@ -28,10 +28,10 @@ public class Metadata {
   
   public Metadata (JsonObject json) {
     if (json != null) {
-      this.createdDate = json.getString(CREATED_DATE);
-      this.createdByUserId = json.getString(CREATED_BY_USER_ID);
-      this.updatedDate = json.getString(UPDATED_DATE);
-      this.updatedByUserId = json.getString(UPDATED_BY_USER_ID);
+      this.createdDate = json.getString(CREATED_DATE_KEY);
+      this.createdByUserId = json.getString(CREATED_BY_USER_ID_KEY);
+      this.updatedDate = json.getString(UPDATED_DATE_KEY);
+      this.updatedByUserId = json.getString(UPDATED_BY_USER_ID_KEY);
     } else {
       this.createdDate = null;
       this.createdByUserId = null;
@@ -43,10 +43,10 @@ public class Metadata {
   public JsonObject getJson() {
     return (this.createdDate != null 
             ? new JsonObject()
-              .put(CREATED_DATE, this.createdDate)
-              .put(CREATED_BY_USER_ID, this.createdByUserId)
-              .put(UPDATED_DATE, this.updatedDate)
-              .put(UPDATED_BY_USER_ID, this.updatedByUserId)
+              .put(CREATED_DATE_KEY, this.createdDate)
+              .put(CREATED_BY_USER_ID_KEY, this.createdByUserId)
+              .put(UPDATED_DATE_KEY, this.updatedDate)
+              .put(UPDATED_BY_USER_ID_KEY, this.updatedByUserId)
             : null);
   }
 */

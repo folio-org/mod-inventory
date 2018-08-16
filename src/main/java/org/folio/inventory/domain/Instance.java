@@ -1,53 +1,52 @@
 package org.folio.inventory.domain;
 
-import io.vertx.core.json.JsonArray;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.folio.inventory.domain.Metadata;
 
 public class Instance {
   // JSON property names
-  public static final String SOURCE = "source";
-  public static final String TITLE = "title";
-  public static final String ALTERNATIVE_TITLES = "alternativeTitles";
-  public static final String EDITION = "edition";
-  public static final String SERIES = "series";
-  public static final String IDENTIFIERS = "identifiers";
-  public static final String CONTRIBUTORS = "contributors";
-  public static final String SUBJECTS = "subjects";
-  public static final String CLASSIFICATIONS = "classifications";
-  public static final String PUBLICATION = "publication";
-  public static final String URLS = "urls";
-  public static final String INSTANCE_TYPE_ID = "instanceTypeId";
-  public static final String INSTANCE_FORMAT_ID = "instanceFormatId";
-  public static final String PHYSICAL_DESCRIPTIONS = "physicalDescriptions";
-  public static final String LANGUAGES = "languages";
-  public static final String NOTES = "notes";
-  public static final String SOURCE_RECORD_FORMAT = "sourceRecordFormat";
-  public static final String METADATA = "metadata";
+  public static final String SOURCE_KEY = "source";
+  public static final String TITLE_KEY = "title";
+  public static final String ALTERNATIVE_TITLES_KEY = "alternativeTitles";
+  public static final String EDITION_KEY = "edition";
+  public static final String SERIES_KEY = "series";
+  public static final String IDENTIFIERS_KEY = "identifiers";
+  public static final String CONTRIBUTORS_KEY = "contributors";
+  public static final String SUBJECTS_KEY = "subjects";
+  public static final String CLASSIFICATIONS_KEY = "classifications";
+  public static final String PUBLICATION_KEY = "publication";
+  public static final String URLS_KEY = "urls";
+  public static final String INSTANCE_TYPE_ID_KEY = "instanceTypeId";
+  public static final String INSTANCE_FORMAT_ID_KEY = "instanceFormatId";
+  public static final String PHYSICAL_DESCRIPTIONS_KEY = "physicalDescriptions";
+  public static final String LANGUAGES_KEY = "languages";
+  public static final String NOTES_KEY = "notes";
+  public static final String SOURCE_RECORD_FORMAT_KEY = "sourceRecordFormat";
+  public static final String METADATA_KEY = "metadata";
 
-  public final String id;
-  public final String source;
-  public final String title;
-  public List<String> alternativeTitles = new ArrayList();
-  public String edition;
-  public List<String> series = new ArrayList();
-  public List<Identifier> identifiers = new ArrayList();
-  public List<Contributor> contributors = new ArrayList();
-  public List<String> subjects = new ArrayList();
-  public List<Classification> classifications = new ArrayList();
-  public List<Publication> publication = new ArrayList();
-  public List<String> urls = new ArrayList();
-  public final String instanceTypeId;
-  public String instanceFormatId;
-  public List<String> physicalDescriptions = new ArrayList();
-  public List<String> languages = new ArrayList();
-  public List<String> notes = new ArrayList();
-  public String sourceRecordFormat;
-  public Metadata metadata = null;
+  private final String id;
+  private final String source;
+  private final String title;
+  private List<String> alternativeTitles = new ArrayList();
+  private String edition;
+  private List<String> series = new ArrayList();
+  private List<Identifier> identifiers = new ArrayList();
+  private List<Contributor> contributors = new ArrayList();
+  private List<String> subjects = new ArrayList();
+  private List<Classification> classifications = new ArrayList();
+  private List<Publication> publication = new ArrayList();
+  private List<String> urls = new ArrayList();
+  private final String instanceTypeId;
+  private String instanceFormatId;
+  private List<String> physicalDescriptions = new ArrayList();
+  private List<String> languages = new ArrayList();
+  private List<String> notes = new ArrayList();
+  private String sourceRecordFormat;
+  private Metadata metadata = null;
+
 
 
   public Instance(
@@ -112,7 +111,6 @@ public class Instance {
     return this;
   }
 
-
   public Instance setPhysicalDescriptions(List<String> physicalDescriptions) {
     this.physicalDescriptions = physicalDescriptions;
     return this;
@@ -142,6 +140,82 @@ public class Instance {
     return this.metadata != null;
   }
 
+    public String getId() {
+    return id;
+  }
+
+  public String getSource() {
+    return source;
+  }
+
+  public String getTitle() {
+    return title;
+  }
+
+  public List<String> getAlternativeTitles() {
+    return alternativeTitles;
+  }
+
+  public String getEdition() {
+    return edition;
+  }
+
+  public List<String> getSeries() {
+    return series;
+  }
+
+  public List<Identifier> getIdentifiers() {
+    return identifiers;
+  }
+
+  public List<Contributor> getContributors() {
+    return contributors;
+  }
+
+  public List<String> getSubjects() {
+    return subjects;
+  }
+
+  public List<Classification> getClassifications() {
+    return classifications;
+  }
+
+  public List<Publication> getPublication() {
+    return publication;
+  }
+
+  public List<String> getUrls() {
+    return urls;
+  }
+
+  public String getInstanceTypeId() {
+    return instanceTypeId;
+  }
+
+  public String getInstanceFormatId() {
+    return instanceFormatId;
+  }
+
+  public List<String> getPhysicalDescriptions() {
+    return physicalDescriptions;
+  }
+
+  public List<String> getLanguages() {
+    return languages;
+  }
+
+  public List<String> getNotes() {
+    return notes;
+  }
+
+  public String getSourceRecordFormat() {
+    return sourceRecordFormat;
+  }
+
+  public Metadata getMetadata() {
+    return metadata;
+  }
+  
   public Instance copyWithNewId(String newId) {
     return new Instance(newId, this.source, this.title, this.instanceTypeId)
             .setAlternativeTitles(alternativeTitles)
