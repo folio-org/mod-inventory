@@ -1,10 +1,11 @@
-package org.folio.inventory.domain;
+package org.folio.inventory.domain.instances;
 
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.folio.inventory.domain.Metadata;
 
 public class Instance {
   // JSON property names

@@ -1,9 +1,9 @@
 package org.folio.inventory.domain.ingest;
 
-import org.folio.inventory.domain.Identifier;
-import org.folio.inventory.domain.Contributor;
-import org.folio.inventory.domain.Instance;
-import org.folio.inventory.domain.InstanceCollection;
+import org.folio.inventory.domain.instances.Identifier;
+import org.folio.inventory.domain.instances.Contributor;
+import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.domain.instances.InstanceCollection;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;

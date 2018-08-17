@@ -12,11 +12,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
-import org.folio.inventory.domain.Contributor;
-import org.folio.inventory.domain.Identifier;
-import org.folio.inventory.domain.Classification;
-import org.folio.inventory.domain.Instance;
-import org.folio.inventory.domain.InstanceCollection;
+import org.folio.inventory.domain.instances.Contributor;
+import org.folio.inventory.domain.instances.Identifier;
+import org.folio.inventory.domain.instances.Classification;
+import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.server.*;
@@ -29,7 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.folio.inventory.domain.Metadata;
-import org.folio.inventory.domain.Publication;
+import org.folio.inventory.domain.instances.Publication;
 
 public class Instances {
   private static final String INSTANCES_PATH = "/inventory/instances";

@@ -4,12 +4,12 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import java.util.ArrayList;
-import org.folio.inventory.domain.Contributor;
-import org.folio.inventory.domain.Identifier;
-import org.folio.inventory.domain.Classification;
-import org.folio.inventory.domain.Publication;
-import org.folio.inventory.domain.Instance;
-import org.folio.inventory.domain.InstanceCollection;
+import org.folio.inventory.domain.instances.Contributor;
+import org.folio.inventory.domain.instances.Identifier;
+import org.folio.inventory.domain.instances.Classification;
+import org.folio.inventory.domain.instances.Publication;
+import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.domain.instances.InstanceCollection;
 
 import java.util.List;
 import java.util.UUID;

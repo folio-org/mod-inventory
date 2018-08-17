@@ -3,8 +3,8 @@ package org.folio.inventory.storage.external.failure;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.domain.CollectionProvider;
-import org.folio.inventory.domain.Instance;
-import org.folio.inventory.domain.InstanceCollection;
+import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.domain.instances.InstanceCollection;
 import org.junit.Test;
 
 import java.io.UnsupportedEncodingException;
