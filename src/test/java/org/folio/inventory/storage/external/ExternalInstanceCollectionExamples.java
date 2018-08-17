@@ -4,8 +4,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.common.WaitForAllFutures;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
-import org.folio.inventory.domain.Instance;
-import org.folio.inventory.domain.InstanceCollection;
+import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.domain.instances.InstanceCollection;
 import org.hamcrest.CoreMatchers;
 import org.junit.Before;
 import org.junit.Test;
@@ -19,6 +19,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import static org.folio.inventory.common.FutureAssistance.*;
+import org.folio.inventory.domain.instances.Identifier;
 import static org.folio.inventory.storage.external.ExternalStorageSuite.getStorageAddress;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -112,7 +113,7 @@ public class ExternalInstanceCollectionExamples {
 
     Instance added = getOnCompletion(addFinished);
 
-    assertThat(added.id, is(instanceId));
+    assertThat(added.getId(), is(instanceId));
   }
 
   @Test
@@ -131,15 +132,15 @@ public class ExternalInstanceCollectionExamples {
     CompletableFuture<Instance> findFuture = new CompletableFuture<Instance>();
     CompletableFuture<Instance> otherFindFuture = new CompletableFuture<Instance>();
 
-    collection.findById(addedInstance.id, succeed(findFuture), fail(findFuture));
-    collection.findById(otherAddedInstance.id, succeed(otherFindFuture), fail(otherFindFuture));
+    collection.findById(addedInstance.getId(), succeed(findFuture), fail(findFuture));
+    collection.findById(otherAddedInstance.getId(), succeed(otherFindFuture), fail(otherFindFuture));
 
     Instance foundSmallAngry = getOnCompletion(findFuture);
     Instance foundNod = getOnCompletion(otherFindFuture);
 
-    assertThat(foundSmallAngry.title, is("Long Way to a Small Angry Planet"));
+    assertThat(foundSmallAngry.getTitle(), is("Long Way to a Small Angry Planet"));
 
-    assertThat(foundNod.title, is("Nod"));
+    assertThat(foundNod.getTitle(), is("Nod"));
 
     assertThat(hasIdentifier(foundSmallAngry, ISBN_IDENTIFIER_TYPE, "9781473619777"), is(true));
     assertThat(hasIdentifier(foundNod, ASIN_IDENTIFIER_TYPE, "B01D1PLMDO"), is(true));
@@ -192,13 +193,13 @@ public class ExternalInstanceCollectionExamples {
 
     CompletableFuture deleted = new CompletableFuture();
 
-    collection.delete(instanceToBeDeleted.id, succeed(deleted), fail(deleted));
+    collection.delete(instanceToBeDeleted.getId(), succeed(deleted), fail(deleted));
 
     waitForCompletion(deleted);
 
     CompletableFuture<Instance> findFuture = new CompletableFuture<Instance>();
 
-    collection.findById(instanceToBeDeleted.id, succeed(findFuture), fail(findFuture));
+    collection.findById(instanceToBeDeleted.getId(), succeed(findFuture), fail(findFuture));
 
     assertThat(findFuture.get(), is(CoreMatchers.nullValue()));
 
@@ -234,13 +235,13 @@ public class ExternalInstanceCollectionExamples {
 
     CompletableFuture<Instance> gotUpdated = new CompletableFuture<Instance>();
 
-    collection.findById(added.id, succeed(gotUpdated), fail(gotUpdated));
+    collection.findById(added.getId(), succeed(gotUpdated), fail(gotUpdated));
 
     Instance updated = getOnCompletion(gotUpdated);
 
-    assertThat(updated.id, is(added.id));
-    assertThat(updated.title, is(added.title));
-    assertThat(updated.identifiers.size(), is(0));
+    assertThat(updated.getId(), is(added.getId()));
+    assertThat(updated.getTitle(), is(added.getTitle()));
+    assertThat(updated.getIdentifiers().size(), is(0));
   }
 
   @Test
@@ -276,7 +277,7 @@ public class ExternalInstanceCollectionExamples {
     assertThat(findByNameResults.size(), is(1));
     assertThat(findByNameResultsWrapped.totalRecords, is(1));
 
-    assertThat(findByNameResults.get(0).id, is(addedSmallAngryPlanet.id));
+    assertThat(findByNameResults.get(0).getId(), is(addedSmallAngryPlanet.getId()));
   }
 
   private static void addSomeExamples(InstanceCollection instanceCollection)
@@ -325,8 +326,10 @@ public class ExternalInstanceCollectionExamples {
   }
 
   private static Instance createInstance(String title) {
-    return new Instance(UUID.randomUUID().toString(), title, new ArrayList<>(),
-      "Local", BOOKS_INSTANCE_TYPE, new ArrayList<>());
+    return new Instance(UUID.randomUUID().toString(), "local", title, BOOKS_INSTANCE_TYPE)
+                .setAlternativeTitles(new ArrayList<>())
+                .setIdentifiers(new ArrayList<>())
+                .setContributors(new ArrayList<>());
   }
 
   private static boolean hasIdentifier(
@@ -334,14 +337,14 @@ public class ExternalInstanceCollectionExamples {
     final String identifierTypeId,
     final String value) {
 
-    return instance.identifiers.stream().anyMatch(it ->
-      StringUtils.equals(it.identifierTypeId, identifierTypeId)
-        && StringUtils.equals(it.value, value));
+    return instance.getIdentifiers().stream().anyMatch(it ->
+      StringUtils.equals(((Identifier)it).identifierTypeId, identifierTypeId)
+        && StringUtils.equals(((Identifier)it).value, value));
   }
 
   private Instance getInstance(List<Instance> allInstances, final String title) {
     return allInstances.stream()
-      .filter(it -> StringUtils.equals(it.title, title))
+      .filter(it -> StringUtils.equals(it.getTitle(), title))
       .findFirst().orElse(null);
   }
 }

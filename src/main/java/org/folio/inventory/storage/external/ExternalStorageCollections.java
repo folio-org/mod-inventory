@@ -3,7 +3,7 @@ package org.folio.inventory.storage.external;
 import io.vertx.core.Vertx;
 import org.folio.inventory.domain.CollectionProvider;
 import org.folio.inventory.domain.HoldingCollection;
-import org.folio.inventory.domain.InstanceCollection;
+import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.domain.ItemCollection;
 import org.folio.inventory.domain.ingest.IngestJobCollection;
 import org.folio.inventory.storage.memory.InMemoryIngestJobCollection;

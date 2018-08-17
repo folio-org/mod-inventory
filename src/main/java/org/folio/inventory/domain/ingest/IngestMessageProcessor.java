@@ -1,5 +1,9 @@
 package org.folio.inventory.domain.ingest;
 
+import org.folio.inventory.domain.instances.Identifier;
+import org.folio.inventory.domain.instances.Contributor;
+import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.domain.instances.InstanceCollection;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
@@ -63,6 +67,9 @@ public class IngestMessageProcessor {
 
     records.stream()
       .map(record -> {
+        List<String> alternativeTitles = JsonArrayHelper.toListOfStrings(
+          record.getJsonArray(Instance.ALTERNATIVE_TITLES_KEY));
+
         List<JsonObject> identifiersJson = JsonArrayHelper.toList(
           record.getJsonArray("identifiers"));
 
@@ -87,15 +94,19 @@ public class IngestMessageProcessor {
             "Unknown contributor", "", ""));
         }
 
-        return new Instance(UUID.randomUUID().toString(), record.getString(TITLE_PROPERTY),
-          identifiers, "Local: MODS", instanceTypes.getString("text"), contributors);
+        return new Instance(UUID.randomUUID().toString(), "Local: MODS",
+                record.getString(TITLE_PROPERTY),
+                instanceTypes.getString("text"))
+                .setAlternativeTitles(alternativeTitles)
+                .setIdentifiers(identifiers)
+                .setContributors(contributors);
       })
       .forEach(instance -> instanceCollection.add(instance, allInstances.receive(),
         failure -> log.error("Instance processing failed: " + failure.getReason())));
 
       allInstances.collect(instances -> {
         instances.stream().map(instance ->
-          new Holding(UUID.randomUUID().toString(), instance.id,
+          new Holding(UUID.randomUUID().toString(), instance.getId(),
             locations.getString("Main Library")))
           .forEach(holding -> holdingCollection.add(holding, allHoldings.receive(),
             failure -> log.error("Holding processing failed: " + failure.getReason())));
@@ -105,11 +116,11 @@ public class IngestMessageProcessor {
             //Will fail if have multiple instances with exactly the same title
             Optional<Instance> possibleInstance = instances.stream()
               .filter(instance ->
-                StringUtils.equals(instance.title, record.getString(TITLE_PROPERTY)))
+                StringUtils.equals(instance.getTitle(), record.getString(TITLE_PROPERTY)))
               .findFirst();
 
             String instanceId = possibleInstance.isPresent()
-              ? possibleInstance.get().id
+              ? possibleInstance.get().getId()
               : null;
 
             Optional<Holding> possibleHolding = holdings.stream()
