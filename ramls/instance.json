@@ -24,6 +24,9 @@
     "edition": {
       "type": "string"
     },
+    "indexTitle": {
+      "type": "string"
+    },
     "series": {
       "type": "array",
       "items": {

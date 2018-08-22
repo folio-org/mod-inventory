@@ -13,6 +13,7 @@ public class Instance {
   public static final String TITLE_KEY = "title";
   public static final String ALTERNATIVE_TITLES_KEY = "alternativeTitles";
   public static final String EDITION_KEY = "edition";
+  public static final String INDEXTITLE_KEY = "indexTitle";
   public static final String SERIES_KEY = "series";
   public static final String IDENTIFIERS_KEY = "identifiers";
   public static final String CONTRIBUTORS_KEY = "contributors";
@@ -33,6 +34,7 @@ public class Instance {
   private final String title;
   private List<String> alternativeTitles = new ArrayList();
   private String edition;
+  private String indexTitle;
   private List<String> series = new ArrayList();
   private List<Identifier> identifiers = new ArrayList();
   private List<Contributor> contributors = new ArrayList();
@@ -72,6 +74,10 @@ public class Instance {
     return this;
   }
 
+  public Instance setIndexTitle(String indexTitle) {
+    this.indexTitle = indexTitle;
+    return this;
+  }
   public Instance setSeries(List<String> series) {
     this.series = series;
     return this;
@@ -160,6 +166,10 @@ public class Instance {
   public String getEdition() {
     return edition;
   }
+  
+  public String getIndexTitle() {
+    return indexTitle;
+  }
 
   public List<String> getSeries() {
     return series;
@@ -221,6 +231,7 @@ public class Instance {
     return new Instance(newId, this.source, this.title, this.instanceTypeId)
             .setAlternativeTitles(alternativeTitles)
             .setEdition(edition)
+            .setIndexTitle(indexTitle)
             .setSeries(series)
             .setIdentifiers(identifiers)
             .setContributors(contributors)
@@ -239,6 +250,7 @@ public class Instance {
     return new Instance(this.id, this.source, this.title, this.instanceTypeId)
             .setAlternativeTitles(alternativeTitles)
             .setEdition(edition)
+            .setIndexTitle(indexTitle)
             .setSeries(series)
             .setIdentifiers(identifiers)
             .setContributors(contributors)

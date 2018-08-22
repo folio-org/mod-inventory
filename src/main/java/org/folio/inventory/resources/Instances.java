@@ -220,6 +220,7 @@ public class Instances {
     resp.put(Instance.TITLE_KEY, instance.getTitle());
     putIfNotNull(resp, Instance.ALTERNATIVE_TITLES_KEY, instance.getAlternativeTitles());
     putIfNotNull(resp, Instance.EDITION_KEY, instance.getEdition());
+    putIfNotNull(resp, Instance.INDEXTITLE_KEY, instance.getIndexTitle());
     putIfNotNull(resp, Instance.SERIES_KEY, instance.getSeries());
     putIfNotNull(resp, Instance.IDENTIFIERS_KEY, instance.getIdentifiers());
     putIfNotNull(resp, Instance.CONTRIBUTORS_KEY, instance.getContributors());
@@ -280,6 +281,7 @@ public class Instances {
       instanceRequest.getString(Instance.INSTANCE_TYPE_ID_KEY))
       .setAlternativeTitles(toListOfStrings(instanceRequest, Instance.ALTERNATIVE_TITLES_KEY))
       .setEdition(instanceRequest.getString(Instance.EDITION_KEY))
+      .setIndexTitle(instanceRequest.getString(Instance.INDEXTITLE_KEY))
       .setSeries(toListOfStrings(instanceRequest, Instance.SERIES_KEY))
       .setIdentifiers(identifiers)
       .setContributors(contributors)

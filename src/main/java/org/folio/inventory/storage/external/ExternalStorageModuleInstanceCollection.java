@@ -44,6 +44,7 @@ class ExternalStorageModuleInstanceCollection
     instanceToSend.put(Instance.TITLE_KEY, instance.getTitle());
     instanceToSend.put(Instance.ALTERNATIVE_TITLES_KEY, instance.getAlternativeTitles());
     includeIfPresent(instanceToSend, Instance.EDITION_KEY, instance.getEdition());
+    includeIfPresent(instanceToSend, Instance.INDEXTITLE_KEY, instance.getIndexTitle());
     instanceToSend.put(Instance.SERIES_KEY, instance.getSeries());
     instanceToSend.put(Instance.IDENTIFIERS_KEY, instance.getIdentifiers());
     instanceToSend.put(Instance.CONTRIBUTORS_KEY, instance.getContributors());
@@ -100,6 +101,7 @@ class ExternalStorageModuleInstanceCollection
       instanceFromServer.getString(Instance.INSTANCE_TYPE_ID_KEY))
       .setAlternativeTitles(jsonArrayAsListOfStrings(instanceFromServer, Instance.ALTERNATIVE_TITLES_KEY))
       .setEdition(instanceFromServer.getString(Instance.EDITION_KEY))
+      .setIndexTitle(instanceFromServer.getString(Instance.INDEXTITLE_KEY))
       .setSeries(jsonArrayAsListOfStrings(instanceFromServer, Instance.SERIES_KEY))
       .setIdentifiers(mappedIdentifiers)
       .setContributors(mappedContributors)
