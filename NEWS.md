@@ -1,10 +1,11 @@
-## 9.2.0 Unreleased
+## 9.2.1 Unreleased
 
+* Adds optional Instance properties `parentInstances`, `childInstances` (MODINV-69)
+* Provides `inventory` interface 6.2 (MODINV-69)
+* Requires `instance-storage` interface version 4.5 (MODINV-69)
 * Add properties `alternativeTitles`, `edition`, `series`, `subjects`, `classifications`, 
   `publication`, `urls`, `instanceFormatId`, `physicalDescriptions`, `languages`, 
   `notes`, `sourceRecordFormat`, `metadata` to `Instance` schema (MODINV-68)
-* Provides `inventory` interface 6.1 (MODINV-68)
-* Requires `instance-storage` interface version 4.4 (MODINV-68)
 
 ## 9.1.0 2018-07-10
 

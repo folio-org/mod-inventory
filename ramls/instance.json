@@ -11,6 +11,44 @@
     "source": {
       "type": "string"
     },
+    "parentInstances": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "superInstanceId": {
+            "type": "string"
+          },
+          "instanceRelationshipTypeId": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "superInstanceId",
+          "instanceRelationshipTypeId"
+        ]
+      }
+    },
+    "childInstances": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "subInstanceId": {
+            "type": "string"
+          },
+          "instanceRelationshipTypeId": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "subInstanceId",
+          "instanceRelationshipTypeId"
+        ]
+      }
+    },
     "title": {
       "type": "string"
     },
