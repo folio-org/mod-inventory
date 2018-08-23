@@ -13,13 +13,14 @@ public class Instance {
   public static final String TITLE_KEY = "title";
   public static final String ALTERNATIVE_TITLES_KEY = "alternativeTitles";
   public static final String EDITION_KEY = "edition";
-  public static final String INDEXTITLE_KEY = "indexTitle";
+  public static final String INDEX_TITLE_KEY = "indexTitle";
   public static final String SERIES_KEY = "series";
   public static final String IDENTIFIERS_KEY = "identifiers";
   public static final String CONTRIBUTORS_KEY = "contributors";
   public static final String SUBJECTS_KEY = "subjects";
   public static final String CLASSIFICATIONS_KEY = "classifications";
   public static final String PUBLICATION_KEY = "publication";
+  public static final String PRECEDING_TITLE_KEY = "precedingTitle";
   public static final String URLS_KEY = "urls";
   public static final String INSTANCE_TYPE_ID_KEY = "instanceTypeId";
   public static final String INSTANCE_FORMAT_ID_KEY = "instanceFormatId";
@@ -41,6 +42,7 @@ public class Instance {
   private List<String> subjects = new ArrayList();
   private List<Classification> classifications = new ArrayList();
   private List<Publication> publication = new ArrayList();
+  private List<PrecedingTitle> precedingTitle = new ArrayList();
   private List<String> urls = new ArrayList();
   private final String instanceTypeId;
   private String instanceFormatId;
@@ -105,6 +107,11 @@ public class Instance {
 
   public Instance setPublication(List<Publication> publication) {
     this.publication = publication;
+    return this;
+  }
+  
+  public Instance setPrecedingTitle(List<PrecedingTitle> precedingTitle) {
+    this.precedingTitle = precedingTitle;
     return this;
   }
 
@@ -194,6 +201,10 @@ public class Instance {
   public List<Publication> getPublication() {
     return publication;
   }
+  
+  public List<PrecedingTitle> getPrecedingTitle() {
+    return precedingTitle;
+  }
 
   public List<String> getUrls() {
     return urls;
@@ -238,6 +249,7 @@ public class Instance {
             .setSubjects(subjects)
             .setClassifications(classifications)
             .setPublication(publication)
+            .setPrecedingTitle(precedingTitle)
             .setUrls(urls)
             .setInstanceFormatId(instanceFormatId)
             .setPhysicalDescriptions(physicalDescriptions)
@@ -257,6 +269,7 @@ public class Instance {
             .setSubjects(subjects)
             .setClassifications(classifications)
             .setPublication(publication)
+            .setPrecedingTitle(precedingTitle)
             .setUrls(urls)
             .setInstanceFormatId(instanceFormatId)
             .setPhysicalDescriptions(physicalDescriptions)

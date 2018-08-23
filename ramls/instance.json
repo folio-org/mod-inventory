@@ -118,10 +118,30 @@
           "publisher": {
             "type": "string"
           },
+          "role": {
+            "type": "string"
+          },
           "place": {
             "type": "string"
           },
           "dateOfPublication": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "precedingTitle": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "issn": {
+            "type": "string"
+          },
+          "isbn": {
             "type": "string"
           }
         }

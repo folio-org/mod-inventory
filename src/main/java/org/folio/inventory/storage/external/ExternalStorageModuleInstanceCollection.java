@@ -8,6 +8,7 @@ import org.folio.inventory.domain.instances.Contributor;
 import org.folio.inventory.domain.instances.Identifier;
 import org.folio.inventory.domain.instances.Classification;
 import org.folio.inventory.domain.instances.Publication;
+import org.folio.inventory.domain.instances.PrecedingTitle;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 
@@ -44,13 +45,14 @@ class ExternalStorageModuleInstanceCollection
     instanceToSend.put(Instance.TITLE_KEY, instance.getTitle());
     instanceToSend.put(Instance.ALTERNATIVE_TITLES_KEY, instance.getAlternativeTitles());
     includeIfPresent(instanceToSend, Instance.EDITION_KEY, instance.getEdition());
-    includeIfPresent(instanceToSend, Instance.INDEXTITLE_KEY, instance.getIndexTitle());
+    includeIfPresent(instanceToSend, Instance.INDEX_TITLE_KEY, instance.getIndexTitle());
     instanceToSend.put(Instance.SERIES_KEY, instance.getSeries());
     instanceToSend.put(Instance.IDENTIFIERS_KEY, instance.getIdentifiers());
     instanceToSend.put(Instance.CONTRIBUTORS_KEY, instance.getContributors());
     instanceToSend.put(Instance.SUBJECTS_KEY, instance.getSubjects());
     instanceToSend.put(Instance.CLASSIFICATIONS_KEY, instance.getClassifications());
     instanceToSend.put(Instance.PUBLICATION_KEY, instance.getPublication());
+    instanceToSend.put(Instance.PRECEDING_TITLE_KEY, instance.getPrecedingTitle());
     instanceToSend.put(Instance.URLS_KEY, instance.getUrls());
     includeIfPresent(instanceToSend, Instance.INSTANCE_TYPE_ID_KEY, instance.getInstanceTypeId());
     includeIfPresent(instanceToSend, Instance.INSTANCE_FORMAT_ID_KEY, instance.getInstanceFormatId());
@@ -87,9 +89,16 @@ class ExternalStorageModuleInstanceCollection
 
     List<JsonObject> publications = toList(
       instanceFromServer.getJsonArray(Instance.PUBLICATION_KEY, new JsonArray()));
+    
+    List<JsonObject> precedingTitles = toList(
+      instanceFromServer.getJsonArray(Instance.PRECEDING_TITLE_KEY, new JsonArray()));
 
     List<Publication> mappedPublications = publications.stream()
       .map(it -> new Publication(it))
+      .collect(Collectors.toList());
+    
+    List<PrecedingTitle> mappedPrecedingTitles = precedingTitles.stream()
+      .map(it -> new PrecedingTitle(it))
       .collect(Collectors.toList());
 
     JsonObject metadataJson = instanceFromServer.getJsonObject(Instance.METADATA_KEY);
@@ -101,13 +110,14 @@ class ExternalStorageModuleInstanceCollection
       instanceFromServer.getString(Instance.INSTANCE_TYPE_ID_KEY))
       .setAlternativeTitles(jsonArrayAsListOfStrings(instanceFromServer, Instance.ALTERNATIVE_TITLES_KEY))
       .setEdition(instanceFromServer.getString(Instance.EDITION_KEY))
-      .setIndexTitle(instanceFromServer.getString(Instance.INDEXTITLE_KEY))
+      .setIndexTitle(instanceFromServer.getString(Instance.INDEX_TITLE_KEY))
       .setSeries(jsonArrayAsListOfStrings(instanceFromServer, Instance.SERIES_KEY))
       .setIdentifiers(mappedIdentifiers)
       .setContributors(mappedContributors)
       .setSubjects(jsonArrayAsListOfStrings(instanceFromServer, Instance.SUBJECTS_KEY))
       .setClassifications(mappedClassifications)
       .setPublication(mappedPublications)
+      .setPrecedingTitle(mappedPrecedingTitles)
       .setUrls(jsonArrayAsListOfStrings(instanceFromServer, Instance.URLS_KEY))
       .setInstanceFormatId(instanceFromServer.getString(Instance.INSTANCE_FORMAT_ID_KEY))
       .setPhysicalDescriptions(jsonArrayAsListOfStrings(instanceFromServer, Instance.PHYSICAL_DESCRIPTIONS_KEY))
