@@ -147,6 +147,23 @@
         }
       }
     },
+    "succeedingTitle": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "issn": {
+            "type": "string"
+          },
+          "isbn": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "urls": {
       "type": "array",
       "items": {

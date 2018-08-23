@@ -21,6 +21,7 @@ public class Instance {
   public static final String CLASSIFICATIONS_KEY = "classifications";
   public static final String PUBLICATION_KEY = "publication";
   public static final String PRECEDING_TITLE_KEY = "precedingTitle";
+  public static final String SUCCEEDING_TITLE_KEY = "succeedingTitle";
   public static final String URLS_KEY = "urls";
   public static final String INSTANCE_TYPE_ID_KEY = "instanceTypeId";
   public static final String INSTANCE_FORMAT_ID_KEY = "instanceFormatId";
@@ -43,6 +44,7 @@ public class Instance {
   private List<Classification> classifications = new ArrayList();
   private List<Publication> publication = new ArrayList();
   private List<PrecedingTitle> precedingTitle = new ArrayList();
+  private List<SucceedingTitle> succeedingTitle = new ArrayList();
   private List<String> urls = new ArrayList();
   private final String instanceTypeId;
   private String instanceFormatId;
@@ -112,6 +114,11 @@ public class Instance {
   
   public Instance setPrecedingTitle(List<PrecedingTitle> precedingTitle) {
     this.precedingTitle = precedingTitle;
+    return this;
+  }
+  
+  public Instance setSucceedingTitle(List<SucceedingTitle> succeedingTitle) {
+    this.succeedingTitle = succeedingTitle;
     return this;
   }
 
@@ -205,6 +212,10 @@ public class Instance {
   public List<PrecedingTitle> getPrecedingTitle() {
     return precedingTitle;
   }
+  
+  public List<SucceedingTitle> getSucceedingTitle() {
+    return succeedingTitle;
+  }
 
   public List<String> getUrls() {
     return urls;
@@ -250,6 +261,7 @@ public class Instance {
             .setClassifications(classifications)
             .setPublication(publication)
             .setPrecedingTitle(precedingTitle)
+            .setSucceedingTitle(succeedingTitle)
             .setUrls(urls)
             .setInstanceFormatId(instanceFormatId)
             .setPhysicalDescriptions(physicalDescriptions)
@@ -270,6 +282,7 @@ public class Instance {
             .setClassifications(classifications)
             .setPublication(publication)
             .setPrecedingTitle(precedingTitle)
+            .setSucceedingTitle(succeedingTitle)
             .setUrls(urls)
             .setInstanceFormatId(instanceFormatId)
             .setPhysicalDescriptions(physicalDescriptions)

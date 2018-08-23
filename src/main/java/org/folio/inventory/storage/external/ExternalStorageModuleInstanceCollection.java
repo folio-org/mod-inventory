@@ -9,6 +9,7 @@ import org.folio.inventory.domain.instances.Identifier;
 import org.folio.inventory.domain.instances.Classification;
 import org.folio.inventory.domain.instances.Publication;
 import org.folio.inventory.domain.instances.PrecedingTitle;
+import org.folio.inventory.domain.instances.SucceedingTitle;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 
@@ -53,6 +54,7 @@ class ExternalStorageModuleInstanceCollection
     instanceToSend.put(Instance.CLASSIFICATIONS_KEY, instance.getClassifications());
     instanceToSend.put(Instance.PUBLICATION_KEY, instance.getPublication());
     instanceToSend.put(Instance.PRECEDING_TITLE_KEY, instance.getPrecedingTitle());
+    instanceToSend.put(Instance.SUCCEEDING_TITLE_KEY, instance.getSucceedingTitle());
     instanceToSend.put(Instance.URLS_KEY, instance.getUrls());
     includeIfPresent(instanceToSend, Instance.INSTANCE_TYPE_ID_KEY, instance.getInstanceTypeId());
     includeIfPresent(instanceToSend, Instance.INSTANCE_FORMAT_ID_KEY, instance.getInstanceFormatId());
@@ -92,6 +94,9 @@ class ExternalStorageModuleInstanceCollection
     
     List<JsonObject> precedingTitles = toList(
       instanceFromServer.getJsonArray(Instance.PRECEDING_TITLE_KEY, new JsonArray()));
+    
+    List<JsonObject> succeedingTitles = toList(
+      instanceFromServer.getJsonArray(Instance.SUCCEEDING_TITLE_KEY, new JsonArray()));
 
     List<Publication> mappedPublications = publications.stream()
       .map(it -> new Publication(it))
@@ -99,6 +104,10 @@ class ExternalStorageModuleInstanceCollection
     
     List<PrecedingTitle> mappedPrecedingTitles = precedingTitles.stream()
       .map(it -> new PrecedingTitle(it))
+      .collect(Collectors.toList());
+    
+    List<SucceedingTitle> mappedSucceedingTitles = succeedingTitles.stream()
+      .map(it -> new SucceedingTitle(it))
       .collect(Collectors.toList());
 
     JsonObject metadataJson = instanceFromServer.getJsonObject(Instance.METADATA_KEY);
@@ -118,6 +127,7 @@ class ExternalStorageModuleInstanceCollection
       .setClassifications(mappedClassifications)
       .setPublication(mappedPublications)
       .setPrecedingTitle(mappedPrecedingTitles)
+      .setSucceedingTitle(mappedSucceedingTitles)
       .setUrls(jsonArrayAsListOfStrings(instanceFromServer, Instance.URLS_KEY))
       .setInstanceFormatId(instanceFromServer.getString(Instance.INSTANCE_FORMAT_ID_KEY))
       .setPhysicalDescriptions(jsonArrayAsListOfStrings(instanceFromServer, Instance.PHYSICAL_DESCRIPTIONS_KEY))

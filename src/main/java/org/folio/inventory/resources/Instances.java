@@ -31,6 +31,7 @@ import java.util.stream.Collectors;
 import org.folio.inventory.domain.Metadata;
 import org.folio.inventory.domain.instances.Publication;
 import org.folio.inventory.domain.instances.PrecedingTitle;
+import org.folio.inventory.domain.instances.SucceedingTitle;
 
 public class Instances {
   private static final String INSTANCES_PATH = "/inventory/instances";
@@ -229,6 +230,7 @@ public class Instances {
     putIfNotNull(resp, Instance.CLASSIFICATIONS_KEY, instance.getClassifications());
     putIfNotNull(resp, Instance.PUBLICATION_KEY, instance.getPublication());
     putIfNotNull(resp, Instance.PRECEDING_TITLE_KEY, instance.getPrecedingTitle());
+    putIfNotNull(resp, Instance.SUCCEEDING_TITLE_KEY, instance.getSucceedingTitle());
     putIfNotNull(resp, Instance.URLS_KEY, instance.getUrls());
     putIfNotNull(resp, Instance.INSTANCE_TYPE_ID_KEY, instance.getInstanceTypeId());
     putIfNotNull(resp, Instance.INSTANCE_FORMAT_ID_KEY, instance.getInstanceFormatId());
@@ -281,6 +283,12 @@ public class Instances {
       .map(json -> new PrecedingTitle(json))
       .collect(Collectors.toList())
       : new ArrayList<>();
+    
+    List<SucceedingTitle> succeedingTitle = instanceRequest.containsKey(Instance.SUCCEEDING_TITLE_KEY)
+      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.SUCCEEDING_TITLE_KEY)).stream()
+      .map(json -> new SucceedingTitle(json))
+      .collect(Collectors.toList())
+      : new ArrayList<>();
 
     return new Instance(
       instanceRequest.getString("id"),
@@ -297,6 +305,7 @@ public class Instances {
       .setClassifications(classifications)
       .setPublication(publications)
       .setPrecedingTitle(precedingTitle)
+      .setSucceedingTitle(succeedingTitle)
       .setUrls(toListOfStrings(instanceRequest, Instance.URLS_KEY))
       .setInstanceFormatId(instanceRequest.getString(Instance.INSTANCE_FORMAT_ID_KEY))
       .setPhysicalDescriptions(toListOfStrings(instanceRequest, Instance.PHYSICAL_DESCRIPTIONS_KEY))
