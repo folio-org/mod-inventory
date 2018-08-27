@@ -198,7 +198,7 @@ public class Instances {
 
 
   /**
-   * Fetches instance relationships for multiple instances records, populates, responds
+   * Fetches instance relationships for multiple Instance records, populates, responds
    * @param success Multi record Instances result
    * @param routingContext
    * @param context
@@ -239,7 +239,7 @@ public class Instances {
   }
 
   /**
-   * Fetches instance relationships for a single instance result, populates, responds
+   * Fetches instance relationships for a single Instance result, populates, responds
    * @param success Single record Instance result
    * @param routingContext
    * @param context
@@ -280,9 +280,9 @@ public class Instances {
 
   /**
    * Populates multiple Instances representation (downwards)
-   * @param wrappedInstances
-   * @param parentMap
-   * @param childMap
+   * @param wrappedInstances Set of Instances to transform to representations
+   * @param parentMap Map with list of super instances per Instance
+   * @param childMap Map with list of sub instances per Instance
    * @param context
    * @return
    */
@@ -313,9 +313,9 @@ public class Instances {
 
   /**
    * Populates an Instance record representation (downwards)
-   * @param instance
-   * @param parentInstances
-   * @param childInstances
+   * @param instance Instance result to transform to representation
+   * @param parentInstances Super instances for this Instance
+   * @param childInstances Sub instances for this Instance
    * @param context
    * @return
    */
@@ -413,6 +413,8 @@ public class Instances {
       .setNotes(toListOfStrings(instanceRequest, Instance.NOTES_KEY))
       .setSourceRecordFormat(instanceRequest.getString(Instance.SOURCE_RECORD_FORMAT_KEY));
   }
+
+  // Utilities
 
   private List<String> getInstanceIdsFromInstanceResult (Success success) {
     List<String> instanceIds = new ArrayList();
