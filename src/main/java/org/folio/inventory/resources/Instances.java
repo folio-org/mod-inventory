@@ -461,19 +461,19 @@ public class Instances {
       .setSourceRecordFormat(instanceRequest.getString(Instance.SOURCE_RECORD_FORMAT_KEY));
   }
 
-  private void putIfNotNull (JsonObject target, String propertyName, String value) {
+  private void putIfNotNull(JsonObject target, String propertyName, String value) {
     if (value != null) {
       target.put(propertyName, value);
     }
   }
 
-  private void putIfNotNull (JsonObject target, String propertyName, List<String> value) {
+  private void putIfNotNull(JsonObject target, String propertyName, List<String> value) {
     if (value != null) {
       target.put(propertyName, value);
     }
   }
 
-  private void putIfNotNull (JsonObject target, String propertyName, Object value) {
+  private void putIfNotNull(JsonObject target, String propertyName, Object value) {
     if (value != null) {
       if (value instanceof List) {
         target.put(propertyName, value);
