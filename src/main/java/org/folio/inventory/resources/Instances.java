@@ -88,14 +88,14 @@ public class Instances {
 
     PagingParameters pagingParameters = PagingParameters.from(context);
 
-    if(pagingParameters == null) {
+    if (pagingParameters == null) {
       ClientErrorResponse.badRequest(routingContext.response(),
         "limit and offset must be numeric when supplied");
 
       return;
     }
 
-    if(search == null) {
+    if (search == null) {
       storage.getInstanceCollection(context).findAll(
         pagingParameters,
         (Success<MultipleRecords<Instance>> success) -> {
@@ -103,8 +103,7 @@ public class Instances {
         },
         FailureResponseConsumer.serverError(routingContext.response())
       );
-    }
-    else {
+    } else {
       try {
         storage.getInstanceCollection(context).findByCql(
           search,
@@ -208,7 +207,7 @@ public class Instances {
 
     JsonObject instanceRequest = routingContext.getBodyAsJson();
 
-    if(StringUtils.isBlank(instanceRequest.getString(Instance.TITLE_KEY))) {
+    if (StringUtils.isBlank(instanceRequest.getString(Instance.TITLE_KEY))) {
       ClientErrorResponse.badRequest(routingContext.response(),
         "Title must be provided for an instance");
       return;
@@ -241,12 +240,11 @@ public class Instances {
 
     instanceCollection.findById(routingContext.request().getParam("id"),
       it -> {
-        if(it.getResult() != null) {
+        if (it.getResult() != null) {
           instanceCollection.update(updatedInstance,
             v -> SuccessResponse.noContent(routingContext.response()),
             FailureResponseConsumer.serverError(routingContext.response()));
-        }
-        else {
+        } else {
           ClientErrorResponse.notFound(routingContext.response());
         }
       }, FailureResponseConsumer.serverError(routingContext.response()));
@@ -255,7 +253,7 @@ public class Instances {
   private void deleteAll(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
 
-    storage.getInstanceCollection(context).empty (
+    storage.getInstanceCollection(context).empty(
       v -> SuccessResponse.noContent(routingContext.response()),
       FailureResponseConsumer.serverError(routingContext.response()));
   }
@@ -464,11 +462,15 @@ public class Instances {
   }
 
   private void putIfNotNull (JsonObject target, String propertyName, String value) {
-    if (value != null) target.put(propertyName, value);
+    if (value != null) {
+      target.put(propertyName, value);
+    }
   }
 
   private void putIfNotNull (JsonObject target, String propertyName, List<String> value) {
-    if (value != null) target.put(propertyName, value);
+    if (value != null) {
+      target.put(propertyName, value);
+    }
   }
 
   private void putIfNotNull (JsonObject target, String propertyName, Object value) {
