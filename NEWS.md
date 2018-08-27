@@ -1,4 +1,4 @@
-## 9.2.0 Unreleased
+## 9.2.0 2018-08-27
 
 * Add properties `alternativeTitles`, `edition`, `series`, `subjects`, `classifications`, 
   `publication`, `urls`, `instanceFormatId`, `physicalDescriptions`, `languages`, 
