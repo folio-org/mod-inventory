@@ -118,90 +118,6 @@ public class Instances {
     }
   }
 
-  private void buildInstancesResponse(Success<MultipleRecords<Instance>> success,
-          RoutingContext routingContext,
-          WebContext context) {
-    List<String> instanceIds = success.getResult().records.stream()
-            .map(instance -> instance.getId())
-            .filter(Objects::nonNull)
-            .distinct()
-            .collect(Collectors.toList());
-    String idList = instanceIds.stream().map(String::toString).distinct().collect(Collectors.joining(" or "));
-
-    String query = String.format("(subInstanceId==(%s)+or+superInstanceId==(%s))", idList, idList);
-
-    try {
-      query = URLEncoder.encode(query, "UTF-8");
-    } catch (UnsupportedEncodingException e) {
-      log.error(String.format("Cannot encode query %s", query));
-    }
-    CollectionResourceClient instancesIdsClient = null;
-
-    try {
-      OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
-      instancesIdsClient
-              = new CollectionResourceClient(
-                      okapiClient,
-                      new URL(context.getOkapiLocation() + "/instance-storage/instance-relationships"));
-    } catch (MalformedURLException mfue) {
-      log.info(mfue);
-    }
-
-    Map<String, List<InstanceRelationshipToParent>> parentInstanceMap = new HashMap();
-    Map<String, List<InstanceRelationshipToChild>> childInstanceMap = new HashMap();
-    if (instancesIdsClient != null) {
-      CompletableFuture<Response> parentInstancesFetched = new CompletableFuture<>();
-      instancesIdsClient.getMany(query, (Response result) -> {
-        if (result.getStatusCode() == 200) {
-          JsonObject json = result.getJson();
-          List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("instanceRelationships"));
-          relationsList.stream().map((rel) -> {
-            addToList(childInstanceMap, rel.getString("superInstanceId"), new InstanceRelationshipToChild(rel));
-            return rel;
-          }).forEachOrdered((rel) -> {
-            addToList(parentInstanceMap, rel.getString("subInstanceId"), new InstanceRelationshipToParent(rel));
-          });
-        } else {
-          log.info("No relations found for instance ID list");
-        }
-        JsonResponse.success(routingContext.response(),
-                toRepresentation(success.getResult(), parentInstanceMap, childInstanceMap, context));
-      });
-    }
-  }
-
-  private synchronized void addToList(Map<String, List<InstanceRelationshipToChild>> items, String mapKey, InstanceRelationshipToChild myItem) {
-    List<InstanceRelationshipToChild> itemsList = items.get(mapKey);
-
-    // if list does not exist create it
-    if (itemsList == null) {
-      itemsList = new ArrayList();
-      itemsList.add(myItem);
-      items.put(mapKey, itemsList);
-    } else {
-      // add if item is not already in list
-      if (!itemsList.contains(myItem)) {
-        itemsList.add(myItem);
-      }
-    }
-  }
-
-  private synchronized void addToList(Map<String, List<InstanceRelationshipToParent>> items, String mapKey, InstanceRelationshipToParent myItem) {
-    List<InstanceRelationshipToParent> itemsList = items.get(mapKey);
-
-    // if list does not exist create it
-    if (itemsList == null) {
-      itemsList = new ArrayList();
-      itemsList.add(myItem);
-      items.put(mapKey, itemsList);
-    } else {
-      // add if item is not already in list
-      if (!itemsList.contains(myItem)) {
-        itemsList.add(myItem);
-      }
-    }
-  }
-
   private void create(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
 
@@ -274,18 +190,12 @@ public class Instances {
             routingContext.request().getParam("id"),
             it -> {
               if (it.getResult() != null) {
-                List<String> instanceIds = Arrays.asList(it.getResult().getId());
-                log.info("Gathered instance ID list: " + instanceIds);
+
+                List<String> instanceIds = getInstanceIdsFromInstanceResult(it);
+
                 String idList = instanceIds.stream().map(String::toString).distinct().collect(Collectors.joining(" or "));
                 String query = String.format(
                         "query=(subInstanceId==(%s)+or+superInstanceid==(%s))", idList, idList);
-                //try {
-                //query = URLEncoder.encode(query, "UTF-8");
-                log.info("Created query: " + query);
-
-                //} catch (UnsupportedEncodingException e) {
-                //  log.error(String.format("Cannot encode query %s", query));
-                //}
                 CollectionResourceClient parentInstancesIdsClient = null;
                 try {
                   OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
@@ -299,17 +209,12 @@ public class Instances {
                 Map<String, List<InstanceRelationshipToParent>> parentInstanceMap = new HashMap();
                 Map<String, List<InstanceRelationshipToChild>> childInstanceMap = new HashMap();
                 if (parentInstancesIdsClient != null) {
-                  CompletableFuture<Response> parentInstancesFetched = new CompletableFuture<>();
-                  log.info("Getting related instances");
                   parentInstancesIdsClient.getMany(query, (Response result) -> {
-                    log.info("Sent off");
                     if (result.getStatusCode() == 200) {
 
                       JsonObject json = result.getJson();
-                      log.info("Got json: " + json);
                       final List<JsonObject> relationsList = JsonArrayHelper.toList(
                               json.getJsonArray("instanceRelationships"));
-                      // new Hashmap<String subInstanceId, List<InstanceRelationshipToParent>>();
                       for (JsonObject rel : relationsList) {
                         if (parentInstanceMap.containsKey(rel.getString("subInstanceId"))) {
                           parentInstanceMap.get(rel.getString("subInstanceId")).add(new InstanceRelationshipToParent(rel));
@@ -321,11 +226,7 @@ public class Instances {
                         } else {
                           childInstanceMap.put(rel.getString("superInstanceId"), Arrays.asList(new InstanceRelationshipToChild(rel)));
                         }
-
                       }
-                      log.info("Created relationships map" + parentInstanceMap);
-                    } else {
-                      log.info("No relations found for instance IDs ");
                     }
                     JsonResponse.success(routingContext.response(),
                             toRepresentation(it.getResult(),
@@ -334,12 +235,76 @@ public class Instances {
                                     context));
                   });
                 }
-
               } else {
                 ClientErrorResponse.notFound(routingContext.response());
               }
             }, FailureResponseConsumer.serverError(routingContext.response()));
   }
+
+    private List<String> getInstanceIdsFromInstanceResult (Success success) {
+    List<String> instanceIds = new ArrayList();
+    if (success.getResult() instanceof Instance) {
+      instanceIds = Arrays.asList(((Instance)success.getResult()).getId());
+    } else if (success.getResult() instanceof MultipleRecords){
+      instanceIds = (((MultipleRecords<Instance>)success.getResult()).records.stream()
+            .map(instance -> instance.getId())
+            .filter(Objects::nonNull)
+            .distinct()
+            .collect(Collectors.toList()));
+    }
+    return instanceIds;
+  }
+
+  private void buildInstancesResponse(Success<MultipleRecords<Instance>> success,
+          RoutingContext routingContext,
+          WebContext context) {
+
+    List<String> instanceIds = getInstanceIdsFromInstanceResult(success);
+
+    String idList = instanceIds.stream().map(String::toString).distinct().collect(Collectors.joining(" or "));
+
+    String query = String.format("(subInstanceId==(%s)+or+superInstanceId==(%s))", idList, idList);
+
+    try {
+      query = URLEncoder.encode(query, "UTF-8");
+    } catch (UnsupportedEncodingException e) {
+      log.error(String.format("Cannot encode query %s", query));
+    }
+    CollectionResourceClient instancesIdsClient = null;
+
+    try {
+      OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
+      instancesIdsClient
+              = new CollectionResourceClient(
+                      okapiClient,
+                      new URL(context.getOkapiLocation() + "/instance-storage/instance-relationships"));
+    } catch (MalformedURLException mfue) {
+      log.info(mfue);
+    }
+
+    Map<String, List<InstanceRelationshipToParent>> parentInstanceMap = new HashMap();
+    Map<String, List<InstanceRelationshipToChild>> childInstanceMap = new HashMap();
+    if (instancesIdsClient != null) {
+      CompletableFuture<Response> parentInstancesFetched = new CompletableFuture<>();
+      instancesIdsClient.getMany(query, (Response result) -> {
+        if (result.getStatusCode() == 200) {
+          JsonObject json = result.getJson();
+          List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("instanceRelationships"));
+          relationsList.stream().map((rel) -> {
+            addToList(childInstanceMap, rel.getString("superInstanceId"), new InstanceRelationshipToChild(rel));
+            return rel;
+          }).forEachOrdered((rel) -> {
+            addToList(parentInstanceMap, rel.getString("subInstanceId"), new InstanceRelationshipToParent(rel));
+          });
+        } else {
+          log.info("No relations found for instance ID list");
+        }
+        JsonResponse.success(routingContext.response(),
+                toRepresentation(success.getResult(), parentInstanceMap, childInstanceMap, context));
+      });
+    }
+  }
+
 
   private JsonObject toRepresentation(
           MultipleRecords<Instance> wrappedInstances,
@@ -487,6 +452,37 @@ public class Instances {
     return source.containsKey(propertyName)
       ? JsonArrayHelper.toListOfStrings(source.getJsonArray(propertyName))
       : new ArrayList<>();
+  }
+    private synchronized void addToList(Map<String, List<InstanceRelationshipToChild>> items, String mapKey, InstanceRelationshipToChild myItem) {
+    List<InstanceRelationshipToChild> itemsList = items.get(mapKey);
+
+    // if list does not exist create it
+    if (itemsList == null) {
+      itemsList = new ArrayList();
+      itemsList.add(myItem);
+      items.put(mapKey, itemsList);
+    } else {
+      // add if item is not already in list
+      if (!itemsList.contains(myItem)) {
+        itemsList.add(myItem);
+      }
+    }
+  }
+
+  private synchronized void addToList(Map<String, List<InstanceRelationshipToParent>> items, String mapKey, InstanceRelationshipToParent myItem) {
+    List<InstanceRelationshipToParent> itemsList = items.get(mapKey);
+
+    // if list does not exist create it
+    if (itemsList == null) {
+      itemsList = new ArrayList();
+      itemsList.add(myItem);
+      items.put(mapKey, itemsList);
+    } else {
+      // add if item is not already in list
+      if (!itemsList.contains(myItem)) {
+        itemsList.add(myItem);
+      }
+    }
   }
 
   private OkapiHttpClient createHttpClient(
