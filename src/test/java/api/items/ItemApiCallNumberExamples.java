@@ -119,13 +119,13 @@ public class ItemApiCallNumberExamples extends ApiTests {
     assertThat(fetchedItemsResponse.size(), is(2));
 
     JsonObject firstFetchedItem = getRecordById(
-      fetchedItemsResponse, firstItemId).get();
+      fetchedItemsResponse, firstItemId).orElse(new JsonObject());
 
     assertThat("has call number from holdings record",
       firstFetchedItem.getString("callNumber"), is("R11.A38"));
 
     JsonObject secondFetchedItem = getRecordById(
-      fetchedItemsResponse, secondItemId).get();
+      fetchedItemsResponse, secondItemId).orElse(new JsonObject());
 
     assertThat("has call number from holdings record",
       secondFetchedItem.getString("callNumber"), is("D15.H63 A3 2002"));
@@ -159,7 +159,7 @@ public class ItemApiCallNumberExamples extends ApiTests {
     assertThat(fetchedItemsResponse.size(), is(1));
 
     JsonObject fetchedItem = getRecordById(
-      fetchedItemsResponse, itemId).get();
+      fetchedItemsResponse, itemId).orElse(new JsonObject());
 
     assertThat("has no call number",
       fetchedItem.containsKey("callNumber"), is(false));

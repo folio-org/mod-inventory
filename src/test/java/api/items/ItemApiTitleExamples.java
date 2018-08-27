@@ -147,13 +147,13 @@ public class ItemApiTitleExamples extends ApiTests {
     assertThat(fetchedItemsResponse.size(), is(2));
 
     JsonObject firstFetchedItem = getRecordById(
-      fetchedItemsResponse, firstItemId).get();
+      fetchedItemsResponse, firstItemId).orElse(new JsonObject());
 
     assertThat("has title from instance",
       firstFetchedItem.getString("title"), is("The Long Way to a Small, Angry Planet"));
 
     JsonObject secondFetchedItem = getRecordById(
-      fetchedItemsResponse, secondItemId).get();
+      fetchedItemsResponse, secondItemId).orElse(new JsonObject());
 
     assertThat("has title from instance",
       secondFetchedItem.getString("title"), is("Temeraire"));
@@ -204,13 +204,13 @@ public class ItemApiTitleExamples extends ApiTests {
     assertThat(fetchedItemsResponse.size(), is(2));
 
     JsonObject firstFetchedItem = getRecordById(
-      fetchedItemsResponse, firstItemId).get();
+      fetchedItemsResponse, firstItemId).orElse(new JsonObject());
 
     assertThat("has no title",
       firstFetchedItem.containsKey("title"), is(false));
 
     JsonObject secondFetchedItem = getRecordById(
-      fetchedItemsResponse, secondItemId).get();
+      fetchedItemsResponse, secondItemId).orElse(new JsonObject());
 
     assertThat("has no title",
       secondFetchedItem.containsKey("title"), is(false));
