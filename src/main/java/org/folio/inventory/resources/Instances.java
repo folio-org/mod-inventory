@@ -98,7 +98,7 @@ public class Instances {
       storage.getInstanceCollection(context).findAll(
         pagingParameters,
         (Success<MultipleRecords<Instance>> success) -> {
-          buildInstancesResponse(success, routingContext, context);
+          makeInstancesResponse(success, routingContext, context);
         },
         FailureResponseConsumer.serverError(routingContext.response())
       );
@@ -108,7 +108,7 @@ public class Instances {
           search,
           pagingParameters,
           success -> {
-            buildInstancesResponse(success, routingContext, context);
+            makeInstancesResponse(success, routingContext, context);
           },
           FailureResponseConsumer.serverError(routingContext.response()));
       } catch (UnsupportedEncodingException e) {
@@ -189,60 +189,22 @@ public class Instances {
             routingContext.request().getParam("id"),
             it -> {
               if (it.getResult() != null) {
-
-                List<String> instanceIds = getInstanceIdsFromInstanceResult(it);
-                String query = createQueryForRelatedInstances(instanceIds);
-                CollectionResourceClient relatedInstancesClient = createInstanceRelationshipsClient(routingContext, context);
-
-                if (relatedInstancesClient != null) {
-                  relatedInstancesClient.getMany(query, (Response result) -> {
-                    Map<String, List<InstanceRelationshipToParent>> parentInstanceMap = new HashMap();
-                    Map<String, List<InstanceRelationshipToChild>> childInstanceMap = new HashMap();
-                    if (result.getStatusCode() == 200) {
-                      JsonObject json = result.getJson();
-                      final List<JsonObject> relationsList = JsonArrayHelper.toList(
-                              json.getJsonArray("instanceRelationships"));
-                      for (JsonObject rel : relationsList) {
-                        if (parentInstanceMap.containsKey(rel.getString("subInstanceId"))) {
-                          parentInstanceMap.get(rel.getString("subInstanceId")).add(new InstanceRelationshipToParent(rel));
-                        } else {
-                          parentInstanceMap.put(rel.getString("subInstanceId"), Arrays.asList(new InstanceRelationshipToParent(rel)));
-                        }
-                        if (childInstanceMap.containsKey(rel.getString("superInstanceId"))) {
-                          childInstanceMap.get(rel.getString("superInstanceId")).add(new InstanceRelationshipToChild(rel));
-                        } else {
-                          childInstanceMap.put(rel.getString("superInstanceId"), Arrays.asList(new InstanceRelationshipToChild(rel)));
-                        }
-                      }
-                    }
-                    JsonResponse.success(routingContext.response(),
-                            toRepresentation(it.getResult(),
-                                    parentInstanceMap.get(it.getResult().getId()),
-                                    childInstanceMap.get(it.getResult().getId()),
-                                    context));
-                  });
-                }
+                makeInstanceResponse(it, routingContext, context);
               } else {
                 ClientErrorResponse.notFound(routingContext.response());
               }
             }, FailureResponseConsumer.serverError(routingContext.response()));
   }
 
-    private List<String> getInstanceIdsFromInstanceResult (Success success) {
-    List<String> instanceIds = new ArrayList();
-    if (success.getResult() instanceof Instance) {
-      instanceIds = Arrays.asList(((Instance)success.getResult()).getId());
-    } else if (success.getResult() instanceof MultipleRecords){
-      instanceIds = (((MultipleRecords<Instance>)success.getResult()).records.stream()
-            .map(instance -> instance.getId())
-            .filter(Objects::nonNull)
-            .distinct()
-            .collect(Collectors.toList()));
-    }
-    return instanceIds;
-  }
 
-  private void buildInstancesResponse(Success<MultipleRecords<Instance>> success,
+  /**
+   * Fetches instance relationships for multiple instances records, populates, responds
+   * @param success Multi record Instances result
+   * @param routingContext
+   * @param context
+   */
+  private void makeInstancesResponse(
+          Success<MultipleRecords<Instance>> success,
           RoutingContext routingContext,
           WebContext context) {
 
@@ -269,8 +231,6 @@ public class Instances {
           }).forEachOrdered((rel) -> {
             addToList(parentInstanceMap, rel.getString("subInstanceId"), new InstanceRelationshipToParent(rel));
           });
-        } else {
-          log.info("No relations found for instance ID list");
         }
         JsonResponse.success(routingContext.response(),
                 toRepresentation(success.getResult(), parentInstanceMap, childInstanceMap, context));
@@ -278,26 +238,54 @@ public class Instances {
     }
   }
 
-  private CollectionResourceClient createInstanceRelationshipsClient (RoutingContext routingContext, WebContext context) {
-    CollectionResourceClient relatedInstancesClient = null;
-    try {
-      OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
-      relatedInstancesClient
-      = new CollectionResourceClient(
-              okapiClient,
-              new URL(context.getOkapiLocation() + "/instance-storage/instance-relationships"));
-    } catch (MalformedURLException mfue) {
-      log.info(mfue);
+  /**
+   * Fetches instance relationships for a single instance result, populates, responds
+   * @param success Single record Instance result
+   * @param routingContext
+   * @param context
+   */
+  private void makeInstanceResponse(
+          Success<Instance> success,
+          RoutingContext routingContext,
+          WebContext context) {
+
+    List<String> instanceIds = getInstanceIdsFromInstanceResult(success);
+    String query = createQueryForRelatedInstances(instanceIds);
+    CollectionResourceClient relatedInstancesClient = createInstanceRelationshipsClient(routingContext, context);
+
+    if (relatedInstancesClient != null) {
+      relatedInstancesClient.getMany(query, (Response result) -> {
+        List<InstanceRelationshipToParent> parentInstanceList = new ArrayList();
+        List<InstanceRelationshipToChild> childInstanceList = new ArrayList();
+        if (result.getStatusCode() == 200) {
+          JsonObject json = result.getJson();
+          List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("instanceRelationships"));
+          relationsList.stream().map((rel) -> {
+            childInstanceList.add(new InstanceRelationshipToChild(rel));
+            return rel;
+          }).forEachOrdered((rel) -> {
+            parentInstanceList.add(new InstanceRelationshipToParent(rel));
+          });
+        }
+        JsonResponse.success(
+                routingContext.response(),
+                toRepresentation(
+                        success.getResult(),
+                        parentInstanceList,
+                        childInstanceList,
+                        context));
+      });
     }
-    return relatedInstancesClient;
   }
 
-  private String createQueryForRelatedInstances(List<String> instanceIds) {
-    String idList = instanceIds.stream().map(String::toString).distinct().collect(Collectors.joining(" or "));
-    String query = String.format("(subInstanceId==(%s)+or+superInstanceId==(%s))", idList, idList);
-    return query;
-  }
-
+  /**
+   * Populates multiple Instances representation (downwards)
+   * @param wrappedInstances
+   * @param parentMap
+   * @param childMap
+   * @param context
+   * @return
+   */
   private JsonObject toRepresentation(
           MultipleRecords<Instance> wrappedInstances,
           Map<String, List<InstanceRelationshipToParent>> parentMap,
@@ -323,6 +311,14 @@ public class Instances {
     return representation;
   }
 
+  /**
+   * Populates an Instance record representation (downwards)
+   * @param instance
+   * @param parentInstances
+   * @param childInstances
+   * @param context
+   * @return
+   */
   private JsonObject toRepresentation(Instance instance,
           List<InstanceRelationshipToParent> parentInstances,
           List<InstanceRelationshipToChild> childInstances,
@@ -416,6 +412,40 @@ public class Instances {
       .setLanguages(toListOfStrings(instanceRequest, Instance.LANGUAGES_KEY))
       .setNotes(toListOfStrings(instanceRequest, Instance.NOTES_KEY))
       .setSourceRecordFormat(instanceRequest.getString(Instance.SOURCE_RECORD_FORMAT_KEY));
+  }
+
+  private List<String> getInstanceIdsFromInstanceResult (Success success) {
+    List<String> instanceIds = new ArrayList();
+    if (success.getResult() instanceof Instance) {
+      instanceIds = Arrays.asList(((Instance)success.getResult()).getId());
+    } else if (success.getResult() instanceof MultipleRecords){
+      instanceIds = (((MultipleRecords<Instance>)success.getResult()).records.stream()
+            .map(instance -> instance.getId())
+            .filter(Objects::nonNull)
+            .distinct()
+            .collect(Collectors.toList()));
+    }
+    return instanceIds;
+  }
+
+  private CollectionResourceClient createInstanceRelationshipsClient (RoutingContext routingContext, WebContext context) {
+    CollectionResourceClient relatedInstancesClient = null;
+    try {
+      OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
+      relatedInstancesClient
+      = new CollectionResourceClient(
+              okapiClient,
+              new URL(context.getOkapiLocation() + "/instance-storage/instance-relationships"));
+    } catch (MalformedURLException mfue) {
+      log.info(mfue);
+    }
+    return relatedInstancesClient;
+  }
+
+  private String createQueryForRelatedInstances(List<String> instanceIds) {
+    String idList = instanceIds.stream().map(String::toString).distinct().collect(Collectors.joining(" or "));
+    String query = String.format("(subInstanceId==(%s)+or+superInstanceId==(%s))", idList, idList);
+    return query;
   }
 
   private void putIfNotNull(JsonObject target, String propertyName, String value) {
