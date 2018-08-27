@@ -11,7 +11,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -192,26 +191,14 @@ public class Instances {
               if (it.getResult() != null) {
 
                 List<String> instanceIds = getInstanceIdsFromInstanceResult(it);
+                String query = createQueryForRelatedInstances(instanceIds);
+                CollectionResourceClient relatedInstancesClient = createInstanceRelationshipsClient(routingContext, context);
 
-                String idList = instanceIds.stream().map(String::toString).distinct().collect(Collectors.joining(" or "));
-                String query = String.format(
-                        "query=(subInstanceId==(%s)+or+superInstanceid==(%s))", idList, idList);
-                CollectionResourceClient parentInstancesIdsClient = null;
-                try {
-                  OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
-                  parentInstancesIdsClient
-                  = new CollectionResourceClient(
-                          okapiClient,
-                          new URL(context.getOkapiLocation() + "/instance-storage/instance-relationships"));
-                } catch (MalformedURLException mfue) {
-                  log.info(mfue);
-                }
-                Map<String, List<InstanceRelationshipToParent>> parentInstanceMap = new HashMap();
-                Map<String, List<InstanceRelationshipToChild>> childInstanceMap = new HashMap();
-                if (parentInstancesIdsClient != null) {
-                  parentInstancesIdsClient.getMany(query, (Response result) -> {
+                if (relatedInstancesClient != null) {
+                  relatedInstancesClient.getMany(query, (Response result) -> {
+                    Map<String, List<InstanceRelationshipToParent>> parentInstanceMap = new HashMap();
+                    Map<String, List<InstanceRelationshipToChild>> childInstanceMap = new HashMap();
                     if (result.getStatusCode() == 200) {
-
                       JsonObject json = result.getJson();
                       final List<JsonObject> relationsList = JsonArrayHelper.toList(
                               json.getJsonArray("instanceRelationships"));
@@ -260,33 +247,19 @@ public class Instances {
           WebContext context) {
 
     List<String> instanceIds = getInstanceIdsFromInstanceResult(success);
-
-    String idList = instanceIds.stream().map(String::toString).distinct().collect(Collectors.joining(" or "));
-
-    String query = String.format("(subInstanceId==(%s)+or+superInstanceId==(%s))", idList, idList);
+    String query = createQueryForRelatedInstances(instanceIds);
 
     try {
       query = URLEncoder.encode(query, "UTF-8");
     } catch (UnsupportedEncodingException e) {
       log.error(String.format("Cannot encode query %s", query));
     }
-    CollectionResourceClient instancesIdsClient = null;
+    CollectionResourceClient relatedInstancesClient = createInstanceRelationshipsClient(routingContext, context);
 
-    try {
-      OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
-      instancesIdsClient
-              = new CollectionResourceClient(
-                      okapiClient,
-                      new URL(context.getOkapiLocation() + "/instance-storage/instance-relationships"));
-    } catch (MalformedURLException mfue) {
-      log.info(mfue);
-    }
-
-    Map<String, List<InstanceRelationshipToParent>> parentInstanceMap = new HashMap();
-    Map<String, List<InstanceRelationshipToChild>> childInstanceMap = new HashMap();
-    if (instancesIdsClient != null) {
-      CompletableFuture<Response> parentInstancesFetched = new CompletableFuture<>();
-      instancesIdsClient.getMany(query, (Response result) -> {
+    if (relatedInstancesClient != null) {
+      relatedInstancesClient.getMany(query, (Response result) -> {
+        Map<String, List<InstanceRelationshipToParent>> parentInstanceMap = new HashMap();
+        Map<String, List<InstanceRelationshipToChild>> childInstanceMap = new HashMap();
         if (result.getStatusCode() == 200) {
           JsonObject json = result.getJson();
           List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("instanceRelationships"));
@@ -305,6 +278,25 @@ public class Instances {
     }
   }
 
+  private CollectionResourceClient createInstanceRelationshipsClient (RoutingContext routingContext, WebContext context) {
+    CollectionResourceClient relatedInstancesClient = null;
+    try {
+      OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
+      relatedInstancesClient
+      = new CollectionResourceClient(
+              okapiClient,
+              new URL(context.getOkapiLocation() + "/instance-storage/instance-relationships"));
+    } catch (MalformedURLException mfue) {
+      log.info(mfue);
+    }
+    return relatedInstancesClient;
+  }
+
+  private String createQueryForRelatedInstances(List<String> instanceIds) {
+    String idList = instanceIds.stream().map(String::toString).distinct().collect(Collectors.joining(" or "));
+    String query = String.format("(subInstanceId==(%s)+or+superInstanceId==(%s))", idList, idList);
+    return query;
+  }
 
   private JsonObject toRepresentation(
           MultipleRecords<Instance> wrappedInstances,
