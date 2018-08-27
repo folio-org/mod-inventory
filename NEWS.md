@@ -1,3 +1,7 @@
+## 9.3.0 Unreleased
+
+* Include `callNumber` from holding in item (if present, MODINV-70)
+
 ## 9.2.0 2018-08-27
 
 * Add properties `alternativeTitles`, `edition`, `series`, `subjects`, `classifications`, 
