@@ -23,12 +23,13 @@ class ItemRepresentation {
 
   private final String relativeItemsPath;
 
-  public ItemRepresentation(String relativeItemsPath) {
+  ItemRepresentation(String relativeItemsPath) {
     this.relativeItemsPath = relativeItemsPath;
   }
 
-  public JsonObject toJson(
+  JsonObject toJson(
     Item item,
+    JsonObject holding,
     JsonObject instance,
     JsonObject materialType,
     JsonObject permanentLoanType,
@@ -38,7 +39,7 @@ class ItemRepresentation {
     JsonObject effectiveLocation,
     WebContext context) {
 
-    JsonObject representation = toJson(item, instance, context);
+    JsonObject representation = toJson(item, holding, instance, context);
 
     if(materialType != null) {
       representation.getJsonObject("materialType")
@@ -84,8 +85,9 @@ class ItemRepresentation {
     return representation;
   }
 
-  JsonObject toJson(
+  private JsonObject toJson(
     Item item,
+    JsonObject holding,
     JsonObject instance,
     WebContext context) {
 
@@ -97,6 +99,7 @@ class ItemRepresentation {
     }
 
     includeIfPresent(representation, "title", instance, i -> i.getString("title"));
+    includeIfPresent(representation, "callNumber", holding, h -> h.getString("callNumber"));
     includeIfPresent(representation, "holdingsRecordId", item.holdingId);
     includeIfPresent(representation, "barcode", item.barcode);
     includeIfPresent(representation, "enumeration", item.enumeration);
@@ -134,7 +137,7 @@ class ItemRepresentation {
     return representation;
   }
 
-  public JsonObject toJson(
+  JsonObject toJson(
     MultipleRecords<Item> wrappedItems,
     Collection<JsonObject> holdings,
     Collection<JsonObject> instances,
@@ -150,7 +153,7 @@ class ItemRepresentation {
 
     List<Item> items = wrappedItems.records;
 
-    items.stream().forEach(item -> {
+    items.forEach(item -> {
       JsonObject materialType = materialTypes.get(item.materialTypeId);
       JsonObject permanentLoanType = loanTypes.get(item.permanentLoanTypeId);
       JsonObject temporaryLoanType = loanTypes.get(item.temporaryLoanTypeId);
@@ -165,7 +168,7 @@ class ItemRepresentation {
       JsonObject permanentLocation = locations.get(item.permanentLocationId);
       JsonObject temporaryLocation = locations.get(item.temporaryLocationId);
 
-      results.add(toJson(item, instance, materialType, permanentLoanType,
+      results.add(toJson(item, holding, instance, materialType, permanentLoanType,
         temporaryLoanType, permanentLocation, temporaryLocation, effectiveLocation, context));
     });
 
