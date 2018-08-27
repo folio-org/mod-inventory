@@ -1,15 +1,17 @@
 package org.folio.inventory.domain.instances;
 
-import org.apache.commons.lang3.StringUtils;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.domain.Metadata;
 
 public class Instance {
   // JSON property names
   public static final String SOURCE_KEY = "source";
+  public static final String PARENT_INSTANCES_KEY = "parentInstances";
+  public static final String CHILD_INSTANCES_KEY = "childInstances";
   public static final String TITLE_KEY = "title";
   public static final String ALTERNATIVE_TITLES_KEY = "alternativeTitles";
   public static final String EDITION_KEY = "edition";
@@ -30,6 +32,8 @@ public class Instance {
 
   private final String id;
   private final String source;
+  private List<InstanceRelationshipToParent> parentInstances = new ArrayList();
+  private List<InstanceRelationshipToChild> childInstances = new ArrayList();
   private final String title;
   private List<String> alternativeTitles = new ArrayList();
   private String edition;
@@ -48,8 +52,6 @@ public class Instance {
   private String sourceRecordFormat;
   private Metadata metadata = null;
 
-
-
   public Instance(
     String id,
     String source,
@@ -60,6 +62,16 @@ public class Instance {
     this.source = source;
     this.title = title;
     this.instanceTypeId = instanceTypeId;
+  }
+
+  public Instance setParentInstances(List<InstanceRelationshipToParent> parentInstances) {
+    this.parentInstances = parentInstances;
+    return this;
+  }
+
+  public Instance setChildInstances(List<InstanceRelationshipToChild> childInstances) {
+    this.childInstances = childInstances;
+    return this;
   }
 
   public Instance setAlternativeTitles(List<String> alternativeTitles) {
@@ -131,12 +143,12 @@ public class Instance {
     this.sourceRecordFormat = sourceRecordFormat;
     return this;
   }
-  
+
   public Instance setMetadata (Metadata metadata) {
     this.metadata = metadata;
     return this;
   }
-  
+
   public boolean hasMetadata () {
     return this.metadata != null;
   }
@@ -147,6 +159,14 @@ public class Instance {
 
   public String getSource() {
     return source;
+  }
+
+  public List<InstanceRelationshipToParent> getParentInstances() {
+    return parentInstances;
+  }
+
+  public List<InstanceRelationshipToChild> getChildInstances() {
+    return childInstances;
   }
 
   public String getTitle() {
@@ -216,7 +236,7 @@ public class Instance {
   public Metadata getMetadata() {
     return metadata;
   }
-  
+
   public Instance copyWithNewId(String newId) {
     return new Instance(newId, this.source, this.title, this.instanceTypeId)
             .setAlternativeTitles(alternativeTitles)
