@@ -17,16 +17,18 @@ public class InstanceRelationshipToParent {
   public static final String SUPER_INSTANCE_ID_KEY = "superInstanceId";
   public static final String INSTANCE_RELATIONSHIP_TYPE_ID_KEY = "instanceRelationshipTypeId";
 
+  public final String id;
   public final String superInstanceId;
   public final String instanceRelationshipTypeId;
 
-  public InstanceRelationshipToParent (String superInstanceId, String instanceRelationshipTypeId) {
+  public InstanceRelationshipToParent (String id, String superInstanceId, String instanceRelationshipTypeId) {
+    this.id = id;
     this.superInstanceId = superInstanceId;
     this.instanceRelationshipTypeId = instanceRelationshipTypeId;
   }
 
   public InstanceRelationshipToParent (JsonObject relationshipJson) {
-    this(relationshipJson.getString(SUPER_INSTANCE_ID_KEY), relationshipJson.getString(INSTANCE_RELATIONSHIP_TYPE_ID_KEY));
+    this(relationshipJson.getString("id"), relationshipJson.getString(SUPER_INSTANCE_ID_KEY), relationshipJson.getString(INSTANCE_RELATIONSHIP_TYPE_ID_KEY));
   }
 
   @Override

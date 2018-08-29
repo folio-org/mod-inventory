@@ -16,6 +16,9 @@
       "items": {
         "type": "object",
         "properties": {
+          "id": {
+            "type": "string"
+          },
           "superInstanceId": {
             "type": "string"
           },
@@ -35,6 +38,9 @@
       "items": {
         "type": "object",
         "properties": {
+          "id": {
+            "type": "string"
+          },
           "subInstanceId": {
             "type": "string"
           },
@@ -44,6 +50,7 @@
         },
         "additionalProperties": false,
         "required": [
+          "id",
           "subInstanceId",
           "instanceRelationshipTypeId"
         ]

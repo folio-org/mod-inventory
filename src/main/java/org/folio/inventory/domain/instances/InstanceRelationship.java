@@ -15,11 +15,13 @@ public class InstanceRelationship {
   public static final String SUB_INSTANCE_ID_KEY = "subInstanceId";
   public static final String INSTANCE_RELATIONSHIP_TYPE_ID_KEY = "instanceRelationshipTypeId";
 
+  public final String id;
   public final String superInstanceId;
   public final String subInstanceId;
   public final String instanceRelationshipTypeId;
 
-  public InstanceRelationship (String superInstanceId, String subInstanceId, String instanceRelationshipTypeId) {
+  public InstanceRelationship (String id, String superInstanceId, String subInstanceId, String instanceRelationshipTypeId) {
+    this.id = id;
     this.superInstanceId = superInstanceId;
     this.subInstanceId = subInstanceId;
     this.instanceRelationshipTypeId = instanceRelationshipTypeId;
