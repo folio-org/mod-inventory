@@ -30,6 +30,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.folio.inventory.domain.Metadata;
 import org.folio.inventory.domain.instances.Publication;
+import org.folio.inventory.domain.instances.PrecedingTitle;
+import org.folio.inventory.domain.instances.SucceedingTitle;
 
 public class Instances {
   private static final String INSTANCES_PATH = "/inventory/instances";
@@ -220,12 +222,15 @@ public class Instances {
     resp.put(Instance.TITLE_KEY, instance.getTitle());
     putIfNotNull(resp, Instance.ALTERNATIVE_TITLES_KEY, instance.getAlternativeTitles());
     putIfNotNull(resp, Instance.EDITION_KEY, instance.getEdition());
+    putIfNotNull(resp, Instance.INDEX_TITLE_KEY, instance.getIndexTitle());
     putIfNotNull(resp, Instance.SERIES_KEY, instance.getSeries());
     putIfNotNull(resp, Instance.IDENTIFIERS_KEY, instance.getIdentifiers());
     putIfNotNull(resp, Instance.CONTRIBUTORS_KEY, instance.getContributors());
     putIfNotNull(resp, Instance.SUBJECTS_KEY, instance.getSubjects());
     putIfNotNull(resp, Instance.CLASSIFICATIONS_KEY, instance.getClassifications());
     putIfNotNull(resp, Instance.PUBLICATION_KEY, instance.getPublication());
+    putIfNotNull(resp, Instance.PRECEDING_TITLE_KEY, instance.getPrecedingTitle());
+    putIfNotNull(resp, Instance.SUCCEEDING_TITLE_KEY, instance.getSucceedingTitle());
     putIfNotNull(resp, Instance.URLS_KEY, instance.getUrls());
     putIfNotNull(resp, Instance.INSTANCE_TYPE_ID_KEY, instance.getInstanceTypeId());
     putIfNotNull(resp, Instance.INSTANCE_FORMAT_ID_KEY, instance.getInstanceFormatId());
@@ -272,6 +277,18 @@ public class Instances {
       .map(json -> new Publication(json))
       .collect(Collectors.toList())
       : new ArrayList<>();
+    
+    List<PrecedingTitle> precedingTitle = instanceRequest.containsKey(Instance.PRECEDING_TITLE_KEY)
+      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.PRECEDING_TITLE_KEY)).stream()
+      .map(json -> new PrecedingTitle(json))
+      .collect(Collectors.toList())
+      : new ArrayList<>();
+    
+    List<SucceedingTitle> succeedingTitle = instanceRequest.containsKey(Instance.SUCCEEDING_TITLE_KEY)
+      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.SUCCEEDING_TITLE_KEY)).stream()
+      .map(json -> new SucceedingTitle(json))
+      .collect(Collectors.toList())
+      : new ArrayList<>();
 
     return new Instance(
       instanceRequest.getString("id"),
@@ -280,12 +297,15 @@ public class Instances {
       instanceRequest.getString(Instance.INSTANCE_TYPE_ID_KEY))
       .setAlternativeTitles(toListOfStrings(instanceRequest, Instance.ALTERNATIVE_TITLES_KEY))
       .setEdition(instanceRequest.getString(Instance.EDITION_KEY))
+      .setIndexTitle(instanceRequest.getString(Instance.INDEX_TITLE_KEY))
       .setSeries(toListOfStrings(instanceRequest, Instance.SERIES_KEY))
       .setIdentifiers(identifiers)
       .setContributors(contributors)
       .setSubjects(toListOfStrings(instanceRequest, Instance.SUBJECTS_KEY))
       .setClassifications(classifications)
       .setPublication(publications)
+      .setPrecedingTitle(precedingTitle)
+      .setSucceedingTitle(succeedingTitle)
       .setUrls(toListOfStrings(instanceRequest, Instance.URLS_KEY))
       .setInstanceFormatId(instanceRequest.getString(Instance.INSTANCE_FORMAT_ID_KEY))
       .setPhysicalDescriptions(toListOfStrings(instanceRequest, Instance.PHYSICAL_DESCRIPTIONS_KEY))

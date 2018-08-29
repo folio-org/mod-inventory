@@ -13,12 +13,15 @@ public class Instance {
   public static final String TITLE_KEY = "title";
   public static final String ALTERNATIVE_TITLES_KEY = "alternativeTitles";
   public static final String EDITION_KEY = "edition";
+  public static final String INDEX_TITLE_KEY = "indexTitle";
   public static final String SERIES_KEY = "series";
   public static final String IDENTIFIERS_KEY = "identifiers";
   public static final String CONTRIBUTORS_KEY = "contributors";
   public static final String SUBJECTS_KEY = "subjects";
   public static final String CLASSIFICATIONS_KEY = "classifications";
   public static final String PUBLICATION_KEY = "publication";
+  public static final String PRECEDING_TITLE_KEY = "precedingTitle";
+  public static final String SUCCEEDING_TITLE_KEY = "succeedingTitle";
   public static final String URLS_KEY = "urls";
   public static final String INSTANCE_TYPE_ID_KEY = "instanceTypeId";
   public static final String INSTANCE_FORMAT_ID_KEY = "instanceFormatId";
@@ -33,12 +36,15 @@ public class Instance {
   private final String title;
   private List<String> alternativeTitles = new ArrayList();
   private String edition;
+  private String indexTitle;
   private List<String> series = new ArrayList();
   private List<Identifier> identifiers = new ArrayList();
   private List<Contributor> contributors = new ArrayList();
   private List<String> subjects = new ArrayList();
   private List<Classification> classifications = new ArrayList();
   private List<Publication> publication = new ArrayList();
+  private List<PrecedingTitle> precedingTitle = new ArrayList();
+  private List<SucceedingTitle> succeedingTitle = new ArrayList();
   private List<String> urls = new ArrayList();
   private final String instanceTypeId;
   private String instanceFormatId;
@@ -72,6 +78,10 @@ public class Instance {
     return this;
   }
 
+  public Instance setIndexTitle(String indexTitle) {
+    this.indexTitle = indexTitle;
+    return this;
+  }
   public Instance setSeries(List<String> series) {
     this.series = series;
     return this;
@@ -99,6 +109,16 @@ public class Instance {
 
   public Instance setPublication(List<Publication> publication) {
     this.publication = publication;
+    return this;
+  }
+  
+  public Instance setPrecedingTitle(List<PrecedingTitle> precedingTitle) {
+    this.precedingTitle = precedingTitle;
+    return this;
+  }
+  
+  public Instance setSucceedingTitle(List<SucceedingTitle> succeedingTitle) {
+    this.succeedingTitle = succeedingTitle;
     return this;
   }
 
@@ -160,6 +180,10 @@ public class Instance {
   public String getEdition() {
     return edition;
   }
+  
+  public String getIndexTitle() {
+    return indexTitle;
+  }
 
   public List<String> getSeries() {
     return series;
@@ -183,6 +207,14 @@ public class Instance {
 
   public List<Publication> getPublication() {
     return publication;
+  }
+  
+  public List<PrecedingTitle> getPrecedingTitle() {
+    return precedingTitle;
+  }
+  
+  public List<SucceedingTitle> getSucceedingTitle() {
+    return succeedingTitle;
   }
 
   public List<String> getUrls() {
@@ -221,12 +253,15 @@ public class Instance {
     return new Instance(newId, this.source, this.title, this.instanceTypeId)
             .setAlternativeTitles(alternativeTitles)
             .setEdition(edition)
+            .setIndexTitle(indexTitle)
             .setSeries(series)
             .setIdentifiers(identifiers)
             .setContributors(contributors)
             .setSubjects(subjects)
             .setClassifications(classifications)
             .setPublication(publication)
+            .setPrecedingTitle(precedingTitle)
+            .setSucceedingTitle(succeedingTitle)
             .setUrls(urls)
             .setInstanceFormatId(instanceFormatId)
             .setPhysicalDescriptions(physicalDescriptions)
@@ -239,12 +274,15 @@ public class Instance {
     return new Instance(this.id, this.source, this.title, this.instanceTypeId)
             .setAlternativeTitles(alternativeTitles)
             .setEdition(edition)
+            .setIndexTitle(indexTitle)
             .setSeries(series)
             .setIdentifiers(identifiers)
             .setContributors(contributors)
             .setSubjects(subjects)
             .setClassifications(classifications)
             .setPublication(publication)
+            .setPrecedingTitle(precedingTitle)
+            .setSucceedingTitle(succeedingTitle)
             .setUrls(urls)
             .setInstanceFormatId(instanceFormatId)
             .setPhysicalDescriptions(physicalDescriptions)
