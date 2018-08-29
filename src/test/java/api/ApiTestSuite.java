@@ -1,5 +1,6 @@
 package api;
 
+import api.items.ItemApiCallNumberExamples;
 import api.items.ItemApiExamples;
 import api.items.ItemApiLocationExamples; 
 import api.items.ItemApiTitleExamples;
@@ -33,6 +34,7 @@ import java.util.concurrent.TimeoutException;
   ItemApiExamples.class,
   ItemApiLocationExamples.class,
   ItemApiTitleExamples.class,
+  ItemApiCallNumberExamples.class,
   ModsIngestExamples.class
 })
 public class ApiTestSuite {
@@ -108,7 +110,7 @@ public class ApiTestSuite {
     stopVertx();
 
     initialised = false;
-  };
+  }
 
   public static boolean isNotInitialised() {
     return !initialised;

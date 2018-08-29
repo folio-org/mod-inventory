@@ -14,6 +14,11 @@
       "description": "title of the item (read only, inherited from associated instance)",
       "readonly": true
     },
+    "callNumber": {
+      "type": "string",
+      "description": "call number (read only, inherited from associated holdings record)",
+      "readonly": true
+    },
     "barcode": {
       "type": "string"
     },

@@ -12,6 +12,7 @@ public class ItemRequestBuilder implements Builder {
   private final UUID id;
   private final UUID holdingId;
   private final String readOnlyTitle;
+  private final String readOnlyCallNumber;
   private final String barcode;
   private final String status;
   private final JsonObject materialType;
@@ -22,7 +23,7 @@ public class ItemRequestBuilder implements Builder {
   private final JsonObject temporaryLoanType;
 
   public ItemRequestBuilder() {
-    this(UUID.randomUUID(), null, null, "645398607547",
+    this(UUID.randomUUID(), null, null, null, "645398607547",
       AVAILABLE_STATUS, bookMaterialType(), null, null, null,
       canCirculateLoanType(), null
     );
@@ -32,6 +33,7 @@ public class ItemRequestBuilder implements Builder {
     UUID id,
     UUID holdingId,
     String readOnlyTitle,
+    String readOnlyCallNumber,
     String barcode,
     String status,
     JsonObject materialType,
@@ -44,6 +46,7 @@ public class ItemRequestBuilder implements Builder {
     this.id = id;
     this.holdingId = holdingId;
     this.readOnlyTitle = readOnlyTitle;
+    this.readOnlyCallNumber = readOnlyCallNumber;
     this.barcode = barcode;
     this.status = status;
     this.readOnlyEffectiveLocation = readOnlyEffectiveLocation;
@@ -74,6 +77,7 @@ public class ItemRequestBuilder implements Builder {
 
     //Read only properties
     includeWhenPresent(itemRequest, "title", readOnlyTitle);
+    includeWhenPresent(itemRequest, "callNumber", readOnlyCallNumber);
     includeWhenPresent(itemRequest, "effectiveLocation", readOnlyEffectiveLocation);
 
     return itemRequest;
@@ -84,6 +88,7 @@ public class ItemRequestBuilder implements Builder {
       id,
       this.holdingId,
       this.readOnlyTitle,
+      this.readOnlyCallNumber,
       this.barcode,
       this.status,
       this.materialType,
@@ -99,6 +104,7 @@ public class ItemRequestBuilder implements Builder {
       this.id,
       holdingId,
       this.readOnlyTitle,
+      this.readOnlyCallNumber,
       this.barcode,
       this.status,
       this.materialType,
@@ -114,6 +120,23 @@ public class ItemRequestBuilder implements Builder {
       this.id,
       this.holdingId,
       title,
+      this.readOnlyCallNumber,
+      this.barcode,
+      this.status,
+      this.materialType,
+      this.readOnlyEffectiveLocation,
+      this.permanentLocation,
+      this.temporaryLocation,
+      this.permanentLoanType,
+      this.temporaryLoanType);
+  }
+
+  public ItemRequestBuilder withReadOnlyCallNumber(String callNumber) {
+    return new ItemRequestBuilder(
+      this.id,
+      this.holdingId,
+      this.readOnlyTitle,
+      callNumber,
       this.barcode,
       this.status,
       this.materialType,
@@ -129,6 +152,7 @@ public class ItemRequestBuilder implements Builder {
       this.id,
       this.holdingId,
       this.readOnlyTitle,
+      this.readOnlyCallNumber,
       barcode,
       this.status,
       this.materialType,
@@ -148,6 +172,7 @@ public class ItemRequestBuilder implements Builder {
       this.id,
       this.holdingId,
       this.readOnlyTitle,
+      this.readOnlyCallNumber,
       this.barcode,
       null,
       this.materialType,
@@ -163,6 +188,7 @@ public class ItemRequestBuilder implements Builder {
       this.id,
       this.holdingId,
       this.readOnlyTitle,
+      this.readOnlyCallNumber,
       this.barcode,
       this.status,
       materialType,
@@ -190,6 +216,7 @@ public class ItemRequestBuilder implements Builder {
       this.id,
       this.holdingId,
       this.readOnlyTitle,
+      this.readOnlyCallNumber,
       this.barcode,
       this.status,
       this.materialType,
@@ -205,6 +232,7 @@ public class ItemRequestBuilder implements Builder {
       this.id,
       this.holdingId,
       this.readOnlyTitle,
+      this.readOnlyCallNumber,
       this.barcode,
       this.status,
       this.materialType,
@@ -220,6 +248,7 @@ public class ItemRequestBuilder implements Builder {
       this.id,
       this.holdingId,
       this.readOnlyTitle,
+      this.readOnlyCallNumber,
       this.barcode,
       this.status,
       this.materialType,
@@ -251,6 +280,7 @@ public class ItemRequestBuilder implements Builder {
       this.id,
       this.holdingId,
       this.readOnlyTitle,
+      this.readOnlyCallNumber,
       this.barcode,
       this.status,
       this.materialType,
@@ -278,6 +308,7 @@ public class ItemRequestBuilder implements Builder {
       this.id,
       this.holdingId,
       this.readOnlyTitle,
+      this.readOnlyCallNumber,
       this.barcode,
       this.status,
       this.materialType,
@@ -308,7 +339,7 @@ public class ItemRequestBuilder implements Builder {
       .put("name", "DVD");
   }
 
-  public static JsonObject thirdFloor() {
+  private static JsonObject thirdFloor() {
     return new JsonObject()
       .put("id", ApiTestSuite.getThirdFloorLocation())
       .put("name", "3rd Floor");
@@ -318,7 +349,6 @@ public class ItemRequestBuilder implements Builder {
     return new JsonObject()
       .put("id", ApiTestSuite.getReadingRoomLocation())
       .put("name", "Reading Room");
-    
   }
 
   private static JsonObject canCirculateLoanType() {

@@ -9,7 +9,6 @@ import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
 import org.junit.Test;
 
-import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.util.List;
 import java.util.UUID;
@@ -21,25 +20,25 @@ import static org.hamcrest.core.Is.is;
 import static org.hamcrest.junit.MatcherAssert.assertThat;
 
 //TODO: When converted to RAML module builder, no longer redirect to content and do separate GET
-public class ItemApiTitleExamples extends ApiTests {
-  public ItemApiTitleExamples() throws MalformedURLException {
+public class ItemApiCallNumberExamples extends ApiTests {
+  public ItemApiCallNumberExamples() throws MalformedURLException {
     super();
   }
 
   @Test
-  public void titleIsBasedUponInstance()
+  public void callNumberIsIncludedFromHoldingsRecord()
     throws InterruptedException,
     ExecutionException,
     TimeoutException,
-    MalformedURLException,
-    UnsupportedEncodingException {
+    MalformedURLException {
 
     UUID instanceId = instancesClient.create(
       InstanceRequestExamples.smallAngryPlanet()).getId();
 
     UUID holdingId = holdingsStorageClient.create(
       new HoldingRequestBuilder()
-        .forInstance(instanceId))
+        .forInstance(instanceId)
+        .withCallNumber("R11.A38"))
       .getId();
 
     IndividualResource response = itemsClient.create(
@@ -48,52 +47,24 @@ public class ItemApiTitleExamples extends ApiTests {
 
     JsonObject createdItem = response.getJson();
 
-    assertThat("has title from instance",
-      createdItem.getString("title"), is("The Long Way to a Small, Angry Planet"));
+    assertThat("has call number from holdings record",
+      createdItem.getString("callNumber"), is("R11.A38"));
   }
 
   @Test
-  public void noTitleWhenNoInstance()
+  public void noCallNumberWhenNoHoldingsRecord()
     throws InterruptedException,
     ExecutionException,
     TimeoutException,
-    MalformedURLException,
-    UnsupportedEncodingException {
+    MalformedURLException {
 
     UUID instanceId = instancesClient.create(
       InstanceRequestExamples.smallAngryPlanet()).getId();
 
     UUID holdingId = holdingsStorageClient.create(
       new HoldingRequestBuilder()
-        .forInstance(instanceId))
-      .getId();
-
-    instancesClient.delete(instanceId);
-
-    IndividualResource response = itemsClient.create(
-      ItemRequestExamples.basedUponSmallAngryPlanet()
-        .forHolding(holdingId));
-
-    JsonObject createdItem = response.getJson();
-
-    assertThat("has no title",
-      createdItem.containsKey("title"), is(false));
-  }
-
-  @Test
-  public void noTitleWhenNoHolding()
-    throws InterruptedException,
-    ExecutionException,
-    TimeoutException,
-    MalformedURLException,
-    UnsupportedEncodingException {
-
-    UUID instanceId = instancesClient.create(
-      InstanceRequestExamples.smallAngryPlanet()).getId();
-
-    UUID holdingId = holdingsStorageClient.create(
-      new HoldingRequestBuilder()
-        .forInstance(instanceId))
+        .forInstance(instanceId)
+        .withCallNumber("R11.A38"))
       .getId();
 
     holdingsStorageClient.delete(holdingId);
@@ -104,24 +75,24 @@ public class ItemApiTitleExamples extends ApiTests {
 
     JsonObject createdItem = response.getJson();
 
-    assertThat("has no title",
-      createdItem.containsKey("title"), is(false));
+    assertThat("has no call number",
+      createdItem.containsKey("callNumber"), is(false));
   }
 
   @Test
-  public void titlesComeFromInstancesForMultipleMultipleItems()
+  public void callNumbersComeFromHoldingsForMultipleItems()
     throws InterruptedException,
     ExecutionException,
     TimeoutException,
-    MalformedURLException,
-    UnsupportedEncodingException {
+    MalformedURLException {
 
     UUID firstInstanceId = instancesClient.create(
       InstanceRequestExamples.smallAngryPlanet()).getId();
 
     UUID firstHoldingId = holdingsStorageClient.create(
       new HoldingRequestBuilder()
-        .forInstance(firstInstanceId))
+        .forInstance(firstInstanceId)
+        .withCallNumber("R11.A38"))
       .getId();
 
     UUID firstItemId = itemsClient.create(
@@ -134,7 +105,8 @@ public class ItemApiTitleExamples extends ApiTests {
 
     UUID secondHoldingId = holdingsStorageClient.create(
       new HoldingRequestBuilder()
-        .forInstance(secondInstanceId))
+        .forInstance(secondInstanceId)
+        .withCallNumber("D15.H63 A3 2002"))
       .getId();
 
     UUID secondItemId = itemsClient.create(
@@ -149,107 +121,83 @@ public class ItemApiTitleExamples extends ApiTests {
     JsonObject firstFetchedItem = getRecordById(
       fetchedItemsResponse, firstItemId).orElse(new JsonObject());
 
-    assertThat("has title from instance",
-      firstFetchedItem.getString("title"), is("The Long Way to a Small, Angry Planet"));
+    assertThat("has call number from holdings record",
+      firstFetchedItem.getString("callNumber"), is("R11.A38"));
 
     JsonObject secondFetchedItem = getRecordById(
       fetchedItemsResponse, secondItemId).orElse(new JsonObject());
 
-    assertThat("has title from instance",
-      secondFetchedItem.getString("title"), is("Temeraire"));
+    assertThat("has call number from holdings record",
+      secondFetchedItem.getString("callNumber"), is("D15.H63 A3 2002"));
   }
 
   @Test
-  public void noTitleWhenHoldingOrInstanceNotFound()
+  public void noCallNumberWhenNoHoldingForMultipleItems()
     throws InterruptedException,
     MalformedURLException,
     TimeoutException,
     ExecutionException {
 
-    UUID firstInstanceId = instancesClient.create(
-      InstanceRequestExamples.smallAngryPlanet()).getId();
-
-    UUID firstHoldingId = holdingsStorageClient.create(
-      new HoldingRequestBuilder()
-        .forInstance(firstInstanceId)
-        .create())
-      .getId();
-
-    UUID firstItemId = itemsClient.create(
-      ItemRequestExamples.basedUponSmallAngryPlanet()
-        .forHolding(firstHoldingId))
-      .getId();
-
-    UUID secondInstanceId = instancesClient.create(
+    UUID instanceId = instancesClient.create(
       InstanceRequestExamples.temeraire()).getId();
 
-    UUID secondHoldingId = holdingsStorageClient.create(
+    UUID holdingId = holdingsStorageClient.create(
       new HoldingRequestBuilder()
-        .forInstance(secondInstanceId)
-        .create())
+        .forInstance(instanceId)
+        .withCallNumber(""))
       .getId();
 
-    UUID secondItemId = itemsClient.create(
+    UUID itemId = itemsClient.create(
       ItemRequestExamples.basedUponTemeraire()
-        .forHolding(secondHoldingId))
+        .forHolding(holdingId))
       .getId();
 
-    //Delete instance or holding
-    instancesClient.delete(firstInstanceId);
-
-    holdingsStorageClient.delete(secondHoldingId);
+    holdingsStorageClient.delete(holdingId);
 
     List<JsonObject> fetchedItemsResponse = itemsClient.getAll();
 
-    assertThat(fetchedItemsResponse.size(), is(2));
+    assertThat(fetchedItemsResponse.size(), is(1));
 
-    JsonObject firstFetchedItem = getRecordById(
-      fetchedItemsResponse, firstItemId).orElse(new JsonObject());
+    JsonObject fetchedItem = getRecordById(
+      fetchedItemsResponse, itemId).orElse(new JsonObject());
 
-    assertThat("has no title",
-      firstFetchedItem.containsKey("title"), is(false));
-
-    JsonObject secondFetchedItem = getRecordById(
-      fetchedItemsResponse, secondItemId).orElse(new JsonObject());
-
-    assertThat("has no title",
-      secondFetchedItem.containsKey("title"), is(false));
+    assertThat("has no call number",
+      fetchedItem.containsKey("callNumber"), is(false));
   }
 
   @Test
-  public void readOnlyTitleIsNotStoredWhenCreated()
+  public void readOnlyCallNumberIsNotStoredWhenCreated()
     throws InterruptedException,
     ExecutionException,
     TimeoutException,
-    MalformedURLException,
-    UnsupportedEncodingException {
+    MalformedURLException {
 
     UUID instanceId = instancesClient.create(
       InstanceRequestExamples.smallAngryPlanet()).getId();
 
     UUID holdingId = holdingsStorageClient.create(
       new HoldingRequestBuilder()
-        .forInstance(instanceId))
+        .forInstance(instanceId)
+        .withCallNumber("foo"))
       .getId();
 
     IndividualResource response = itemsClient.create(
       ItemRequestExamples.basedUponSmallAngryPlanet()
-        .withReadOnlyTitle("Should be discarded")
+        .withReadOnlyCallNumber("Should be discarded")
         .forHolding(holdingId));
 
     Response storedItemResponse = itemsStorageClient.getById(response.getId());
 
-    assertThat("title should not be stored",
-      storedItemResponse.getJson().containsKey("title"), is(false));
+    assertThat("call number should not be stored",
+      storedItemResponse.getJson().containsKey("callNumber"), is(false));
   }
 
   @Test
-  public void readOnlyTitleIsNotStoredWhenUpdated()
+  public void readOnlyCallNumberIsNotStoredWhenUpdated()
     throws InterruptedException,
     ExecutionException,
     TimeoutException,
-    MalformedURLException,
-    UnsupportedEncodingException {
+    MalformedURLException {
 
     UUID instanceId = instancesClient.create(
       InstanceRequestExamples.smallAngryPlanet()).getId();
@@ -261,14 +209,14 @@ public class ItemApiTitleExamples extends ApiTests {
 
     IndividualResource response = itemsClient.create(
       ItemRequestExamples.basedUponSmallAngryPlanet()
-        .withReadOnlyTitle("Should be discarded")
+        .withReadOnlyCallNumber("Should be discarded")
         .forHolding(holdingId));
 
     itemsClient.replace(response.getId(), response.getJson());
 
     Response storedItemResponse = itemsStorageClient.getById(response.getId());
 
-    assertThat("title should not be stored",
-      storedItemResponse.getJson().containsKey("title"), is(false));
+    assertThat("call number should not be stored",
+      storedItemResponse.getJson().containsKey("callNumber"), is(false));
   }
 }
