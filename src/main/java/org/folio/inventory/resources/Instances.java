@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -133,7 +134,8 @@ public class Instances {
 
     storage.getInstanceCollection(context).add(newInstance,
       success -> {
-        updateInstanceRelationships(newInstance, routingContext, context);
+        Instance response = success.getResult();
+        updateInstanceRelationships(response, routingContext, context);
         try {
           URL url = context.absoluteUrl(String.format("%s/%s",
             INSTANCES_PATH, success.getResult().getId()));
@@ -168,23 +170,28 @@ public class Instances {
             existingRelationships.put(relObj.id, relObj);
           });
           Map<String, InstanceRelationship> updatingRelationships = new HashMap();
-          instance.getParentInstances().forEach((parent) -> {
-            updatingRelationships.put(parent.id,
-                    new InstanceRelationship(
-                            parent.id,
-                            parent.superInstanceId,
-                            instance.getId(),
-                            parent.instanceRelationshipTypeId));
-          });
-          instance.getChildInstances().forEach((child) -> {
-            updatingRelationships.put(child.id,
-                    new InstanceRelationship(
-                            child.id,
-                            instance.getId(),
-                            child.subInstanceId,
-                            child.instanceRelationshipTypeId));
-          });
-
+          if (instance.getParentInstances() != null)  {
+            instance.getParentInstances().forEach((parent) -> {
+              String id = (parent.id == null ? UUID.randomUUID().toString() : parent.id );
+              updatingRelationships.put(id,
+                      new InstanceRelationship(
+                              id,
+                              parent.superInstanceId,
+                              instance.getId(),
+                              parent.instanceRelationshipTypeId));
+            });
+          }
+          if (instance.getChildInstances() != null ) {
+            instance.getChildInstances().forEach((child) -> {
+              String id = (child.id == null ? UUID.randomUUID().toString() : child.id );
+              updatingRelationships.put(id,
+                      new InstanceRelationship(
+                              id,
+                              instance.getId(),
+                              child.subInstanceId,
+                              child.instanceRelationshipTypeId));
+            });
+          }
           updatingRelationships.keySet().forEach((updatingKey) -> {
             InstanceRelationship relation = updatingRelationships.get(updatingKey);
             if (existingRelationships.containsKey(updatingKey)) {
@@ -206,8 +213,8 @@ public class Instances {
               });
             }
           });
-        }}
-      );
+        }
+      });
     };
   }
 
