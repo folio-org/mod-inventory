@@ -1,4 +1,4 @@
-## 9.3.0 Unreleased
+## 9.3.0 2018-08-30
 
 * Include `callNumber` from holding in item (if present, MODINV-70)
 * Provides `inventory` 6.2 interface (MODINV-70)
