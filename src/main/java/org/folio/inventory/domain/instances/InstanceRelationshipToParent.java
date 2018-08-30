@@ -33,6 +33,6 @@ public class InstanceRelationshipToParent {
 
   @Override
   public String toString() {
-    return "{ \"superInstanceId\": \""+ superInstanceId + "\", \"instanceRelationshipTypeId\": \"" + instanceRelationshipTypeId + "\" }";
+    return "{ \"id\": \"" + id + "\", \"superInstanceId\": \""+ superInstanceId + "\", \"instanceRelationshipTypeId\": \"" + instanceRelationshipTypeId + "\" }";
   }
 }

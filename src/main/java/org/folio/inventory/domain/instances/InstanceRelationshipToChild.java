@@ -32,7 +32,7 @@ public class InstanceRelationshipToChild {
 
   @Override
   public String toString() {
-    return "{ \"subInstanceId\": \""+ subInstanceId + "\", \"instanceRelationshipTypeId\": \"" + instanceRelationshipTypeId + "\" }";
+    return "{ \"id\": \"" + id + "\", \"subInstanceId\": \""+ subInstanceId + "\", \"instanceRelationshipTypeId\": \"" + instanceRelationshipTypeId + "\" }";
   }
 
 }

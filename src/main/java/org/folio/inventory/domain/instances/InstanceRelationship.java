@@ -5,6 +5,8 @@
  */
 package org.folio.inventory.domain.instances;
 
+import io.vertx.core.json.JsonObject;
+
 /**
  *
  * @author ne
@@ -25,5 +27,26 @@ public class InstanceRelationship {
     this.superInstanceId = superInstanceId;
     this.subInstanceId = subInstanceId;
     this.instanceRelationshipTypeId = instanceRelationshipTypeId;
+  }
+
+  public InstanceRelationship (JsonObject rel) {
+    this(rel.getString("id"),
+         rel.getString(SUPER_INSTANCE_ID_KEY),
+         rel.getString(SUB_INSTANCE_ID_KEY),
+         rel.getString(INSTANCE_RELATIONSHIP_TYPE_ID_KEY));
+  }
+
+  @Override
+  public String toString() {
+    return "{ \"id\": \"" + id + "\", \"superInstanceId\": \""+ superInstanceId + "\", \"subInstanceId\": \""+ subInstanceId + "\", \"instanceRelationshipTypeId\": \"" + instanceRelationshipTypeId + "\" }";
+  }
+
+  @Override
+  public boolean equals (Object object) {
+    if (object != null && object instanceof InstanceRelationship) {
+      return ((InstanceRelationship) object).toString().equals(this.toString());
+    } else {
+      return false;
+    }
   }
 }

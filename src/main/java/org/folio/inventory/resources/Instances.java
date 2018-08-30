@@ -23,6 +23,7 @@ import org.folio.inventory.domain.instances.Contributor;
 import org.folio.inventory.domain.instances.Identifier;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
+import org.folio.inventory.domain.instances.InstanceRelationship;
 import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
 import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
 import org.folio.inventory.domain.instances.Publication;
@@ -132,16 +133,82 @@ public class Instances {
 
     storage.getInstanceCollection(context).add(newInstance,
       success -> {
+        updateInstanceRelationships(newInstance, routingContext, context);
         try {
           URL url = context.absoluteUrl(String.format("%s/%s",
             INSTANCES_PATH, success.getResult().getId()));
-
           RedirectResponse.created(routingContext.response(), url.toString());
         } catch (MalformedURLException e) {
           log.warn(
             String.format("Failed to create self link for instance: %s", e.toString()));
         }
       }, FailureResponseConsumer.serverError(routingContext.response()));
+  }
+
+  /**
+   * Fetch existing relationships for the instance from storage, compare them to the request. Delete, add, and modify relations as needed.
+   * @param instance The instance request containing relationship arrays to persist.
+   * @param routingContext
+   * @param context
+   */
+  private void updateInstanceRelationships(Instance instance,
+                                           RoutingContext routingContext,
+                                           WebContext context) {
+    CollectionResourceClient relatedInstancesClient = createInstanceRelationshipsClient(routingContext, context);
+    List<String> instanceId = Arrays.asList(instance.getId());
+    String query = createQueryForRelatedInstances(instanceId);
+
+    if (relatedInstancesClient != null) {
+      relatedInstancesClient.getMany(query, (Response result) -> {
+        if (result.getStatusCode() == 200) {
+          JsonObject json = result.getJson();
+          List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("instanceRelationships"));
+          Map<String, InstanceRelationship> existingRelationships = new HashMap();
+          relationsList.stream().map((rel) -> new InstanceRelationship(rel)).forEachOrdered((relObj) -> {
+            existingRelationships.put(relObj.id, relObj);
+          });
+          Map<String, InstanceRelationship> updatingRelationships = new HashMap();
+          instance.getParentInstances().forEach((parent) -> {
+            updatingRelationships.put(parent.id,
+                    new InstanceRelationship(
+                            parent.id,
+                            parent.superInstanceId,
+                            instance.getId(),
+                            parent.instanceRelationshipTypeId));
+          });
+          instance.getChildInstances().forEach((child) -> {
+            updatingRelationships.put(child.id,
+                    new InstanceRelationship(
+                            child.id,
+                            instance.getId(),
+                            child.subInstanceId,
+                            child.instanceRelationshipTypeId));
+          });
+
+          updatingRelationships.keySet().forEach((updatingKey) -> {
+            InstanceRelationship relation = updatingRelationships.get(updatingKey);
+            if (existingRelationships.containsKey(updatingKey)) {
+              if (!updatingRelationships.get(updatingKey).equals(existingRelationships.get(updatingKey))) {
+                relatedInstancesClient.put(updatingKey, relation, success -> {
+                  log.debug("Updated relation " + relation);
+                });
+              }
+            } else {
+              relatedInstancesClient.post(relation, success -> {
+                log.debug("Created new relation " + relation);
+              });
+            }
+          });
+          existingRelationships.keySet().forEach((existingKey) -> {
+            if (!updatingRelationships.containsKey(existingKey)) {
+              relatedInstancesClient.delete(existingKey, success -> {
+                log.debug("Deleted relation " + existingRelationships.get(existingKey));
+              });
+            }
+          });
+        }}
+      );
+    };
   }
 
   private void update(RoutingContext routingContext) {
@@ -156,8 +223,12 @@ public class Instances {
     instanceCollection.findById(routingContext.request().getParam("id"),
       it -> {
         if (it.getResult() != null) {
+          updateInstanceRelationships(updatedInstance, routingContext, context);
           instanceCollection.update(updatedInstance,
-            v -> SuccessResponse.noContent(routingContext.response()),
+            v -> {
+              updateInstanceRelationships(updatedInstance, routingContext, context);
+              SuccessResponse.noContent(routingContext.response());
+            },
             FailureResponseConsumer.serverError(routingContext.response()));
         } else {
           ClientErrorResponse.notFound(routingContext.response());
@@ -249,6 +320,7 @@ public class Instances {
           RoutingContext routingContext,
           WebContext context) {
 
+    Instance instance = success.getResult();
     List<String> instanceIds = getInstanceIdsFromInstanceResult(success);
     String query = createQueryForRelatedInstances(instanceIds);
     CollectionResourceClient relatedInstancesClient = createInstanceRelationshipsClient(routingContext, context);
@@ -260,11 +332,12 @@ public class Instances {
         if (result.getStatusCode() == 200) {
           JsonObject json = result.getJson();
           List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("instanceRelationships"));
-          relationsList.stream().map((rel) -> {
-            childInstanceList.add(new InstanceRelationshipToChild(rel));
-            return rel;
-          }).forEachOrdered((rel) -> {
-            parentInstanceList.add(new InstanceRelationshipToParent(rel));
+          relationsList.forEach((rel) -> {
+            if (rel.getString(InstanceRelationship.SUPER_INSTANCE_ID_KEY).equals(instance.getId())) {
+              childInstanceList.add(new InstanceRelationshipToChild(rel));
+            } else if (rel.getString(InstanceRelationship.SUB_INSTANCE_ID_KEY).equals(instance.getId())) {
+              parentInstanceList.add(new InstanceRelationshipToParent(rel));
+            }
           });
         }
         JsonResponse.success(
@@ -369,6 +442,19 @@ public class Instances {
   }
 
   private Instance requestToInstance(JsonObject instanceRequest) {
+
+    List<InstanceRelationshipToParent> parentInstances = instanceRequest.containsKey(Instance.PARENT_INSTANCES_KEY)
+      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.PARENT_INSTANCES_KEY)).stream()
+          .map(json -> new InstanceRelationshipToParent(json))
+          .collect(Collectors.toList())
+      : new ArrayList<>();
+
+    List<InstanceRelationshipToChild> childInstances = instanceRequest.containsKey(Instance.CHILD_INSTANCES_KEY)
+      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.CHILD_INSTANCES_KEY)).stream()
+          .map(json -> new InstanceRelationshipToChild(json))
+          .collect(Collectors.toList())
+      : new ArrayList<>();
+
     List<Identifier> identifiers = instanceRequest.containsKey(Instance.IDENTIFIERS_KEY)
       ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.IDENTIFIERS_KEY)).stream()
           .map(json -> new Identifier(json))
@@ -398,6 +484,8 @@ public class Instances {
       instanceRequest.getString(Instance.SOURCE_KEY),
       instanceRequest.getString(Instance.TITLE_KEY),
       instanceRequest.getString(Instance.INSTANCE_TYPE_ID_KEY))
+      .setParentInstances(parentInstances)
+      .setChildInstances(childInstances)
       .setAlternativeTitles(toListOfStrings(instanceRequest, Instance.ALTERNATIVE_TITLES_KEY))
       .setEdition(instanceRequest.getString(Instance.EDITION_KEY))
       .setSeries(toListOfStrings(instanceRequest, Instance.SERIES_KEY))
@@ -446,7 +534,7 @@ public class Instances {
 
   private String createQueryForRelatedInstances(List<String> instanceIds) {
     String idList = instanceIds.stream().map(String::toString).distinct().collect(Collectors.joining(" or "));
-    String query = String.format("(subInstanceId==(%s)+or+superInstanceId==(%s))", idList, idList);
+    String query = String.format("query=(subInstanceId==(%s)+or+superInstanceId==(%s))", idList, idList);
     return query;
   }
 
