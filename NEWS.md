@@ -1,8 +1,13 @@
-## 9.2.1 Unreleased
+## 9.3.0 Unreleased
 
+* Include `callNumber` from holding in item (if present, MODINV-70)
+* Provides `inventory` 6.2 interface (MODINV-70)
 * Adds optional Instance properties `parentInstances`, `childInstances` (MODINV-69)
 * Provides `inventory` interface 6.2 (MODINV-69)
 * Requires `instance-storage` interface version 4.5 (MODINV-69)
+
+## 9.2.0 2018-08-27
+
 * Add properties `alternativeTitles`, `edition`, `series`, `subjects`, `classifications`, 
   `publication`, `urls`, `instanceFormatId`, `physicalDescriptions`, `languages`, 
   `notes`, `sourceRecordFormat`, `metadata` to `Instance` schema (MODINV-68)

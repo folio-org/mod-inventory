@@ -216,6 +216,10 @@ public class Items {
 
         if(item != null) {
           holdingsClient.get(item.holdingId, holdingResponse -> {
+            final JsonObject holding = holdingResponse.getStatusCode() == 200
+              ? holdingResponse.getJson()
+              : null;
+
             String instanceId = holdingResponse.getStatusCode() == 200
               ? holdingResponse.getJson().getString("instanceId")
               : null;
@@ -227,10 +231,11 @@ public class Items {
 
               String effectiveLocationId = holdingResponse.getStatusCode() == 200
                 ? HoldingsSupport.determineEffectiveLocationIdForItem(
-                        holdingResponse.getJson(),
-                        item)
+                    holdingResponse.getJson(), item)
                 : null;
+
               log.info("Effective location ID in Items: " + effectiveLocationId);
+
               ArrayList<CompletableFuture<Response>> allFutures = new ArrayList<>();
 
               CompletableFuture<Response> materialTypeFuture = getReferenceRecord(
@@ -256,7 +261,7 @@ public class Items {
               allDoneFuture.thenAccept(v -> {
                 try {
                   JsonObject representation = includeReferenceRecordInformationInItem(
-                    context, item, instance, materialTypeFuture,
+                    context, item, holding, instance, materialTypeFuture,
                     effectiveLocationId,
                     permanentLoanTypeFuture, temporaryLoanTypeFuture,
                     temporaryLocationFuture, permanentLocationFuture,
@@ -268,8 +273,7 @@ public class Items {
                     String.format("Error creating Item Representation: %s", e));
                 }
               });
-              });
-
+            });
           });
         }
         else {
@@ -648,6 +652,7 @@ public class Items {
   private JsonObject includeReferenceRecordInformationInItem(
     WebContext context,
     Item item,
+    JsonObject holding,
     JsonObject instance,
     CompletableFuture<Response> materialTypeFuture,
     String effectiveLocationId,
@@ -677,6 +682,7 @@ public class Items {
 
     return new ItemRepresentation(RELATIVE_ITEMS_PATH)
         .toJson(item,
+          holding,
           instance,
           foundMaterialType,
           foundPermanentLoanType,
