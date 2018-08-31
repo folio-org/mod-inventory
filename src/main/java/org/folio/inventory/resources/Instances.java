@@ -230,7 +230,6 @@ public class Instances {
     instanceCollection.findById(routingContext.request().getParam("id"),
       it -> {
         if (it.getResult() != null) {
-          updateInstanceRelationships(updatedInstance, routingContext, context);
           instanceCollection.update(updatedInstance,
             v -> {
               updateInstanceRelationships(updatedInstance, routingContext, context);
