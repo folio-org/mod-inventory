@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -92,7 +94,6 @@ public class Instances {
     if (pagingParameters == null) {
       ClientErrorResponse.badRequest(routingContext.response(),
         "limit and offset must be numeric when supplied");
-
       return;
     }
 
@@ -135,87 +136,21 @@ public class Instances {
     storage.getInstanceCollection(context).add(newInstance,
       success -> {
         Instance response = success.getResult();
-        updateInstanceRelationships(response, routingContext, context);
-        try {
-          URL url = context.absoluteUrl(String.format("%s/%s",
-            INSTANCES_PATH, success.getResult().getId()));
-          RedirectResponse.created(routingContext.response(), url.toString());
-        } catch (MalformedURLException e) {
-          log.warn(
-            String.format("Failed to create self link for instance: %s", e.toString()));
-        }
+        response.setParentInstances(newInstance.getParentInstances());
+        response.setChildInstances(newInstance.getChildInstances());
+        updateInstanceRelationships(response, routingContext, context,
+                (x) -> {
+                    try {
+                      URL url = context.absoluteUrl(String.format("%s/%s",
+                        INSTANCES_PATH, success.getResult().getId()));
+                      RedirectResponse.created(routingContext.response(), url.toString());
+                    } catch (MalformedURLException e) {
+                      log.warn(
+                        String.format("Failed to create self link for instance: %s", e.toString()));
+                    }
+                }
+        );
       }, FailureResponseConsumer.serverError(routingContext.response()));
-  }
-
-  /**
-   * Fetch existing relationships for the instance from storage, compare them to the request. Delete, add, and modify relations as needed.
-   * @param instance The instance request containing relationship arrays to persist.
-   * @param routingContext
-   * @param context
-   */
-  private void updateInstanceRelationships(Instance instance,
-                                           RoutingContext routingContext,
-                                           WebContext context) {
-    CollectionResourceClient relatedInstancesClient = createInstanceRelationshipsClient(routingContext, context);
-    List<String> instanceId = Arrays.asList(instance.getId());
-    String query = createQueryForRelatedInstances(instanceId);
-
-    if (relatedInstancesClient != null) {
-      relatedInstancesClient.getMany(query, (Response result) -> {
-        if (result.getStatusCode() == 200) {
-          JsonObject json = result.getJson();
-          List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("instanceRelationships"));
-          Map<String, InstanceRelationship> existingRelationships = new HashMap();
-          relationsList.stream().map((rel) -> new InstanceRelationship(rel)).forEachOrdered((relObj) -> {
-            existingRelationships.put(relObj.id, relObj);
-          });
-          Map<String, InstanceRelationship> updatingRelationships = new HashMap();
-          if (instance.getParentInstances() != null)  {
-            instance.getParentInstances().forEach((parent) -> {
-              String id = (parent.id == null ? UUID.randomUUID().toString() : parent.id );
-              updatingRelationships.put(id,
-                      new InstanceRelationship(
-                              id,
-                              parent.superInstanceId,
-                              instance.getId(),
-                              parent.instanceRelationshipTypeId));
-            });
-          }
-          if (instance.getChildInstances() != null ) {
-            instance.getChildInstances().forEach((child) -> {
-              String id = (child.id == null ? UUID.randomUUID().toString() : child.id );
-              updatingRelationships.put(id,
-                      new InstanceRelationship(
-                              id,
-                              instance.getId(),
-                              child.subInstanceId,
-                              child.instanceRelationshipTypeId));
-            });
-          }
-          updatingRelationships.keySet().forEach((updatingKey) -> {
-            InstanceRelationship relation = updatingRelationships.get(updatingKey);
-            if (existingRelationships.containsKey(updatingKey)) {
-              if (!updatingRelationships.get(updatingKey).equals(existingRelationships.get(updatingKey))) {
-                relatedInstancesClient.put(updatingKey, relation, success -> {
-                  log.debug("Updated relation " + relation);
-                });
-              }
-            } else {
-              relatedInstancesClient.post(relation, success -> {
-                log.debug("Created new relation " + relation);
-              });
-            }
-          });
-          existingRelationships.keySet().forEach((existingKey) -> {
-            if (!updatingRelationships.containsKey(existingKey)) {
-              relatedInstancesClient.delete(existingKey, success -> {
-                log.debug("Deleted relation " + existingRelationships.get(existingKey));
-              });
-            }
-          });
-        }
-      });
-    };
   }
 
   private void update(RoutingContext routingContext) {
@@ -232,8 +167,10 @@ public class Instances {
         if (it.getResult() != null) {
           instanceCollection.update(updatedInstance,
             v -> {
-              updateInstanceRelationships(updatedInstance, routingContext, context);
-              SuccessResponse.noContent(routingContext.response());
+              updateInstanceRelationships(updatedInstance,
+                                          routingContext,
+                                          context,
+                                          (x) -> {SuccessResponse.noContent(routingContext.response());});
             },
             FailureResponseConsumer.serverError(routingContext.response()));
         } else {
@@ -271,6 +208,83 @@ public class Instances {
                 ClientErrorResponse.notFound(routingContext.response());
               }
             }, FailureResponseConsumer.serverError(routingContext.response()));
+  }
+
+  /**
+   * Fetch existing relationships for the instance from storage, compare them to the request. Delete, add, and modify relations as needed.
+   * @param instance The instance request containing relationship arrays to persist.
+   * @param routingContext
+   * @param context
+   */
+  private void updateInstanceRelationships(Instance instance,
+                                           RoutingContext routingContext,
+                                           WebContext context,
+                                           Consumer respond) {
+    CollectionResourceClient relatedInstancesClient = createInstanceRelationshipsClient(routingContext, context);
+    List<String> instanceId = Arrays.asList(instance.getId());
+    String query = createQueryForRelatedInstances(instanceId);
+
+
+    if (relatedInstancesClient != null) {
+      relatedInstancesClient.getMany(query, (Response result) -> {
+        ArrayList<CompletableFuture<Response>> allFutures = new ArrayList<>();
+        if (result.getStatusCode() == 200) {
+          JsonObject json = result.getJson();
+          List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("instanceRelationships"));
+          Map<String, InstanceRelationship> existingRelationships = new HashMap();
+          relationsList.stream().map((rel) -> new InstanceRelationship(rel)).forEachOrdered((relObj) -> {
+            existingRelationships.put(relObj.id, relObj);
+          });
+          Map<String, InstanceRelationship> updatingRelationships = new HashMap();
+          if (instance.getParentInstances() != null)  {
+            instance.getParentInstances().forEach((parent) -> {
+              String id = (parent.id == null ? UUID.randomUUID().toString() : parent.id );
+              updatingRelationships.put(id,
+                      new InstanceRelationship(
+                              id,
+                              parent.superInstanceId,
+                              instance.getId(),
+                              parent.instanceRelationshipTypeId));
+            });
+          }
+          if (instance.getChildInstances() != null ) {
+            instance.getChildInstances().forEach((child) -> {
+              String id = (child.id == null ? UUID.randomUUID().toString() : child.id );
+              updatingRelationships.put(id,
+                      new InstanceRelationship(
+                              id,
+                              instance.getId(),
+                              child.subInstanceId,
+                              child.instanceRelationshipTypeId));
+            });
+          }
+          updatingRelationships.keySet().forEach((updatingKey) -> {
+            InstanceRelationship relation = updatingRelationships.get(updatingKey);
+            if (existingRelationships.containsKey(updatingKey)) {
+              if (!updatingRelationships.get(updatingKey).equals(existingRelationships.get(updatingKey))) {
+                CompletableFuture<Response> newFuture = new CompletableFuture<>();
+                allFutures.add(newFuture);
+                relatedInstancesClient.put(updatingKey, relation, newFuture::complete);
+              }
+            } else {
+              CompletableFuture<Response> newFuture = new CompletableFuture<>();
+              allFutures.add(newFuture);
+              relatedInstancesClient.post(relation, newFuture::complete);
+            }
+          });
+          existingRelationships.keySet().forEach((existingKey) -> {
+            if (!updatingRelationships.containsKey(existingKey)) {
+              CompletableFuture<Response> newFuture = new CompletableFuture<>();
+              allFutures.add(newFuture);
+              relatedInstancesClient.delete(existingKey, newFuture::complete);
+            }
+          });
+          CompletableFuture.allOf(allFutures.toArray(new CompletableFuture<?>[] { }))
+                  .thenAccept(respond);
+        }
+      });
+    };
+
   }
 
 
@@ -533,7 +547,7 @@ public class Instances {
               okapiClient,
               new URL(context.getOkapiLocation() + "/instance-storage/instance-relationships"));
     } catch (MalformedURLException mfue) {
-      log.info(mfue);
+      log.error(mfue);
     }
     return relatedInstancesClient;
   }
