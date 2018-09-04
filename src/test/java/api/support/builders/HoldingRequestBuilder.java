@@ -38,7 +38,7 @@ public class HoldingRequestBuilder implements Builder {
 
     holding.put("instanceId", instanceId.toString())
            .put("permanentLocationId", permanentLocationId.toString());
-    
+
     if (temporaryLocationId != null) {
       holding.put("temporaryLocationId", temporaryLocationId.toString());
     }
@@ -55,7 +55,7 @@ public class HoldingRequestBuilder implements Builder {
       this.temporaryLocationId,
       callNumber);
   }
-  
+
   private HoldingRequestBuilder withTemporaryLocation(UUID temporaryLocationId) {
     return new HoldingRequestBuilder(
       this.instanceId,
@@ -63,15 +63,15 @@ public class HoldingRequestBuilder implements Builder {
       temporaryLocationId,
       this.callNumber);
   }
-    
+
   public HoldingRequestBuilder permanentlyInMainLibrary() {
     return withPermanentLocation(UUID.fromString(ApiTestSuite.getMainLibraryLocation()));
   }
-  
+
   public HoldingRequestBuilder temporarilyInMezzanine() {
     return withTemporaryLocation(UUID.fromString(ApiTestSuite.getMezzanineDisplayCaseLocation()));
   }
-  
+
   public HoldingRequestBuilder withNoTemporaryLocation() {
     return withTemporaryLocation(null);
   }

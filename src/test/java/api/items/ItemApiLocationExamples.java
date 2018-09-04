@@ -61,7 +61,7 @@ public class ItemApiLocationExamples extends ApiTests {
       createdItem.getJsonObject("effectiveLocation").getString("id"),
       is(ApiTestSuite.getMainLibraryLocation()));
   }
-  
+
   @Test
   public void effectiveLocationIsTemporaryLocationFromHolding()
     throws InterruptedException,
@@ -164,7 +164,7 @@ public class ItemApiLocationExamples extends ApiTests {
       createdItem.getJsonObject("effectiveLocation").getString("id"),
       is(ApiTestSuite.getReadingRoomLocation()));
   }
-  
+
   //@Test
   public void permanentLocationsComeFromHoldingsForMultipleItems()
     throws InterruptedException,

@@ -2,7 +2,7 @@ package api;
 
 import api.items.ItemApiCallNumberExamples;
 import api.items.ItemApiExamples;
-import api.items.ItemApiLocationExamples; 
+import api.items.ItemApiLocationExamples;
 import api.items.ItemApiTitleExamples;
 import api.support.ControlledVocabularyPreparation;
 import api.support.http.ResourceClient;
@@ -139,7 +139,7 @@ public class ApiTestSuite {
   public static String getMezzanineDisplayCaseLocation() {
     return mezzanineDisplayCaseLocationId.toString();
   }
-  
+
   public static String getReadingRoomLocation() {
     return readingRoomLocationId.toString();
   }
@@ -343,14 +343,14 @@ public class ApiTestSuite {
         .put("campusId", jubileeCampus.toString())
         .put("libraryId", businessLibrary.toString()));
 
-    readingRoomLocationId = createReferenceRecord(locationsClient, 
+    readingRoomLocationId = createReferenceRecord(locationsClient,
       new JsonObject()
          .put("name", "Reading Room")
          .put("code","NU/JC/BL/PR")
          .put("institutionId", nottinghamUniversityInstitution.toString())
          .put("campusId", jubileeCampus.toString())
          .put("libraryId", businessLibrary.toString()));
-                 
+
     //Need to create a main library location otherwise MODS ingestion will fail
     //TODO: Need to remove this when MODS uses different example location
     mainLibraryLocationId = createReferenceRecord(locationsClient,

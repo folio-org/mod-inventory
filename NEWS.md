@@ -5,8 +5,8 @@
 
 ## 9.2.0 2018-08-27
 
-* Add properties `alternativeTitles`, `edition`, `series`, `subjects`, `classifications`, 
-  `publication`, `urls`, `instanceFormatId`, `physicalDescriptions`, `languages`, 
+* Add properties `alternativeTitles`, `edition`, `series`, `subjects`, `classifications`,
+  `publication`, `urls`, `instanceFormatId`, `physicalDescriptions`, `languages`,
   `notes`, `sourceRecordFormat`, `metadata` to `Instance` schema (MODINV-68)
 * Provides `inventory` interface 6.1 (MODINV-68)
 * Requires `instance-storage` interface version 4.4 (MODINV-68)
@@ -18,7 +18,7 @@
 ## 9.0.0 2018-07-06
 
 * Includes item `effectiveLocation` property for overall location of item (MODINV-56)
-* Changes item `permanentLocation` to be property from storage instead of derived (MODINV-56) 
+* Changes item `permanentLocation` to be property from storage instead of derived (MODINV-56)
 * Provides `inventory` interface 6.0 (MODINV-56)
 * Requires `item-storage` interface 5.3 (MODINV-56)
 * Requires `holdings-storage` interface 1.3 (MODINV-56)
@@ -29,7 +29,7 @@
 * Expose change `metadata` property for items (MODINV-47)
 * Extend the offset and limit paging query parameters to allow maximum integer values (MODINV-55)
 * Provides `inventory` interface 5.2 (MODINV-47, MODINV-55)
-* Requires `locations` interface 1.0 or 2.0 (MODINV-49) 
+* Requires `locations` interface 1.0 or 2.0 (MODINV-49)
 * No longer requires `shelf-locations` interface (MODINV-49)
 
 ## 7.1.0 2018-04-03
@@ -56,7 +56,7 @@
 * Removes `location` property from `item` record
 * `title` is now optional for an `item` (MODINV-34)
 * Adds `holdingsRecordId` to item (MODINV-30)
-* MODS ingest now creates holdings records (MODINV-30) 
+* MODS ingest now creates holdings records (MODINV-30)
 * Introduces `enumeration`, `chronology`, `numberOfPieces`, `notes`, `pieceIdentifiers` (MODINV-33)
 * Introduces `permanentLocation` and `temporaryLocation` properties (which include the name fetched from `shelf-locations`)
 * Provides inventory interface version 4.2
