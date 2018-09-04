@@ -116,10 +116,10 @@ class ItemRepresentation {
 
     includeReferenceIfPresent(representation, "temporaryLoanType",
       item.temporaryLoanTypeId);
-    
+
     includeReferenceIfPresent(representation, "permanentLocation",
       item.permanentLocationId);
-    
+
     includeReferenceIfPresent(representation, "temporaryLocation",
       item.temporaryLocationId);
 

@@ -59,7 +59,7 @@ public class Item {
     return new Item(newId, this.barcode, this.enumeration,
       this.chronology, this.pieceIdentifiers, this.numberOfPieces,
       holdingId, this.notes, this.status, this.materialTypeId,
-      this.permanentLocationId, this.temporaryLocationId,  
+      this.permanentLocationId, this.temporaryLocationId,
       this.permanentLoanTypeId, this.temporaryLoanTypeId, this.metadata);
   }
 
@@ -67,7 +67,7 @@ public class Item {
     return new Item(this.id, this.barcode, this.enumeration,
       this.chronology, this.pieceIdentifiers, this.numberOfPieces,
       holdingId, this.notes, newStatus, this.materialTypeId,
-      this.permanentLocationId, this.temporaryLocationId, 
+      this.permanentLocationId, this.temporaryLocationId,
       this.permanentLoanTypeId, this.temporaryLoanTypeId, this.metadata);
   }
 

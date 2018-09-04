@@ -131,12 +131,12 @@ public class Instance {
     this.sourceRecordFormat = sourceRecordFormat;
     return this;
   }
-  
+
   public Instance setMetadata (Metadata metadata) {
     this.metadata = metadata;
     return this;
   }
-  
+
   public boolean hasMetadata () {
     return this.metadata != null;
   }
@@ -216,7 +216,7 @@ public class Instance {
   public Metadata getMetadata() {
     return metadata;
   }
-  
+
   public Instance copyWithNewId(String newId) {
     return new Instance(newId, this.source, this.title, this.instanceTypeId)
             .setAlternativeTitles(alternativeTitles)

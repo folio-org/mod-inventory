@@ -457,7 +457,7 @@ public class Items {
           .filter(Objects::nonNull)
           .distinct()
           .collect(Collectors.toList());
-        
+
         List<String> temporaryLocationIds = wrappedItems.records.stream()
           .map(item -> item.temporaryLocationId)
           .filter(Objects::nonNull)

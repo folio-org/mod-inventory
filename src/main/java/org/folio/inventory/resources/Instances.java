@@ -297,17 +297,17 @@ public class Instances {
   private void putIfNotNull (JsonObject target, String propertyName, String value) {
     if (value != null) target.put(propertyName, value);
   }
-    
+
   private void putIfNotNull (JsonObject target, String propertyName, List<String> value) {
     if (value != null) target.put(propertyName, value);
   }
-    
+
   private void putIfNotNull (JsonObject target, String propertyName, Object value) {
     if (value != null) {
       if (value instanceof List) {
         target.put(propertyName, value);
       } else {
-        target.put(propertyName, new JsonObject(Json.encode(value)));        
+        target.put(propertyName, new JsonObject(Json.encode(value)));
       }
     }
   }
