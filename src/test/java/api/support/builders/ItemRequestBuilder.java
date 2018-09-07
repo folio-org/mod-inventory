@@ -242,7 +242,7 @@ public class ItemRequestBuilder implements Builder {
       this.permanentLoanType,
       this.temporaryLoanType);
   }
-  
+
     private ItemRequestBuilder withPermanentLocation(JsonObject location) {
     return new ItemRequestBuilder(
       this.id,
@@ -258,7 +258,7 @@ public class ItemRequestBuilder implements Builder {
       this.permanentLoanType,
       this.temporaryLoanType);
   }
-      
+
   public ItemRequestBuilder permanentlyInThirdFloor() {
     return withPermanentLocation(thirdFloor());
   }
@@ -266,7 +266,7 @@ public class ItemRequestBuilder implements Builder {
   public ItemRequestBuilder temporarilyInReadingRoom() {
     return withTemporaryLocation(readingRoom());
   }
-  
+
   public ItemRequestBuilder withNoPermanentLocation() {
     return withPermanentLocation(null);
   }
@@ -274,7 +274,7 @@ public class ItemRequestBuilder implements Builder {
   public ItemRequestBuilder withNoTemporaryLocation() {
     return withTemporaryLocation(null);
   }
-  
+
   private ItemRequestBuilder withPermanentLoanType(JsonObject loanType) {
     return new ItemRequestBuilder(
       this.id,
@@ -344,7 +344,7 @@ public class ItemRequestBuilder implements Builder {
       .put("id", ApiTestSuite.getThirdFloorLocation())
       .put("name", "3rd Floor");
   }
-    
+
   public static JsonObject readingRoom() {
     return new JsonObject()
       .put("id", ApiTestSuite.getReadingRoomLocation())
