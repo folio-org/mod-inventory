@@ -139,7 +139,7 @@ public class Instances {
         response.setParentInstances(newInstance.getParentInstances());
         response.setChildInstances(newInstance.getChildInstances());
         updateInstanceRelationships(response, routingContext, context,
-                (x) -> {
+                x -> {
                     try {
                       URL url = context.absoluteUrl(String.format("%s/%s",
                         INSTANCES_PATH, success.getResult().getId()));
@@ -224,7 +224,6 @@ public class Instances {
     List<String> instanceId = Arrays.asList(instance.getId());
     String query = createQueryForRelatedInstances(instanceId);
 
-
     if (relatedInstancesClient != null) {
       relatedInstancesClient.getMany(query, (Response result) -> {
         ArrayList<CompletableFuture<Response>> allFutures = new ArrayList<>();
@@ -232,12 +231,12 @@ public class Instances {
           JsonObject json = result.getJson();
           List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("instanceRelationships"));
           Map<String, InstanceRelationship> existingRelationships = new HashMap();
-          relationsList.stream().map((rel) -> new InstanceRelationship(rel)).forEachOrdered((relObj) -> {
+          relationsList.stream().map(rel -> new InstanceRelationship(rel)).forEachOrdered(relObj -> {
             existingRelationships.put(relObj.id, relObj);
           });
           Map<String, InstanceRelationship> updatingRelationships = new HashMap();
           if (instance.getParentInstances() != null)  {
-            instance.getParentInstances().forEach((parent) -> {
+            instance.getParentInstances().forEach(parent -> {
               String id = (parent.id == null ? UUID.randomUUID().toString() : parent.id );
               updatingRelationships.put(id,
                       new InstanceRelationship(
@@ -248,7 +247,7 @@ public class Instances {
             });
           }
           if (instance.getChildInstances() != null ) {
-            instance.getChildInstances().forEach((child) -> {
+            instance.getChildInstances().forEach(child -> {
               String id = (child.id == null ? UUID.randomUUID().toString() : child.id );
               updatingRelationships.put(id,
                       new InstanceRelationship(
@@ -258,7 +257,7 @@ public class Instances {
                               child.instanceRelationshipTypeId));
             });
           }
-          updatingRelationships.keySet().forEach((updatingKey) -> {
+          updatingRelationships.keySet().forEach(updatingKey -> {
             InstanceRelationship relation = updatingRelationships.get(updatingKey);
             if (existingRelationships.containsKey(updatingKey)) {
               if (!updatingRelationships.get(updatingKey).equals(existingRelationships.get(updatingKey))) {
@@ -272,7 +271,7 @@ public class Instances {
               relatedInstancesClient.post(relation, newFuture::complete);
             }
           });
-          existingRelationships.keySet().forEach((existingKey) -> {
+          existingRelationships.keySet().forEach(existingKey -> {
             if (!updatingRelationships.containsKey(existingKey)) {
               CompletableFuture<Response> newFuture = new CompletableFuture<>();
               allFutures.add(newFuture);
@@ -283,8 +282,7 @@ public class Instances {
                   .thenAccept(respond);
         }
       });
-    };
-
+    }
   }
 
 
@@ -316,10 +314,10 @@ public class Instances {
         if (result.getStatusCode() == 200) {
           JsonObject json = result.getJson();
           List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("instanceRelationships"));
-          relationsList.stream().map((rel) -> {
+          relationsList.stream().map(rel -> {
             addToList(childInstanceMap, rel.getString("superInstanceId"), new InstanceRelationshipToChild(rel));
             return rel;
-          }).forEachOrdered((rel) -> {
+          }).forEachOrdered(rel -> {
             addToList(parentInstanceMap, rel.getString("subInstanceId"), new InstanceRelationshipToParent(rel));
           });
         }
@@ -352,7 +350,7 @@ public class Instances {
         if (result.getStatusCode() == 200) {
           JsonObject json = result.getJson();
           List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("instanceRelationships"));
-          relationsList.forEach((rel) -> {
+          relationsList.forEach(rel -> {
             if (rel.getString(InstanceRelationship.SUPER_INSTANCE_ID_KEY).equals(instance.getId())) {
               childInstanceList.add(new InstanceRelationshipToChild(rel));
             } else if (rel.getString(InstanceRelationship.SUB_INSTANCE_ID_KEY).equals(instance.getId())) {
