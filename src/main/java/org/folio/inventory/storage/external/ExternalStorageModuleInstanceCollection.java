@@ -42,6 +42,7 @@ class ExternalStorageModuleInstanceCollection
     instanceToSend.put("id", instance.getId() != null
       ? instance.getId()
       : UUID.randomUUID().toString());
+    instanceToSend.put(Instance.HRID, instance.getHrid());
     includeIfPresent(instanceToSend, Instance.SOURCE_KEY, instance.getSource());
     instanceToSend.put(Instance.TITLE_KEY, instance.getTitle());
     instanceToSend.put(Instance.ALTERNATIVE_TITLES_KEY, instance.getAlternativeTitles());

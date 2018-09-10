@@ -426,6 +426,7 @@ public class Instances {
     }
 
     resp.put("id", instance.getId());
+    resp.put("hrid", instance.getHrid());
     resp.put(Instance.SOURCE_KEY, instance.getSource());
     resp.put(Instance.TITLE_KEY, instance.getTitle());
     putIfNotNull(resp, Instance.PARENT_INSTANCES_KEY, parentInstances);
@@ -513,7 +514,6 @@ public class Instances {
       .collect(Collectors.toList())
       : new ArrayList<>();
 
-
     return new Instance(
       instanceRequest.getString("id"),
       instanceRequest.getString("hrid"),
@@ -598,6 +598,8 @@ public class Instances {
   private void putIfNotNull(JsonObject target, String propertyName, Object value) {
     if (value != null) {
       if (value instanceof List) {
+        target.put(propertyName, value);
+      } else if (value instanceof Boolean) {
         target.put(propertyName, value);
       } else {
         target.put(propertyName, new JsonObject(Json.encode(value)));
