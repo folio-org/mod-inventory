@@ -1,4 +1,4 @@
-## 9.4.0 Unreleased
+## 9.4.0 2018-09-10
 
 * Implements Instance relationships (MODINV-69)
 * Adds optional Instance properties `parentInstances`, `childInstances` (MODINV-69)
