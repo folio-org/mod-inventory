@@ -23,6 +23,7 @@ import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.instances.Classification;
 import org.folio.inventory.domain.instances.Contributor;
+import org.folio.inventory.domain.instances.ElectronicAccess;
 import org.folio.inventory.domain.instances.Identifier;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
@@ -437,13 +438,22 @@ public class Instances {
     putIfNotNull(resp, Instance.SUBJECTS_KEY, instance.getSubjects());
     putIfNotNull(resp, Instance.CLASSIFICATIONS_KEY, instance.getClassifications());
     putIfNotNull(resp, Instance.PUBLICATION_KEY, instance.getPublication());
+    putIfNotNull(resp, Instance.ELECTRONIC_ACCESS_KEY, instance.getElectronicAccess());
     putIfNotNull(resp, Instance.URLS_KEY, instance.getUrls());
     putIfNotNull(resp, Instance.INSTANCE_TYPE_ID_KEY, instance.getInstanceTypeId());
     putIfNotNull(resp, Instance.INSTANCE_FORMAT_ID_KEY, instance.getInstanceFormatId());
     putIfNotNull(resp, Instance.PHYSICAL_DESCRIPTIONS_KEY, instance.getPhysicalDescriptions());
     putIfNotNull(resp, Instance.LANGUAGES_KEY, instance.getLanguages());
     putIfNotNull(resp, Instance.NOTES_KEY, instance.getNotes());
+    putIfNotNull(resp, Instance.MODE_OF_ISSUANCE_ID_KEY, instance.getModeOfIssuanceId());
+    putIfNotNull(resp, Instance.CATALOGED_DATE_KEY, instance.getCatalogedDate());
+    putIfNotNull(resp, Instance.CATALOGING_LEVEL_ID_KEY, instance.getCatalogingLevelId());
+    putIfNotNull(resp, Instance.PREVIOUSLY_HELD_KEY, instance.getPreviouslyHeld());
+    putIfNotNull(resp, Instance.STAFF_SUPPRESS_KEY, instance.getStaffSuppress());
+    putIfNotNull(resp, Instance.DISCOVERY_SUPPRESS_KEY, instance.getDiscoverySuppress());
+    putIfNotNull(resp, Instance.STATISTICAL_CODE_IDS_KEY, instance.getStatisticalCodeIds());
     putIfNotNull(resp, Instance.SOURCE_RECORD_FORMAT_KEY, instance.getSourceRecordFormat());
+    putIfNotNull(resp, Instance.STATUS_ID_KEY, instance.getStatusId());
     putIfNotNull(resp, Instance.METADATA_KEY, instance.getMetadata());
 
     try {
@@ -497,8 +507,16 @@ public class Instances {
       .collect(Collectors.toList())
       : new ArrayList<>();
 
+    List<ElectronicAccess> electronicAccess = instanceRequest.containsKey(Instance.ELECTRONIC_ACCESS_KEY)
+      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.ELECTRONIC_ACCESS_KEY)).stream()
+      .map(json -> new ElectronicAccess(json))
+      .collect(Collectors.toList())
+      : new ArrayList<>();
+
+
     return new Instance(
       instanceRequest.getString("id"),
+      instanceRequest.getString("hrid"),
       instanceRequest.getString(Instance.SOURCE_KEY),
       instanceRequest.getString(Instance.TITLE_KEY),
       instanceRequest.getString(Instance.INSTANCE_TYPE_ID_KEY))
@@ -512,12 +530,21 @@ public class Instances {
       .setSubjects(toListOfStrings(instanceRequest, Instance.SUBJECTS_KEY))
       .setClassifications(classifications)
       .setPublication(publications)
+      .setElectronicAccess(electronicAccess)
       .setUrls(toListOfStrings(instanceRequest, Instance.URLS_KEY))
       .setInstanceFormatId(instanceRequest.getString(Instance.INSTANCE_FORMAT_ID_KEY))
       .setPhysicalDescriptions(toListOfStrings(instanceRequest, Instance.PHYSICAL_DESCRIPTIONS_KEY))
       .setLanguages(toListOfStrings(instanceRequest, Instance.LANGUAGES_KEY))
       .setNotes(toListOfStrings(instanceRequest, Instance.NOTES_KEY))
-      .setSourceRecordFormat(instanceRequest.getString(Instance.SOURCE_RECORD_FORMAT_KEY));
+      .setModeOfIssuanceId(instanceRequest.getString(Instance.MODE_OF_ISSUANCE_ID_KEY))
+      .setCatalogingLevelId(instanceRequest.getString(Instance.CATALOGING_LEVEL_ID_KEY))
+      .setCatalogedDate(instanceRequest.getString(Instance.CATALOGED_DATE_KEY))
+      .setPreviouslyHeld(instanceRequest.getBoolean(Instance.PREVIOUSLY_HELD_KEY))
+      .setStaffSuppress(instanceRequest.getBoolean(Instance.STAFF_SUPPRESS_KEY))
+      .setDiscoverySuppress(instanceRequest.getBoolean(Instance.DISCOVERY_SUPPRESS_KEY))
+      .setStatisticalCodeIds(toListOfStrings(instanceRequest, Instance.STATISTICAL_CODE_IDS_KEY))
+      .setSourceRecordFormat(instanceRequest.getString(Instance.SOURCE_RECORD_FORMAT_KEY))
+      .setStatusId(instanceRequest.getString(Instance.STATUS_ID_KEY));
   }
 
   // Utilities
