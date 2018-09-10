@@ -1,3 +1,9 @@
+## 9.5.0 Unreleased
+
+* Propagates more properties from `instance-storage` (MODINV-71)
+* Provides `inventory` interface 6.4 (MODINV-71)
+* Requires `instance-storage` interface version 4.6 (MODINV-71)
+
 ## 9.4.0 2018-09-10
 
 * Implements Instance relationships (MODINV-69)
