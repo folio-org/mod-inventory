@@ -439,6 +439,8 @@ public class Instances {
     putIfNotNull(resp, Instance.SUBJECTS_KEY, instance.getSubjects());
     putIfNotNull(resp, Instance.CLASSIFICATIONS_KEY, instance.getClassifications());
     putIfNotNull(resp, Instance.PUBLICATION_KEY, instance.getPublication());
+    putIfNotNull(resp, Instance.PUBLICATION_FREQUENCY_KEY, instance.getPublicationFrequency());
+    putIfNotNull(resp, Instance.PUBLICATION_RANGE_KEY, instance.getPublicationRange());
     putIfNotNull(resp, Instance.ELECTRONIC_ACCESS_KEY, instance.getElectronicAccess());
     putIfNotNull(resp, Instance.URLS_KEY, instance.getUrls());
     putIfNotNull(resp, Instance.INSTANCE_TYPE_ID_KEY, instance.getInstanceTypeId());
@@ -455,6 +457,7 @@ public class Instances {
     putIfNotNull(resp, Instance.STATISTICAL_CODE_IDS_KEY, instance.getStatisticalCodeIds());
     putIfNotNull(resp, Instance.SOURCE_RECORD_FORMAT_KEY, instance.getSourceRecordFormat());
     putIfNotNull(resp, Instance.STATUS_ID_KEY, instance.getStatusId());
+    putIfNotNull(resp, Instance.STATUS_UPDATED_DATE_KEY, instance.getStatusUpdatedDate());
     putIfNotNull(resp, Instance.METADATA_KEY, instance.getMetadata());
 
     try {
@@ -530,6 +533,8 @@ public class Instances {
       .setSubjects(toListOfStrings(instanceRequest, Instance.SUBJECTS_KEY))
       .setClassifications(classifications)
       .setPublication(publications)
+      .setPublicationFrequency(toListOfStrings(instanceRequest, Instance.PUBLICATION_FREQUENCY_KEY))
+      .setPublicationRange(toListOfStrings(instanceRequest, Instance.PUBLICATION_RANGE_KEY))
       .setElectronicAccess(electronicAccess)
       .setUrls(toListOfStrings(instanceRequest, Instance.URLS_KEY))
       .setInstanceFormatId(instanceRequest.getString(Instance.INSTANCE_FORMAT_ID_KEY))
@@ -544,7 +549,8 @@ public class Instances {
       .setDiscoverySuppress(instanceRequest.getBoolean(Instance.DISCOVERY_SUPPRESS_KEY))
       .setStatisticalCodeIds(toListOfStrings(instanceRequest, Instance.STATISTICAL_CODE_IDS_KEY))
       .setSourceRecordFormat(instanceRequest.getString(Instance.SOURCE_RECORD_FORMAT_KEY))
-      .setStatusId(instanceRequest.getString(Instance.STATUS_ID_KEY));
+      .setStatusId(instanceRequest.getString(Instance.STATUS_ID_KEY))
+      .setStatusUpdatedDate(instanceRequest.getString(Instance.STATUS_UPDATED_DATE_KEY ));
   }
 
   // Utilities

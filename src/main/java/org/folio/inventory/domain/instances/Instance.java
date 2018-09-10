@@ -22,6 +22,8 @@ public class Instance {
   public static final String SUBJECTS_KEY = "subjects";
   public static final String CLASSIFICATIONS_KEY = "classifications";
   public static final String PUBLICATION_KEY = "publication";
+  public static final String PUBLICATION_FREQUENCY_KEY = "publicationFrequency";
+  public static final String PUBLICATION_RANGE_KEY = "publicationRange";
   public static final String ELECTRONIC_ACCESS_KEY = "electronicAccess";
   public static final String URLS_KEY = "urls";
   public static final String INSTANCE_TYPE_ID_KEY = "instanceTypeId";
@@ -38,6 +40,7 @@ public class Instance {
   public static final String STATISTICAL_CODE_IDS_KEY = "statisticalCodeIds";
   public static final String SOURCE_RECORD_FORMAT_KEY = "sourceRecordFormat";
   public static final String STATUS_ID_KEY = "statusId";
+  public static final String STATUS_UPDATED_DATE_KEY = "statusUpdatedDate";
   public static final String METADATA_KEY = "metadata";
 
   private final String id;
@@ -54,6 +57,8 @@ public class Instance {
   private List<String> subjects = new ArrayList();
   private List<Classification> classifications = new ArrayList();
   private List<Publication> publication = new ArrayList();
+  private List<String> publicationFrequency = new ArrayList();
+  private List<String> publicationRange = new ArrayList();
   private List<ElectronicAccess> electronicAccess = new ArrayList();
   private List<String> urls = new ArrayList();
   private final String instanceTypeId;
@@ -70,6 +75,7 @@ public class Instance {
   private List<String> statisticalCodeIds = new ArrayList();
   private String sourceRecordFormat;
   private String statusId;
+  private String statusUpdatedDate;
   private Metadata metadata = null;
 
   public Instance(
@@ -133,6 +139,16 @@ public class Instance {
 
   public Instance setPublication(List<Publication> publication) {
     this.publication = publication;
+    return this;
+  }
+
+  public Instance setPublicationFrequency (List<String> publicationFrequency) {
+    this.publicationFrequency = publicationFrequency;
+    return this;
+  }
+
+  public Instance setPublicationRange (List<String> publicationRange) {
+    this.publicationRange = publicationRange;
     return this;
   }
 
@@ -211,6 +227,11 @@ public class Instance {
     return this;
   }
 
+  public Instance setStatusUpdatedDate(String statusUpdatedDate) {
+    this.statusUpdatedDate = statusUpdatedDate;
+    return this;
+  }
+
   public Instance setMetadata (Metadata metadata) {
     this.metadata = metadata;
     return this;
@@ -274,6 +295,14 @@ public class Instance {
 
   public List<Publication> getPublication() {
     return publication;
+  }
+
+  public List<String> getPublicationFrequency() {
+    return publicationFrequency;
+  }
+
+  public List<String> getPublicationRange() {
+    return publicationRange;
   }
 
   public List<ElectronicAccess> getElectronicAccess() {
@@ -341,6 +370,10 @@ public class Instance {
     return statusId;
   }
 
+  public String getStatusUpdatedDate() {
+    return statusUpdatedDate;
+  }
+
   public Metadata getMetadata() {
     return metadata;
   }
@@ -355,33 +388,8 @@ public class Instance {
             .setSubjects(subjects)
             .setClassifications(classifications)
             .setPublication(publication)
-            .setElectronicAccess(electronicAccess)
-            .setUrls(urls)
-            .setInstanceFormatId(instanceFormatId)
-            .setPhysicalDescriptions(physicalDescriptions)
-            .setLanguages(languages)
-            .setNotes(notes)
-            .setModeOfIssuanceId(modeOfIssuanceId)
-            .setCatalogingLevelId(catalogingLevelId)
-            .setCatalogedDate(catalogedDate)
-            .setPreviouslyHeld(previouslyHeld)
-            .setStaffSuppress(staffSuppress)
-            .setDiscoverySuppress(discoverySuppress)
-            .setStatisticalCodeIds(statisticalCodeIds)
-            .setSourceRecordFormat(sourceRecordFormat)
-            .setStatusId(statusId);
-  }
-
-  public Instance copyInstance() {
-    return new Instance(this.id, this.hrid, this.source, this.title, this.instanceTypeId)
-            .setAlternativeTitles(alternativeTitles)
-            .setEdition(edition)
-            .setSeries(series)
-            .setIdentifiers(identifiers)
-            .setContributors(contributors)
-            .setSubjects(subjects)
-            .setClassifications(classifications)
-            .setPublication(publication)
+            .setPublicationFrequency(publicationFrequency)
+            .setPublicationRange(publicationRange)
             .setElectronicAccess(electronicAccess)
             .setUrls(urls)
             .setInstanceFormatId(instanceFormatId)
@@ -397,6 +405,37 @@ public class Instance {
             .setStatisticalCodeIds(statisticalCodeIds)
             .setSourceRecordFormat(sourceRecordFormat)
             .setStatusId(statusId)
+            .setStatusUpdatedDate(statusUpdatedDate);
+  }
+
+  public Instance copyInstance() {
+    return new Instance(this.id, this.hrid, this.source, this.title, this.instanceTypeId)
+            .setAlternativeTitles(alternativeTitles)
+            .setEdition(edition)
+            .setSeries(series)
+            .setIdentifiers(identifiers)
+            .setContributors(contributors)
+            .setSubjects(subjects)
+            .setClassifications(classifications)
+            .setPublication(publication)
+            .setPublicationFrequency(publicationFrequency)
+            .setPublicationRange(publicationRange)
+            .setElectronicAccess(electronicAccess)
+            .setUrls(urls)
+            .setInstanceFormatId(instanceFormatId)
+            .setPhysicalDescriptions(physicalDescriptions)
+            .setLanguages(languages)
+            .setNotes(notes)
+            .setModeOfIssuanceId(modeOfIssuanceId)
+            .setCatalogingLevelId(catalogingLevelId)
+            .setCatalogedDate(catalogedDate)
+            .setPreviouslyHeld(previouslyHeld)
+            .setStaffSuppress(staffSuppress)
+            .setDiscoverySuppress(discoverySuppress)
+            .setStatisticalCodeIds(statisticalCodeIds)
+            .setSourceRecordFormat(sourceRecordFormat)
+            .setStatusId(statusId)
+            .setStatusUpdatedDate(statusUpdatedDate)
             .setMetadata(metadata);
   }
 

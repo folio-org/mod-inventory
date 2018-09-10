@@ -53,6 +53,8 @@ class ExternalStorageModuleInstanceCollection
     instanceToSend.put(Instance.SUBJECTS_KEY, instance.getSubjects());
     instanceToSend.put(Instance.CLASSIFICATIONS_KEY, instance.getClassifications());
     instanceToSend.put(Instance.PUBLICATION_KEY, instance.getPublication());
+    instanceToSend.put(Instance.PUBLICATION_FREQUENCY_KEY, instance.getPublicationFrequency());
+    instanceToSend.put(Instance.PUBLICATION_RANGE_KEY, instance.getPublicationRange());
     instanceToSend.put(Instance.ELECTRONIC_ACCESS_KEY, instance.getElectronicAccess());
     instanceToSend.put(Instance.URLS_KEY, instance.getUrls());
     includeIfPresent(instanceToSend, Instance.INSTANCE_TYPE_ID_KEY, instance.getInstanceTypeId());
@@ -69,6 +71,7 @@ class ExternalStorageModuleInstanceCollection
     instanceToSend.put(Instance.STATISTICAL_CODE_IDS_KEY, instance.getStatisticalCodeIds());
     includeIfPresent(instanceToSend, Instance.SOURCE_RECORD_FORMAT_KEY, instance.getSourceRecordFormat());
     instanceToSend.put(Instance.STATUS_ID_KEY, instance.getStatusId());
+    instanceToSend.put(Instance.STATUS_UPDATED_DATE_KEY, instance.getStatusUpdatedDate());
 
     return instanceToSend;
   }
@@ -126,6 +129,8 @@ class ExternalStorageModuleInstanceCollection
       .setSubjects(jsonArrayAsListOfStrings(instanceFromServer, Instance.SUBJECTS_KEY))
       .setClassifications(mappedClassifications)
       .setPublication(mappedPublications)
+      .setPublicationFrequency(jsonArrayAsListOfStrings(instanceFromServer, Instance.PUBLICATION_FREQUENCY_KEY))
+      .setPublicationRange(jsonArrayAsListOfStrings(instanceFromServer, Instance.PUBLICATION_RANGE_KEY))
       .setElectronicAccess(mappedElectronicAccess)
       .setUrls(jsonArrayAsListOfStrings(instanceFromServer, Instance.URLS_KEY))
       .setInstanceFormatId(instanceFromServer.getString(Instance.INSTANCE_FORMAT_ID_KEY))
@@ -141,6 +146,7 @@ class ExternalStorageModuleInstanceCollection
       .setStatisticalCodeIds(jsonArrayAsListOfStrings(instanceFromServer, Instance.STATISTICAL_CODE_IDS_KEY))
       .setSourceRecordFormat(instanceFromServer.getString(Instance.SOURCE_RECORD_FORMAT_KEY))
       .setStatusId(instanceFromServer.getString(Instance.STATUS_ID_KEY))
+      .setStatusUpdatedDate(instanceFromServer.getString(Instance.STATUS_UPDATED_DATE_KEY))
       .setMetadata(new Metadata(metadataJson));
   }
 
