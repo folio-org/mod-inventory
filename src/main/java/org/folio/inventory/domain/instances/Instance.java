@@ -37,7 +37,7 @@ public class Instance {
   public static final String PREVIOUSLY_HELD_KEY = "previouslyHeld";
   public static final String STAFF_SUPPRESS_KEY = "staffSuppress";
   public static final String DISCOVERY_SUPPRESS_KEY = "discoverySuppress";
-  public static final String STATISTICAL_CODE_IDS_KEY = "statisticalCodeIds";
+  public static final String STATISTICAL_CODES_KEY = "statisticalCodes";
   public static final String SOURCE_RECORD_FORMAT_KEY = "sourceRecordFormat";
   public static final String STATUS_ID_KEY = "statusId";
   public static final String STATUS_UPDATED_DATE_KEY = "statusUpdatedDate";
@@ -72,7 +72,7 @@ public class Instance {
   private Boolean previouslyHeld;
   private Boolean staffSuppress;
   private Boolean discoverySuppress;
-  private List<String> statisticalCodeIds = new ArrayList();
+  private List<StatisticalCode> statisticalCodes = new ArrayList();
   private String sourceRecordFormat;
   private String statusId;
   private String statusUpdatedDate;
@@ -212,8 +212,8 @@ public class Instance {
     return this;
   }
 
-  public Instance setStatisticalCodeIds(List<String> statisticalCodeIds) {
-    this.statisticalCodeIds = statisticalCodeIds;
+  public Instance setStatisticalCodes(List<StatisticalCode> statisticalCodes) {
+    this.statisticalCodes = statisticalCodes;
     return this;
   }
 
@@ -358,8 +358,8 @@ public class Instance {
     return discoverySuppress;
   }
 
-  public List<String> getStatisticalCodeIds() {
-    return statisticalCodeIds;
+  public List<StatisticalCode> getStatisticalCodes() {
+    return statisticalCodes;
   }
 
   public String getSourceRecordFormat() {
@@ -402,7 +402,7 @@ public class Instance {
             .setPreviouslyHeld(previouslyHeld)
             .setStaffSuppress(staffSuppress)
             .setDiscoverySuppress(discoverySuppress)
-            .setStatisticalCodeIds(statisticalCodeIds)
+            .setStatisticalCodes(statisticalCodes)
             .setSourceRecordFormat(sourceRecordFormat)
             .setStatusId(statusId)
             .setStatusUpdatedDate(statusUpdatedDate);
@@ -432,7 +432,7 @@ public class Instance {
             .setPreviouslyHeld(previouslyHeld)
             .setStaffSuppress(staffSuppress)
             .setDiscoverySuppress(discoverySuppress)
-            .setStatisticalCodeIds(statisticalCodeIds)
+            .setStatisticalCodes(statisticalCodes)
             .setSourceRecordFormat(sourceRecordFormat)
             .setStatusId(statusId)
             .setStatusUpdatedDate(statusUpdatedDate)
