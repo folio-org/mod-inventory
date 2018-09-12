@@ -23,6 +23,7 @@ import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.instances.Classification;
 import org.folio.inventory.domain.instances.Contributor;
+import org.folio.inventory.domain.instances.ElectronicAccess;
 import org.folio.inventory.domain.instances.Identifier;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
@@ -30,6 +31,7 @@ import org.folio.inventory.domain.instances.InstanceRelationship;
 import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
 import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
 import org.folio.inventory.domain.instances.Publication;
+import org.folio.inventory.domain.instances.StatisticalCode;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.support.JsonArrayHelper;
@@ -425,6 +427,7 @@ public class Instances {
     }
 
     resp.put("id", instance.getId());
+    resp.put("hrid", instance.getHrid());
     resp.put(Instance.SOURCE_KEY, instance.getSource());
     resp.put(Instance.TITLE_KEY, instance.getTitle());
     putIfNotNull(resp, Instance.PARENT_INSTANCES_KEY, parentInstances);
@@ -437,13 +440,25 @@ public class Instances {
     putIfNotNull(resp, Instance.SUBJECTS_KEY, instance.getSubjects());
     putIfNotNull(resp, Instance.CLASSIFICATIONS_KEY, instance.getClassifications());
     putIfNotNull(resp, Instance.PUBLICATION_KEY, instance.getPublication());
+    putIfNotNull(resp, Instance.PUBLICATION_FREQUENCY_KEY, instance.getPublicationFrequency());
+    putIfNotNull(resp, Instance.PUBLICATION_RANGE_KEY, instance.getPublicationRange());
+    putIfNotNull(resp, Instance.ELECTRONIC_ACCESS_KEY, instance.getElectronicAccess());
     putIfNotNull(resp, Instance.URLS_KEY, instance.getUrls());
     putIfNotNull(resp, Instance.INSTANCE_TYPE_ID_KEY, instance.getInstanceTypeId());
     putIfNotNull(resp, Instance.INSTANCE_FORMAT_ID_KEY, instance.getInstanceFormatId());
     putIfNotNull(resp, Instance.PHYSICAL_DESCRIPTIONS_KEY, instance.getPhysicalDescriptions());
     putIfNotNull(resp, Instance.LANGUAGES_KEY, instance.getLanguages());
     putIfNotNull(resp, Instance.NOTES_KEY, instance.getNotes());
+    putIfNotNull(resp, Instance.MODE_OF_ISSUANCE_ID_KEY, instance.getModeOfIssuanceId());
+    putIfNotNull(resp, Instance.CATALOGED_DATE_KEY, instance.getCatalogedDate());
+    putIfNotNull(resp, Instance.CATALOGING_LEVEL_ID_KEY, instance.getCatalogingLevelId());
+    putIfNotNull(resp, Instance.PREVIOUSLY_HELD_KEY, instance.getPreviouslyHeld());
+    putIfNotNull(resp, Instance.STAFF_SUPPRESS_KEY, instance.getStaffSuppress());
+    putIfNotNull(resp, Instance.DISCOVERY_SUPPRESS_KEY, instance.getDiscoverySuppress());
+    putIfNotNull(resp, Instance.STATISTICAL_CODES_KEY, instance.getStatisticalCodes());
     putIfNotNull(resp, Instance.SOURCE_RECORD_FORMAT_KEY, instance.getSourceRecordFormat());
+    putIfNotNull(resp, Instance.STATUS_ID_KEY, instance.getStatusId());
+    putIfNotNull(resp, Instance.STATUS_UPDATED_DATE_KEY, instance.getStatusUpdatedDate());
     putIfNotNull(resp, Instance.METADATA_KEY, instance.getMetadata());
 
     try {
@@ -497,8 +512,22 @@ public class Instances {
       .collect(Collectors.toList())
       : new ArrayList<>();
 
+    List<ElectronicAccess> electronicAccess = instanceRequest.containsKey(Instance.ELECTRONIC_ACCESS_KEY)
+      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.ELECTRONIC_ACCESS_KEY)).stream()
+      .map(json -> new ElectronicAccess(json))
+      .collect(Collectors.toList())
+      : new ArrayList<>();
+
+    List<StatisticalCode> statisticalCodes = instanceRequest.containsKey(Instance.STATISTICAL_CODES_KEY)
+      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.STATISTICAL_CODES_KEY)).stream()
+      .map(json -> new StatisticalCode(json))
+      .collect(Collectors.toList())
+      : new ArrayList<>();
+    
+    
     return new Instance(
       instanceRequest.getString("id"),
+      instanceRequest.getString("hrid"),
       instanceRequest.getString(Instance.SOURCE_KEY),
       instanceRequest.getString(Instance.TITLE_KEY),
       instanceRequest.getString(Instance.INSTANCE_TYPE_ID_KEY))
@@ -512,12 +541,24 @@ public class Instances {
       .setSubjects(toListOfStrings(instanceRequest, Instance.SUBJECTS_KEY))
       .setClassifications(classifications)
       .setPublication(publications)
+      .setPublicationFrequency(toListOfStrings(instanceRequest, Instance.PUBLICATION_FREQUENCY_KEY))
+      .setPublicationRange(toListOfStrings(instanceRequest, Instance.PUBLICATION_RANGE_KEY))
+      .setElectronicAccess(electronicAccess)
       .setUrls(toListOfStrings(instanceRequest, Instance.URLS_KEY))
       .setInstanceFormatId(instanceRequest.getString(Instance.INSTANCE_FORMAT_ID_KEY))
       .setPhysicalDescriptions(toListOfStrings(instanceRequest, Instance.PHYSICAL_DESCRIPTIONS_KEY))
       .setLanguages(toListOfStrings(instanceRequest, Instance.LANGUAGES_KEY))
       .setNotes(toListOfStrings(instanceRequest, Instance.NOTES_KEY))
-      .setSourceRecordFormat(instanceRequest.getString(Instance.SOURCE_RECORD_FORMAT_KEY));
+      .setModeOfIssuanceId(instanceRequest.getString(Instance.MODE_OF_ISSUANCE_ID_KEY))
+      .setCatalogingLevelId(instanceRequest.getString(Instance.CATALOGING_LEVEL_ID_KEY))
+      .setCatalogedDate(instanceRequest.getString(Instance.CATALOGED_DATE_KEY))
+      .setPreviouslyHeld(instanceRequest.getBoolean(Instance.PREVIOUSLY_HELD_KEY))
+      .setStaffSuppress(instanceRequest.getBoolean(Instance.STAFF_SUPPRESS_KEY))
+      .setDiscoverySuppress(instanceRequest.getBoolean(Instance.DISCOVERY_SUPPRESS_KEY))
+      .setStatisticalCodes(statisticalCodes)
+      .setSourceRecordFormat(instanceRequest.getString(Instance.SOURCE_RECORD_FORMAT_KEY))
+      .setStatusId(instanceRequest.getString(Instance.STATUS_ID_KEY))
+      .setStatusUpdatedDate(instanceRequest.getString(Instance.STATUS_UPDATED_DATE_KEY ));
   }
 
   // Utilities
@@ -571,6 +612,8 @@ public class Instances {
   private void putIfNotNull(JsonObject target, String propertyName, Object value) {
     if (value != null) {
       if (value instanceof List) {
+        target.put(propertyName, value);
+      } else if (value instanceof Boolean) {
         target.put(propertyName, value);
       } else {
         target.put(propertyName, new JsonObject(Json.encode(value)));

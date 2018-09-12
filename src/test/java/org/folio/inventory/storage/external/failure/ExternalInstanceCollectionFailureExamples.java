@@ -1,11 +1,6 @@
 package org.folio.inventory.storage.external.failure;
 
-import org.folio.inventory.common.api.request.PagingParameters;
-import org.folio.inventory.common.domain.Failure;
-import org.folio.inventory.domain.CollectionProvider;
-import org.folio.inventory.domain.instances.Instance;
-import org.folio.inventory.domain.instances.InstanceCollection;
-import org.junit.Test;
+import static org.junit.Assert.fail;
 
 import java.io.UnsupportedEncodingException;
 import java.util.UUID;
@@ -14,7 +9,12 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static org.junit.Assert.fail;
+import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.common.domain.Failure;
+import org.folio.inventory.domain.CollectionProvider;
+import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.domain.instances.InstanceCollection;
+import org.junit.Test;
 
 public abstract class ExternalInstanceCollectionFailureExamples {
 
@@ -150,7 +150,10 @@ public abstract class ExternalInstanceCollectionFailureExamples {
   protected abstract void check(Failure failure);
 
   private static Instance createInstance() {
-    return new Instance(UUID.randomUUID().toString(), null, "Nod", UUID.randomUUID().toString());
+    return new Instance(
+            UUID.randomUUID().toString(),
+            UUID.randomUUID().toString(),
+            null, "Nod", UUID.randomUUID().toString());
   }
 
   private InstanceCollection createCollection() {

@@ -9,6 +9,7 @@ import org.folio.inventory.domain.Metadata;
 
 public class Instance {
   // JSON property names
+  public static final String HRID_KEY = "hrid";
   public static final String SOURCE_KEY = "source";
   public static final String PARENT_INSTANCES_KEY = "parentInstances";
   public static final String CHILD_INSTANCES_KEY = "childInstances";
@@ -21,16 +22,29 @@ public class Instance {
   public static final String SUBJECTS_KEY = "subjects";
   public static final String CLASSIFICATIONS_KEY = "classifications";
   public static final String PUBLICATION_KEY = "publication";
+  public static final String PUBLICATION_FREQUENCY_KEY = "publicationFrequency";
+  public static final String PUBLICATION_RANGE_KEY = "publicationRange";
+  public static final String ELECTRONIC_ACCESS_KEY = "electronicAccess";
   public static final String URLS_KEY = "urls";
   public static final String INSTANCE_TYPE_ID_KEY = "instanceTypeId";
   public static final String INSTANCE_FORMAT_ID_KEY = "instanceFormatId";
   public static final String PHYSICAL_DESCRIPTIONS_KEY = "physicalDescriptions";
   public static final String LANGUAGES_KEY = "languages";
   public static final String NOTES_KEY = "notes";
+  public static final String MODE_OF_ISSUANCE_ID_KEY = "modeOfIssuanceId";
+  public static final String CATALOGING_LEVEL_ID_KEY = "catalogingLevelId";
+  public static final String CATALOGED_DATE_KEY = "catalogedDate";
+  public static final String PREVIOUSLY_HELD_KEY = "previouslyHeld";
+  public static final String STAFF_SUPPRESS_KEY = "staffSuppress";
+  public static final String DISCOVERY_SUPPRESS_KEY = "discoverySuppress";
+  public static final String STATISTICAL_CODES_KEY = "statisticalCodes";
   public static final String SOURCE_RECORD_FORMAT_KEY = "sourceRecordFormat";
+  public static final String STATUS_ID_KEY = "statusId";
+  public static final String STATUS_UPDATED_DATE_KEY = "statusUpdatedDate";
   public static final String METADATA_KEY = "metadata";
 
   private final String id;
+  private final String hrid;
   private final String source;
   private List<InstanceRelationshipToParent> parentInstances = new ArrayList();
   private List<InstanceRelationshipToChild> childInstances = new ArrayList();
@@ -43,22 +57,36 @@ public class Instance {
   private List<String> subjects = new ArrayList();
   private List<Classification> classifications = new ArrayList();
   private List<Publication> publication = new ArrayList();
+  private List<String> publicationFrequency = new ArrayList();
+  private List<String> publicationRange = new ArrayList();
+  private List<ElectronicAccess> electronicAccess = new ArrayList();
   private List<String> urls = new ArrayList();
   private final String instanceTypeId;
   private String instanceFormatId;
   private List<String> physicalDescriptions = new ArrayList();
   private List<String> languages = new ArrayList();
   private List<String> notes = new ArrayList();
+  private String modeOfIssuanceId;
+  private String catalogingLevelId;
+  private String catalogedDate;
+  private Boolean previouslyHeld;
+  private Boolean staffSuppress;
+  private Boolean discoverySuppress;
+  private List<StatisticalCode> statisticalCodes = new ArrayList();
   private String sourceRecordFormat;
+  private String statusId;
+  private String statusUpdatedDate;
   private Metadata metadata = null;
 
   public Instance(
     String id,
+    String hrid,
     String source,
     String title,
     String instanceTypeId) {
 
     this.id = id;
+    this.hrid = hrid;
     this.source = source;
     this.title = title;
     this.instanceTypeId = instanceTypeId;
@@ -114,6 +142,21 @@ public class Instance {
     return this;
   }
 
+  public Instance setPublicationFrequency (List<String> publicationFrequency) {
+    this.publicationFrequency = publicationFrequency;
+    return this;
+  }
+
+  public Instance setPublicationRange (List<String> publicationRange) {
+    this.publicationRange = publicationRange;
+    return this;
+  }
+
+  public Instance setElectronicAccess(List<ElectronicAccess> electronicAccess) {
+    this.electronicAccess = electronicAccess;
+    return this;
+  }
+
   public Instance setUrls(List<String> urls) {
     this.urls = urls;
     return this;
@@ -139,8 +182,53 @@ public class Instance {
     return this;
   }
 
+  public Instance setModeOfIssuanceId(String modeOfIssuanceId) {
+    this.modeOfIssuanceId = modeOfIssuanceId;
+    return this;
+  }
+
+  public Instance setCatalogingLevelId(String catalogingLevelId) {
+    this.catalogingLevelId = catalogingLevelId;
+    return this;
+  }
+
+  public Instance setCatalogedDate(String catalogedDate) {
+    this.catalogedDate = catalogedDate;
+    return this;
+  }
+
+  public Instance setPreviouslyHeld(Boolean previouslyHeld) {
+    this.previouslyHeld = previouslyHeld;
+    return this;
+  }
+
+  public Instance setStaffSuppress(Boolean staffSuppress) {
+    this.staffSuppress = staffSuppress;
+    return this;
+  }
+
+  public Instance setDiscoverySuppress(Boolean discoverySuppress) {
+    this.discoverySuppress = discoverySuppress;
+    return this;
+  }
+
+  public Instance setStatisticalCodes(List<StatisticalCode> statisticalCodes) {
+    this.statisticalCodes = statisticalCodes;
+    return this;
+  }
+
   public Instance setSourceRecordFormat(String sourceRecordFormat) {
     this.sourceRecordFormat = sourceRecordFormat;
+    return this;
+  }
+
+  public Instance setStatusId(String statusId) {
+    this.statusId = statusId;
+    return this;
+  }
+
+  public Instance setStatusUpdatedDate(String statusUpdatedDate) {
+    this.statusUpdatedDate = statusUpdatedDate;
     return this;
   }
 
@@ -155,6 +243,10 @@ public class Instance {
 
     public String getId() {
     return id;
+  }
+
+  public String getHrid() {
+    return hrid;
   }
 
   public String getSource() {
@@ -205,6 +297,18 @@ public class Instance {
     return publication;
   }
 
+  public List<String> getPublicationFrequency() {
+    return publicationFrequency;
+  }
+
+  public List<String> getPublicationRange() {
+    return publicationRange;
+  }
+
+  public List<ElectronicAccess> getElectronicAccess() {
+    return electronicAccess;
+  }
+
   public List<String> getUrls() {
     return urls;
   }
@@ -229,8 +333,45 @@ public class Instance {
     return notes;
   }
 
+
+  public String getModeOfIssuanceId() {
+    return modeOfIssuanceId;
+  }
+
+  public String getCatalogingLevelId() {
+    return catalogingLevelId;
+  }
+
+  public String getCatalogedDate() {
+    return catalogedDate;
+  }
+
+  public Boolean getPreviouslyHeld() {
+    return previouslyHeld;
+  }
+
+  public Boolean getStaffSuppress() {
+    return staffSuppress;
+  }
+
+  public Boolean getDiscoverySuppress() {
+    return discoverySuppress;
+  }
+
+  public List<StatisticalCode> getStatisticalCodes() {
+    return statisticalCodes;
+  }
+
   public String getSourceRecordFormat() {
     return sourceRecordFormat;
+  }
+
+  public String getStatusId() {
+    return statusId;
+  }
+
+  public String getStatusUpdatedDate() {
+    return statusUpdatedDate;
   }
 
   public Metadata getMetadata() {
@@ -238,7 +379,7 @@ public class Instance {
   }
 
   public Instance copyWithNewId(String newId) {
-    return new Instance(newId, this.source, this.title, this.instanceTypeId)
+    return new Instance(newId, this.hrid, this.source, this.title, this.instanceTypeId)
             .setAlternativeTitles(alternativeTitles)
             .setEdition(edition)
             .setSeries(series)
@@ -247,16 +388,28 @@ public class Instance {
             .setSubjects(subjects)
             .setClassifications(classifications)
             .setPublication(publication)
+            .setPublicationFrequency(publicationFrequency)
+            .setPublicationRange(publicationRange)
+            .setElectronicAccess(electronicAccess)
             .setUrls(urls)
             .setInstanceFormatId(instanceFormatId)
             .setPhysicalDescriptions(physicalDescriptions)
             .setLanguages(languages)
             .setNotes(notes)
-            .setSourceRecordFormat(sourceRecordFormat);
+            .setModeOfIssuanceId(modeOfIssuanceId)
+            .setCatalogingLevelId(catalogingLevelId)
+            .setCatalogedDate(catalogedDate)
+            .setPreviouslyHeld(previouslyHeld)
+            .setStaffSuppress(staffSuppress)
+            .setDiscoverySuppress(discoverySuppress)
+            .setStatisticalCodes(statisticalCodes)
+            .setSourceRecordFormat(sourceRecordFormat)
+            .setStatusId(statusId)
+            .setStatusUpdatedDate(statusUpdatedDate);
   }
 
   public Instance copyInstance() {
-    return new Instance(this.id, this.source, this.title, this.instanceTypeId)
+    return new Instance(this.id, this.hrid, this.source, this.title, this.instanceTypeId)
             .setAlternativeTitles(alternativeTitles)
             .setEdition(edition)
             .setSeries(series)
@@ -265,12 +418,24 @@ public class Instance {
             .setSubjects(subjects)
             .setClassifications(classifications)
             .setPublication(publication)
+            .setPublicationFrequency(publicationFrequency)
+            .setPublicationRange(publicationRange)
+            .setElectronicAccess(electronicAccess)
             .setUrls(urls)
             .setInstanceFormatId(instanceFormatId)
             .setPhysicalDescriptions(physicalDescriptions)
             .setLanguages(languages)
             .setNotes(notes)
+            .setModeOfIssuanceId(modeOfIssuanceId)
+            .setCatalogingLevelId(catalogingLevelId)
+            .setCatalogedDate(catalogedDate)
+            .setPreviouslyHeld(previouslyHeld)
+            .setStaffSuppress(staffSuppress)
+            .setDiscoverySuppress(discoverySuppress)
+            .setStatisticalCodes(statisticalCodes)
             .setSourceRecordFormat(sourceRecordFormat)
+            .setStatusId(statusId)
+            .setStatusUpdatedDate(statusUpdatedDate)
             .setMetadata(metadata);
   }
 
@@ -307,6 +472,6 @@ public class Instance {
 
   @Override
   public String toString() {
-    return String.format("Instance ID: %s, Title: %s", id, title);
+    return String.format("Instance ID: %s, HRID: %s, Title: %s", id, hrid, title);
   }
 }

@@ -1,14 +1,9 @@
 package org.folio.inventory.storage.external;
 
-import org.apache.commons.lang3.StringUtils;
-import org.folio.inventory.common.WaitForAllFutures;
-import org.folio.inventory.common.api.request.PagingParameters;
-import org.folio.inventory.common.domain.MultipleRecords;
-import org.folio.inventory.domain.instances.Instance;
-import org.folio.inventory.domain.instances.InstanceCollection;
-import org.hamcrest.CoreMatchers;
-import org.junit.Before;
-import org.junit.Test;
+import static org.folio.inventory.common.FutureAssistance.*;
+import static org.folio.inventory.storage.external.ExternalStorageSuite.getStorageAddress;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
 
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
@@ -18,11 +13,16 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-import static org.folio.inventory.common.FutureAssistance.*;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.inventory.common.WaitForAllFutures;
+import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.domain.instances.Identifier;
-import static org.folio.inventory.storage.external.ExternalStorageSuite.getStorageAddress;
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.domain.instances.InstanceCollection;
+import org.hamcrest.CoreMatchers;
+import org.junit.Before;
+import org.junit.Test;
 
 public class ExternalInstanceCollectionExamples {
   private static final String BOOKS_INSTANCE_TYPE = UUID.randomUUID().toString();
@@ -326,7 +326,12 @@ public class ExternalInstanceCollectionExamples {
   }
 
   private static Instance createInstance(String title) {
-    return new Instance(UUID.randomUUID().toString(), "local", title, BOOKS_INSTANCE_TYPE)
+    return new Instance(
+            UUID.randomUUID().toString(),
+            UUID.randomUUID().toString(),
+            "local",
+            title,
+            BOOKS_INSTANCE_TYPE)
                 .setAlternativeTitles(new ArrayList<>())
                 .setIdentifiers(new ArrayList<>())
                 .setContributors(new ArrayList<>());
