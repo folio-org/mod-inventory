@@ -11,7 +11,7 @@ public class Publication {
   public static final String PUBLISHER_KEY = "publisher";
   public static final String PLACE_KEY = "place";
   public static final String DATE_OF_PUBLICATION_KEY = "dateOfPublication";
-  public static final String ROLE = "role";
+  public static final String ROLE_KEY = "role";
 
   public final String publisher;
   public final String place;
@@ -29,6 +29,6 @@ public class Publication {
     this(json.getString(PUBLISHER_KEY),
          json.getString(PLACE_KEY),
          json.getString(DATE_OF_PUBLICATION_KEY),
-         json.getString(ROLE));
+         json.getString(ROLE_KEY));
   }
 }

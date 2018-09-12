@@ -9,7 +9,7 @@ import org.folio.inventory.domain.Metadata;
 
 public class Instance {
   // JSON property names
-  public static final String HRID = "hrid";
+  public static final String HRID_KEY = "hrid";
   public static final String SOURCE_KEY = "source";
   public static final String PARENT_INSTANCES_KEY = "parentInstances";
   public static final String CHILD_INSTANCES_KEY = "childInstances";
