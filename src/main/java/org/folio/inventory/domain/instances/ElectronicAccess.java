@@ -24,7 +24,7 @@ public class ElectronicAccess {
   public final String materialsSpecification;
   public final String publicNote;
   public final String relationship;
-  
+
   public ElectronicAccess(
           String uri,
           String linkText,
@@ -37,7 +37,7 @@ public class ElectronicAccess {
     this.publicNote = publicNote;
     this.relationship = relationship;
   }
-  
+
     public ElectronicAccess(JsonObject json) {
     this(json.getString(URI_KEY),
          json.getString(LINK_TEXT_KEY),
