@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package org.folio.inventory.domain.instances;
 
 import io.vertx.core.json.JsonObject;
@@ -24,7 +19,7 @@ public class ElectronicAccess {
   public final String materialsSpecification;
   public final String publicNote;
   public final String relationship;
-  
+
   public ElectronicAccess(
           String uri,
           String linkText,
@@ -37,7 +32,7 @@ public class ElectronicAccess {
     this.publicNote = publicNote;
     this.relationship = relationship;
   }
-  
+
     public ElectronicAccess(JsonObject json) {
     this(json.getString(URI_KEY),
          json.getString(LINK_TEXT_KEY),

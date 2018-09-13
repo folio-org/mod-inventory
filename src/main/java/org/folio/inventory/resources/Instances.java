@@ -523,8 +523,8 @@ public class Instances {
       .map(json -> new StatisticalCode(json))
       .collect(Collectors.toList())
       : new ArrayList<>();
-    
-    
+
+
     return new Instance(
       instanceRequest.getString("id"),
       instanceRequest.getString("hrid"),

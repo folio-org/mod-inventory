@@ -102,7 +102,7 @@ class ExternalStorageModuleInstanceCollection
 
     List<JsonObject> publications = toList(
       instanceFromServer.getJsonArray(Instance.PUBLICATION_KEY, new JsonArray()));
-    
+
     List<Publication> mappedPublications = publications.stream()
       .map(it -> new Publication(it))
       .collect(Collectors.toList());
@@ -121,7 +121,7 @@ class ExternalStorageModuleInstanceCollection
       .map(it -> new StatisticalCode(it))
       .collect(Collectors.toList());
 
-    
+
     JsonObject metadataJson = instanceFromServer.getJsonObject(Instance.METADATA_KEY);
 
     return new Instance(
