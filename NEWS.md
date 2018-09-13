@@ -1,4 +1,4 @@
-## 9.5.0 Unreleased
+## 9.5.0 2018-09-13
 
 * Propagates more properties from `instance-storage` (MODINV-71)
 * Provides `inventory` interface 6.4 (MODINV-71)
