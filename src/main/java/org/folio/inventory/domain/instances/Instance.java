@@ -25,7 +25,6 @@ public class Instance {
   public static final String PUBLICATION_FREQUENCY_KEY = "publicationFrequency";
   public static final String PUBLICATION_RANGE_KEY = "publicationRange";
   public static final String ELECTRONIC_ACCESS_KEY = "electronicAccess";
-  public static final String URLS_KEY = "urls";
   public static final String INSTANCE_TYPE_ID_KEY = "instanceTypeId";
   public static final String INSTANCE_FORMAT_ID_KEY = "instanceFormatId";
   public static final String PHYSICAL_DESCRIPTIONS_KEY = "physicalDescriptions";
@@ -60,7 +59,6 @@ public class Instance {
   private List<String> publicationFrequency = new ArrayList();
   private List<String> publicationRange = new ArrayList();
   private List<ElectronicAccess> electronicAccess = new ArrayList();
-  private List<String> urls = new ArrayList();
   private final String instanceTypeId;
   private String instanceFormatId;
   private List<String> physicalDescriptions = new ArrayList();
@@ -154,11 +152,6 @@ public class Instance {
 
   public Instance setElectronicAccess(List<ElectronicAccess> electronicAccess) {
     this.electronicAccess = electronicAccess;
-    return this;
-  }
-
-  public Instance setUrls(List<String> urls) {
-    this.urls = urls;
     return this;
   }
 
@@ -309,10 +302,6 @@ public class Instance {
     return electronicAccess;
   }
 
-  public List<String> getUrls() {
-    return urls;
-  }
-
   public String getInstanceTypeId() {
     return instanceTypeId;
   }
@@ -391,7 +380,6 @@ public class Instance {
             .setPublicationFrequency(publicationFrequency)
             .setPublicationRange(publicationRange)
             .setElectronicAccess(electronicAccess)
-            .setUrls(urls)
             .setInstanceFormatId(instanceFormatId)
             .setPhysicalDescriptions(physicalDescriptions)
             .setLanguages(languages)
@@ -421,7 +409,6 @@ public class Instance {
             .setPublicationFrequency(publicationFrequency)
             .setPublicationRange(publicationRange)
             .setElectronicAccess(electronicAccess)
-            .setUrls(urls)
             .setInstanceFormatId(instanceFormatId)
             .setPhysicalDescriptions(physicalDescriptions)
             .setLanguages(languages)
