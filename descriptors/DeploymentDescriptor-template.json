@@ -1,5 +1,6 @@
 {
   "srvcId": "${artifactId}-${version}",
+  "nodeId": "localhost",
   "descriptor": {
     "exec": "java -Dport=%p -jar ../mod-inventory/target/mod-inventory.jar"
   }
