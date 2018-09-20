@@ -15,7 +15,7 @@ public class Instance {
   public static final String CHILD_INSTANCES_KEY = "childInstances";
   public static final String TITLE_KEY = "title";
   public static final String ALTERNATIVE_TITLES_KEY = "alternativeTitles";
-  public static final String EDITION_KEY = "edition";
+  public static final String EDITIONS_KEY = "editions";
   public static final String SERIES_KEY = "series";
   public static final String IDENTIFIERS_KEY = "identifiers";
   public static final String CONTRIBUTORS_KEY = "contributors";
@@ -50,7 +50,7 @@ public class Instance {
   private List<InstanceRelationshipToChild> childInstances = new ArrayList();
   private final String title;
   private List<String> alternativeTitles = new ArrayList();
-  private String edition;
+  private List<String> editions = new ArrayList();
   private List<String> series = new ArrayList();
   private List<Identifier> identifiers = new ArrayList();
   private List<Contributor> contributors = new ArrayList();
@@ -107,8 +107,8 @@ public class Instance {
     return this;
   }
 
-  public Instance setEdition(String edition) {
-    this.edition = edition;
+  public Instance setEditions(List<String> editions) {
+    this.editions = editions;
     return this;
   }
 
@@ -269,8 +269,8 @@ public class Instance {
     return alternativeTitles;
   }
 
-  public String getEdition() {
-    return edition;
+  public List<String> getEditions() {
+    return editions;
   }
 
   public List<String> getSeries() {
@@ -381,7 +381,7 @@ public class Instance {
   public Instance copyWithNewId(String newId) {
     return new Instance(newId, this.hrid, this.source, this.title, this.instanceTypeId)
             .setAlternativeTitles(alternativeTitles)
-            .setEdition(edition)
+            .setEditions(editions)
             .setSeries(series)
             .setIdentifiers(identifiers)
             .setContributors(contributors)
@@ -411,7 +411,7 @@ public class Instance {
   public Instance copyInstance() {
     return new Instance(this.id, this.hrid, this.source, this.title, this.instanceTypeId)
             .setAlternativeTitles(alternativeTitles)
-            .setEdition(edition)
+            .setEditions(editions)
             .setSeries(series)
             .setIdentifiers(identifiers)
             .setContributors(contributors)

@@ -1,3 +1,9 @@
+## 10.0.0 Unreleased
+* Removes `instance.edition` (MODINV-78)
+* Adds `instance.editions` (MODINV-78)
+* Provides `inventory` interface 7.0 (MODINV-78)
+* Requires `instance-storage` interface version 5.0 (MODINV-78)
+
 ## 9.5.0 2018-09-13
 
 * Propagates more properties from `instance-storage` (MODINV-71)
