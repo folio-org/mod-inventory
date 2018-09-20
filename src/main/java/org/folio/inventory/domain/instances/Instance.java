@@ -31,7 +31,6 @@ public class Instance {
   public static final String LANGUAGES_KEY = "languages";
   public static final String NOTES_KEY = "notes";
   public static final String MODE_OF_ISSUANCE_ID_KEY = "modeOfIssuanceId";
-  public static final String CATALOGING_LEVEL_ID_KEY = "catalogingLevelId";
   public static final String CATALOGED_DATE_KEY = "catalogedDate";
   public static final String PREVIOUSLY_HELD_KEY = "previouslyHeld";
   public static final String STAFF_SUPPRESS_KEY = "staffSuppress";
@@ -65,7 +64,6 @@ public class Instance {
   private List<String> languages = new ArrayList();
   private List<String> notes = new ArrayList();
   private String modeOfIssuanceId;
-  private String catalogingLevelId;
   private String catalogedDate;
   private Boolean previouslyHeld;
   private Boolean staffSuppress;
@@ -177,11 +175,6 @@ public class Instance {
 
   public Instance setModeOfIssuanceId(String modeOfIssuanceId) {
     this.modeOfIssuanceId = modeOfIssuanceId;
-    return this;
-  }
-
-  public Instance setCatalogingLevelId(String catalogingLevelId) {
-    this.catalogingLevelId = catalogingLevelId;
     return this;
   }
 
@@ -327,10 +320,6 @@ public class Instance {
     return modeOfIssuanceId;
   }
 
-  public String getCatalogingLevelId() {
-    return catalogingLevelId;
-  }
-
   public String getCatalogedDate() {
     return catalogedDate;
   }
@@ -385,7 +374,6 @@ public class Instance {
             .setLanguages(languages)
             .setNotes(notes)
             .setModeOfIssuanceId(modeOfIssuanceId)
-            .setCatalogingLevelId(catalogingLevelId)
             .setCatalogedDate(catalogedDate)
             .setPreviouslyHeld(previouslyHeld)
             .setStaffSuppress(staffSuppress)
@@ -414,7 +402,6 @@ public class Instance {
             .setLanguages(languages)
             .setNotes(notes)
             .setModeOfIssuanceId(modeOfIssuanceId)
-            .setCatalogingLevelId(catalogingLevelId)
             .setCatalogedDate(catalogedDate)
             .setPreviouslyHeld(previouslyHeld)
             .setStaffSuppress(staffSuppress)
