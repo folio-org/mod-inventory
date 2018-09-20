@@ -64,7 +64,6 @@ class ExternalStorageModuleInstanceCollection
     instanceToSend.put(Instance.LANGUAGES_KEY, instance.getLanguages());
     instanceToSend.put(Instance.NOTES_KEY, instance.getNotes());
     instanceToSend.put(Instance.MODE_OF_ISSUANCE_ID_KEY, instance.getModeOfIssuanceId());
-    instanceToSend.put(Instance.CATALOGING_LEVEL_ID_KEY, instance.getCatalogingLevelId());
     instanceToSend.put(Instance.CATALOGED_DATE_KEY, instance.getCatalogedDate());
     instanceToSend.put(Instance.PREVIOUSLY_HELD_KEY, instance.getPreviouslyHeld());
     instanceToSend.put(Instance.STAFF_SUPPRESS_KEY, instance.getStaffSuppress());
@@ -147,7 +146,6 @@ class ExternalStorageModuleInstanceCollection
       .setLanguages(jsonArrayAsListOfStrings(instanceFromServer, Instance.LANGUAGES_KEY))
       .setNotes(jsonArrayAsListOfStrings(instanceFromServer, Instance.NOTES_KEY))
       .setModeOfIssuanceId(instanceFromServer.getString(Instance.MODE_OF_ISSUANCE_ID_KEY))
-      .setCatalogingLevelId(instanceFromServer.getString(Instance.CATALOGING_LEVEL_ID_KEY))
       .setCatalogedDate(instanceFromServer.getString(Instance.CATALOGED_DATE_KEY))
       .setPreviouslyHeld(instanceFromServer.getBoolean(Instance.PREVIOUSLY_HELD_KEY))
       .setStaffSuppress(instanceFromServer.getBoolean(Instance.STAFF_SUPPRESS_KEY))

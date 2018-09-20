@@ -451,7 +451,6 @@ public class Instances {
     putIfNotNull(resp, Instance.NOTES_KEY, instance.getNotes());
     putIfNotNull(resp, Instance.MODE_OF_ISSUANCE_ID_KEY, instance.getModeOfIssuanceId());
     putIfNotNull(resp, Instance.CATALOGED_DATE_KEY, instance.getCatalogedDate());
-    putIfNotNull(resp, Instance.CATALOGING_LEVEL_ID_KEY, instance.getCatalogingLevelId());
     putIfNotNull(resp, Instance.PREVIOUSLY_HELD_KEY, instance.getPreviouslyHeld());
     putIfNotNull(resp, Instance.STAFF_SUPPRESS_KEY, instance.getStaffSuppress());
     putIfNotNull(resp, Instance.DISCOVERY_SUPPRESS_KEY, instance.getDiscoverySuppress());
@@ -550,7 +549,6 @@ public class Instances {
       .setLanguages(toListOfStrings(instanceRequest, Instance.LANGUAGES_KEY))
       .setNotes(toListOfStrings(instanceRequest, Instance.NOTES_KEY))
       .setModeOfIssuanceId(instanceRequest.getString(Instance.MODE_OF_ISSUANCE_ID_KEY))
-      .setCatalogingLevelId(instanceRequest.getString(Instance.CATALOGING_LEVEL_ID_KEY))
       .setCatalogedDate(instanceRequest.getString(Instance.CATALOGED_DATE_KEY))
       .setPreviouslyHeld(instanceRequest.getBoolean(Instance.PREVIOUSLY_HELD_KEY))
       .setStaffSuppress(instanceRequest.getBoolean(Instance.STAFF_SUPPRESS_KEY))

@@ -1,3 +1,9 @@
+## 10.0.0 Unreleased
+
+* Removes property `categoryLevelId` (MODINV-82)
+* Provides `inventory` interface 7.0 (MODINV-82)
+* Requires `instance-storage` interface version 5.0 (MODINV-82)
+
 ## 9.5.0 2018-09-13
 
 * Propagates more properties from `instance-storage` (MODINV-71)
