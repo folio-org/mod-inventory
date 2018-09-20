@@ -1,3 +1,9 @@
+## 10.0.0 Unreleased
+
+* Removes property `instance.urls` (MODINV-81)
+* Provides `inventory` interface 7.0 (MODINV-81)
+* Requires `instance-storage` interface version 5.0 (MODINV-81)
+
 ## 9.5.0 2018-09-13
 
 * Propagates more properties from `instance-storage` (MODINV-71)

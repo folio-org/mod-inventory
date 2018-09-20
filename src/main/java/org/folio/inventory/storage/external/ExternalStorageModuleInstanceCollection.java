@@ -57,7 +57,6 @@ class ExternalStorageModuleInstanceCollection
     instanceToSend.put(Instance.PUBLICATION_FREQUENCY_KEY, instance.getPublicationFrequency());
     instanceToSend.put(Instance.PUBLICATION_RANGE_KEY, instance.getPublicationRange());
     instanceToSend.put(Instance.ELECTRONIC_ACCESS_KEY, instance.getElectronicAccess());
-    instanceToSend.put(Instance.URLS_KEY, instance.getUrls());
     includeIfPresent(instanceToSend, Instance.INSTANCE_TYPE_ID_KEY, instance.getInstanceTypeId());
     includeIfPresent(instanceToSend, Instance.INSTANCE_FORMAT_ID_KEY, instance.getInstanceFormatId());
     instanceToSend.put(Instance.PHYSICAL_DESCRIPTIONS_KEY, instance.getPhysicalDescriptions());
@@ -141,7 +140,6 @@ class ExternalStorageModuleInstanceCollection
       .setPublicationFrequency(jsonArrayAsListOfStrings(instanceFromServer, Instance.PUBLICATION_FREQUENCY_KEY))
       .setPublicationRange(jsonArrayAsListOfStrings(instanceFromServer, Instance.PUBLICATION_RANGE_KEY))
       .setElectronicAccess(mappedElectronicAccess)
-      .setUrls(jsonArrayAsListOfStrings(instanceFromServer, Instance.URLS_KEY))
       .setInstanceFormatId(instanceFromServer.getString(Instance.INSTANCE_FORMAT_ID_KEY))
       .setPhysicalDescriptions(jsonArrayAsListOfStrings(instanceFromServer, Instance.PHYSICAL_DESCRIPTIONS_KEY))
       .setLanguages(jsonArrayAsListOfStrings(instanceFromServer, Instance.LANGUAGES_KEY))
