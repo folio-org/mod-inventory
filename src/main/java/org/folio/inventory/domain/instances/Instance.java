@@ -15,7 +15,7 @@ public class Instance {
   public static final String CHILD_INSTANCES_KEY = "childInstances";
   public static final String TITLE_KEY = "title";
   public static final String ALTERNATIVE_TITLES_KEY = "alternativeTitles";
-  public static final String EDITION_KEY = "edition";
+  public static final String EDITIONS_KEY = "editions";
   public static final String SERIES_KEY = "series";
   public static final String IDENTIFIERS_KEY = "identifiers";
   public static final String CONTRIBUTORS_KEY = "contributors";
@@ -25,14 +25,12 @@ public class Instance {
   public static final String PUBLICATION_FREQUENCY_KEY = "publicationFrequency";
   public static final String PUBLICATION_RANGE_KEY = "publicationRange";
   public static final String ELECTRONIC_ACCESS_KEY = "electronicAccess";
-  public static final String URLS_KEY = "urls";
   public static final String INSTANCE_TYPE_ID_KEY = "instanceTypeId";
   public static final String INSTANCE_FORMAT_ID_KEY = "instanceFormatId";
   public static final String PHYSICAL_DESCRIPTIONS_KEY = "physicalDescriptions";
   public static final String LANGUAGES_KEY = "languages";
   public static final String NOTES_KEY = "notes";
   public static final String MODE_OF_ISSUANCE_ID_KEY = "modeOfIssuanceId";
-  public static final String CATALOGING_LEVEL_ID_KEY = "catalogingLevelId";
   public static final String CATALOGED_DATE_KEY = "catalogedDate";
   public static final String PREVIOUSLY_HELD_KEY = "previouslyHeld";
   public static final String STAFF_SUPPRESS_KEY = "staffSuppress";
@@ -50,7 +48,7 @@ public class Instance {
   private List<InstanceRelationshipToChild> childInstances = new ArrayList();
   private final String title;
   private List<String> alternativeTitles = new ArrayList();
-  private String edition;
+  private List<String> editions = new ArrayList();
   private List<String> series = new ArrayList();
   private List<Identifier> identifiers = new ArrayList();
   private List<Contributor> contributors = new ArrayList();
@@ -60,14 +58,12 @@ public class Instance {
   private List<String> publicationFrequency = new ArrayList();
   private List<String> publicationRange = new ArrayList();
   private List<ElectronicAccess> electronicAccess = new ArrayList();
-  private List<String> urls = new ArrayList();
   private final String instanceTypeId;
   private String instanceFormatId;
   private List<String> physicalDescriptions = new ArrayList();
   private List<String> languages = new ArrayList();
   private List<String> notes = new ArrayList();
   private String modeOfIssuanceId;
-  private String catalogingLevelId;
   private String catalogedDate;
   private Boolean previouslyHeld;
   private Boolean staffSuppress;
@@ -107,8 +103,8 @@ public class Instance {
     return this;
   }
 
-  public Instance setEdition(String edition) {
-    this.edition = edition;
+  public Instance setEditions(List<String> editions) {
+    this.editions = editions;
     return this;
   }
 
@@ -157,11 +153,6 @@ public class Instance {
     return this;
   }
 
-  public Instance setUrls(List<String> urls) {
-    this.urls = urls;
-    return this;
-  }
-
   public Instance setInstanceFormatId(String instanceFormatId) {
     this.instanceFormatId = instanceFormatId;
     return this;
@@ -184,11 +175,6 @@ public class Instance {
 
   public Instance setModeOfIssuanceId(String modeOfIssuanceId) {
     this.modeOfIssuanceId = modeOfIssuanceId;
-    return this;
-  }
-
-  public Instance setCatalogingLevelId(String catalogingLevelId) {
-    this.catalogingLevelId = catalogingLevelId;
     return this;
   }
 
@@ -269,8 +255,8 @@ public class Instance {
     return alternativeTitles;
   }
 
-  public String getEdition() {
-    return edition;
+  public List<String> getEditions() {
+    return editions;
   }
 
   public List<String> getSeries() {
@@ -309,10 +295,6 @@ public class Instance {
     return electronicAccess;
   }
 
-  public List<String> getUrls() {
-    return urls;
-  }
-
   public String getInstanceTypeId() {
     return instanceTypeId;
   }
@@ -336,10 +318,6 @@ public class Instance {
 
   public String getModeOfIssuanceId() {
     return modeOfIssuanceId;
-  }
-
-  public String getCatalogingLevelId() {
-    return catalogingLevelId;
   }
 
   public String getCatalogedDate() {
@@ -381,7 +359,7 @@ public class Instance {
   public Instance copyWithNewId(String newId) {
     return new Instance(newId, this.hrid, this.source, this.title, this.instanceTypeId)
             .setAlternativeTitles(alternativeTitles)
-            .setEdition(edition)
+            .setEditions(editions)
             .setSeries(series)
             .setIdentifiers(identifiers)
             .setContributors(contributors)
@@ -391,13 +369,11 @@ public class Instance {
             .setPublicationFrequency(publicationFrequency)
             .setPublicationRange(publicationRange)
             .setElectronicAccess(electronicAccess)
-            .setUrls(urls)
             .setInstanceFormatId(instanceFormatId)
             .setPhysicalDescriptions(physicalDescriptions)
             .setLanguages(languages)
             .setNotes(notes)
             .setModeOfIssuanceId(modeOfIssuanceId)
-            .setCatalogingLevelId(catalogingLevelId)
             .setCatalogedDate(catalogedDate)
             .setPreviouslyHeld(previouslyHeld)
             .setStaffSuppress(staffSuppress)
@@ -411,7 +387,7 @@ public class Instance {
   public Instance copyInstance() {
     return new Instance(this.id, this.hrid, this.source, this.title, this.instanceTypeId)
             .setAlternativeTitles(alternativeTitles)
-            .setEdition(edition)
+            .setEditions(editions)
             .setSeries(series)
             .setIdentifiers(identifiers)
             .setContributors(contributors)
@@ -421,13 +397,11 @@ public class Instance {
             .setPublicationFrequency(publicationFrequency)
             .setPublicationRange(publicationRange)
             .setElectronicAccess(electronicAccess)
-            .setUrls(urls)
             .setInstanceFormatId(instanceFormatId)
             .setPhysicalDescriptions(physicalDescriptions)
             .setLanguages(languages)
             .setNotes(notes)
             .setModeOfIssuanceId(modeOfIssuanceId)
-            .setCatalogingLevelId(catalogingLevelId)
             .setCatalogedDate(catalogedDate)
             .setPreviouslyHeld(previouslyHeld)
             .setStaffSuppress(staffSuppress)

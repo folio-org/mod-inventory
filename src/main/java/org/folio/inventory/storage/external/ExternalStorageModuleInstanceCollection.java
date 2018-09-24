@@ -47,7 +47,7 @@ class ExternalStorageModuleInstanceCollection
     includeIfPresent(instanceToSend, Instance.SOURCE_KEY, instance.getSource());
     instanceToSend.put(Instance.TITLE_KEY, instance.getTitle());
     instanceToSend.put(Instance.ALTERNATIVE_TITLES_KEY, instance.getAlternativeTitles());
-    includeIfPresent(instanceToSend, Instance.EDITION_KEY, instance.getEdition());
+    instanceToSend.put(Instance.EDITIONS_KEY, instance.getEditions());
     instanceToSend.put(Instance.SERIES_KEY, instance.getSeries());
     instanceToSend.put(Instance.IDENTIFIERS_KEY, instance.getIdentifiers());
     instanceToSend.put(Instance.CONTRIBUTORS_KEY, instance.getContributors());
@@ -57,14 +57,12 @@ class ExternalStorageModuleInstanceCollection
     instanceToSend.put(Instance.PUBLICATION_FREQUENCY_KEY, instance.getPublicationFrequency());
     instanceToSend.put(Instance.PUBLICATION_RANGE_KEY, instance.getPublicationRange());
     instanceToSend.put(Instance.ELECTRONIC_ACCESS_KEY, instance.getElectronicAccess());
-    instanceToSend.put(Instance.URLS_KEY, instance.getUrls());
     includeIfPresent(instanceToSend, Instance.INSTANCE_TYPE_ID_KEY, instance.getInstanceTypeId());
     includeIfPresent(instanceToSend, Instance.INSTANCE_FORMAT_ID_KEY, instance.getInstanceFormatId());
     instanceToSend.put(Instance.PHYSICAL_DESCRIPTIONS_KEY, instance.getPhysicalDescriptions());
     instanceToSend.put(Instance.LANGUAGES_KEY, instance.getLanguages());
     instanceToSend.put(Instance.NOTES_KEY, instance.getNotes());
     instanceToSend.put(Instance.MODE_OF_ISSUANCE_ID_KEY, instance.getModeOfIssuanceId());
-    instanceToSend.put(Instance.CATALOGING_LEVEL_ID_KEY, instance.getCatalogingLevelId());
     instanceToSend.put(Instance.CATALOGED_DATE_KEY, instance.getCatalogedDate());
     instanceToSend.put(Instance.PREVIOUSLY_HELD_KEY, instance.getPreviouslyHeld());
     instanceToSend.put(Instance.STAFF_SUPPRESS_KEY, instance.getStaffSuppress());
@@ -131,7 +129,7 @@ class ExternalStorageModuleInstanceCollection
       instanceFromServer.getString(Instance.TITLE_KEY),
       instanceFromServer.getString(Instance.INSTANCE_TYPE_ID_KEY))
       .setAlternativeTitles(jsonArrayAsListOfStrings(instanceFromServer, Instance.ALTERNATIVE_TITLES_KEY))
-      .setEdition(instanceFromServer.getString(Instance.EDITION_KEY))
+      .setEditions(jsonArrayAsListOfStrings(instanceFromServer, Instance.EDITIONS_KEY))
       .setSeries(jsonArrayAsListOfStrings(instanceFromServer, Instance.SERIES_KEY))
       .setIdentifiers(mappedIdentifiers)
       .setContributors(mappedContributors)
@@ -141,13 +139,11 @@ class ExternalStorageModuleInstanceCollection
       .setPublicationFrequency(jsonArrayAsListOfStrings(instanceFromServer, Instance.PUBLICATION_FREQUENCY_KEY))
       .setPublicationRange(jsonArrayAsListOfStrings(instanceFromServer, Instance.PUBLICATION_RANGE_KEY))
       .setElectronicAccess(mappedElectronicAccess)
-      .setUrls(jsonArrayAsListOfStrings(instanceFromServer, Instance.URLS_KEY))
       .setInstanceFormatId(instanceFromServer.getString(Instance.INSTANCE_FORMAT_ID_KEY))
       .setPhysicalDescriptions(jsonArrayAsListOfStrings(instanceFromServer, Instance.PHYSICAL_DESCRIPTIONS_KEY))
       .setLanguages(jsonArrayAsListOfStrings(instanceFromServer, Instance.LANGUAGES_KEY))
       .setNotes(jsonArrayAsListOfStrings(instanceFromServer, Instance.NOTES_KEY))
       .setModeOfIssuanceId(instanceFromServer.getString(Instance.MODE_OF_ISSUANCE_ID_KEY))
-      .setCatalogingLevelId(instanceFromServer.getString(Instance.CATALOGING_LEVEL_ID_KEY))
       .setCatalogedDate(instanceFromServer.getString(Instance.CATALOGED_DATE_KEY))
       .setPreviouslyHeld(instanceFromServer.getBoolean(Instance.PREVIOUSLY_HELD_KEY))
       .setStaffSuppress(instanceFromServer.getBoolean(Instance.STAFF_SUPPRESS_KEY))

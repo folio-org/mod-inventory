@@ -433,7 +433,7 @@ public class Instances {
     putIfNotNull(resp, Instance.PARENT_INSTANCES_KEY, parentInstances);
     putIfNotNull(resp, Instance.CHILD_INSTANCES_KEY, childInstances);
     putIfNotNull(resp, Instance.ALTERNATIVE_TITLES_KEY, instance.getAlternativeTitles());
-    putIfNotNull(resp, Instance.EDITION_KEY, instance.getEdition());
+    putIfNotNull(resp, Instance.EDITIONS_KEY, instance.getEditions());
     putIfNotNull(resp, Instance.SERIES_KEY, instance.getSeries());
     putIfNotNull(resp, Instance.IDENTIFIERS_KEY, instance.getIdentifiers());
     putIfNotNull(resp, Instance.CONTRIBUTORS_KEY, instance.getContributors());
@@ -443,7 +443,6 @@ public class Instances {
     putIfNotNull(resp, Instance.PUBLICATION_FREQUENCY_KEY, instance.getPublicationFrequency());
     putIfNotNull(resp, Instance.PUBLICATION_RANGE_KEY, instance.getPublicationRange());
     putIfNotNull(resp, Instance.ELECTRONIC_ACCESS_KEY, instance.getElectronicAccess());
-    putIfNotNull(resp, Instance.URLS_KEY, instance.getUrls());
     putIfNotNull(resp, Instance.INSTANCE_TYPE_ID_KEY, instance.getInstanceTypeId());
     putIfNotNull(resp, Instance.INSTANCE_FORMAT_ID_KEY, instance.getInstanceFormatId());
     putIfNotNull(resp, Instance.PHYSICAL_DESCRIPTIONS_KEY, instance.getPhysicalDescriptions());
@@ -451,7 +450,6 @@ public class Instances {
     putIfNotNull(resp, Instance.NOTES_KEY, instance.getNotes());
     putIfNotNull(resp, Instance.MODE_OF_ISSUANCE_ID_KEY, instance.getModeOfIssuanceId());
     putIfNotNull(resp, Instance.CATALOGED_DATE_KEY, instance.getCatalogedDate());
-    putIfNotNull(resp, Instance.CATALOGING_LEVEL_ID_KEY, instance.getCatalogingLevelId());
     putIfNotNull(resp, Instance.PREVIOUSLY_HELD_KEY, instance.getPreviouslyHeld());
     putIfNotNull(resp, Instance.STAFF_SUPPRESS_KEY, instance.getStaffSuppress());
     putIfNotNull(resp, Instance.DISCOVERY_SUPPRESS_KEY, instance.getDiscoverySuppress());
@@ -534,7 +532,7 @@ public class Instances {
       .setParentInstances(parentInstances)
       .setChildInstances(childInstances)
       .setAlternativeTitles(toListOfStrings(instanceRequest, Instance.ALTERNATIVE_TITLES_KEY))
-      .setEdition(instanceRequest.getString(Instance.EDITION_KEY))
+      .setEditions(toListOfStrings(instanceRequest, Instance.EDITIONS_KEY))
       .setSeries(toListOfStrings(instanceRequest, Instance.SERIES_KEY))
       .setIdentifiers(identifiers)
       .setContributors(contributors)
@@ -544,13 +542,11 @@ public class Instances {
       .setPublicationFrequency(toListOfStrings(instanceRequest, Instance.PUBLICATION_FREQUENCY_KEY))
       .setPublicationRange(toListOfStrings(instanceRequest, Instance.PUBLICATION_RANGE_KEY))
       .setElectronicAccess(electronicAccess)
-      .setUrls(toListOfStrings(instanceRequest, Instance.URLS_KEY))
       .setInstanceFormatId(instanceRequest.getString(Instance.INSTANCE_FORMAT_ID_KEY))
       .setPhysicalDescriptions(toListOfStrings(instanceRequest, Instance.PHYSICAL_DESCRIPTIONS_KEY))
       .setLanguages(toListOfStrings(instanceRequest, Instance.LANGUAGES_KEY))
       .setNotes(toListOfStrings(instanceRequest, Instance.NOTES_KEY))
       .setModeOfIssuanceId(instanceRequest.getString(Instance.MODE_OF_ISSUANCE_ID_KEY))
-      .setCatalogingLevelId(instanceRequest.getString(Instance.CATALOGING_LEVEL_ID_KEY))
       .setCatalogedDate(instanceRequest.getString(Instance.CATALOGED_DATE_KEY))
       .setPreviouslyHeld(instanceRequest.getBoolean(Instance.PREVIOUSLY_HELD_KEY))
       .setStaffSuppress(instanceRequest.getBoolean(Instance.STAFF_SUPPRESS_KEY))
