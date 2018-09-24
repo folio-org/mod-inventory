@@ -213,7 +213,7 @@
           "publicNote": {
             "type": "string"
           },
-          "relationship": {
+          "relationshipId": {
             "type": "string"
           }
         },
