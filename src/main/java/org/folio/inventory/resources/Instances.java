@@ -445,7 +445,7 @@ public class Instances {
     putIfNotNull(resp, Instance.ELECTRONIC_ACCESS_KEY, instance.getElectronicAccess());
     putIfNotNull(resp, Instance.URLS_KEY, instance.getUrls());
     putIfNotNull(resp, Instance.INSTANCE_TYPE_ID_KEY, instance.getInstanceTypeId());
-    putIfNotNull(resp, Instance.INSTANCE_FORMAT_ID_KEY, instance.getInstanceFormatId());
+    putIfNotNull(resp, Instance.INSTANCE_FORMAT_IDS_KEY, instance.getInstanceFormatIds());
     putIfNotNull(resp, Instance.PHYSICAL_DESCRIPTIONS_KEY, instance.getPhysicalDescriptions());
     putIfNotNull(resp, Instance.LANGUAGES_KEY, instance.getLanguages());
     putIfNotNull(resp, Instance.NOTES_KEY, instance.getNotes());
@@ -545,7 +545,7 @@ public class Instances {
       .setPublicationRange(toListOfStrings(instanceRequest, Instance.PUBLICATION_RANGE_KEY))
       .setElectronicAccess(electronicAccess)
       .setUrls(toListOfStrings(instanceRequest, Instance.URLS_KEY))
-      .setInstanceFormatId(instanceRequest.getString(Instance.INSTANCE_FORMAT_ID_KEY))
+      .setInstanceFormatIds(toListOfStrings(instanceRequest, Instance.INSTANCE_FORMAT_IDS_KEY))
       .setPhysicalDescriptions(toListOfStrings(instanceRequest, Instance.PHYSICAL_DESCRIPTIONS_KEY))
       .setLanguages(toListOfStrings(instanceRequest, Instance.LANGUAGES_KEY))
       .setNotes(toListOfStrings(instanceRequest, Instance.NOTES_KEY))

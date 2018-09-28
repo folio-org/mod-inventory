@@ -59,7 +59,7 @@ class ExternalStorageModuleInstanceCollection
     instanceToSend.put(Instance.ELECTRONIC_ACCESS_KEY, instance.getElectronicAccess());
     instanceToSend.put(Instance.URLS_KEY, instance.getUrls());
     includeIfPresent(instanceToSend, Instance.INSTANCE_TYPE_ID_KEY, instance.getInstanceTypeId());
-    includeIfPresent(instanceToSend, Instance.INSTANCE_FORMAT_ID_KEY, instance.getInstanceFormatId());
+    instanceToSend.put(Instance.INSTANCE_FORMAT_IDS_KEY, instance.getInstanceFormatIds());
     instanceToSend.put(Instance.PHYSICAL_DESCRIPTIONS_KEY, instance.getPhysicalDescriptions());
     instanceToSend.put(Instance.LANGUAGES_KEY, instance.getLanguages());
     instanceToSend.put(Instance.NOTES_KEY, instance.getNotes());
@@ -142,7 +142,7 @@ class ExternalStorageModuleInstanceCollection
       .setPublicationRange(jsonArrayAsListOfStrings(instanceFromServer, Instance.PUBLICATION_RANGE_KEY))
       .setElectronicAccess(mappedElectronicAccess)
       .setUrls(jsonArrayAsListOfStrings(instanceFromServer, Instance.URLS_KEY))
-      .setInstanceFormatId(instanceFromServer.getString(Instance.INSTANCE_FORMAT_ID_KEY))
+      .setInstanceFormatIds(jsonArrayAsListOfStrings(instanceFromServer, Instance.INSTANCE_FORMAT_IDS_KEY))
       .setPhysicalDescriptions(jsonArrayAsListOfStrings(instanceFromServer, Instance.PHYSICAL_DESCRIPTIONS_KEY))
       .setLanguages(jsonArrayAsListOfStrings(instanceFromServer, Instance.LANGUAGES_KEY))
       .setNotes(jsonArrayAsListOfStrings(instanceFromServer, Instance.NOTES_KEY))
