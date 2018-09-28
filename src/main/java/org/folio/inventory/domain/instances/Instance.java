@@ -26,7 +26,7 @@ public class Instance {
   public static final String PUBLICATION_RANGE_KEY = "publicationRange";
   public static final String ELECTRONIC_ACCESS_KEY = "electronicAccess";
   public static final String INSTANCE_TYPE_ID_KEY = "instanceTypeId";
-  public static final String INSTANCE_FORMAT_ID_KEY = "instanceFormatId";
+  public static final String INSTANCE_FORMAT_IDS_KEY = "instanceFormatIds";
   public static final String PHYSICAL_DESCRIPTIONS_KEY = "physicalDescriptions";
   public static final String LANGUAGES_KEY = "languages";
   public static final String NOTES_KEY = "notes";
@@ -59,7 +59,7 @@ public class Instance {
   private List<String> publicationRange = new ArrayList();
   private List<ElectronicAccess> electronicAccess = new ArrayList();
   private final String instanceTypeId;
-  private String instanceFormatId;
+  private List<String> instanceFormatIds;
   private List<String> physicalDescriptions = new ArrayList();
   private List<String> languages = new ArrayList();
   private List<String> notes = new ArrayList();
@@ -153,8 +153,8 @@ public class Instance {
     return this;
   }
 
-  public Instance setInstanceFormatId(String instanceFormatId) {
-    this.instanceFormatId = instanceFormatId;
+  public Instance setInstanceFormatIds(List<String> instanceFormatIds) {
+    this.instanceFormatIds = instanceFormatIds;
     return this;
   }
 
@@ -299,8 +299,8 @@ public class Instance {
     return instanceTypeId;
   }
 
-  public String getInstanceFormatId() {
-    return instanceFormatId;
+  public List<String> getInstanceFormatIds() {
+    return instanceFormatIds;
   }
 
   public List<String> getPhysicalDescriptions() {
@@ -369,7 +369,7 @@ public class Instance {
             .setPublicationFrequency(publicationFrequency)
             .setPublicationRange(publicationRange)
             .setElectronicAccess(electronicAccess)
-            .setInstanceFormatId(instanceFormatId)
+            .setInstanceFormatIds(instanceFormatIds)
             .setPhysicalDescriptions(physicalDescriptions)
             .setLanguages(languages)
             .setNotes(notes)
@@ -397,7 +397,7 @@ public class Instance {
             .setPublicationFrequency(publicationFrequency)
             .setPublicationRange(publicationRange)
             .setElectronicAccess(electronicAccess)
-            .setInstanceFormatId(instanceFormatId)
+            .setInstanceFormatIds(instanceFormatIds)
             .setPhysicalDescriptions(physicalDescriptions)
             .setLanguages(languages)
             .setNotes(notes)
