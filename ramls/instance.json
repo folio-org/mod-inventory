@@ -70,7 +70,7 @@
       "uniqueItems": true
     },
     "editions": {
-      "type": "array"
+      "type": "array",
       "items": {
         "type": "string"
       },
