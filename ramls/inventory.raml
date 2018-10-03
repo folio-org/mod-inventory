@@ -1,4 +1,4 @@
-#%RAML 0.8
+#%RAML 1.0
 title: Inventory API
 version: v7.0
 protocols: [ HTTP, HTTPS ]
@@ -8,24 +8,22 @@ documentation:
   - title: "Inventory API"
     content: <b>API for interacting with an inventory of physical resources</b>
 
-schemas:
- - item.json: !include item.json
- - items: !include items.json
- - instance.json: !include instance.json
- - instances: !include instances.json
- - context: !include instance_context.json
- - ingest-status: !include ingest_status.json
- - raml-util/schemas/metadata.schema: !include raml-util/schemas/metadata.schema
+types:
+  item: !include item.json
+  items: !include items.json
+  instance.json: !include instance.json
+  instances: !include instances.json
+  context: !include instance_context.json
+  ingest-status: !include ingest_status.json
 
 traits:
- - secured: !include raml-util/traits/auth.raml
- - language: !include raml-util/traits/language.raml
- - pageable: !include raml-util/traits/pageable.raml
- - searchable: !include raml-util/traits/searchable.raml
+  language: !include raml-util/traits/language.raml
+  pageable: !include raml-util/traits/pageable.raml
+  searchable: !include raml-util/traits/searchable.raml
 
 resourceTypes:
- - collection: !include raml-util/rtypes/collection.raml
- - collection-item: !include raml-util/rtypes/item-collection.raml
+  collection: !include raml-util/rtypes/collection.raml
+  collection-item: !include raml-util/rtypes/item-collection.raml
 
 /inventory:
   /items:
@@ -34,7 +32,7 @@ resourceTypes:
       collection:
         exampleCollection: !include examples/items_get.json
         schemaCollection: items
-        schemaItem: item.json
+        schemaItem: item
         exampleItem: !include examples/item_get.json
     get:
       is: [pageable,
@@ -49,7 +47,7 @@ resourceTypes:
       type:
         collection-item:
           exampleItem: !include examples/item_get.json
-          schema: item.json
+          schema: item
       get:
   /instances:
     displayName: Instances
@@ -87,7 +85,7 @@ resourceTypes:
       post:
         body:
           multipart/form-data:
-            formParameters:
+            properties:
               file:
                 description: MODS file containing items to ingest
                 required: true
