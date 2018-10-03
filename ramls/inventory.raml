@@ -9,21 +9,21 @@ documentation:
     content: <b>API for interacting with an inventory of physical resources</b>
 
 types:
- item: !include item.json
- items: !include items.json
- instance.json: !include instance.json
- instances: !include instances.json
- context: !include instance_context.json
- ingest-status: !include ingest_status.json
+  item: !include item.json
+  items: !include items.json
+  instance.json: !include instance.json
+  instances: !include instances.json
+  context: !include instance_context.json
+  ingest-status: !include ingest_status.json
 
 traits:
- language: !include raml-util/traits/language.raml
- pageable: !include raml-util/traits/pageable.raml
- searchable: !include raml-util/traits/searchable.raml
+  language: !include raml-util/traits/language.raml
+  pageable: !include raml-util/traits/pageable.raml
+  searchable: !include raml-util/traits/searchable.raml
 
 resourceTypes:
- collection: !include raml-util/rtypes/collection.raml
- collection-item: !include raml-util/rtypes/item-collection.raml
+  collection: !include raml-util/rtypes/collection.raml
+  collection-item: !include raml-util/rtypes/item-collection.raml
 
 /inventory:
   /items:
