@@ -2,10 +2,13 @@
 
 * Removes `instance.edition` (MODINV-78)
 * Adds `instance.editions` (MODINV-78)
+* Removes `instanceFormatId` (MODINV-86)
+* Adds `instanceFormatIds` (MODINV-86)
 * Provides `inventory` interface 7.0 (MODINV-83)
 * Requires `instance-storage` interface version 5.0 (MODINV-83)
 * Removes property `instance.urls` (MODINV-81)
 * Removes property `categoryLevelId` (MODINV-82)
+* Renames `instance.electronicAccess.relationship` to `relationshipId` (MODINV-84)
 
 ## 9.5.0 2018-09-13
 
