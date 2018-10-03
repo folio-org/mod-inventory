@@ -12,25 +12,25 @@ public class ElectronicAccess {
   public static final String LINK_TEXT_KEY = "linkText";
   public static final String MATERIALS_SPECIFICATION_KEY = "materialsSpecification";
   public static final String PUBLIC_NOTE_KEY = "publicNote";
-  public static final String RELATIONSHIP_KEY = "relationship";
+  public static final String RELATIONSHIP_ID_KEY = "relationshipId";
 
   public final String uri;
   public final String linkText;
   public final String materialsSpecification;
   public final String publicNote;
-  public final String relationship;
+  public final String relationshipId;
 
   public ElectronicAccess(
           String uri,
           String linkText,
           String materialsSpecification,
           String publicNote,
-          String relationship) {
+          String relationshipId) {
     this.uri = uri;
     this.linkText = linkText;
     this.materialsSpecification = materialsSpecification;
     this.publicNote = publicNote;
-    this.relationship = relationship;
+    this.relationshipId = relationshipId;
   }
 
     public ElectronicAccess(JsonObject json) {
@@ -38,7 +38,7 @@ public class ElectronicAccess {
          json.getString(LINK_TEXT_KEY),
          json.getString(MATERIALS_SPECIFICATION_KEY),
          json.getString(PUBLIC_NOTE_KEY),
-         json.getString(RELATIONSHIP_KEY));
+         json.getString(RELATIONSHIP_ID_KEY));
   }
 
 }
