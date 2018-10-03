@@ -1,5 +1,6 @@
 ## 10.0.0 Unreleased
 
+* Upgrades to RAML 1.0 (MODINV-85)
 * Removes `instance.edition` (MODINV-78)
 * Adds `instance.editions` (MODINV-78)
 * Removes `instanceFormatId` (MODINV-86)
