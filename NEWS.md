@@ -1,5 +1,6 @@
 ## 10.0.0 Unreleased
 
+* Requires `locations` interface 2.0 or 3.0 (MODINV-89)
 * Upgrades to RAML 1.0 (MODINV-85)
 * Removes `instance.edition` (MODINV-78)
 * Adds `instance.editions` (MODINV-78)
