@@ -14,6 +14,7 @@ public class Instance {
   public static final String PARENT_INSTANCES_KEY = "parentInstances";
   public static final String CHILD_INSTANCES_KEY = "childInstances";
   public static final String TITLE_KEY = "title";
+  public static final String INDEX_TITLE_KEY = "indexTitle";
   public static final String ALTERNATIVE_TITLES_KEY = "alternativeTitles";
   public static final String EDITIONS_KEY = "editions";
   public static final String SERIES_KEY = "series";
@@ -47,6 +48,7 @@ public class Instance {
   private List<InstanceRelationshipToParent> parentInstances = new ArrayList();
   private List<InstanceRelationshipToChild> childInstances = new ArrayList();
   private final String title;
+  private String indexTitle;
   private List<String> alternativeTitles = new ArrayList();
   private List<String> editions = new ArrayList();
   private List<String> series = new ArrayList();
@@ -86,6 +88,11 @@ public class Instance {
     this.source = source;
     this.title = title;
     this.instanceTypeId = instanceTypeId;
+  }
+
+  public Instance setIndexTitle(String indexTitle) {
+    this.indexTitle = indexTitle;
+    return this;
   }
 
   public Instance setParentInstances(List<InstanceRelationshipToParent> parentInstances) {
@@ -251,6 +258,10 @@ public class Instance {
     return title;
   }
 
+  public String getIndexTitle() {
+    return indexTitle;
+  }
+
   public List<String> getAlternativeTitles() {
     return alternativeTitles;
   }
@@ -358,6 +369,7 @@ public class Instance {
 
   public Instance copyWithNewId(String newId) {
     return new Instance(newId, this.hrid, this.source, this.title, this.instanceTypeId)
+            .setIndexTitle(indexTitle)
             .setAlternativeTitles(alternativeTitles)
             .setEditions(editions)
             .setSeries(series)
@@ -386,6 +398,7 @@ public class Instance {
 
   public Instance copyInstance() {
     return new Instance(this.id, this.hrid, this.source, this.title, this.instanceTypeId)
+            .setIndexTitle(indexTitle)
             .setAlternativeTitles(alternativeTitles)
             .setEditions(editions)
             .setSeries(series)

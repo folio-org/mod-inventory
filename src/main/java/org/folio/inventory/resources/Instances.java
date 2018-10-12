@@ -430,6 +430,7 @@ public class Instances {
     resp.put("hrid", instance.getHrid());
     resp.put(Instance.SOURCE_KEY, instance.getSource());
     resp.put(Instance.TITLE_KEY, instance.getTitle());
+    putIfNotNull(resp, Instance.INDEX_TITLE_KEY, instance.getIndexTitle());
     putIfNotNull(resp, Instance.PARENT_INSTANCES_KEY, parentInstances);
     putIfNotNull(resp, Instance.CHILD_INSTANCES_KEY, childInstances);
     putIfNotNull(resp, Instance.ALTERNATIVE_TITLES_KEY, instance.getAlternativeTitles());
@@ -529,6 +530,7 @@ public class Instances {
       instanceRequest.getString(Instance.SOURCE_KEY),
       instanceRequest.getString(Instance.TITLE_KEY),
       instanceRequest.getString(Instance.INSTANCE_TYPE_ID_KEY))
+      .setIndexTitle(instanceRequest.getString(Instance.INDEX_TITLE_KEY))
       .setParentInstances(parentInstances)
       .setChildInstances(childInstances)
       .setAlternativeTitles(toListOfStrings(instanceRequest, Instance.ALTERNATIVE_TITLES_KEY))
