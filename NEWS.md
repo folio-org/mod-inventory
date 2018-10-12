@@ -1,4 +1,4 @@
-## 10.0.0 Unreleased
+## 10.0.0 2018-10-12
 
 * Propagates `instance.indexTitle` (MODINV-88)
 * Requires `locations` interface 2.0 or 3.0 (MODINV-89)
