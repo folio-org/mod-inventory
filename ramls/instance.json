@@ -1,5 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "An instance record",
   "type": "object",
   "properties": {
     "@context": {
