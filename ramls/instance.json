@@ -7,13 +7,16 @@
       "type": "string"
     },
     "id": {
-      "type": "string"
+      "type": "string",
+      "description": "The system assigned unique ID of the instance record; UUID"
     },
     "hrid": {
-      "type": "string"
+      "type": "string",
+      "description": "The human readable ID, also called eye readable ID. A system-assigned sequential ID which maps to the Instance ID"
     },
     "source": {
-      "type": "string"
+      "type": "string",
+      "description": "The metadata source and its format of the underlying record to the instance record. (e.g. FOLIO if it's a record created in Inventory;  MARC if it's a MARC record created in MARCcat or EPKB if it's a record coming from eHoldings)"
     },
     "parentInstances": {
       "type": "array",
@@ -61,13 +64,16 @@
       }
     },
     "title": {
-      "type": "string"
+      "type": "string",
+      "description": "The primary title (or label) associated with the resource"
     },
     "indexTitle": {
-      "type": "string"
+      "type": "string",
+      "description": "Title normalized for browsing and searching; based on the title with articles removed"
     },
     "alternativeTitles": {
       "type": "array",
+      "description": "List of alternative titles for the resource (e.g. original language version title of a movie)",
       "items": {
         "type": "string"
       },
@@ -75,6 +81,7 @@
     },
     "editions": {
       "type": "array",
+      "description": "The edition statement, imprint and other publication source information",
       "items": {
         "type": "string"
       },
@@ -82,6 +89,7 @@
     },
     "series": {
       "type": "array",
+      "description": "List of series titles associated with the resource (e.g. Harry Potter)",
       "items": {
         "type": "string"
       },
@@ -89,15 +97,18 @@
     },
     "identifiers": {
       "type": "array",
+      "description": "An extensible set of name-value pairs of identifiers associated with the resource",
       "minItems": 0,
       "items": {
         "type": "object",
         "properties": {
           "value": {
-            "type": "string"
+            "type": "string",
+            "description": "Resource identifier value"
           },
           "identifierTypeId": {
-            "type": "string"
+            "type": "string",
+            "description": "Resource identifier type (e.g. ISBN, ISSN, LCCN, CODEN, Locally defined identifiers)"
           }
         },
         "additionalProperties": false,
@@ -109,24 +120,30 @@
     },
     "contributors": {
       "type": "array",
+      "description": "List of contributors",
       "minItems": 0,
       "items": {
         "type": "object",
         "properties": {
           "name": {
-            "type": "string"
+            "type": "string",
+            "description": "Personal name, corporate name, meeting name"
           },
           "contributorTypeId": {
-            "type": "string"
+            "type": "string",
+            "description": "ID for the contributor type term defined as a referencetable in settings"
           },
           "contributorTypeText": {
-            "type": "string"
+            "type": "string",
+            "description": "Free text element for adding contributor type terms other that defined by the MARC code list for relators"
           },
           "contributorNameTypeId": {
-            "type": "string"
+            "type": "string",
+            "description": "Contributor type terms defined by the MARC code list for relators"
           },
           "primary": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether this is the primary contributor"
           }
         },
         "additionalProperties": false,
@@ -138,6 +155,7 @@
     },
     "subjects": {
       "type": "array",
+      "description": "List of subject headings",
       "items": {
         "type": "string"
       },
@@ -145,15 +163,18 @@
     },
     "classifications": {
       "type": "array",
+      "description": "List of classifications",
       "minItems": 0,
       "items": {
         "type": "object",
         "properties": {
           "classificationNumber": {
-            "type": "string"
+            "type": "string",
+            "description": "Classification (e.g. classification scheme, classification schedule)"
           },
           "classificationTypeId": {
-            "type": "string"
+            "type": "string",
+            "description": "List of classification schemas (e.g. LC, Canadian Classification, NLM, National Agricultural Library, UDC, and Dewey)"
           }
         },
         "additionalProperties": false,
@@ -165,26 +186,32 @@
     },
     "publication": {
       "type": "array",
+      "description": "List of publication items",
       "items": {
         "type": "object",
         "properties": {
           "publisher": {
-            "type": "string"
+            "type": "string",
+            "description": "Name of publisher, distributor, etc."
           },
           "place": {
-            "type": "string"
+            "type": "string",
+            "description": "Place of publication, distribution, etc."
           },
           "dateOfPublication": {
-            "type": "string"
+            "type": "string",
+            "description": "Date (year YYYY) of publication, distribution, etc."
           },
           "role": {
-            "type": "string"
+            "type": "string",
+            "description": "The role of the publisher, distributor, etc."
           }
         }
       }
     },
     "publicationFrequency": {
       "type": "array",
+      "description": "List of intervals at which a serial appears (e.g. daily, weekly, monthly, quarterly, etc.)",
       "items": {
         "type": "string"
       },
@@ -192,6 +219,7 @@
     },
     "publicationRange": {
       "type": "array",
+      "description": "The range of sequential designation/chronology of publication, or date range",
       "items": {
         "type": "string"
       },
@@ -199,23 +227,29 @@
     },
     "electronicAccess": {
       "type": "array",
+      "description": "List of electronic access items",
       "items": {
         "type": "object",
         "properties": {
           "uri": {
-            "type": "string"
+            "type": "string",
+            "description": "Uniform Resource Identifier (URI) is a string of characters designed for unambiguous identification of resources"
           },
           "linkText": {
-            "type": "string"
+            "type": "string",
+            "description": "The value of the MARC tag field 856 2nd indicator, where the values are: no information provided, resource, version of resource, related resource, no display constant generated"
           },
           "materialsSpecification": {
-            "type": "string"
+            "type": "string",
+            "description": "Materials specified is used to specify to what portion or aspect of the resource the electronic location and access information applies (e.g. a portion or subset of the item is electronic, or a related electronic resource is being linked to the record)"
           },
           "publicNote": {
-            "type": "string"
+            "type": "string",
+            "description": "URL public note to be displayed in the discovery"
           },
           "relationshipId": {
-            "type": "string"
+            "type": "string",
+            "description": "Relationship between the electronic resource at the location identified and the item described in the record as a whole"
           }
         },
         "additionalProperties": false,
@@ -225,22 +259,26 @@
       }
     },
     "instanceTypeId": {
-      "type": "string"
+      "type": "string",
+      "description": "The unique term for the resource type whether it's from the RDA content term list of locally defined"
     },
     "instanceFormatIds": {
       "type": "array",
+      "description": "The unique term for the format whether it's from the RDA carrier term list of locally defined",
       "items": {
         "type": "string"
       }
     },
     "physicalDescriptions": {
       "type": "array",
+      "description": "Physical description of the described resource, including its extent, dimensions, and such other physical details as a description of any accompanying materials and unit type and size",
       "items": {
         "type": "string"
       }
     },
     "languages": {
       "type": "array",
+      "description": "The set of languages used by the resource",
       "minItems": 0,
       "items": {
         "type": "string"
@@ -248,35 +286,44 @@
     },
     "notes": {
       "type": "array",
+      "description": "Bibliographic notes (e.g. general notes, specialized notes), and administrative notes",
       "items": {
         "type": "string"
       }
     },
     "modeOfIssuanceId": {
-      "type": "string"
+      "type": "string",
+      "description": "RDA mode of issuance is a categorization reflecting whether a resource is issued in one or more parts, the way it is updated, and whether its termination is predetermined or not (e.g. monograph,  sequential monograph, serial; integrating Resource, other)"
     },
     "catalogedDate": {
-      "type": "string"
+      "type": "string",
+      "description": "Date or timestamp on an instance for when is was considered cataloged"
     },
     "previouslyHeld": {
-      "type": "boolean"
+      "type": "boolean",
+      "description": "Records the fact that the resource was previously held by the library for things like Hathi access, etc."
     },
     "staffSuppress": {
-      "type": "boolean"
+      "type": "boolean",
+      "description": "Records the fact that the record should not be displayed for others than catalogers"
     },
     "discoverySuppress": {
-      "type": "boolean"
+      "type": "boolean",
+      "description": "Records the fact that the record should not be displayed in a discovery system"
     },
     "statisticalCodes": {
       "type": "array",
+      "description": "List of statistical code items",
       "items": {
         "type": "object",
         "properties": {
           "statisticalCodeTypeId": {
-            "type": "string"
+            "type": "string",
+            "description": "Statistical code ID"
           },
           "code": {
-            "type": "string"
+            "type": "string",
+            "description": "Statistical codes (e.g. ARL stats, cataloger, collection or Package code)"
           }
         }
       }
@@ -288,10 +335,12 @@
       "readonly": true
     },
     "statusId": {
-      "type": "string"
+      "type": "string",
+      "description": "Instance status term (e.g. cataloged, uncatalogued, batch loaded, temporary, other, not yet assigned)"
     },
     "statusUpdatedDate": {
-      "type": "string"
+      "type": "string",
+      "description": "Date [or timestamp] for when the instance status was updated"
     },
     "metadata": {
       "type": "object",
