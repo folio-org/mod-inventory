@@ -1,8 +1,10 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "The status of an ingest",
   "type": "object",
   "properties": {
     "status": {
+      "description": "The status of this ingest",
       "type": "string",
       "enum": [
         "Requested",
