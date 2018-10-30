@@ -4,6 +4,7 @@
   "type": "object",
   "properties": {
     "items": {
+      "description": "List of item records",
       "id": "items",
       "type": "array",
       "items": {

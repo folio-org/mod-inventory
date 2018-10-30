@@ -4,6 +4,7 @@
   "type": "object",
   "properties": {
     "instances": {
+      "description": "List of instance records",
       "id": "instances",
       "type": "array",
       "items": {
