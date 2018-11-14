@@ -36,8 +36,7 @@ resourceTypes:
         exampleItem: !include examples/item_get.json
     get:
       is: [pageable,
-          searchable: {description: "using CQL (indexes for item and material type)",
-                       example: "title=\"*uproot*\""}]
+          searchable: {description: "using CQL (indexes for item and material type)"}]
     post:
     delete:
       responses:
@@ -58,7 +57,8 @@ resourceTypes:
         schemaItem: instance.json
         exampleItem: !include examples/instance_get.json
     get:
-      is: [pageable]
+      is: [pageable,
+          searchable: {description: "using CQL"}]
     post:
     delete:
       responses:
