@@ -36,7 +36,9 @@ resourceTypes:
         exampleItem: !include examples/item_get.json
     get:
       is: [pageable,
-          searchable: {description: "using CQL (indexes for item and material type)"}]
+          searchable: {description: "using CQL (indexes for item and material type)",
+            example: "barcode==\"65345656554\""}
+          ]
     post:
     delete:
       responses:
@@ -58,7 +60,9 @@ resourceTypes:
         exampleItem: !include examples/instance_get.json
     get:
       is: [pageable,
-          searchable: {description: "using CQL"}]
+          searchable: {description: "using CQL (indexes for item and material type)",
+            example: "title=\"uproot*\""}
+          ]
     post:
     delete:
       responses:
