@@ -1,13 +1,8 @@
 package api.items;
 
-import api.support.ApiTests;
-import api.support.builders.HoldingRequestBuilder;
-import api.support.fixtures.InstanceRequestExamples;
-import api.support.fixtures.ItemRequestExamples;
-import io.vertx.core.json.JsonObject;
-import org.folio.inventory.support.http.client.IndividualResource;
-import org.folio.inventory.support.http.client.Response;
-import org.junit.Test;
+import static api.support.JsonCollectionAssistant.getRecordById;
+import static org.hamcrest.core.Is.is;
+import static org.hamcrest.junit.MatcherAssert.assertThat;
 
 import java.net.MalformedURLException;
 import java.util.List;
@@ -15,9 +10,16 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-import static api.support.JsonCollectionAssistant.getRecordById;
-import static org.hamcrest.core.Is.is;
-import static org.hamcrest.junit.MatcherAssert.assertThat;
+import org.folio.inventory.support.http.client.IndividualResource;
+import org.folio.inventory.support.http.client.Response;
+import org.junit.Ignore;
+import org.junit.Test;
+
+import api.support.ApiTests;
+import api.support.builders.HoldingRequestBuilder;
+import api.support.fixtures.InstanceRequestExamples;
+import api.support.fixtures.ItemRequestExamples;
+import io.vertx.core.json.JsonObject;
 
 //TODO: When converted to RAML module builder, no longer redirect to content and do separate GET
 public class ItemApiCallNumberExamples extends ApiTests {
@@ -51,6 +53,7 @@ public class ItemApiCallNumberExamples extends ApiTests {
       createdItem.getString("callNumber"), is("R11.A38"));
   }
 
+  @Ignore("mod-inventory-storage disallows this scenario, change to be isolated test")
   @Test
   public void noCallNumberWhenNoHoldingsRecord()
     throws InterruptedException,
@@ -131,6 +134,7 @@ public class ItemApiCallNumberExamples extends ApiTests {
       secondFetchedItem.getString("callNumber"), is("D15.H63 A3 2002"));
   }
 
+  @Ignore("mod-inventory-storage disallows this scenario, change to be isolated test")
   @Test
   public void noCallNumberWhenNoHoldingForMultipleItems()
     throws InterruptedException,

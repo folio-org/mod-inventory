@@ -1,24 +1,25 @@
 package api.items;
 
-import api.support.ApiTests;
-import api.support.builders.HoldingRequestBuilder;
-import api.support.fixtures.InstanceRequestExamples;
-import api.support.fixtures.ItemRequestExamples;
-import io.vertx.core.json.JsonObject;
-import org.folio.inventory.support.http.client.IndividualResource;
-import org.folio.inventory.support.http.client.Response;
-import org.junit.Test;
+import static api.support.JsonCollectionAssistant.getRecordById;
+import static org.hamcrest.core.Is.is;
+import static org.hamcrest.junit.MatcherAssert.assertThat;
 
-import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-import static api.support.JsonCollectionAssistant.getRecordById;
-import static org.hamcrest.core.Is.is;
-import static org.hamcrest.junit.MatcherAssert.assertThat;
+import org.folio.inventory.support.http.client.IndividualResource;
+import org.folio.inventory.support.http.client.Response;
+import org.junit.Ignore;
+import org.junit.Test;
+
+import api.support.ApiTests;
+import api.support.builders.HoldingRequestBuilder;
+import api.support.fixtures.InstanceRequestExamples;
+import api.support.fixtures.ItemRequestExamples;
+import io.vertx.core.json.JsonObject;
 
 //TODO: When converted to RAML module builder, no longer redirect to content and do separate GET
 public class ItemApiTitleExamples extends ApiTests {
@@ -31,8 +32,7 @@ public class ItemApiTitleExamples extends ApiTests {
     throws InterruptedException,
     ExecutionException,
     TimeoutException,
-    MalformedURLException,
-    UnsupportedEncodingException {
+    MalformedURLException {
 
     UUID instanceId = instancesClient.create(
       InstanceRequestExamples.smallAngryPlanet()).getId();
@@ -52,13 +52,13 @@ public class ItemApiTitleExamples extends ApiTests {
       createdItem.getString("title"), is("The Long Way to a Small, Angry Planet"));
   }
 
+  @Ignore("mod-inventory-storage disallows this scenario, change to be isolated test")
   @Test
   public void noTitleWhenNoInstance()
     throws InterruptedException,
     ExecutionException,
     TimeoutException,
-    MalformedURLException,
-    UnsupportedEncodingException {
+    MalformedURLException {
 
     UUID instanceId = instancesClient.create(
       InstanceRequestExamples.smallAngryPlanet()).getId();
@@ -80,13 +80,13 @@ public class ItemApiTitleExamples extends ApiTests {
       createdItem.containsKey("title"), is(false));
   }
 
+  @Ignore("mod-inventory-storage disallows this scenario, change to be isolated test")
   @Test
   public void noTitleWhenNoHolding()
     throws InterruptedException,
     ExecutionException,
     TimeoutException,
-    MalformedURLException,
-    UnsupportedEncodingException {
+    MalformedURLException {
 
     UUID instanceId = instancesClient.create(
       InstanceRequestExamples.smallAngryPlanet()).getId();
@@ -113,8 +113,7 @@ public class ItemApiTitleExamples extends ApiTests {
     throws InterruptedException,
     ExecutionException,
     TimeoutException,
-    MalformedURLException,
-    UnsupportedEncodingException {
+    MalformedURLException {
 
     UUID firstInstanceId = instancesClient.create(
       InstanceRequestExamples.smallAngryPlanet()).getId();
@@ -159,6 +158,7 @@ public class ItemApiTitleExamples extends ApiTests {
       secondFetchedItem.getString("title"), is("Temeraire"));
   }
 
+  @Ignore("mod-inventory-storage disallows this scenario, change to be isolated test")
   @Test
   public void noTitleWhenHoldingOrInstanceNotFound()
     throws InterruptedException,
@@ -221,8 +221,7 @@ public class ItemApiTitleExamples extends ApiTests {
     throws InterruptedException,
     ExecutionException,
     TimeoutException,
-    MalformedURLException,
-    UnsupportedEncodingException {
+    MalformedURLException {
 
     UUID instanceId = instancesClient.create(
       InstanceRequestExamples.smallAngryPlanet()).getId();
@@ -248,8 +247,7 @@ public class ItemApiTitleExamples extends ApiTests {
     throws InterruptedException,
     ExecutionException,
     TimeoutException,
-    MalformedURLException,
-    UnsupportedEncodingException {
+    MalformedURLException {
 
     UUID instanceId = instancesClient.create(
       InstanceRequestExamples.smallAngryPlanet()).getId();
