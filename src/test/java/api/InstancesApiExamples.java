@@ -1,23 +1,15 @@
 package api;
 
-import api.support.ApiRoot;
-import api.support.ApiTests;
-import api.support.InstanceApiClient;
-import com.github.jsonldjava.core.DocumentLoader;
-import com.github.jsonldjava.core.JsonLdError;
-import com.github.jsonldjava.core.JsonLdOptions;
-import com.github.jsonldjava.core.JsonLdProcessor;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import org.apache.http.Header;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
-import org.apache.http.message.BasicHeader;
-import org.folio.inventory.support.JsonArrayHelper;
-import org.folio.inventory.support.http.client.Response;
-import org.folio.inventory.support.http.client.ResponseHandler;
-import org.junit.Assert;
-import org.junit.Test;
+import static api.support.InstanceSamples.leviathanWakes;
+import static api.support.InstanceSamples.nod;
+import static api.support.InstanceSamples.smallAngryPlanet;
+import static api.support.InstanceSamples.taoOfPooh;
+import static api.support.InstanceSamples.temeraire;
+import static api.support.InstanceSamples.uprooted;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.junit.Assert.assertThat;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -30,9 +22,26 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static api.support.InstanceSamples.*;
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.assertThat;
+import org.apache.http.Header;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
+import org.apache.http.message.BasicHeader;
+import org.folio.inventory.support.JsonArrayHelper;
+import org.folio.inventory.support.http.client.Response;
+import org.folio.inventory.support.http.client.ResponseHandler;
+import org.junit.Assert;
+import org.junit.Test;
+
+import com.github.jsonldjava.core.DocumentLoader;
+import com.github.jsonldjava.core.JsonLdError;
+import com.github.jsonldjava.core.JsonLdOptions;
+import com.github.jsonldjava.core.JsonLdProcessor;
+
+import api.support.ApiRoot;
+import api.support.ApiTests;
+import api.support.InstanceApiClient;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 public class InstancesApiExamples extends ApiTests {
   public InstancesApiExamples() throws MalformedURLException {
@@ -443,7 +452,7 @@ public class InstancesApiExamples extends ApiTests {
 
     CompletableFuture<Response> searchGetCompleted = new CompletableFuture<>();
 
-    okapiClient.get(ApiRoot.instances("query=title=*Small%20Angry*"),
+    okapiClient.get(ApiRoot.instances("query=title=Small%20Angry*"),
       ResponseHandler.json(searchGetCompleted));
 
     Response searchGetResponse = searchGetCompleted.get(5, TimeUnit.SECONDS);

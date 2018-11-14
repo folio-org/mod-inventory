@@ -1,22 +1,5 @@
 package api;
 
-import api.items.ItemApiCallNumberExamples;
-import api.items.ItemApiExamples;
-import api.items.ItemApiLocationExamples;
-import api.items.ItemApiTitleExamples;
-import api.support.ControlledVocabularyPreparation;
-import api.support.http.ResourceClient;
-import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
-import org.folio.inventory.InventoryVerticle;
-import org.folio.inventory.common.VertxAssistant;
-import org.folio.inventory.support.http.client.OkapiHttpClient;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
-import support.fakes.FakeOkapi;
-
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
@@ -27,6 +10,25 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
+import org.folio.inventory.InventoryVerticle;
+import org.folio.inventory.common.VertxAssistant;
+import org.folio.inventory.support.http.client.OkapiHttpClient;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
+
+import api.items.ItemApiCallNumberExamples;
+import api.items.ItemApiExamples;
+import api.items.ItemApiLocationExamples;
+import api.items.ItemApiTitleExamples;
+import api.support.ControlledVocabularyPreparation;
+import api.support.http.ResourceClient;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import support.fakes.FakeOkapi;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
@@ -327,13 +329,18 @@ public class ApiTestSuite {
 
     ResourceClient locationsClient = ResourceClient.forLocations(client);
 
+    final UUID fakeServicePointId = UUID.randomUUID();
+
     thirdFloorLocationId = createReferenceRecord(locationsClient,
       new JsonObject()
         .put("name", "3rd Floor")
         .put("code", "NU/JC/DL/3F")
         .put("institutionId", nottinghamUniversityInstitution.toString())
         .put("campusId", jubileeCampus.toString())
-        .put("libraryId", djanoglyLibrary.toString()));
+        .put("libraryId", djanoglyLibrary.toString())
+        //TODO: Replace with created service point
+        .put("primaryServicePoint", fakeServicePointId.toString())
+        .put("servicePointIds", new JsonArray().add(fakeServicePointId.toString())));
 
     mezzanineDisplayCaseLocationId = createReferenceRecord(locationsClient,
       new JsonObject()
@@ -341,15 +348,21 @@ public class ApiTestSuite {
         .put("code", "NU/JC/BL/DM")
         .put("institutionId", nottinghamUniversityInstitution.toString())
         .put("campusId", jubileeCampus.toString())
-        .put("libraryId", businessLibrary.toString()));
+        .put("libraryId", businessLibrary.toString())
+        //TODO: Replace with created service point
+        .put("primaryServicePoint", fakeServicePointId.toString())
+        .put("servicePointIds", new JsonArray().add(fakeServicePointId.toString())));
 
     readingRoomLocationId = createReferenceRecord(locationsClient,
       new JsonObject()
-         .put("name", "Reading Room")
-         .put("code","NU/JC/BL/PR")
-         .put("institutionId", nottinghamUniversityInstitution.toString())
-         .put("campusId", jubileeCampus.toString())
-         .put("libraryId", businessLibrary.toString()));
+        .put("name", "Reading Room")
+        .put("code","NU/JC/BL/PR")
+        .put("institutionId", nottinghamUniversityInstitution.toString())
+        .put("campusId", jubileeCampus.toString())
+        .put("libraryId", businessLibrary.toString())
+        //TODO: Replace with created service point
+        .put("primaryServicePoint", fakeServicePointId.toString())
+        .put("servicePointIds", new JsonArray().add(fakeServicePointId.toString())));
 
     //Need to create a main library location otherwise MODS ingestion will fail
     //TODO: Need to remove this when MODS uses different example location
@@ -359,7 +372,10 @@ public class ApiTestSuite {
         .put("code", "NU/JC/DL/ML")
         .put("institutionId", nottinghamUniversityInstitution.toString())
         .put("campusId", jubileeCampus.toString())
-        .put("libraryId", djanoglyLibrary.toString()));
+        .put("libraryId", djanoglyLibrary.toString())
+        //TODO: Replace with created service point
+        .put("primaryServicePoint", fakeServicePointId.toString())
+        .put("servicePointIds", new JsonArray().add(fakeServicePointId.toString())));
   }
 
   private static void createIdentifierTypes()
