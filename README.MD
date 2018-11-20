@@ -60,7 +60,7 @@ In order to build an executable Jar (e.g. for Okapi to deploy), run `mvn package
 
 Make sure that [Okapi](https://github.com/folio-org/okapi) is running on its default port of 9130 (see the [guide](https://github.com/folio-org/okapi/blob/master/doc/guide.md) for instructions).
 
-A script for building and running Okapi is provided. Run `/start-okapi.sh` from the root of the Okapi source.
+A script for building and running Okapi is provided. Run this module's `start-okapi.sh` from the root of the Okapi source.
 
 As this runs Okapi using Postgres storage, some database preparation is required. This can be achieved by running `./create-okapi-database.sh` from the root of this repository.
 
