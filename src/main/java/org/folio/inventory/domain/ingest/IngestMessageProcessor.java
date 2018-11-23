@@ -61,6 +61,7 @@ public class IngestMessageProcessor {
     final JsonObject instanceTypes = body.getJsonObject("instanceTypes");
     final JsonObject identifierTypes = body.getJsonObject("identifierTypes");
     final JsonObject contributorNameTypes = body.getJsonObject("contributorNameTypes");
+    final JsonObject alternativeTitleTypes = body.getJsonObject("alternativeTitleTypes");
 
     final InstanceCollection instanceCollection = storage.getInstanceCollection(context);
     final ItemCollection itemCollection = storage.getItemCollection(context);
@@ -68,8 +69,11 @@ public class IngestMessageProcessor {
 
     records.stream()
       .map(record -> {
-        List<String> alternativeTitles = JsonArrayHelper.toListOfStrings(
-          record.getJsonArray(Instance.ALTERNATIVE_TITLES_KEY));
+        //List<JsonObject> alternativeTitlesJson = JsonArrayHelper.toList(
+        //  record.getJsonArray("alternativeTitles"));
+        
+        //List<AlternativeTitle> alternativeTitles = alternativeTitlesJson.stream()
+        //        .map(alternativeTitle -> new AlternativeTitle(alternativeTitleTypes.get))
 
         List<JsonObject> identifiersJson = JsonArrayHelper.toList(
           record.getJsonArray("identifiers"));
@@ -101,7 +105,7 @@ public class IngestMessageProcessor {
                 "Local: MODS",
                 record.getString(TITLE_PROPERTY),
                 instanceTypes.getString("text"))
-                .setAlternativeTitles(alternativeTitles)
+                //.setAlternativeTitles(alternativeTitles)
                 .setIdentifiers(identifiers)
                 .setContributors(contributors);
       })
