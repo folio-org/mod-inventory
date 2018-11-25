@@ -1,11 +1,22 @@
 package org.folio.inventory.resources;
 
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.BodyHandler;
+import static org.folio.inventory.common.FutureAssistance.allOf;
+import static org.folio.inventory.support.CqlHelper.multipleRecordsCqlQuery;
+import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
+import static org.folio.inventory.support.JsonHelper.getNestedProperty;
+
+import java.io.UnsupportedEncodingException;
+import java.lang.invoke.MethodHandles;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
@@ -21,22 +32,12 @@ import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.server.*;
 
-import java.io.UnsupportedEncodingException;
-import java.lang.invoke.MethodHandles;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static org.folio.inventory.common.FutureAssistance.allOf;
-import static org.folio.inventory.support.CqlHelper.multipleRecordsCqlQuery;
-import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
-import static org.folio.inventory.support.JsonHelper.getNestedProperty;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
 
 public class Items {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
@@ -283,8 +284,8 @@ public class Items {
   }
 
   private Item requestToItem(JsonObject itemRequest) {
-    List<String> pieceIdentifiers = toListOfStrings(
-      itemRequest.getJsonArray("pieceIdentifiers"));
+    List<String> copyNumbers = toListOfStrings(
+      itemRequest.getJsonArray("copyNumbers"));
 
     String status = getNestedProperty(itemRequest, "status", "name");
 
@@ -301,7 +302,7 @@ public class Items {
       itemRequest.getString("barcode"),
       itemRequest.getString("enumeration"),
       itemRequest.getString("chronology"),
-      pieceIdentifiers,
+      copyNumbers,
       itemRequest.getString("numberOfPieces"),
       itemRequest.getString("holdingsRecordId"),
       notes,
