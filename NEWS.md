@@ -1,3 +1,8 @@
+## 11.0.0 Unreleased
+
+* Provides `inventory` interface 8.0 (MODINV-90)
+* Renames `item.pieceIdentifiers` to `copyNumbers` (MODINV-94)
+
 ## 10.0.0 2018-10-12
 
 * Propagates `instance.indexTitle` (MODINV-88)
