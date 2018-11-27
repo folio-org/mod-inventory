@@ -1,15 +1,16 @@
 package org.folio.inventory.storage.external;
 
-import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
-import org.folio.inventory.domain.Item;
-import org.folio.inventory.domain.ItemCollection;
-import org.folio.inventory.support.JsonArrayHelper;
+import static org.folio.inventory.support.JsonHelper.getNestedProperty;
 
 import java.util.List;
 import java.util.UUID;
 
-import static org.folio.inventory.support.JsonHelper.getNestedProperty;
+import org.folio.inventory.domain.Item;
+import org.folio.inventory.domain.ItemCollection;
+import org.folio.inventory.support.JsonArrayHelper;
+
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 
 class ExternalStorageModuleItemCollection
   extends ExternalStorageModuleCollection<Item>
@@ -28,7 +29,7 @@ class ExternalStorageModuleItemCollection
   protected Item mapFromJson(JsonObject itemFromServer) {
 
     List<String> pieceIdentifierList;
-    pieceIdentifierList = JsonArrayHelper.toListOfStrings(itemFromServer.getJsonArray("pieceIdentifiers"));
+    pieceIdentifierList = JsonArrayHelper.toListOfStrings(itemFromServer.getJsonArray("copyNumbers"));
 
     List<String> notesList;
     notesList = JsonArrayHelper.toListOfStrings(itemFromServer.getJsonArray("notes"));
@@ -69,7 +70,7 @@ class ExternalStorageModuleItemCollection
       itemToSend.put("status", new JsonObject().put("name", item.status));
     }
 
-    itemToSend.put("pieceIdentifiers", item.pieceIdentifiers);
+    itemToSend.put("copyNumbers", item.copyNumbers);
     itemToSend.put("notes", item.notes);
     includeIfPresent(itemToSend, "barcode", item.barcode);
     includeIfPresent(itemToSend, "enumeration", item.enumeration);

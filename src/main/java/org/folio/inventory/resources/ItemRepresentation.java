@@ -1,12 +1,6 @@
 package org.folio.inventory.resources;
 
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import org.folio.inventory.common.WebContext;
-import org.folio.inventory.common.domain.MultipleRecords;
-import org.folio.inventory.domain.Item;
+import static org.folio.inventory.support.HoldingsSupport.*;
 
 import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
@@ -16,7 +10,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-import static org.folio.inventory.support.HoldingsSupport.*;
+import org.folio.inventory.common.WebContext;
+import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.domain.Item;
+
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 class ItemRepresentation {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
@@ -104,7 +105,7 @@ class ItemRepresentation {
     includeIfPresent(representation, "barcode", item.barcode);
     includeIfPresent(representation, "enumeration", item.enumeration);
     includeIfPresent(representation, "chronology", item.chronology);
-    representation.put("pieceIdentifiers",item.pieceIdentifiers);
+    representation.put("copyNumbers",item.copyNumbers);
     representation.put("notes", item.notes);
     includeIfPresent(representation, "numberOfPieces", item.numberOfPieces);
 

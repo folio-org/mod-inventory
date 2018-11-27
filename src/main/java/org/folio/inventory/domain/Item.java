@@ -10,7 +10,7 @@ public class Item {
   public final String barcode;
   public final String enumeration;
   public final String chronology;
-  public final List<String> pieceIdentifiers;
+  public final List<String> copyNumbers;
   public final String numberOfPieces;
   public final String holdingId;
   public final List<String> notes;
@@ -26,7 +26,7 @@ public class Item {
               String barcode,
               String enumeration,
               String chronology,
-              List<String> pieceIdentifiers,
+              List<String> copyNumbers,
               String numberOfPieces,
               String holdingId,
               List<String> notes,
@@ -42,7 +42,7 @@ public class Item {
     this.barcode = barcode;
     this.enumeration = enumeration;
     this.chronology = chronology;
-    this.pieceIdentifiers = new ArrayList<>(pieceIdentifiers);
+    this.copyNumbers = new ArrayList<>(copyNumbers);
     this.numberOfPieces = numberOfPieces;
     this.holdingId = holdingId;
     this.notes = new ArrayList<>(notes);
@@ -57,7 +57,7 @@ public class Item {
 
   public Item copyWithNewId(String newId) {
     return new Item(newId, this.barcode, this.enumeration,
-      this.chronology, this.pieceIdentifiers, this.numberOfPieces,
+      this.chronology, this.copyNumbers, this.numberOfPieces,
       holdingId, this.notes, this.status, this.materialTypeId,
       this.permanentLocationId, this.temporaryLocationId,
       this.permanentLoanTypeId, this.temporaryLoanTypeId, this.metadata);
@@ -65,7 +65,7 @@ public class Item {
 
   public Item changeStatus(String newStatus) {
     return new Item(this.id, this.barcode, this.enumeration,
-      this.chronology, this.pieceIdentifiers, this.numberOfPieces,
+      this.chronology, this.copyNumbers, this.numberOfPieces,
       holdingId, this.notes, newStatus, this.materialTypeId,
       this.permanentLocationId, this.temporaryLocationId,
       this.permanentLoanTypeId, this.temporaryLoanTypeId, this.metadata);

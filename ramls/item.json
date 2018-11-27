@@ -29,7 +29,7 @@
     "chronology": {
       "type": "string"
     },
-    "pieceIdentifiers": {
+    "copyNumbers": {
       "type": "array",
       "items": {
         "type": "string"
