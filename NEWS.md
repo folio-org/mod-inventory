@@ -1,3 +1,7 @@
+## 11.0.0 Unreleased
+
+* Requires `holdings-storage` interface 2.0 or 3.0 (MODINV-93)
+
 ## 10.0.0 2018-10-12
 
 * Propagates `instance.indexTitle` (MODINV-88)
