@@ -61,7 +61,6 @@ public class IngestMessageProcessor {
     final JsonObject instanceTypes = body.getJsonObject("instanceTypes");
     final JsonObject identifierTypes = body.getJsonObject("identifierTypes");
     final JsonObject contributorNameTypes = body.getJsonObject("contributorNameTypes");
-    final JsonObject alternativeTitleTypes = body.getJsonObject("alternativeTitleTypes");
 
     final InstanceCollection instanceCollection = storage.getInstanceCollection(context);
     final ItemCollection itemCollection = storage.getItemCollection(context);
