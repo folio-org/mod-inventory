@@ -21,6 +21,7 @@ import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.domain.instances.AlternativeTitle;
 import org.folio.inventory.domain.instances.Classification;
 import org.folio.inventory.domain.instances.Contributor;
 import org.folio.inventory.domain.instances.ElectronicAccess;
@@ -493,6 +494,12 @@ public class Instances {
           .collect(Collectors.toList())
           : new ArrayList<>();
 
+    List<AlternativeTitle> alternativeTitles = instanceRequest.containsKey(Instance.ALTERNATIVE_TITLES_KEY)
+      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.ALTERNATIVE_TITLES_KEY)).stream()
+          .map(json -> new AlternativeTitle(json))
+          .collect(Collectors.toList())
+            : new ArrayList<>();
+
     List<Contributor> contributors = instanceRequest.containsKey(Instance.CONTRIBUTORS_KEY)
       ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.CONTRIBUTORS_KEY)).stream()
       .map(json -> new Contributor(json))
@@ -533,7 +540,7 @@ public class Instances {
       .setIndexTitle(instanceRequest.getString(Instance.INDEX_TITLE_KEY))
       .setParentInstances(parentInstances)
       .setChildInstances(childInstances)
-      .setAlternativeTitles(toListOfStrings(instanceRequest, Instance.ALTERNATIVE_TITLES_KEY))
+      .setAlternativeTitles(alternativeTitles)
       .setEditions(toListOfStrings(instanceRequest, Instance.EDITIONS_KEY))
       .setSeries(toListOfStrings(instanceRequest, Instance.SERIES_KEY))
       .setIdentifiers(identifiers)

@@ -68,8 +68,6 @@ public class IngestMessageProcessor {
 
     records.stream()
       .map(record -> {
-        List<String> alternativeTitles = JsonArrayHelper.toListOfStrings(
-          record.getJsonArray(Instance.ALTERNATIVE_TITLES_KEY));
 
         List<JsonObject> identifiersJson = JsonArrayHelper.toList(
           record.getJsonArray("identifiers"));
@@ -101,7 +99,6 @@ public class IngestMessageProcessor {
                 "Local: MODS",
                 record.getString(TITLE_PROPERTY),
                 instanceTypes.getString("text"))
-                .setAlternativeTitles(alternativeTitles)
                 .setIdentifiers(identifiers)
                 .setContributors(contributors);
       })

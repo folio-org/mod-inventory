@@ -9,6 +9,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.folio.inventory.domain.Metadata;
+import org.folio.inventory.domain.instances.AlternativeTitle;
 import org.folio.inventory.domain.instances.Classification;
 import org.folio.inventory.domain.instances.Contributor;
 import org.folio.inventory.domain.instances.ElectronicAccess;
@@ -85,6 +86,13 @@ class ExternalStorageModuleInstanceCollection
       .map(it -> new Identifier(it))
       .collect(Collectors.toList());
 
+    List<JsonObject> alternativeTitles = toList(
+      instanceFromServer.getJsonArray(Instance.ALTERNATIVE_TITLES_KEY, new JsonArray()));
+
+    List<AlternativeTitle> mappedAlternativeTitles = alternativeTitles.stream()
+      .map(it -> new AlternativeTitle(it))
+      .collect(Collectors.toList());
+
     List<JsonObject> contributors = toList(
       instanceFromServer.getJsonArray(Instance.CONTRIBUTORS_KEY, new JsonArray()));
 
@@ -130,7 +138,7 @@ class ExternalStorageModuleInstanceCollection
       instanceFromServer.getString(Instance.TITLE_KEY),
       instanceFromServer.getString(Instance.INSTANCE_TYPE_ID_KEY))
       .setIndexTitle(instanceFromServer.getString(Instance.INDEX_TITLE_KEY))
-      .setAlternativeTitles(jsonArrayAsListOfStrings(instanceFromServer, Instance.ALTERNATIVE_TITLES_KEY))
+      .setAlternativeTitles(mappedAlternativeTitles)
       .setEditions(jsonArrayAsListOfStrings(instanceFromServer, Instance.EDITIONS_KEY))
       .setSeries(jsonArrayAsListOfStrings(instanceFromServer, Instance.SERIES_KEY))
       .setIdentifiers(mappedIdentifiers)

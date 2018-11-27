@@ -49,7 +49,7 @@ public class Instance {
   private List<InstanceRelationshipToChild> childInstances = new ArrayList();
   private final String title;
   private String indexTitle;
-  private List<String> alternativeTitles = new ArrayList();
+  private List<AlternativeTitle> alternativeTitles = new ArrayList();
   private List<String> editions = new ArrayList();
   private List<String> series = new ArrayList();
   private List<Identifier> identifiers = new ArrayList();
@@ -105,7 +105,7 @@ public class Instance {
     return this;
   }
 
-  public Instance setAlternativeTitles(List<String> alternativeTitles) {
+  public Instance setAlternativeTitles(List<AlternativeTitle> alternativeTitles) {
     this.alternativeTitles = alternativeTitles;
     return this;
   }
@@ -262,7 +262,7 @@ public class Instance {
     return indexTitle;
   }
 
-  public List<String> getAlternativeTitles() {
+  public List<AlternativeTitle> getAlternativeTitles() {
     return alternativeTitles;
   }
 
