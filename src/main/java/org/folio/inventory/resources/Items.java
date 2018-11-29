@@ -21,8 +21,9 @@ import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
-import org.folio.inventory.domain.Item;
-import org.folio.inventory.domain.ItemCollection;
+import org.folio.inventory.domain.items.Item;
+import org.folio.inventory.domain.items.ItemCollection;
+import org.folio.inventory.domain.items.Note;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.support.CqlHelper;
@@ -289,7 +290,11 @@ public class Items {
 
     String status = getNestedProperty(itemRequest, "status", "name");
 
-    List<String> notes = toListOfStrings(itemRequest.getJsonArray("notes"));
+    List<Note> notes = itemRequest.containsKey(Item.NOTES_KEY)
+      ? JsonArrayHelper.toList(itemRequest.getJsonArray(Item.NOTES_KEY)).stream()
+          .map(json -> new Note(json))
+          .collect(Collectors.toList())
+          : new ArrayList<>();
 
     String materialTypeId = getNestedProperty(itemRequest, "materialType", "id");
     String permanentLocationId = getNestedProperty(itemRequest, "permanentLocation", "id");

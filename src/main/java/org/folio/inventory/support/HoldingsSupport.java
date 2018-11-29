@@ -1,7 +1,8 @@
 package org.folio.inventory.support;
 
 import io.vertx.core.json.JsonObject;
-import org.folio.inventory.domain.Item;
+
+import org.folio.inventory.domain.items.Item;
 
 import java.util.Collection;
 import java.util.Optional;

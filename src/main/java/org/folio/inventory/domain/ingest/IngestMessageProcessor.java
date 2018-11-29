@@ -1,5 +1,8 @@
 package org.folio.inventory.domain.ingest;
 
+import org.folio.inventory.domain.items.Item;
+import org.folio.inventory.domain.items.ItemCollection;
+
 import java.lang.invoke.MethodHandles;
 import java.util.*;
 import java.util.stream.Collectors;
