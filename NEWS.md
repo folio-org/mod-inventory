@@ -6,6 +6,7 @@
 * Requires `item-storage` interface 7.0 (MODINV-94)
 * Changes structure of `alternativeTitles` (MODINV-90)
 * Renames `item.pieceIdentifiers` to `copyNumbers` (MODINV-94)
+* Changes structure of item notes (MODINV-97)
 
 ## 10.0.0 2018-10-12
 

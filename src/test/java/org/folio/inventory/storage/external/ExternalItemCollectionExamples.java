@@ -4,8 +4,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.common.WaitForAllFutures;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
-import org.folio.inventory.domain.Item;
-import org.folio.inventory.domain.ItemCollection;
+import org.folio.inventory.domain.items.Item;
+import org.folio.inventory.domain.items.ItemCollection;
 import org.junit.Before;
 import org.junit.Test;
 

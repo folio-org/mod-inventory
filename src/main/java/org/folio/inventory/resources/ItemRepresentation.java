@@ -12,7 +12,7 @@ import java.util.function.Function;
 
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.domain.MultipleRecords;
-import org.folio.inventory.domain.Item;
+import org.folio.inventory.domain.items.Item;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;

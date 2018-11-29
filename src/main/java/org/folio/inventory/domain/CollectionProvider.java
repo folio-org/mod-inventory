@@ -1,5 +1,6 @@
 package org.folio.inventory.domain;
 
+import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.domain.ingest.IngestJobCollection;
 

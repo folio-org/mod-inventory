@@ -1,11 +1,14 @@
-package org.folio.inventory.domain;
-
-import io.vertx.core.json.JsonObject;
+package org.folio.inventory.domain.items;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import io.vertx.core.json.JsonObject;
+
 public class Item {
+  
+  public static final String NOTES_KEY = "notes";
+  
   public final String id;
   public final String barcode;
   public final String enumeration;
@@ -13,7 +16,7 @@ public class Item {
   public final List<String> copyNumbers;
   public final String numberOfPieces;
   public final String holdingId;
-  public final List<String> notes;
+  public final List<Note> notes;
   public final String status;
   public final String materialTypeId;
   public final String permanentLoanTypeId;
@@ -29,7 +32,7 @@ public class Item {
               List<String> copyNumbers,
               String numberOfPieces,
               String holdingId,
-              List<String> notes,
+              List<Note> notes,
               String status,
               String materialTypeId,
               String permanentLocationId,

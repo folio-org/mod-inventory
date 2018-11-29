@@ -42,9 +42,20 @@
     "notes": {
       "type": "array",
       "items": {
-        "type": "string"
-      },
-      "uniqueItems": true
+        "type": "object",
+        "properties": {
+          "itemNoteTypeId": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "staffOnly": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      }
     },
     "status": {
       "type": "object",

@@ -1,15 +1,19 @@
 package org.folio.inventory.storage.external;
 
+import static org.folio.inventory.support.JsonArrayHelper.toList;
 import static org.folio.inventory.support.JsonHelper.getNestedProperty;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
-import org.folio.inventory.domain.Item;
-import org.folio.inventory.domain.ItemCollection;
+import org.folio.inventory.domain.items.Item;
+import org.folio.inventory.domain.items.ItemCollection;
+import org.folio.inventory.domain.items.Note;
 import org.folio.inventory.support.JsonArrayHelper;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 class ExternalStorageModuleItemCollection
@@ -31,8 +35,12 @@ class ExternalStorageModuleItemCollection
     List<String> pieceIdentifierList;
     pieceIdentifierList = JsonArrayHelper.toListOfStrings(itemFromServer.getJsonArray("copyNumbers"));
 
-    List<String> notesList;
-    notesList = JsonArrayHelper.toListOfStrings(itemFromServer.getJsonArray("notes"));
+    List<JsonObject> notes = toList(
+      itemFromServer.getJsonArray(Item.NOTES_KEY, new JsonArray()));
+
+    List<Note> mappedNotes = notes.stream()
+      .map(it -> new Note(it))
+      .collect(Collectors.toList());
 
     return new Item(
       itemFromServer.getString("id"),
@@ -42,7 +50,7 @@ class ExternalStorageModuleItemCollection
       pieceIdentifierList,
       itemFromServer.getString("numberOfPieces"),
       itemFromServer.getString("holdingsRecordId"),
-      notesList,
+      mappedNotes,
       getNestedProperty(itemFromServer, "status", "name"),
       itemFromServer.getString("materialTypeId"),
       itemFromServer.getString("permanentLocationId"),

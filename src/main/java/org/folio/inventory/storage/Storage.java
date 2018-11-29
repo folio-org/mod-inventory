@@ -2,11 +2,12 @@ package org.folio.inventory.storage;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+
 import org.folio.inventory.common.Context;
 import org.folio.inventory.domain.CollectionProvider;
 import org.folio.inventory.domain.HoldingCollection;
 import org.folio.inventory.domain.instances.InstanceCollection;
-import org.folio.inventory.domain.ItemCollection;
+import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.ingest.IngestJobCollection;
 import org.folio.inventory.storage.external.ExternalStorageCollections;
 
