@@ -7,6 +7,7 @@
 * Changes structure of `alternativeTitles` (MODINV-90)
 * Renames `item.pieceIdentifiers` to `copyNumbers` (MODINV-94)
 * Changes structure of item notes (MODINV-97)
+* Renames, changes structure of `instance.statisticalCodes` (MODINV-98) 
 
 ## 10.0.0 2018-10-12
 

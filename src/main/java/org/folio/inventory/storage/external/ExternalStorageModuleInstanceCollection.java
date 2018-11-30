@@ -17,7 +17,6 @@ import org.folio.inventory.domain.instances.Identifier;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.domain.instances.Publication;
-import org.folio.inventory.domain.instances.StatisticalCode;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
@@ -69,7 +68,7 @@ class ExternalStorageModuleInstanceCollection
     instanceToSend.put(Instance.PREVIOUSLY_HELD_KEY, instance.getPreviouslyHeld());
     instanceToSend.put(Instance.STAFF_SUPPRESS_KEY, instance.getStaffSuppress());
     instanceToSend.put(Instance.DISCOVERY_SUPPRESS_KEY, instance.getDiscoverySuppress());
-    instanceToSend.put(Instance.STATISTICAL_CODES_KEY, instance.getStatisticalCodes());
+    instanceToSend.put(Instance.STATISTICAL_CODE_IDS_KEY, instance.getStatisticalCodeIds());
     includeIfPresent(instanceToSend, Instance.SOURCE_RECORD_FORMAT_KEY, instance.getSourceRecordFormat());
     instanceToSend.put(Instance.STATUS_ID_KEY, instance.getStatusId());
     instanceToSend.put(Instance.STATUS_UPDATED_DATE_KEY, instance.getStatusUpdatedDate());
@@ -121,14 +120,6 @@ class ExternalStorageModuleInstanceCollection
       .map(it -> new ElectronicAccess(it))
       .collect(Collectors.toList());
 
-    List<JsonObject> statisticalCodes = toList(
-      instanceFromServer.getJsonArray(Instance.STATISTICAL_CODES_KEY, new JsonArray()));
-
-    List<StatisticalCode> mappedStatisticalCodes = statisticalCodes.stream()
-      .map(it -> new StatisticalCode(it))
-      .collect(Collectors.toList());
-
-
     JsonObject metadataJson = instanceFromServer.getJsonObject(Instance.METADATA_KEY);
 
     return new Instance(
@@ -158,7 +149,7 @@ class ExternalStorageModuleInstanceCollection
       .setPreviouslyHeld(instanceFromServer.getBoolean(Instance.PREVIOUSLY_HELD_KEY))
       .setStaffSuppress(instanceFromServer.getBoolean(Instance.STAFF_SUPPRESS_KEY))
       .setDiscoverySuppress(instanceFromServer.getBoolean(Instance.DISCOVERY_SUPPRESS_KEY))
-      .setStatisticalCodes(mappedStatisticalCodes)
+      .setStatisticalCodeIds(jsonArrayAsListOfStrings(instanceFromServer, Instance.STATISTICAL_CODE_IDS_KEY))
       .setSourceRecordFormat(instanceFromServer.getString(Instance.SOURCE_RECORD_FORMAT_KEY))
       .setStatusId(instanceFromServer.getString(Instance.STATUS_ID_KEY))
       .setStatusUpdatedDate(instanceFromServer.getString(Instance.STATUS_UPDATED_DATE_KEY))
