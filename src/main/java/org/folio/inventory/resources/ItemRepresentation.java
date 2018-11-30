@@ -95,36 +95,36 @@ class ItemRepresentation {
     JsonObject representation = new JsonObject();
     representation.put("id", item.id);
 
-    if(item.status != null) {
-      representation.put("status", new JsonObject().put("name", item.status));
+    if(item.getStatus() != null) {
+      representation.put("status", new JsonObject().put("name", item.getStatus()));
     }
 
     includeIfPresent(representation, "title", instance, i -> i.getString("title"));
     includeIfPresent(representation, "callNumber", holding, h -> h.getString("callNumber"));
-    includeIfPresent(representation, "holdingsRecordId", item.holdingId);
-    includeIfPresent(representation, "barcode", item.barcode);
-    includeIfPresent(representation, "enumeration", item.enumeration);
-    includeIfPresent(representation, "chronology", item.chronology);
-    representation.put("copyNumbers",item.copyNumbers);
-    representation.put("notes", item.notes);
-    includeIfPresent(representation, "numberOfPieces", item.numberOfPieces);
+    includeIfPresent(representation, "holdingsRecordId", item.getHoldingId());
+    includeIfPresent(representation, "barcode", item.getBarcode());
+    includeIfPresent(representation, "enumeration", item.getEnumeration());
+    includeIfPresent(representation, "chronology", item.getChronology());
+    representation.put("copyNumbers",item.getCopyNumbers());
+    representation.put("notes", item.getNotes());
+    includeIfPresent(representation, "numberOfPieces", item.getNumberOfPieces());
 
     includeReferenceIfPresent(representation, "materialType",
-      item.materialTypeId);
+      item.getMaterialTypeId());
 
     includeReferenceIfPresent(representation, "permanentLoanType",
-      item.permanentLoanTypeId);
+      item.getPermanentLoanTypeId());
 
     includeReferenceIfPresent(representation, "temporaryLoanType",
-      item.temporaryLoanTypeId);
+      item.getTemporaryLoanTypeId());
 
     includeReferenceIfPresent(representation, "permanentLocation",
-      item.permanentLocationId);
+      item.getPermanentLocationId());
 
     includeReferenceIfPresent(representation, "temporaryLocation",
-      item.temporaryLocationId);
+      item.getTemporaryLocationId());
 
-    includeIfPresent(representation, "metadata", item.metadata);
+    includeIfPresent(representation, "metadata", item.getMetadata());
 
     try {
       URL selfUrl = context.absoluteUrl(String.format("%s/%s",
@@ -155,9 +155,9 @@ class ItemRepresentation {
     List<Item> items = wrappedItems.records;
 
     items.forEach(item -> {
-      JsonObject materialType = materialTypes.get(item.materialTypeId);
-      JsonObject permanentLoanType = loanTypes.get(item.permanentLoanTypeId);
-      JsonObject temporaryLoanType = loanTypes.get(item.temporaryLoanTypeId);
+      JsonObject materialType = materialTypes.get(item.getMaterialTypeId());
+      JsonObject permanentLoanType = loanTypes.get(item.getPermanentLoanTypeId());
+      JsonObject temporaryLoanType = loanTypes.get(item.getTemporaryLoanTypeId());
 
       JsonObject holding = holdingForItem(item, holdings).orElse(null);
 
@@ -166,8 +166,8 @@ class ItemRepresentation {
       String effectiveLocationId = determineEffectiveLocationIdForItem(
         holding, item);
       JsonObject effectiveLocation = effectiveLocations.get(effectiveLocationId);
-      JsonObject permanentLocation = locations.get(item.permanentLocationId);
-      JsonObject temporaryLocation = locations.get(item.temporaryLocationId);
+      JsonObject permanentLocation = locations.get(item.getPermanentLocationId());
+      JsonObject temporaryLocation = locations.get(item.getTemporaryLocationId());
 
       results.add(toJson(item, holding, instance, materialType, permanentLoanType,
         temporaryLoanType, permanentLocation, temporaryLocation, effectiveLocation, context));

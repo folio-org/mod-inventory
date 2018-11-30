@@ -6,72 +6,170 @@ import java.util.List;
 import io.vertx.core.json.JsonObject;
 
 public class Item {
-  
+
   public static final String NOTES_KEY = "notes";
-  
+
   public final String id;
-  public final String barcode;
-  public final String enumeration;
-  public final String chronology;
-  public final List<String> copyNumbers;
-  public final String numberOfPieces;
-  public final String holdingId;
-  public final List<Note> notes;
-  public final String status;
-  public final String materialTypeId;
-  public final String permanentLoanTypeId;
-  public final String temporaryLoanTypeId;
-  public final String permanentLocationId;
-  public final String temporaryLocationId;
-  public final JsonObject metadata;
+  private String barcode;
+  private String enumeration;
+  private String chronology;
+  private List<String> copyNumbers = new ArrayList();
+  private String numberOfPieces;
+  private String holdingId;
+  private List<Note> notes = new ArrayList();
+  private String status;
+  private String materialTypeId;
+  private String permanentLoanTypeId;
+
+  private String temporaryLoanTypeId;
+  private String permanentLocationId;
+  private String temporaryLocationId;
+  private JsonObject metadata;
 
   public Item(String id,
-              String barcode,
-              String enumeration,
-              String chronology,
-              List<String> copyNumbers,
-              String numberOfPieces,
               String holdingId,
-              List<Note> notes,
               String status,
               String materialTypeId,
-              String permanentLocationId,
-              String temporaryLocationId,
               String permanentLoanTypeId,
-              String temporaryLoanTypeId,
               JsonObject metadata) {
 
     this.id = id;
-    this.barcode = barcode;
-    this.enumeration = enumeration;
-    this.chronology = chronology;
-    this.copyNumbers = new ArrayList<>(copyNumbers);
-    this.numberOfPieces = numberOfPieces;
     this.holdingId = holdingId;
-    this.notes = new ArrayList<>(notes);
     this.status = status;
     this.materialTypeId = materialTypeId;
-    this.permanentLocationId = permanentLocationId;
-    this.temporaryLocationId = temporaryLocationId;
     this.permanentLoanTypeId = permanentLoanTypeId;
-    this.temporaryLoanTypeId = temporaryLoanTypeId;
     this.metadata = metadata;
   }
 
+  public Item setBarcode(String barcode) {
+    this.barcode = barcode;
+    return this;
+  };
+
+  public String getBarcode() {
+    return barcode;
+  };
+
+  public Item setEnumeration(String enumeration) {
+    this.enumeration = enumeration;
+    return this;
+  };
+
+  public String getEnumeration() {
+    return enumeration;
+  };
+
+  public Item setChronology(String chronology) {
+    this.chronology = chronology;
+    return this;
+  };
+
+  public String getChronology() {
+    return chronology;
+  };
+
+  public Item setCopyNumbers(List<String> copyNumbers) {
+    this.copyNumbers = copyNumbers;
+    return this;
+  };
+
+  public List<String> getCopyNumbers() {
+    return this.copyNumbers;
+  };
+
+  public Item setNumberOfPieces(String numberOfPieces) {
+    this.numberOfPieces = numberOfPieces;
+    return this;
+  };
+
+  public String getNumberOfPieces() {
+    return this.numberOfPieces;
+  };
+
+  public Item setNotes(List<Note> notes) {
+    this.notes = notes;
+    return this;
+  };
+
+  public List<Note> getNotes() {
+    return this.notes;
+  };
+
+  public Item setPermanentLocationId(String permanentLocationId) {
+    this.permanentLocationId = permanentLocationId;
+    return this;
+  };
+
+  public String getPermanentLocationId() {
+    return permanentLocationId;
+  };
+
+  public Item setTemporaryLocationId(String temporaryLocationId) {
+    this.temporaryLocationId = temporaryLocationId;
+    return this;
+  };
+
+  public String getTemporaryLocationId() {
+    return temporaryLocationId;
+  };
+
+  public Item setTemporaryLoanTypeId(String temporaryLoanTypeId) {
+    this.temporaryLoanTypeId = temporaryLoanTypeId;
+    return this;
+  };
+
+  public String getTemporaryLoanTypeId() {
+    return temporaryLoanTypeId;
+  }
+
+  public String getHoldingId() {
+    return holdingId;
+  }
+
+  public String getStatus() {
+    return status;
+  }
+
+  public String getMaterialTypeId() {
+    return materialTypeId;
+  }
+
+  public String getPermanentLoanTypeId() {
+    return permanentLoanTypeId;
+  }
+
+  public JsonObject getMetadata() {
+    return metadata;
+  }
+
   public Item copyWithNewId(String newId) {
-    return new Item(newId, this.barcode, this.enumeration,
-      this.chronology, this.copyNumbers, this.numberOfPieces,
-      holdingId, this.notes, this.status, this.materialTypeId,
-      this.permanentLocationId, this.temporaryLocationId,
-      this.permanentLoanTypeId, this.temporaryLoanTypeId, this.metadata);
+    return new Item(newId,
+      holdingId, this.status, this.materialTypeId,
+      this.permanentLoanTypeId, this.metadata)
+            .setBarcode(this.barcode)
+            .setEnumeration(this.enumeration)
+            .setChronology(this.chronology)
+            .setCopyNumbers(this.copyNumbers)
+            .setNumberOfPieces(this.numberOfPieces)
+            .setNotes(this.notes)
+            .setPermanentLocationId(this.permanentLocationId)
+            .setTemporaryLocationId(this.temporaryLocationId)
+            .setTemporaryLoanTypeId(this.temporaryLoanTypeId);
   }
 
   public Item changeStatus(String newStatus) {
-    return new Item(this.id, this.barcode, this.enumeration,
-      this.chronology, this.copyNumbers, this.numberOfPieces,
-      holdingId, this.notes, newStatus, this.materialTypeId,
-      this.permanentLocationId, this.temporaryLocationId,
-      this.permanentLoanTypeId, this.temporaryLoanTypeId, this.metadata);
+    return new Item(this.id,
+      holdingId, newStatus, this.materialTypeId,
+      this.permanentLoanTypeId, this.metadata)
+            .setBarcode(this.barcode)
+            .setEnumeration(this.enumeration)
+            .setChronology(this.chronology)
+            .setCopyNumbers(this.copyNumbers)
+            .setNumberOfPieces(this.numberOfPieces)
+            .setNotes(this.notes)
+            .setPermanentLocationId(this.permanentLocationId)
+            .setTemporaryLocationId(this.temporaryLocationId)
+            .setTemporaryLoanTypeId(this.temporaryLoanTypeId);
   }
 
   @Override

@@ -32,8 +32,8 @@ class ExternalStorageModuleItemCollection
   @Override
   protected Item mapFromJson(JsonObject itemFromServer) {
 
-    List<String> pieceIdentifierList;
-    pieceIdentifierList = JsonArrayHelper.toListOfStrings(itemFromServer.getJsonArray("copyNumbers"));
+    List<String> copyNumberList;
+    copyNumberList = JsonArrayHelper.toListOfStrings(itemFromServer.getJsonArray("copyNumbers"));
 
     List<JsonObject> notes = toList(
       itemFromServer.getJsonArray(Item.NOTES_KEY, new JsonArray()));
@@ -44,20 +44,20 @@ class ExternalStorageModuleItemCollection
 
     return new Item(
       itemFromServer.getString("id"),
-      itemFromServer.getString("barcode"),
-      itemFromServer.getString("enumeration"),
-      itemFromServer.getString("chronology"),
-      pieceIdentifierList,
-      itemFromServer.getString("numberOfPieces"),
       itemFromServer.getString("holdingsRecordId"),
-      mappedNotes,
       getNestedProperty(itemFromServer, "status", "name"),
       itemFromServer.getString("materialTypeId"),
-      itemFromServer.getString("permanentLocationId"),
-      itemFromServer.getString("temporaryLocationId"),
       itemFromServer.getString("permanentLoanTypeId"),
-      itemFromServer.getString("temporaryLoanTypeId"),
-      itemFromServer.getJsonObject("metadata"));
+      itemFromServer.getJsonObject("metadata"))
+            .setBarcode(itemFromServer.getString("barcode"))
+            .setEnumeration(itemFromServer.getString("enumeration"))
+            .setChronology(itemFromServer.getString("chronology"))
+            .setCopyNumbers(copyNumberList)
+            .setNumberOfPieces(itemFromServer.getString("numberOfPieces"))
+            .setNotes(mappedNotes)
+            .setPermanentLocationId(itemFromServer.getString("permanentLocationId"))
+            .setTemporaryLocationId(itemFromServer.getString("temporaryLocationId"))
+            .setTemporaryLoanTypeId(itemFromServer.getString("temporaryLoanTypeId"));
   }
 
   @Override
@@ -74,22 +74,22 @@ class ExternalStorageModuleItemCollection
       ? item.id
       : UUID.randomUUID().toString());
 
-    if(item.status != null) {
-      itemToSend.put("status", new JsonObject().put("name", item.status));
+    if(item.getStatus() != null) {
+      itemToSend.put("status", new JsonObject().put("name", item.getStatus()));
     }
 
-    itemToSend.put("copyNumbers", item.copyNumbers);
-    itemToSend.put("notes", item.notes);
-    includeIfPresent(itemToSend, "barcode", item.barcode);
-    includeIfPresent(itemToSend, "enumeration", item.enumeration);
-    includeIfPresent(itemToSend, "chronology", item.chronology);
-    includeIfPresent(itemToSend, "numberOfPieces", item.numberOfPieces);
-    includeIfPresent(itemToSend, "holdingsRecordId", item.holdingId);
-    includeIfPresent(itemToSend, "materialTypeId", item.materialTypeId);
-    includeIfPresent(itemToSend, "permanentLoanTypeId", item.permanentLoanTypeId);
-    includeIfPresent(itemToSend, "temporaryLoanTypeId", item.temporaryLoanTypeId);
-    includeIfPresent(itemToSend, "permanentLocationId", item.permanentLocationId);
-    includeIfPresent(itemToSend, "temporaryLocationId", item.temporaryLocationId);
+    itemToSend.put("copyNumbers", item.getCopyNumbers());
+    itemToSend.put("notes", item.getNotes());
+    includeIfPresent(itemToSend, "barcode", item.getBarcode());
+    includeIfPresent(itemToSend, "enumeration", item.getEnumeration());
+    includeIfPresent(itemToSend, "chronology", item.getChronology());
+    includeIfPresent(itemToSend, "numberOfPieces", item.getNumberOfPieces());
+    includeIfPresent(itemToSend, "holdingsRecordId", item.getHoldingId());
+    includeIfPresent(itemToSend, "materialTypeId", item.getMaterialTypeId());
+    includeIfPresent(itemToSend, "permanentLoanTypeId", item.getPermanentLoanTypeId());
+    includeIfPresent(itemToSend, "temporaryLoanTypeId", item.getTemporaryLoanTypeId());
+    includeIfPresent(itemToSend, "permanentLocationId", item.getPermanentLocationId());
+    includeIfPresent(itemToSend, "temporaryLocationId", item.getTemporaryLocationId());
 
     return itemToSend;
   }
