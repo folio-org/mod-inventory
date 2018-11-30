@@ -111,13 +111,17 @@ class ItemRepresentation {
     includeIfPresent(representation, Item.ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY, item.getItemLevelCallNumberSuffix());
     includeIfPresent(representation, Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY, item.getItemLevelCallNumberTypeId());
     includeIfPresent(representation, Item.VOLUME_KEY, item.getVolume());
-
-
     includeIfPresent(representation, "enumeration", item.getEnumeration());
     includeIfPresent(representation, "chronology", item.getChronology());
     representation.put("copyNumbers",item.getCopyNumbers());
     representation.put(Item.NOTES_KEY, item.getNotes());
     includeIfPresent(representation, "numberOfPieces", item.getNumberOfPieces());
+    includeIfPresent(representation, Item.DESCRIPTION_OF_PIECES_KEY, item.getDescriptionOfPieces());
+    includeIfPresent(representation, Item.NUMBER_OF_MISSING_PIECES_KEY, item.getNumberOfMissingPieces());
+    includeIfPresent(representation, Item.MISSING_PIECES_KEY, item.getMissingPieces());
+    includeIfPresent(representation, Item.MISSING_PIECES_DATE_KEY, item.getMissingPiecesDate());
+    includeIfPresent(representation, Item.ITEM_DAMAGED_STATUS_ID_KEY, item.getItemDamagedStatusId());
+    includeIfPresent(representation, Item.ITEM_DAMAGED_STATUS_DATE_KEY, item.getItemDamagedStatusDate());
 
     includeReferenceIfPresent(representation, "materialType",
       item.getMaterialTypeId());

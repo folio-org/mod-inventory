@@ -70,6 +70,24 @@
     "numberOfPieces": {
       "type": "string"
     },
+    "descriptionOfPieces": {
+      "type": "string"
+    },
+    "numberOfMissingPieces": {
+      "type": "string"
+    },
+    "missingPieces": {
+      "type": "string"
+    },
+    "missingPiecesDate": {
+      "type": "string"
+    },
+    "itemDamagedStatusId": {
+      "type": "string"
+    },
+    "itemDamagedStatusDate": {
+      "type": "string"
+    },
     "notes": {
       "type": "array",
       "items": {
@@ -89,9 +107,11 @@
       }
     },
     "status": {
+      "description": "The status of the item",
       "type": "object",
       "properties": {
         "name": {
+          "description": "Name of the status e.g. Available, Checked out, In transit",
           "type": "string"
         }
       },

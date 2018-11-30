@@ -62,6 +62,12 @@ class ExternalStorageModuleItemCollection
             .setChronology(itemFromServer.getString("chronology"))
             .setCopyNumbers(copyNumberList)
             .setNumberOfPieces(itemFromServer.getString("numberOfPieces"))
+            .setDescriptionOfPieces(itemFromServer.getString(Item.DESCRIPTION_OF_PIECES_KEY))
+            .setNumberOfMissingPieces(itemFromServer.getString(Item.NUMBER_OF_MISSING_PIECES_KEY))
+            .setMissingPieces(itemFromServer.getString(Item.MISSING_PIECES_KEY))
+            .setMissingPiecesDate(itemFromServer.getString(Item.MISSING_PIECES_DATE_KEY))
+            .setItemDamagedStatusId(itemFromServer.getString(Item.ITEM_DAMAGED_STATUS_ID_KEY))
+            .setItemDamagedStatusDate(itemFromServer.getString(Item.ITEM_DAMAGED_STATUS_DATE_KEY))
             .setNotes(mappedNotes)
             .setPermanentLocationId(itemFromServer.getString("permanentLocationId"))
             .setTemporaryLocationId(itemFromServer.getString("temporaryLocationId"))
@@ -100,6 +106,12 @@ class ExternalStorageModuleItemCollection
     includeIfPresent(itemToSend, "enumeration", item.getEnumeration());
     includeIfPresent(itemToSend, "chronology", item.getChronology());
     includeIfPresent(itemToSend, "numberOfPieces", item.getNumberOfPieces());
+    includeIfPresent(itemToSend, Item.DESCRIPTION_OF_PIECES_KEY, item.getDescriptionOfPieces());
+    includeIfPresent(itemToSend, Item.NUMBER_OF_MISSING_PIECES_KEY, item.getNumberOfMissingPieces());
+    includeIfPresent(itemToSend, Item.MISSING_PIECES_KEY, item.getMissingPieces());
+    includeIfPresent(itemToSend, Item.MISSING_PIECES_DATE_KEY, item.getMissingPiecesDate());
+    includeIfPresent(itemToSend, Item.ITEM_DAMAGED_STATUS_ID_KEY, item.getItemDamagedStatusId());
+    includeIfPresent(itemToSend, Item.ITEM_DAMAGED_STATUS_DATE_KEY, item.getItemDamagedStatusDate());
     includeIfPresent(itemToSend, "holdingsRecordId", item.getHoldingId());
     includeIfPresent(itemToSend, "materialTypeId", item.getMaterialTypeId());
     includeIfPresent(itemToSend, "permanentLoanTypeId", item.getPermanentLoanTypeId());

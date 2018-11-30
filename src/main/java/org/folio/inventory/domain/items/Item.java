@@ -15,6 +15,14 @@ public class Item {
   public static final String ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY = "itemLevelCallNumberSuffix";
   public static final String ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY = "itemLevelCallNumberTypeId";
   public static final String VOLUME_KEY = "volume";
+
+  public static final String DESCRIPTION_OF_PIECES_KEY = "descriptionOfPieces";  
+  public static final String NUMBER_OF_MISSING_PIECES_KEY = "numberOfMissingPieces";
+  public static final String MISSING_PIECES_KEY = "missingPieces";
+  public static final String MISSING_PIECES_DATE_KEY = "missingPiecesDate";
+  public static final String ITEM_DAMAGED_STATUS_ID_KEY = "itemDamagedStatusId";  
+  public static final String ITEM_DAMAGED_STATUS_DATE_KEY = "itemDamagedStatusDate";
+
   public static final String NOTES_KEY = "notes";
 
   public final String id;
@@ -35,6 +43,13 @@ public class Item {
   private List<String> copyNumbers = new ArrayList();
   private String numberOfPieces;
   private final String holdingId;
+  private String descriptionOfPieces;
+  private String numberOfMissingPieces;
+  private String missingPieces;
+  private String missingPiecesDate;
+  private String itemDamagedStatusId;  
+  private String itemDamagedStatusDate;
+
   private List<Note> notes = new ArrayList();
   private final String status;
   private final String materialTypeId;
@@ -176,6 +191,60 @@ public class Item {
   public String getNumberOfPieces() {
     return this.numberOfPieces;
   };
+  
+  public String getDescriptionOfPieces() {
+    return descriptionOfPieces;
+  }
+
+  public Item setDescriptionOfPieces(String descriptionOfPieces) {
+    this.descriptionOfPieces = descriptionOfPieces;
+    return this;
+  }
+
+  public String getNumberOfMissingPieces() {
+    return numberOfMissingPieces;
+  }
+
+  public Item setNumberOfMissingPieces(String numberOfMissingPieces) {
+    this.numberOfMissingPieces = numberOfMissingPieces;
+    return this;
+  }
+
+  public String getMissingPieces() {
+    return missingPieces;
+  }
+
+  public Item setMissingPieces(String missingPieces) {
+    this.missingPieces = missingPieces;
+    return this;
+  }
+
+  public String getMissingPiecesDate() {
+    return missingPiecesDate;
+  }
+
+  public Item setMissingPiecesDate(String missingPiecesDate) {
+    this.missingPiecesDate = missingPiecesDate;
+    return this;
+  }
+
+  public String getItemDamagedStatusId() {
+    return itemDamagedStatusId;
+  }
+
+  public Item setItemDamagedStatusId(String itemDamagedStatusId) {
+    this.itemDamagedStatusId = itemDamagedStatusId;
+    return this;
+  }
+
+  public String getItemDamagedStatusDate() {
+    return itemDamagedStatusDate;
+  }
+
+  public Item setItemDamagedStatusDate(String itemDamagedStatusDate) {
+    this.itemDamagedStatusDate = itemDamagedStatusDate;
+    return this;
+  }
 
   public Item setNotes(List<Note> notes) {
     this.notes = notes;
@@ -250,6 +319,12 @@ public class Item {
             .setChronology(this.chronology)
             .setCopyNumbers(this.copyNumbers)
             .setNumberOfPieces(this.numberOfPieces)
+            .setDescriptionOfPieces(this.descriptionOfPieces)
+            .setNumberOfMissingPieces(this.numberOfMissingPieces)
+            .setMissingPieces(this.missingPieces)
+            .setMissingPiecesDate(this.missingPiecesDate)
+            .setItemDamagedStatusId(this.itemDamagedStatusId)
+            .setItemDamagedStatusDate(this.itemDamagedStatusDate)
             .setNotes(this.notes)
             .setPermanentLocationId(this.permanentLocationId)
             .setTemporaryLocationId(this.temporaryLocationId)
@@ -273,6 +348,12 @@ public class Item {
             .setChronology(this.chronology)
             .setCopyNumbers(this.copyNumbers)
             .setNumberOfPieces(this.numberOfPieces)
+            .setDescriptionOfPieces(this.descriptionOfPieces)
+            .setNumberOfMissingPieces(this.numberOfMissingPieces)
+            .setMissingPieces(this.missingPieces)
+            .setMissingPiecesDate(this.missingPiecesDate)
+            .setItemDamagedStatusId(this.itemDamagedStatusId)
+            .setItemDamagedStatusDate(this.itemDamagedStatusDate)
             .setNotes(this.notes)
             .setPermanentLocationId(this.permanentLocationId)
             .setTemporaryLocationId(this.temporaryLocationId)
