@@ -12,7 +12,7 @@ import org.folio.inventory.domain.Metadata;
 import org.folio.inventory.domain.instances.AlternativeTitle;
 import org.folio.inventory.domain.instances.Classification;
 import org.folio.inventory.domain.instances.Contributor;
-import org.folio.inventory.domain.instances.ElectronicAccess;
+import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 import org.folio.inventory.domain.instances.Identifier;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;

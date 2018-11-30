@@ -3,6 +3,8 @@ package org.folio.inventory.domain.items;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
+
 import io.vertx.core.json.JsonObject;
 
 public class Item {
@@ -46,11 +48,6 @@ public class Item {
   private String accessionNumber;
   private String itemIdentifier;
   private List<String> yearCaption = new ArrayList();
-  // private List electronicAccess
-  private List<String> statisticalCodeIds = new ArrayList();
-
-
-
   private String enumeration;
   private String chronology;
   private List<String> copyNumbers = new ArrayList();
@@ -62,7 +59,6 @@ public class Item {
   private String missingPiecesDate;
   private String itemDamagedStatusId;
   private String itemDamagedStatusDate;
-
   private List<Note> notes = new ArrayList();
   private final String status;
   private final String materialTypeId;
@@ -71,6 +67,8 @@ public class Item {
   private String temporaryLoanTypeId;
   private String permanentLocationId;
   private String temporaryLocationId;
+  private List<ElectronicAccess> electronicAccess = new ArrayList();
+  private List<String> statisticalCodeIds = new ArrayList();
   private final JsonObject metadata;
 
   public Item(String id,
@@ -337,6 +335,15 @@ public class Item {
     this.yearCaption = yearCaption;
     return this;
   }
+  
+  public List<ElectronicAccess> getElectronicAccess() {
+    return electronicAccess;
+  }
+
+  public Item setElectronicAccess(List<ElectronicAccess> electronicAccess) {
+    this.electronicAccess = electronicAccess;
+    return this;
+  }
 
   public List<String> getStatisticalCodeIds() {
     return statisticalCodeIds;
@@ -381,6 +388,7 @@ public class Item {
             .setAccessionNumber(this.accessionNumber)
             .setItemIdentifier(this.itemIdentifier)
             .setYearCaption(this.yearCaption)
+            .setElectronicAccess(this.electronicAccess)
             .setStatisticalCodeIds(this.statisticalCodeIds);
   }
 
@@ -414,6 +422,7 @@ public class Item {
             .setAccessionNumber(this.accessionNumber)
             .setItemIdentifier(this.itemIdentifier)
             .setYearCaption(this.yearCaption)
+            .setElectronicAccess(this.electronicAccess)
             .setStatisticalCodeIds(this.statisticalCodeIds);
   }
 

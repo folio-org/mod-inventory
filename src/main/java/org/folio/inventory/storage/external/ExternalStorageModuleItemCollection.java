@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.Note;
+import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 import org.folio.inventory.support.JsonArrayHelper;
 
 import io.vertx.core.Vertx;
@@ -48,7 +49,12 @@ class ExternalStorageModuleItemCollection
       .map(it -> new Note(it))
       .collect(Collectors.toList());
 
+    List<JsonObject> electronicAccess = toList(
+      itemFromServer.getJsonArray(Item.ELECTRONIC_ACCESS_KEY, new JsonArray()));
 
+    List<ElectronicAccess> mappedElectronicAccess = electronicAccess.stream()
+            .map(it -> new ElectronicAccess(it))
+            .collect(Collectors.toList());
 
     return new Item(
       itemFromServer.getString("id"),
@@ -83,6 +89,7 @@ class ExternalStorageModuleItemCollection
             .setAccessionNumber(itemFromServer.getString(Item.ACCESSION_NUMBER_KEY))
             .setItemIdentifier(itemFromServer.getString(Item.ITEM_IDENTIFIER_KEY))
             .setYearCaption(yearCaption)
+            .setElectronicAccess(mappedElectronicAccess)
             .setStatisticalCodeIds(statisticalCodeIds);
   }
 
@@ -133,6 +140,7 @@ class ExternalStorageModuleItemCollection
     includeIfPresent(itemToSend, Item.ACCESSION_NUMBER_KEY, item.getAccessionNumber());
     includeIfPresent(itemToSend, Item.ITEM_IDENTIFIER_KEY, item.getItemIdentifier());
     itemToSend.put(Item.YEAR_CAPTION_KEY, item.getYearCaption());
+    itemToSend.put(Item.ELECTRONIC_ACCESS_KEY, item.getElectronicAccess());
     itemToSend.put(Item.STATISTICAL_CODE_IDS_KEY, item.getStatisticalCodeIds());
 
 

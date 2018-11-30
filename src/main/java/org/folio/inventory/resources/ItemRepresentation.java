@@ -125,6 +125,7 @@ class ItemRepresentation {
     includeIfPresent(representation, Item.ACCESSION_NUMBER_KEY, item.getAccessionNumber());
     includeIfPresent(representation, Item.ITEM_IDENTIFIER_KEY, item.getItemIdentifier());
     representation.put(Item.YEAR_CAPTION_KEY, item.getYearCaption());
+    representation.put(Item.ELECTRONIC_ACCESS_KEY, item.getElectronicAccess());
     representation.put(Item.STATISTICAL_CODE_IDS_KEY, item.getStatisticalCodeIds());
     includeReferenceIfPresent(representation, "materialType",
       item.getMaterialTypeId());

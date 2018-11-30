@@ -24,6 +24,7 @@ import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.Note;
+import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.support.CqlHelper;
@@ -305,6 +306,13 @@ public class Items {
           .collect(Collectors.toList())
           : new ArrayList<>();
 
+    List<ElectronicAccess> electronicAccess = itemRequest.containsKey(Item.ELECTRONIC_ACCESS_KEY)
+      ? JsonArrayHelper.toList(itemRequest.getJsonArray(Item.ELECTRONIC_ACCESS_KEY)).stream()
+          .map(json -> new ElectronicAccess(json))
+          .collect(Collectors.toList())
+          : new ArrayList<>();
+
+
     String materialTypeId = getNestedProperty(itemRequest, "materialType", "id");
     String permanentLocationId = getNestedProperty(itemRequest, "permanentLocation", "id");
     String temporaryLocationId = getNestedProperty(itemRequest, "temporaryLocation", "id");
@@ -344,6 +352,7 @@ public class Items {
             .setAccessionNumber(itemRequest.getString(Item.ACCESSION_NUMBER_KEY))
             .setItemIdentifier(itemRequest.getString(Item.ITEM_IDENTIFIER_KEY))
             .setYearCaption(yearCaption)
+            .setElectronicAccess(electronicAccess)
             .setStatisticalCodeIds(statisticalCodeIds);
   }
 
