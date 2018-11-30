@@ -32,7 +32,6 @@ import org.folio.inventory.domain.instances.InstanceRelationship;
 import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
 import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
 import org.folio.inventory.domain.instances.Publication;
-import org.folio.inventory.domain.instances.StatisticalCode;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.support.JsonArrayHelper;
@@ -455,7 +454,7 @@ public class Instances {
     putIfNotNull(resp, Instance.PREVIOUSLY_HELD_KEY, instance.getPreviouslyHeld());
     putIfNotNull(resp, Instance.STAFF_SUPPRESS_KEY, instance.getStaffSuppress());
     putIfNotNull(resp, Instance.DISCOVERY_SUPPRESS_KEY, instance.getDiscoverySuppress());
-    putIfNotNull(resp, Instance.STATISTICAL_CODES_KEY, instance.getStatisticalCodes());
+    putIfNotNull(resp, Instance.STATISTICAL_CODE_IDS_KEY, instance.getStatisticalCodeIds());
     putIfNotNull(resp, Instance.SOURCE_RECORD_FORMAT_KEY, instance.getSourceRecordFormat());
     putIfNotNull(resp, Instance.STATUS_ID_KEY, instance.getStatusId());
     putIfNotNull(resp, Instance.STATUS_UPDATED_DATE_KEY, instance.getStatusUpdatedDate());
@@ -524,12 +523,6 @@ public class Instances {
       .collect(Collectors.toList())
       : new ArrayList<>();
 
-    List<StatisticalCode> statisticalCodes = instanceRequest.containsKey(Instance.STATISTICAL_CODES_KEY)
-      ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.STATISTICAL_CODES_KEY)).stream()
-      .map(json -> new StatisticalCode(json))
-      .collect(Collectors.toList())
-      : new ArrayList<>();
-
 
     return new Instance(
       instanceRequest.getString("id"),
@@ -560,7 +553,7 @@ public class Instances {
       .setPreviouslyHeld(instanceRequest.getBoolean(Instance.PREVIOUSLY_HELD_KEY))
       .setStaffSuppress(instanceRequest.getBoolean(Instance.STAFF_SUPPRESS_KEY))
       .setDiscoverySuppress(instanceRequest.getBoolean(Instance.DISCOVERY_SUPPRESS_KEY))
-      .setStatisticalCodes(statisticalCodes)
+      .setStatisticalCodeIds(toListOfStrings(instanceRequest,Instance.STATISTICAL_CODE_IDS_KEY))
       .setSourceRecordFormat(instanceRequest.getString(Instance.SOURCE_RECORD_FORMAT_KEY))
       .setStatusId(instanceRequest.getString(Instance.STATUS_ID_KEY))
       .setStatusUpdatedDate(instanceRequest.getString(Instance.STATUS_UPDATED_DATE_KEY ));
