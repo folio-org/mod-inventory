@@ -1,21 +1,20 @@
 package org.folio.inventory.storage.external.failure;
 
-import org.folio.inventory.common.api.request.PagingParameters;
-import org.folio.inventory.common.domain.Failure;
-import org.folio.inventory.domain.CollectionProvider;
-import org.folio.inventory.domain.items.Item;
-import org.folio.inventory.domain.items.ItemCollection;
-import org.junit.Test;
+import static org.junit.Assert.fail;
 
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static org.junit.Assert.fail;
+import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.common.domain.Failure;
+import org.folio.inventory.domain.CollectionProvider;
+import org.folio.inventory.domain.items.Item;
+import org.folio.inventory.domain.items.ItemCollection;
+import org.junit.Test;
 
 public abstract class ExternalItemCollectionFailureExamples {
 
@@ -151,13 +150,14 @@ public abstract class ExternalItemCollectionFailureExamples {
   protected abstract void check(Failure failure);
 
   private static Item createItem() {
-    return new Item(null, UUID.randomUUID().toString(), "6575467847",
-      null, new ArrayList<>(), null,
-      null, new ArrayList<>(),
+    return new Item(null,
+      null,
       UUID.randomUUID().toString(), UUID.randomUUID().toString(),
-      UUID.randomUUID().toString(),
-      UUID.randomUUID().toString(),
-      UUID.randomUUID().toString(), null, null);
+      UUID.randomUUID().toString(),  null)
+            .setBarcode(UUID.randomUUID().toString())
+            .setEnumeration("6575467847")
+            .setPermanentLocationId(UUID.randomUUID().toString())
+            .setTemporaryLocationId(UUID.randomUUID().toString());
   }
 
   private ItemCollection createCollection() {

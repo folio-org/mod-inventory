@@ -1,8 +1,5 @@
 package org.folio.inventory.domain.ingest;
 
-import org.folio.inventory.domain.items.Item;
-import org.folio.inventory.domain.items.ItemCollection;
-
 import java.lang.invoke.MethodHandles;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -15,6 +12,8 @@ import org.folio.inventory.domain.instances.Contributor;
 import org.folio.inventory.domain.instances.Identifier;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
+import org.folio.inventory.domain.items.Item;
+import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.resources.ingest.IngestJob;
 import org.folio.inventory.resources.ingest.IngestJobState;
 import org.folio.inventory.storage.Storage;
@@ -137,18 +136,16 @@ public class IngestMessageProcessor {
               : null;
 
             return new Item(null,
-              record.getString("barcode"),
-              null, null, new ArrayList<>(), null,
-              holdingId, new ArrayList<>(),
+              holdingId,
               "Available",
               materialTypes.getString("Book") != null
                 ? materialTypes.getString("Book")
                 : materialTypes.getString("book"),
-              null, null,
               loanTypes.getString("Can Circulate") != null
                 ? loanTypes.getString("Can Circulate")
                 : loanTypes.getString("Can circulate"),
-              null, null);
+               null)
+                    .setBarcode(record.getString("barcode"));
         })
         .forEach(item -> itemCollection.add(item, allItems.receive(),
           failure -> log.error("Item processing failed: " + failure.getReason()))));

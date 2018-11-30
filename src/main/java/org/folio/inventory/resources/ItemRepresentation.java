@@ -95,36 +95,54 @@ class ItemRepresentation {
     JsonObject representation = new JsonObject();
     representation.put("id", item.id);
 
-    if(item.status != null) {
-      representation.put("status", new JsonObject().put("name", item.status));
+    if(item.getStatus() != null) {
+      representation.put("status", new JsonObject().put("name", item.getStatus()));
     }
 
     includeIfPresent(representation, "title", instance, i -> i.getString("title"));
     includeIfPresent(representation, "callNumber", holding, h -> h.getString("callNumber"));
-    includeIfPresent(representation, "holdingsRecordId", item.holdingId);
-    includeIfPresent(representation, "barcode", item.barcode);
-    includeIfPresent(representation, "enumeration", item.enumeration);
-    includeIfPresent(representation, "chronology", item.chronology);
-    representation.put("copyNumbers",item.copyNumbers);
-    representation.put("notes", item.notes);
-    includeIfPresent(representation, "numberOfPieces", item.numberOfPieces);
-
+    includeIfPresent(representation, Item.HRID_KEY, item.getHrid());
+    representation.put(Item.FORMER_IDS_KEY, item.getFormerIds());
+    representation.put(Item.DISCOVERY_SUPPRESS_KEY, item.getDiscoverySuppress());
+    includeIfPresent(representation, "holdingsRecordId", item.getHoldingId());
+    includeIfPresent(representation, "barcode", item.getBarcode());
+    includeIfPresent(representation, Item.ITEM_LEVEL_CALL_NUMBER_KEY, item.getItemLevelCallNumber());
+    includeIfPresent(representation, Item.ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY, item.getItemLevelCallNumberPrefix());
+    includeIfPresent(representation, Item.ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY, item.getItemLevelCallNumberSuffix());
+    includeIfPresent(representation, Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY, item.getItemLevelCallNumberTypeId());
+    includeIfPresent(representation, Item.VOLUME_KEY, item.getVolume());
+    includeIfPresent(representation, "enumeration", item.getEnumeration());
+    includeIfPresent(representation, "chronology", item.getChronology());
+    representation.put("copyNumbers",item.getCopyNumbers());
+    representation.put(Item.NOTES_KEY, item.getNotes());
+    includeIfPresent(representation, "numberOfPieces", item.getNumberOfPieces());
+    includeIfPresent(representation, Item.DESCRIPTION_OF_PIECES_KEY, item.getDescriptionOfPieces());
+    includeIfPresent(representation, Item.NUMBER_OF_MISSING_PIECES_KEY, item.getNumberOfMissingPieces());
+    includeIfPresent(representation, Item.MISSING_PIECES_KEY, item.getMissingPieces());
+    includeIfPresent(representation, Item.MISSING_PIECES_DATE_KEY, item.getMissingPiecesDate());
+    includeIfPresent(representation, Item.ITEM_DAMAGED_STATUS_ID_KEY, item.getItemDamagedStatusId());
+    includeIfPresent(representation, Item.ITEM_DAMAGED_STATUS_DATE_KEY, item.getItemDamagedStatusDate());
+    includeIfPresent(representation, Item.ACCESSION_NUMBER_KEY, item.getAccessionNumber());
+    includeIfPresent(representation, Item.ITEM_IDENTIFIER_KEY, item.getItemIdentifier());
+    representation.put(Item.YEAR_CAPTION_KEY, item.getYearCaption());
+    representation.put(Item.ELECTRONIC_ACCESS_KEY, item.getElectronicAccess());
+    representation.put(Item.STATISTICAL_CODE_IDS_KEY, item.getStatisticalCodeIds());
     includeReferenceIfPresent(representation, "materialType",
-      item.materialTypeId);
+      item.getMaterialTypeId());
 
     includeReferenceIfPresent(representation, "permanentLoanType",
-      item.permanentLoanTypeId);
+      item.getPermanentLoanTypeId());
 
     includeReferenceIfPresent(representation, "temporaryLoanType",
-      item.temporaryLoanTypeId);
+      item.getTemporaryLoanTypeId());
 
     includeReferenceIfPresent(representation, "permanentLocation",
-      item.permanentLocationId);
+      item.getPermanentLocationId());
 
     includeReferenceIfPresent(representation, "temporaryLocation",
-      item.temporaryLocationId);
+      item.getTemporaryLocationId());
 
-    includeIfPresent(representation, "metadata", item.metadata);
+    includeIfPresent(representation, "metadata", item.getMetadata());
 
     try {
       URL selfUrl = context.absoluteUrl(String.format("%s/%s",
@@ -155,9 +173,9 @@ class ItemRepresentation {
     List<Item> items = wrappedItems.records;
 
     items.forEach(item -> {
-      JsonObject materialType = materialTypes.get(item.materialTypeId);
-      JsonObject permanentLoanType = loanTypes.get(item.permanentLoanTypeId);
-      JsonObject temporaryLoanType = loanTypes.get(item.temporaryLoanTypeId);
+      JsonObject materialType = materialTypes.get(item.getMaterialTypeId());
+      JsonObject permanentLoanType = loanTypes.get(item.getPermanentLoanTypeId());
+      JsonObject temporaryLoanType = loanTypes.get(item.getTemporaryLoanTypeId());
 
       JsonObject holding = holdingForItem(item, holdings).orElse(null);
 
@@ -166,8 +184,8 @@ class ItemRepresentation {
       String effectiveLocationId = determineEffectiveLocationIdForItem(
         holding, item);
       JsonObject effectiveLocation = effectiveLocations.get(effectiveLocationId);
-      JsonObject permanentLocation = locations.get(item.permanentLocationId);
-      JsonObject temporaryLocation = locations.get(item.temporaryLocationId);
+      JsonObject permanentLocation = locations.get(item.getPermanentLocationId());
+      JsonObject temporaryLocation = locations.get(item.getTemporaryLocationId());
 
       results.add(toJson(item, holding, instance, materialType, permanentLoanType,
         temporaryLoanType, permanentLocation, temporaryLocation, effectiveLocation, context));

@@ -24,6 +24,7 @@ import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.Note;
+import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.support.CqlHelper;
@@ -113,9 +114,9 @@ public class Items {
 
     ItemCollection itemCollection = storage.getItemCollection(context);
 
-    if(newItem.barcode != null) {
+    if(newItem.getBarcode() != null) {
       try {
-        itemCollection.findByCql(CqlHelper.barcodeIs(newItem.barcode),
+        itemCollection.findByCql(CqlHelper.barcodeIs(newItem.getBarcode()),
           PagingParameters.defaults(), findResult -> {
 
             if(findResult.getResult().records.isEmpty()) {
@@ -124,7 +125,7 @@ public class Items {
             else {
               ClientErrorResponse.badRequest(routingContext.response(),
                 String.format("Barcode must be unique, %s is already assigned to another item",
-                  newItem.barcode));
+                  newItem.getBarcode()));
             }
           }, FailureResponseConsumer.serverError(routingContext.response()));
       } catch (UnsupportedEncodingException e) {
@@ -217,7 +218,7 @@ public class Items {
         Item item = itemResponse.getResult();
 
         if(item != null) {
-          holdingsClient.get(item.holdingId, holdingResponse -> {
+          holdingsClient.get(item.getHoldingId(), holdingResponse -> {
             final JsonObject holding = holdingResponse.getStatusCode() == 200
               ? holdingResponse.getJson()
               : null;
@@ -241,19 +242,19 @@ public class Items {
               ArrayList<CompletableFuture<Response>> allFutures = new ArrayList<>();
 
               CompletableFuture<Response> materialTypeFuture = getReferenceRecord(
-                item.materialTypeId, materialTypesClient, allFutures);
+                item.getMaterialTypeId(), materialTypesClient, allFutures);
 
               CompletableFuture<Response> permanentLoanTypeFuture = getReferenceRecord(
-                item.permanentLoanTypeId, loanTypesClient, allFutures);
+                item.getPermanentLoanTypeId(), loanTypesClient, allFutures);
 
               CompletableFuture<Response> temporaryLoanTypeFuture = getReferenceRecord(
-                item.temporaryLoanTypeId, loanTypesClient, allFutures);
+                item.getTemporaryLoanTypeId(), loanTypesClient, allFutures);
 
               CompletableFuture<Response> permanentLocationFuture = getReferenceRecord(
-                item.permanentLocationId, locationsClient, allFutures);
+                item.getPermanentLocationId(), locationsClient, allFutures);
 
               CompletableFuture<Response> temporaryLocationFuture = getReferenceRecord(
-                item.temporaryLocationId, locationsClient, allFutures);
+                item.getTemporaryLocationId(), locationsClient, allFutures);
 
               CompletableFuture<Response> effectiveLocationFuture = getReferenceRecord(
                 effectiveLocationId, locationsClient, allFutures);
@@ -285,8 +286,17 @@ public class Items {
   }
 
   private Item requestToItem(JsonObject itemRequest) {
+    List<String> formerIds = toListOfStrings(
+      itemRequest.getJsonArray(Item.FORMER_IDS_KEY));
+
     List<String> copyNumbers = toListOfStrings(
       itemRequest.getJsonArray("copyNumbers"));
+
+    List<String> statisticalCodeIds = toListOfStrings(
+      itemRequest.getJsonArray(Item.STATISTICAL_CODE_IDS_KEY));
+
+    List<String> yearCaption = toListOfStrings(
+      itemRequest.getJsonArray(Item.YEAR_CAPTION_KEY));
 
     String status = getNestedProperty(itemRequest, "status", "name");
 
@@ -296,6 +306,13 @@ public class Items {
           .collect(Collectors.toList())
           : new ArrayList<>();
 
+    List<ElectronicAccess> electronicAccess = itemRequest.containsKey(Item.ELECTRONIC_ACCESS_KEY)
+      ? JsonArrayHelper.toList(itemRequest.getJsonArray(Item.ELECTRONIC_ACCESS_KEY)).stream()
+          .map(json -> new ElectronicAccess(json))
+          .collect(Collectors.toList())
+          : new ArrayList<>();
+
+
     String materialTypeId = getNestedProperty(itemRequest, "materialType", "id");
     String permanentLocationId = getNestedProperty(itemRequest, "permanentLocation", "id");
     String temporaryLocationId = getNestedProperty(itemRequest, "temporaryLocation", "id");
@@ -304,20 +321,39 @@ public class Items {
 
     return new Item(
       itemRequest.getString("id"),
-      itemRequest.getString("barcode"),
-      itemRequest.getString("enumeration"),
-      itemRequest.getString("chronology"),
-      copyNumbers,
-      itemRequest.getString("numberOfPieces"),
       itemRequest.getString("holdingsRecordId"),
-      notes,
       status,
       materialTypeId,
-      permanentLocationId,
-      temporaryLocationId,
       permanentLoanTypeId,
-      temporaryLoanTypeId,
-      null);
+      null)
+            .setHrid(itemRequest.getString(Item.HRID_KEY))
+            .setFormerIds(formerIds)
+            .setDiscoverySuppress(itemRequest.getBoolean(Item.DISCOVERY_SUPPRESS_KEY))
+            .setBarcode(itemRequest.getString("barcode"))
+            .setItemLevelCallNumber(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_KEY))
+            .setItemLevelCallNumberPrefix(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY))
+            .setItemLevelCallNumberSuffix(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY))
+            .setItemLevelCallNumberTypeId(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY))
+            .setVolume(itemRequest.getString(Item.VOLUME_KEY))
+            .setEnumeration(itemRequest.getString("enumeration"))
+            .setChronology(itemRequest.getString("chronology"))
+            .setNumberOfPieces(itemRequest.getString("numberOfPieces"))
+            .setDescriptionOfPieces(itemRequest.getString(Item.DESCRIPTION_OF_PIECES_KEY))
+            .setNumberOfMissingPieces(itemRequest.getString(Item.NUMBER_OF_MISSING_PIECES_KEY))
+            .setMissingPieces(itemRequest.getString(Item.MISSING_PIECES_KEY))
+            .setMissingPiecesDate(itemRequest.getString(Item.MISSING_PIECES_DATE_KEY))
+            .setItemDamagedStatusId(itemRequest.getString(Item.ITEM_DAMAGED_STATUS_ID_KEY))
+            .setItemDamagedStatusDate(itemRequest.getString(Item.ITEM_DAMAGED_STATUS_DATE_KEY))
+            .setPermanentLocationId(permanentLocationId)
+            .setTemporaryLocationId(temporaryLocationId)
+            .setTemporaryLoanTypeId(temporaryLoanTypeId)
+            .setCopyNumbers(copyNumbers)
+            .setNotes(notes)
+            .setAccessionNumber(itemRequest.getString(Item.ACCESSION_NUMBER_KEY))
+            .setItemIdentifier(itemRequest.getString(Item.ITEM_IDENTIFIER_KEY))
+            .setYearCaption(yearCaption)
+            .setElectronicAccess(electronicAccess)
+            .setStatisticalCodeIds(statisticalCodeIds);
   }
 
   private void respondWithManyItems(
@@ -354,7 +390,7 @@ public class Items {
     ArrayList<CompletableFuture<Response>> allFutures = new ArrayList<>();
 
     List<String> holdingsIds = wrappedItems.records.stream()
-      .map(item -> item.holdingId)
+      .map(item -> item.getHoldingId())
       .filter(Objects::nonNull)
       .distinct()
       .collect(Collectors.toList());
@@ -404,7 +440,7 @@ public class Items {
           instancesResponse.getJson().getJsonArray("instances"));
 
         List<String> materialTypeIds = wrappedItems.records.stream()
-          .map(item -> item.materialTypeId)
+          .map(item -> item.getMaterialTypeId())
           .filter(Objects::nonNull)
           .distinct()
           .collect(Collectors.toList());
@@ -419,13 +455,13 @@ public class Items {
         });
 
         List<String> permanentLoanTypeIds = wrappedItems.records.stream()
-          .map(item -> item.permanentLoanTypeId)
+          .map(item -> item.getPermanentLoanTypeId())
           .filter(Objects::nonNull)
           .distinct()
           .collect(Collectors.toList());
 
         List<String> temporaryLoanTypeIds = wrappedItems.records.stream()
-          .map(item -> item.temporaryLoanTypeId)
+          .map(item -> item.getTemporaryLoanTypeId())
           .filter(Objects::nonNull)
           .distinct()
           .collect(Collectors.toList());
@@ -459,13 +495,13 @@ public class Items {
         });
 
         List<String> permanentLocationIds = wrappedItems.records.stream()
-          .map(item -> item.permanentLocationId)
+          .map(item -> item.getPermanentLocationId())
           .filter(Objects::nonNull)
           .distinct()
           .collect(Collectors.toList());
 
         List<String> temporaryLocationIds = wrappedItems.records.stream()
-          .map(item -> item.temporaryLocationId)
+          .map(item -> item.getTemporaryLocationId())
           .filter(Objects::nonNull)
           .distinct()
           .collect(Collectors.toList());
@@ -669,19 +705,19 @@ public class Items {
     CompletableFuture<Response> effectiveLocationFuture) {
 
     JsonObject foundMaterialType =
-      referenceRecordFrom(item.materialTypeId, materialTypeFuture);
+      referenceRecordFrom(item.getMaterialTypeId(), materialTypeFuture);
 
     JsonObject foundPermanentLoanType =
-      referenceRecordFrom(item.permanentLoanTypeId, permanentLoanTypeFuture);
+      referenceRecordFrom(item.getPermanentLoanTypeId(), permanentLoanTypeFuture);
 
     JsonObject foundTemporaryLoanType =
-      referenceRecordFrom(item.temporaryLoanTypeId, temporaryLoanTypeFuture);
+      referenceRecordFrom(item.getTemporaryLoanTypeId(), temporaryLoanTypeFuture);
 
     JsonObject foundPermanentLocation =
-      referenceRecordFrom(item.permanentLocationId, permanentLocationFuture);
+      referenceRecordFrom(item.getPermanentLocationId(), permanentLocationFuture);
 
     JsonObject foundTemporaryLocation =
-      referenceRecordFrom(item.temporaryLocationId, temporaryLocationFuture);
+      referenceRecordFrom(item.getTemporaryLocationId(), temporaryLocationFuture);
 
     JsonObject foundEffectiveLocation =
       referenceRecordFrom(effectiveLocationId, effectiveLocationFuture);
@@ -700,8 +736,8 @@ public class Items {
   }
 
   private boolean hasSameBarcode(Item updatedItem, Item foundItem) {
-    return updatedItem.barcode == null
-      || Objects.equals(foundItem.barcode, updatedItem.barcode);
+    return updatedItem.getBarcode() == null
+      || Objects.equals(foundItem.getBarcode(), updatedItem.getBarcode());
   }
 
   private void updateItem(
@@ -722,7 +758,7 @@ public class Items {
     throws UnsupportedEncodingException {
 
     itemCollection.findByCql(
-      CqlHelper.barcodeIs(updatedItem.barcode) + " and id<>" + updatedItem.id,
+      CqlHelper.barcodeIs(updatedItem.getBarcode()) + " and id<>" + updatedItem.id,
       PagingParameters.defaults(), it -> {
 
         List<Item> items = it.getResult().records;
@@ -733,7 +769,7 @@ public class Items {
         else {
           ClientErrorResponse.badRequest(routingContext.response(),
             String.format("Barcode must be unique, %s is already assigned to another item",
-              updatedItem.barcode));
+              updatedItem.getBarcode()));
         }
       }, FailureResponseConsumer.serverError(routingContext.response()));
   }

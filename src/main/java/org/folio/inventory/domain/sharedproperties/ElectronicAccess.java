@@ -1,4 +1,4 @@
-package org.folio.inventory.domain.instances;
+package org.folio.inventory.domain.sharedproperties;
 
 import io.vertx.core.json.JsonObject;
 

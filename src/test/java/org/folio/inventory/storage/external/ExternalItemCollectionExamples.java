@@ -1,5 +1,17 @@
 package org.folio.inventory.storage.external;
 
+import static org.folio.inventory.common.FutureAssistance.*;
+import static org.folio.inventory.storage.external.ExternalStorageSuite.getStorageAddress;
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.assertThat;
+
+import java.io.UnsupportedEncodingException;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.common.WaitForAllFutures;
 import org.folio.inventory.common.api.request.PagingParameters;
@@ -8,19 +20,6 @@ import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
-
-import static org.folio.inventory.common.FutureAssistance.*;
-import static org.folio.inventory.storage.external.ExternalStorageSuite.getStorageAddress;
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.assertThat;
 
 public class ExternalItemCollectionExamples {
   private final String bookMaterialTypeId = UUID.randomUUID().toString();
@@ -97,26 +96,26 @@ public class ExternalItemCollectionExamples {
     Item smallAngry = getItem(allItems, "036000291452");
 
     assertThat(smallAngry, notNullValue());
-    assertThat(smallAngry.status, is("Available"));
-    assertThat(smallAngry.materialTypeId, is(bookMaterialTypeId));
-    assertThat(smallAngry.permanentLoanTypeId, is(canCirculateLoanTypeId));
-    assertThat(smallAngry.temporaryLocationId, is(annexLibraryLocationId));
+    assertThat(smallAngry.getStatus(), is("Available"));
+    assertThat(smallAngry.getMaterialTypeId(), is(bookMaterialTypeId));
+    assertThat(smallAngry.getPermanentLoanTypeId(), is(canCirculateLoanTypeId));
+    assertThat(smallAngry.getTemporaryLocationId(), is(annexLibraryLocationId));
 
     Item nod = getItem(allItems, "565578437802");
 
     assertThat(nod, notNullValue());
-    assertThat(nod.status, is("Available"));
-    assertThat(nod.materialTypeId, is(bookMaterialTypeId));
-    assertThat(nod.permanentLoanTypeId, is(canCirculateLoanTypeId));
-    assertThat(nod.temporaryLocationId, is(annexLibraryLocationId));
+    assertThat(nod.getStatus(), is("Available"));
+    assertThat(nod.getMaterialTypeId(), is(bookMaterialTypeId));
+    assertThat(nod.getPermanentLoanTypeId(), is(canCirculateLoanTypeId));
+    assertThat(nod.getTemporaryLocationId(), is(annexLibraryLocationId));
 
     Item uprooted = getItem(allItems, "657670342075");
 
     assertThat(uprooted, notNullValue());
-    assertThat(uprooted.status, is("Available"));
-    assertThat(uprooted.materialTypeId, is(bookMaterialTypeId));
-    assertThat(uprooted.permanentLoanTypeId, is(canCirculateLoanTypeId));
-    assertThat(uprooted.temporaryLocationId, is(annexLibraryLocationId));
+    assertThat(uprooted.getStatus(), is("Available"));
+    assertThat(uprooted.getMaterialTypeId(), is(bookMaterialTypeId));
+    assertThat(uprooted.getPermanentLoanTypeId(), is(canCirculateLoanTypeId));
+    assertThat(uprooted.getTemporaryLocationId(), is(annexLibraryLocationId));
   }
 
   @Test
@@ -163,11 +162,11 @@ public class ExternalItemCollectionExamples {
     Item updated = getOnCompletion(gotUpdated);
 
     assertThat(updated.id, is(added.id));
-    assertThat(updated.barcode, is(added.barcode));
-    assertThat(updated.temporaryLocationId, is(added.temporaryLocationId));
-    assertThat(updated.materialTypeId, is(added.materialTypeId));
-    assertThat(updated.permanentLoanTypeId, is(added.permanentLoanTypeId));
-    assertThat(updated.status, is("Checked Out"));
+    assertThat(updated.getBarcode(), is(added.getBarcode()));
+    assertThat(updated.getTemporaryLocationId(), is(added.getTemporaryLocationId()));
+    assertThat(updated.getMaterialTypeId(), is(added.getMaterialTypeId()));
+    assertThat(updated.getPermanentLoanTypeId(), is(added.getPermanentLoanTypeId()));
+    assertThat(updated.getStatus(), is("Checked Out"));
   }
 
   @Test
@@ -310,18 +309,18 @@ public class ExternalItemCollectionExamples {
     Item otherFoundItem = getOnCompletion(otherFindFuture);
 
     assertThat(foundItem, notNullValue());
-    assertThat(foundItem.barcode, is("036000291452"));
-    assertThat(foundItem.status, is("Available"));
-    assertThat(foundItem.materialTypeId, is(bookMaterialTypeId));
-    assertThat(foundItem.permanentLoanTypeId, is(canCirculateLoanTypeId));
-    assertThat(foundItem.temporaryLocationId, is(annexLibraryLocationId));
+    assertThat(foundItem.getBarcode(), is("036000291452"));
+    assertThat(foundItem.getStatus(), is("Available"));
+    assertThat(foundItem.getMaterialTypeId(), is(bookMaterialTypeId));
+    assertThat(foundItem.getPermanentLoanTypeId(), is(canCirculateLoanTypeId));
+    assertThat(foundItem.getTemporaryLocationId(), is(annexLibraryLocationId));
 
     assertThat(otherFoundItem, notNullValue());
-    assertThat(otherFoundItem.barcode, is("565578437802"));
-    assertThat(otherFoundItem.status, is("Available"));
-    assertThat(otherFoundItem.materialTypeId, is(bookMaterialTypeId));
-    assertThat(otherFoundItem.permanentLoanTypeId, is(canCirculateLoanTypeId));
-    assertThat(otherFoundItem.temporaryLocationId, is(annexLibraryLocationId));
+    assertThat(otherFoundItem.getBarcode(), is("565578437802"));
+    assertThat(otherFoundItem.getStatus(), is("Available"));
+    assertThat(otherFoundItem.getMaterialTypeId(), is(bookMaterialTypeId));
+    assertThat(otherFoundItem.getPermanentLoanTypeId(), is(canCirculateLoanTypeId));
+    assertThat(otherFoundItem.getTemporaryLocationId(), is(annexLibraryLocationId));
   }
 
   private void addSomeExamples(ItemCollection itemCollection)
@@ -337,48 +336,49 @@ public class ExternalItemCollectionExamples {
   }
 
   private Item smallAngryPlanet() {
-    return new Item(null, "036000291452",
-      null, null, new ArrayList<>(), null,
-      null, new ArrayList<>(),
-      "Available", bookMaterialTypeId, null,
-      annexLibraryLocationId, canCirculateLoanTypeId, null, null);
+    return new Item(null,
+      null,
+      "Available", bookMaterialTypeId, canCirculateLoanTypeId, null)
+            .setBarcode("036000291452")
+            .setTemporaryLocationId(annexLibraryLocationId);
   }
 
   private Item nod() {
-    return new Item(null, "565578437802",
-      null, null, new ArrayList<>(), null,
-      null, new ArrayList<>(),
-      "Available", bookMaterialTypeId, null,
-      annexLibraryLocationId, canCirculateLoanTypeId, null, null);
+    return new Item(null,
+      null,
+      "Available", bookMaterialTypeId, canCirculateLoanTypeId, null)
+             .setBarcode("565578437802")
+            .setTemporaryLocationId(annexLibraryLocationId);
   }
 
   private Item uprooted() {
-    return new Item(null, "657670342075",
-      null, null, new ArrayList<>(), null,
-      null, new ArrayList<>(),
-      "Available", bookMaterialTypeId, null,
-      annexLibraryLocationId, canCirculateLoanTypeId, null, null);
+    return new Item(null,
+      null,
+      "Available", bookMaterialTypeId,  canCirculateLoanTypeId, null)
+            .setBarcode("657670342075")
+            .setTemporaryLocationId(annexLibraryLocationId);
   }
 
   private Item temeraire() {
-    return new Item(null, "232142443432",
-      null, null, new ArrayList<>(), null,
-      null, new ArrayList<>(),
-      "Available", bookMaterialTypeId, null,
-      annexLibraryLocationId, canCirculateLoanTypeId, null, null);
+    return new Item(null,
+      null,
+      "Available", bookMaterialTypeId,
+      canCirculateLoanTypeId, null)
+            .setBarcode("232142443432")
+            .setTemporaryLocationId(annexLibraryLocationId);
   }
 
   private Item interestingTimes() {
-    return new Item(null, "56454543534",
-      null, null, new ArrayList<>(), null,
-      null, new ArrayList<>(),
-      "Available", bookMaterialTypeId, null,
-      annexLibraryLocationId, canCirculateLoanTypeId, null, null);
+    return new Item(null,
+      null,
+      "Available", bookMaterialTypeId,  canCirculateLoanTypeId, null)
+            .setBarcode("56454543534")
+            .setTemporaryLocationId(annexLibraryLocationId);
   }
 
   private Item getItem(List<Item> allItems, String barcode) {
     return allItems.stream()
-      .filter(it -> StringUtils.equals(it.barcode, barcode))
+      .filter(it -> StringUtils.equals(it.getBarcode(), barcode))
       .findFirst().orElse(null);
   }
 }
