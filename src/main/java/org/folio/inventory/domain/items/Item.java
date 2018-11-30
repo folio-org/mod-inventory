@@ -116,11 +116,11 @@ public class Item {
   public Item setBarcode(String barcode) {
     this.barcode = barcode;
     return this;
-  };
+  }
 
   public String getBarcode() {
     return barcode;
-  };
+  }
 
     public String getItemLevelCallNumber() {
     return itemLevelCallNumber;
@@ -197,11 +197,11 @@ public class Item {
   public Item setNumberOfPieces(String numberOfPieces) {
     this.numberOfPieces = numberOfPieces;
     return this;
-  };
+  }
 
   public String getNumberOfPieces() {
     return this.numberOfPieces;
-  };
+  }
 
   public String getDescriptionOfPieces() {
     return descriptionOfPieces;
@@ -264,30 +264,30 @@ public class Item {
 
   public List<Note> getNotes() {
     return this.notes;
-  };
+  }
 
   public Item setPermanentLocationId(String permanentLocationId) {
     this.permanentLocationId = permanentLocationId;
     return this;
-  };
+  }
 
   public String getPermanentLocationId() {
     return permanentLocationId;
-  };
+  }
 
   public Item setTemporaryLocationId(String temporaryLocationId) {
     this.temporaryLocationId = temporaryLocationId;
     return this;
-  };
+  }
 
   public String getTemporaryLocationId() {
     return temporaryLocationId;
-  };
+  }
 
   public Item setTemporaryLoanTypeId(String temporaryLoanTypeId) {
     this.temporaryLoanTypeId = temporaryLoanTypeId;
     return this;
-  };
+  }
 
   public String getTemporaryLoanTypeId() {
     return temporaryLoanTypeId;
