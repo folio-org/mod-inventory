@@ -10,17 +10,24 @@ public class Item {
   public static final String HRID_KEY = "hrid";
   public static final String FORMER_IDS_KEY = "formerIds";
   public static final String DISCOVERY_SUPPRESS_KEY = "discoverySuppress";
+
+  public static final String ACCESSION_NUMBER_KEY = "accessionNumber";
+  public static final String ITEM_IDENTIFIER_KEY = "itemIdentifier";
+  public static final String YEAR_CAPTION_KEY = "yearCaption";
+  public static final String ELECTRONIC_ACCESS_KEY = "electronicAccess";
+  public static final String STATISTICAL_CODE_IDS_KEY = "statisticalCodeIds";
+
   public static final String ITEM_LEVEL_CALL_NUMBER_KEY = "itemLevelCallNumber";
   public static final String ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY = "itemLevelCallNumberPrefix";
   public static final String ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY = "itemLevelCallNumberSuffix";
   public static final String ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY = "itemLevelCallNumberTypeId";
   public static final String VOLUME_KEY = "volume";
 
-  public static final String DESCRIPTION_OF_PIECES_KEY = "descriptionOfPieces";  
+  public static final String DESCRIPTION_OF_PIECES_KEY = "descriptionOfPieces";
   public static final String NUMBER_OF_MISSING_PIECES_KEY = "numberOfMissingPieces";
   public static final String MISSING_PIECES_KEY = "missingPieces";
   public static final String MISSING_PIECES_DATE_KEY = "missingPiecesDate";
-  public static final String ITEM_DAMAGED_STATUS_ID_KEY = "itemDamagedStatusId";  
+  public static final String ITEM_DAMAGED_STATUS_ID_KEY = "itemDamagedStatusId";
   public static final String ITEM_DAMAGED_STATUS_DATE_KEY = "itemDamagedStatusDate";
 
   public static final String NOTES_KEY = "notes";
@@ -36,6 +43,12 @@ public class Item {
   private String itemLevelCallNumberSuffix;
   private String itemLevelCallNumberTypeId;
   private String volume;
+  private String accessionNumber;
+  private String itemIdentifier;
+  private List<String> yearCaption = new ArrayList();
+  // private List electronicAccess
+  private List<String> statisticalCodeIds = new ArrayList();
+
 
 
   private String enumeration;
@@ -47,7 +60,7 @@ public class Item {
   private String numberOfMissingPieces;
   private String missingPieces;
   private String missingPiecesDate;
-  private String itemDamagedStatusId;  
+  private String itemDamagedStatusId;
   private String itemDamagedStatusDate;
 
   private List<Note> notes = new ArrayList();
@@ -191,7 +204,7 @@ public class Item {
   public String getNumberOfPieces() {
     return this.numberOfPieces;
   };
-  
+
   public String getDescriptionOfPieces() {
     return descriptionOfPieces;
   }
@@ -298,6 +311,42 @@ public class Item {
     return permanentLoanTypeId;
   }
 
+  public String getAccessionNumber() {
+    return accessionNumber;
+  }
+
+  public Item setAccessionNumber(String accessionNumber) {
+    this.accessionNumber = accessionNumber;
+    return this;
+  }
+
+  public String getItemIdentifier() {
+    return itemIdentifier;
+  }
+
+  public Item setItemIdentifier(String itemIdentifier) {
+    this.itemIdentifier = itemIdentifier;
+    return this;
+  }
+
+  public List<String> getYearCaption() {
+    return yearCaption;
+  }
+
+  public Item setYearCaption(List<String> yearCaption) {
+    this.yearCaption = yearCaption;
+    return this;
+  }
+
+  public List<String> getStatisticalCodeIds() {
+    return statisticalCodeIds;
+  }
+
+  public Item setStatisticalCodeIds(List<String> statisticalCodeIds) {
+    this.statisticalCodeIds = statisticalCodeIds;
+    return this;
+  }
+
   public JsonObject getMetadata() {
     return metadata;
   }
@@ -328,7 +377,11 @@ public class Item {
             .setNotes(this.notes)
             .setPermanentLocationId(this.permanentLocationId)
             .setTemporaryLocationId(this.temporaryLocationId)
-            .setTemporaryLoanTypeId(this.temporaryLoanTypeId);
+            .setTemporaryLoanTypeId(this.temporaryLoanTypeId)
+            .setAccessionNumber(this.accessionNumber)
+            .setItemIdentifier(this.itemIdentifier)
+            .setYearCaption(this.yearCaption)
+            .setStatisticalCodeIds(this.statisticalCodeIds);
   }
 
   public Item changeStatus(String newStatus) {
@@ -357,7 +410,11 @@ public class Item {
             .setNotes(this.notes)
             .setPermanentLocationId(this.permanentLocationId)
             .setTemporaryLocationId(this.temporaryLocationId)
-            .setTemporaryLoanTypeId(this.temporaryLoanTypeId);
+            .setTemporaryLoanTypeId(this.temporaryLoanTypeId)
+            .setAccessionNumber(this.accessionNumber)
+            .setItemIdentifier(this.itemIdentifier)
+            .setYearCaption(this.yearCaption)
+            .setStatisticalCodeIds(this.statisticalCodeIds);
   }
 
   @Override

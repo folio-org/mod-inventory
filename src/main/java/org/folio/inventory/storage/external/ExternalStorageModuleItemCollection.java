@@ -32,8 +32,14 @@ class ExternalStorageModuleItemCollection
   @Override
   protected Item mapFromJson(JsonObject itemFromServer) {
 
-    List<String> formerIds = JsonArrayHelper.toListOfStrings(itemFromServer.getJsonArray(Item.FORMER_IDS_KEY));
-    List<String> copyNumberList = JsonArrayHelper.toListOfStrings(itemFromServer.getJsonArray("copyNumbers"));
+    List<String> formerIds = JsonArrayHelper
+            .toListOfStrings(itemFromServer.getJsonArray(Item.FORMER_IDS_KEY));
+    List<String> copyNumberList = JsonArrayHelper
+            .toListOfStrings(itemFromServer.getJsonArray("copyNumbers"));
+    List<String> statisticalCodeIds = JsonArrayHelper
+            .toListOfStrings(itemFromServer.getJsonArray(Item.STATISTICAL_CODE_IDS_KEY));
+    List<String> yearCaption = JsonArrayHelper
+            .toListOfStrings(itemFromServer.getJsonArray(Item.YEAR_CAPTION_KEY));
 
     List<JsonObject> notes = toList(
       itemFromServer.getJsonArray(Item.NOTES_KEY, new JsonArray()));
@@ -41,6 +47,8 @@ class ExternalStorageModuleItemCollection
     List<Note> mappedNotes = notes.stream()
       .map(it -> new Note(it))
       .collect(Collectors.toList());
+
+
 
     return new Item(
       itemFromServer.getString("id"),
@@ -71,7 +79,11 @@ class ExternalStorageModuleItemCollection
             .setNotes(mappedNotes)
             .setPermanentLocationId(itemFromServer.getString("permanentLocationId"))
             .setTemporaryLocationId(itemFromServer.getString("temporaryLocationId"))
-            .setTemporaryLoanTypeId(itemFromServer.getString("temporaryLoanTypeId"));
+            .setTemporaryLoanTypeId(itemFromServer.getString("temporaryLoanTypeId"))
+            .setAccessionNumber(itemFromServer.getString(Item.ACCESSION_NUMBER_KEY))
+            .setItemIdentifier(itemFromServer.getString(Item.ITEM_IDENTIFIER_KEY))
+            .setYearCaption(yearCaption)
+            .setStatisticalCodeIds(statisticalCodeIds);
   }
 
   @Override
@@ -118,6 +130,11 @@ class ExternalStorageModuleItemCollection
     includeIfPresent(itemToSend, "temporaryLoanTypeId", item.getTemporaryLoanTypeId());
     includeIfPresent(itemToSend, "permanentLocationId", item.getPermanentLocationId());
     includeIfPresent(itemToSend, "temporaryLocationId", item.getTemporaryLocationId());
+    includeIfPresent(itemToSend, Item.ACCESSION_NUMBER_KEY, item.getAccessionNumber());
+    includeIfPresent(itemToSend, Item.ITEM_IDENTIFIER_KEY, item.getItemIdentifier());
+    itemToSend.put(Item.YEAR_CAPTION_KEY, item.getYearCaption());
+    itemToSend.put(Item.STATISTICAL_CODE_IDS_KEY, item.getStatisticalCodeIds());
+
 
     return itemToSend;
   }

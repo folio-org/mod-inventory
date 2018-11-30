@@ -122,7 +122,10 @@ class ItemRepresentation {
     includeIfPresent(representation, Item.MISSING_PIECES_DATE_KEY, item.getMissingPiecesDate());
     includeIfPresent(representation, Item.ITEM_DAMAGED_STATUS_ID_KEY, item.getItemDamagedStatusId());
     includeIfPresent(representation, Item.ITEM_DAMAGED_STATUS_DATE_KEY, item.getItemDamagedStatusDate());
-
+    includeIfPresent(representation, Item.ACCESSION_NUMBER_KEY, item.getAccessionNumber());
+    includeIfPresent(representation, Item.ITEM_IDENTIFIER_KEY, item.getItemIdentifier());
+    representation.put(Item.YEAR_CAPTION_KEY, item.getYearCaption());
+    representation.put(Item.STATISTICAL_CODE_IDS_KEY, item.getStatisticalCodeIds());
     includeReferenceIfPresent(representation, "materialType",
       item.getMaterialTypeId());
 

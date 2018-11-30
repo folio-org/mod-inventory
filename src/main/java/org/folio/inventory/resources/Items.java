@@ -286,10 +286,16 @@ public class Items {
 
   private Item requestToItem(JsonObject itemRequest) {
     List<String> formerIds = toListOfStrings(
-            itemRequest.getJsonArray(Item.FORMER_IDS_KEY));
+      itemRequest.getJsonArray(Item.FORMER_IDS_KEY));
 
     List<String> copyNumbers = toListOfStrings(
       itemRequest.getJsonArray("copyNumbers"));
+
+    List<String> statisticalCodeIds = toListOfStrings(
+      itemRequest.getJsonArray(Item.STATISTICAL_CODE_IDS_KEY));
+
+    List<String> yearCaption = toListOfStrings(
+      itemRequest.getJsonArray(Item.YEAR_CAPTION_KEY));
 
     String status = getNestedProperty(itemRequest, "status", "name");
 
@@ -334,7 +340,11 @@ public class Items {
             .setTemporaryLocationId(temporaryLocationId)
             .setTemporaryLoanTypeId(temporaryLoanTypeId)
             .setCopyNumbers(copyNumbers)
-            .setNotes(notes);
+            .setNotes(notes)
+            .setAccessionNumber(itemRequest.getString(Item.ACCESSION_NUMBER_KEY))
+            .setItemIdentifier(itemRequest.getString(Item.ITEM_IDENTIFIER_KEY))
+            .setYearCaption(yearCaption)
+            .setStatisticalCodeIds(statisticalCodeIds);
   }
 
   private void respondWithManyItems(
