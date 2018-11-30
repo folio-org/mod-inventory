@@ -1,4 +1,4 @@
-## 11.0.0 Unreleased
+## 11.0.0 2018-11-30
 
 * Provides `inventory` interface 8.0 (MODINV-90)
 * Requires `holdings-storage` interface 2.0 or 3.0 (MODINV-93)
@@ -6,8 +6,9 @@
 * Requires `item-storage` interface 7.0 (MODINV-94)
 * Changes structure of `alternativeTitles` (MODINV-90)
 * Renames `item.pieceIdentifiers` to `copyNumbers` (MODINV-94)
-* Changes structure of item notes (MODINV-97)
+* Changes structure of `item` `notes` (MODINV-97)
 * Renames, changes structure of `instance.statisticalCodes` (MODINV-98) 
+* Adds 20 new properties to `item` (MODINV-72)
 
 ## 10.0.0 2018-10-12
 
