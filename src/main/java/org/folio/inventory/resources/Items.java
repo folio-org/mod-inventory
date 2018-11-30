@@ -285,6 +285,9 @@ public class Items {
   }
 
   private Item requestToItem(JsonObject itemRequest) {
+    List<String> formerIds = toListOfStrings(
+            itemRequest.getJsonArray(Item.FORMER_IDS_KEY));
+
     List<String> copyNumbers = toListOfStrings(
       itemRequest.getJsonArray("copyNumbers"));
 
@@ -309,7 +312,15 @@ public class Items {
       materialTypeId,
       permanentLoanTypeId,
       null)
+            .setHrid(itemRequest.getString(Item.HRID_KEY))
+            .setFormerIds(formerIds)
+            .setDiscoverySuppress(itemRequest.getBoolean(Item.DISCOVERY_SUPPRESS_KEY))
             .setBarcode(itemRequest.getString("barcode"))
+            .setItemLevelCallNumber(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_KEY))
+            .setItemLevelCallNumberPrefix(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY))
+            .setItemLevelCallNumberSuffix(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY))
+            .setItemLevelCallNumberTypeId(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY))
+            .setVolume(itemRequest.getString(Item.VOLUME_KEY))
             .setEnumeration(itemRequest.getString("enumeration"))
             .setChronology(itemRequest.getString("chronology"))
             .setNumberOfPieces(itemRequest.getString("numberOfPieces"))

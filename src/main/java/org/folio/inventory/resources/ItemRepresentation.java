@@ -101,12 +101,22 @@ class ItemRepresentation {
 
     includeIfPresent(representation, "title", instance, i -> i.getString("title"));
     includeIfPresent(representation, "callNumber", holding, h -> h.getString("callNumber"));
+    includeIfPresent(representation, Item.HRID_KEY, item.getHrid());
+    representation.put(Item.FORMER_IDS_KEY, item.getFormerIds());
+    representation.put(Item.DISCOVERY_SUPPRESS_KEY, item.getDiscoverySuppress());
     includeIfPresent(representation, "holdingsRecordId", item.getHoldingId());
     includeIfPresent(representation, "barcode", item.getBarcode());
+    includeIfPresent(representation, Item.ITEM_LEVEL_CALL_NUMBER_KEY, item.getItemLevelCallNumber());
+    includeIfPresent(representation, Item.ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY, item.getItemLevelCallNumberPrefix());
+    includeIfPresent(representation, Item.ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY, item.getItemLevelCallNumberSuffix());
+    includeIfPresent(representation, Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY, item.getItemLevelCallNumberTypeId());
+    includeIfPresent(representation, Item.VOLUME_KEY, item.getVolume());
+
+
     includeIfPresent(representation, "enumeration", item.getEnumeration());
     includeIfPresent(representation, "chronology", item.getChronology());
     representation.put("copyNumbers",item.getCopyNumbers());
-    representation.put("notes", item.getNotes());
+    representation.put(Item.NOTES_KEY, item.getNotes());
     includeIfPresent(representation, "numberOfPieces", item.getNumberOfPieces());
 
     includeReferenceIfPresent(representation, "materialType",

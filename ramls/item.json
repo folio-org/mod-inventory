@@ -6,10 +6,26 @@
     "id": {
       "type": "string"
     },
+    "hrid": {
+      "type": "string",
+      "description": "The human readable ID, also called eye readable ID. A system-assigned sequential alternate ID"
+    },
     "holdingsRecordId": {
       "description": "ID of the holding the item is a member of",
       "type": "string"
     },
+    "formerIds": {
+      "type": "array",
+      "description": "Previous identifiers assigned to the item",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "discoverySuppress": {
+      "type": "boolean",
+      "description": "Records the fact that the record should not be displayed in a discovery system"
+    },    
     "title": {
       "type": "string",
       "description": "title of the item (read only, inherited from associated instance)",
@@ -21,6 +37,21 @@
       "readonly": true
     },
     "barcode": {
+      "type": "string"
+    },
+    "itemLevelCallNumber": {
+      "type": "string"
+    },
+    "itemLevelCallNumberPrefix": {
+      "type": "string"
+    },
+    "itemLevelCallNumberSuffix": {
+      "type": "string"
+    },
+    "itemLevelCallNumberTypeId": {
+      "type": "string"
+    },
+    "volume": {
       "type": "string"
     },
     "enumeration": {

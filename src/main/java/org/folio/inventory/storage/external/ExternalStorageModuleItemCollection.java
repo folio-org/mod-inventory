@@ -32,8 +32,8 @@ class ExternalStorageModuleItemCollection
   @Override
   protected Item mapFromJson(JsonObject itemFromServer) {
 
-    List<String> copyNumberList;
-    copyNumberList = JsonArrayHelper.toListOfStrings(itemFromServer.getJsonArray("copyNumbers"));
+    List<String> formerIds = JsonArrayHelper.toListOfStrings(itemFromServer.getJsonArray(Item.FORMER_IDS_KEY));
+    List<String> copyNumberList = JsonArrayHelper.toListOfStrings(itemFromServer.getJsonArray("copyNumbers"));
 
     List<JsonObject> notes = toList(
       itemFromServer.getJsonArray(Item.NOTES_KEY, new JsonArray()));
@@ -49,7 +49,15 @@ class ExternalStorageModuleItemCollection
       itemFromServer.getString("materialTypeId"),
       itemFromServer.getString("permanentLoanTypeId"),
       itemFromServer.getJsonObject("metadata"))
+            .setHrid(itemFromServer.getString(Item.HRID_KEY))
+            .setFormerIds(formerIds)
+            .setDiscoverySuppress(itemFromServer.getBoolean(Item.DISCOVERY_SUPPRESS_KEY))
             .setBarcode(itemFromServer.getString("barcode"))
+            .setItemLevelCallNumber(itemFromServer.getString(Item.ITEM_LEVEL_CALL_NUMBER_KEY))
+            .setItemLevelCallNumberPrefix(itemFromServer.getString(Item.ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY))
+            .setItemLevelCallNumberSuffix(itemFromServer.getString(Item.ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY))
+            .setItemLevelCallNumberTypeId(itemFromServer.getString(Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY))
+            .setVolume(itemFromServer.getString(Item.VOLUME_KEY))
             .setEnumeration(itemFromServer.getString("enumeration"))
             .setChronology(itemFromServer.getString("chronology"))
             .setCopyNumbers(copyNumberList)
@@ -78,9 +86,17 @@ class ExternalStorageModuleItemCollection
       itemToSend.put("status", new JsonObject().put("name", item.getStatus()));
     }
 
+    includeIfPresent(itemToSend, Item.HRID_KEY, item.getHrid());
+    itemToSend.put(Item.FORMER_IDS_KEY, item.getFormerIds());
+    itemToSend.put(Item.DISCOVERY_SUPPRESS_KEY, item.getDiscoverySuppress());
     itemToSend.put("copyNumbers", item.getCopyNumbers());
     itemToSend.put("notes", item.getNotes());
     includeIfPresent(itemToSend, "barcode", item.getBarcode());
+    includeIfPresent(itemToSend, Item.ITEM_LEVEL_CALL_NUMBER_KEY, item.getItemLevelCallNumber());
+    includeIfPresent(itemToSend, Item.ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY, item.getItemLevelCallNumberPrefix());
+    includeIfPresent(itemToSend, Item.ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY, item.getItemLevelCallNumberSuffix());
+    includeIfPresent(itemToSend, Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY, item.getItemLevelCallNumberTypeId());
+    includeIfPresent(itemToSend, Item.VOLUME_KEY, item.getVolume());
     includeIfPresent(itemToSend, "enumeration", item.getEnumeration());
     includeIfPresent(itemToSend, "chronology", item.getChronology());
     includeIfPresent(itemToSend, "numberOfPieces", item.getNumberOfPieces());
