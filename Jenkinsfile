@@ -1,4 +1,4 @@
-@Library ('folio_jenkins_shared_libs@FOLIO-1027-ci-lint-raml-cop') _
+@Library ('folio_jenkins_shared_libs@folio-1481-lint-raml-two-jobs') _
 
 buildMvn {
   publishModDescriptor = 'yes'
