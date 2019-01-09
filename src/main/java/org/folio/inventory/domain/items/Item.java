@@ -271,7 +271,7 @@ public class Item {
   public Item setCirculationNotes(List<CirculationNote> circulationNotes) {
     this.circulationNotes = circulationNotes;
     return this;
-  };
+  }
 
   public List<CirculationNote> getCirculationNotes() {
     return this.circulationNotes;
