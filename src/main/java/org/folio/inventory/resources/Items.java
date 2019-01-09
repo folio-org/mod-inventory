@@ -21,6 +21,7 @@ import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.domain.items.CirculationNote;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.Note;
@@ -306,6 +307,12 @@ public class Items {
           .collect(Collectors.toList())
           : new ArrayList<>();
 
+    List<CirculationNote> circulationNotes = itemRequest.containsKey(Item.CIRCULATION_NOTES_KEY)
+      ? JsonArrayHelper.toList(itemRequest.getJsonArray(Item.CIRCULATION_NOTES_KEY)).stream()
+          .map(json -> new CirculationNote(json))
+          .collect(Collectors.toList())
+          : new ArrayList<>();
+
     List<ElectronicAccess> electronicAccess = itemRequest.containsKey(Item.ELECTRONIC_ACCESS_KEY)
       ? JsonArrayHelper.toList(itemRequest.getJsonArray(Item.ELECTRONIC_ACCESS_KEY)).stream()
           .map(json -> new ElectronicAccess(json))
@@ -349,6 +356,7 @@ public class Items {
             .setTemporaryLoanTypeId(temporaryLoanTypeId)
             .setCopyNumbers(copyNumbers)
             .setNotes(notes)
+            .setCirculationNotes(circulationNotes)
             .setAccessionNumber(itemRequest.getString(Item.ACCESSION_NUMBER_KEY))
             .setItemIdentifier(itemRequest.getString(Item.ITEM_IDENTIFIER_KEY))
             .setYearCaption(yearCaption)

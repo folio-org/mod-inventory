@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.folio.inventory.domain.items.CirculationNote;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.Note;
@@ -49,6 +50,13 @@ class ExternalStorageModuleItemCollection
       .map(it -> new Note(it))
       .collect(Collectors.toList());
 
+    List<JsonObject> circulationNotes = toList(
+      itemFromServer.getJsonArray(Item.CIRCULATION_NOTES_KEY, new JsonArray()));
+
+    List<CirculationNote> mappedCirculationNotes = circulationNotes.stream()
+      .map(it -> new CirculationNote(it))
+      .collect(Collectors.toList());
+
     List<JsonObject> electronicAccess = toList(
       itemFromServer.getJsonArray(Item.ELECTRONIC_ACCESS_KEY, new JsonArray()));
 
@@ -83,6 +91,7 @@ class ExternalStorageModuleItemCollection
             .setItemDamagedStatusId(itemFromServer.getString(Item.ITEM_DAMAGED_STATUS_ID_KEY))
             .setItemDamagedStatusDate(itemFromServer.getString(Item.ITEM_DAMAGED_STATUS_DATE_KEY))
             .setNotes(mappedNotes)
+            .setCirculationNotes(mappedCirculationNotes)
             .setPermanentLocationId(itemFromServer.getString("permanentLocationId"))
             .setTemporaryLocationId(itemFromServer.getString("temporaryLocationId"))
             .setTemporaryLoanTypeId(itemFromServer.getString("temporaryLoanTypeId"))
@@ -116,6 +125,7 @@ class ExternalStorageModuleItemCollection
     itemToSend.put(Item.DISCOVERY_SUPPRESS_KEY, item.getDiscoverySuppress());
     itemToSend.put("copyNumbers", item.getCopyNumbers());
     itemToSend.put("notes", item.getNotes());
+    itemToSend.put(Item.CIRCULATION_NOTES_KEY, item.getCirculationNotes());
     includeIfPresent(itemToSend, "barcode", item.getBarcode());
     includeIfPresent(itemToSend, Item.ITEM_LEVEL_CALL_NUMBER_KEY, item.getItemLevelCallNumber());
     includeIfPresent(itemToSend, Item.ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY, item.getItemLevelCallNumberPrefix());
