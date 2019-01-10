@@ -1,3 +1,9 @@
+## 11.1.0 Unreleased
+
+* Provides `inventory` interface 8.1 (MODINV-101)
+* Requires `item-storage` interface 7.1 (MODINV-101)
+* Adds `circulationNotes' to `item` schema (MODINV-101)
+
 ## 11.0.0 2018-11-30
 
 * Provides `inventory` interface 8.0 (MODINV-90)
