@@ -174,8 +174,8 @@ public class Items {
     CollectionResourceClient itemsStorageClient;
 
     try {
-      OkapiHttpClient client = createHttpClient(routingContext, context);
-      itemsStorageClient = createItemsStorageClient(client, context);
+      OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
+      itemsStorageClient = createItemsStorageClient(okapiClient, context);
     }
     catch (MalformedURLException e) {
       invalidOkapiUrlResponse(routingContext, context);
@@ -204,12 +204,12 @@ public class Items {
     CollectionResourceClient locationsClient;
 
     try {
-      OkapiHttpClient client = createHttpClient(routingContext, context);
-      holdingsClient = createHoldingsClient(client, context);
-      instancesClient = createInstancesClient(client, context);
-      materialTypesClient = createMaterialTypesClient(client, context);
-      loanTypesClient = createLoanTypesClient(client, context);
-      locationsClient = createLocationsClient(client, context);
+      OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
+      holdingsClient = createHoldingsClient(okapiClient, context);
+      instancesClient = createInstancesClient(okapiClient, context);
+      materialTypesClient = createMaterialTypesClient(okapiClient, context);
+      loanTypesClient = createLoanTypesClient(okapiClient, context);
+      locationsClient = createLocationsClient(okapiClient, context);
     }
     catch (MalformedURLException e) {
       invalidOkapiUrlResponse(routingContext, context);
@@ -381,13 +381,13 @@ public class Items {
     CollectionResourceClient effectiveLocationsClient;
 
     try {
-      OkapiHttpClient client = createHttpClient(routingContext, context);
-      holdingsClient = createHoldingsClient(client, context);
-      instancesClient = createInstancesClient(client, context);
-      materialTypesClient = createMaterialTypesClient(client, context);
-      loanTypesClient = createLoanTypesClient(client, context);
-      locationsClient = createLocationsClient(client, context);
-      effectiveLocationsClient = createLocationsClient(client, context);
+      OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
+      holdingsClient = createHoldingsClient(okapiClient, context);
+      instancesClient = createInstancesClient(okapiClient, context);
+      materialTypesClient = createMaterialTypesClient(okapiClient, context);
+      loanTypesClient = createLoanTypesClient(okapiClient, context);
+      locationsClient = createLocationsClient(okapiClient, context);
+      effectiveLocationsClient = createLocationsClient(okapiClient, context);
     }
     catch (MalformedURLException e) {
       invalidOkapiUrlResponse(routingContext, context);
