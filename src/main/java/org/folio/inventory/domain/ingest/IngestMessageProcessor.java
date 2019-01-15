@@ -97,7 +97,7 @@ public class IngestMessageProcessor {
 
         return new Instance(
                 UUID.randomUUID().toString(),
-                UUID.randomUUID().toString(),
+                null,
                 "Local: MODS",
                 record.getString(TITLE_PROPERTY),
                 instanceTypes.getString("text"))

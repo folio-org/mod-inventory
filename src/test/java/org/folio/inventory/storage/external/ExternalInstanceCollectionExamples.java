@@ -328,7 +328,7 @@ public class ExternalInstanceCollectionExamples {
   private static Instance createInstance(String title) {
     return new Instance(
             UUID.randomUUID().toString(),
-            UUID.randomUUID().toString(),
+            null,
             "local",
             title,
             BOOKS_INSTANCE_TYPE)
