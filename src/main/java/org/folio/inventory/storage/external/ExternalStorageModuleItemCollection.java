@@ -15,6 +15,7 @@ import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 import org.folio.inventory.support.JsonArrayHelper;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -25,10 +26,11 @@ class ExternalStorageModuleItemCollection
   ExternalStorageModuleItemCollection(Vertx vertx,
                                       String baseAddress,
                                       String tenant,
-                                      String token) {
+                                      String token,
+                                      HttpClient client) {
 
     super(vertx, String.format("%s/%s", baseAddress, "item-storage/items"),
-      tenant, token, "items");
+      tenant, token, "items", client);
   }
 
   @Override

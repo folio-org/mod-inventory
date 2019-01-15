@@ -1,5 +1,6 @@
 package org.folio.inventory.resources.ingest;
 
+import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -34,8 +35,11 @@ public class ModsIngestion {
 
   private final Storage storage;
 
-  public ModsIngestion(final Storage storage) {
+  private final HttpClient client;
+
+  public ModsIngestion(final Storage storage, final HttpClient client) {
     this.storage = storage;
+    this.client = client;
   }
 
   public void register(Router router) {
@@ -234,7 +238,7 @@ public class ModsIngestion {
 
     throws MalformedURLException {
 
-    return new OkapiHttpClient(routingContext.vertx().createHttpClient(),
+    return new OkapiHttpClient(client,
       new URL(context.getOkapiLocation()), context.getTenantId(),
       context.getToken(),
       exception -> ServerErrorResponse.internalError(routingContext.response(),

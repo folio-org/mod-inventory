@@ -12,7 +12,7 @@ public class ExternalItemCollectionServerErrorExamples
   public ExternalItemCollectionServerErrorExamples() {
     super(ExternalStorageFailureSuite.createUsing(
       it -> new ExternalStorageCollections(it,
-        ExternalStorageFailureSuite.getServerErrorStorageAddress())));
+        ExternalStorageFailureSuite.getServerErrorStorageAddress(), it.createHttpClient())));
   }
 
   @Override
