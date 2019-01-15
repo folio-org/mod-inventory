@@ -33,6 +33,7 @@ public class Item {
   public static final String ITEM_DAMAGED_STATUS_DATE_KEY = "itemDamagedStatusDate";
 
   public static final String NOTES_KEY = "notes";
+  public static final String CIRCULATION_NOTES_KEY = "circulationNotes";
 
   public final String id;
   private String hrid;
@@ -60,6 +61,7 @@ public class Item {
   private String itemDamagedStatusId;
   private String itemDamagedStatusDate;
   private List<Note> notes = new ArrayList();
+  private List<CirculationNote> circulationNotes = new ArrayList();
   private final String status;
   private final String materialTypeId;
   private final String permanentLoanTypeId;
@@ -266,6 +268,15 @@ public class Item {
     return this.notes;
   }
 
+  public Item setCirculationNotes(List<CirculationNote> circulationNotes) {
+    this.circulationNotes = circulationNotes;
+    return this;
+  }
+
+  public List<CirculationNote> getCirculationNotes() {
+    return this.circulationNotes;
+  }
+
   public Item setPermanentLocationId(String permanentLocationId) {
     this.permanentLocationId = permanentLocationId;
     return this;
@@ -335,7 +346,7 @@ public class Item {
     this.yearCaption = yearCaption;
     return this;
   }
-  
+
   public List<ElectronicAccess> getElectronicAccess() {
     return electronicAccess;
   }
