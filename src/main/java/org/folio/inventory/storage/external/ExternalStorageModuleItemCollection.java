@@ -99,7 +99,8 @@ class ExternalStorageModuleItemCollection
             .setItemIdentifier(itemFromServer.getString(Item.ITEM_IDENTIFIER_KEY))
             .setYearCaption(yearCaption)
             .setElectronicAccess(mappedElectronicAccess)
-            .setStatisticalCodeIds(statisticalCodeIds);
+            .setStatisticalCodeIds(statisticalCodeIds)
+            .setPurchaseOrderLineidentifier(itemFromServer.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER));
   }
 
   @Override
@@ -152,7 +153,7 @@ class ExternalStorageModuleItemCollection
     itemToSend.put(Item.YEAR_CAPTION_KEY, item.getYearCaption());
     itemToSend.put(Item.ELECTRONIC_ACCESS_KEY, item.getElectronicAccess());
     itemToSend.put(Item.STATISTICAL_CODE_IDS_KEY, item.getStatisticalCodeIds());
-
+    itemToSend.put(Item.PURCHASE_ORDER_LINE_IDENTIFIER, item.getPurchaseOrderLineidentifier());
 
     return itemToSend;
   }

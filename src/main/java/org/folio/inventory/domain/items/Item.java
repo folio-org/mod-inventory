@@ -34,6 +34,7 @@ public class Item {
 
   public static final String NOTES_KEY = "notes";
   public static final String CIRCULATION_NOTES_KEY = "circulationNotes";
+  public static final String PURCHASE_ORDER_LINE_IDENTIFIER = "purchaseOrderLineIdentifier";
 
   public final String id;
   private String hrid;
@@ -71,6 +72,8 @@ public class Item {
   private String temporaryLocationId;
   private List<ElectronicAccess> electronicAccess = new ArrayList();
   private List<String> statisticalCodeIds = new ArrayList();
+  private String purchaseOrderLineidentifier;
+
   private final JsonObject metadata;
 
   public Item(String id,
@@ -365,6 +368,15 @@ public class Item {
     return this;
   }
 
+  public String getPurchaseOrderLineidentifier() {
+    return purchaseOrderLineidentifier;
+  }
+
+  public Item setPurchaseOrderLineidentifier(String purchaseOrderLineidentifier) {
+    this.purchaseOrderLineidentifier = purchaseOrderLineidentifier;
+    return this;
+  }
+
   public JsonObject getMetadata() {
     return metadata;
   }
@@ -400,7 +412,8 @@ public class Item {
             .setItemIdentifier(this.itemIdentifier)
             .setYearCaption(this.yearCaption)
             .setElectronicAccess(this.electronicAccess)
-            .setStatisticalCodeIds(this.statisticalCodeIds);
+            .setStatisticalCodeIds(this.statisticalCodeIds)
+            .setPurchaseOrderLineidentifier(this.purchaseOrderLineidentifier);
   }
 
   public Item changeStatus(String newStatus) {
@@ -434,7 +447,8 @@ public class Item {
             .setItemIdentifier(this.itemIdentifier)
             .setYearCaption(this.yearCaption)
             .setElectronicAccess(this.electronicAccess)
-            .setStatisticalCodeIds(this.statisticalCodeIds);
+            .setStatisticalCodeIds(this.statisticalCodeIds)
+            .setPurchaseOrderLineidentifier(purchaseOrderLineidentifier);
   }
 
   @Override
