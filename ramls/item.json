@@ -289,6 +289,10 @@
       },
       "uniqueItems": true
     },
+    "purchaseOrderLineIdentifier": {
+      "type": "string",
+      "description": "ID referencing a remote purchase order object related to this item"
+    },
     "metadata": {
       "description": "Metadata about creation and changes, provided by the server (client should not provide)",
       "type": "object",

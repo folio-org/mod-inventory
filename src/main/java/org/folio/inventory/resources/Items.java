@@ -361,7 +361,8 @@ public class Items {
             .setItemIdentifier(itemRequest.getString(Item.ITEM_IDENTIFIER_KEY))
             .setYearCaption(yearCaption)
             .setElectronicAccess(electronicAccess)
-            .setStatisticalCodeIds(statisticalCodeIds);
+            .setStatisticalCodeIds(statisticalCodeIds)
+            .setPurchaseOrderLineidentifier(itemRequest.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER));
   }
 
   private void respondWithManyItems(
