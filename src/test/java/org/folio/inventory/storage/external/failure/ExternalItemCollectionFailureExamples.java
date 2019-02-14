@@ -14,6 +14,7 @@ import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.domain.CollectionProvider;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
+import org.folio.inventory.domain.items.Status;
 import org.junit.Test;
 
 public abstract class ExternalItemCollectionFailureExamples {
@@ -152,7 +153,7 @@ public abstract class ExternalItemCollectionFailureExamples {
   private static Item createItem() {
     return new Item(null,
       null,
-      UUID.randomUUID().toString(), UUID.randomUUID().toString(),
+      new Status(UUID.randomUUID().toString()), UUID.randomUUID().toString(),
       UUID.randomUUID().toString(),  null)
             .setBarcode(UUID.randomUUID().toString())
             .setEnumeration("6575467847")

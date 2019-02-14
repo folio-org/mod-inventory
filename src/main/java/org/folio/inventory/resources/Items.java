@@ -25,6 +25,7 @@ import org.folio.inventory.domain.items.CirculationNote;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.Note;
+import org.folio.inventory.domain.items.Status;
 import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
@@ -299,7 +300,7 @@ public class Items {
     List<String> yearCaption = toListOfStrings(
       itemRequest.getJsonArray(Item.YEAR_CAPTION_KEY));
 
-    String status = getNestedProperty(itemRequest, "status", "name");
+    Status status = new Status(itemRequest.getJsonObject(Item.STATUS_KEY));
 
     List<Note> notes = itemRequest.containsKey(Item.NOTES_KEY)
       ? JsonArrayHelper.toList(itemRequest.getJsonArray(Item.NOTES_KEY)).stream()
