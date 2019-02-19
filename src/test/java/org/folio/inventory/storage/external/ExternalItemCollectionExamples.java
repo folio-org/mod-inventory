@@ -18,6 +18,7 @@ import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
+import org.folio.inventory.domain.items.Status;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -96,7 +97,7 @@ public class ExternalItemCollectionExamples {
     Item smallAngry = getItem(allItems, "036000291452");
 
     assertThat(smallAngry, notNullValue());
-    assertThat(smallAngry.getStatus(), is("Available"));
+    assertThat(smallAngry.getStatus().getString(Status.NAME_KEY), is("Available"));
     assertThat(smallAngry.getMaterialTypeId(), is(bookMaterialTypeId));
     assertThat(smallAngry.getPermanentLoanTypeId(), is(canCirculateLoanTypeId));
     assertThat(smallAngry.getTemporaryLocationId(), is(annexLibraryLocationId));
@@ -104,7 +105,7 @@ public class ExternalItemCollectionExamples {
     Item nod = getItem(allItems, "565578437802");
 
     assertThat(nod, notNullValue());
-    assertThat(nod.getStatus(), is("Available"));
+    assertThat(nod.getStatus().getString(Status.NAME_KEY), is("Available"));
     assertThat(nod.getMaterialTypeId(), is(bookMaterialTypeId));
     assertThat(nod.getPermanentLoanTypeId(), is(canCirculateLoanTypeId));
     assertThat(nod.getTemporaryLocationId(), is(annexLibraryLocationId));
@@ -112,7 +113,7 @@ public class ExternalItemCollectionExamples {
     Item uprooted = getItem(allItems, "657670342075");
 
     assertThat(uprooted, notNullValue());
-    assertThat(uprooted.getStatus(), is("Available"));
+    assertThat(uprooted.getStatus().getString(Status.NAME_KEY), is("Available"));
     assertThat(uprooted.getMaterialTypeId(), is(bookMaterialTypeId));
     assertThat(uprooted.getPermanentLoanTypeId(), is(canCirculateLoanTypeId));
     assertThat(uprooted.getTemporaryLocationId(), is(annexLibraryLocationId));
@@ -166,7 +167,7 @@ public class ExternalItemCollectionExamples {
     assertThat(updated.getTemporaryLocationId(), is(added.getTemporaryLocationId()));
     assertThat(updated.getMaterialTypeId(), is(added.getMaterialTypeId()));
     assertThat(updated.getPermanentLoanTypeId(), is(added.getPermanentLoanTypeId()));
-    assertThat(updated.getStatus(), is("Checked Out"));
+    assertThat(updated.getStatus().getString(Status.NAME_KEY), is("Checked Out"));
   }
 
   @Test
@@ -310,14 +311,14 @@ public class ExternalItemCollectionExamples {
 
     assertThat(foundItem, notNullValue());
     assertThat(foundItem.getBarcode(), is("036000291452"));
-    assertThat(foundItem.getStatus(), is("Available"));
+    assertThat(foundItem.getStatus().getString(Status.NAME_KEY), is("Available"));
     assertThat(foundItem.getMaterialTypeId(), is(bookMaterialTypeId));
     assertThat(foundItem.getPermanentLoanTypeId(), is(canCirculateLoanTypeId));
     assertThat(foundItem.getTemporaryLocationId(), is(annexLibraryLocationId));
 
     assertThat(otherFoundItem, notNullValue());
     assertThat(otherFoundItem.getBarcode(), is("565578437802"));
-    assertThat(otherFoundItem.getStatus(), is("Available"));
+    assertThat(otherFoundItem.getStatus().getString(Status.NAME_KEY), is("Available"));
     assertThat(otherFoundItem.getMaterialTypeId(), is(bookMaterialTypeId));
     assertThat(otherFoundItem.getPermanentLoanTypeId(), is(canCirculateLoanTypeId));
     assertThat(otherFoundItem.getTemporaryLocationId(), is(annexLibraryLocationId));
@@ -338,7 +339,7 @@ public class ExternalItemCollectionExamples {
   private Item smallAngryPlanet() {
     return new Item(null,
       null,
-      "Available", bookMaterialTypeId, canCirculateLoanTypeId, null)
+      new Status("Available"), bookMaterialTypeId, canCirculateLoanTypeId, null)
             .setBarcode("036000291452")
             .setTemporaryLocationId(annexLibraryLocationId);
   }
@@ -346,7 +347,7 @@ public class ExternalItemCollectionExamples {
   private Item nod() {
     return new Item(null,
       null,
-      "Available", bookMaterialTypeId, canCirculateLoanTypeId, null)
+      new Status("Available"), bookMaterialTypeId, canCirculateLoanTypeId, null)
              .setBarcode("565578437802")
             .setTemporaryLocationId(annexLibraryLocationId);
   }
@@ -354,7 +355,7 @@ public class ExternalItemCollectionExamples {
   private Item uprooted() {
     return new Item(null,
       null,
-      "Available", bookMaterialTypeId,  canCirculateLoanTypeId, null)
+      new Status("Available"), bookMaterialTypeId,  canCirculateLoanTypeId, null)
             .setBarcode("657670342075")
             .setTemporaryLocationId(annexLibraryLocationId);
   }
@@ -362,7 +363,7 @@ public class ExternalItemCollectionExamples {
   private Item temeraire() {
     return new Item(null,
       null,
-      "Available", bookMaterialTypeId,
+      new Status("Available"), bookMaterialTypeId,
       canCirculateLoanTypeId, null)
             .setBarcode("232142443432")
             .setTemporaryLocationId(annexLibraryLocationId);
@@ -371,7 +372,7 @@ public class ExternalItemCollectionExamples {
   private Item interestingTimes() {
     return new Item(null,
       null,
-      "Available", bookMaterialTypeId,  canCirculateLoanTypeId, null)
+      new Status("Available"), bookMaterialTypeId,  canCirculateLoanTypeId, null)
             .setBarcode("56454543534")
             .setTemporaryLocationId(annexLibraryLocationId);
   }

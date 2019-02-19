@@ -12,7 +12,7 @@ public class Item {
   public static final String HRID_KEY = "hrid";
   public static final String FORMER_IDS_KEY = "formerIds";
   public static final String DISCOVERY_SUPPRESS_KEY = "discoverySuppress";
-
+  public static final String STATUS_KEY = "status";
   public static final String ACCESSION_NUMBER_KEY = "accessionNumber";
   public static final String ITEM_IDENTIFIER_KEY = "itemIdentifier";
   public static final String YEAR_CAPTION_KEY = "yearCaption";
@@ -63,7 +63,7 @@ public class Item {
   private String itemDamagedStatusDate;
   private List<Note> notes = new ArrayList();
   private List<CirculationNote> circulationNotes = new ArrayList();
-  private final String status;
+  public final Status status;
   private final String materialTypeId;
   private final String permanentLoanTypeId;
 
@@ -78,7 +78,7 @@ public class Item {
 
   public Item(String id,
               String holdingId,
-              String status,
+              Status status,
               String materialTypeId,
               String permanentLoanTypeId,
               JsonObject metadata) {
@@ -311,8 +311,8 @@ public class Item {
     return holdingId;
   }
 
-  public String getStatus() {
-    return status;
+  public JsonObject getStatus() {
+    return status.getJson();
   }
 
   public String getMaterialTypeId() {
@@ -418,7 +418,7 @@ public class Item {
 
   public Item changeStatus(String newStatus) {
     return new Item(this.id,
-      holdingId, newStatus, this.materialTypeId,
+      holdingId, new Status(newStatus), this.materialTypeId,
       this.permanentLoanTypeId, this.metadata)
             .setHrid(this.hrid)
             .setFormerIds(this.formerIds)

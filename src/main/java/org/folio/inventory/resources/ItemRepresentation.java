@@ -13,6 +13,7 @@ import java.util.function.Function;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.domain.items.Item;
+import org.folio.inventory.domain.items.Status;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -95,8 +96,8 @@ class ItemRepresentation {
     JsonObject representation = new JsonObject();
     representation.put("id", item.id);
 
-    if(item.getStatus() != null) {
-      representation.put("status", new JsonObject().put("name", item.getStatus()));
+    if(item.getStatus().getString(Status.NAME_KEY) != null) {
+      representation.put(Item.STATUS_KEY, item.status.getJson());
     }
 
     includeIfPresent(representation, "title", instance, i -> i.getString("title"));
