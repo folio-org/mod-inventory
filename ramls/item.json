@@ -153,7 +153,7 @@
           "description": "Name of the status e.g. Available, Checked out, In transit",
           "type": "string"
         },
-        "status": {
+        "date": {
           "description": "Date of a status",
           "type": "string"
         }
