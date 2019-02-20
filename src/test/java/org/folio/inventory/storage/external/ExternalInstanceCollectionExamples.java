@@ -34,7 +34,7 @@ public class ExternalInstanceCollectionExamples {
   private final InstanceCollection collection =
     ExternalStorageSuite.useVertx(
       it -> new ExternalStorageModuleInstanceCollection(it, getStorageAddress(),
-        ExternalStorageSuite.TENANT_ID, ExternalStorageSuite.TENANT_TOKEN));
+        ExternalStorageSuite.TENANT_ID, ExternalStorageSuite.TENANT_TOKEN, it.createHttpClient()));
 
   @Before
   public void before()

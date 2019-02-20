@@ -4,6 +4,7 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -38,15 +39,17 @@ public class InventoryVerticle extends AbstractVerticle {
     config.fieldNames().stream().forEach(key ->
       log.info(String.format("%s:%s", key, config.getValue(key).toString())));
 
-    Storage storage = Storage.basedUpon(vertx, config);
+    HttpClient client = vertx.createHttpClient();
+
+    Storage storage = Storage.basedUpon(vertx, config, client);
 
     new IngestMessageProcessor(storage).register(vertx.eventBus());
 
     router.route().handler(WebRequestDiagnostics::outputDiagnostics);
 
-    new ModsIngestion(storage).register(router);
-    new Items(storage).register(router);
-    new Instances(storage).register(router);
+    new ModsIngestion(storage, client).register(router);
+    new Items(storage, client).register(router);
+    new Instances(storage, client).register(router);
 
     Handler<AsyncResult<HttpServer>> onHttpServerStart = result -> {
       if (result.succeeded()) {

@@ -1,5 +1,6 @@
 package org.folio.inventory.resources.ingest;
 
+import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -34,8 +35,11 @@ public class ModsIngestion {
 
   private final Storage storage;
 
-  public ModsIngestion(final Storage storage) {
+  private final HttpClient client;
+
+  public ModsIngestion(final Storage storage, final HttpClient client) {
     this.storage = storage;
+    this.client = client;
   }
 
   public void register(Router router) {
@@ -59,7 +63,7 @@ public class ModsIngestion {
     }
 
     WebContext context = new WebContext(routingContext);
-    OkapiHttpClient client;
+    OkapiHttpClient okapiClient;
     ReferenceRecordClient materialTypesClient;
     ReferenceRecordClient loanTypesClient;
     ReferenceRecordClient locationsClient;
@@ -68,24 +72,24 @@ public class ModsIngestion {
     ReferenceRecordClient contributorNameTypesClient;
 
     try {
-      client = createHttpClient(routingContext, context);
+      okapiClient = createHttpClient(routingContext, context);
 
-      materialTypesClient = new ReferenceRecordClient(new CollectionResourceClient(client,
+      materialTypesClient = new ReferenceRecordClient(new CollectionResourceClient(okapiClient,
         new URL(context.getOkapiLocation() + "/material-types")), "mtypes");
 
-      loanTypesClient = new ReferenceRecordClient(new CollectionResourceClient(client,
+      loanTypesClient = new ReferenceRecordClient(new CollectionResourceClient(okapiClient,
         new URL(context.getOkapiLocation() + "/loan-types")), "loantypes");
 
-      locationsClient = new ReferenceRecordClient(new CollectionResourceClient(client,
+      locationsClient = new ReferenceRecordClient(new CollectionResourceClient(okapiClient,
         new URL(context.getOkapiLocation() + "/locations")), "locations");
 
-      identifierTypesClient = new ReferenceRecordClient(new CollectionResourceClient(client,
+      identifierTypesClient = new ReferenceRecordClient(new CollectionResourceClient(okapiClient,
         new URL(context.getOkapiLocation() + "/identifier-types")), "identifierTypes");
 
-      instanceTypesClient = new ReferenceRecordClient(new CollectionResourceClient(client,
+      instanceTypesClient = new ReferenceRecordClient(new CollectionResourceClient(okapiClient,
         new URL(context.getOkapiLocation() + "/instance-types")), "instanceTypes");
 
-      contributorNameTypesClient = new ReferenceRecordClient(new CollectionResourceClient(client,
+      contributorNameTypesClient = new ReferenceRecordClient(new CollectionResourceClient(okapiClient,
         new URL(context.getOkapiLocation() + "/contributor-name-types")), "contributorNameTypes");
     }
     catch (MalformedURLException e) {
@@ -234,7 +238,7 @@ public class ModsIngestion {
 
     throws MalformedURLException {
 
-    return new OkapiHttpClient(routingContext.vertx().createHttpClient(),
+    return new OkapiHttpClient(client,
       new URL(context.getOkapiLocation()), context.getTenantId(),
       context.getToken(),
       exception -> ServerErrorResponse.internalError(routingContext.response(),
