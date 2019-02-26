@@ -1,9 +1,9 @@
 package api.support.builders;
 
+import java.util.UUID;
+
 import api.ApiTestSuite;
 import io.vertx.core.json.JsonObject;
-
-import java.util.UUID;
 
 public class ItemRequestBuilder implements Builder {
 
@@ -67,6 +67,8 @@ public class ItemRequestBuilder implements Builder {
 
     if(status != null) {
       itemRequest.put("status", new JsonObject().put("name", status));
+    } else {
+      itemRequest.put("status", new JsonObject());
     }
 
     includeWhenPresent(itemRequest, "materialType", materialType);

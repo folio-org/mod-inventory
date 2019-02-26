@@ -13,6 +13,7 @@ import java.util.function.Function;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.domain.items.Item;
+import org.folio.inventory.domain.items.Status;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -95,8 +96,8 @@ class ItemRepresentation {
     JsonObject representation = new JsonObject();
     representation.put("id", item.id);
 
-    if(item.getStatus() != null) {
-      representation.put("status", new JsonObject().put("name", item.getStatus()));
+    if(item.getStatus().getString(Status.NAME_KEY) != null) {
+      representation.put(Item.STATUS_KEY, item.status.getJson());
     }
 
     includeIfPresent(representation, "title", instance, i -> i.getString("title"));
@@ -115,6 +116,7 @@ class ItemRepresentation {
     includeIfPresent(representation, "chronology", item.getChronology());
     representation.put("copyNumbers",item.getCopyNumbers());
     representation.put(Item.NOTES_KEY, item.getNotes());
+    representation.put(Item.CIRCULATION_NOTES_KEY, item.getCirculationNotes());
     includeIfPresent(representation, "numberOfPieces", item.getNumberOfPieces());
     includeIfPresent(representation, Item.DESCRIPTION_OF_PIECES_KEY, item.getDescriptionOfPieces());
     includeIfPresent(representation, Item.NUMBER_OF_MISSING_PIECES_KEY, item.getNumberOfMissingPieces());
@@ -127,6 +129,7 @@ class ItemRepresentation {
     representation.put(Item.YEAR_CAPTION_KEY, item.getYearCaption());
     representation.put(Item.ELECTRONIC_ACCESS_KEY, item.getElectronicAccess());
     representation.put(Item.STATISTICAL_CODE_IDS_KEY, item.getStatisticalCodeIds());
+    representation.put(Item.PURCHASE_ORDER_LINE_IDENTIFIER, item.getPurchaseOrderLineidentifier());
     includeReferenceIfPresent(representation, "materialType",
       item.getMaterialTypeId());
 

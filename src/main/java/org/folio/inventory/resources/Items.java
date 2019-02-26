@@ -21,9 +21,11 @@ import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.domain.items.CirculationNote;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.Note;
+import org.folio.inventory.domain.items.Status;
 import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
@@ -34,6 +36,7 @@ import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.server.*;
 
+import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -48,8 +51,11 @@ public class Items {
 
   private final Storage storage;
 
-  public Items(final Storage storage) {
+  private final HttpClient client;
+
+  public Items(final Storage storage, final HttpClient client) {
     this.storage = storage;
+    this.client = client;
   }
 
   public void register(Router router) {
@@ -169,8 +175,8 @@ public class Items {
     CollectionResourceClient itemsStorageClient;
 
     try {
-      OkapiHttpClient client = createHttpClient(routingContext, context);
-      itemsStorageClient = createItemsStorageClient(client, context);
+      OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
+      itemsStorageClient = createItemsStorageClient(okapiClient, context);
     }
     catch (MalformedURLException e) {
       invalidOkapiUrlResponse(routingContext, context);
@@ -199,12 +205,12 @@ public class Items {
     CollectionResourceClient locationsClient;
 
     try {
-      OkapiHttpClient client = createHttpClient(routingContext, context);
-      holdingsClient = createHoldingsClient(client, context);
-      instancesClient = createInstancesClient(client, context);
-      materialTypesClient = createMaterialTypesClient(client, context);
-      loanTypesClient = createLoanTypesClient(client, context);
-      locationsClient = createLocationsClient(client, context);
+      OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
+      holdingsClient = createHoldingsClient(okapiClient, context);
+      instancesClient = createInstancesClient(okapiClient, context);
+      materialTypesClient = createMaterialTypesClient(okapiClient, context);
+      loanTypesClient = createLoanTypesClient(okapiClient, context);
+      locationsClient = createLocationsClient(okapiClient, context);
     }
     catch (MalformedURLException e) {
       invalidOkapiUrlResponse(routingContext, context);
@@ -298,11 +304,17 @@ public class Items {
     List<String> yearCaption = toListOfStrings(
       itemRequest.getJsonArray(Item.YEAR_CAPTION_KEY));
 
-    String status = getNestedProperty(itemRequest, "status", "name");
+    Status status = new Status(itemRequest.getJsonObject(Item.STATUS_KEY));
 
     List<Note> notes = itemRequest.containsKey(Item.NOTES_KEY)
       ? JsonArrayHelper.toList(itemRequest.getJsonArray(Item.NOTES_KEY)).stream()
           .map(json -> new Note(json))
+          .collect(Collectors.toList())
+          : new ArrayList<>();
+
+    List<CirculationNote> circulationNotes = itemRequest.containsKey(Item.CIRCULATION_NOTES_KEY)
+      ? JsonArrayHelper.toList(itemRequest.getJsonArray(Item.CIRCULATION_NOTES_KEY)).stream()
+          .map(json -> new CirculationNote(json))
           .collect(Collectors.toList())
           : new ArrayList<>();
 
@@ -349,11 +361,13 @@ public class Items {
             .setTemporaryLoanTypeId(temporaryLoanTypeId)
             .setCopyNumbers(copyNumbers)
             .setNotes(notes)
+            .setCirculationNotes(circulationNotes)
             .setAccessionNumber(itemRequest.getString(Item.ACCESSION_NUMBER_KEY))
             .setItemIdentifier(itemRequest.getString(Item.ITEM_IDENTIFIER_KEY))
             .setYearCaption(yearCaption)
             .setElectronicAccess(electronicAccess)
-            .setStatisticalCodeIds(statisticalCodeIds);
+            .setStatisticalCodeIds(statisticalCodeIds)
+            .setPurchaseOrderLineidentifier(itemRequest.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER));
   }
 
   private void respondWithManyItems(
@@ -369,13 +383,13 @@ public class Items {
     CollectionResourceClient effectiveLocationsClient;
 
     try {
-      OkapiHttpClient client = createHttpClient(routingContext, context);
-      holdingsClient = createHoldingsClient(client, context);
-      instancesClient = createInstancesClient(client, context);
-      materialTypesClient = createMaterialTypesClient(client, context);
-      loanTypesClient = createLoanTypesClient(client, context);
-      locationsClient = createLocationsClient(client, context);
-      effectiveLocationsClient = createLocationsClient(client, context);
+      OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
+      holdingsClient = createHoldingsClient(okapiClient, context);
+      instancesClient = createInstancesClient(okapiClient, context);
+      materialTypesClient = createMaterialTypesClient(okapiClient, context);
+      loanTypesClient = createLoanTypesClient(okapiClient, context);
+      locationsClient = createLocationsClient(okapiClient, context);
+      effectiveLocationsClient = createLocationsClient(okapiClient, context);
     }
     catch (MalformedURLException e) {
       invalidOkapiUrlResponse(routingContext, context);
@@ -569,7 +583,7 @@ public class Items {
     WebContext context)
     throws MalformedURLException {
 
-    return new OkapiHttpClient(routingContext.vertx().createHttpClient(),
+    return new OkapiHttpClient(client,
       new URL(context.getOkapiLocation()), context.getTenantId(),
       context.getToken(),
       exception -> ServerErrorResponse.internalError(routingContext.response(),

@@ -12,7 +12,7 @@ public class Item {
   public static final String HRID_KEY = "hrid";
   public static final String FORMER_IDS_KEY = "formerIds";
   public static final String DISCOVERY_SUPPRESS_KEY = "discoverySuppress";
-
+  public static final String STATUS_KEY = "status";
   public static final String ACCESSION_NUMBER_KEY = "accessionNumber";
   public static final String ITEM_IDENTIFIER_KEY = "itemIdentifier";
   public static final String YEAR_CAPTION_KEY = "yearCaption";
@@ -33,6 +33,8 @@ public class Item {
   public static final String ITEM_DAMAGED_STATUS_DATE_KEY = "itemDamagedStatusDate";
 
   public static final String NOTES_KEY = "notes";
+  public static final String CIRCULATION_NOTES_KEY = "circulationNotes";
+  public static final String PURCHASE_ORDER_LINE_IDENTIFIER = "purchaseOrderLineIdentifier";
 
   public final String id;
   private String hrid;
@@ -60,7 +62,8 @@ public class Item {
   private String itemDamagedStatusId;
   private String itemDamagedStatusDate;
   private List<Note> notes = new ArrayList();
-  private final String status;
+  private List<CirculationNote> circulationNotes = new ArrayList();
+  public final Status status;
   private final String materialTypeId;
   private final String permanentLoanTypeId;
 
@@ -69,11 +72,13 @@ public class Item {
   private String temporaryLocationId;
   private List<ElectronicAccess> electronicAccess = new ArrayList();
   private List<String> statisticalCodeIds = new ArrayList();
+  private String purchaseOrderLineidentifier;
+
   private final JsonObject metadata;
 
   public Item(String id,
               String holdingId,
-              String status,
+              Status status,
               String materialTypeId,
               String permanentLoanTypeId,
               JsonObject metadata) {
@@ -266,6 +271,15 @@ public class Item {
     return this.notes;
   }
 
+  public Item setCirculationNotes(List<CirculationNote> circulationNotes) {
+    this.circulationNotes = circulationNotes;
+    return this;
+  }
+
+  public List<CirculationNote> getCirculationNotes() {
+    return this.circulationNotes;
+  }
+
   public Item setPermanentLocationId(String permanentLocationId) {
     this.permanentLocationId = permanentLocationId;
     return this;
@@ -297,8 +311,8 @@ public class Item {
     return holdingId;
   }
 
-  public String getStatus() {
-    return status;
+  public JsonObject getStatus() {
+    return status.getJson();
   }
 
   public String getMaterialTypeId() {
@@ -335,7 +349,7 @@ public class Item {
     this.yearCaption = yearCaption;
     return this;
   }
-  
+
   public List<ElectronicAccess> getElectronicAccess() {
     return electronicAccess;
   }
@@ -351,6 +365,15 @@ public class Item {
 
   public Item setStatisticalCodeIds(List<String> statisticalCodeIds) {
     this.statisticalCodeIds = statisticalCodeIds;
+    return this;
+  }
+
+  public String getPurchaseOrderLineidentifier() {
+    return purchaseOrderLineidentifier;
+  }
+
+  public Item setPurchaseOrderLineidentifier(String purchaseOrderLineidentifier) {
+    this.purchaseOrderLineidentifier = purchaseOrderLineidentifier;
     return this;
   }
 
@@ -389,12 +412,13 @@ public class Item {
             .setItemIdentifier(this.itemIdentifier)
             .setYearCaption(this.yearCaption)
             .setElectronicAccess(this.electronicAccess)
-            .setStatisticalCodeIds(this.statisticalCodeIds);
+            .setStatisticalCodeIds(this.statisticalCodeIds)
+            .setPurchaseOrderLineidentifier(this.purchaseOrderLineidentifier);
   }
 
   public Item changeStatus(String newStatus) {
     return new Item(this.id,
-      holdingId, newStatus, this.materialTypeId,
+      holdingId, new Status(newStatus), this.materialTypeId,
       this.permanentLoanTypeId, this.metadata)
             .setHrid(this.hrid)
             .setFormerIds(this.formerIds)
@@ -423,7 +447,8 @@ public class Item {
             .setItemIdentifier(this.itemIdentifier)
             .setYearCaption(this.yearCaption)
             .setElectronicAccess(this.electronicAccess)
-            .setStatisticalCodeIds(this.statisticalCodeIds);
+            .setStatisticalCodeIds(this.statisticalCodeIds)
+            .setPurchaseOrderLineidentifier(purchaseOrderLineidentifier);
   }
 
   @Override

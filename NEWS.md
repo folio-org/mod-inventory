@@ -1,3 +1,16 @@
+## 11.2.0 2019-02-19
+
+* Provides `inventory` interface 8.3 (MODINV-104)
+* Requires `item-storage` interface 7.3 (MODINV-104)
+* Adds `status.date` to `item` schema (MODINV-104)
+
+## 11.1.0 2019-02-01
+
+* Provides `inventory` interface 8.2 (MODINV-101 MODINV-103)
+* Requires `item-storage` interface 7.2 (MODINV-101 MODINV-103)
+* Adds `circulationNotes' to `item` schema (MODINV-101)
+* Adds `purchaseOrderLineIdentifier` to `item` schema (MODINV-103)
+
 ## 11.0.0 2018-11-30
 
 * Provides `inventory` interface 8.0 (MODINV-90)

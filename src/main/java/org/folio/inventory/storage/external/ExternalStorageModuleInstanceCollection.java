@@ -19,6 +19,7 @@ import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.domain.instances.Publication;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -30,10 +31,11 @@ class ExternalStorageModuleInstanceCollection
     Vertx vertx,
     String baseAddress,
     String tenant,
-    String token) {
+    String token,
+    HttpClient client) {
 
     super(vertx, String.format("%s/%s", baseAddress, "instance-storage/instances"),
-      tenant, token, "instances");
+      tenant, token, "instances", client);
   }
 
   @Override

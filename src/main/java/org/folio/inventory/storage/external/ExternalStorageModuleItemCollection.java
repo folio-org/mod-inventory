@@ -1,19 +1,21 @@
 package org.folio.inventory.storage.external;
 
 import static org.folio.inventory.support.JsonArrayHelper.toList;
-import static org.folio.inventory.support.JsonHelper.getNestedProperty;
 
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.folio.inventory.domain.items.CirculationNote;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.Note;
+import org.folio.inventory.domain.items.Status;
 import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 import org.folio.inventory.support.JsonArrayHelper;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -24,10 +26,11 @@ class ExternalStorageModuleItemCollection
   ExternalStorageModuleItemCollection(Vertx vertx,
                                       String baseAddress,
                                       String tenant,
-                                      String token) {
+                                      String token,
+                                      HttpClient client) {
 
     super(vertx, String.format("%s/%s", baseAddress, "item-storage/items"),
-      tenant, token, "items");
+      tenant, token, "items", client);
   }
 
   @Override
@@ -49,6 +52,13 @@ class ExternalStorageModuleItemCollection
       .map(it -> new Note(it))
       .collect(Collectors.toList());
 
+    List<JsonObject> circulationNotes = toList(
+      itemFromServer.getJsonArray(Item.CIRCULATION_NOTES_KEY, new JsonArray()));
+
+    List<CirculationNote> mappedCirculationNotes = circulationNotes.stream()
+      .map(it -> new CirculationNote(it))
+      .collect(Collectors.toList());
+
     List<JsonObject> electronicAccess = toList(
       itemFromServer.getJsonArray(Item.ELECTRONIC_ACCESS_KEY, new JsonArray()));
 
@@ -59,7 +69,7 @@ class ExternalStorageModuleItemCollection
     return new Item(
       itemFromServer.getString("id"),
       itemFromServer.getString("holdingsRecordId"),
-      getNestedProperty(itemFromServer, "status", "name"),
+      new Status(itemFromServer.getJsonObject("status")),
       itemFromServer.getString("materialTypeId"),
       itemFromServer.getString("permanentLoanTypeId"),
       itemFromServer.getJsonObject("metadata"))
@@ -83,6 +93,7 @@ class ExternalStorageModuleItemCollection
             .setItemDamagedStatusId(itemFromServer.getString(Item.ITEM_DAMAGED_STATUS_ID_KEY))
             .setItemDamagedStatusDate(itemFromServer.getString(Item.ITEM_DAMAGED_STATUS_DATE_KEY))
             .setNotes(mappedNotes)
+            .setCirculationNotes(mappedCirculationNotes)
             .setPermanentLocationId(itemFromServer.getString("permanentLocationId"))
             .setTemporaryLocationId(itemFromServer.getString("temporaryLocationId"))
             .setTemporaryLoanTypeId(itemFromServer.getString("temporaryLoanTypeId"))
@@ -90,7 +101,8 @@ class ExternalStorageModuleItemCollection
             .setItemIdentifier(itemFromServer.getString(Item.ITEM_IDENTIFIER_KEY))
             .setYearCaption(yearCaption)
             .setElectronicAccess(mappedElectronicAccess)
-            .setStatisticalCodeIds(statisticalCodeIds);
+            .setStatisticalCodeIds(statisticalCodeIds)
+            .setPurchaseOrderLineidentifier(itemFromServer.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER));
   }
 
   @Override
@@ -107,8 +119,8 @@ class ExternalStorageModuleItemCollection
       ? item.id
       : UUID.randomUUID().toString());
 
-    if(item.getStatus() != null) {
-      itemToSend.put("status", new JsonObject().put("name", item.getStatus()));
+    if(item.getStatus().getString(Status.NAME_KEY) != null) {
+      itemToSend.put("status", item.getStatus());
     }
 
     includeIfPresent(itemToSend, Item.HRID_KEY, item.getHrid());
@@ -116,6 +128,7 @@ class ExternalStorageModuleItemCollection
     itemToSend.put(Item.DISCOVERY_SUPPRESS_KEY, item.getDiscoverySuppress());
     itemToSend.put("copyNumbers", item.getCopyNumbers());
     itemToSend.put("notes", item.getNotes());
+    itemToSend.put(Item.CIRCULATION_NOTES_KEY, item.getCirculationNotes());
     includeIfPresent(itemToSend, "barcode", item.getBarcode());
     includeIfPresent(itemToSend, Item.ITEM_LEVEL_CALL_NUMBER_KEY, item.getItemLevelCallNumber());
     includeIfPresent(itemToSend, Item.ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY, item.getItemLevelCallNumberPrefix());
@@ -142,7 +155,7 @@ class ExternalStorageModuleItemCollection
     itemToSend.put(Item.YEAR_CAPTION_KEY, item.getYearCaption());
     itemToSend.put(Item.ELECTRONIC_ACCESS_KEY, item.getElectronicAccess());
     itemToSend.put(Item.STATISTICAL_CODE_IDS_KEY, item.getStatisticalCodeIds());
-
+    itemToSend.put(Item.PURCHASE_ORDER_LINE_IDENTIFIER, item.getPurchaseOrderLineidentifier());
 
     return itemToSend;
   }

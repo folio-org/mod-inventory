@@ -1,13 +1,12 @@
 package org.folio.inventory.domain.instances;
 
-import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.domain.Metadata;
+import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 
 public class Instance {
   // JSON property names
@@ -370,7 +369,7 @@ public class Instance {
   }
 
   public Instance copyWithNewId(String newId) {
-    return new Instance(newId, this.hrid, this.source, this.title, this.instanceTypeId)
+    return new Instance(newId, null, this.source, this.title, this.instanceTypeId)
             .setIndexTitle(indexTitle)
             .setAlternativeTitles(alternativeTitles)
             .setEditions(editions)

@@ -152,7 +152,7 @@ public abstract class ExternalInstanceCollectionFailureExamples {
   private static Instance createInstance() {
     return new Instance(
             UUID.randomUUID().toString(),
-            UUID.randomUUID().toString(),
+            null,
             null, "Nod", UUID.randomUUID().toString());
   }
 

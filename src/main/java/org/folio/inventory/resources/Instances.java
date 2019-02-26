@@ -39,6 +39,7 @@ import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.server.*;
 
+import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -56,8 +57,11 @@ public class Instances {
 
   private final Storage storage;
 
-  public Instances(final Storage storage) {
+  private final HttpClient client;
+
+  public Instances(final Storage storage, final HttpClient client) {
     this.storage = storage;
+    this.client = client;
   }
 
   public void register(Router router) {
@@ -661,7 +665,7 @@ public class Instances {
           WebContext context)
           throws MalformedURLException {
 
-    return new OkapiHttpClient(routingContext.vertx().createHttpClient(),
+    return new OkapiHttpClient(client,
             new URL(context.getOkapiLocation()), context.getTenantId(),
             context.getToken(),
             exception -> {
