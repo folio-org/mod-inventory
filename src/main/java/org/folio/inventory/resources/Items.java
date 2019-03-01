@@ -200,25 +200,6 @@ public class Items {
 
   private void getById(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
-    CollectionResourceClient holdingsClient;
-    CollectionResourceClient instancesClient;
-    CollectionResourceClient materialTypesClient;
-    CollectionResourceClient loanTypesClient;
-    CollectionResourceClient locationsClient;
-
-    try {
-      OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
-      holdingsClient = createHoldingsClient(okapiClient, context);
-      instancesClient = createInstancesClient(okapiClient, context);
-      materialTypesClient = createMaterialTypesClient(okapiClient, context);
-      loanTypesClient = createLoanTypesClient(okapiClient, context);
-      locationsClient = createLocationsClient(okapiClient, context);
-    }
-    catch (MalformedURLException e) {
-      invalidOkapiUrlResponse(routingContext, context);
-
-      return;
-    }
 
     storage.getItemCollection(context).findById(
       routingContext.request().getParam("id"),
@@ -629,12 +610,12 @@ public class Items {
     CollectionResourceClient locationsClient;
 
     try {
-      OkapiHttpClient client = createHttpClient(routingContext, webContext);
-      holdingsClient = createHoldingsClient(client, webContext);
-      instancesClient = createInstancesClient(client, webContext);
-      materialTypesClient = createMaterialTypesClient(client, webContext);
-      loanTypesClient = createLoanTypesClient(client, webContext);
-      locationsClient = createLocationsClient(client, webContext);
+      OkapiHttpClient okapiClient = createHttpClient(routingContext, webContext);
+      holdingsClient = createHoldingsClient(okapiClient, webContext);
+      instancesClient = createInstancesClient(okapiClient, webContext);
+      materialTypesClient = createMaterialTypesClient(okapiClient, webContext);
+      loanTypesClient = createLoanTypesClient(okapiClient, webContext);
+      locationsClient = createLocationsClient(okapiClient, webContext);
     }
     catch (MalformedURLException e) {
       invalidOkapiUrlResponse(routingContext, webContext);
@@ -698,10 +679,14 @@ public class Items {
             switch (responseStatus) {
               case STATUS_CREATED :
                 JsonResponse.created(routingContext.response(), representation);
+                break;
               case STATUS_SUCCESS :
                 JsonResponse.success(routingContext.response(), representation);
+                break;
               default:
-                throw new Exception("Invalid status code defined for response");
+                ServerErrorResponse.internalError(routingContext.response(),
+                  String.format("System specified invalid status code for Item response"));
+                break;
             }
           } catch (Exception e) {
             ServerErrorResponse.internalError(routingContext.response(),
