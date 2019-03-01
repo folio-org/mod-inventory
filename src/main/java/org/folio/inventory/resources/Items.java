@@ -685,7 +685,7 @@ public class Items {
                 break;
               default:
                 ServerErrorResponse.internalError(routingContext.response(),
-                  String.format("System specified invalid status code for Item response"));
+                  "System specified invalid status code for Item response");
                 break;
             }
           } catch (Exception e) {
