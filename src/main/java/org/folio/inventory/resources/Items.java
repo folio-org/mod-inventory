@@ -36,6 +36,7 @@ import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.server.*;
 
+import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -52,8 +53,11 @@ public class Items {
   private static final int STATUS_CREATED = 201;
   private static final int STATUS_SUCCESS = 200;
 
-  public Items(final Storage storage) {
+  private final HttpClient client;
+
+  public Items(final Storage storage, final HttpClient client) {
     this.storage = storage;
+    this.client = client;
   }
 
   public void register(Router router) {
@@ -173,8 +177,8 @@ public class Items {
     CollectionResourceClient itemsStorageClient;
 
     try {
-      OkapiHttpClient client = createHttpClient(routingContext, context);
-      itemsStorageClient = createItemsStorageClient(client, context);
+      OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
+      itemsStorageClient = createItemsStorageClient(okapiClient, context);
     }
     catch (MalformedURLException e) {
       invalidOkapiUrlResponse(routingContext, context);
@@ -203,12 +207,12 @@ public class Items {
     CollectionResourceClient locationsClient;
 
     try {
-      OkapiHttpClient client = createHttpClient(routingContext, context);
-      holdingsClient = createHoldingsClient(client, context);
-      instancesClient = createInstancesClient(client, context);
-      materialTypesClient = createMaterialTypesClient(client, context);
-      loanTypesClient = createLoanTypesClient(client, context);
-      locationsClient = createLocationsClient(client, context);
+      OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
+      holdingsClient = createHoldingsClient(okapiClient, context);
+      instancesClient = createInstancesClient(okapiClient, context);
+      materialTypesClient = createMaterialTypesClient(okapiClient, context);
+      loanTypesClient = createLoanTypesClient(okapiClient, context);
+      locationsClient = createLocationsClient(okapiClient, context);
     }
     catch (MalformedURLException e) {
       invalidOkapiUrlResponse(routingContext, context);
@@ -322,13 +326,13 @@ public class Items {
     CollectionResourceClient effectiveLocationsClient;
 
     try {
-      OkapiHttpClient client = createHttpClient(routingContext, context);
-      holdingsClient = createHoldingsClient(client, context);
-      instancesClient = createInstancesClient(client, context);
-      materialTypesClient = createMaterialTypesClient(client, context);
-      loanTypesClient = createLoanTypesClient(client, context);
-      locationsClient = createLocationsClient(client, context);
-      effectiveLocationsClient = createLocationsClient(client, context);
+      OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
+      holdingsClient = createHoldingsClient(okapiClient, context);
+      instancesClient = createInstancesClient(okapiClient, context);
+      materialTypesClient = createMaterialTypesClient(okapiClient, context);
+      loanTypesClient = createLoanTypesClient(okapiClient, context);
+      locationsClient = createLocationsClient(okapiClient, context);
+      effectiveLocationsClient = createLocationsClient(okapiClient, context);
     }
     catch (MalformedURLException e) {
       invalidOkapiUrlResponse(routingContext, context);
@@ -522,7 +526,7 @@ public class Items {
     WebContext context)
     throws MalformedURLException {
 
-    return new OkapiHttpClient(routingContext.vertx().createHttpClient(),
+    return new OkapiHttpClient(client,
       new URL(context.getOkapiLocation()), context.getTenantId(),
       context.getToken(),
       exception -> ServerErrorResponse.internalError(routingContext.response(),

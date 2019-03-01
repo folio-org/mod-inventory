@@ -2,6 +2,7 @@ package org.folio.inventory.storage.external;
 
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.http.HttpHeaders;
@@ -28,19 +29,22 @@ abstract class ExternalStorageModuleCollection<T> {
   private final String tenant;
   private final String token;
   private final String collectionWrapperPropertyName;
+  private final HttpClient client;
 
   ExternalStorageModuleCollection(
     Vertx vertx,
     String storageAddress,
     String tenant,
     String token,
-    String collectionWrapperPropertyName) {
+    String collectionWrapperPropertyName,
+    HttpClient client) {
 
     this.vertx = vertx;
     this.storageAddress = storageAddress;
     this.tenant = tenant;
     this.token = token;
     this.collectionWrapperPropertyName = collectionWrapperPropertyName;
+    this.client = client;
   }
 
   protected abstract JsonObject mapToRequest(T record);
@@ -260,7 +264,7 @@ abstract class ExternalStorageModuleCollection<T> {
     Handler<HttpClientResponse> onResponse,
     Consumer<Failure> failureCallback) {
 
-    HttpClientRequest request = vertx.createHttpClient()
+    HttpClientRequest request = client
       .requestAbs(method, location, onResponse);
 
     registerExceptionHandler(request, failureCallback);
