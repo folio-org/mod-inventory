@@ -50,6 +50,8 @@ public class Items {
   private static final String RELATIVE_ITEMS_PATH = "/inventory/items";
 
   private final Storage storage;
+  private static final int STATUS_CREATED = 201;
+  private static final int STATUS_SUCCESS = 200;
 
   private final HttpClient client;
 
@@ -198,25 +200,6 @@ public class Items {
 
   private void getById(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
-    CollectionResourceClient holdingsClient;
-    CollectionResourceClient instancesClient;
-    CollectionResourceClient materialTypesClient;
-    CollectionResourceClient loanTypesClient;
-    CollectionResourceClient locationsClient;
-
-    try {
-      OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
-      holdingsClient = createHoldingsClient(okapiClient, context);
-      instancesClient = createInstancesClient(okapiClient, context);
-      materialTypesClient = createMaterialTypesClient(okapiClient, context);
-      loanTypesClient = createLoanTypesClient(okapiClient, context);
-      locationsClient = createLocationsClient(okapiClient, context);
-    }
-    catch (MalformedURLException e) {
-      invalidOkapiUrlResponse(routingContext, context);
-
-      return;
-    }
 
     storage.getItemCollection(context).findById(
       routingContext.request().getParam("id"),
@@ -224,66 +207,7 @@ public class Items {
         Item item = itemResponse.getResult();
 
         if(item != null) {
-          holdingsClient.get(item.getHoldingId(), holdingResponse -> {
-            final JsonObject holding = holdingResponse.getStatusCode() == 200
-              ? holdingResponse.getJson()
-              : null;
-
-            String instanceId = holdingResponse.getStatusCode() == 200
-              ? holdingResponse.getJson().getString("instanceId")
-              : null;
-
-            instancesClient.get(instanceId, instanceResponse -> {
-              final JsonObject instance = instanceResponse.getStatusCode() == 200
-                ? instanceResponse.getJson()
-                : null;
-
-              String effectiveLocationId = holdingResponse.getStatusCode() == 200
-                ? HoldingsSupport.determineEffectiveLocationIdForItem(
-                    holdingResponse.getJson(), item)
-                : null;
-
-              log.info("Effective location ID in Items: " + effectiveLocationId);
-
-              ArrayList<CompletableFuture<Response>> allFutures = new ArrayList<>();
-
-              CompletableFuture<Response> materialTypeFuture = getReferenceRecord(
-                item.getMaterialTypeId(), materialTypesClient, allFutures);
-
-              CompletableFuture<Response> permanentLoanTypeFuture = getReferenceRecord(
-                item.getPermanentLoanTypeId(), loanTypesClient, allFutures);
-
-              CompletableFuture<Response> temporaryLoanTypeFuture = getReferenceRecord(
-                item.getTemporaryLoanTypeId(), loanTypesClient, allFutures);
-
-              CompletableFuture<Response> permanentLocationFuture = getReferenceRecord(
-                item.getPermanentLocationId(), locationsClient, allFutures);
-
-              CompletableFuture<Response> temporaryLocationFuture = getReferenceRecord(
-                item.getTemporaryLocationId(), locationsClient, allFutures);
-
-              CompletableFuture<Response> effectiveLocationFuture = getReferenceRecord(
-                effectiveLocationId, locationsClient, allFutures);
-
-              CompletableFuture<Void> allDoneFuture = allOf(allFutures);
-
-              allDoneFuture.thenAccept(v -> {
-                try {
-                  JsonObject representation = includeReferenceRecordInformationInItem(
-                    context, item, holding, instance, materialTypeFuture,
-                    effectiveLocationId,
-                    permanentLoanTypeFuture, temporaryLoanTypeFuture,
-                    temporaryLocationFuture, permanentLocationFuture,
-                    effectiveLocationFuture);
-
-                  JsonResponse.success(routingContext.response(), representation);
-                } catch (Exception e) {
-                  ServerErrorResponse.internalError(routingContext.response(),
-                    String.format("Error creating Item Representation: %s", e));
-                }
-              });
-            });
-          });
+          respondWithItemRepresentation(item, STATUS_SUCCESS, routingContext, context);
         }
         else {
           ClientErrorResponse.notFound(routingContext.response());
@@ -666,20 +590,111 @@ public class Items {
 
   private void addItem(
     RoutingContext routingContext,
-    WebContext context,
+    WebContext webContext,
     Item newItem,
     ItemCollection itemCollection) {
 
     itemCollection.add(newItem, success -> {
-      try {
-        URL url = context.absoluteUrl(String.format("%s/%s",
-          RELATIVE_ITEMS_PATH, success.getResult().id));
-
-        RedirectResponse.created(routingContext.response(), url.toString());
-      } catch (MalformedURLException e) {
-        log.warn(String.format("Failed to create self link for item: %s", e.toString()));
-      }
+      Item item = success.getResult();
+      respondWithItemRepresentation(item, STATUS_CREATED, routingContext, webContext);
     }, FailureResponseConsumer.serverError(routingContext.response()));
+  }
+
+  private void respondWithItemRepresentation (
+          Item item, int responseStatus, RoutingContext routingContext, WebContext webContext)
+  {
+    CollectionResourceClient holdingsClient;
+    CollectionResourceClient instancesClient;
+    CollectionResourceClient materialTypesClient;
+    CollectionResourceClient loanTypesClient;
+    CollectionResourceClient locationsClient;
+
+    try {
+      OkapiHttpClient okapiClient = createHttpClient(routingContext, webContext);
+      holdingsClient = createHoldingsClient(okapiClient, webContext);
+      instancesClient = createInstancesClient(okapiClient, webContext);
+      materialTypesClient = createMaterialTypesClient(okapiClient, webContext);
+      loanTypesClient = createLoanTypesClient(okapiClient, webContext);
+      locationsClient = createLocationsClient(okapiClient, webContext);
+    }
+    catch (MalformedURLException e) {
+      invalidOkapiUrlResponse(routingContext, webContext);
+      return;
+    }
+    holdingsClient.get(item.getHoldingId(), (Response holdingResponse) -> {
+      final JsonObject holding = holdingResponse.getStatusCode() == 200
+        ? holdingResponse.getJson()
+        : null;
+
+      String instanceId = holdingResponse.getStatusCode() == 200
+        ? holdingResponse.getJson().getString("instanceId")
+        : null;
+
+      instancesClient.get(instanceId, (Response instanceResponse) -> {
+        final JsonObject instance = instanceResponse.getStatusCode() == 200
+          ? instanceResponse.getJson()
+          : null;
+
+        String effectiveLocationId = holdingResponse.getStatusCode() == 200
+          ? HoldingsSupport.determineEffectiveLocationIdForItem(
+              holdingResponse.getJson(), item)
+          : null;
+
+        log.info("Effective location ID in Items: " + effectiveLocationId);
+
+        ArrayList<CompletableFuture<Response>> allFutures = new ArrayList<>();
+
+        CompletableFuture<Response> materialTypeFuture = getReferenceRecord(
+          item.getMaterialTypeId(), materialTypesClient, allFutures);
+
+        CompletableFuture<Response> permanentLoanTypeFuture = getReferenceRecord(
+          item.getPermanentLoanTypeId(), loanTypesClient, allFutures);
+
+        CompletableFuture<Response> temporaryLoanTypeFuture = getReferenceRecord(
+          item.getTemporaryLoanTypeId(), loanTypesClient, allFutures);
+
+        CompletableFuture<Response> permanentLocationFuture = getReferenceRecord(
+          item.getPermanentLocationId(), locationsClient, allFutures);
+
+        CompletableFuture<Response> temporaryLocationFuture = getReferenceRecord(
+          item.getTemporaryLocationId(), locationsClient, allFutures);
+
+        CompletableFuture<Response> effectiveLocationFuture = getReferenceRecord(
+          effectiveLocationId, locationsClient, allFutures);
+
+        CompletableFuture<Void> allDoneFuture = allOf(allFutures);
+
+        allDoneFuture.thenAccept(v -> {
+          try {
+            JsonObject representation = includeReferenceRecordInformationInItem(
+                      webContext, item, holding, instance,
+                      materialTypeFuture,
+                      effectiveLocationId,
+                      permanentLoanTypeFuture,
+                      temporaryLoanTypeFuture,
+                      temporaryLocationFuture,
+                      permanentLocationFuture,
+                      effectiveLocationFuture);
+
+            switch (responseStatus) {
+              case STATUS_CREATED :
+                JsonResponse.created(routingContext.response(), representation);
+                break;
+              case STATUS_SUCCESS :
+                JsonResponse.success(routingContext.response(), representation);
+                break;
+              default:
+                ServerErrorResponse.internalError(routingContext.response(),
+                  "System specified invalid status code for Item response");
+                break;
+            }
+          } catch (Exception e) {
+            ServerErrorResponse.internalError(routingContext.response(),
+              String.format("Error responding with Item representation: %s", e));
+          }
+        });
+      });
+    });
   }
 
   private void invalidOkapiUrlResponse(RoutingContext routingContext, WebContext context) {
