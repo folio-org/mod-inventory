@@ -1,3 +1,9 @@
+## 11.3.0 2019-03-15
+
+* Optimizes use of HttpClients (MODINV-102)
+* Use Alpine docker container (MODINV-100)
+* Return new `Item` as JSON on POST (MODINV-106)
+
 ## 11.2.0 2019-02-19
 
 * Provides `inventory` interface 8.3 (MODINV-104)
