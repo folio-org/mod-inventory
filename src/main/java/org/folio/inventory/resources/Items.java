@@ -34,7 +34,12 @@ import org.folio.inventory.support.HoldingsSupport;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
-import org.folio.inventory.support.http.server.*;
+import org.folio.inventory.support.http.server.ClientErrorResponse;
+import org.folio.inventory.support.http.server.FailureResponseConsumer;
+import org.folio.inventory.support.http.server.ForwardResponse;
+import org.folio.inventory.support.http.server.JsonResponse;
+import org.folio.inventory.support.http.server.ServerErrorResponse;
+import org.folio.inventory.support.http.server.SuccessResponse;
 
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
@@ -156,11 +161,14 @@ public class Items {
 
     itemCollection.findById(routingContext.request().getParam("id"), getItemResult -> {
       if(getItemResult.getResult() != null) {
-        if(hasSameBarcode(updatedItem, getItemResult.getResult())) {
-          updateItem(routingContext, updatedItem, itemCollection);
+        Item existingItem = getItemResult.getResult();
+        String oldStatus = existingItem.getStatusName();
+        Item itemToSave = updatedItem.changeStatus(oldStatus);
+        if(hasSameBarcode(itemToSave, getItemResult.getResult())) {
+          updateItem(routingContext, itemToSave, itemCollection);
         } else {
           try {
-            checkForNonUniqueBarcode(routingContext, updatedItem, itemCollection);
+            checkForNonUniqueBarcode(routingContext, itemToSave, itemCollection);
           } catch (UnsupportedEncodingException e) {
             ServerErrorResponse.internalError(routingContext.response(), e.toString());
           }

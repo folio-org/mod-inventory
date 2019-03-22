@@ -1,20 +1,12 @@
 package api.items;
 
-import api.ApiTestSuite;
-import api.support.ApiRoot;
-import api.support.ApiTests;
-import api.support.InstanceApiClient;
-import api.support.builders.HoldingRequestBuilder;
-import api.support.builders.ItemRequestBuilder;
-import io.vertx.core.json.JsonObject;
-import org.apache.commons.lang3.StringUtils;
-import org.folio.inventory.support.JsonArrayHelper;
-import org.folio.inventory.support.http.client.IndividualResource;
-import org.folio.inventory.support.http.client.Response;
-import org.folio.inventory.support.http.client.ResponseHandler;
-import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
-import org.junit.Test;
+import static api.support.InstanceSamples.girlOnTheTrain;
+import static api.support.InstanceSamples.nod;
+import static api.support.InstanceSamples.smallAngryPlanet;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.junit.Assert.assertThat;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -25,9 +17,22 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static api.support.InstanceSamples.*;
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.assertThat;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.inventory.support.JsonArrayHelper;
+import org.folio.inventory.support.http.client.IndividualResource;
+import org.folio.inventory.support.http.client.Response;
+import org.folio.inventory.support.http.client.ResponseHandler;
+import org.hamcrest.CoreMatchers;
+import org.junit.Assert;
+import org.junit.Test;
+
+import api.ApiTestSuite;
+import api.support.ApiRoot;
+import api.support.ApiTests;
+import api.support.InstanceApiClient;
+import api.support.builders.HoldingRequestBuilder;
+import api.support.builders.ItemRequestBuilder;
+import io.vertx.core.json.JsonObject;
 
 public class ItemApiExamples extends ApiTests {
   public ItemApiExamples() throws MalformedURLException {
@@ -364,7 +369,8 @@ public class ItemApiExamples extends ApiTests {
     assertThat(updatedItem.containsKey("id"), is(true));
     assertThat(updatedItem.getString("title"), is("Long Way to a Small Angry Planet"));
     assertThat(updatedItem.getString("barcode"), is("645398607547"));
-    assertThat(updatedItem.getJsonObject("status").getString("name"), is("Checked Out"));
+    assertThat("Item status should stay unchanged",
+      updatedItem.getJsonObject("status").getString("name"), is("Available"));
 
     JsonObject materialType = updatedItem.getJsonObject("materialType");
 

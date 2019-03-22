@@ -315,6 +315,10 @@ public class Item {
     return status.getJson();
   }
 
+  public String getStatusName() {
+    return status.getName();
+  }
+
   public String getMaterialTypeId() {
     return materialTypeId;
   }
