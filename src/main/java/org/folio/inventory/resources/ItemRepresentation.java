@@ -101,9 +101,11 @@ class ItemRepresentation {
       representation.put(Item.STATUS_KEY, item.status.getJson());
     }
 
-    List<String> contributorNames = new ArrayList<>();
+    List<JsonObject> contributorNames = new ArrayList<>();
     instance.getJsonArray("contributors").forEach((contributor) -> {
-      contributorNames.add(((JsonObject)contributor).getString("name"));
+      JsonObject contributorName = new JsonObject();
+      contributorName.put("name", ((JsonObject)contributor).getString("name"));
+      contributorNames.add(contributorName);
     });
 
     includeIfPresent(representation, "title", instance, i -> i.getString("title"));
