@@ -5,6 +5,7 @@ import static org.folio.inventory.support.HoldingsSupport.*;
 import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -100,9 +101,15 @@ class ItemRepresentation {
       representation.put(Item.STATUS_KEY, item.status.getJson());
     }
 
+    List<String> contributorNames = new ArrayList<>();
+    instance.getJsonArray("contributors").forEach((contributor) -> {
+      contributorNames.add(((JsonObject)contributor).getString("name"));
+    });
+
     includeIfPresent(representation, "title", instance, i -> i.getString("title"));
     includeIfPresent(representation, "callNumber", holding, h -> h.getString("callNumber"));
     includeIfPresent(representation, Item.HRID_KEY, item.getHrid());
+    representation.put("contributorNames", contributorNames);
     representation.put(Item.FORMER_IDS_KEY, item.getFormerIds());
     representation.put(Item.DISCOVERY_SUPPRESS_KEY, item.getDiscoverySuppress());
     includeIfPresent(representation, "holdingsRecordId", item.getHoldingId());

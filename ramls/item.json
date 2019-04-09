@@ -31,6 +31,14 @@
       "description": "title of the item (read only, inherited from associated instance)",
       "readonly": true
     },
+    "contributorNames": {
+      "description": "A list of contributor names",
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "readonly": true
+    },
     "callNumber": {
       "type": "string",
       "description": "call number (read only, inherited from associated holdings record)",
