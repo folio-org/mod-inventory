@@ -35,9 +35,14 @@
       "description": "A list of contributor names",
       "type": "array",
       "items": {
-        "type": "string"
-      },
-      "readonly": true
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "The contributor name",
+            "type": "string"
+          }
+        }
+      }
     },
     "callNumber": {
       "type": "string",
