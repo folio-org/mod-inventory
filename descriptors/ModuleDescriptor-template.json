@@ -86,12 +86,14 @@
           "methods": ["POST"],
           "pathPattern": "/inventory/instances",
           "permissionsRequired": ["inventory.instances.item.post"],
-          "modulePermissions": ["inventory-storage.instances.item.post"]
+          "modulePermissions": ["inventory-storage.instances.item.post",
+                                "inventory-storage.instances.item.get"]
         }, {
           "methods": ["PUT"],
           "pathPattern": "/inventory/instances/{id}",
           "permissionsRequired": ["inventory.instances.item.put"],
-          "modulePermissions": ["inventory-storage.instances.item.put"]
+          "modulePermissions": ["inventory-storage.instances.item.put",
+                                "inventory-storage.instances.item.get"]
         }, {
           "methods": ["DELETE"],
           "pathPattern": "/inventory/instances/{id}",
