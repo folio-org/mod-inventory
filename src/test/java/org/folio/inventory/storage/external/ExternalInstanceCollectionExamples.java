@@ -295,34 +295,34 @@ public class ExternalInstanceCollectionExamples {
   private static Instance nod() {
     return createInstance("Nod")
       .addIdentifier(ASIN_IDENTIFIER_TYPE, "B01D1PLMDO")
-      .addContributor(PERSONAL_CONTRIBUTOR_NAME_TYPE, "Barnes, Adrian", AUTHOR_CONTRIBUTOR_TYPE, "");
+      .addContributor(PERSONAL_CONTRIBUTOR_NAME_TYPE, "Barnes, Adrian", AUTHOR_CONTRIBUTOR_TYPE, "", null);
   }
 
   private static Instance uprooted() {
     return createInstance("Uprooted")
       .addIdentifier(ISBN_IDENTIFIER_TYPE, "1447294149")
       .addIdentifier(ISBN_IDENTIFIER_TYPE, "9781447294146")
-      .addContributor(PERSONAL_CONTRIBUTOR_NAME_TYPE, "Novik, Naomi", AUTHOR_CONTRIBUTOR_TYPE, "");
+      .addContributor(PERSONAL_CONTRIBUTOR_NAME_TYPE, "Novik, Naomi", AUTHOR_CONTRIBUTOR_TYPE, "", null);
   }
 
   private static Instance smallAngryPlanet() {
     return createInstance("Long Way to a Small Angry Planet")
       .addIdentifier(ISBN_IDENTIFIER_TYPE, "9781473619777")
-      .addContributor(PERSONAL_CONTRIBUTOR_NAME_TYPE, "Chambers, Becky", AUTHOR_CONTRIBUTOR_TYPE, "");
+      .addContributor(PERSONAL_CONTRIBUTOR_NAME_TYPE, "Chambers, Becky", AUTHOR_CONTRIBUTOR_TYPE, "", null);
   }
 
   private static Instance temeraire() {
     return createInstance("Temeraire")
       .addIdentifier(ISBN_IDENTIFIER_TYPE, "0007258712")
       .addIdentifier(ISBN_IDENTIFIER_TYPE, "9780007258710")
-      .addContributor(PERSONAL_CONTRIBUTOR_NAME_TYPE, "Novik, Naomi", AUTHOR_CONTRIBUTOR_TYPE, "");
+      .addContributor(PERSONAL_CONTRIBUTOR_NAME_TYPE, "Novik, Naomi", AUTHOR_CONTRIBUTOR_TYPE, "", null);
   }
 
   private static Instance interestingTimes() {
     return createInstance("Interesting Times")
       .addIdentifier(ISBN_IDENTIFIER_TYPE, "0552167541")
       .addIdentifier(ISBN_IDENTIFIER_TYPE, "9780552167543")
-      .addContributor(PERSONAL_CONTRIBUTOR_NAME_TYPE, "Pratchett, Terry", AUTHOR_CONTRIBUTOR_TYPE, "");
+      .addContributor(PERSONAL_CONTRIBUTOR_NAME_TYPE, "Pratchett, Terry", AUTHOR_CONTRIBUTOR_TYPE, "", null);
   }
 
   private static Instance createInstance(String title) {

@@ -441,10 +441,10 @@ public class Instance {
     return addIdentifier(identifier);
   }
 
-  public Instance addContributor(String contributorNameTypeId, String name, String contributorTypeId, String contributorTypeText) {
+  public Instance addContributor(String contributorNameTypeId, String name, String contributorTypeId, String contributorTypeText, Boolean primary) {
     List<Contributor> newContributors = new ArrayList<>(this.contributors);
 
-    newContributors.add(new Contributor(contributorNameTypeId, name, contributorTypeId, contributorTypeText));
+    newContributors.add(new Contributor(contributorNameTypeId, name, contributorTypeId, contributorTypeText, primary));
 
     return copyInstance().setContributors(newContributors);
   }
