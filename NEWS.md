@@ -1,3 +1,9 @@
+## 11.4.0 2019-05-09
+
+* Adds Instance contributor names to Item representation (MODINV-112)
+* Adds missing module permissions for managing instance relationships (MODINV-113)
+* Propagates property `primary` of Instance contributors (MODINV-117)
+
 ## 11.3.0 2019-03-15
 
 * Optimizes use of HttpClients (MODINV-102)
@@ -26,7 +32,7 @@
 * Changes structure of `alternativeTitles` (MODINV-90)
 * Renames `item.pieceIdentifiers` to `copyNumbers` (MODINV-94)
 * Changes structure of `item` `notes` (MODINV-97)
-* Renames, changes structure of `instance.statisticalCodes` (MODINV-98) 
+* Renames, changes structure of `instance.statisticalCodes` (MODINV-98)
 * Adds 20 new properties to `item` (MODINV-72)
 
 ## 10.0.0 2018-10-12
