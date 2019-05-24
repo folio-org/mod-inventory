@@ -28,7 +28,7 @@ public class RedirectResponse {
   }
 
   /**
-   * Ends up response with CREATED(202) status and writes "Location" header to the response body before ending.
+   * Ends up response with ACCEPTED(202) status and writes "Location" header to the response body before ending.
    *
    * @param response http server response
    * @param location value to put to "Location" header
