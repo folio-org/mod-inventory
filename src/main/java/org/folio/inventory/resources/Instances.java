@@ -67,7 +67,8 @@ public class Instances {
     router.post(INSTANCES_PATH + "*").handler(BodyHandler.create());
     router.put(INSTANCES_PATH + "*").handler(BodyHandler.create());
 
-    router.get(INSTANCES_PATH + "/context").handler(this::getMetadataContext);
+    router.get(INSTANCES_PATH + "/context")
+      .handler(this::getMetadataContext);
 
     router.get(INSTANCES_PATH).handler(this::getAll);
     router.post(INSTANCES_PATH).handler(this::create);

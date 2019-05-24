@@ -2,8 +2,8 @@
 
 * Added endpoint to save collection of Instances (MODINV-119)
 
- | METHOD |             URL                            | DESCRIPTION                                 |
- |--------|--------------------------------------------|---------------------------------------------|
+ | METHOD |             URL                             | DESCRIPTION                                |
+ |--------|-------------------------------------------- |--------------------------------------------|
  | GET    | /inventory/items                            | Get list of items                          |
  | GET    | /inventory/items/{itemId}                   | Get item by id                             |
  | POST   | /inventory/items                            | Create new item                            |
@@ -14,7 +14,7 @@
  | GET    | /inventory/instances/{instanceId}           | Get instances by id                        |
  | GET    | /inventory/instances/context                | Get metadata context                       |
  | POST   | /inventory/instances                        | Create new instances                       |
- | POST   | /inventory/instancesCollection              | Create collection of new instances         |                            |
+ | POST   | /inventory/instancesCollection              | Create collection of new instances         |
  | PUT    | /inventory/instances/{instanceId}           | Update instance by id                      |
  | DELETE | /inventory/instances                        | Delete all instances                       |
  | DELETE | /inventory/instances/{instanceId}           | Delete instance by id                      |

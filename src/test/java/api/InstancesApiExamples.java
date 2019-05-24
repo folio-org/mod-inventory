@@ -130,11 +130,11 @@ public class InstancesApiExamples extends ApiTests {
       .put("id", instanceId)
       .put("title", "Long Way to a Small Angry Planet")
       .put("identifiers", new JsonArray().add(new JsonObject()
-        .put("identifierTypeId", ApiTestSuite.getIsbnIdentifierType())
-        .put("value", "9781473619777")))
+      .put("identifierTypeId", ApiTestSuite.getIsbnIdentifierType())
+      .put("value", "9781473619777")))
       .put("contributors", new JsonArray().add(new JsonObject()
-        .put("contributorNameTypeId", ApiTestSuite.getPersonalContributorNameType())
-        .put("name", "Chambers, Becky")))
+      .put("contributorNameTypeId", ApiTestSuite.getPersonalContributorNameType())
+      .put("name", "Chambers, Becky")))
       .put("source", "Local")
       .put("instanceTypeId", ApiTestSuite.getTextInstanceType());
 
