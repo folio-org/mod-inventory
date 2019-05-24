@@ -13,8 +13,8 @@
  | GET    | /inventory/instances                        | Get list of instances                      |
  | GET    | /inventory/instances/{instanceId}           | Get instances by id                        |
  | GET    | /inventory/instances/context                | Get metadata context                       |
- | POST   | /inventory/instances                        | Create new instances                       |
- | POST   | /inventory/instancesCollection              | Create collection of new instances         |
+ | POST   | /inventory/instances                        | Create new instance                        |
+ | POST   | /inventory/instancesCollection              | Create collection of instances             |
  | PUT    | /inventory/instances/{instanceId}           | Update instance by id                      |
  | DELETE | /inventory/instances                        | Delete all instances                       |
  | DELETE | /inventory/instances/{instanceId}           | Delete instance by id                      |
