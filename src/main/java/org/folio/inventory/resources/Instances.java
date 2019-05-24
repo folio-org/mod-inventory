@@ -185,10 +185,7 @@ public class Instances {
           Instance response = success.getResult();
           response.setParentInstances(newInstance.getParentInstances());
           response.setChildInstances(newInstance.getChildInstances());
-          updateInstanceRelationships(response, routingContext, webContext, x -> {
-              future.complete(newInstance);
-            }
-          );
+          updateInstanceRelationships(response, routingContext, webContext, x -> future.complete(newInstance));
         }, failure -> future.fail(failure.getReason()));
     }
     CompositeFuture.all(addInstanceFutures).setHandler(ar -> {
