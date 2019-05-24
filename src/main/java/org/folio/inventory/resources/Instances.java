@@ -16,6 +16,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.api.request.PagingParameters;
@@ -50,13 +52,10 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 
 public class Instances {
-
   private static final String INSTANCES_PATH = "/inventory/instances";
-
+  private static final String INSTANCES_COLLECTION_PATH = "/inventory/instancesCollection";
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
-
   private final Storage storage;
-
   private final HttpClient client;
 
   public Instances(final Storage storage, final HttpClient client) {
@@ -68,11 +67,11 @@ public class Instances {
     router.post(INSTANCES_PATH + "*").handler(BodyHandler.create());
     router.put(INSTANCES_PATH + "*").handler(BodyHandler.create());
 
-    router.get(INSTANCES_PATH + "/context")
-      .handler(this::getMetadataContext);
+    router.get(INSTANCES_PATH + "/context").handler(this::getMetadataContext);
 
     router.get(INSTANCES_PATH).handler(this::getAll);
     router.post(INSTANCES_PATH).handler(this::create);
+    router.post(INSTANCES_COLLECTION_PATH).handler(this::createCollection);
     router.delete(INSTANCES_PATH).handler(this::deleteAll);
 
     router.get(INSTANCES_PATH + "/:id").handler(this::getById);
@@ -157,6 +156,49 @@ public class Instances {
                 }
         );
       }, FailureResponseConsumer.serverError(routingContext.response()));
+  }
+
+  /**
+   * Creates a collection of Instances expecting the request could be mapped to array of json objects.
+   *
+   * @param routingContext context for the handling of a request in Vert.x-Web
+   */
+  private void createCollection(RoutingContext routingContext) {
+    WebContext webContext = new WebContext(routingContext);
+    JsonArray instanceCollection = routingContext.getBodyAsJsonArray();
+    for (int i = 0; i < instanceCollection.size(); i++) {
+      JsonObject instanceRequest = instanceCollection.getJsonObject(i);
+      if (StringUtils.isBlank(instanceRequest.getString(Instance.TITLE_KEY))) {
+        String errorMessage = "Title must be provided for an instance" + instanceRequest.toString();
+        log.error(errorMessage);
+        ClientErrorResponse.badRequest(routingContext.response(), errorMessage);
+        return;
+      }
+    }
+    List<Future> addInstanceFutures = new ArrayList<>(instanceCollection.size());
+    for (int i = 0; i < instanceCollection.size(); i++) {
+      Instance newInstance = requestToInstance(instanceCollection.getJsonObject(i));
+      Future<Instance> future = Future.future();
+      addInstanceFutures.add(future);
+      storage.getInstanceCollection(webContext).add(newInstance,success -> {
+          Instance response = success.getResult();
+          response.setParentInstances(newInstance.getParentInstances());
+          response.setChildInstances(newInstance.getChildInstances());
+          updateInstanceRelationships(response, routingContext, webContext, x -> {
+              future.complete(newInstance);
+            }
+          );
+        }, failure -> future.fail(failure.getReason()));
+    }
+    CompositeFuture.all(addInstanceFutures).setHandler(ar -> {
+      if (ar.failed()) {
+        String errorMessage = "An error occurred while adding a new Instance. Cause: " + ar.cause();
+        log.error(errorMessage);
+        FailureResponseConsumer.serverError(routingContext.response());
+      } else {
+        RedirectResponse.created(routingContext.response(), new JsonArray(ar.result().list()).toBuffer());
+      }
+    });
   }
 
   private void update(RoutingContext routingContext) {

@@ -16,6 +16,11 @@ public class ApiRoot {
     return new URL(String.format("%s/instances", inventory()));
   }
 
+  public static URL instancesCollection()
+    throws MalformedURLException {
+    return new URL(String.format("%s/instancesCollection", inventory()));
+  }
+
   public static URL instances(String query)
     throws MalformedURLException {
 

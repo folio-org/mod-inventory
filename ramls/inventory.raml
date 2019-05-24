@@ -84,6 +84,22 @@ resourceTypes:
               application/json:
                 example: !include examples/instance_context_get.json
                 schema: context
+  /instancesCollection:
+     post:
+        description: "Create instances from instance collection"
+        body:
+          application/json:
+            type: instances
+        responses:
+          201:
+            body:
+              application/json:
+                type: instances
+          500:
+            description: "Internal server error"
+            body:
+              text/plain:
+                example: "Internal server error"
   /ingest:
     /mods:
       post:

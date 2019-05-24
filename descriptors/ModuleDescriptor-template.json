@@ -89,6 +89,14 @@
           "modulePermissions": ["inventory-storage.instances.item.post",
                                 "inventory-storage.instances.item.get"]
         }, {
+          "methods": ["POST"],
+          "pathPattern": "/inventory/instancesCollection",
+          "permissionsRequired": ["inventory.instances.item.post"],
+          "modulePermissions": [
+            "inventory-storage.instances.item.post",
+            "inventory-storage.instances.item.get"
+          ]
+        }, {
           "methods": ["PUT"],
           "pathPattern": "/inventory/instances/{id}",
           "permissionsRequired": ["inventory.instances.item.put"],

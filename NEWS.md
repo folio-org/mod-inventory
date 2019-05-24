@@ -1,3 +1,26 @@
+## 11.5.0-SNAPSHOT 2019-05-24
+
+* Added endpoint to save collection of Instances (MODINV-119)
+
+ | METHOD |             URL                            | DESCRIPTION                                 |
+ |--------|--------------------------------------------|---------------------------------------------|
+ | GET    | /inventory/items                            | Get list of items                          |
+ | GET    | /inventory/items/{itemId}                   | Get item by id                             |
+ | POST   | /inventory/items                            | Create new item                            |
+ | PUT    | /inventory/items/{itemId}                   | Update item by id                          |
+ | DELETE | /inventory/items                            | Delete all items                           |
+ | DELETE | /inventory/items/{itemId}                   | Delete item by id                          |
+ | GET    | /inventory/instances                        | Get list of instances                      |
+ | GET    | /inventory/instances/{instanceId}           | Get instances by id                        |
+ | GET    | /inventory/instances/context                | Get metadata context                       |
+ | POST   | /inventory/instances                        | Create new instances                       |
+ | POST   | /inventory/instancesCollection              | Create collection of new instances         |                            |
+ | PUT    | /inventory/instances/{instanceId}           | Update instance by id                      |
+ | DELETE | /inventory/instances                        | Delete all instances                       |
+ | DELETE | /inventory/instances/{instanceId}           | Delete instance by id                      |
+ | POST   | /inventory/ingest/mods                      | MODS file containing items to ingest       |
+ | GET    | /inventory/ingest/mods/status/{id}          | Get Status of a MODS ingest                |
+
 ## 11.4.0 2019-05-09
 
 * Adds Instance contributor names to Item representation (MODINV-112)

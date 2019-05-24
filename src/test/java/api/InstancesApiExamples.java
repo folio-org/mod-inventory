@@ -130,11 +130,11 @@ public class InstancesApiExamples extends ApiTests {
       .put("id", instanceId)
       .put("title", "Long Way to a Small Angry Planet")
       .put("identifiers", new JsonArray().add(new JsonObject()
-      .put("identifierTypeId", ApiTestSuite.getIsbnIdentifierType())
-      .put("value", "9781473619777")))
+        .put("identifierTypeId", ApiTestSuite.getIsbnIdentifierType())
+        .put("value", "9781473619777")))
       .put("contributors", new JsonArray().add(new JsonObject()
-      .put("contributorNameTypeId", ApiTestSuite.getPersonalContributorNameType())
-      .put("name", "Chambers, Becky")))
+        .put("contributorNameTypeId", ApiTestSuite.getPersonalContributorNameType())
+        .put("name", "Chambers, Becky")))
       .put("source", "Local")
       .put("instanceTypeId", ApiTestSuite.getTextInstanceType());
 
@@ -185,6 +185,53 @@ public class InstancesApiExamples extends ApiTests {
     dublinCoreContextLinkRespectsWayResourceWasReached(createdInstance);
     selfLinkRespectsWayResourceWasReached(createdInstance);
     selfLinkShouldBeReachable(createdInstance);
+  }
+
+  @Test
+  public void canCreateCollectionOfInstances() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+    String angryPlanetInstanceId = UUID.randomUUID().toString();
+    JsonObject angryPlanetInstance = new JsonObject()
+      .put("id", angryPlanetInstanceId)
+      .put("title", "Long Way to a Small Angry Planet")
+      .put("source", "Local")
+      .put("instanceTypeId", ApiTestSuite.getTextInstanceType());
+    String treasureIslandInstanceId = UUID.randomUUID().toString();
+    JsonObject treasureIslandInstance = new JsonObject()
+      .put("id", treasureIslandInstanceId)
+      .put("title", "Treasure Island")
+      .put("source", "MARC")
+      .put("instanceTypeId", ApiTestSuite.getTextInstanceType());
+    JsonArray request = new JsonArray()
+      .add(angryPlanetInstance)
+      .add(treasureIslandInstance);
+
+    // Post collection of instances
+    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+    okapiClient.post(ApiRoot.instancesCollection(), request, ResponseHandler.any(postCompleted));
+    Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
+    assertThat(postResponse.getStatusCode(), is(201));
+
+    // Get and assert angryPlanetInstance
+    CompletableFuture<Response> getAngryPlanetInstanceCompleted = new CompletableFuture<>();
+    okapiClient.get(String.format("%s/%s", ApiRoot.instances(), angryPlanetInstanceId), ResponseHandler.json(getAngryPlanetInstanceCompleted));
+    Response getAngryPlanetInstanceResponse = getAngryPlanetInstanceCompleted.get(5, TimeUnit.SECONDS);
+    assertThat(getAngryPlanetInstanceResponse.getStatusCode(), is(200));
+    JsonObject createdAngryPlanetInstance = getAngryPlanetInstanceResponse.getJson();
+    assertThat(createdAngryPlanetInstance.containsKey("id"), is(true));
+    assertThat(createdAngryPlanetInstance.getString("title"), is("Long Way to a Small Angry Planet"));
+    assertThat(createdAngryPlanetInstance.getString("source"), is("Local"));
+    assertThat(createdAngryPlanetInstance.getString("instanceTypeId"), is(ApiTestSuite.getTextInstanceType()));
+
+    // Get and assert treasureIslandInstance
+    CompletableFuture<Response> getTreasureIslandInstanceCompleted = new CompletableFuture<>();
+    okapiClient.get(String.format("%s/%s", ApiRoot.instances(), treasureIslandInstanceId), ResponseHandler.json(getTreasureIslandInstanceCompleted));
+    Response getTreasureIslandInstanceResponse = getTreasureIslandInstanceCompleted.get(5, TimeUnit.SECONDS);
+    assertThat(getTreasureIslandInstanceResponse.getStatusCode(), is(200));
+    JsonObject createdTreasureIslandInstance = getTreasureIslandInstanceResponse.getJson();
+    assertThat(createdTreasureIslandInstance.containsKey("id"), is(true));
+    assertThat(createdTreasureIslandInstance.getString("title"), is("Treasure Island"));
+    assertThat(createdTreasureIslandInstance.getString("source"), is("MARC"));
+    assertThat(createdTreasureIslandInstance.getString("instanceTypeId"), is(ApiTestSuite.getTextInstanceType()));
   }
 
   @Test
