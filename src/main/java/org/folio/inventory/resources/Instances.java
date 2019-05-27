@@ -53,7 +53,7 @@ import io.vertx.ext.web.handler.BodyHandler;
 
 public class Instances {
   private static final String INSTANCES_PATH = "/inventory/instances";
-  private static final String INSTANCES_COLLECTION_PATH = "/inventory/instancesCollection";
+  private static final String INSTANCES_COLLECTION_PATH = INSTANCES_PATH + "Collection";
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   private final Storage storage;
   private final HttpClient client;
