@@ -92,6 +92,12 @@ resourceTypes:
             type: instances
         responses:
           201:
+            description: "Instances are created"
+            body:
+              application/json:
+                type: instances
+          400:
+            description: "Bad request"
             body:
               application/json:
                 type: instances
