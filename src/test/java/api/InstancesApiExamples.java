@@ -22,6 +22,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.http.Header;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
@@ -209,13 +210,13 @@ public class InstancesApiExamples extends ApiTests {
     CompletableFuture<Response> postCompleted = new CompletableFuture<>();
     okapiClient.post(ApiRoot.instancesCollection(), request, ResponseHandler.any(postCompleted));
     Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
-    assertThat(postResponse.getStatusCode(), is(201));
+    assertThat(postResponse.getStatusCode(), is(HttpResponseStatus.CREATED.code()));
 
     // Get and assert angryPlanetInstance
     CompletableFuture<Response> getAngryPlanetInstanceCompleted = new CompletableFuture<>();
     okapiClient.get(String.format("%s/%s", ApiRoot.instances(), angryPlanetInstanceId), ResponseHandler.json(getAngryPlanetInstanceCompleted));
     Response getAngryPlanetInstanceResponse = getAngryPlanetInstanceCompleted.get(5, TimeUnit.SECONDS);
-    assertThat(getAngryPlanetInstanceResponse.getStatusCode(), is(200));
+    assertThat(getAngryPlanetInstanceResponse.getStatusCode(), is(HttpResponseStatus.OK.code()));
     JsonObject createdAngryPlanetInstance = getAngryPlanetInstanceResponse.getJson();
     assertThat(createdAngryPlanetInstance.containsKey("id"), is(true));
     assertThat(createdAngryPlanetInstance.getString("title"), is("Long Way to a Small Angry Planet"));
@@ -226,12 +227,27 @@ public class InstancesApiExamples extends ApiTests {
     CompletableFuture<Response> getTreasureIslandInstanceCompleted = new CompletableFuture<>();
     okapiClient.get(String.format("%s/%s", ApiRoot.instances(), treasureIslandInstanceId), ResponseHandler.json(getTreasureIslandInstanceCompleted));
     Response getTreasureIslandInstanceResponse = getTreasureIslandInstanceCompleted.get(5, TimeUnit.SECONDS);
-    assertThat(getTreasureIslandInstanceResponse.getStatusCode(), is(200));
+    assertThat(getTreasureIslandInstanceResponse.getStatusCode(), is(HttpResponseStatus.OK.code()));
     JsonObject createdTreasureIslandInstance = getTreasureIslandInstanceResponse.getJson();
     assertThat(createdTreasureIslandInstance.containsKey("id"), is(true));
     assertThat(createdTreasureIslandInstance.getString("title"), is("Treasure Island"));
     assertThat(createdTreasureIslandInstance.getString("source"), is("MARC"));
     assertThat(createdTreasureIslandInstance.getString("instanceTypeId"), is(ApiTestSuite.getTextInstanceType()));
+  }
+
+  @Test
+  public void shouldReturnBadRequestIfPostedInstanceWithoutTitle() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+    String angryPlanetInstanceId = UUID.randomUUID().toString();
+    JsonObject angryPlanetInstance = new JsonObject()
+      .put("id", angryPlanetInstanceId)
+      .put("source", "Local")
+      .put("instanceTypeId", ApiTestSuite.getTextInstanceType());
+    JsonArray request = new JsonArray().add(angryPlanetInstance);
+    // Post instance
+    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+    okapiClient.post(ApiRoot.instancesCollection(), request, ResponseHandler.any(postCompleted));
+    Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
+    assertThat(postResponse.getStatusCode(), is(HttpResponseStatus.BAD_REQUEST.code()));
   }
 
   @Test
