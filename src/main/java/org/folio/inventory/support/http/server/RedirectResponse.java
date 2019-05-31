@@ -37,6 +37,17 @@ public class RedirectResponse {
     locationResponse(response, location, HttpResponseStatus.ACCEPTED.code());
   }
 
+  /**
+   * Ends up response with INTERNAL_SERVER_ERROR(500) status and writes response body before ending.
+   *
+   * @param response http server response
+   * @param body     response body
+   */
+  public static void serverError(HttpServerResponse response, Buffer body) {
+    response.setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
+    response.end(body);
+  }
+
   private static void locationResponse(
     HttpServerResponse response,
     String url,
