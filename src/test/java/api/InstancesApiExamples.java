@@ -9,6 +9,7 @@ import static api.support.InstanceSamples.uprooted;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
 import java.net.MalformedURLException;
@@ -202,15 +203,20 @@ public class InstancesApiExamples extends ApiTests {
       .put("title", "Treasure Island")
       .put("source", "MARC")
       .put("instanceTypeId", ApiTestSuite.getTextInstanceType());
-    JsonArray request = new JsonArray()
+    JsonObject request = new JsonObject();
+    request.put("instances", new JsonArray()
       .add(angryPlanetInstance)
-      .add(treasureIslandInstance);
+      .add(treasureIslandInstance));
+    request.put("totalRecords", 2);
 
     // Post collection of instances
     CompletableFuture<Response> postCompleted = new CompletableFuture<>();
     okapiClient.post(ApiRoot.instancesCollection(), request, ResponseHandler.any(postCompleted));
     Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
     assertThat(postResponse.getStatusCode(), is(HttpResponseStatus.CREATED.code()));
+    assertEquals(postResponse.getJson().getJsonArray("instances").size(), 2);
+    assertEquals(postResponse.getJson().getJsonArray("errorMessages").size(), 0);
+    assertEquals(postResponse.getJson().getInteger("totalRecords"), Integer.valueOf(2));
 
     // Get and assert angryPlanetInstance
     CompletableFuture<Response> getAngryPlanetInstanceCompleted = new CompletableFuture<>();
@@ -218,7 +224,7 @@ public class InstancesApiExamples extends ApiTests {
     Response getAngryPlanetInstanceResponse = getAngryPlanetInstanceCompleted.get(5, TimeUnit.SECONDS);
     assertThat(getAngryPlanetInstanceResponse.getStatusCode(), is(HttpResponseStatus.OK.code()));
     JsonObject createdAngryPlanetInstance = getAngryPlanetInstanceResponse.getJson();
-    assertThat(createdAngryPlanetInstance.containsKey("id"), is(true));
+    assertEquals(createdAngryPlanetInstance.getString("id"), angryPlanetInstanceId);
     assertThat(createdAngryPlanetInstance.getString("title"), is("Long Way to a Small Angry Planet"));
     assertThat(createdAngryPlanetInstance.getString("source"), is("Local"));
     assertThat(createdAngryPlanetInstance.getString("instanceTypeId"), is(ApiTestSuite.getTextInstanceType()));
@@ -229,7 +235,7 @@ public class InstancesApiExamples extends ApiTests {
     Response getTreasureIslandInstanceResponse = getTreasureIslandInstanceCompleted.get(5, TimeUnit.SECONDS);
     assertThat(getTreasureIslandInstanceResponse.getStatusCode(), is(HttpResponseStatus.OK.code()));
     JsonObject createdTreasureIslandInstance = getTreasureIslandInstanceResponse.getJson();
-    assertThat(createdTreasureIslandInstance.containsKey("id"), is(true));
+    assertEquals(createdTreasureIslandInstance.getString("id"), treasureIslandInstanceId);
     assertThat(createdTreasureIslandInstance.getString("title"), is("Treasure Island"));
     assertThat(createdTreasureIslandInstance.getString("source"), is("MARC"));
     assertThat(createdTreasureIslandInstance.getString("instanceTypeId"), is(ApiTestSuite.getTextInstanceType()));
@@ -242,12 +248,15 @@ public class InstancesApiExamples extends ApiTests {
       .put("id", angryPlanetInstanceId)
       .put("source", "Local")
       .put("instanceTypeId", ApiTestSuite.getTextInstanceType());
-    JsonArray request = new JsonArray().add(angryPlanetInstance);
+    JsonObject request = new JsonObject();
+    request.put("instances", new JsonArray()
+      .add(angryPlanetInstance));
+    request.put("total", 1);
     // Post instance
     CompletableFuture<Response> postCompleted = new CompletableFuture<>();
     okapiClient.post(ApiRoot.instancesCollection(), request, ResponseHandler.any(postCompleted));
     Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
-    assertThat(postResponse.getStatusCode(), is(HttpResponseStatus.BAD_REQUEST.code()));
+    assertThat(postResponse.getStatusCode(), is(HttpResponseStatus.INTERNAL_SERVER_ERROR.code()));
   }
 
   @Test
