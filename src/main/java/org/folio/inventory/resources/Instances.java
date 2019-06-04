@@ -59,7 +59,7 @@ public class Instances {
   private static final String INVENTORY_PATH = "/inventory";
   private static final String INSTANCES_PATH = INVENTORY_PATH + "/instances";
   private static final String INSTANCES_CONTEXT_PATH = INSTANCES_PATH + "/context";
-  private static final String INSTANCES_COLLECTION_PATH = INVENTORY_PATH + "/instancesCollection";
+  private static final String INSTANCES_BATCH_PATH = INSTANCES_PATH + "/batch";
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   private final Storage storage;
   private final HttpClient client;
@@ -77,7 +77,7 @@ public class Instances {
 
     router.get(INSTANCES_PATH).handler(this::getAll);
     router.post(INSTANCES_PATH).handler(this::create);
-    router.post(INSTANCES_COLLECTION_PATH).handler(this::createCollection);
+    router.post(INSTANCES_BATCH_PATH).handler(this::createBatch);
     router.delete(INSTANCES_PATH).handler(this::deleteAll);
 
     router.get(INSTANCES_PATH + "/:id").handler(this::getById);
@@ -169,22 +169,21 @@ public class Instances {
    *
    * @param routingContext context for the handling of a request in Vert.x-Web
    */
-  private void createCollection(RoutingContext routingContext) {
+  private void createBatch(RoutingContext routingContext) {
     WebContext webContext = new WebContext(routingContext);
     JsonObject request = routingContext.getBodyAsJson();
     JsonArray instanceCollection = request.getJsonArray("instances", new JsonArray());
-    Integer totalRecordsRq = request.getInteger("totalRecords", 0);
-    log.info("Received collection of Instances with size:" + totalRecordsRq);
+    log.info("Received batch of Instances, size:" + instanceCollection.size());
+
     List<Future> futures = new ArrayList<>(instanceCollection.size());
     for (int i = 0; i < instanceCollection.size(); i++) {
       futures.add(postInstance(instanceCollection.getJsonObject(i), routingContext, webContext));
     }
     CompositeFuture.join(futures).setHandler(ar -> {
-      log.info("Received collection of Instances is proceeded, size:" + totalRecordsRq);
+      log.info("Batch of Instances has processed, size:" + instanceCollection.size());
+
       JsonObject response = new JsonObject();
       if (ar.failed()) {
-        String errorMessage = "An error occurred while adding a new Instance. Cause: " + ar.cause();
-        log.error(errorMessage);
         List<String> errorMessages = futures.stream().filter(Future::failed).map(future -> future.cause().getMessage()).collect(Collectors.toList());
         List<Object> savedInstances = futures.stream().filter(Future::succeeded).map(future -> future.result()).collect(Collectors.toList());
         response.put("instances", new JsonArray(savedInstances));

@@ -12,14 +12,14 @@ types:
   instances: !include instances.json
   instancesBatchResponse: !include instances-batch-response.json
 
-/inventory/instancesCollection:
+/inventory/instances/batch:
     displayName: Instances collection
       type:
         collection:
           schemaCollection: instances
-          exampleCollection: !include examples/instancesCollection_post.json
+          exampleCollection: !include examples/instancesBatch_post.json
           schemaItem: instances
-          exampleItem: !include examples/instancesCollection_post.json
+          exampleItem: !include examples/instancesBatch_post.json
     post:
       description: "Create collection of instances"
       body:
