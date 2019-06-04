@@ -8,11 +8,13 @@
       "handlers": [
         {
           "methods": ["POST"],
-          "pathPattern": "/inventory/instancesCollection",
-          "permissionsRequired": ["inventory.instances.item.post"],
+          "pathPattern": "/inventory/instances/batch",
+          "permissionsRequired": ["inventory.instances.item.post.batch"],
           "modulePermissions": [
             "inventory-storage.instances.item.post",
-            "inventory-storage.instances.item.get"
+            "inventory-storage.instances.item.get",
+            "inventory-storage.instances.item.put",
+            "inventory-storage.instances.item.delete"
           ]
         }
       ]
@@ -235,6 +237,11 @@
       "description": "Create individual instance"
     },
     {
+      "permissionName": "inventory.instances.item.post.batch",
+      "displayName": "Inventory - create batch of individual instance",
+      "description": "Create batch of individual instance"
+    },
+    {
       "permissionName": "inventory.instances.item.put",
       "displayName": "Inventory - modify instance",
       "description": "Modify instance"
@@ -268,6 +275,7 @@
         "inventory.instances.collection.get",
         "inventory.instances.item.get",
         "inventory.instances.item.post",
+        "inventory.instances.item.post.batch",
         "inventory.instances.item.put",
         "inventory.instances.item.delete",
         "inventory.instances.collection.delete",
