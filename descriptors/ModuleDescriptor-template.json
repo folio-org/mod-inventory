@@ -9,7 +9,7 @@
         {
           "methods": ["POST"],
           "pathPattern": "/inventory/instances/batch",
-          "permissionsRequired": ["inventory.instances.item.post.batch"],
+          "permissionsRequired": ["inventory.instances.batch.post"],
           "modulePermissions": [
             "inventory-storage.instances.item.post",
             "inventory-storage.instances.item.get",
