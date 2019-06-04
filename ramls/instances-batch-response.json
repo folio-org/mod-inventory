@@ -21,6 +21,7 @@
       }
     },
     "totalRecords": {
+      "description": "Total number of successfully saved instances",
       "type": "integer"
     }
   },
