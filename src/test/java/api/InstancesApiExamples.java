@@ -265,6 +265,9 @@ public class InstancesApiExamples extends ApiTests {
 
     // Assertions
     assertThat(postResponse.getStatusCode(), is(HttpResponseStatus.INTERNAL_SERVER_ERROR.code()));
+    assertEquals(postResponse.getJson().getJsonArray("instances").size(), 0);
+    assertEquals(postResponse.getJson().getJsonArray("errorMessages").size(), 1);
+    assertEquals(postResponse.getJson().getInteger("totalRecords"), Integer.valueOf(0));
   }
 
   @Test
