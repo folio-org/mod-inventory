@@ -237,7 +237,7 @@
       "description": "Create individual instance"
     },
     {
-      "permissionName": "inventory.instances.item.post.batch",
+      "permissionName": "inventory.instances.batch.post",
       "displayName": "Inventory - create batch of individual instance",
       "description": "Create batch of individual instance"
     },
@@ -275,7 +275,7 @@
         "inventory.instances.collection.get",
         "inventory.instances.item.get",
         "inventory.instances.item.post",
-        "inventory.instances.item.post.batch",
+        "inventory.instances.batch.post",
         "inventory.instances.item.put",
         "inventory.instances.item.delete",
         "inventory.instances.collection.delete",
