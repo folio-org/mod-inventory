@@ -3,6 +3,23 @@
   "name": "Inventory Module",
   "provides": [
     {
+      "id": "inventory-batch",
+      "version": "0.1",
+      "handlers": [
+        {
+          "methods": ["POST"],
+          "pathPattern": "/inventory/instances/batch",
+          "permissionsRequired": ["inventory.instances.batch.post"],
+          "modulePermissions": [
+            "inventory-storage.instances.item.post",
+            "inventory-storage.instances.item.get",
+            "inventory-storage.instances.item.put",
+            "inventory-storage.instances.item.delete"
+          ]
+        }
+      ]
+    },
+    {
       "id": "inventory",
       "version": "8.3",
       "handlers": [
@@ -220,6 +237,11 @@
       "description": "Create individual instance"
     },
     {
+      "permissionName": "inventory.instances.batch.post",
+      "displayName": "Inventory - create batch of individual instance",
+      "description": "Create batch of individual instance"
+    },
+    {
       "permissionName": "inventory.instances.item.put",
       "displayName": "Inventory - modify instance",
       "description": "Modify instance"
@@ -253,6 +275,7 @@
         "inventory.instances.collection.get",
         "inventory.instances.item.get",
         "inventory.instances.item.post",
+        "inventory.instances.batch.post",
         "inventory.instances.item.put",
         "inventory.instances.item.delete",
         "inventory.instances.collection.delete",

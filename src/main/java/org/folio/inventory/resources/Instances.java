@@ -1,5 +1,44 @@
 package org.folio.inventory.resources;
 
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.inventory.common.WebContext;
+import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.domain.instances.AlternativeTitle;
+import org.folio.inventory.domain.instances.Classification;
+import org.folio.inventory.domain.instances.Contributor;
+import org.folio.inventory.domain.instances.Identifier;
+import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.domain.instances.InstanceCollection;
+import org.folio.inventory.domain.instances.InstanceRelationship;
+import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
+import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
+import org.folio.inventory.domain.instances.Publication;
+import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
+import org.folio.inventory.storage.Storage;
+import org.folio.inventory.storage.external.CollectionResourceClient;
+import org.folio.inventory.support.JsonArrayHelper;
+import org.folio.inventory.support.http.client.OkapiHttpClient;
+import org.folio.inventory.support.http.client.Response;
+import org.folio.inventory.support.http.server.ClientErrorResponse;
+import org.folio.inventory.support.http.server.FailureResponseConsumer;
+import org.folio.inventory.support.http.server.JsonResponse;
+import org.folio.inventory.support.http.server.RedirectResponse;
+import org.folio.inventory.support.http.server.ServerErrorResponse;
+import org.folio.inventory.support.http.server.SuccessResponse;
+
 import java.io.UnsupportedEncodingException;
 import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
@@ -16,47 +55,13 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.StringUtils;
-import org.folio.inventory.common.WebContext;
-import org.folio.inventory.common.api.request.PagingParameters;
-import org.folio.inventory.common.domain.MultipleRecords;
-import org.folio.inventory.common.domain.Success;
-import org.folio.inventory.domain.instances.AlternativeTitle;
-import org.folio.inventory.domain.instances.Classification;
-import org.folio.inventory.domain.instances.Contributor;
-import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
-import org.folio.inventory.domain.instances.Identifier;
-import org.folio.inventory.domain.instances.Instance;
-import org.folio.inventory.domain.instances.InstanceCollection;
-import org.folio.inventory.domain.instances.InstanceRelationship;
-import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
-import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
-import org.folio.inventory.domain.instances.Publication;
-import org.folio.inventory.storage.Storage;
-import org.folio.inventory.storage.external.CollectionResourceClient;
-import org.folio.inventory.support.JsonArrayHelper;
-import org.folio.inventory.support.http.client.OkapiHttpClient;
-import org.folio.inventory.support.http.client.Response;
-import org.folio.inventory.support.http.server.*;
-
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.BodyHandler;
-
 public class Instances {
-
-  private static final String INSTANCES_PATH = "/inventory/instances";
-
+  private static final String INVENTORY_PATH = "/inventory";
+  private static final String INSTANCES_PATH = INVENTORY_PATH + "/instances";
+  private static final String INSTANCES_CONTEXT_PATH = INSTANCES_PATH + "/context";
+  private static final String INSTANCES_BATCH_PATH = INSTANCES_PATH + "/batch";
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
-
   private final Storage storage;
-
   private final HttpClient client;
 
   public Instances(final Storage storage, final HttpClient client) {
@@ -68,11 +73,11 @@ public class Instances {
     router.post(INSTANCES_PATH + "*").handler(BodyHandler.create());
     router.put(INSTANCES_PATH + "*").handler(BodyHandler.create());
 
-    router.get(INSTANCES_PATH + "/context")
-      .handler(this::getMetadataContext);
+    router.get(INSTANCES_CONTEXT_PATH).handler(this::getMetadataContext);
 
     router.get(INSTANCES_PATH).handler(this::getAll);
     router.post(INSTANCES_PATH).handler(this::create);
+    router.post(INSTANCES_BATCH_PATH).handler(this::createBatch);
     router.delete(INSTANCES_PATH).handler(this::deleteAll);
 
     router.get(INSTANCES_PATH + "/:id").handler(this::getById);
@@ -145,18 +150,95 @@ public class Instances {
         response.setParentInstances(newInstance.getParentInstances());
         response.setChildInstances(newInstance.getChildInstances());
         updateInstanceRelationships(response, routingContext, context,
-                x -> {
-                    try {
-                      URL url = context.absoluteUrl(String.format("%s/%s",
-                        INSTANCES_PATH, success.getResult().getId()));
-                      RedirectResponse.created(routingContext.response(), url.toString());
-                    } catch (MalformedURLException e) {
-                      log.warn(
-                        String.format("Failed to create self link for instance: %s", e.toString()));
-                    }
-                }
+          x -> {
+            try {
+              URL url = context.absoluteUrl(String.format("%s/%s",
+                INSTANCES_PATH, success.getResult().getId()));
+              RedirectResponse.created(routingContext.response(), url.toString());
+            } catch (MalformedURLException e) {
+              log.warn(
+                String.format("Failed to create self link for instance: %s", e.toString()));
+            }
+          }
         );
       }, FailureResponseConsumer.serverError(routingContext.response()));
+  }
+
+  /**
+   * Creates a collection of Instances expecting the request could be mapped to Instances schema.
+   *
+   * @param routingContext context for the handling of a request in Vert.x-Web
+   */
+  private void createBatch(RoutingContext routingContext) {
+    WebContext webContext = new WebContext(routingContext);
+    JsonObject request = routingContext.getBodyAsJson();
+    JsonArray instanceCollection = request.getJsonArray("instances", new JsonArray());
+    log.info("Received batch of Instances, size:" + instanceCollection.size());
+
+    List<Future> futures = new ArrayList<>(instanceCollection.size());
+    for (int i = 0; i < instanceCollection.size(); i++) {
+      futures.add(postInstance(instanceCollection.getJsonObject(i), routingContext, webContext));
+    }
+    CompositeFuture.join(futures).setHandler(ar -> {
+      log.info("Batch of Instances has processed, size:" + instanceCollection.size());
+
+      JsonObject response = new JsonObject();
+      if (ar.failed()) {
+        List<String> errorMessages = futures.stream().filter(Future::failed).map(future -> future.cause().getMessage()).collect(Collectors.toList());
+        List<Object> savedInstances = futures.stream().filter(Future::succeeded).map(future -> future.result()).collect(Collectors.toList());
+        response.put("instances", new JsonArray(savedInstances));
+        response.put("errorMessages", new JsonArray(errorMessages));
+        response.put("totalRecords", savedInstances.size());
+        RedirectResponse.serverError(routingContext.response(), response.toBuffer());
+      } else {
+        List<Object> savedInstances = ar.result().list();
+        response.put("instances", savedInstances);
+        response.put("errorMessages", new JsonArray());
+        response.put("totalRecords", savedInstances.size());
+        RedirectResponse.created(routingContext.response(), response.toBuffer());
+      }
+    });
+  }
+
+  /**
+   * Performs POST request to mod-inventory-storage sending given Instance
+   *
+   * @param jsonInstance   Instance json object
+   * @param routingContext routingContext context for the handling of a request in Vert.x-Web
+   * @param webContext     web context
+   * @return future
+   */
+  private Future postInstance(JsonObject jsonInstance, RoutingContext routingContext, WebContext webContext) {
+    Future future = Future.future();
+    List<String> errorMessages = validateInstance(jsonInstance);
+    if (errorMessages != null && errorMessages.isEmpty()) {
+      Instance instance = requestToInstance(jsonInstance);
+      storage.getInstanceCollection(webContext).add(instance, success -> {
+        Instance instanceResponse = success.getResult();
+        instanceResponse.setParentInstances(instanceResponse.getParentInstances());
+        instanceResponse.setChildInstances(instanceResponse.getChildInstances());
+        updateInstanceRelationships(instanceResponse, routingContext, webContext, x -> future.complete(instanceResponse));
+      }, failure -> future.fail(failure.getReason()));
+    } else {
+      future.fail("Instance is not valid for further processing: " + errorMessages);
+    }
+    return future;
+  }
+
+  /**
+   * Performs validation for incoming Instance json object
+   *
+   * @param jsonInstance Instance json object
+   * @return error message
+   */
+  private List<String> validateInstance(JsonObject jsonInstance) {
+    List<String> errorMessages = new ArrayList<>();
+    if (StringUtils.isBlank(jsonInstance.getString(Instance.TITLE_KEY))) {
+      String errorMessage = "Title must be provided for an instance: " + jsonInstance.getString("id");
+      log.error(errorMessage);
+      errorMessages.add(errorMessage);
+    }
+    return errorMessages;
   }
 
   private void update(RoutingContext routingContext) {
@@ -174,9 +256,11 @@ public class Instances {
           instanceCollection.update(updatedInstance,
             v -> {
               updateInstanceRelationships(updatedInstance,
-                                          routingContext,
-                                          context,
-                                          (x) -> {SuccessResponse.noContent(routingContext.response());});
+                routingContext,
+                context,
+                (x) -> {
+                  SuccessResponse.noContent(routingContext.response());
+                });
             },
             FailureResponseConsumer.serverError(routingContext.response()));
         } else {
@@ -206,19 +290,20 @@ public class Instances {
     WebContext context = new WebContext(routingContext);
 
     storage.getInstanceCollection(context).findById(
-            routingContext.request().getParam("id"),
-            it -> {
-              if (it.getResult() != null) {
-                makeInstanceResponse(it, routingContext, context);
-              } else {
-                ClientErrorResponse.notFound(routingContext.response());
-              }
-            }, FailureResponseConsumer.serverError(routingContext.response()));
+      routingContext.request().getParam("id"),
+      it -> {
+        if (it.getResult() != null) {
+          makeInstanceResponse(it, routingContext, context);
+        } else {
+          ClientErrorResponse.notFound(routingContext.response());
+        }
+      }, FailureResponseConsumer.serverError(routingContext.response()));
   }
 
   /**
    * Fetch existing relationships for the instance from storage, compare them to the request. Delete, add, and modify relations as needed.
-   * @param instance The instance request containing relationship arrays to persist.
+   *
+   * @param instance       The instance request containing relationship arrays to persist.
    * @param routingContext
    * @param context
    */
@@ -241,26 +326,26 @@ public class Instances {
             existingRelationships.put(relObj.id, relObj);
           });
           Map<String, InstanceRelationship> updatingRelationships = new HashMap();
-          if (instance.getParentInstances() != null)  {
+          if (instance.getParentInstances() != null) {
             instance.getParentInstances().forEach(parent -> {
-              String id = (parent.id == null ? UUID.randomUUID().toString() : parent.id );
+              String id = (parent.id == null ? UUID.randomUUID().toString() : parent.id);
               updatingRelationships.put(id,
-                      new InstanceRelationship(
-                              id,
-                              parent.superInstanceId,
-                              instance.getId(),
-                              parent.instanceRelationshipTypeId));
+                new InstanceRelationship(
+                  id,
+                  parent.superInstanceId,
+                  instance.getId(),
+                  parent.instanceRelationshipTypeId));
             });
           }
-          if (instance.getChildInstances() != null ) {
+          if (instance.getChildInstances() != null) {
             instance.getChildInstances().forEach(child -> {
-              String id = (child.id == null ? UUID.randomUUID().toString() : child.id );
+              String id = (child.id == null ? UUID.randomUUID().toString() : child.id);
               updatingRelationships.put(id,
-                      new InstanceRelationship(
-                              id,
-                              instance.getId(),
-                              child.subInstanceId,
-                              child.instanceRelationshipTypeId));
+                new InstanceRelationship(
+                  id,
+                  instance.getId(),
+                  child.subInstanceId,
+                  child.instanceRelationshipTypeId));
             });
           }
           updatingRelationships.keySet().forEach(updatingKey -> {
@@ -284,8 +369,8 @@ public class Instances {
               relatedInstancesClient.delete(existingKey, newFuture::complete);
             }
           });
-          CompletableFuture.allOf(allFutures.toArray(new CompletableFuture<?>[] { }))
-                  .thenAccept(respond);
+          CompletableFuture.allOf(allFutures.toArray(new CompletableFuture<?>[]{}))
+            .thenAccept(respond);
         }
       });
     }
@@ -294,14 +379,15 @@ public class Instances {
 
   /**
    * Fetches instance relationships for multiple Instance records, populates, responds
-   * @param success Multi record Instances result
+   *
+   * @param success        Multi record Instances result
    * @param routingContext
    * @param context
    */
   private void makeInstancesResponse(
-          Success<MultipleRecords<Instance>> success,
-          RoutingContext routingContext,
-          WebContext context) {
+    Success<MultipleRecords<Instance>> success,
+    RoutingContext routingContext,
+    WebContext context) {
 
     List<String> instanceIds = getInstanceIdsFromInstanceResult(success);
     String query = createQueryForRelatedInstances(instanceIds);
@@ -328,21 +414,22 @@ public class Instances {
           });
         }
         JsonResponse.success(routingContext.response(),
-                toRepresentation(success.getResult(), parentInstanceMap, childInstanceMap, context));
+          toRepresentation(success.getResult(), parentInstanceMap, childInstanceMap, context));
       });
     }
   }
 
   /**
    * Fetches instance relationships for a single Instance result, populates, responds
-   * @param success Single record Instance result
+   *
+   * @param success        Single record Instance result
    * @param routingContext
    * @param context
    */
   private void makeInstanceResponse(
-          Success<Instance> success,
-          RoutingContext routingContext,
-          WebContext context) {
+    Success<Instance> success,
+    RoutingContext routingContext,
+    WebContext context) {
 
     Instance instance = success.getResult();
     List<String> instanceIds = getInstanceIdsFromInstanceResult(success);
@@ -365,29 +452,30 @@ public class Instances {
           });
         }
         JsonResponse.success(
-                routingContext.response(),
-                toRepresentation(
-                        success.getResult(),
-                        parentInstanceList,
-                        childInstanceList,
-                        context));
+          routingContext.response(),
+          toRepresentation(
+            success.getResult(),
+            parentInstanceList,
+            childInstanceList,
+            context));
       });
     }
   }
 
   /**
    * Populates multiple Instances representation (downwards)
+   *
    * @param wrappedInstances Set of Instances to transform to representations
-   * @param parentMap Map with list of super instances per Instance
-   * @param childMap Map with list of sub instances per Instance
+   * @param parentMap        Map with list of super instances per Instance
+   * @param childMap         Map with list of sub instances per Instance
    * @param context
    * @return
    */
   private JsonObject toRepresentation(
-          MultipleRecords<Instance> wrappedInstances,
-          Map<String, List<InstanceRelationshipToParent>> parentMap,
-          Map<String, List<InstanceRelationshipToChild>> childMap,
-          WebContext context) {
+    MultipleRecords<Instance> wrappedInstances,
+    Map<String, List<InstanceRelationshipToParent>> parentMap,
+    Map<String, List<InstanceRelationshipToChild>> childMap,
+    WebContext context) {
 
     JsonObject representation = new JsonObject();
 
@@ -410,16 +498,17 @@ public class Instances {
 
   /**
    * Populates an Instance record representation (downwards)
-   * @param instance Instance result to transform to representation
+   *
+   * @param instance        Instance result to transform to representation
    * @param parentInstances Super instances for this Instance
-   * @param childInstances Sub instances for this Instance
+   * @param childInstances  Sub instances for this Instance
    * @param context
    * @return
    */
   private JsonObject toRepresentation(Instance instance,
-          List<InstanceRelationshipToParent> parentInstances,
-          List<InstanceRelationshipToChild> childInstances,
-          WebContext context) {
+                                      List<InstanceRelationshipToParent> parentInstances,
+                                      List<InstanceRelationshipToChild> childInstances,
+                                      WebContext context) {
     JsonObject resp = new JsonObject();
 
     try {
@@ -481,27 +570,27 @@ public class Instances {
 
     List<InstanceRelationshipToParent> parentInstances = instanceRequest.containsKey(Instance.PARENT_INSTANCES_KEY)
       ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.PARENT_INSTANCES_KEY)).stream()
-          .map(json -> new InstanceRelationshipToParent(json))
-          .collect(Collectors.toList())
+      .map(json -> new InstanceRelationshipToParent(json))
+      .collect(Collectors.toList())
       : new ArrayList<>();
 
     List<InstanceRelationshipToChild> childInstances = instanceRequest.containsKey(Instance.CHILD_INSTANCES_KEY)
       ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.CHILD_INSTANCES_KEY)).stream()
-          .map(json -> new InstanceRelationshipToChild(json))
-          .collect(Collectors.toList())
+      .map(json -> new InstanceRelationshipToChild(json))
+      .collect(Collectors.toList())
       : new ArrayList<>();
 
     List<Identifier> identifiers = instanceRequest.containsKey(Instance.IDENTIFIERS_KEY)
       ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.IDENTIFIERS_KEY)).stream()
-          .map(json -> new Identifier(json))
-          .collect(Collectors.toList())
-          : new ArrayList<>();
+      .map(json -> new Identifier(json))
+      .collect(Collectors.toList())
+      : new ArrayList<>();
 
     List<AlternativeTitle> alternativeTitles = instanceRequest.containsKey(Instance.ALTERNATIVE_TITLES_KEY)
       ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.ALTERNATIVE_TITLES_KEY)).stream()
-          .map(json -> new AlternativeTitle(json))
-          .collect(Collectors.toList())
-            : new ArrayList<>();
+      .map(json -> new AlternativeTitle(json))
+      .collect(Collectors.toList())
+      : new ArrayList<>();
 
     List<Contributor> contributors = instanceRequest.containsKey(Instance.CONTRIBUTORS_KEY)
       ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.CONTRIBUTORS_KEY)).stream()
@@ -557,36 +646,36 @@ public class Instances {
       .setPreviouslyHeld(instanceRequest.getBoolean(Instance.PREVIOUSLY_HELD_KEY))
       .setStaffSuppress(instanceRequest.getBoolean(Instance.STAFF_SUPPRESS_KEY))
       .setDiscoverySuppress(instanceRequest.getBoolean(Instance.DISCOVERY_SUPPRESS_KEY))
-      .setStatisticalCodeIds(toListOfStrings(instanceRequest,Instance.STATISTICAL_CODE_IDS_KEY))
+      .setStatisticalCodeIds(toListOfStrings(instanceRequest, Instance.STATISTICAL_CODE_IDS_KEY))
       .setSourceRecordFormat(instanceRequest.getString(Instance.SOURCE_RECORD_FORMAT_KEY))
       .setStatusId(instanceRequest.getString(Instance.STATUS_ID_KEY))
-      .setStatusUpdatedDate(instanceRequest.getString(Instance.STATUS_UPDATED_DATE_KEY ));
+      .setStatusUpdatedDate(instanceRequest.getString(Instance.STATUS_UPDATED_DATE_KEY));
   }
 
   // Utilities
 
-  private List<String> getInstanceIdsFromInstanceResult (Success success) {
+  private List<String> getInstanceIdsFromInstanceResult(Success success) {
     List<String> instanceIds = new ArrayList();
     if (success.getResult() instanceof Instance) {
-      instanceIds = Arrays.asList(((Instance)success.getResult()).getId());
-    } else if (success.getResult() instanceof MultipleRecords){
-      instanceIds = (((MultipleRecords<Instance>)success.getResult()).records.stream()
-            .map(instance -> instance.getId())
-            .filter(Objects::nonNull)
-            .distinct()
-            .collect(Collectors.toList()));
+      instanceIds = Arrays.asList(((Instance) success.getResult()).getId());
+    } else if (success.getResult() instanceof MultipleRecords) {
+      instanceIds = (((MultipleRecords<Instance>) success.getResult()).records.stream()
+        .map(instance -> instance.getId())
+        .filter(Objects::nonNull)
+        .distinct()
+        .collect(Collectors.toList()));
     }
     return instanceIds;
   }
 
-  private CollectionResourceClient createInstanceRelationshipsClient (RoutingContext routingContext, WebContext context) {
+  private CollectionResourceClient createInstanceRelationshipsClient(RoutingContext routingContext, WebContext context) {
     CollectionResourceClient relatedInstancesClient = null;
     try {
       OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
       relatedInstancesClient
-      = new CollectionResourceClient(
-              okapiClient,
-              new URL(context.getOkapiLocation() + "/instance-storage/instance-relationships"));
+        = new CollectionResourceClient(
+        okapiClient,
+        new URL(context.getOkapiLocation() + "/instance-storage/instance-relationships"));
     } catch (MalformedURLException mfue) {
       log.error(mfue);
     }
@@ -628,7 +717,8 @@ public class Instances {
       ? JsonArrayHelper.toListOfStrings(source.getJsonArray(propertyName))
       : new ArrayList<>();
   }
-    private synchronized void addToList(Map<String, List<InstanceRelationshipToChild>> items, String mapKey, InstanceRelationshipToChild myItem) {
+
+  private synchronized void addToList(Map<String, List<InstanceRelationshipToChild>> items, String mapKey, InstanceRelationshipToChild myItem) {
     List<InstanceRelationshipToChild> itemsList = items.get(mapKey);
 
     // if list does not exist create it
@@ -661,17 +751,17 @@ public class Instances {
   }
 
   private OkapiHttpClient createHttpClient(
-          RoutingContext routingContext,
-          WebContext context)
-          throws MalformedURLException {
+    RoutingContext routingContext,
+    WebContext context)
+    throws MalformedURLException {
 
     return new OkapiHttpClient(client,
-            new URL(context.getOkapiLocation()), context.getTenantId(),
-            context.getToken(),
-            exception -> {
-              ServerErrorResponse.internalError(routingContext.response(), String.format("Failed to contact storage module: %s",
-                      exception.toString()));
-            });
+      new URL(context.getOkapiLocation()), context.getTenantId(),
+      context.getToken(),
+      exception -> {
+        ServerErrorResponse.internalError(routingContext.response(), String.format("Failed to contact storage module: %s",
+          exception.toString()));
+      });
   }
 
 }

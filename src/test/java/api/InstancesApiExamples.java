@@ -9,6 +9,7 @@ import static api.support.InstanceSamples.uprooted;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
 import java.net.MalformedURLException;
@@ -22,6 +23,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.http.Header;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
@@ -185,6 +187,125 @@ public class InstancesApiExamples extends ApiTests {
     dublinCoreContextLinkRespectsWayResourceWasReached(createdInstance);
     selfLinkRespectsWayResourceWasReached(createdInstance);
     selfLinkShouldBeReachable(createdInstance);
+  }
+
+  @Test
+  public void canCreateBatchOfInstances() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+    // Prepare request data
+    String angryPlanetInstanceId = UUID.randomUUID().toString();
+    JsonObject angryPlanetInstance = new JsonObject()
+      .put("id", angryPlanetInstanceId)
+      .put("title", "Long Way to a Small Angry Planet")
+      .put("source", "Local")
+      .put("instanceTypeId", ApiTestSuite.getTextInstanceType());
+
+    String treasureIslandInstanceId = UUID.randomUUID().toString();
+    JsonObject treasureIslandInstance = new JsonObject()
+      .put("id", treasureIslandInstanceId)
+      .put("title", "Treasure Island")
+      .put("source", "MARC")
+      .put("instanceTypeId", ApiTestSuite.getTextInstanceType());
+
+    JsonObject request = new JsonObject();
+    request.put("instances", new JsonArray().add(angryPlanetInstance).add(treasureIslandInstance));
+    request.put("totalRecords", 2);
+
+    // Post collection of instances
+    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+    okapiClient.post(ApiRoot.instancesBatch(), request, ResponseHandler.any(postCompleted));
+    Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
+
+    // Assertions
+    assertThat(postResponse.getStatusCode(), is(HttpResponseStatus.CREATED.code()));
+    assertEquals(postResponse.getJson().getJsonArray("instances").size(), 2);
+    assertEquals(postResponse.getJson().getJsonArray("errorMessages").size(), 0);
+    assertEquals(postResponse.getJson().getInteger("totalRecords"), Integer.valueOf(2));
+
+    // Get and assert angryPlanetInstance
+    CompletableFuture<Response> getAngryPlanetInstanceCompleted = new CompletableFuture<>();
+    okapiClient.get(String.format("%s/%s", ApiRoot.instances(), angryPlanetInstanceId), ResponseHandler.json(getAngryPlanetInstanceCompleted));
+    Response getAngryPlanetInstanceResponse = getAngryPlanetInstanceCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(getAngryPlanetInstanceResponse.getStatusCode(), is(HttpResponseStatus.OK.code()));
+    JsonObject createdAngryPlanetInstance = getAngryPlanetInstanceResponse.getJson();
+    assertEquals(createdAngryPlanetInstance.getString("id"), angryPlanetInstanceId);
+    assertThat(createdAngryPlanetInstance.getString("title"), is("Long Way to a Small Angry Planet"));
+    assertThat(createdAngryPlanetInstance.getString("source"), is("Local"));
+    assertThat(createdAngryPlanetInstance.getString("instanceTypeId"), is(ApiTestSuite.getTextInstanceType()));
+
+    // Get and assert treasureIslandInstance
+    CompletableFuture<Response> getTreasureIslandInstanceCompleted = new CompletableFuture<>();
+    okapiClient.get(String.format("%s/%s", ApiRoot.instances(), treasureIslandInstanceId), ResponseHandler.json(getTreasureIslandInstanceCompleted));
+    Response getTreasureIslandInstanceResponse = getTreasureIslandInstanceCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(getTreasureIslandInstanceResponse.getStatusCode(), is(HttpResponseStatus.OK.code()));
+    JsonObject createdTreasureIslandInstance = getTreasureIslandInstanceResponse.getJson();
+    assertEquals(createdTreasureIslandInstance.getString("id"), treasureIslandInstanceId);
+    assertThat(createdTreasureIslandInstance.getString("title"), is("Treasure Island"));
+    assertThat(createdTreasureIslandInstance.getString("source"), is("MARC"));
+    assertThat(createdTreasureIslandInstance.getString("instanceTypeId"), is(ApiTestSuite.getTextInstanceType()));
+  }
+
+  @Test
+  public void shouldReturnBadRequestIfOneInstancePostedWithoutTitle() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+    // Prepare request data
+    String angryPlanetInstanceId = UUID.randomUUID().toString();
+    JsonObject angryPlanetInstance = new JsonObject()
+      .put("id", angryPlanetInstanceId)
+      .put("source", "Local")
+      .put("instanceTypeId", ApiTestSuite.getTextInstanceType());
+    JsonObject request = new JsonObject();
+    request.put("instances", new JsonArray().add(angryPlanetInstance));
+    request.put("total", 1);
+
+    // Post instance
+    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+    okapiClient.post(ApiRoot.instancesBatch(), request, ResponseHandler.any(postCompleted));
+    Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
+
+    // Assertions
+    assertThat(postResponse.getStatusCode(), is(HttpResponseStatus.INTERNAL_SERVER_ERROR.code()));
+    assertEquals(postResponse.getJson().getJsonArray("instances").size(), 0);
+    assertEquals(postResponse.getJson().getJsonArray("errorMessages").size(), 1);
+    assertEquals(postResponse.getJson().getInteger("totalRecords"), Integer.valueOf(0));
+  }
+
+  @Test
+  public void shouldReturnBadRequestIfOneOfInstancesPostedWithoutTitle() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+    // Prepare request data
+    String angryPlanetInstanceId = UUID.randomUUID().toString();
+    JsonObject angryPlanetInstance = new JsonObject()
+      .put("id", angryPlanetInstanceId)
+      .put("source", "Local")
+      .put("instanceTypeId", ApiTestSuite.getTextInstanceType());
+
+    String treasureIslandInstanceId = UUID.randomUUID().toString();
+    JsonObject treasureIslandInstance = new JsonObject()
+      .put("id", treasureIslandInstanceId)
+      .put("title", "Treasure Island")
+      .put("source", "MARC")
+      .put("instanceTypeId", ApiTestSuite.getTextInstanceType());
+
+    JsonObject dealBreakerInstance = new JsonObject()
+      .put("id", treasureIslandInstanceId)
+      .put("title", "Deal Breaker")
+      .put("source", "MARC")
+      .put("instanceTypeId", ApiTestSuite.getTextInstanceType());
+
+    JsonObject request = new JsonObject();
+    request.put("instances", new JsonArray().add(angryPlanetInstance).add(treasureIslandInstance).add(dealBreakerInstance));
+    request.put("totalRecords", 3);
+
+    // Post instance
+    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+    okapiClient.post(ApiRoot.instancesBatch(), request, ResponseHandler.any(postCompleted));
+    Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
+
+    // Assertions
+    assertThat(postResponse.getStatusCode(), is(HttpResponseStatus.INTERNAL_SERVER_ERROR.code()));
+    assertEquals(postResponse.getJson().getJsonArray("instances").size(), 2);
+    assertEquals(postResponse.getJson().getJsonArray("errorMessages").size(), 1);
+    assertEquals(postResponse.getJson().getInteger("totalRecords"), Integer.valueOf(2));
   }
 
   @Test

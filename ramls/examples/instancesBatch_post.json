@@ -1,0 +1,39 @@
+{
+  "instances": [
+    {
+      "title": "ADVANCING LIBRARY EDUCATION: TECHNOLOGICAL INNOVATION AND INSTRUCTIONAL DESIGN",
+      "source": "Local",
+      "instanceTypeId": "abc5dd49-7ede-49cb-84db-6fac770279a8",
+      "identifiers": [
+        {
+          "identifierTypeId": "8261054f-be78-422d-bd51-4ed9f33c3422",
+          "value": "9781466636897"
+        }
+      ],
+      "contributors": [
+        {
+          "contributorNameTypeId": "2b94c631-fca9-a892-c730-03ee529ffe2a",
+          "name": "Samuels, Simon"
+        }
+      ]
+    },
+    {
+      "title": "Open Bibliography for Science, Technology and Medicine",
+      "source": "MARC",
+      "instanceTypeId": "9c3b0455-c2a9-49dd-8e7c-ed8c96fef7b3",
+      "identifiers": [
+        {
+          "identifierTypeId": "1a901567-8b27-411c-bc7e-bfb472df8723",
+          "value": "9781466636897"
+        }
+      ],
+      "contributors": [
+        {
+          "contributorNameTypeId": "7f80bbcc-8e93-4f51-aa93-5fc8d0e43d9b",
+          "name": "William Waites"
+        }
+      ]
+    }
+  ],
+  "totalRecords": 2
+}
