@@ -12,6 +12,13 @@ types:
   instances: !include instances.json
   instancesBatchResponse: !include instances-batch-response.json
 
+traits:
+  language: !include raml-util/traits/language.raml
+
+resourceTypes:
+  collection: !include raml-util/rtypes/collection.raml
+  collection-item: !include raml-util/rtypes/item-collection.raml
+
 /inventory/instances/batch:
   displayName: Instances batch API
   type:
