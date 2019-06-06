@@ -200,12 +200,14 @@
       ]
     },
     "materialType": {
+      "description": "Material type",
       "type": "object",
       "properties": {
         "id": {
           "type": "string"
         },
         "name": {
+          "description": "Material type name",
           "type": "string"
         }
       },
@@ -215,12 +217,14 @@
       ]
     },
     "permanentLoanType": {
+      "description": "Permanent loan type",
       "type": "object",
       "properties": {
         "id": {
           "type": "string"
         },
         "name": {
+          "description": "Permanent loan type name",
           "type": "string"
         }
       },
@@ -230,12 +234,14 @@
       ]
     },
     "temporaryLoanType": {
+      "description": "Temporary loan type",
       "type": "object",
       "properties": {
         "id": {
           "type": "string"
         },
         "name": {
+          "description": "Temporary loan type name",
           "type": "string"
         }
       },
@@ -245,12 +251,14 @@
       ]
     },
     "permanentLocation": {
+      "description": "Permanent location",
       "type": "object",
       "properties": {
         "id": {
           "type": "string"
         },
         "name": {
+          "description": "Permanent location type name",
           "type": "string"
         }
       },
@@ -260,12 +268,14 @@
       ]
     },
     "temporaryLocation": {
+      "description": "Temporary location",
       "type": "object",
       "properties": {
         "id": {
           "type": "string"
         },
         "name": {
+          "description": "Temporary location name",
           "type": "string"
         }
       },
@@ -284,6 +294,7 @@
            "readonly": true
          },
          "name": {
+           "description": "Effective location name",
            "type": "string",
            "readonly": true
          }
