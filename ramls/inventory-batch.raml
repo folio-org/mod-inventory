@@ -13,26 +13,26 @@ types:
   instancesBatchResponse: !include instances-batch-response.json
 
 /inventory/instances/batch:
-    displayName: Instances batch API
-      type:
-        collection:
-          schemaCollection: instances
-          exampleCollection: !include examples/instancesBatch_post.json
-          schemaItem: instances
-          exampleItem: !include examples/instancesBatch_post.json
-    post:
-      description: "Create collection of instances in one request"
-      body:
-        application/json:
-          type: instances
-      responses:
-        201:
-          description: "Instances are created"
-          body:
-            application/json:
-              type: instancesBatchResponse
-        500:
-          description: "Internal server error"
-          body:
-            application/json:
-              type: instancesBatchResponse
+  displayName: Instances batch API
+    type:
+      collection:
+        schemaCollection: instances
+        exampleCollection: !include examples/instancesBatch_post.json
+        schemaItem: instances
+        exampleItem: !include examples/instancesBatch_post.json
+  post:
+    description: "Create collection of instances in one request"
+    body:
+      application/json:
+        type: instances
+    responses:
+      201:
+        description: "Instances are created"
+        body:
+          application/json:
+            type: instancesBatchResponse
+      500:
+        description: "Internal server error"
+        body:
+          application/json:
+            type: instancesBatchResponse
