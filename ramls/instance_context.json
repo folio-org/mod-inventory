@@ -4,12 +4,15 @@
   "type": "object",
   "properties": {
     "@context": {
+      "description": "context of an instance record",
       "type": "object",
       "properties": {
         "dcterms": {
+          "description": "dcterms",
           "type": "string"
         },
         "title": {
+          "description": "title",
           "type": "string"
         }
       },
