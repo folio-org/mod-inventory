@@ -96,7 +96,7 @@
       "uniqueItems": true
     },
     "itemIdentifier": {
-      "description": "itemIdentifier",
+      "description": "Item identifier",
       "type": "string"
     },
     "copyNumbers": {
