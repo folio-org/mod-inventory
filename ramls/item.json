@@ -150,7 +150,7 @@
             "type": "string"
           },
           "staffOnly": {
-            "description": "staffOnly",
+            "description": "Whether a note should only be available to staff",
             "type": "boolean",
             "default": false
           }
