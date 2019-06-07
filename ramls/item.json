@@ -72,7 +72,7 @@
       "type": "string"
     },
     "itemLevelCallNumberTypeId": {
-      "description": "itemLevelCallNumberTypeId",
+      "description": "Call number type, refers to a call-number-type reference record",
       "type": "string"
     },
     "volume": {
