@@ -174,7 +174,7 @@
           },
           "staffOnly": {
             "type": "boolean",
-            "description": "Flag to restrict display of this note",
+            "description": "Whether a note should only be available to staff",
             "default": false
           }
         },
