@@ -76,7 +76,7 @@
       "type": "string"
     },
     "volume": {
-      "description": "volume",
+      "description": "Volume",
       "type": "string"
     },
     "enumeration": {
