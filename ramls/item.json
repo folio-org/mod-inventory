@@ -124,7 +124,7 @@
       "type": "string"
     },
     "missingPiecesDate": {
-      "description": "missingPiecesDate",
+      "description": "Date when pieces went missing",
       "type": "string"
     },
     "itemDamagedStatusId": {
