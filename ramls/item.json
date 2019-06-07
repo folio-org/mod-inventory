@@ -132,7 +132,7 @@
       "type": "string"
     },
     "itemDamagedStatusDate": {
-      "description": "damaged status date",
+      "description": "Date when damage status was last changed",
       "type": "string"
     },
     "notes": {
