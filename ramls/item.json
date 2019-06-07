@@ -146,7 +146,7 @@
             "type": "string"
           },
           "note": {
-            "description": "Text to display",
+            "description": "Text of the note",
             "type": "string"
           },
           "staffOnly": {
