@@ -60,7 +60,7 @@
     },
 
     "itemLevelCallNumber": {
-      "description": "Level call number",
+      "description": "Call number of the item",
       "type": "string"
     },
     "itemLevelCallNumberPrefix": {
