@@ -112,7 +112,7 @@
       "type": "string"
     },
     "descriptionOfPieces": {
-      "description": "description of pieces",
+      "description": "Description of pieces",
       "type": "string"
     },
     "numberOfMissingPieces": {
