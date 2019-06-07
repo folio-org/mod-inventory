@@ -128,7 +128,7 @@
       "type": "string"
     },
     "itemDamagedStatusId": {
-      "description": "Id of damaged status",
+      "description": "Damage status",
       "type": "string"
     },
     "itemDamagedStatusDate": {
