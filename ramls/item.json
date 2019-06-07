@@ -80,7 +80,7 @@
       "type": "string"
     },
     "enumeration": {
-      "description": "enumeration",
+      "description": "Enumeration",
       "type": "string"
     },
     "chronology": {
