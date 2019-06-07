@@ -68,7 +68,7 @@
       "type": "string"
     },
     "itemLevelCallNumberSuffix": {
-      "description": "Suffix for level call number",
+      "description": "Call number suffix",
       "type": "string"
     },
     "itemLevelCallNumberTypeId": {
