@@ -116,7 +116,7 @@
       "type": "string"
     },
     "numberOfMissingPieces": {
-      "description": "numberOfMissingPieces",
+      "description": "number of missing pieces",
       "type": "string"
     },
     "missingPieces": {
