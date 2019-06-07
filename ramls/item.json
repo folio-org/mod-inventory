@@ -120,7 +120,7 @@
       "type": "string"
     },
     "missingPieces": {
-      "description": "missingPieces",
+      "description": "Missing pieces",
       "type": "string"
     },
     "missingPiecesDate": {
