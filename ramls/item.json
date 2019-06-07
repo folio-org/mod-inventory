@@ -108,7 +108,7 @@
       "uniqueItems": true
     },
     "numberOfPieces": {
-      "description": "numberOfPieces",
+      "description": "Number of pieces",
       "type": "string"
     },
     "descriptionOfPieces": {
