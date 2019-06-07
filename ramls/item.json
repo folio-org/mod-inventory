@@ -142,7 +142,7 @@
         "type": "object",
         "properties": {
           "itemNoteTypeId": {
-            "description": "itemNoteTypeId",
+            "description": "Item note type, refers to a item-note-type reference record",
             "type": "string"
           },
           "note": {
