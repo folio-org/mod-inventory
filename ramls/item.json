@@ -301,7 +301,7 @@
        }
     },
     "electronicAccess": {
-      "description": "electronic access",
+      "description": "Whether an item is available electronically",
       "type": "array",
       "items": {
         "type": "object",
