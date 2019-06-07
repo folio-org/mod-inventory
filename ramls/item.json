@@ -204,6 +204,7 @@
       "type": "object",
       "properties": {
         "id": {
+          "description": "UUID of the material type",
           "type": "string"
         },
         "name": {
@@ -238,6 +239,7 @@
       "type": "object",
       "properties": {
         "id": {
+          "description": "UUID of the temporary loan type",
           "type": "string"
         },
         "name": {
@@ -255,6 +257,7 @@
       "type": "object",
       "properties": {
         "id": {
+          "description": "UUID of the permanent location",
           "type": "string"
         },
         "name": {
@@ -272,6 +275,7 @@
       "type": "object",
       "properties": {
         "id": {
+          "description": "UUID of the temporary location",
           "type": "string"
         },
         "name": {
