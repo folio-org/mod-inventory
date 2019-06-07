@@ -26,15 +26,15 @@
         "type": "object",
         "properties": {
           "id": {
-            "description": "parent instance id",
+            "description": "Id of the parent instance",
             "type": "string"
           },
           "superInstanceId": {
-            "description": "super instance id",
+            "description": "Id of the super instance",
             "type": "string"
           },
           "instanceRelationshipTypeId": {
-            "description": "relationship type id",
+            "description": "Id of the relationship type",
             "type": "string"
           }
         },
@@ -59,7 +59,7 @@
             "type": "string"
           },
           "instanceRelationshipTypeId": {
-            "description": "relationship type id",
+            "description": "Id of the relationship type",
             "type": "string"
           }
         },
