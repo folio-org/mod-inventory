@@ -101,9 +101,9 @@ public class Instances {
   }
 
   private void getBlockedFieldsConfig(RoutingContext routingContext) {
-    JsonObject blockedFieldsConfig = new JsonObject();
-    blockedFieldsConfig.put("blockedFields", new JsonArray());
-    JsonResponse.success(routingContext.response(), new JsonObject().put("blockedFields", new JsonArray(BLOCKED_FIELDS)));
+    JsonObject response = new JsonObject();
+    response.put("blockedFields", BLOCKED_FIELDS);
+    JsonResponse.success(routingContext.response(), response);
   }
 
   private void getAll(RoutingContext routingContext) {
