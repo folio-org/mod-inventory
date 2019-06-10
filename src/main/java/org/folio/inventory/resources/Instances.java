@@ -60,6 +60,10 @@ public class Instances {
   private static final String INSTANCES_PATH = INVENTORY_PATH + "/instances";
   private static final String INSTANCES_CONTEXT_PATH = INSTANCES_PATH + "/context";
   private static final String INSTANCES_BATCH_PATH = INSTANCES_PATH + "/batch";
+  private static final String CONFIG_PATH = INSTANCES_PATH + "/config";
+  private static final String BLOCKED_FIELDS_CONFIG_PATH = CONFIG_PATH + "/blockedFields";
+  private static final List<String> BLOCKED_FIELDS =
+    Arrays.asList("hrid", "source", "discoverySuppress", "staffSuppress", "previouslyHeld", "statusId", "clickable-add-statistical-code");
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   private final Storage storage;
   private final HttpClient client;
@@ -74,6 +78,7 @@ public class Instances {
     router.put(INSTANCES_PATH + "*").handler(BodyHandler.create());
 
     router.get(INSTANCES_CONTEXT_PATH).handler(this::getMetadataContext);
+    router.get(BLOCKED_FIELDS_CONFIG_PATH).handler(this::getBlockedFieldsConfig);
 
     router.get(INSTANCES_PATH).handler(this::getAll);
     router.post(INSTANCES_PATH).handler(this::create);
@@ -93,6 +98,12 @@ public class Instances {
       .put(Instance.TITLE_KEY, "dcterms:title"));
 
     JsonResponse.success(routingContext.response(), representation);
+  }
+
+  private void getBlockedFieldsConfig(RoutingContext routingContext) {
+    JsonObject blockedFieldsConfig = new JsonObject();
+    blockedFieldsConfig.put("blockedFields", new JsonArray());
+    JsonResponse.success(routingContext.response(), new JsonObject().put("blockedFields", new JsonArray(BLOCKED_FIELDS)));
   }
 
   private void getAll(RoutingContext routingContext) {

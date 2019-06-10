@@ -1,0 +1,12 @@
+{
+  "blockedFields": [
+    "hrid",
+    "source",
+    "discoverySuppress",
+    "staffSuppress",
+    "previouslyHeld",
+    "statusId",
+    "clickable-add-statistical-code",
+    "tags"
+  ]
+}

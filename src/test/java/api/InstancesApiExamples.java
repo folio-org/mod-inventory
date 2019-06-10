@@ -309,6 +309,17 @@ public class InstancesApiExamples extends ApiTests {
   }
 
   @Test
+  public void canGetBlockedFieldsConfig() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+    okapiClient.get(ApiRoot.blockedFieldsConfig(), ResponseHandler.json(getCompleted));
+    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+
+    JsonObject response = getResponse.getJson();
+    assertThat(response.containsKey("blockedFields"), is(true));
+    assertThat(response.getJsonArray("blockedFields"), notNullValue());
+  }
+
+  @Test
   public void instanceTitleIsMandatory()
     throws InterruptedException,
     MalformedURLException,

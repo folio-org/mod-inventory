@@ -21,7 +21,7 @@
     },
     {
       "id": "inventory",
-      "version": "8.3",
+      "version": "8.4",
       "handlers": [
         {
           "methods": ["GET"],
@@ -94,6 +94,11 @@
           "pathPattern": "/inventory/instances",
           "permissionsRequired": ["inventory.instances.collection.get"],
           "modulePermissions": ["inventory-storage.instances.collection.get"]
+        }, {
+          "methods": ["GET"],
+          "pathPattern": "/inventory/instances/config/blockedFields",
+          "permissionsRequired": ["inventory.instances.collection.get"],
+          "modulePermissions": []
         }, {
           "methods": ["GET"],
           "pathPattern": "/inventory/instances/{id}",

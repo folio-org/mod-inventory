@@ -1,6 +1,6 @@
 #%RAML 1.0
 title: Inventory API
-version: v8.3
+version: v8.4
 protocols: [ HTTP, HTTPS ]
 baseUri: http://localhost
 
@@ -15,6 +15,7 @@ types:
   instances: !include instances.json
   context: !include instance_context.json
   ingest-status: !include ingest_status.json
+  blocked-fields: !include blocked_fields.json
 
 traits:
   language: !include raml-util/traits/language.raml
@@ -84,6 +85,17 @@ resourceTypes:
               application/json:
                 example: !include examples/instance_context_get.json
                 schema: context
+    /config:
+      /blockedFields:
+        get:
+          description: "Provides configuration with blocked fields for instance"
+          responses:
+            200:
+              description: "Array of blocked fields for instance"
+              body:
+                application/json:
+                  example: !include examples/blocked_fields_get.json
+                  schema: blocked-fields
   /ingest:
     /mods:
       post:

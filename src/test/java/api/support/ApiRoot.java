@@ -38,4 +38,8 @@ public class ApiRoot {
 
     return new URL(String.format("%s/items?%s", inventory(), query));
   }
+
+  public static URL blockedFieldsConfig() throws MalformedURLException {
+    return new URL(String.format("%s/config/blockedFields", instances()));
+  }
 }
