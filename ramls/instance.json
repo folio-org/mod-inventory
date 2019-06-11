@@ -4,6 +4,7 @@
   "type": "object",
   "properties": {
     "@context": {
+      "description": "Instance context",
       "type": "string"
     },
     "id": {
@@ -19,17 +20,21 @@
       "description": "The metadata source and its format of the underlying record to the instance record. (e.g. FOLIO if it's a record created in Inventory;  MARC if it's a MARC record created in MARCcat or EPKB if it's a record coming from eHoldings)"
     },
     "parentInstances": {
+      "description": "Array of parent instances",
       "type": "array",
       "items": {
         "type": "object",
         "properties": {
           "id": {
+            "description": "Id of the parent instance",
             "type": "string"
           },
           "superInstanceId": {
+            "description": "Id of the super instance",
             "type": "string"
           },
           "instanceRelationshipTypeId": {
+            "description": "Id of the relationship type",
             "type": "string"
           }
         },
@@ -41,6 +46,7 @@
       }
     },
     "childInstances": {
+      "description": "Child instances",
       "type": "array",
       "items": {
         "type": "object",
@@ -49,9 +55,11 @@
             "type": "string"
           },
           "subInstanceId": {
+            "description": "Id of sub Instance",
             "type": "string"
           },
           "instanceRelationshipTypeId": {
+            "description": "Id of the relationship type",
             "type": "string"
           }
         },
@@ -348,9 +356,11 @@
       "readonly": true
     },
     "links": {
+        "description": "Links",
         "type": "object",
         "properties": {
           "self": {
+            "description": "self",
             "type": "string"
           }
         },

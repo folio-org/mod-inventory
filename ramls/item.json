@@ -4,6 +4,7 @@
   "type": "object",
   "properties": {
     "id": {
+      "description": "Item id",
       "type": "string"
     },
     "hrid": {
@@ -50,35 +51,44 @@
       "readonly": true
     },
     "barcode": {
+      "description": "Barcode",
       "type": "string"
     },
     "accessionNumber": {
       "type": "string",
-      "description": "Also called inventar number"
+      "description": "Also called inventory number"
     },
 
     "itemLevelCallNumber": {
+      "description": "Call number of the item",
       "type": "string"
     },
     "itemLevelCallNumberPrefix": {
+      "description": "Call number prefix",
       "type": "string"
     },
     "itemLevelCallNumberSuffix": {
+      "description": "Call number suffix",
       "type": "string"
     },
     "itemLevelCallNumberTypeId": {
+      "description": "Call number type, refers to a call-number-type reference record",
       "type": "string"
     },
     "volume": {
+      "description": "Volume",
       "type": "string"
     },
     "enumeration": {
+      "description": "Enumeration",
       "type": "string"
     },
     "chronology": {
+      "description": "Chronology",
       "type": "string"
     },
     "yearCaption": {
+      "description": "Year captions",
       "type": "array",
       "items": {
         "type": "string"
@@ -86,9 +96,11 @@
       "uniqueItems": true
     },
     "itemIdentifier": {
+      "description": "Item identifier",
       "type": "string"
     },
     "copyNumbers": {
+      "description": "Copy numbers",
       "type": "array",
       "items": {
         "type": "string"
@@ -96,38 +108,49 @@
       "uniqueItems": true
     },
     "numberOfPieces": {
+      "description": "Number of pieces",
       "type": "string"
     },
     "descriptionOfPieces": {
+      "description": "Description of pieces",
       "type": "string"
     },
     "numberOfMissingPieces": {
+      "description": "number of missing pieces",
       "type": "string"
     },
     "missingPieces": {
+      "description": "Missing pieces",
       "type": "string"
     },
     "missingPiecesDate": {
+      "description": "Date when pieces went missing",
       "type": "string"
     },
     "itemDamagedStatusId": {
+      "description": "Damage status",
       "type": "string"
     },
     "itemDamagedStatusDate": {
+      "description": "Date when damage status was last changed",
       "type": "string"
     },
     "notes": {
+      "description": "notes",
       "type": "array",
       "items": {
         "type": "object",
         "properties": {
           "itemNoteTypeId": {
+            "description": "Item note type, refers to a item-note-type reference record",
             "type": "string"
           },
           "note": {
+            "description": "Text of the note",
             "type": "string"
           },
           "staffOnly": {
+            "description": "Whether a note should only be available to staff",
             "type": "boolean",
             "default": false
           }
@@ -151,7 +174,7 @@
           },
           "staffOnly": {
             "type": "boolean",
-            "default": "Flag to restrict display of this note",
+            "description": "Whether a note should only be available to staff",
             "default": false
           }
         },
@@ -177,12 +200,15 @@
       ]
     },
     "materialType": {
+      "description": "Material type",
       "type": "object",
       "properties": {
         "id": {
+          "description": "UUID of the material type",
           "type": "string"
         },
         "name": {
+          "description": "Material type name",
           "type": "string"
         }
       },
@@ -192,12 +218,14 @@
       ]
     },
     "permanentLoanType": {
+      "description": "Permanent loan type",
       "type": "object",
       "properties": {
         "id": {
           "type": "string"
         },
         "name": {
+          "description": "Permanent loan type name",
           "type": "string"
         }
       },
@@ -207,12 +235,15 @@
       ]
     },
     "temporaryLoanType": {
+      "description": "Temporary loan type",
       "type": "object",
       "properties": {
         "id": {
+          "description": "UUID of the temporary loan type",
           "type": "string"
         },
         "name": {
+          "description": "Temporary loan type name",
           "type": "string"
         }
       },
@@ -222,12 +253,15 @@
       ]
     },
     "permanentLocation": {
+      "description": "Permanent location",
       "type": "object",
       "properties": {
         "id": {
+          "description": "UUID of the permanent location",
           "type": "string"
         },
         "name": {
+          "description": "Permanent location type name",
           "type": "string"
         }
       },
@@ -237,12 +271,15 @@
       ]
     },
     "temporaryLocation": {
+      "description": "Temporary location",
       "type": "object",
       "properties": {
         "id": {
+          "description": "UUID of the temporary location",
           "type": "string"
         },
         "name": {
+          "description": "Temporary location name",
           "type": "string"
         }
       },
@@ -261,12 +298,14 @@
            "readonly": true
          },
          "name": {
+           "description": "Effective location name",
            "type": "string",
            "readonly": true
          }
        }
     },
     "electronicAccess": {
+      "description": "Whether an item is available electronically",
       "type": "array",
       "items": {
         "type": "object",
