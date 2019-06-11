@@ -1,3 +1,7 @@
+## 11.5.0 2019-06-11
+
+* Provides `inventory-batch` interface 0.1 (MODINV-119)
+
 ## 11.4.0 2019-05-09
 
 * Adds Instance contributor names to Item representation (MODINV-112)
