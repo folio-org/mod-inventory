@@ -12,7 +12,7 @@
       "description": "The human readable ID, also called eye readable ID. A system-assigned sequential alternate ID"
     },
     "holdingsRecordId": {
-      "description": "ID of the holding the item is a member of",
+      "description": "ID of the holdings record the item is a member of",
       "type": "string"
     },
     "formerIds": {
@@ -29,7 +29,7 @@
     },    
     "title": {
       "type": "string",
-      "description": "title of the item (read only, inherited from associated instance)",
+      "description": "Resouce title (read only, inherited from associated instance record)",
       "readonly": true
     },
     "contributorNames": {
@@ -47,28 +47,28 @@
     },
     "callNumber": {
       "type": "string",
-      "description": "call number (read only, inherited from associated holdings record)",
+      "description": "Call number is an identifier assigned to an item, usually printed on a label attached to the item, and used to determine its physical position in a shelving sequence (e.g. K1 .M44, read only, inherited from associated holdings record)",
       "readonly": true
     },
     "barcode": {
-      "description": "Barcode",
+      "description": "Text, with input likely validated by the barcode scanner",
       "type": "string"
     },
     "accessionNumber": {
       "type": "string",
-      "description": "Also called inventory number"
+      "description": "Accession number is also called inventar number. Accession number is a unique number assigned to an item in the order in which it is added to a library collection. Most libraries assign accession numbers in continous numerical sequece, but some use a code system to indicate type of material and/or year of accession in addition to order of accession"
     },
 
     "itemLevelCallNumber": {
-      "description": "Call number of the item",
+      "description": "Call number is an identifier assigned to an item, usually printed on a label attached to the item, and used to determine its physical position in a shelving sequence (e.g. K1 .M44, read only, inherited from associated holdings record). The item level call number, is the call number on item level",
       "type": "string"
     },
     "itemLevelCallNumberPrefix": {
-      "description": "Call number prefix",
+      "description": "Prefix of the call number on the item level",
       "type": "string"
     },
     "itemLevelCallNumberSuffix": {
-      "description": "Call number suffix",
+      "description": "Suffix of the call number on the item level",
       "type": "string"
     },
     "itemLevelCallNumberTypeId": {
@@ -76,19 +76,19 @@
       "type": "string"
     },
     "volume": {
-      "description": "Volume",
+      "description": "Volume is intended for monographs when a multipart monograph (e.g. a biography of Gerorge Bernard Shaw in three volumes)",
       "type": "string"
     },
     "enumeration": {
-      "description": "Enumeration",
+      "description": "Enumeration is the descriptive information for the numbering scheme of a serial, usually identified by level and a descriptive caption, e.g., level 0 = v. and level 1 = no. This means that each issue of the serial has a volume and an issue number that would appear (e.g. v.71:no.6-2)",
       "type": "string"
     },
     "chronology": {
-      "description": "Chronology",
+      "description": "Chronology is the descriptive information for the dating scheme of a serial, usually identified by level, e.g., level 0 = year level 1 = month. This means that each issue of the serial has a month and a year on each issue (e.g. 1985:July-Dec.)",
       "type": "string"
     },
     "yearCaption": {
-      "description": "Year captions",
+      "description": "In multipart monographs, a caption is characters used to label a level of chronology (e.g. 'year 1985')",
       "type": "array",
       "items": {
         "type": "string"
@@ -96,11 +96,11 @@
       "uniqueItems": true
     },
     "itemIdentifier": {
-      "description": "Item identifier",
+      "description": "Item identifier number, e.g. imported from the union catalogue (read only)",
       "type": "string"
     },
     "copyNumbers": {
-      "description": "Copy numbers",
+      "description": "Copy number is the piece identifier. The copy number reflects if the library has one (or more) copies of a single-volume monograph; one (or more) copies of a multi-volume, (e.g. Copy 1, or C.7.)",
       "type": "array",
       "items": {
         "type": "string"
@@ -108,27 +108,27 @@
       "uniqueItems": true
     },
     "numberOfPieces": {
-      "description": "Number of pieces",
+      "description": "Number of pieces. Used when an item is checked out or returned to verify that all parts are present (e.g. 7 CDs in a set)",
       "type": "string"
     },
     "descriptionOfPieces": {
-      "description": "Description of pieces",
+      "description": "Text which descripe the pieces",
       "type": "string"
     },
     "numberOfMissingPieces": {
-      "description": "number of missing pieces",
+      "description": "Number of missing pieces",
       "type": "string"
     },
     "missingPieces": {
-      "description": "Missing pieces",
+      "description": "Text which descripes the missing pieces",
       "type": "string"
     },
     "missingPiecesDate": {
-      "description": "Date when pieces went missing",
+      "description": "Date when the piece(s) went missing",
       "type": "string"
     },
     "itemDamagedStatusId": {
-      "description": "Damage status",
+      "description": "Item Damage status Id, refers to an Item damage Status ID reference record",
       "type": "string"
     },
     "itemDamagedStatusDate": {
@@ -146,11 +146,11 @@
             "type": "string"
           },
           "note": {
-            "description": "Text of the note",
+            "description": "Text to display (e.g. action note, binding, use and reproduction)",
             "type": "string"
           },
           "staffOnly": {
-            "description": "Whether a note should only be available to staff",
+            "description": "Records the fact that the record should only be displayed for staff",
             "type": "boolean",
             "default": false
           }
@@ -174,7 +174,7 @@
           },
           "staffOnly": {
             "type": "boolean",
-            "description": "Whether a note should only be available to staff",
+            "description": "Records the fact that the note should only be displayed for staff",
             "default": false
           }
         },
@@ -186,11 +186,11 @@
       "type": "object",
       "properties": {
         "name": {
-          "description": "Name of the status e.g. Available, Checked out, In transit",
+          "description": "Name of the item state (e.g. Available, Checked out, In transit, Awaiting pickup, On order). Default value is set to: Available",
           "type": "string"
         },
         "date": {
-          "description": "Date of a status",
+          "description": "Date of the current item state. E.g. date set when item state was changed by the Check out app",
           "type": "string"
         }
       },
@@ -200,15 +200,15 @@
       ]
     },
     "materialType": {
-      "description": "Material type",
+      "description": "Material type define what type of thing the item is",
       "type": "object",
       "properties": {
         "id": {
-          "description": "UUID of the material type",
+          "description": "Material type Id, refers to a material type reference record",
           "type": "string"
         },
         "name": {
-          "description": "Material type name",
+          "description": "Material type name (e.g. Audio book, Audio disc, Computer file, Pamphelet) ",
           "type": "string"
         }
       },
@@ -218,10 +218,11 @@
       ]
     },
     "permanentLoanType": {
-      "description": "Permanent loan type",
+      "description": "Permanent loan type, is the default loan type for a given item. Loan types are tenant-defined in a reference table in Settings, Inventory, Item, Loan type (e.g. Can circulate, Course reserves, Reading room, Selected)",
       "type": "object",
       "properties": {
         "id": {
+          "description": "Permanent loan type Id, refers to a loan type reference record",
           "type": "string"
         },
         "name": {
@@ -235,11 +236,11 @@
       ]
     },
     "temporaryLoanType": {
-      "description": "Temporary loan type",
+      "description": "Temporary loan type, is the temporary loan type for a given item. Loan types are tenant-defined in a reference table in Settings, Inventory, Item, Loan type (e.g. Can circulate, Course reserves, Reading room, Selected)",
       "type": "object",
       "properties": {
         "id": {
-          "description": "UUID of the temporary loan type",
+          "description": "Temporary loan type Id, refers to a loan type reference record",
           "type": "string"
         },
         "name": {
@@ -253,11 +254,11 @@
       ]
     },
     "permanentLocation": {
-      "description": "Permanent location",
+      "description": "Permanent item location is the default location, shelving location, or holding which is a physical place where items are stored, or an Online location. The location is defined by Institutions, Campuses, libraries, and locations. Permanent location can be assigned at the holding level, and be overridden at the item level if needed",
       "type": "object",
       "properties": {
         "id": {
-          "description": "UUID of the permanent location",
+          "description": "Permanent location Id, refers to a location type reference record",
           "type": "string"
         },
         "name": {
@@ -271,11 +272,11 @@
       ]
     },
     "temporaryLocation": {
-      "description": "Temporary location",
+      "description": "Temporary item location is the temporarily location, shelving location, or holding which is a physical place where items are stored, or an Online location. The location is defined by Institutions, Campuses, libraries, and locations. Permanent location can be assigned at the holding level, and be overridden at the item level if needed",
       "type": "object",
       "properties": {
         "id": {
-          "description": "UUID of the temporary location",
+          "description": "Temporary location Id, refers to a location type reference record",
           "type": "string"
         },
         "name": {
@@ -290,7 +291,7 @@
     },
     "effectiveLocation": {
        "type": "object",
-       "description": "effective location of the item (read only, derived from locations on HoldingsRecord and Item)",
+       "description": "The effective location is used by FOLIO and other integrated systems to know the current home location for the item (read only, derived from locations on HoldingsRecord and Item)",
        "readonly": true,
        "properties": {
          "id": {
@@ -312,15 +313,15 @@
         "properties": {
           "uri": {
             "type": "string",
-            "description": "uniform resource identifier (URI) is a string of characters designed for unambiguous identification of resources"
+            "description": "Uniform Resource Identifier (URI) is a string of characters designed for unambiguous identification of resources"
           },
           "linkText": {
             "type": "string",
-            "description": "the value of the MARC tag field 856 2nd indicator, where the values are: no information provided, resource, version of resource, related resource, no display constant generated"
+            "description": "Link text is used for display in place of the URL"
           },
           "materialsSpecification": {
             "type": "string",
-            "description": "materials specified is used to specify to what portion or aspect of the resource the electronic location and access information applies (e.g. a portion or subset of the item is electronic, or a related electronic resource is being linked to the record)"
+            "description": "Materials specified is used to specify to what portion or aspect of the resource the electronic location and access information applies (e.g. a portion or subset of the item is electronic, or a related electronic resource is being linked to the record)"
           },
           "publicNote": {
             "type": "string",
@@ -328,7 +329,7 @@
           },
           "relationshipId": {
             "type": "string",
-            "description": "relationship between the electronic resource at the location identified and the item described in the record as a whole"
+            "description": "Relationship Id, refers to a Relationship type reference record. Relationship between the electronic resource at the location identified and the item described in the record as a whole. (E.g. values from MARC 21, tag field 856 2nd indicator, where the values are: No information provided, Resource, Version of resource, Related resource, No display constant generate"
           }
         },
         "additionalProperties": false,
@@ -339,7 +340,7 @@
     },
     "statisticalCodeIds": {
       "type": "array",
-      "description": "List of statistical code IDs",
+      "description": "Statistical code Id, refers to a Statistical code reference record",
       "items": {
         "type": "string"
       },
