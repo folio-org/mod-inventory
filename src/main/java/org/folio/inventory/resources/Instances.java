@@ -60,10 +60,7 @@ public class Instances {
   private static final String INSTANCES_PATH = INVENTORY_PATH + "/instances";
   private static final String INSTANCES_CONTEXT_PATH = INSTANCES_PATH + "/context";
   private static final String INSTANCES_BATCH_PATH = INSTANCES_PATH + "/batch";
-  private static final String CONFIG_PATH = INSTANCES_PATH + "/config";
-  private static final String BLOCKED_FIELDS_CONFIG_PATH = CONFIG_PATH + "/blockedFields";
-  private static final List<String> BLOCKED_FIELDS =
-    Arrays.asList("hrid", "source", "discoverySuppress", "staffSuppress", "previouslyHeld", "statusId", "clickable-add-statistical-code");
+  private static final String BLOCKED_FIELDS_CONFIG_PATH = INVENTORY_PATH + "/config/instances/blockedFields";
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   private final Storage storage;
   private final HttpClient client;
@@ -102,7 +99,7 @@ public class Instances {
 
   private void getBlockedFieldsConfig(RoutingContext routingContext) {
     JsonObject response = new JsonObject();
-    response.put("blockedFields", BLOCKED_FIELDS);
+    response.put("blockedFields", Arrays.asList(InventoryConfiguration.BLOCKED_FIELDS));
     JsonResponse.success(routingContext.response(), response);
   }
 
