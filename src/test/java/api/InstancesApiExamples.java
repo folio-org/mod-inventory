@@ -247,7 +247,7 @@ public class InstancesApiExamples extends ApiTests {
   }
 
   @Test
-  public void shouldReturnBadRequestIfOneInstancePostedWithoutTitle() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+  public void shouldReturnServerErrorIfOneInstancePostedWithoutTitle() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
     // Prepare request data
     String angryPlanetInstanceId = UUID.randomUUID().toString();
     JsonObject angryPlanetInstance = new JsonObject()
@@ -271,7 +271,7 @@ public class InstancesApiExamples extends ApiTests {
   }
 
   @Test
-  public void shouldReturnBadRequestIfOneOfInstancesPostedWithoutTitle() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+  public void shouldReturnServerErrorIfOneOfInstancesPostedWithoutTitle() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
     // Prepare request data
     String angryPlanetInstanceId = UUID.randomUUID().toString();
     JsonObject angryPlanetInstance = new JsonObject()
