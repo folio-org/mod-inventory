@@ -1,7 +1,6 @@
 package org.folio.inventory.resources;
 
 import com.google.common.collect.Sets;
-
 import java.util.Set;
 
 /**
@@ -16,7 +15,6 @@ public class InventoryConfiguration {
     "previouslyHeld",
     "statusId",
     "clickable-add-statistical-code");
-
 
   private InventoryConfiguration() {
     throw new UnsupportedOperationException("Instance of the " + this.getClass().getName() + " + can not be created, because it is utility class");
