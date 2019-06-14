@@ -16,8 +16,4 @@ public class InventoryConfiguration {
     "previouslyHeld",
     "statusId",
     "clickable-add-statistical-code");
-
-  private InventoryConfiguration() {
-    throw new UnsupportedOperationException("Instance of the " + this.getClass().getName() + " + can not be created, because it is utility class");
-  }
 }
