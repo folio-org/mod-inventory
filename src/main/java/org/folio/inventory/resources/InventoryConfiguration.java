@@ -5,7 +5,7 @@ import com.google.common.collect.Sets;
 import java.util.Set;
 
 /**
- * Stores configuration properties for Instances, Items, Holdings
+ * Stores configuration properties for Inventory entities: Instances, Items, Holdings
  */
 public class InventoryConfiguration {
   protected static final Set<String> BLOCKED_FIELDS = Sets.newHashSet(
@@ -17,6 +17,7 @@ public class InventoryConfiguration {
     "statusId",
     "clickable-add-statistical-code");
 
-  public InventoryConfiguration() {
+  private InventoryConfiguration() {
+    throw new UnsupportedOperationException ("Utility class to store Inventory configuration");
   }
 }
