@@ -8,7 +8,7 @@ import java.util.Set;
  * Stores configuration properties for Instances, Items, Holdings
  */
 public class InventoryConfiguration {
-  public static final Set<String> BLOCKED_FIELDS = Sets.newHashSet(
+  protected static final Set<String> BLOCKED_FIELDS = Sets.newHashSet(
     "hrid",
     "source",
     "discoverySuppress",
@@ -16,4 +16,7 @@ public class InventoryConfiguration {
     "previouslyHeld",
     "statusId",
     "clickable-add-statistical-code");
+
+  public InventoryConfiguration() {
+  }
 }
