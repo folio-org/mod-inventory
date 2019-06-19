@@ -99,7 +99,7 @@ public class Instances {
 
   private void getBlockedFieldsConfig(RoutingContext routingContext) {
     JsonObject response = new JsonObject();
-    response.put("blockedFields", Arrays.asList(InventoryConfiguration.BLOCKED_FIELDS));
+    response.put("blockedFields", new JsonArray(new ArrayList(InventoryConfiguration.BLOCKED_FIELDS)));
     JsonResponse.success(routingContext.response(), response);
   }
 

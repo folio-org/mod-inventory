@@ -28,6 +28,7 @@ import org.apache.http.Header;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
 import org.apache.http.message.BasicHeader;
+import org.folio.inventory.resources.InventoryConfiguration;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
@@ -311,14 +312,17 @@ public class InstancesApiExamples extends ApiTests {
   @Test
   public void shouldReturnBlockedFieldsConfig() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
     CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+    JsonObject expectedResponseBody = new JsonObject()
+      .put("blockedFields", new JsonArray(new ArrayList(InventoryConfiguration.BLOCKED_FIELDS)));
 
     okapiClient.get(ApiRoot.blockedFieldsConfig(), ResponseHandler.json(getCompleted));
     Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
 
     assertThat(getResponse.getStatusCode(), is(HttpResponseStatus.OK.code()));
-    JsonObject response = getResponse.getJson();
-    assertThat(response.containsKey("blockedFields"), is(true));
-    assertThat(response.getJsonArray("blockedFields"), notNullValue());
+    JsonObject actualResponse = getResponse.getJson();
+    assertThat(actualResponse.containsKey("blockedFields"), is(true));
+    assertThat(actualResponse.getJsonArray("blockedFields"), notNullValue());
+    assertThat(actualResponse.getJsonArray("blockedFields").toString(), is(expectedResponseBody.getJsonArray("blockedFields").toString()));
   }
 
   @Test
