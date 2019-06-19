@@ -8,7 +8,7 @@
       "handlers": [
         {
           "methods": ["GET"],
-          "pathPattern": "/inventory/config/instances/blockedFields",
+          "pathPattern": "/inventory/config/instances/blocked-fields",
           "permissionsRequired": ["inventory.config.instances.blocked-fields"],
           "modulePermissions": []
         }
