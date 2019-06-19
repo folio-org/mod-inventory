@@ -11,6 +11,7 @@ import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -313,17 +314,22 @@ public class InstancesApiExamples extends ApiTests {
   @Test
   public void shouldReturnBlockedFieldsConfig() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
     CompletableFuture<Response> getCompleted = new CompletableFuture<>();
-    JsonObject expectedResponseBody = new JsonObject()
-      .put("blockedFields", new JsonArray(Json.encode(InventoryConfiguration.BLOCKED_FIELDS)));
 
     okapiClient.get(ApiRoot.blockedFieldsConfig(), ResponseHandler.json(getCompleted));
     Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
 
     assertThat(getResponse.getStatusCode(), is(HttpResponseStatus.OK.code()));
     JsonObject actualResponse = getResponse.getJson();
+
     assertThat(actualResponse.containsKey("blockedFields"), is(true));
     assertThat(actualResponse.getJsonArray("blockedFields"), notNullValue());
-    assertThat(actualResponse.getJsonArray("blockedFields").toString(), is(expectedResponseBody.getJsonArray("blockedFields").toString()));
+    assertTrue(actualResponse.getJsonArray("blockedFields").contains("discoverySuppress"));
+    assertTrue(actualResponse.getJsonArray("blockedFields").contains("previouslyHeld"));
+    assertTrue(actualResponse.getJsonArray("blockedFields").contains("statusId"));
+    assertTrue(actualResponse.getJsonArray("blockedFields").contains("hrid"));
+    assertTrue(actualResponse.getJsonArray("blockedFields").contains("staffSuppress"));
+    assertTrue(actualResponse.getJsonArray("blockedFields").contains("source"));
+    assertTrue(actualResponse.getJsonArray("blockedFields").contains("clickable-add-statistical-code"));
   }
 
   @Test

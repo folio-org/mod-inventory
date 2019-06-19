@@ -7,7 +7,7 @@ import java.util.Set;
  * Stores configuration properties for Inventory entities: Instances, Items, Holdings
  */
 public class InventoryConfiguration {
-  public static final Set<String> BLOCKED_FIELDS = Sets.newHashSet(
+  protected static final Set<String> BLOCKED_FIELDS = Sets.newHashSet(
     "hrid",
     "source",
     "discoverySuppress",
