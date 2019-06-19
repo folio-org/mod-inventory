@@ -9,11 +9,11 @@ documentation:
     content: <b>API for interacting with configuration for Instances, Items, Holdings</b>
 
 types:
-  blocked-fields: !include blocked_fields.json
+  blocked-fields: !include blocked-fields.json
 
 /inventory/config:
   /instances:
-    /blockedFields:
+    /blocked-fields:
       get:
         description: "Provides configuration with blocked fields of instance"
         responses:

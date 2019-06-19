@@ -10,10 +10,6 @@ public class ApiRoot {
     return String.format("%s/inventory", ApiTestSuite.apiRoot());
   }
 
-  public static String inventoryConfig() {return String.format("%s/inventory/config", ApiTestSuite.apiRoot());}
-
-  public static String instancesConfig() {return String.format("%s/instances", inventoryConfig());}
-
   public static URL instances()
     throws MalformedURLException {
 
@@ -44,6 +40,6 @@ public class ApiRoot {
   }
 
   public static URL blockedFieldsConfig() throws MalformedURLException {
-    return new URL(String.format("%s/blockedFields", instancesConfig()));
+    return new URL(String.format("%s/inventory/config/instances/blocked-fields", ApiTestSuite.apiRoot()));
   }
 }

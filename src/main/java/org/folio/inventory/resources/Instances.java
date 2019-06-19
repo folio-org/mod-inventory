@@ -60,7 +60,7 @@ public class Instances {
   private static final String INSTANCES_PATH = INVENTORY_PATH + "/instances";
   private static final String INSTANCES_CONTEXT_PATH = INSTANCES_PATH + "/context";
   private static final String INSTANCES_BATCH_PATH = INSTANCES_PATH + "/batch";
-  private static final String BLOCKED_FIELDS_CONFIG_PATH = INVENTORY_PATH + "/config/instances/blockedFields";
+  private static final String BLOCKED_FIELDS_CONFIG_PATH = INVENTORY_PATH + "/config/instances/blocked-fields";
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   private final Storage storage;
   private final HttpClient client;
