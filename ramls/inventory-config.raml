@@ -23,3 +23,8 @@ types:
               application/json:
                 example: !include examples/blocked_fields_get.json
                 schema: blocked-fields
+          500:
+            description: "Internal server error"
+              body:
+                text/plain:
+                  example: "Internal server error, contact administrator"
