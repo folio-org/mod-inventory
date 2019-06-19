@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "Blocked fields of instance",
+  "type": "object",
+  "properties": {
+    "blockedFields": {
+      "description": "Array of blocked fields",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "blockedFields"
+  ]
+}

@@ -9,12 +9,13 @@ documentation:
     content: <b>API for interacting with an inventory of physical resources</b>
 
 types:
+  errors: !include raml-util/schemas/errors.schema
   item: !include item.json
   items: !include items.json
   instance: !include instance.json
   instances: !include instances.json
-  context: !include instance_context.json
-  ingest-status: !include ingest_status.json
+  context: !include instance-context.json
+  ingest-status: !include ingest-status.json
 
 traits:
   language: !include raml-util/traits/language.raml

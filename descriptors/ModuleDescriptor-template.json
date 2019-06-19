@@ -3,6 +3,18 @@
   "name": "Inventory Module",
   "provides": [
     {
+      "id": "inventory-config",
+      "version": "0.1",
+      "handlers": [
+        {
+          "methods": ["GET"],
+          "pathPattern": "/inventory/config/instances/blocked-fields",
+          "permissionsRequired": ["inventory.config.instances.blocked-fields.get"],
+          "modulePermissions": []
+        }
+      ]
+    },
+    {
       "id": "inventory-batch",
       "version": "0.1",
       "handlers": [
@@ -262,6 +274,11 @@
       "description": "Check the status of a MODS format file ingestion"
     },
     {
+      "permissionName": "inventory.config.instances.blocked-fields.get",
+      "displayName": "Inventory - get configuration for blocked fields of instances",
+      "description": "Get configuration for blocked fields of instances"
+    },
+    {
       "permissionName": "inventory.all",
       "displayName": "Inventory - all permissions",
       "description": "Entire set of permissions needed to use the inventory",
@@ -280,7 +297,8 @@
         "inventory.instances.item.delete",
         "inventory.instances.collection.delete",
         "inventory.ingest.mods.post",
-        "inventory.ingest.mods.status.get"
+        "inventory.ingest.mods.status.get",
+        "inventory.config.instances.blocked-fields.get"
       ]
     }
   ],

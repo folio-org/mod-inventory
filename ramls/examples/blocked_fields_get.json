@@ -1,0 +1,7 @@
+{
+  "blockedFields": [
+    "hrid",
+    "source",
+    "discoverySuppress"
+  ]
+}

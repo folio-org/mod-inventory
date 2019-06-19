@@ -60,6 +60,7 @@ public class Instances {
   private static final String INSTANCES_PATH = INVENTORY_PATH + "/instances";
   private static final String INSTANCES_CONTEXT_PATH = INSTANCES_PATH + "/context";
   private static final String INSTANCES_BATCH_PATH = INSTANCES_PATH + "/batch";
+  private static final String BLOCKED_FIELDS_CONFIG_PATH = INVENTORY_PATH + "/config/instances/blocked-fields";
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   private final Storage storage;
   private final HttpClient client;
@@ -74,6 +75,7 @@ public class Instances {
     router.put(INSTANCES_PATH + "*").handler(BodyHandler.create());
 
     router.get(INSTANCES_CONTEXT_PATH).handler(this::getMetadataContext);
+    router.get(BLOCKED_FIELDS_CONFIG_PATH).handler(this::getBlockedFieldsConfig);
 
     router.get(INSTANCES_PATH).handler(this::getAll);
     router.post(INSTANCES_PATH).handler(this::create);
@@ -93,6 +95,12 @@ public class Instances {
       .put(Instance.TITLE_KEY, "dcterms:title"));
 
     JsonResponse.success(routingContext.response(), representation);
+  }
+
+  private void getBlockedFieldsConfig(RoutingContext routingContext) {
+    JsonObject response = new JsonObject();
+    response.put("blockedFields", new JsonArray(Json.encode(InventoryConfiguration.BLOCKED_FIELDS)));
+    JsonResponse.success(routingContext.response(), response);
   }
 
   private void getAll(RoutingContext routingContext) {

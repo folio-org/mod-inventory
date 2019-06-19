@@ -11,6 +11,7 @@ import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -24,10 +25,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.json.Json;
 import org.apache.http.Header;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
 import org.apache.http.message.BasicHeader;
+import org.folio.inventory.resources.InventoryConfiguration;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
@@ -306,6 +309,27 @@ public class InstancesApiExamples extends ApiTests {
     assertEquals(postResponse.getJson().getJsonArray("instances").size(), 2);
     assertEquals(postResponse.getJson().getJsonArray("errorMessages").size(), 1);
     assertEquals(postResponse.getJson().getInteger("totalRecords"), Integer.valueOf(2));
+  }
+
+  @Test
+  public void shouldReturnBlockedFieldsConfig() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+
+    okapiClient.get(ApiRoot.blockedFieldsConfig(), ResponseHandler.json(getCompleted));
+    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(getResponse.getStatusCode(), is(HttpResponseStatus.OK.code()));
+    JsonObject actualResponse = getResponse.getJson();
+
+    assertThat(actualResponse.containsKey("blockedFields"), is(true));
+    assertThat(actualResponse.getJsonArray("blockedFields"), notNullValue());
+    assertTrue(actualResponse.getJsonArray("blockedFields").contains("discoverySuppress"));
+    assertTrue(actualResponse.getJsonArray("blockedFields").contains("previouslyHeld"));
+    assertTrue(actualResponse.getJsonArray("blockedFields").contains("statusId"));
+    assertTrue(actualResponse.getJsonArray("blockedFields").contains("hrid"));
+    assertTrue(actualResponse.getJsonArray("blockedFields").contains("staffSuppress"));
+    assertTrue(actualResponse.getJsonArray("blockedFields").contains("source"));
+    assertTrue(actualResponse.getJsonArray("blockedFields").contains("clickable-add-statistical-code"));
   }
 
   @Test

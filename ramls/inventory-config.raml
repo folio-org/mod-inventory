@@ -1,0 +1,31 @@
+#%RAML 1.0
+title: Inventory API
+version: v0.1
+protocols: [ HTTP, HTTPS ]
+baseUri: http://localhost
+
+documentation:
+  - title: "Inventory configuration API"
+    content: <b>API for interacting with configuration for Instances, Items, Holdings</b>
+
+types:
+  errors: !include raml-util/schemas/errors.schema
+  blocked-fields: !include blocked-fields.json
+
+/inventory/config:
+  /instances:
+    /blocked-fields:
+      get:
+        description: "Provides configuration with blocked fields of instance"
+        responses:
+          200:
+            description: "Array of blocked fields of instance"
+            body:
+              application/json:
+                example: !include examples/blocked_fields_get.json
+                schema: blocked-fields
+          500:
+            description: "Internal server error"
+              body:
+                text/plain:
+                  example: "Internal server error, contact administrator"
