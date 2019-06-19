@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.json.Json;
 import org.apache.http.Header;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
@@ -313,7 +314,7 @@ public class InstancesApiExamples extends ApiTests {
   public void shouldReturnBlockedFieldsConfig() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
     CompletableFuture<Response> getCompleted = new CompletableFuture<>();
     JsonObject expectedResponseBody = new JsonObject()
-      .put("blockedFields", new JsonArray(new ArrayList(InventoryConfiguration.BLOCKED_FIELDS)));
+      .put("blockedFields", new JsonArray(Json.encode(InventoryConfiguration.BLOCKED_FIELDS)));
 
     okapiClient.get(ApiRoot.blockedFieldsConfig(), ResponseHandler.json(getCompleted));
     Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
