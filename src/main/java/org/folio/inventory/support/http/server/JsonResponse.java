@@ -11,6 +11,9 @@ import org.folio.inventory.support.http.ContentType;
 import java.util.List;
 
 public class JsonResponse {
+
+  public static final String ERRORS = "errors";
+
   private JsonResponse() { }
 
   public static void created(HttpServerResponse response,
@@ -37,7 +40,7 @@ public class JsonResponse {
 
     errors.add(error.toJson());
 
-    response(response, new JsonObject().put("errors", errors), 422);
+    response(response, new JsonObject().put(ERRORS, errors), 422);
   }
 
   public static void unprocessableEntity(
@@ -48,7 +51,18 @@ public class JsonResponse {
 
     errors.forEach(error -> errorsArray.add(error.toJson()));
 
-    response(response, new JsonObject().put("errors", errors), 422);
+    response(response, new JsonObject().put(ERRORS, errorsArray), 422);
+  }
+
+  public static void badRequest(
+    HttpServerResponse response,
+    ValidationError error) {
+
+    JsonArray errors = new JsonArray();
+
+    errors.add(error.toJson());
+
+    response(response, new JsonObject().put(ERRORS, errors), 400);
   }
 
   private static void response(HttpServerResponse response,

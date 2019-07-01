@@ -11,6 +11,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import api.isbns.IsbnUtilsApiExamples;
 import org.folio.inventory.InventoryVerticle;
 import org.folio.inventory.common.VertxAssistant;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
@@ -37,7 +38,8 @@ import support.fakes.FakeOkapi;
   ItemApiLocationExamples.class,
   ItemApiTitleExamples.class,
   ItemApiCallNumberExamples.class,
-  ModsIngestExamples.class
+  ModsIngestExamples.class,
+  IsbnUtilsApiExamples.class
 })
 public class ApiTestSuite {
   public static final int INVENTORY_VERTICLE_TEST_PORT = 9603;

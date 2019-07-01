@@ -39,6 +39,25 @@ public class ApiRoot {
     return new URL(String.format("%s/items?%s", inventory(), query));
   }
 
+  public static String isbn() {
+    return String.format("%s/isbn", ApiTestSuite.apiRoot());
+  }
+
+  public static URL isbnValidate(String query) throws MalformedURLException {
+
+    return new URL(String.format("%s/validator?%s", isbn(), query));
+  }
+
+  public static URL isbnConvertTo10(String query) throws MalformedURLException {
+
+    return new URL(String.format("%s/convertTo10?%s", isbn(), query));
+  }
+
+  public static URL isbnConvertTo13(String query) throws MalformedURLException {
+
+    return new URL(String.format("%s/convertTo13?%s", isbn(), query));
+  }
+
   public static URL blockedFieldsConfig() throws MalformedURLException {
     return new URL(String.format("%s/inventory/config/instances/blocked-fields", ApiTestSuite.apiRoot()));
   }
