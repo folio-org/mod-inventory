@@ -57,12 +57,7 @@ public class JsonResponse {
   public static void badRequest(
     HttpServerResponse response,
     ValidationError error) {
-
-    JsonArray errors = new JsonArray();
-
-    errors.add(error.toJson());
-
-    response(response, new JsonObject().put(ERRORS, errors), 400);
+    response(response, error.toJson(), 400);
   }
 
   private static void response(HttpServerResponse response,

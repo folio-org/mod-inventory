@@ -1,5 +1,6 @@
 package api.isbns;
 
+import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.folio.inventory.resources.IsbnUtilsApi.CONVERTER_MISSING_REQUIRED_PARAM_MSG;
 import static org.folio.inventory.resources.IsbnUtilsApi.INVALID_HYPHENS_VALUE_MSG;
 import static org.folio.inventory.resources.IsbnUtilsApi.INVALID_ISBN_MESSAGE;
@@ -143,13 +144,12 @@ public class IsbnUtilsApiExamples extends ApiTests {
   @Test
   public void testIsbnConvertTo13InvalidHyphens() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
     CompletableFuture<Response> conversionCompleted = new CompletableFuture<>();
-    okapiClient.get(ApiRoot.isbnConvertTo13("isbn=9781930110991&hyphens=123"), ResponseHandler.text(conversionCompleted));
+    String query = "isbn=9781930110991&hyphens=123";
+    okapiClient.get(ApiRoot.isbnConvertTo13(query), ResponseHandler.json(conversionCompleted));
 
     Response conversionResponse = conversionCompleted.get(5, TimeUnit.SECONDS);
 
-    assertThat(conversionResponse.getStatusCode(), is(400));
-    String result = conversionResponse.getBody();
-    assertThat(result, is(INVALID_HYPHENS_VALUE_MSG));
+    checkErrorResponse(conversionResponse, INVALID_HYPHENS_VALUE_MSG, query);
   }
 
   @Test
@@ -159,7 +159,7 @@ public class IsbnUtilsApiExamples extends ApiTests {
 
     Response conversionResponse = conversionCompleted.get(5, TimeUnit.SECONDS);
 
-    checkErrorResponse(conversionResponse,"1930211099");
+    checkErrorResponse(conversionResponse, INVALID_ISBN_MESSAGE, "1930211099");
   }
 
   @Test
@@ -170,52 +170,45 @@ public class IsbnUtilsApiExamples extends ApiTests {
     Response conversionResponse = conversionCompleted.get(5, TimeUnit.SECONDS);
 
 
-    checkErrorResponse(conversionResponse, "97819301109911");
+    checkErrorResponse(conversionResponse, INVALID_ISBN_MESSAGE, "97819301109911");
   }
 
-  private void checkErrorResponse(Response conversionResponse, String errorParameterValue) {
+  private void checkErrorResponse(Response conversionResponse, String message, String errorParameterValue) {
     assertThat(conversionResponse.getStatusCode(), is(400));
-    JsonObject result = conversionResponse.getJson();
-    assertThat(result.getJsonArray("errors").size(), is(1));
-    JsonObject error = result.getJsonArray("errors").getJsonObject(0);
-    assertThat(error.getString("message"), is(INVALID_ISBN_MESSAGE));
+    JsonObject error = conversionResponse.getJson();
+    assertThat(error.getString("message"), is(message));
     assertThat(error.getJsonArray("parameters").getJsonObject(0).getString("value"), is(errorParameterValue));
   }
 
   @Test
   public void testIsbnConvertTo10FromIsbn13IsbnQueryParamIsMissing() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
     CompletableFuture<Response> conversionCompleted = new CompletableFuture<>();
-    okapiClient.get(ApiRoot.isbnConvertTo10(""), ResponseHandler.text(conversionCompleted));
+    okapiClient.get(ApiRoot.isbnConvertTo10(EMPTY), ResponseHandler.json(conversionCompleted));
 
     Response conversionResponse = conversionCompleted.get(5, TimeUnit.SECONDS);
 
-    assertThat(conversionResponse.getStatusCode(), is(400));
-    String result = conversionResponse.getBody();
-    assertThat(result, is(CONVERTER_MISSING_REQUIRED_PARAM_MSG));
+    checkErrorResponse(conversionResponse, CONVERTER_MISSING_REQUIRED_PARAM_MSG, EMPTY);
   }
 
   @Test
   public void testIsbnValidatorQueryParamIsMissing() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
     CompletableFuture<Response> conversionCompleted = new CompletableFuture<>();
-    okapiClient.get(ApiRoot.isbnValidate(""), ResponseHandler.text(conversionCompleted));
+    okapiClient.get(ApiRoot.isbnValidate(EMPTY), ResponseHandler.json(conversionCompleted));
 
     Response conversionResponse = conversionCompleted.get(5, TimeUnit.SECONDS);
 
-    assertThat(conversionResponse.getStatusCode(), is(400));
-    String result = conversionResponse.getBody();
-    assertThat(result, is(VALIDATOR_MISSING_REQUIRED_PARAMS_MSG));
+    checkErrorResponse(conversionResponse, VALIDATOR_MISSING_REQUIRED_PARAMS_MSG, EMPTY);
   }
 
   @Test
   public void testIsbnValidatorQueryMoreThanOneParam() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
     CompletableFuture<Response> conversionCompleted = new CompletableFuture<>();
-    okapiClient.get(ApiRoot.isbnValidate("isbn10=109310410&isbn13=07417041"), ResponseHandler.text(conversionCompleted));
+    String query = "isbn10=109310410&isbn13=07417041";
+    okapiClient.get(ApiRoot.isbnValidate(query), ResponseHandler.json(conversionCompleted));
 
     Response conversionResponse = conversionCompleted.get(5, TimeUnit.SECONDS);
 
-    assertThat(conversionResponse.getStatusCode(), is(400));
-    String result = conversionResponse.getBody();
-    assertThat(result, is(VALIDATOR_MISSING_REQUIRED_PARAMS_MSG));
+    checkErrorResponse(conversionResponse, VALIDATOR_MISSING_REQUIRED_PARAMS_MSG, query);
   }
 
   private void verifyValidator(String isbnParam, boolean isValid) throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
