@@ -167,14 +167,15 @@ public class Items {
     Item updatedItem = requestToItem(itemRequest);
 
     ItemCollection itemCollection = storage.getItemCollection(context);
+    UserCollection userCollection = storage.getUserCollection(context);
 
     itemCollection.findById(routingContext.request().getParam("id"), getItemResult -> {
       if(getItemResult.getResult() != null) {
         if(hasSameBarcode(updatedItem, getItemResult.getResult())) {
-          updateItem(routingContext, updatedItem, itemCollection);
+          updateItem(routingContext, updatedItem, itemCollection, userCollection);
         } else {
           try {
-            checkForNonUniqueBarcode(routingContext, updatedItem, itemCollection);
+            checkForNonUniqueBarcode(routingContext, updatedItem, itemCollection, userCollection);
           } catch (UnsupportedEncodingException e) {
             ServerErrorResponse.internalError(routingContext.response(), e.toString());
           }
@@ -800,18 +801,33 @@ public class Items {
   private void updateItem(
     RoutingContext routingContext,
     Item updatedItem,
-    ItemCollection itemCollection) {
+    ItemCollection itemCollection,
+    UserCollection userCollection) {
 
-    itemCollection.update(updatedItem,
-      v -> SuccessResponse.noContent(routingContext.response()),
-      failure -> ServerErrorResponse.internalError(
-        routingContext.response(), failure.getReason()));
+    String userId = routingContext.request().getHeader("X-Okapi-User-Id");
+    userCollection.findById(userId,
+      userSuccess -> {
+        User user = userSuccess.getResult();
+
+        List<CirculationNote> notes = updatedItem.getCirculationNotes()
+          .stream()
+          .map(note -> note.withSource(user))
+          .map(note -> note.withDate(dateTimeFormatter.format(ZonedDateTime.now())))
+          .collect(Collectors.toList());
+
+        itemCollection.update(updatedItem.setCirculationNotes(notes),
+          v -> SuccessResponse.noContent(routingContext.response()),
+          failure -> ServerErrorResponse.internalError(
+            routingContext.response(), failure.getReason()));
+      },
+      FailureResponseConsumer.serverError(routingContext.response()));
   }
 
   private void checkForNonUniqueBarcode(
     RoutingContext routingContext,
     Item updatedItem,
-    ItemCollection itemCollection)
+    ItemCollection itemCollection,
+    UserCollection userCollection)
     throws UnsupportedEncodingException {
 
     itemCollection.findByCql(
@@ -821,7 +837,7 @@ public class Items {
         List<Item> items = it.getResult().records;
 
         if(items.isEmpty()) {
-          updateItem(routingContext, updatedItem, itemCollection);
+          updateItem(routingContext, updatedItem, itemCollection, userCollection);
         }
         else {
           ClientErrorResponse.badRequest(routingContext.response(),
