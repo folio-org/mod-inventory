@@ -1,14 +1,15 @@
 package org.folio.inventory.storage.external;
 
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpClient;
-
 import org.folio.inventory.domain.CollectionProvider;
 import org.folio.inventory.domain.HoldingCollection;
+import org.folio.inventory.domain.ingest.IngestJobCollection;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.domain.items.ItemCollection;
-import org.folio.inventory.domain.ingest.IngestJobCollection;
+import org.folio.inventory.domain.user.UserCollection;
 import org.folio.inventory.storage.memory.InMemoryIngestJobCollection;
+
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClient;
 
 public class ExternalStorageCollections implements CollectionProvider {
   private final Vertx vertx;
@@ -44,5 +45,11 @@ public class ExternalStorageCollections implements CollectionProvider {
   public IngestJobCollection getIngestJobCollection(String tenantId, String token) {
     //There is no external storage implementation for Jobs yet
     return ingestJobCollection;
+  }
+
+  @Override
+  public UserCollection getUserCollection(String tenantId, String token) {
+    return new ExternalStorageModuleUserCollection(vertx, baseAddress,
+      tenantId, token, client);
   }
 }

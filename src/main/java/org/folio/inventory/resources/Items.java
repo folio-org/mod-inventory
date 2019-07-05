@@ -9,6 +9,9 @@ import java.io.UnsupportedEncodingException;
 import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +30,8 @@ import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.Note;
 import org.folio.inventory.domain.items.Status;
 import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
+import org.folio.inventory.domain.user.User;
+import org.folio.inventory.domain.user.UserCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.support.CqlHelper;
@@ -34,7 +39,12 @@ import org.folio.inventory.support.HoldingsSupport;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
-import org.folio.inventory.support.http.server.*;
+import org.folio.inventory.support.http.server.ClientErrorResponse;
+import org.folio.inventory.support.http.server.FailureResponseConsumer;
+import org.folio.inventory.support.http.server.ForwardResponse;
+import org.folio.inventory.support.http.server.JsonResponse;
+import org.folio.inventory.support.http.server.ServerErrorResponse;
+import org.folio.inventory.support.http.server.SuccessResponse;
 
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
@@ -54,6 +64,9 @@ public class Items {
   private static final int STATUS_SUCCESS = 200;
 
   private final HttpClient client;
+
+  private final DateTimeFormatter dateTimeFormatter =
+    DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").withZone(ZoneOffset.UTC);
 
   public Items(final Storage storage, final HttpClient client) {
     this.storage = storage;
@@ -121,6 +134,7 @@ public class Items {
     Item newItem = requestToItem(item);
 
     ItemCollection itemCollection = storage.getItemCollection(context);
+    UserCollection userCollection = storage.getUserCollection(context);
 
     if(newItem.getBarcode() != null) {
       try {
@@ -128,7 +142,7 @@ public class Items {
           PagingParameters.defaults(), findResult -> {
 
             if(findResult.getResult().records.isEmpty()) {
-              addItem(routingContext, context, newItem, itemCollection);
+              addItem(routingContext, context, newItem, itemCollection, userCollection);
             }
             else {
               ClientErrorResponse.badRequest(routingContext.response(),
@@ -141,7 +155,7 @@ public class Items {
       }
     }
     else {
-      addItem(routingContext, context, newItem, itemCollection);
+      addItem(routingContext, context, newItem, itemCollection, userCollection);
     }
   }
 
@@ -592,12 +606,26 @@ public class Items {
     RoutingContext routingContext,
     WebContext webContext,
     Item newItem,
-    ItemCollection itemCollection) {
+    ItemCollection itemCollection,
+    UserCollection userCollection) {
 
-    itemCollection.add(newItem, success -> {
-      Item item = success.getResult();
-      respondWithItemRepresentation(item, STATUS_CREATED, routingContext, webContext);
-    }, FailureResponseConsumer.serverError(routingContext.response()));
+    String userId = routingContext.request().getHeader("X-Okapi-User-Id");
+    userCollection.findById(userId,
+      userSuccess -> {
+        User user = userSuccess.getResult();
+
+        List<CirculationNote> notes = newItem.getCirculationNotes()
+          .stream()
+          .map(note -> note.withSource(user))
+          .map(note -> note.withDate(dateTimeFormatter.format(ZonedDateTime.now())))
+          .collect(Collectors.toList());
+
+        itemCollection.add(newItem.setCirculationNotes(notes), success -> {
+          Item item = success.getResult();
+          respondWithItemRepresentation(item, STATUS_CREATED, routingContext, webContext);
+        }, FailureResponseConsumer.serverError(routingContext.response()));
+      },
+      FailureResponseConsumer.serverError(routingContext.response()));
   }
 
   private void respondWithItemRepresentation (
