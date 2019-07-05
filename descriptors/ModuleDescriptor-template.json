@@ -169,13 +169,13 @@
           "modulePermissions": []
         },
         {
-          "methods": ["get"],
+          "methods": ["GET"],
           "pathPattern": "/isbn/convertTo10",
           "permissionsRequired": ["isbn-utils.convert-to-10.get"],
           "modulePermissions": []
         },
         {
-          "methods": ["get"],
+          "methods": ["GET"],
           "pathPattern": "/isbn/validator",
           "permissionsRequired": ["isbn-utils.validator.get"],
           "modulePermissions": []

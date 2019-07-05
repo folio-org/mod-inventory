@@ -9,7 +9,7 @@ documentation:
     content: <b>API for validation and conversion of ISBN-10 and ISBN-13 numbers </b>
 
 types:
-  error: !include raml-util/schemas/error.schema
+  errors: !include raml-util/schemas/errors.schema
 
 /isbn:
   /convertTo13:
@@ -36,12 +36,10 @@ types:
           description: "Bad request, an invalid ISBNs is provided"
           body:
             application/json:
-              type: error
+              type: errors
               example:
                 strict: false
-                value: !include raml-util/examples/error.sample
-            text/plain:
-              example: "Isbn must be specified"
+                value: !include raml-util/examples/errors.sample
 
   /convertTo10:
     get:
@@ -67,10 +65,10 @@ types:
           description: "Bad request, an invalid ISBNs is provided"
           body:
             application/json:
-              type: error
+              type: errors
               example:
                 strict: false
-                value: !include raml-util/examples/error.sample
+                value: !include raml-util/examples/errors.sample
   /validator:
     get:
       description: Checks the code is a valid ISBN code.
@@ -86,6 +84,7 @@ types:
           description: "Bad request, invalid query parameter is provided"
           body:
             application/json:
+              type: errors
               example:
                 strict: false
-                value: !include raml-util/examples/error.sample
+                value: !include raml-util/examples/errors.sample

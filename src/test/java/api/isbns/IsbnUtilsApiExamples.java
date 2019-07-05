@@ -175,7 +175,9 @@ public class IsbnUtilsApiExamples extends ApiTests {
 
   private void checkErrorResponse(Response conversionResponse, String message, String errorParameterValue) {
     assertThat(conversionResponse.getStatusCode(), is(400));
-    JsonObject error = conversionResponse.getJson();
+    JsonObject result = conversionResponse.getJson();
+    assertThat(result.getJsonArray("errors").size(), is(1));
+    JsonObject error = result.getJsonArray("errors").getJsonObject(0);
     assertThat(error.getString("message"), is(message));
     assertThat(error.getJsonArray("parameters").getJsonObject(0).getString("value"), is(errorParameterValue));
   }
