@@ -72,7 +72,7 @@ types:
           description: "The response body is a json object containing the converted isbn"
           body:
             application/json:
-              type: isValid
+              type: isbn
               example: !include examples/isbn10.json
         400:
           description: "Bad request, an invalid ISBNs is provided"
