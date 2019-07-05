@@ -10,6 +10,17 @@ documentation:
 
 types:
   errors: !include raml-util/schemas/errors.schema
+  isbn:
+    type: object
+    properties:
+      isbn: string
+      additionalProperties: false
+
+  isValid:
+    type: object
+    properties:
+      isValid: boolean
+    additionalProperties: false
 
 /isbn:
   /convertTo13:
@@ -31,6 +42,7 @@ types:
           description: "The response body is a json object containing the converted isbn"
           body:
             application/json:
+              type: isbn
               example: !include examples/isbn13.json
         400:
           description: "Bad request, an invalid ISBNs is provided"
@@ -60,6 +72,7 @@ types:
           description: "The response body is a json object containing the converted isbn"
           body:
             application/json:
+              type: isValid
               example: !include examples/isbn10.json
         400:
           description: "Bad request, an invalid ISBNs is provided"
@@ -79,6 +92,7 @@ types:
           description: "Returns true if a valid ISBN code, otherwise false"
           body:
             application/json:
+              type: isValid
               example: !include examples/isbn_validation_result.json
         400:
           description: "Bad request, invalid query parameter is provided"

@@ -147,8 +147,9 @@ public class IsbnUtilsApi {
       case ISBN_PARAM:
         isValid = IsbnUtil.isValid10DigitNumber(isbnCode) || IsbnUtil.isValid13DigitNumber(isbnCode);
         break;
-      default: badRequest(routingContext.response(),
-        new ValidationError(VALIDATOR_MISSING_REQUIRED_PARAMS_MSG, QUERY, routingContext.request().query()));
+      default:
+        badRequest(routingContext.response(),
+          new ValidationError(VALIDATOR_MISSING_REQUIRED_PARAMS_MSG, QUERY, routingContext.request().query()));
         return;
     }
 
