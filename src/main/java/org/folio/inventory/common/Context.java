@@ -4,6 +4,7 @@ public interface Context {
   String getTenantId();
   String getToken();
   String getOkapiLocation();
+  String getUserId();
   String getHeader(String header);
   String getHeader(String header, String defaultValue);
   boolean hasHeader(String header);

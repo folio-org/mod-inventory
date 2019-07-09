@@ -1,20 +1,25 @@
 package api.items;
 
-import api.ApiTestSuite;
-import api.support.ApiRoot;
-import api.support.ApiTests;
-import api.support.InstanceApiClient;
-import api.support.builders.HoldingRequestBuilder;
-import api.support.builders.ItemRequestBuilder;
-import io.vertx.core.json.JsonObject;
-import org.apache.commons.lang3.StringUtils;
-import org.folio.inventory.support.JsonArrayHelper;
-import org.folio.inventory.support.http.client.IndividualResource;
-import org.folio.inventory.support.http.client.Response;
-import org.folio.inventory.support.http.client.ResponseHandler;
-import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
-import org.junit.Test;
+import static api.ApiTestSuite.USER_ID;
+import static api.support.InstanceSamples.girlOnTheTrain;
+import static api.support.InstanceSamples.nod;
+import static api.support.InstanceSamples.smallAngryPlanet;
+import static org.folio.inventory.domain.items.CirculationNote.DATE_KEY;
+import static org.folio.inventory.domain.items.CirculationNote.NOTE_KEY;
+import static org.folio.inventory.domain.items.CirculationNote.NOTE_TYPE_KEY;
+import static org.folio.inventory.domain.items.CirculationNote.SOURCE_KEY;
+import static org.folio.inventory.domain.items.CirculationNote.STAFF_ONLY_KEY;
+import static org.folio.inventory.domain.items.Item.CIRCULATION_NOTES_KEY;
+import static org.folio.inventory.domain.user.Personal.FIRST_NAME_KEY;
+import static org.folio.inventory.domain.user.Personal.LAST_NAME_KEY;
+import static org.folio.inventory.domain.user.User.ID_KEY;
+import static org.folio.inventory.domain.user.User.PERSONAL_KEY;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.junit.Assert.assertThat;
+import static support.matchers.TextDateTimeMatcher.withinSecondsAfter;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -25,9 +30,24 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static api.support.InstanceSamples.*;
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.assertThat;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.inventory.support.JsonArrayHelper;
+import org.folio.inventory.support.http.client.IndividualResource;
+import org.folio.inventory.support.http.client.Response;
+import org.folio.inventory.support.http.client.ResponseHandler;
+import org.hamcrest.CoreMatchers;
+import org.joda.time.DateTime;
+import org.joda.time.Seconds;
+import org.junit.Assert;
+import org.junit.Test;
+
+import api.ApiTestSuite;
+import api.support.ApiRoot;
+import api.support.ApiTests;
+import api.support.InstanceApiClient;
+import api.support.builders.HoldingRequestBuilder;
+import api.support.builders.ItemRequestBuilder;
+import io.vertx.core.json.JsonObject;
 
 public class ItemApiExamples extends ApiTests {
   public ItemApiExamples() throws MalformedURLException {
@@ -935,6 +955,158 @@ public class ItemApiExamples extends ApiTests {
 
     assertThat(getItemResponse.getStatusCode(), is(200));
     assertThat(getItemResponse.getJson().containsKey("barcode"), is(false));
+  }
+
+  @Test
+  public void canCreateAnItemWithACirculationNote()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
+
+    JsonObject user = new JsonObject()
+      .put(ID_KEY, USER_ID)
+      .put(PERSONAL_KEY, new JsonObject()
+        .put(LAST_NAME_KEY, "Smith")
+        .put(FIRST_NAME_KEY, "John"));
+
+    JsonObject createdUser = usersClient.create(user).getJson();
+
+    DateTime requestMade = DateTime.now();
+
+    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withBarcode("645398607547")
+      .temporarilyInReadingRoom()
+      .canCirculate()
+      .temporarilyCourseReserves()
+      .withCheckInNote());
+
+    JsonObject createdItem = itemsClient.getById(postResponse.getId()).getJson();
+
+    assertThat(createdItem.containsKey("id"), is(true));
+    assertThat(createdItem.getString("title"), is("Long Way to a Small Angry Planet"));
+    assertThat(createdItem.getString("barcode"), is("645398607547"));
+    assertThat(createdItem.getJsonObject("status").getString("name"), is("Available"));
+
+    JsonObject materialType = createdItem.getJsonObject("materialType");
+
+    assertThat(materialType.getString("id"), CoreMatchers.is(ApiTestSuite.getBookMaterialType()));
+    assertThat(materialType.getString("name"), is("Book"));
+
+    JsonObject permanentLoanType = createdItem.getJsonObject("permanentLoanType");
+
+    JsonObject temporaryLoanType = createdItem.getJsonObject("temporaryLoanType");
+
+    assertThat(permanentLoanType.getString("id"), is(ApiTestSuite.getCanCirculateLoanType()));
+    assertThat(permanentLoanType.getString("name"), is("Can Circulate"));
+
+    assertThat(temporaryLoanType.getString("id"), is(ApiTestSuite.getCourseReserveLoanType()));
+    assertThat(temporaryLoanType.getString("name"), is("Course Reserves"));
+
+    assertThat("Item should not have permanent location",
+      createdItem.containsKey("permanentLocation"), is(false));
+
+    assertThat(createdItem.getJsonObject("temporaryLocation").getString("name"), is("Reading Room"));
+
+    JsonObject checkInNote = createdItem.getJsonArray(CIRCULATION_NOTES_KEY).getJsonObject(0);
+    JsonObject source = checkInNote.getJsonObject(SOURCE_KEY);
+
+    assertThat(checkInNote.getString(NOTE_TYPE_KEY), is("Check in"));
+    assertThat(checkInNote.getString(NOTE_KEY), is("Please read this note before checking in the item"));
+    assertThat(checkInNote.getBoolean(STAFF_ONLY_KEY), is(false));
+    assertThat(checkInNote.getString(DATE_KEY), withinSecondsAfter(Seconds.seconds(2), requestMade));
+
+    assertThat(source.getString(ID_KEY), is(createdUser.getString(ID_KEY)));
+    assertThat(source.getJsonObject(PERSONAL_KEY).getString(LAST_NAME_KEY),
+      is(source.getJsonObject(PERSONAL_KEY).getString(LAST_NAME_KEY)));
+    assertThat(source.getJsonObject(PERSONAL_KEY).getString(FIRST_NAME_KEY),
+      is(source.getJsonObject(PERSONAL_KEY).getString(FIRST_NAME_KEY)));
+
+    selfLinkRespectsWayResourceWasReached(createdItem);
+    selfLinkShouldBeReachable(createdItem);
+  }
+
+  @Test
+  public void canUpdateAnItemWithExistingCirculationNote()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    JsonObject createdInstance = createInstance(
+      smallAngryPlanet(UUID.randomUUID()));
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
+
+    UUID itemId = UUID.randomUUID();
+
+    JsonObject newItemRequest = new ItemRequestBuilder()
+      .withId(itemId)
+      .forHolding(holdingId)
+      .withBarcode("645398607547")
+      .canCirculate()
+      .temporarilyInReadingRoom()
+      .withCheckInNote()
+      .create();
+
+    DateTime createItemRequestMade = DateTime.now();
+
+    itemsClient.create(newItemRequest);
+
+    String createdItemCirculationNoteDate = itemsClient.getById(itemId)
+      .getJson()
+      .getJsonArray(CIRCULATION_NOTES_KEY)
+      .getJsonObject(0)
+      .getString(DATE_KEY);
+
+    JsonObject updateItemRequest = newItemRequest.copy()
+      .put("status", new JsonObject().put("name", "Checked Out"));
+
+    itemsClient.replace(itemId, updateItemRequest);
+
+    Response getResponse = itemsClient.getById(itemId);
+
+    assertThat(getResponse.getStatusCode(), is(200));
+    JsonObject updatedItem = getResponse.getJson();
+
+    assertThat(updatedItem.containsKey("id"), is(true));
+    assertThat(updatedItem.getString("title"), is("Long Way to a Small Angry Planet"));
+    assertThat(updatedItem.getString("barcode"), is("645398607547"));
+    assertThat(updatedItem.getJsonObject("status").getString("name"), is("Checked Out"));
+
+    JsonObject materialType = updatedItem.getJsonObject("materialType");
+
+    assertThat(materialType.getString("id"), is(ApiTestSuite.getBookMaterialType()));
+    assertThat(materialType.getString("name"), is("Book"));
+
+    JsonObject permanentLoanType = updatedItem.getJsonObject("permanentLoanType");
+
+    assertThat(permanentLoanType.getString("id"), is(ApiTestSuite.getCanCirculateLoanType()));
+    assertThat(permanentLoanType.getString("name"), is("Can Circulate"));
+
+    assertThat("Item should not have permanent location",
+      updatedItem.containsKey("permanentLocation"), is(false));
+
+    assertThat(updatedItem.getJsonObject("temporaryLocation").getString("name"), is("Reading Room"));
+
+    JsonObject checkInNote = updatedItem.getJsonArray(CIRCULATION_NOTES_KEY).getJsonObject(0);
+
+    assertThat(checkInNote.getString(DATE_KEY), not(createdItemCirculationNoteDate));
+    assertThat(checkInNote.getString(DATE_KEY), withinSecondsAfter(Seconds.seconds(2), createItemRequestMade));
+
+    selfLinkRespectsWayResourceWasReached(updatedItem);
+    selfLinkShouldBeReachable(updatedItem);
   }
 
   private static void selfLinkRespectsWayResourceWasReached(JsonObject item) {

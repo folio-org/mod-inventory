@@ -69,6 +69,11 @@ public class ResourceClient {
       "locations");
   }
 
+  public static ResourceClient forUsers(OkapiHttpClient client) {
+    return new ResourceClient(client, StorageInterfaceUrls::usersStorageUrl,
+      "users");
+  }
+
   private ResourceClient(
     OkapiHttpClient client,
     UrlMaker urlMaker, String resourceName,

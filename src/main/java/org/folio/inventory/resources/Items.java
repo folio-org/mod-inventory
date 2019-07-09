@@ -524,7 +524,7 @@ public class Items {
 
     return new OkapiHttpClient(client,
       new URL(context.getOkapiLocation()), context.getTenantId(),
-      context.getToken(),
+      context.getToken(), context.getUserId(),
       exception -> ServerErrorResponse.internalError(routingContext.response(),
       String.format("Failed to contact storage module: %s",
         exception.toString())));

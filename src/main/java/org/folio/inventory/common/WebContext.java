@@ -26,6 +26,11 @@ public class WebContext implements Context {
   }
 
   @Override
+  public String getUserId() {
+    return getHeader("X-Okapi-User-Id", "");
+  }
+
+  @Override
   public String getHeader(String header) {
     return routingContext.request().getHeader(header);
   }

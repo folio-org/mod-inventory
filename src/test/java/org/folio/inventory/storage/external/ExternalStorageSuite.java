@@ -1,5 +1,7 @@
 package org.folio.inventory.storage.external;
 
+import static api.ApiTestSuite.USER_ID;
+
 import io.vertx.core.Vertx;
 import org.folio.inventory.common.VertxAssistant;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
@@ -85,7 +87,7 @@ public class ExternalStorageSuite {
 
     return new OkapiHttpClient(
       vertxAssistant.createUsingVertx(Vertx::createHttpClient),
-      new URL(getStorageAddress()), TENANT_ID, TENANT_TOKEN, it ->
+      new URL(getStorageAddress()), TENANT_ID, TENANT_TOKEN, USER_ID, it ->
       System.out.println(
         String.format("Request failed: %s",
           it.toString())));

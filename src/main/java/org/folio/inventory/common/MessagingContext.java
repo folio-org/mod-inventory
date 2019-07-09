@@ -25,6 +25,11 @@ public class MessagingContext implements Context {
   }
 
   @Override
+  public String getUserId() {
+    return getHeader("userId");
+  }
+
+  @Override
   public String getHeader(String header) {
     return headers.get(header);
   }

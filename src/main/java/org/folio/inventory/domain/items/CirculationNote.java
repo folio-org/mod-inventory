@@ -17,6 +17,8 @@ public class CirculationNote {
   public static final String NOTE_TYPE_KEY = "noteType";
   public static final String NOTE_KEY = "note";
   public static final String STAFF_ONLY_KEY = "staffOnly";
+  public static final String SOURCE_KEY = "source";
+  public static final String DATE_KEY = "date";
 
   public final String noteType;
   public final String note;
@@ -43,7 +45,10 @@ public class CirculationNote {
   public CirculationNote (JsonObject json) {
     this(json.getString(NOTE_TYPE_KEY),
       json.getString(NOTE_KEY),
-      json.getBoolean(STAFF_ONLY_KEY));
+      json.getBoolean(STAFF_ONLY_KEY),
+      new User(json.getJsonObject(SOURCE_KEY)),
+      json.getString(DATE_KEY)
+    );
   }
 
   public CirculationNote withSource(User source) {
