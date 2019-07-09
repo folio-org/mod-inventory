@@ -33,7 +33,7 @@
     },
     {
       "id": "inventory",
-      "version": "8.3",
+      "version": "8.4",
       "handlers": [
         {
           "methods": ["GET"],
@@ -84,14 +84,19 @@
             "inventory-storage.holdings.collection.get",
             "inventory-storage.holdings.item.get",
             "inventory-storage.instances.collection.get",
-            "inventory-storage.instances.item.get"
+            "inventory-storage.instances.item.get",
+            "users.item.get"
           ]
         }, {
           "methods": ["PUT"],
           "pathPattern": "/inventory/items/{id}",
           "permissionsRequired": ["inventory.items.item.put"],
-          "modulePermissions": ["inventory-storage.items.item.put"]
-        }, {
+          "modulePermissions": [
+            "inventory-storage.items.item.put",
+            "users.item.get"
+          ]
+        },
+        {
           "methods": ["DELETE"],
           "pathPattern": "/inventory/items/{id}",
           "permissionsRequired": ["inventory.items.item.delete"],
