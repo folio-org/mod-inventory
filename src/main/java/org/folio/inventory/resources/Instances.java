@@ -273,7 +273,7 @@ public class Instances {
               return;
             }
           }
-          updateInstance(routingContext, context, updatedInstance, instanceCollection);
+          updateInstance(updatedInstance, instanceCollection, routingContext, context);
         } else {
           ClientErrorResponse.notFound(routingContext.response());
         }
@@ -307,17 +307,25 @@ public class Instances {
     return validationErrors;
   }
 
-  private void updateInstance(RoutingContext routingContext, WebContext context, Instance updatedInstance, InstanceCollection instanceCollection) {
-    instanceCollection.update(updatedInstance,
+
+  /**
+   * Updates given Instance
+   * @param instance  instance for update
+   * @param storage   storage of instances
+   * @param rContext  routing context
+   * @param wContext  web context
+   */
+  private void updateInstance(Instance instance, InstanceCollection storage, RoutingContext rContext, WebContext wContext) {
+    storage.update(instance,
       v -> {
-        updateInstanceRelationships(updatedInstance,
-          routingContext,
-          context,
+        updateInstanceRelationships(instance,
+          rContext,
+          wContext,
           (x) -> {
-            SuccessResponse.noContent(routingContext.response());
+            SuccessResponse.noContent(rContext.response());
           });
       },
-      FailureResponseConsumer.serverError(routingContext.response()));
+      FailureResponseConsumer.serverError(rContext.response()));
   }
 
   private void deleteAll(RoutingContext routingContext) {
