@@ -115,6 +115,14 @@ public class InstanceSamples {
       identifiers, contributors);
   }
 
+  public static JsonObject treasureIslandInstance(UUID id) {
+    return new JsonObject()
+      .put("id", id.toString())
+      .put("title", "Treasure Island")
+      .put("source", "MARC")
+      .put("instanceTypeId", getTextInstanceType());
+  }
+
   private static JsonObject identifier(
     String identifierTypeId,
     String value) {
