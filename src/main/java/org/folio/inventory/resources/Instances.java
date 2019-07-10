@@ -18,6 +18,7 @@ import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.config.InventoryConfiguration;
+import org.folio.inventory.config.InventoryConfigurationImpl;
 import org.folio.inventory.domain.instances.AlternativeTitle;
 import org.folio.inventory.domain.instances.Classification;
 import org.folio.inventory.domain.instances.Contributor;
@@ -39,7 +40,6 @@ import org.folio.inventory.support.http.server.FailureResponseConsumer;
 import org.folio.inventory.support.http.server.JsonResponse;
 import org.folio.inventory.support.http.server.RedirectResponse;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
-import org.folio.inventory.support.http.server.ValidationError;
 
 import java.io.UnsupportedEncodingException;
 import java.lang.invoke.MethodHandles;
@@ -68,10 +68,12 @@ public class Instances {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   private final Storage storage;
   private final HttpClient client;
+  private final InventoryConfiguration inventoryConfiguration;
 
   public Instances(final Storage storage, final HttpClient client) {
     this.storage = storage;
     this.client = client;
+    this.inventoryConfiguration = new InventoryConfigurationImpl();
   }
 
   public void register(Router router) {
@@ -103,7 +105,7 @@ public class Instances {
 
   private void getBlockedFieldsConfig(RoutingContext routingContext) {
     JsonObject response = new JsonObject();
-    response.put("blockedFields", new JsonArray(Json.encode(InventoryConfiguration.getInstanceBlockedFields())));
+    response.put("blockedFields", new JsonArray(Json.encode(inventoryConfiguration.getInstanceBlockedFields())));
     JsonResponse.success(routingContext.response(), response);
   }
 
@@ -255,7 +257,6 @@ public class Instances {
 
   private void update(RoutingContext rContext) {
     WebContext wContext = new WebContext(rContext);
-
     JsonObject instanceRequest = rContext.getBodyAsJson();
     Instance updatedInstance = requestToInstance(instanceRequest);
     InstanceCollection instanceCollection = storage.getInstanceCollection(wContext);
@@ -264,19 +265,28 @@ public class Instances {
       it -> {
         Instance existingInstance = it.getResult();
         if (existingInstance != null) {
-          if ("MARC".equals(existingInstance.getSource())) {
-            List<ValidationError> validationErrors =
-              validateInstanceBlockedFields(JsonObject.mapFrom(existingInstance), JsonObject.mapFrom(updatedInstance));
-            if (!validationErrors.isEmpty()) {
-              JsonResponse.unprocessableEntity(rContext.response(), validationErrors);
-              return;
-            }
+          if (isInstanceControlledByRecord(existingInstance) &&
+            instanceBlockedFieldsChanged(existingInstance, updatedInstance)) {
+            String errorMessage = "Unprocessable entity: given Instance is controlled by MARC record, "
+              + "it's blocked fields can not be updated: "
+              + StringUtils.join(inventoryConfiguration.getInstanceBlockedFields(), ",");
+            JsonResponse.unprocessableEntity(rContext.response(), errorMessage);
+          } else {
+            updateInstance(updatedInstance, rContext, wContext);
           }
-          updateInstance(updatedInstance, rContext, wContext);
         } else {
           ClientErrorResponse.notFound(rContext.response());
         }
       }, FailureResponseConsumer.serverError(rContext.response()));
+  }
+
+  /**
+   * Returns true if given Instance is has linked record in source-record-storage
+   * @param instance given instance
+   * @return boolean
+   */
+  private boolean isInstanceControlledByRecord(Instance instance) {
+    return "MARC".equals(instance.getSource());
   }
 
   /**
@@ -295,31 +305,23 @@ public class Instances {
   }
 
   /**
-   * Compares existing instance with it's update changes,
-   * if blocked fields are changed then returns validation errors
+   * Compares existing instance with it's version for update,
+   * returns true if blocked fields are changed
    *
    * @param existingInstance instance that exists in database
    * @param updatedInstance  instance with changes for update
-   * @return List of validation errors
+   * @return boolean
    */
-  private List<ValidationError> validateInstanceBlockedFields(JsonObject existingInstance, JsonObject updatedInstance) {
-    List<ValidationError> validationErrors = new ArrayList<>();
-    final String errorMessage =
-      "Unprocessable entity: given Instance is controlled by MARC record, it's blocked fields can not be updated: ";
-    for (String blockedFieldCode : InventoryConfiguration.getInstanceBlockedFields()) {
-      Object existingFieldValue = existingInstance.getValue(blockedFieldCode);
-      Object updatedFieldValue = updatedInstance.getValue(blockedFieldCode);
-      if (ObjectUtils.notEqual(existingFieldValue, updatedFieldValue)) {
-        ValidationError validationError = new ValidationError(
-          errorMessage + StringUtils.join(InventoryConfiguration.getInstanceBlockedFields(), ","),
-          blockedFieldCode,
-          updatedFieldValue.toString()
-        );
-        validationErrors.add(validationError);
-        break;
-      }
+  private boolean instanceBlockedFieldsChanged(Instance existingInstance, Instance updatedInstance) {
+    JsonObject existingInstanceJson = JsonObject.mapFrom(existingInstance);
+    JsonObject updatedInstanceJson = JsonObject.mapFrom(updatedInstance);
+    Map<String, Object> existingBlockedFields = new HashMap<>();
+    Map<String, Object> updatedBlockedFields = new HashMap<>();
+    for (String blockedFieldCode : inventoryConfiguration.getInstanceBlockedFields()) {
+      existingBlockedFields.put(blockedFieldCode, existingInstanceJson.getValue(blockedFieldCode));
+      updatedBlockedFields.put(blockedFieldCode, updatedInstanceJson.getValue(blockedFieldCode));
     }
-    return validationErrors;
+    return ObjectUtils.notEqual(existingBlockedFields, updatedBlockedFields);
   }
 
   private void deleteAll(RoutingContext routingContext) {
