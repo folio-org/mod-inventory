@@ -270,6 +270,7 @@ public class Instances {
             String errorMessage = "Unprocessable entity: given Instance is controlled by MARC record, "
               + "it's blocked fields can not be updated: "
               + StringUtils.join(inventoryConfiguration.getInstanceBlockedFields(), ",");
+            log.error(errorMessage);
             JsonResponse.unprocessableEntity(rContext.response(), errorMessage);
           } else {
             updateInstance(updatedInstance, rContext, wContext);
