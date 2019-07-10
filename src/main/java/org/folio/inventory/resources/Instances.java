@@ -39,7 +39,6 @@ import org.folio.inventory.support.http.server.FailureResponseConsumer;
 import org.folio.inventory.support.http.server.JsonResponse;
 import org.folio.inventory.support.http.server.RedirectResponse;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
-import org.folio.inventory.support.http.server.SuccessResponse;
 import org.folio.inventory.support.http.server.ValidationError;
 
 import java.io.UnsupportedEncodingException;
@@ -57,6 +56,8 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+
+import static org.folio.inventory.support.http.server.SuccessResponse.noContent;
 
 public class Instances {
   private static final String INVENTORY_PATH = "/inventory";
@@ -252,16 +253,14 @@ public class Instances {
     return errorMessages;
   }
 
-  private void update(RoutingContext routingContext) {
-    WebContext context = new WebContext(routingContext);
+  private void update(RoutingContext rContext) {
+    WebContext wContext = new WebContext(rContext);
 
-    JsonObject instanceRequest = routingContext.getBodyAsJson();
-
+    JsonObject instanceRequest = rContext.getBodyAsJson();
     Instance updatedInstance = requestToInstance(instanceRequest);
+    InstanceCollection instanceCollection = storage.getInstanceCollection(wContext);
 
-    InstanceCollection instanceCollection = storage.getInstanceCollection(context);
-
-    instanceCollection.findById(routingContext.request().getParam("id"),
+    instanceCollection.findById(rContext.request().getParam("id"),
       it -> {
         Instance existingInstance = it.getResult();
         if (existingInstance != null) {
@@ -269,15 +268,30 @@ public class Instances {
             List<ValidationError> validationErrors =
               validateInstanceBlockedFields(JsonObject.mapFrom(existingInstance), JsonObject.mapFrom(updatedInstance));
             if (!validationErrors.isEmpty()) {
-              JsonResponse.unprocessableEntity(routingContext.response(), validationErrors);
+              JsonResponse.unprocessableEntity(rContext.response(), validationErrors);
               return;
             }
           }
-          updateInstance(updatedInstance, instanceCollection, routingContext, context);
+          updateInstance(updatedInstance, rContext, wContext);
         } else {
-          ClientErrorResponse.notFound(routingContext.response());
+          ClientErrorResponse.notFound(rContext.response());
         }
-      }, FailureResponseConsumer.serverError(routingContext.response()));
+      }, FailureResponseConsumer.serverError(rContext.response()));
+  }
+
+  /**
+   * Updates given Instance
+   *
+   * @param instance instance for update
+   * @param rContext routing context
+   * @param wContext web context
+   */
+  private void updateInstance(Instance instance, RoutingContext rContext, WebContext wContext) {
+    InstanceCollection instanceCollection = storage.getInstanceCollection(wContext);
+    instanceCollection.update(
+      instance,
+      v -> updateInstanceRelationships(instance, rContext, wContext, (x) -> noContent(rContext.response())),
+      FailureResponseConsumer.serverError(rContext.response()));
   }
 
   /**
@@ -308,32 +322,11 @@ public class Instances {
     return validationErrors;
   }
 
-  /**
-   * Updates given Instance
-   *
-   * @param instance instance for update
-   * @param storage  storage of instances
-   * @param rContext routing context
-   * @param wContext web context
-   */
-  private void updateInstance(Instance instance, InstanceCollection storage, RoutingContext rContext, WebContext wContext) {
-    storage.update(instance,
-      v -> {
-        updateInstanceRelationships(instance,
-          rContext,
-          wContext,
-          (x) -> {
-            SuccessResponse.noContent(rContext.response());
-          });
-      },
-      FailureResponseConsumer.serverError(rContext.response()));
-  }
-
   private void deleteAll(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
 
     storage.getInstanceCollection(context).empty(
-      v -> SuccessResponse.noContent(routingContext.response()),
+      v -> noContent(routingContext.response()),
       FailureResponseConsumer.serverError(routingContext.response()));
   }
 
@@ -342,7 +335,7 @@ public class Instances {
 
     storage.getInstanceCollection(context).delete(
       routingContext.request().getParam("id"),
-      v -> SuccessResponse.noContent(routingContext.response()),
+      v -> noContent(routingContext.response()),
       FailureResponseConsumer.serverError(routingContext.response()));
   }
 
