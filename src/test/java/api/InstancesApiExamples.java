@@ -492,6 +492,46 @@ public class InstancesApiExamples extends ApiTests {
   }
 
   @Test
+  public void canNotUpdateAnExistingMARCInstanceIfBlockedFieldsAreChangedToNulls()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    UUID id = UUID.randomUUID();
+    JsonObject createInstanceRequest = treasureIslandInstance(id)
+      .put("hrid", "test-hrid-0")
+      .put("statusId", "test-statusId-0");
+    // Create new Instance
+    JsonObject newInstance = createInstance(createInstanceRequest);
+
+    JsonObject instanceForUpdate = treasureIslandInstance(id);
+    URL instanceLocation = new URL(String.format("%s/%s", ApiRoot.instances(), newInstance.getString("id")));
+    // Put Instance for update
+    CompletableFuture<Response> putCompleted = new CompletableFuture<>();
+    okapiClient.put(instanceLocation, instanceForUpdate, ResponseHandler.any(putCompleted));
+    Response putResponse = putCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(putResponse.getStatusCode(), is(422));
+    assertThat(putResponse.getJson().getJsonArray("errors").size(), is(1));
+    // Get existing Instance
+    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+    okapiClient.get(instanceLocation, ResponseHandler.json(getCompleted));
+    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(getResponse.getStatusCode(), is(200));
+
+    JsonObject updatedInstance = getResponse.getJson();
+    assertThat(updatedInstance.getString("id"), is(newInstance.getString("id")));
+    assertThat(updatedInstance.getString("title"), is(newInstance.getString("title")));
+    assertThat(updatedInstance.getString("source"), is(newInstance.getString("source")));
+    assertThat(updatedInstance.getString("hrid"), is(newInstance.getString("hrid")));
+    assertThat(updatedInstance.getString("statusId"), is(newInstance.getString("statusId")));
+    selfLinkRespectsWayResourceWasReached(updatedInstance);
+    selfLinkShouldBeReachable(updatedInstance);
+  }
+
+  @Test
   public void canUpdateAnExistingMARCInstanceIfBlockedFieldsAreNotChanged()
     throws InterruptedException,
     MalformedURLException,
