@@ -102,7 +102,7 @@ public class Instances {
 
   private void getBlockedFieldsConfig(RoutingContext routingContext) {
     JsonObject response = new JsonObject();
-    response.put("blockedFields", new JsonArray(Json.encode(InventoryConfiguration.INSTANCE_BLOCKED_FIELDS)));
+    response.put("blockedFields", new JsonArray(Json.encode(InventoryConfiguration.getInstanceBlockedFields())));
     JsonResponse.success(routingContext.response(), response);
   }
 
@@ -283,20 +283,21 @@ public class Instances {
   /**
    * Compares existing instance with it's update changes,
    * if blocked fields are changed then returns validation errors
-   * @param existingInstance  instance that exists in database
-   * @param updatedInstance   instance with changes for update
-   * @return  List of validation errors
+   *
+   * @param existingInstance instance that exists in database
+   * @param updatedInstance  instance with changes for update
+   * @return List of validation errors
    */
   private List<ValidationError> validateInstanceForBlockedFields(JsonObject existingInstance, JsonObject updatedInstance) {
     List<ValidationError> validationErrors = new ArrayList<>();
     final String errorMessage =
       "Unprocessable entity: given Instance is controlled by MARC record, it's blocked fields can not be updated: ";
-    for (String blockedFieldCode : InventoryConfiguration.INSTANCE_BLOCKED_FIELDS) {
+    for (String blockedFieldCode : InventoryConfiguration.getInstanceBlockedFields()) {
       Object existingFieldValue = existingInstance.getValue(blockedFieldCode);
       Object updatedFieldValue = updatedInstance.getValue(blockedFieldCode);
       if (ObjectUtils.notEqual(existingFieldValue, updatedFieldValue)) {
         ValidationError validationError = new ValidationError(
-          errorMessage + StringUtils.join(InventoryConfiguration.INSTANCE_BLOCKED_FIELDS, ","),
+          errorMessage + StringUtils.join(InventoryConfiguration.getInstanceBlockedFields(), ","),
           blockedFieldCode,
           updatedFieldValue.toString()
         );
@@ -307,13 +308,13 @@ public class Instances {
     return validationErrors;
   }
 
-
   /**
    * Updates given Instance
-   * @param instance  instance for update
-   * @param storage   storage of instances
-   * @param rContext  routing context
-   * @param wContext  web context
+   *
+   * @param instance instance for update
+   * @param storage  storage of instances
+   * @param rContext routing context
+   * @param wContext web context
    */
   private void updateInstance(Instance instance, InstanceCollection storage, RoutingContext rContext, WebContext wContext) {
     storage.update(instance,
