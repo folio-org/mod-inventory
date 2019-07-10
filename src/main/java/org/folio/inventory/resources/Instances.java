@@ -267,7 +267,7 @@ public class Instances {
         if (existingInstance != null) {
           if ("MARC".equals(existingInstance.getSource())) {
             List<ValidationError> validationErrors =
-              validateInstanceForBlockedFields(JsonObject.mapFrom(existingInstance), JsonObject.mapFrom(updatedInstance));
+              validateInstanceBlockedFields(JsonObject.mapFrom(existingInstance), JsonObject.mapFrom(updatedInstance));
             if (!validationErrors.isEmpty()) {
               JsonResponse.unprocessableEntity(routingContext.response(), validationErrors);
               return;
@@ -288,7 +288,7 @@ public class Instances {
    * @param updatedInstance  instance with changes for update
    * @return List of validation errors
    */
-  private List<ValidationError> validateInstanceForBlockedFields(JsonObject existingInstance, JsonObject updatedInstance) {
+  private List<ValidationError> validateInstanceBlockedFields(JsonObject existingInstance, JsonObject updatedInstance) {
     List<ValidationError> validationErrors = new ArrayList<>();
     final String errorMessage =
       "Unprocessable entity: given Instance is controlled by MARC record, it's blocked fields can not be updated: ";
