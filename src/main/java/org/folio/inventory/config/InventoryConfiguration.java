@@ -1,13 +1,14 @@
-package org.folio.inventory.resources;
+package org.folio.inventory.config;
 
 import com.google.common.collect.Sets;
+
 import java.util.Set;
 
 /**
  * Stores configuration properties for Inventory entities: Instances, Items, Holdings
  */
 public class InventoryConfiguration {
-  protected static final Set<String> BLOCKED_FIELDS = Sets.newHashSet(
+  public static final Set<String> INSTANCE_BLOCKED_FIELDS = Sets.newHashSet(
     "hrid",
     "source",
     "discoverySuppress",

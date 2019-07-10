@@ -1,5 +1,48 @@
 package org.folio.inventory.resources;
 
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
+import org.apache.commons.lang3.ObjectUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.inventory.common.WebContext;
+import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.config.InventoryConfiguration;
+import org.folio.inventory.config.InventoryConfigurationImpl;
+import org.folio.inventory.domain.instances.AlternativeTitle;
+import org.folio.inventory.domain.instances.Classification;
+import org.folio.inventory.domain.instances.Contributor;
+import org.folio.inventory.domain.instances.Identifier;
+import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.domain.instances.InstanceCollection;
+import org.folio.inventory.domain.instances.InstanceRelationship;
+import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
+import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
+import org.folio.inventory.domain.instances.Publication;
+import org.folio.inventory.domain.items.Note;
+import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
+import org.folio.inventory.storage.Storage;
+import org.folio.inventory.storage.external.CollectionResourceClient;
+import org.folio.inventory.support.JsonArrayHelper;
+import org.folio.inventory.support.http.client.OkapiHttpClient;
+import org.folio.inventory.support.http.client.Response;
+import org.folio.inventory.support.http.server.ClientErrorResponse;
+import org.folio.inventory.support.http.server.FailureResponseConsumer;
+import org.folio.inventory.support.http.server.JsonResponse;
+import org.folio.inventory.support.http.server.RedirectResponse;
+import org.folio.inventory.support.http.server.ServerErrorResponse;
+import org.folio.inventory.support.http.server.SuccessResponse;
+
 import java.io.UnsupportedEncodingException;
 import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
@@ -16,46 +59,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.StringUtils;
-import org.folio.inventory.common.WebContext;
-import org.folio.inventory.common.api.request.PagingParameters;
-import org.folio.inventory.common.domain.MultipleRecords;
-import org.folio.inventory.common.domain.Success;
-import org.folio.inventory.domain.instances.AlternativeTitle;
-import org.folio.inventory.domain.instances.Classification;
-import org.folio.inventory.domain.instances.Contributor;
-import org.folio.inventory.domain.instances.Identifier;
-import org.folio.inventory.domain.instances.Instance;
-import org.folio.inventory.domain.instances.InstanceCollection;
-import org.folio.inventory.domain.instances.InstanceRelationship;
-import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
-import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
-import org.folio.inventory.domain.instances.Note;
-import org.folio.inventory.domain.instances.Publication;
-import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
-import org.folio.inventory.storage.Storage;
-import org.folio.inventory.storage.external.CollectionResourceClient;
-import org.folio.inventory.support.JsonArrayHelper;
-import org.folio.inventory.support.http.client.OkapiHttpClient;
-import org.folio.inventory.support.http.client.Response;
-import org.folio.inventory.support.http.server.ClientErrorResponse;
-import org.folio.inventory.support.http.server.FailureResponseConsumer;
-import org.folio.inventory.support.http.server.JsonResponse;
-import org.folio.inventory.support.http.server.RedirectResponse;
-import org.folio.inventory.support.http.server.ServerErrorResponse;
-import org.folio.inventory.support.http.server.SuccessResponse;
-
-import io.vertx.core.CompositeFuture;
-import io.vertx.core.Future;
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.BodyHandler;
+import static io.netty.util.internal.StringUtil.COMMA;
+import static org.folio.inventory.support.http.server.SuccessResponse.noContent;
 
 public class Instances {
   private static final String INVENTORY_PATH = "/inventory";
@@ -66,10 +71,14 @@ public class Instances {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   private final Storage storage;
   private final HttpClient client;
+  private final InventoryConfiguration config;
+  private static final String BLOCKED_FIELDS_UPDATE_ERROR_MESSAGE = "Unprocessable entity: given Instance is controlled by MARC record, "
+    + "it's blocked fields can not be updated: ";
 
   public Instances(final Storage storage, final HttpClient client) {
     this.storage = storage;
     this.client = client;
+    this.config = new InventoryConfigurationImpl();
   }
 
   public void register(Router router) {
@@ -101,7 +110,7 @@ public class Instances {
 
   private void getBlockedFieldsConfig(RoutingContext routingContext) {
     JsonObject response = new JsonObject();
-    response.put("blockedFields", new JsonArray(Json.encode(InventoryConfiguration.BLOCKED_FIELDS)));
+    response.put("blockedFields", new JsonArray(Json.encode(config.getInstanceBlockedFields())));
     JsonResponse.success(routingContext.response(), response);
   }
 
@@ -251,39 +260,78 @@ public class Instances {
     return errorMessages;
   }
 
-  private void update(RoutingContext routingContext) {
-    WebContext context = new WebContext(routingContext);
-
-    JsonObject instanceRequest = routingContext.getBodyAsJson();
-
+  private void update(RoutingContext rContext) {
+    WebContext wContext = new WebContext(rContext);
+    JsonObject instanceRequest = rContext.getBodyAsJson();
     Instance updatedInstance = requestToInstance(instanceRequest);
+    InstanceCollection instanceCollection = storage.getInstanceCollection(wContext);
 
-    InstanceCollection instanceCollection = storage.getInstanceCollection(context);
-
-    instanceCollection.findById(routingContext.request().getParam("id"),
+    instanceCollection.findById(rContext.request().getParam("id"),
       it -> {
-        if (it.getResult() != null) {
-          instanceCollection.update(updatedInstance,
-            v -> {
-              updateInstanceRelationships(updatedInstance,
-                routingContext,
-                context,
-                (x) -> {
-                  SuccessResponse.noContent(routingContext.response());
-                });
-            },
-            FailureResponseConsumer.serverError(routingContext.response()));
+        Instance existingInstance = it.getResult();
+        if (existingInstance != null) {
+          if (isInstanceControlledByRecord(existingInstance) && areInstanceBlockedFieldsChanged(existingInstance, updatedInstance)) {
+            String errorMessage = BLOCKED_FIELDS_UPDATE_ERROR_MESSAGE + StringUtils.join(config.getInstanceBlockedFields(), COMMA);
+            log.error(errorMessage);
+            JsonResponse.unprocessableEntity(rContext.response(), errorMessage);
+          } else {
+            updateInstance(updatedInstance, rContext, wContext);
+          }
         } else {
-          ClientErrorResponse.notFound(routingContext.response());
+          ClientErrorResponse.notFound(rContext.response());
         }
-      }, FailureResponseConsumer.serverError(routingContext.response()));
+      }, FailureResponseConsumer.serverError(rContext.response()));
+  }
+
+  /**
+   * Returns true if given Instance has linked record in source-record-storage
+   * @param instance given instance
+   * @return boolean
+   */
+  private boolean isInstanceControlledByRecord(Instance instance) {
+    return "MARC".equals(instance.getSource());
+  }
+
+  /**
+   * Updates given Instance
+   *
+   * @param instance instance for update
+   * @param rContext routing context
+   * @param wContext web context
+   */
+  private void updateInstance(Instance instance, RoutingContext rContext, WebContext wContext) {
+    InstanceCollection instanceCollection = storage.getInstanceCollection(wContext);
+    instanceCollection.update(
+      instance,
+      v -> updateInstanceRelationships(instance, rContext, wContext, (x) -> noContent(rContext.response())),
+      FailureResponseConsumer.serverError(rContext.response()));
+  }
+
+  /**
+   * Compares existing instance with it's version for update,
+   * returns true if blocked fields are changed
+   *
+   * @param existingInstance instance that exists in database
+   * @param updatedInstance  instance with changes for update
+   * @return boolean
+   */
+  private boolean areInstanceBlockedFieldsChanged(Instance existingInstance, Instance updatedInstance) {
+    JsonObject existingInstanceJson = JsonObject.mapFrom(existingInstance);
+    JsonObject updatedInstanceJson = JsonObject.mapFrom(updatedInstance);
+    Map<String, Object> existingBlockedFields = new HashMap<>();
+    Map<String, Object> updatedBlockedFields = new HashMap<>();
+    for (String blockedFieldCode : config.getInstanceBlockedFields()) {
+      existingBlockedFields.put(blockedFieldCode, existingInstanceJson.getValue(blockedFieldCode));
+      updatedBlockedFields.put(blockedFieldCode, updatedInstanceJson.getValue(blockedFieldCode));
+    }
+    return ObjectUtils.notEqual(existingBlockedFields, updatedBlockedFields);
   }
 
   private void deleteAll(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
 
     storage.getInstanceCollection(context).empty(
-      v -> SuccessResponse.noContent(routingContext.response()),
+      v -> noContent(routingContext.response()),
       FailureResponseConsumer.serverError(routingContext.response()));
   }
 
@@ -292,7 +340,7 @@ public class Instances {
 
     storage.getInstanceCollection(context).delete(
       routingContext.request().getParam("id"),
-      v -> SuccessResponse.noContent(routingContext.response()),
+      v -> noContent(routingContext.response()),
       FailureResponseConsumer.serverError(routingContext.response()));
   }
 
