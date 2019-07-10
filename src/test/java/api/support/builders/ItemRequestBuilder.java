@@ -351,7 +351,8 @@ public class ItemRequestBuilder implements Builder {
   }
 
   public ItemRequestBuilder withCheckInNote() {
-    JsonObject checkInNote = new JsonObject().put("noteType", "Check in")
+    JsonObject checkInNote = new JsonObject()
+      .put("noteType", "Check in")
       .put("note", "Please read this note before checking in the item")
       .put("staffOnly", false);
 

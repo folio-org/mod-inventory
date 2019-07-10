@@ -95,7 +95,7 @@ public class Item {
     return hrid;
   }
 
-  public Item setHrid(String hrid) {
+  public Item withHrid(String hrid) {
     this.hrid = hrid;
     return this;
   }
@@ -104,7 +104,7 @@ public class Item {
     return discoverySuppress;
   }
 
-  public Item setDiscoverySuppress(Boolean discoverySuppress) {
+  public Item withDiscoverySuppress(Boolean discoverySuppress) {
     this.discoverySuppress = discoverySuppress;
     return this;
   }
@@ -113,12 +113,12 @@ public class Item {
     return formerIds;
   }
 
-  public Item setFormerIds(List<String> formerIds) {
+  public Item withFormerIds(List<String> formerIds) {
     this.formerIds = formerIds;
     return this;
   }
 
-  public Item setBarcode(String barcode) {
+  public Item withBarcode(String barcode) {
     this.barcode = barcode;
     return this;
   }
@@ -131,7 +131,7 @@ public class Item {
     return itemLevelCallNumber;
   }
 
-  public Item setItemLevelCallNumber(String itemLevelCallNumber) {
+  public Item withItemLevelCallNumber(String itemLevelCallNumber) {
     this.itemLevelCallNumber = itemLevelCallNumber;
     return this;
   }
@@ -140,7 +140,7 @@ public class Item {
     return itemLevelCallNumberPrefix;
   }
 
-  public Item setItemLevelCallNumberPrefix(String itemLevelCallNumberPrefix) {
+  public Item withItemLevelCallNumberPrefix(String itemLevelCallNumberPrefix) {
     this.itemLevelCallNumberPrefix = itemLevelCallNumberPrefix;
     return this;
   }
@@ -149,7 +149,7 @@ public class Item {
     return itemLevelCallNumberSuffix;
   }
 
-  public Item setItemLevelCallNumberSuffix(String itemLevelCallNumberSuffix) {
+  public Item withItemLevelCallNumberSuffix(String itemLevelCallNumberSuffix) {
     this.itemLevelCallNumberSuffix = itemLevelCallNumberSuffix;
     return this;
   }
@@ -158,7 +158,7 @@ public class Item {
     return itemLevelCallNumberTypeId;
   }
 
-  public Item setItemLevelCallNumberTypeId(String itemLevelCallNumberTypeId) {
+  public Item withItemLevelCallNumberTypeId(String itemLevelCallNumberTypeId) {
     this.itemLevelCallNumberTypeId = itemLevelCallNumberTypeId;
     return this;
   }
@@ -167,12 +167,12 @@ public class Item {
     return volume;
   }
 
-  public Item setVolume(String volume) {
+  public Item withVolume(String volume) {
     this.volume = volume;
     return this;
   }
 
-  public Item setEnumeration(String enumeration) {
+  public Item withEnumeration(String enumeration) {
     this.enumeration = enumeration;
     return this;
   }
@@ -181,7 +181,7 @@ public class Item {
     return enumeration;
   }
 
-  public Item setChronology(String chronology) {
+  public Item withChronology(String chronology) {
     this.chronology = chronology;
     return this;
   }
@@ -190,7 +190,7 @@ public class Item {
     return chronology;
   }
 
-  public Item setCopyNumbers(List<String> copyNumbers) {
+  public Item withCopyNumbers(List<String> copyNumbers) {
     this.copyNumbers = copyNumbers;
     return this;
   }
@@ -199,7 +199,7 @@ public class Item {
     return this.copyNumbers;
   }
 
-  public Item setNumberOfPieces(String numberOfPieces) {
+  public Item withNumberOfPieces(String numberOfPieces) {
     this.numberOfPieces = numberOfPieces;
     return this;
   }
@@ -212,7 +212,7 @@ public class Item {
     return descriptionOfPieces;
   }
 
-  public Item setDescriptionOfPieces(String descriptionOfPieces) {
+  public Item withDescriptionOfPieces(String descriptionOfPieces) {
     this.descriptionOfPieces = descriptionOfPieces;
     return this;
   }
@@ -221,7 +221,7 @@ public class Item {
     return numberOfMissingPieces;
   }
 
-  public Item setNumberOfMissingPieces(String numberOfMissingPieces) {
+  public Item withNumberOfMissingPieces(String numberOfMissingPieces) {
     this.numberOfMissingPieces = numberOfMissingPieces;
     return this;
   }
@@ -230,7 +230,7 @@ public class Item {
     return missingPieces;
   }
 
-  public Item setMissingPieces(String missingPieces) {
+  public Item withMissingPieces(String missingPieces) {
     this.missingPieces = missingPieces;
     return this;
   }
@@ -239,7 +239,7 @@ public class Item {
     return missingPiecesDate;
   }
 
-  public Item setMissingPiecesDate(String missingPiecesDate) {
+  public Item withMissingPiecesDate(String missingPiecesDate) {
     this.missingPiecesDate = missingPiecesDate;
     return this;
   }
@@ -248,7 +248,7 @@ public class Item {
     return itemDamagedStatusId;
   }
 
-  public Item setItemDamagedStatusId(String itemDamagedStatusId) {
+  public Item withItemDamagedStatusId(String itemDamagedStatusId) {
     this.itemDamagedStatusId = itemDamagedStatusId;
     return this;
   }
@@ -257,12 +257,12 @@ public class Item {
     return itemDamagedStatusDate;
   }
 
-  public Item setItemDamagedStatusDate(String itemDamagedStatusDate) {
+  public Item withItemDamagedStatusDate(String itemDamagedStatusDate) {
     this.itemDamagedStatusDate = itemDamagedStatusDate;
     return this;
   }
 
-  public Item setNotes(List<Note> notes) {
+  public Item withNotes(List<Note> notes) {
     this.notes = notes;
     return this;
   };
@@ -271,7 +271,7 @@ public class Item {
     return this.notes;
   }
 
-  public Item setCirculationNotes(List<CirculationNote> circulationNotes) {
+  public Item withCirculationNotes(List<CirculationNote> circulationNotes) {
     this.circulationNotes = circulationNotes;
     return this;
   }
@@ -280,7 +280,7 @@ public class Item {
     return this.circulationNotes;
   }
 
-  public Item setPermanentLocationId(String permanentLocationId) {
+  public Item withPermanentLocationId(String permanentLocationId) {
     this.permanentLocationId = permanentLocationId;
     return this;
   }
@@ -289,7 +289,7 @@ public class Item {
     return permanentLocationId;
   }
 
-  public Item setTemporaryLocationId(String temporaryLocationId) {
+  public Item withTemporaryLocationId(String temporaryLocationId) {
     this.temporaryLocationId = temporaryLocationId;
     return this;
   }
@@ -298,7 +298,7 @@ public class Item {
     return temporaryLocationId;
   }
 
-  public Item setTemporaryLoanTypeId(String temporaryLoanTypeId) {
+  public Item withTemporaryLoanTypeId(String temporaryLoanTypeId) {
     this.temporaryLoanTypeId = temporaryLoanTypeId;
     return this;
   }
@@ -327,7 +327,7 @@ public class Item {
     return accessionNumber;
   }
 
-  public Item setAccessionNumber(String accessionNumber) {
+  public Item withAccessionNumber(String accessionNumber) {
     this.accessionNumber = accessionNumber;
     return this;
   }
@@ -336,7 +336,7 @@ public class Item {
     return itemIdentifier;
   }
 
-  public Item setItemIdentifier(String itemIdentifier) {
+  public Item withItemIdentifier(String itemIdentifier) {
     this.itemIdentifier = itemIdentifier;
     return this;
   }
@@ -345,7 +345,7 @@ public class Item {
     return yearCaption;
   }
 
-  public Item setYearCaption(List<String> yearCaption) {
+  public Item withYearCaption(List<String> yearCaption) {
     this.yearCaption = yearCaption;
     return this;
   }
@@ -354,7 +354,7 @@ public class Item {
     return electronicAccess;
   }
 
-  public Item setElectronicAccess(List<ElectronicAccess> electronicAccess) {
+  public Item withElectronicAccess(List<ElectronicAccess> electronicAccess) {
     this.electronicAccess = electronicAccess;
     return this;
   }
@@ -363,7 +363,7 @@ public class Item {
     return statisticalCodeIds;
   }
 
-  public Item setStatisticalCodeIds(List<String> statisticalCodeIds) {
+  public Item withStatisticalCodeIds(List<String> statisticalCodeIds) {
     this.statisticalCodeIds = statisticalCodeIds;
     return this;
   }
@@ -372,7 +372,7 @@ public class Item {
     return purchaseOrderLineidentifier;
   }
 
-  public Item setPurchaseOrderLineidentifier(String purchaseOrderLineidentifier) {
+  public Item withPurchaseOrderLineidentifier(String purchaseOrderLineidentifier) {
     this.purchaseOrderLineidentifier = purchaseOrderLineidentifier;
     return this;
   }
@@ -385,70 +385,70 @@ public class Item {
     return new Item(newId,
       holdingId, this.status, this.materialTypeId,
       this.permanentLoanTypeId, this.metadata)
-            .setHrid(this.hrid)
-            .setFormerIds(this.formerIds)
-            .setDiscoverySuppress(this.discoverySuppress)
-            .setBarcode(this.barcode)
-            .setItemLevelCallNumber(this.itemLevelCallNumber)
-            .setItemLevelCallNumberPrefix(this.itemLevelCallNumberPrefix)
-            .setItemLevelCallNumberSuffix(this.itemLevelCallNumberSuffix)
-            .setItemLevelCallNumberTypeId(this.itemLevelCallNumberTypeId)
-            .setVolume(this.volume)
-            .setEnumeration(this.enumeration)
-            .setChronology(this.chronology)
-            .setCopyNumbers(this.copyNumbers)
-            .setNumberOfPieces(this.numberOfPieces)
-            .setDescriptionOfPieces(this.descriptionOfPieces)
-            .setNumberOfMissingPieces(this.numberOfMissingPieces)
-            .setMissingPieces(this.missingPieces)
-            .setMissingPiecesDate(this.missingPiecesDate)
-            .setItemDamagedStatusId(this.itemDamagedStatusId)
-            .setItemDamagedStatusDate(this.itemDamagedStatusDate)
-            .setNotes(this.notes)
-            .setPermanentLocationId(this.permanentLocationId)
-            .setTemporaryLocationId(this.temporaryLocationId)
-            .setTemporaryLoanTypeId(this.temporaryLoanTypeId)
-            .setAccessionNumber(this.accessionNumber)
-            .setItemIdentifier(this.itemIdentifier)
-            .setYearCaption(this.yearCaption)
-            .setElectronicAccess(this.electronicAccess)
-            .setStatisticalCodeIds(this.statisticalCodeIds)
-            .setPurchaseOrderLineidentifier(this.purchaseOrderLineidentifier);
+            .withHrid(this.hrid)
+            .withFormerIds(this.formerIds)
+            .withDiscoverySuppress(this.discoverySuppress)
+            .withBarcode(this.barcode)
+            .withItemLevelCallNumber(this.itemLevelCallNumber)
+            .withItemLevelCallNumberPrefix(this.itemLevelCallNumberPrefix)
+            .withItemLevelCallNumberSuffix(this.itemLevelCallNumberSuffix)
+            .withItemLevelCallNumberTypeId(this.itemLevelCallNumberTypeId)
+            .withVolume(this.volume)
+            .withEnumeration(this.enumeration)
+            .withChronology(this.chronology)
+            .withCopyNumbers(this.copyNumbers)
+            .withNumberOfPieces(this.numberOfPieces)
+            .withDescriptionOfPieces(this.descriptionOfPieces)
+            .withNumberOfMissingPieces(this.numberOfMissingPieces)
+            .withMissingPieces(this.missingPieces)
+            .withMissingPiecesDate(this.missingPiecesDate)
+            .withItemDamagedStatusId(this.itemDamagedStatusId)
+            .withItemDamagedStatusDate(this.itemDamagedStatusDate)
+            .withNotes(this.notes)
+            .withPermanentLocationId(this.permanentLocationId)
+            .withTemporaryLocationId(this.temporaryLocationId)
+            .withTemporaryLoanTypeId(this.temporaryLoanTypeId)
+            .withAccessionNumber(this.accessionNumber)
+            .withItemIdentifier(this.itemIdentifier)
+            .withYearCaption(this.yearCaption)
+            .withElectronicAccess(this.electronicAccess)
+            .withStatisticalCodeIds(this.statisticalCodeIds)
+            .withPurchaseOrderLineidentifier(this.purchaseOrderLineidentifier);
   }
 
   public Item changeStatus(String newStatus) {
     return new Item(this.id,
       holdingId, new Status(newStatus), this.materialTypeId,
       this.permanentLoanTypeId, this.metadata)
-            .setHrid(this.hrid)
-            .setFormerIds(this.formerIds)
-            .setDiscoverySuppress(this.discoverySuppress)
-            .setBarcode(this.barcode)
-            .setItemLevelCallNumber(this.itemLevelCallNumber)
-            .setItemLevelCallNumberPrefix(this.itemLevelCallNumberPrefix)
-            .setItemLevelCallNumberSuffix(this.itemLevelCallNumberSuffix)
-            .setItemLevelCallNumberTypeId(this.itemLevelCallNumberTypeId)
-            .setVolume(this.volume)
-            .setEnumeration(this.enumeration)
-            .setChronology(this.chronology)
-            .setCopyNumbers(this.copyNumbers)
-            .setNumberOfPieces(this.numberOfPieces)
-            .setDescriptionOfPieces(this.descriptionOfPieces)
-            .setNumberOfMissingPieces(this.numberOfMissingPieces)
-            .setMissingPieces(this.missingPieces)
-            .setMissingPiecesDate(this.missingPiecesDate)
-            .setItemDamagedStatusId(this.itemDamagedStatusId)
-            .setItemDamagedStatusDate(this.itemDamagedStatusDate)
-            .setNotes(this.notes)
-            .setPermanentLocationId(this.permanentLocationId)
-            .setTemporaryLocationId(this.temporaryLocationId)
-            .setTemporaryLoanTypeId(this.temporaryLoanTypeId)
-            .setAccessionNumber(this.accessionNumber)
-            .setItemIdentifier(this.itemIdentifier)
-            .setYearCaption(this.yearCaption)
-            .setElectronicAccess(this.electronicAccess)
-            .setStatisticalCodeIds(this.statisticalCodeIds)
-            .setPurchaseOrderLineidentifier(purchaseOrderLineidentifier);
+            .withHrid(this.hrid)
+            .withFormerIds(this.formerIds)
+            .withDiscoverySuppress(this.discoverySuppress)
+            .withBarcode(this.barcode)
+            .withItemLevelCallNumber(this.itemLevelCallNumber)
+            .withItemLevelCallNumberPrefix(this.itemLevelCallNumberPrefix)
+            .withItemLevelCallNumberSuffix(this.itemLevelCallNumberSuffix)
+            .withItemLevelCallNumberTypeId(this.itemLevelCallNumberTypeId)
+            .withVolume(this.volume)
+            .withEnumeration(this.enumeration)
+            .withChronology(this.chronology)
+            .withCopyNumbers(this.copyNumbers)
+            .withNumberOfPieces(this.numberOfPieces)
+            .withDescriptionOfPieces(this.descriptionOfPieces)
+            .withNumberOfMissingPieces(this.numberOfMissingPieces)
+            .withMissingPieces(this.missingPieces)
+            .withMissingPiecesDate(this.missingPiecesDate)
+            .withItemDamagedStatusId(this.itemDamagedStatusId)
+            .withItemDamagedStatusDate(this.itemDamagedStatusDate)
+            .withNotes(this.notes)
+            .withPermanentLocationId(this.permanentLocationId)
+            .withTemporaryLocationId(this.temporaryLocationId)
+            .withTemporaryLoanTypeId(this.temporaryLoanTypeId)
+            .withAccessionNumber(this.accessionNumber)
+            .withItemIdentifier(this.itemIdentifier)
+            .withYearCaption(this.yearCaption)
+            .withElectronicAccess(this.electronicAccess)
+            .withStatisticalCodeIds(this.statisticalCodeIds)
+            .withPurchaseOrderLineidentifier(purchaseOrderLineidentifier);
   }
 
   @Override

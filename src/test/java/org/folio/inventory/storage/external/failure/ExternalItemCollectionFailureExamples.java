@@ -155,10 +155,10 @@ public abstract class ExternalItemCollectionFailureExamples {
       null,
       new Status(UUID.randomUUID().toString()), UUID.randomUUID().toString(),
       UUID.randomUUID().toString(),  null)
-            .setBarcode(UUID.randomUUID().toString())
-            .setEnumeration("6575467847")
-            .setPermanentLocationId(UUID.randomUUID().toString())
-            .setTemporaryLocationId(UUID.randomUUID().toString());
+            .withBarcode(UUID.randomUUID().toString())
+            .withEnumeration("6575467847")
+            .withPermanentLocationId(UUID.randomUUID().toString())
+            .withTemporaryLocationId(UUID.randomUUID().toString());
   }
 
   private ItemCollection createCollection() {
