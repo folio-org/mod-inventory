@@ -41,7 +41,6 @@ import org.folio.inventory.support.http.server.FailureResponseConsumer;
 import org.folio.inventory.support.http.server.JsonResponse;
 import org.folio.inventory.support.http.server.RedirectResponse;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
-import org.folio.inventory.support.http.server.SuccessResponse;
 
 import java.io.UnsupportedEncodingException;
 import java.lang.invoke.MethodHandles;
