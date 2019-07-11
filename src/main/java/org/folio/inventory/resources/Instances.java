@@ -57,6 +57,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import static io.netty.util.internal.StringUtil.COMMA;
 import static org.folio.inventory.support.http.server.SuccessResponse.noContent;
 
 public class Instances {
@@ -68,12 +69,14 @@ public class Instances {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   private final Storage storage;
   private final HttpClient client;
-  private final InventoryConfiguration inventoryConfiguration;
+  private final InventoryConfiguration config;
+  private static final String BLOCKED_FIELDS_UPDATE_ERROR_MESSAGE = "Unprocessable entity: given Instance is controlled by MARC record, "
+    + "it's blocked fields can not be updated: ";
 
   public Instances(final Storage storage, final HttpClient client) {
     this.storage = storage;
     this.client = client;
-    this.inventoryConfiguration = new InventoryConfigurationImpl();
+    this.config = new InventoryConfigurationImpl();
   }
 
   public void register(Router router) {
@@ -105,7 +108,7 @@ public class Instances {
 
   private void getBlockedFieldsConfig(RoutingContext routingContext) {
     JsonObject response = new JsonObject();
-    response.put("blockedFields", new JsonArray(Json.encode(inventoryConfiguration.getInstanceBlockedFields())));
+    response.put("blockedFields", new JsonArray(Json.encode(config.getInstanceBlockedFields())));
     JsonResponse.success(routingContext.response(), response);
   }
 
@@ -265,11 +268,8 @@ public class Instances {
       it -> {
         Instance existingInstance = it.getResult();
         if (existingInstance != null) {
-          if (isInstanceControlledByRecord(existingInstance) &&
-            instanceBlockedFieldsChanged(existingInstance, updatedInstance)) {
-            String errorMessage = "Unprocessable entity: given Instance is controlled by MARC record, "
-              + "it's blocked fields can not be updated: "
-              + StringUtils.join(inventoryConfiguration.getInstanceBlockedFields(), ",");
+          if (isInstanceControlledByRecord(existingInstance) && areInstanceBlockedFieldsChanged(existingInstance, updatedInstance)) {
+            String errorMessage = BLOCKED_FIELDS_UPDATE_ERROR_MESSAGE + StringUtils.join(config.getInstanceBlockedFields(), COMMA);
             log.error(errorMessage);
             JsonResponse.unprocessableEntity(rContext.response(), errorMessage);
           } else {
@@ -282,7 +282,7 @@ public class Instances {
   }
 
   /**
-   * Returns true if given Instance is has linked record in source-record-storage
+   * Returns true if given Instance has linked record in source-record-storage
    * @param instance given instance
    * @return boolean
    */
@@ -313,12 +313,12 @@ public class Instances {
    * @param updatedInstance  instance with changes for update
    * @return boolean
    */
-  private boolean instanceBlockedFieldsChanged(Instance existingInstance, Instance updatedInstance) {
+  private boolean areInstanceBlockedFieldsChanged(Instance existingInstance, Instance updatedInstance) {
     JsonObject existingInstanceJson = JsonObject.mapFrom(existingInstance);
     JsonObject updatedInstanceJson = JsonObject.mapFrom(updatedInstance);
     Map<String, Object> existingBlockedFields = new HashMap<>();
     Map<String, Object> updatedBlockedFields = new HashMap<>();
-    for (String blockedFieldCode : inventoryConfiguration.getInstanceBlockedFields()) {
+    for (String blockedFieldCode : config.getInstanceBlockedFields()) {
       existingBlockedFields.put(blockedFieldCode, existingInstanceJson.getValue(blockedFieldCode));
       updatedBlockedFields.put(blockedFieldCode, updatedInstanceJson.getValue(blockedFieldCode));
     }
