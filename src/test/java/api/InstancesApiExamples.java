@@ -19,17 +19,21 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import com.google.common.collect.Sets;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.http.Header;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
 import org.apache.http.message.BasicHeader;
+import org.folio.inventory.config.InventoryConfiguration;
+import org.folio.inventory.config.InventoryConfigurationImpl;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
@@ -48,6 +52,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public class InstancesApiExamples extends ApiTests {
+  private static final InventoryConfiguration config = new InventoryConfigurationImpl();
   public InstancesApiExamples() throws MalformedURLException {
     super();
   }
@@ -322,13 +327,10 @@ public class InstancesApiExamples extends ApiTests {
 
     assertThat(actualResponse.containsKey("blockedFields"), is(true));
     assertThat(actualResponse.getJsonArray("blockedFields"), notNullValue());
-    assertTrue(actualResponse.getJsonArray("blockedFields").contains("discoverySuppress"));
-    assertTrue(actualResponse.getJsonArray("blockedFields").contains("previouslyHeld"));
-    assertTrue(actualResponse.getJsonArray("blockedFields").contains("statusId"));
-    assertTrue(actualResponse.getJsonArray("blockedFields").contains("hrid"));
-    assertTrue(actualResponse.getJsonArray("blockedFields").contains("staffSuppress"));
-    assertTrue(actualResponse.getJsonArray("blockedFields").contains("source"));
-    assertTrue(actualResponse.getJsonArray("blockedFields").contains("clickable-add-statistical-code"));
+
+    for (String blockedField : config.getInstanceBlockedFields()) {
+      assertTrue(actualResponse.getJsonArray("blockedFields").contains(blockedField));
+    }
   }
 
   @Test
