@@ -1,10 +1,12 @@
 package api;
 
 import static api.support.InstanceSamples.leviathanWakes;
+import static api.support.InstanceSamples.marcInstanceWithDefaultBlockedFields;
 import static api.support.InstanceSamples.nod;
 import static api.support.InstanceSamples.smallAngryPlanet;
 import static api.support.InstanceSamples.taoOfPooh;
 import static api.support.InstanceSamples.temeraire;
+import static api.support.InstanceSamples.treasureIslandInstance;
 import static api.support.InstanceSamples.uprooted;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
@@ -30,7 +32,8 @@ import org.apache.http.Header;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
 import org.apache.http.message.BasicHeader;
-import org.folio.inventory.resources.InventoryConfiguration;
+import org.folio.inventory.config.InventoryConfiguration;
+import org.folio.inventory.config.InventoryConfigurationImpl;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
@@ -49,6 +52,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public class InstancesApiExamples extends ApiTests {
+  private static final InventoryConfiguration config = new InventoryConfigurationImpl();
   public InstancesApiExamples() throws MalformedURLException {
     super();
   }
@@ -321,15 +325,9 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(getResponse.getStatusCode(), is(HttpResponseStatus.OK.code()));
     JsonObject actualResponse = getResponse.getJson();
 
-    assertThat(actualResponse.containsKey("blockedFields"), is(true));
-    assertThat(actualResponse.getJsonArray("blockedFields"), notNullValue());
-    assertTrue(actualResponse.getJsonArray("blockedFields").contains("discoverySuppress"));
-    assertTrue(actualResponse.getJsonArray("blockedFields").contains("previouslyHeld"));
-    assertTrue(actualResponse.getJsonArray("blockedFields").contains("statusId"));
-    assertTrue(actualResponse.getJsonArray("blockedFields").contains("hrid"));
-    assertTrue(actualResponse.getJsonArray("blockedFields").contains("staffSuppress"));
-    assertTrue(actualResponse.getJsonArray("blockedFields").contains("source"));
-    assertTrue(actualResponse.getJsonArray("blockedFields").contains("clickable-add-statistical-code"));
+    for (String blockedField : config.getInstanceBlockedFields()) {
+      assertTrue(actualResponse.getJsonArray("blockedFields").contains(blockedField));
+    }
   }
 
   @Test
@@ -417,6 +415,141 @@ public class InstancesApiExamples extends ApiTests {
     Response putResponse = putCompleted.get(5, TimeUnit.SECONDS);
 
     assertThat(putResponse.getStatusCode(), is(404));
+  }
+
+  @Test
+  public void canUpdateAnExistingMARCInstanceIfNoChanges()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    UUID id = UUID.randomUUID();
+    // Create new Instance
+    JsonObject newInstance = createInstance(treasureIslandInstance(id));
+    JsonObject instanceForUpdate = treasureIslandInstance(id);
+    URL instanceLocation = new URL(String.format("%s/%s", ApiRoot.instances(), newInstance.getString("id")));
+    // Put Instance for update
+    CompletableFuture<Response> putCompleted = new CompletableFuture<>();
+    okapiClient.put(instanceLocation, instanceForUpdate, ResponseHandler.any(putCompleted));
+    Response putResponse = putCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(putResponse.getStatusCode(), is(204));
+    // Get existing Instance
+    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+    okapiClient.get(instanceLocation, ResponseHandler.json(getCompleted));
+    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(getResponse.getStatusCode(), is(200));
+
+    JsonObject updatedInstance = getResponse.getJson();
+    assertEquals(updatedInstance, newInstance);
+    selfLinkRespectsWayResourceWasReached(updatedInstance);
+    selfLinkShouldBeReachable(updatedInstance);
+  }
+
+  @Test
+  public void canNotUpdateAnExistingMARCInstanceIfBlockedFieldsAreChanged()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    UUID id = UUID.randomUUID();
+    createInstance(treasureIslandInstance(id));
+    JsonObject instanceForUpdate = marcInstanceWithDefaultBlockedFields(id);
+
+    for (String field : config.getInstanceBlockedFields()) {
+      URL instanceLocation = new URL(String.format("%s/%s", ApiRoot.instances(), id));
+      // Put Instance for update
+      CompletableFuture<Response> putCompleted = new CompletableFuture<>();
+      okapiClient.put(instanceLocation, instanceForUpdate, ResponseHandler.any(putCompleted));
+      Response putResponse = putCompleted.get(5, TimeUnit.SECONDS);
+
+      assertThat(putResponse.getStatusCode(), is(422));
+      assertThat(putResponse.getJson().getJsonArray("errors").size(), is(1));
+
+      instanceForUpdate.remove(field);
+    }
+  }
+
+  @Test
+  public void canNotUpdateAnExistingMARCInstanceIfBlockedFieldsAreChangedToNulls()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    UUID id = UUID.randomUUID();
+    JsonObject createInstanceRequest = treasureIslandInstance(id)
+      .put("hrid", "test-hrid-0")
+      .put("statusId", "test-statusId-0");
+    // Create new Instance
+    JsonObject newInstance = createInstance(createInstanceRequest);
+
+    JsonObject instanceForUpdate = treasureIslandInstance(id);
+    URL instanceLocation = new URL(String.format("%s/%s", ApiRoot.instances(), newInstance.getString("id")));
+    // Put Instance for update
+    CompletableFuture<Response> putCompleted = new CompletableFuture<>();
+    okapiClient.put(instanceLocation, instanceForUpdate, ResponseHandler.any(putCompleted));
+    Response putResponse = putCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(putResponse.getStatusCode(), is(422));
+    assertThat(putResponse.getJson().getJsonArray("errors").size(), is(1));
+    // Get existing Instance
+    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+    okapiClient.get(instanceLocation, ResponseHandler.json(getCompleted));
+    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(getResponse.getStatusCode(), is(200));
+
+    JsonObject updatedInstance = getResponse.getJson();
+    assertThat(updatedInstance.getString("id"), is(newInstance.getString("id")));
+    assertThat(updatedInstance.getString("title"), is(newInstance.getString("title")));
+    assertThat(updatedInstance.getString("source"), is(newInstance.getString("source")));
+    assertThat(updatedInstance.getString("hrid"), is(newInstance.getString("hrid")));
+    assertThat(updatedInstance.getString("statusId"), is(newInstance.getString("statusId")));
+    selfLinkRespectsWayResourceWasReached(updatedInstance);
+    selfLinkShouldBeReachable(updatedInstance);
+  }
+
+  @Test
+  public void canUpdateAnExistingMARCInstanceIfBlockedFieldsAreNotChanged()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    UUID id = UUID.randomUUID();
+    JsonObject createInstanceRequest = treasureIslandInstance(id)
+      .put("sourceRecordFormat", "test-format-0");
+    // Create new Instance
+    JsonObject newInstance = createInstance(createInstanceRequest);
+
+    JsonObject instanceForUpdate = treasureIslandInstance(id)
+      .put("sourceRecordFormat", "test-format-1");
+    URL instanceLocation = new URL(String.format("%s/%s", ApiRoot.instances(), newInstance.getString("id")));
+    // Put Instance for update
+    CompletableFuture<Response> putCompleted = new CompletableFuture<>();
+    okapiClient.put(instanceLocation, instanceForUpdate, ResponseHandler.any(putCompleted));
+    Response putResponse = putCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(putResponse.getStatusCode(), is(204));
+
+    // Get existing Instance
+    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+    okapiClient.get(instanceLocation, ResponseHandler.json(getCompleted));
+    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(getResponse.getStatusCode(), is(200));
+
+    JsonObject updatedInstance = getResponse.getJson();
+    assertThat(updatedInstance.getString("id"), is(newInstance.getString("id")));
+    assertThat(updatedInstance.getString("title"), is(newInstance.getString("title")));
+    assertThat(updatedInstance.getString("source"), is(newInstance.getString("source")));
+    assertThat(updatedInstance.getString("sourceRecordFormat"), is(instanceForUpdate.getString("sourceRecordFormat")));
+    selfLinkRespectsWayResourceWasReached(updatedInstance);
+    selfLinkShouldBeReachable(updatedInstance);
   }
 
   @Test
