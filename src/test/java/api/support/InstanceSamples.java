@@ -1,24 +1,26 @@
 package api.support;
 
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
+import static api.ApiTestSuite.*;
 
 import java.util.UUID;
 
-import static api.ApiTestSuite.*;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 public class InstanceSamples {
   public static JsonObject createInstanceRequest(
     UUID id,
     String title,
     JsonArray identifiers,
-    JsonArray contributors) {
+    JsonArray contributors,
+    JsonArray notes) {
 
     return new JsonObject()
       .put("id",id.toString())
       .put("title", title)
       .put("identifiers", identifiers)
       .put("contributors", contributors)
+      .put("notes", notes)
       .put("source", "Local")
       .put("instanceTypeId", getTextInstanceType());
   }
@@ -32,8 +34,11 @@ public class InstanceSamples {
 
     contributors.add(contributor("Chambers, Becky"));
 
+    JsonArray notes = new JsonArray();
+    notes.add(instanceNote("A general note on Small Angry Planet"));
+
     return createInstanceRequest(id, "Long Way to a Small Angry Planet",
-      identifiers, contributors);
+      identifiers, contributors, notes);
   }
 
   public static JsonObject nod(UUID id) {
@@ -45,7 +50,10 @@ public class InstanceSamples {
 
     contributors.add(contributor("Barnes, Adrian"));
 
-    return createInstanceRequest(id, "Nod", identifiers, contributors);
+    JsonArray notes = new JsonArray();
+    notes.add(instanceNote("A general note on Nod"));
+
+    return createInstanceRequest(id, "Nod", identifiers, contributors, notes);
   }
 
   public static JsonObject uprooted(UUID id) {
@@ -58,8 +66,11 @@ public class InstanceSamples {
 
     contributors.add(contributor("Novik, Naomi"));
 
+    JsonArray notes = new JsonArray();
+    notes.add(instanceNote("A general note on Uprooted"));
+
     return createInstanceRequest(id, "Uprooted",
-      identifiers, contributors);
+      identifiers, contributors, notes);
   }
 
   public static JsonObject temeraire(UUID id) {
@@ -72,8 +83,11 @@ public class InstanceSamples {
 
     contributors.add(contributor("Novik, Naomi"));
 
+    JsonArray notes = new JsonArray();
+    notes.add(instanceNote("A general note on Nod"));
+
     return createInstanceRequest(id, "Temeraire",
-      identifiers, contributors);
+      identifiers, contributors, notes);
   }
 
   public static JsonObject leviathanWakes(UUID id) {
@@ -85,8 +99,10 @@ public class InstanceSamples {
     JsonArray contributors = new JsonArray();
 
     contributors.add(contributor("Corey, James S. A."));
+    JsonArray notes = new JsonArray();
+    notes.add(instanceNote("A general note on Leviathan"));
 
-    return createInstanceRequest(id, "Leviathan Wakes", identifiers, contributors);
+    return createInstanceRequest(id, "Leviathan Wakes", identifiers, contributors, notes);
   }
 
   public static JsonObject taoOfPooh(UUID id) {
@@ -99,7 +115,10 @@ public class InstanceSamples {
 
     contributors.add(contributor("Hoff, Benjamin"));
 
-    return createInstanceRequest(id, "Tao of Pooh", identifiers, contributors);
+    JsonArray notes = new JsonArray();
+    notes.add(instanceNote("A general note on Tao of Pooh"));
+
+    return createInstanceRequest(id, "Tao of Pooh", identifiers, contributors, notes);
   }
 
   public static JsonObject girlOnTheTrain(UUID id) {
@@ -111,8 +130,12 @@ public class InstanceSamples {
 
     contributors.add(contributor("Hawkins, Paula"));
 
+    JsonArray notes = new JsonArray();
+    notes.add(instanceNote("A general note on Girl on the Train"));
+
+
     return createInstanceRequest(id, "The Girl on the Train",
-      identifiers, contributors);
+      identifiers, contributors, notes);
   }
 
   private static JsonObject identifier(
@@ -128,5 +151,11 @@ public class InstanceSamples {
     return new JsonObject()
       .put("contributorNameTypeId", getPersonalContributorNameType())
       .put("name", name);
+  }
+
+  private static JsonObject instanceNote(String note) {
+    return new JsonObject()
+      .put("instanceNoteTypeId", "6a2533a7-4de2-4e64-8466-074c2fa9308c" )
+      .put("note", note);
   }
 }
