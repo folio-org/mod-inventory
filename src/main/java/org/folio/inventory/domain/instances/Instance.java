@@ -65,7 +65,7 @@ public class Instance {
   private List<String> instanceFormatIds;
   private List<String> physicalDescriptions = new ArrayList();
   private List<String> languages = new ArrayList();
-  private List<String> notes = new ArrayList();
+  private List<Note> notes = new ArrayList();
   private String modeOfIssuanceId;
   private String catalogedDate;
   private Boolean previouslyHeld;
@@ -176,7 +176,7 @@ public class Instance {
     return this;
   }
 
-  public Instance setNotes(List<String> notes) {
+  public Instance setNotes(List<Note> notes) {
     this.notes = notes;
     return this;
   }
@@ -323,7 +323,7 @@ public class Instance {
     return languages;
   }
 
-  public List<String> getNotes() {
+  public List<Note> getNotes() {
     return notes;
   }
 

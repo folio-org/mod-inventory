@@ -12,11 +12,12 @@ import org.folio.inventory.domain.Metadata;
 import org.folio.inventory.domain.instances.AlternativeTitle;
 import org.folio.inventory.domain.instances.Classification;
 import org.folio.inventory.domain.instances.Contributor;
-import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 import org.folio.inventory.domain.instances.Identifier;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
+import org.folio.inventory.domain.instances.Note;
 import org.folio.inventory.domain.instances.Publication;
+import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
@@ -122,6 +123,14 @@ class ExternalStorageModuleInstanceCollection
       .map(it -> new ElectronicAccess(it))
       .collect(Collectors.toList());
 
+    List<JsonObject> notes = toList(
+      instanceFromServer.getJsonArray(Instance.NOTES_KEY, new JsonArray()));
+
+    List<Note> mappedNotes = notes.stream()
+      .map(it -> new Note(it))
+      .collect(Collectors.toList());
+
+
     JsonObject metadataJson = instanceFromServer.getJsonObject(Instance.METADATA_KEY);
 
     return new Instance(
@@ -145,7 +154,7 @@ class ExternalStorageModuleInstanceCollection
       .setInstanceFormatIds(jsonArrayAsListOfStrings(instanceFromServer, Instance.INSTANCE_FORMAT_IDS_KEY))
       .setPhysicalDescriptions(jsonArrayAsListOfStrings(instanceFromServer, Instance.PHYSICAL_DESCRIPTIONS_KEY))
       .setLanguages(jsonArrayAsListOfStrings(instanceFromServer, Instance.LANGUAGES_KEY))
-      .setNotes(jsonArrayAsListOfStrings(instanceFromServer, Instance.NOTES_KEY))
+      .setNotes(mappedNotes)
       .setModeOfIssuanceId(instanceFromServer.getString(Instance.MODE_OF_ISSUANCE_ID_KEY))
       .setCatalogedDate(instanceFromServer.getString(Instance.CATALOGED_DATE_KEY))
       .setPreviouslyHeld(instanceFromServer.getBoolean(Instance.PREVIOUSLY_HELD_KEY))
