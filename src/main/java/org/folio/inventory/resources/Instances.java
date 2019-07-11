@@ -29,7 +29,7 @@ import org.folio.inventory.domain.instances.InstanceRelationship;
 import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
 import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
 import org.folio.inventory.domain.instances.Publication;
-import org.folio.inventory.domain.items.Note;
+import org.folio.inventory.domain.instances.Note;
 import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
@@ -265,8 +265,7 @@ public class Instances {
     Instance updatedInstance = requestToInstance(instanceRequest);
     InstanceCollection instanceCollection = storage.getInstanceCollection(wContext);
 
-    instanceCollection.findById(rContext.request().getParam("id"),
-      it -> {
+    instanceCollection.findById(rContext.request().getParam("id"), it -> {
         Instance existingInstance = it.getResult();
         if (existingInstance != null) {
           if (isInstanceControlledByRecord(existingInstance) && areInstanceBlockedFieldsChanged(existingInstance, updatedInstance)) {
@@ -279,7 +278,8 @@ public class Instances {
         } else {
           ClientErrorResponse.notFound(rContext.response());
         }
-      }, FailureResponseConsumer.serverError(rContext.response()));
+      },
+      FailureResponseConsumer.serverError(rContext.response()));
   }
 
   /**

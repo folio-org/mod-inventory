@@ -1,11 +1,23 @@
 package api.support;
 
-import static api.ApiTestSuite.*;
-
-import java.util.UUID;
-
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import org.folio.inventory.domain.instances.AlternativeTitle;
+import org.folio.inventory.domain.instances.Classification;
+import org.folio.inventory.domain.instances.Contributor;
+import org.folio.inventory.domain.instances.Identifier;
+import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
+import org.folio.inventory.domain.instances.Publication;
+import org.folio.inventory.domain.items.Note;
+import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
+
+import java.time.LocalDate;
+import java.util.UUID;
+
+import static api.ApiTestSuite.getAsinIdentifierType;
+import static api.ApiTestSuite.getIsbnIdentifierType;
+import static api.ApiTestSuite.getPersonalContributorNameType;
+import static api.ApiTestSuite.getTextInstanceType;
 
 public class InstanceSamples {
   public static JsonObject createInstanceRequest(
@@ -144,6 +156,44 @@ public class InstanceSamples {
       .put("title", "Treasure Island")
       .put("source", "MARC")
       .put("instanceTypeId", getTextInstanceType());
+  }
+
+  public static JsonObject marcInstanceWithDefaultBlockedFields(UUID id) {
+    return new JsonObject()
+      .put("id", id.toString())
+      .put("title", "Treasure Island")
+      .put("instanceTypeId", getTextInstanceType())
+      // blocked fields
+      .put("discoverySuppress", true)
+      .put("previouslyHeld", true)
+      .put("statusId", "test status id")
+      .put("hrid", UUID.randomUUID().toString())
+      .put("staffSuppress", true)
+      .put("alternativeTitles", new JsonArray()
+        .add(JsonObject.mapFrom(new AlternativeTitle("test id", "test title"))))
+      .put("series", new JsonArray().add("test series"))
+      .put("source", "MARC")
+      .put("identifiers", new JsonArray()
+        .add(JsonObject.mapFrom(new Identifier("test identifier type id", "test identifier value"))))
+      .put("contributors", new JsonArray()
+        .add(JsonObject.mapFrom(new Contributor("test name type id", "test name", "test type id", "test text", true))))
+      .put("publication", new JsonArray()
+        .add(JsonObject.mapFrom(new Publication("test publisher", "test place", LocalDate.now().toString(), "test role"))))
+      .put("editions", new JsonArray().add("test edition"))
+      .put("physicalDescriptions", new JsonArray().add("test physical description"))
+      .put("instanceFormatIds", new JsonArray().add("test format ids"))
+      .put("languages", new JsonArray().add("test language"))
+      .put("publicationFrequency", new JsonArray().add("test publication frequency"))
+      .put("publicationRange", new JsonArray().add("test publication range"))
+      .put("notes", new JsonArray()
+        .add(JsonObject.mapFrom(new Note("test id", "test note", true))))
+      .put("electronicAccess", new JsonArray()
+        .add(JsonObject.mapFrom(new ElectronicAccess("test uri", "test link text", "test materials specification", "test public note", "test relationship id"))))
+      .put("subjects", new JsonArray().add("test subject"))
+      .put("classifications", new JsonArray()
+        .add(JsonObject.mapFrom(new Classification("test id", "test number"))))
+      .put("childInstances", new JsonArray()
+        .add(JsonObject.mapFrom(new InstanceRelationshipToChild("test id", "test instance id", "test type id"))));
   }
 
   private static JsonObject identifier(
