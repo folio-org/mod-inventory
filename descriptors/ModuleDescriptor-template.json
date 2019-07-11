@@ -200,6 +200,10 @@
     {
       "id": "contributor-name-types",
       "version": "1.0"
+    },
+    {
+      "id": "users",
+      "version": "15.0"
     }
   ],
   "permissionSets": [
