@@ -12,6 +12,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
@@ -495,7 +496,15 @@ public class InstancesApiExamples extends ApiTests {
     Response putResponse = putCompleted.get(5, TimeUnit.SECONDS);
 
     assertThat(putResponse.getStatusCode(), is(422));
-    assertThat(putResponse.getJson().getJsonArray("errors").size(), is(1));
+    assertNotNull(putResponse.getJson().getJsonArray("errors"));
+    JsonArray errors = putResponse.getJson().getJsonArray("errors");
+    assertThat(errors.size(), is(1));
+    assertThat(errors.getString(0), is(
+      "Instance is controlled by MARC record, these fields are blocked and can not be updated: " +
+        "physicalDescriptions,previouslyHeld,notes,languages,parentInstances,identifiers,subjects,source," +
+        "publicationFrequency,electronicAccess,publicationRange,classifications,discoverySuppress,editions," +
+        "statusId,childInstances,hrid,series,instanceFormatIds,staffSuppress,publication,contributors,alternativeTitles"));
+
     // Get existing Instance
     CompletableFuture<Response> getCompleted = new CompletableFuture<>();
     okapiClient.get(instanceLocation, ResponseHandler.json(getCompleted));
@@ -522,7 +531,7 @@ public class InstancesApiExamples extends ApiTests {
 
     UUID id = UUID.randomUUID();
     JsonObject createInstanceRequest = treasureIslandInstance(id)
-      .put("sourceRecordFormat", "test-format-0");
+      .put("sourceRecordFormat", "test-format-0"); // 'sourceRecordFormat' is non blocked field
     // Create new Instance
     JsonObject newInstance = createInstance(createInstanceRequest);
 

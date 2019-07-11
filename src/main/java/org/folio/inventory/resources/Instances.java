@@ -73,7 +73,7 @@ public class Instances {
   private final Storage storage;
   private final HttpClient client;
   private final InventoryConfiguration config;
-  private static final String BLOCKED_FIELDS_UPDATE_ERROR_MESSAGE = "Unprocessable entity: given Instance is controlled by MARC record, "
+  private static final String BLOCKED_FIELDS_UPDATE_ERROR_MESSAGE = "Instance is controlled by MARC record, "
     + "these fields are blocked and can not be updated: ";
 
   public Instances(final Storage storage, final HttpClient client) {
