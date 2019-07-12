@@ -613,7 +613,7 @@ public class Items {
     ItemCollection itemCollection,
     UserCollection userCollection) {
 
-    String userId = routingContext.request().getHeader("X-Okapi-User-Id");
+    String userId = webContext.getUserId();
     userCollection.findById(userId,
       userSuccess -> {
         User user = userSuccess.getResult();
