@@ -167,7 +167,7 @@
   "requires": [
     {
       "id": "item-storage",
-      "version": "7.3"
+      "version": "7.4"
     },
     {
       "id": "instance-storage",
