@@ -51,6 +51,12 @@ public class JsonResponse {
     response(response, new JsonObject().put("errors", errors), 422);
   }
 
+  public static void unprocessableEntity(HttpServerResponse response, String errorMessage) {
+    JsonArray error = new JsonArray();
+    error.add(errorMessage);
+    response(response, new JsonObject().put("errors", error), 422);
+  }
+
   private static void response(HttpServerResponse response,
                                JsonObject body,
                                int statusCode) {
