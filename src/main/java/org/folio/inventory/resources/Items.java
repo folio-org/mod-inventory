@@ -864,7 +864,7 @@ public class Items {
       return newNote.withId(UUID.randomUUID().toString())
         .withSource(user)
         .withDate(dateTimeFormatter.format(ZonedDateTime.now()));
-    } else if (circulationNoteChanged(newNote, oldNotes.get(noteId))){
+    } else if (circulationNoteChanged(newNote, oldNotes.get(noteId))) {
       return newNote.withSource(user)
         .withDate(dateTimeFormatter.format(ZonedDateTime.now()));
     } else {
