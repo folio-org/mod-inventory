@@ -1,20 +1,28 @@
 package api;
 
-import static api.support.InstanceSamples.leviathanWakes;
-import static api.support.InstanceSamples.marcInstanceWithDefaultBlockedFields;
-import static api.support.InstanceSamples.nod;
-import static api.support.InstanceSamples.smallAngryPlanet;
-import static api.support.InstanceSamples.taoOfPooh;
-import static api.support.InstanceSamples.temeraire;
-import static api.support.InstanceSamples.treasureIslandInstance;
-import static api.support.InstanceSamples.uprooted;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import api.support.ApiRoot;
+import api.support.ApiTests;
+import api.support.InstanceApiClient;
+import com.github.jsonldjava.core.DocumentLoader;
+import com.github.jsonldjava.core.JsonLdError;
+import com.github.jsonldjava.core.JsonLdOptions;
+import com.github.jsonldjava.core.JsonLdProcessor;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import org.apache.http.Header;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
+import org.apache.http.message.BasicHeader;
+import org.folio.inventory.config.InventoryConfiguration;
+import org.folio.inventory.config.InventoryConfigurationImpl;
+import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
+import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
+import org.folio.inventory.support.JsonArrayHelper;
+import org.folio.inventory.support.http.client.Response;
+import org.folio.inventory.support.http.client.ResponseHandler;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -27,30 +35,22 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.json.Json;
-import org.apache.http.Header;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
-import org.apache.http.message.BasicHeader;
-import org.folio.inventory.config.InventoryConfiguration;
-import org.folio.inventory.config.InventoryConfigurationImpl;
-import org.folio.inventory.support.JsonArrayHelper;
-import org.folio.inventory.support.http.client.Response;
-import org.folio.inventory.support.http.client.ResponseHandler;
-import org.junit.Assert;
-import org.junit.Test;
-
-import com.github.jsonldjava.core.DocumentLoader;
-import com.github.jsonldjava.core.JsonLdError;
-import com.github.jsonldjava.core.JsonLdOptions;
-import com.github.jsonldjava.core.JsonLdProcessor;
-
-import api.support.ApiRoot;
-import api.support.ApiTests;
-import api.support.InstanceApiClient;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
+import static api.support.InstanceSamples.leviathanWakes;
+import static api.support.InstanceSamples.marcInstanceWithDefaultBlockedFields;
+import static api.support.InstanceSamples.nod;
+import static api.support.InstanceSamples.smallAngryPlanet;
+import static api.support.InstanceSamples.taoOfPooh;
+import static api.support.InstanceSamples.temeraire;
+import static api.support.InstanceSamples.treasureIslandInstance;
+import static api.support.InstanceSamples.uprooted;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 public class InstancesApiExamples extends ApiTests {
   private static final InventoryConfiguration config = new InventoryConfigurationImpl();
@@ -255,6 +255,41 @@ public class InstancesApiExamples extends ApiTests {
   }
 
   @Test
+  public void shouldCreateBatchOfInstancesAndUpdateRelationships() throws
+    InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    JsonArray parentInstances = new JsonArray()
+      .add(JsonObject.mapFrom(new InstanceRelationshipToParent(UUID.randomUUID().toString(), "test super instance id", "test type id")));
+    JsonArray childInstances = new JsonArray()
+      .add(JsonObject.mapFrom(new InstanceRelationshipToChild(UUID.randomUUID().toString(), "test sub instance id", "test type id")));
+
+    UUID instanceId = UUID.randomUUID();
+    JsonObject treasureIslandInstanceWithRelationships = treasureIslandInstance(instanceId)
+      .put("parentInstances", parentInstances)
+      .put("childInstances", childInstances);
+
+    JsonObject request = new JsonObject();
+    request.put("instances", new JsonArray().add(treasureIslandInstanceWithRelationships));
+    request.put("totalRecords", 1);
+
+    // Post batch of instances
+    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+    okapiClient.post(ApiRoot.instancesBatch(), request, ResponseHandler.any(postCompleted));
+    Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
+
+    // Assertions
+    assertThat(postResponse.getStatusCode(), is(HttpResponseStatus.CREATED.code()));
+    assertThat(postResponse.getJson().getJsonArray("instances").size(), is(1));
+
+    JsonObject createdInstances = postResponse.getJson().getJsonArray("instances").getJsonObject(0);
+    assertThat(createdInstances.getJsonArray("parentInstances"), equalTo(parentInstances));
+    assertThat(createdInstances.getJsonArray("childInstances"), equalTo(childInstances));
+  }
+
+  @Test
   public void shouldReturnServerErrorIfOneInstancePostedWithoutTitle() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
     // Prepare request data
     String angryPlanetInstanceId = UUID.randomUUID().toString();
@@ -435,13 +470,13 @@ public class InstancesApiExamples extends ApiTests {
     okapiClient.put(instanceLocation, instanceForUpdate, ResponseHandler.any(putCompleted));
     Response putResponse = putCompleted.get(5, TimeUnit.SECONDS);
 
-    assertThat(putResponse.getStatusCode(), is(204));
+    assertThat(putResponse.getStatusCode(), is(HttpResponseStatus.NO_CONTENT));
     // Get existing Instance
     CompletableFuture<Response> getCompleted = new CompletableFuture<>();
     okapiClient.get(instanceLocation, ResponseHandler.json(getCompleted));
     Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
 
-    assertThat(getResponse.getStatusCode(), is(200));
+    assertThat(getResponse.getStatusCode(), is(HttpResponseStatus.OK));
 
     JsonObject updatedInstance = getResponse.getJson();
     assertEquals(updatedInstance, newInstance);
@@ -467,7 +502,7 @@ public class InstancesApiExamples extends ApiTests {
       okapiClient.put(instanceLocation, instanceForUpdate, ResponseHandler.any(putCompleted));
       Response putResponse = putCompleted.get(5, TimeUnit.SECONDS);
 
-      assertThat(putResponse.getStatusCode(), is(422));
+      assertThat(putResponse.getStatusCode(), is(HttpResponseStatus.UNPROCESSABLE_ENTITY));
       assertThat(putResponse.getJson().getJsonArray("errors").size(), is(1));
 
       instanceForUpdate.remove(field);
@@ -495,7 +530,7 @@ public class InstancesApiExamples extends ApiTests {
     okapiClient.put(instanceLocation, instanceForUpdate, ResponseHandler.any(putCompleted));
     Response putResponse = putCompleted.get(5, TimeUnit.SECONDS);
 
-    assertThat(putResponse.getStatusCode(), is(422));
+    assertThat(putResponse.getStatusCode(), is(HttpResponseStatus.UNPROCESSABLE_ENTITY));
     assertNotNull(putResponse.getJson().getJsonArray("errors"));
     JsonArray errors = putResponse.getJson().getJsonArray("errors");
     assertThat(errors.size(), is(1));
@@ -543,14 +578,14 @@ public class InstancesApiExamples extends ApiTests {
     okapiClient.put(instanceLocation, instanceForUpdate, ResponseHandler.any(putCompleted));
     Response putResponse = putCompleted.get(5, TimeUnit.SECONDS);
 
-    assertThat(putResponse.getStatusCode(), is(204));
+    assertThat(putResponse.getStatusCode(), is(HttpResponseStatus.NO_CONTENT));
 
     // Get existing Instance
     CompletableFuture<Response> getCompleted = new CompletableFuture<>();
     okapiClient.get(instanceLocation, ResponseHandler.json(getCompleted));
     Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
 
-    assertThat(getResponse.getStatusCode(), is(200));
+    assertThat(getResponse.getStatusCode(), is(HttpResponseStatus.OK));
 
     JsonObject updatedInstance = getResponse.getJson();
     assertThat(updatedInstance.getString("id"), is(newInstance.getString("id")));

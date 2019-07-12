@@ -12,6 +12,7 @@ import org.folio.inventory.domain.instances.Classification;
 import org.folio.inventory.domain.instances.Contributor;
 import org.folio.inventory.domain.instances.Identifier;
 import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
+import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
 import org.folio.inventory.domain.instances.Publication;
 import org.folio.inventory.domain.items.Note;
 import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
@@ -189,8 +190,10 @@ public class InstanceSamples {
       .put("subjects", new JsonArray().add("test subject"))
       .put("classifications", new JsonArray()
         .add(JsonObject.mapFrom(new Classification("test id", "test number"))))
+      .put("parentInstances", new JsonArray()
+        .add(JsonObject.mapFrom(new InstanceRelationshipToParent("test id", "test super instance id", "test type id"))))
       .put("childInstances", new JsonArray()
-        .add(JsonObject.mapFrom(new InstanceRelationshipToChild("test id", "test instance id", "test type id"))));
+        .add(JsonObject.mapFrom(new InstanceRelationshipToChild("test id", "test sub instance id", "test type id"))));
   }
 
   private static JsonObject identifier(

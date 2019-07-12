@@ -232,12 +232,12 @@ public class Instances {
     Future future = Future.future();
     List<String> errorMessages = validateInstance(jsonInstance);
     if (errorMessages != null && errorMessages.isEmpty()) {
-      Instance instance = requestToInstance(jsonInstance);
-      storage.getInstanceCollection(webContext).add(instance, success -> {
-        Instance instanceResponse = success.getResult();
-        instanceResponse.setParentInstances(instanceResponse.getParentInstances());
-        instanceResponse.setChildInstances(instanceResponse.getChildInstances());
-        updateInstanceRelationships(instanceResponse, routingContext, webContext, x -> future.complete(instanceResponse));
+      Instance instanceForCreation = requestToInstance(jsonInstance);
+      storage.getInstanceCollection(webContext).add(instanceForCreation, success -> {
+        Instance createdInstance = success.getResult();
+        createdInstance.setParentInstances(instanceForCreation.getParentInstances());
+        createdInstance.setChildInstances(instanceForCreation.getChildInstances());
+        updateInstanceRelationships(createdInstance, routingContext, webContext, x -> future.complete(createdInstance));
       }, failure -> future.fail(failure.getReason()));
     } else {
       future.fail("Instance is not valid for further processing: " + errorMessages);
