@@ -1,0 +1,104 @@
+#%RAML 1.0
+title: Inventory API
+version: v1
+protocols: [ HTTP, HTTPS ]
+baseUri: http://localhost
+
+documentation:
+  - title: "ISBN API"
+    content: <b>API for validation and conversion of ISBN-10 and ISBN-13 numbers </b>
+
+types:
+  errors: !include raml-util/schemas/errors.schema
+  isbn:
+    type: object
+    properties:
+      isbn: string
+    additionalProperties: false
+
+  isValid:
+    type: object
+    properties:
+      isValid: boolean
+    additionalProperties: false
+
+/isbn:
+  /convertTo13:
+    get:
+      description: Converts an ISBN code to an ISBN-13 code
+      queryParameters:
+        isbn:
+          displayName: Isbn
+          type: string
+          example: "091698477X"
+          required: true
+        hyphens:
+          displayName: Hyphens
+          type: boolean
+          default: false
+          required: false
+      responses:
+        200:
+          description: "The response body is a json object containing the converted isbn"
+          body:
+            application/json:
+              type: isbn
+              example: !include examples/isbn13.json
+        400:
+          description: "Bad request, an invalid ISBNs is provided"
+          body:
+            application/json:
+              type: errors
+              example:
+                strict: false
+                value: !include raml-util/examples/errors.sample
+
+  /convertTo10:
+    get:
+      description: "Converts an ISBN-13 code to an ISBN-10 code"
+      queryParameters:
+        isbn:
+          displayName: ISBN
+          type: string
+          example: "978-1-930110-99-1"
+          required: true
+        hyphens:
+          displayName: Hyphens
+          type: boolean
+          default: false
+          required: false
+      responses:
+        200:
+          description: "The response body is a json object containing the converted isbn"
+          body:
+            application/json:
+              type: isbn
+              example: !include examples/isbn10.json
+        400:
+          description: "Bad request, an invalid ISBNs is provided"
+          body:
+            application/json:
+              type: errors
+              example:
+                strict: false
+                value: !include raml-util/examples/errors.sample
+  /validator:
+    get:
+      description: Checks the code is a valid ISBN code.
+      queryParameters:
+        /^(isbn|isbn10|isbn13)$/: string
+      responses:
+        200:
+          description: "Returns true if a valid ISBN code, otherwise false"
+          body:
+            application/json:
+              type: isValid
+              example: !include examples/isbn_validation_result.json
+        400:
+          description: "Bad request, invalid query parameter is provided"
+          body:
+            application/json:
+              type: errors
+              example:
+                strict: false
+                value: !include raml-util/examples/errors.sample

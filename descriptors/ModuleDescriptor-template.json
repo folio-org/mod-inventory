@@ -162,6 +162,30 @@
           "permissionsRequired": ["inventory.ingest.mods.status.get"]
         }
       ]
+    },
+    {
+      "id": "isbn-utils",
+      "version": "1.0",
+      "handlers": [
+        {
+          "methods": ["GET"],
+          "pathPattern": "/isbn/convertTo13",
+          "permissionsRequired": ["isbn-utils.convert-to-13.get"],
+          "modulePermissions": []
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/isbn/convertTo10",
+          "permissionsRequired": ["isbn-utils.convert-to-10.get"],
+          "modulePermissions": []
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/isbn/validator",
+          "permissionsRequired": ["isbn-utils.validator.get"],
+          "modulePermissions": []
+        }
+      ]
     }
   ],
   "requires": [
@@ -308,6 +332,31 @@
         "inventory.ingest.mods.post",
         "inventory.ingest.mods.status.get",
         "inventory.config.instances.blocked-fields.get"
+      ]
+    },
+    {
+      "permissionName": "isbn-utils.convert-to-13.get",
+      "displayName": "ISBN utils - convert to ISBN-13 format",
+      "description": "Convert isbn code to ISBN-13 format"
+    },
+    {
+      "permissionName": "isbn-utils.convert-to-10.get",
+      "displayName": "ISBN utils - convert to ISBN-10 format",
+      "description": "Convert isbn code to ISBN-10 format"
+    },
+    {
+      "permissionName": "isbn-utils.validator.get",
+      "displayName": "ISBN utils - validate ISBN code",
+      "description": "Check that isbn code is valid"
+    },
+    {
+      "permissionName": "isbn-utils.all",
+      "displayName": "Isbn-utils - all permissions",
+      "description": "Entire set of permissions needed to use the isbn-utils",
+      "subPermissions": [
+        "isbn-utils.convert-to-13.get",
+        "isbn-utils.convert-to-10.get",
+        "isbn-utils.validator.get"
       ]
     }
   ],

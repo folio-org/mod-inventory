@@ -44,6 +44,11 @@ public class ResourceClient {
       "items");
   }
 
+  public static ResourceClient forIsbns(OkapiHttpClient client) {
+    return new ResourceClient(client, BusinessLogicInterfaceUrls::isbns,
+      "isbns");
+  }
+
   public static ResourceClient forInstances(OkapiHttpClient client) {
     return new ResourceClient(client, BusinessLogicInterfaceUrls::instances,
       "instances");
