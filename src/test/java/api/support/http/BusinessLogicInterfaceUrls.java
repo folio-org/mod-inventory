@@ -14,6 +14,10 @@ public class BusinessLogicInterfaceUrls {
     return getUrl("/inventory/instances", subPath);
   }
 
+  public static URL isbns(String subPath) {
+    return getUrl("/isbn", subPath);
+  }
+
   private static URL getUrl(String basePath, String subPath) {
     try {
       return URLHelper.joinPath(new URL(apiRoot()), String.format(
@@ -22,4 +26,5 @@ public class BusinessLogicInterfaceUrls {
       return null;
     }
   }
+
 }
