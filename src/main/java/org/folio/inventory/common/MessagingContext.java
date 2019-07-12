@@ -26,7 +26,7 @@ public class MessagingContext implements Context {
 
   @Override
   public String getUserId() {
-    return getHeader("userId");
+    return null;
   }
 
   @Override
