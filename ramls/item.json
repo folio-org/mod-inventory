@@ -184,19 +184,23 @@
             "properties": {
               "id": {
                 "type": "string",
-                "description": "The id of the user who added/updated the note"
+                "description": "The id of the user who added/updated the note",
+                "readonly": true
               },
               "personal": {
                 "type": "object",
                 "description": "Personal information about the user",
+                "readonly": true,
                 "properties": {
                   "lastName": {
+                    "type": "string",
                     "description": "The user's last name",
-                    "type": "string"
+                    "readonly": true
                   },
                   "firstName": {
+                    "type": "string",
                     "description": "The user's first name",
-                    "type": "string"
+                    "readonly": true
                   }
                 }
               }
