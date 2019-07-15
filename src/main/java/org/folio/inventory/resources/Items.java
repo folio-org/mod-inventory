@@ -144,7 +144,7 @@ public class Items {
           PagingParameters.defaults(), findResult -> {
 
             if(findResult.getResult().records.isEmpty()) {
-              addItem(routingContext, context, newItem, itemCollection, userCollection);
+              findUserAndAddItem(routingContext, context, newItem, userCollection, itemCollection);
             }
             else {
               ClientErrorResponse.badRequest(routingContext.response(),
@@ -157,7 +157,7 @@ public class Items {
       }
     }
     else {
-      addItem(routingContext, context, newItem, itemCollection, userCollection);
+      findUserAndAddItem(routingContext, context, newItem, userCollection, itemCollection);
     }
   }
 
@@ -175,7 +175,7 @@ public class Items {
       Item oldItem = getItemResult.getResult();
       if(oldItem != null) {
         if(hasSameBarcode(newItem, oldItem)) {
-          updateItem(routingContext, newItem, oldItem, itemCollection, userCollection);
+          findUserAndUpdateItem(routingContext, newItem, oldItem, userCollection, itemCollection);
         } else {
           try {
             checkForNonUniqueBarcode(routingContext, newItem, oldItem, itemCollection, userCollection);
@@ -606,31 +606,37 @@ public class Items {
       : null;
   }
 
+  private void findUserAndAddItem(
+    RoutingContext routingContext,
+    WebContext webContext,
+    Item newItem,
+    UserCollection userCollection,
+    ItemCollection itemCollection) {
+
+    String userId = webContext.getUserId();
+    userCollection.findById(userId,
+      success -> addItem(routingContext, webContext, newItem, success.getResult(), itemCollection),
+      failure -> addItem(routingContext, webContext, newItem, null, itemCollection));
+  }
+
   private void addItem(
     RoutingContext routingContext,
     WebContext webContext,
     Item newItem,
-    ItemCollection itemCollection,
-    UserCollection userCollection) {
+    User user,
+    ItemCollection itemCollection) {
 
-    String userId = webContext.getUserId();
-    userCollection.findById(userId,
-      userSuccess -> {
-        User user = userSuccess.getResult();
+    List<CirculationNote> notes = newItem.getCirculationNotes()
+      .stream()
+      .map(note -> note.withId(UUID.randomUUID().toString()))
+      .map(note -> note.withSource(user))
+      .map(note -> note.withDate(dateTimeFormatter.format(ZonedDateTime.now())))
+      .collect(Collectors.toList());
 
-        List<CirculationNote> notes = newItem.getCirculationNotes()
-          .stream()
-          .map(note -> note.withId(UUID.randomUUID().toString()))
-          .map(note -> note.withSource(user))
-          .map(note -> note.withDate(dateTimeFormatter.format(ZonedDateTime.now())))
-          .collect(Collectors.toList());
-
-        itemCollection.add(newItem.withCirculationNotes(notes), success -> {
-          Item item = success.getResult();
-          respondWithItemRepresentation(item, STATUS_CREATED, routingContext, webContext);
-        }, FailureResponseConsumer.serverError(routingContext.response()));
-      },
-      FailureResponseConsumer.serverError(routingContext.response()));
+    itemCollection.add(newItem.withCirculationNotes(notes), success -> {
+      Item item = success.getResult();
+      respondWithItemRepresentation(item, STATUS_CREATED, routingContext, webContext);
+    }, FailureResponseConsumer.serverError(routingContext.response()));
   }
 
   private void respondWithItemRepresentation (
@@ -802,33 +808,39 @@ public class Items {
       || Objects.equals(foundItem.getBarcode(), updatedItem.getBarcode());
   }
 
+  private void findUserAndUpdateItem(
+    RoutingContext routingContext,
+    Item newItem,
+    Item oldItem,
+    UserCollection userCollection,
+    ItemCollection itemCollection) {
+
+    String userId = routingContext.request().getHeader("X-Okapi-User-Id");
+    userCollection.findById(userId,
+      success -> updateItem(routingContext, newItem, oldItem, success.getResult(), itemCollection),
+      failure -> updateItem(routingContext, newItem, oldItem, null, itemCollection));
+  }
+
   private void updateItem(
     RoutingContext routingContext,
     Item newItem,
     Item oldItem,
-    ItemCollection itemCollection,
-    UserCollection userCollection) {
+    User user,
+    ItemCollection itemCollection) {
 
-    String userId = routingContext.request().getHeader("X-Okapi-User-Id");
-    userCollection.findById(userId,
-      userSuccess -> {
-        User user = userSuccess.getResult();
+    Map<String, CirculationNote> oldNotes = oldItem.getCirculationNotes()
+      .stream()
+      .collect(Collectors.toMap(CirculationNote::getId, Function.identity()));
 
-        Map<String, CirculationNote> oldNotes = oldItem.getCirculationNotes()
-          .stream()
-          .collect(Collectors.toMap(CirculationNote::getId, Function.identity()));
+    List<CirculationNote> updatedNotes = newItem.getCirculationNotes()
+      .stream()
+      .map(note -> updateCirculationNoteIfChanged(note, user, oldNotes))
+      .collect(Collectors.toList());
 
-        List<CirculationNote> updatedNotes = newItem.getCirculationNotes()
-          .stream()
-          .map(note -> updateCirculationNoteIfChanged(note, user, oldNotes))
-          .collect(Collectors.toList());
-
-        itemCollection.update(newItem.withCirculationNotes(updatedNotes),
-          v -> SuccessResponse.noContent(routingContext.response()),
-          failure -> ServerErrorResponse.internalError(
-            routingContext.response(), failure.getReason()));
-      },
-      FailureResponseConsumer.serverError(routingContext.response()));
+    itemCollection.update(newItem.withCirculationNotes(updatedNotes),
+      v -> SuccessResponse.noContent(routingContext.response()),
+      failure -> ServerErrorResponse.internalError(
+        routingContext.response(), failure.getReason()));
   }
 
   private void checkForNonUniqueBarcode(
@@ -846,7 +858,7 @@ public class Items {
         List<Item> items = it.getResult().records;
 
         if(items.isEmpty()) {
-          updateItem(routingContext, newItem, oldItem, itemCollection, userCollection);
+          findUserAndUpdateItem(routingContext, newItem, oldItem, userCollection, itemCollection);
         }
         else {
           ClientErrorResponse.badRequest(routingContext.response(),
