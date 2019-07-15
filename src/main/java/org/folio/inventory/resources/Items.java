@@ -174,7 +174,7 @@ public class Items {
     itemCollection.findById(routingContext.request().getParam("id"), getItemResult -> {
       Item oldItem = getItemResult.getResult();
       if (oldItem != null) {
-        if(hasSameBarcode(newItem, oldItem)) {
+        if (hasSameBarcode(newItem, oldItem)) {
           findUserAndUpdateItem(routingContext, newItem, oldItem, userCollection, itemCollection);
         } else {
           try {
