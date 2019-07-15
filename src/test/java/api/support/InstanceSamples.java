@@ -159,14 +159,8 @@ public class InstanceSamples {
   public static JsonObject marcInstanceWithDefaultBlockedFields(UUID id) {
     return new JsonObject()
       .put("id", id.toString())
-      .put("title", "Treasure Island")
-      .put("instanceTypeId", getTextInstanceType())
       // blocked fields
-      .put("discoverySuppress", true)
-      .put("previouslyHeld", true)
-      .put("statusId", "test status id")
       .put("hrid", UUID.randomUUID().toString())
-      .put("staffSuppress", true)
       .put("alternativeTitles", new JsonArray()
         .add(JsonObject.mapFrom(new AlternativeTitle("test id", "test title"))))
       .put("series", new JsonArray().add("test series"))
@@ -184,7 +178,7 @@ public class InstanceSamples {
       .put("publicationFrequency", new JsonArray().add("test publication frequency"))
       .put("publicationRange", new JsonArray().add("test publication range"))
       .put("notes", new JsonArray()
-        .add(JsonObject.mapFrom(new Note("test id", "test note", true))))
+        .add(JsonObject.mapFrom(new JsonObject().put("note", "test note").put("staffOnly", false))))
       .put("electronicAccess", new JsonArray()
         .add(JsonObject.mapFrom(new ElectronicAccess("test uri", "test link text", "test materials specification", "test public note", "test relationship id"))))
       .put("subjects", new JsonArray().add("test subject"))
@@ -193,7 +187,11 @@ public class InstanceSamples {
       .put("parentInstances", new JsonArray()
         .add(JsonObject.mapFrom(new InstanceRelationshipToParent("test id", "test super instance id", "test type id"))))
       .put("childInstances", new JsonArray()
-        .add(JsonObject.mapFrom(new InstanceRelationshipToChild("test id", "test sub instance id", "test type id"))));
+        .add(JsonObject.mapFrom(new InstanceRelationshipToChild("test id", "test sub instance id", "test type id"))))
+      .put("catalogedDate", LocalDate.now().toString())
+      .put("title", "Treasure Island")
+      .put("indexTitle", "Index Title")
+      .put("instanceTypeId", getTextInstanceType());
   }
 
   private static JsonObject identifier(

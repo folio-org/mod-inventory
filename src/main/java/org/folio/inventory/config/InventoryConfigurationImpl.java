@@ -10,11 +10,7 @@ import java.util.Set;
  */
 public class InventoryConfigurationImpl implements InventoryConfiguration {
   private static final Set<String> INSTANCE_BLOCKED_FIELDS = Sets.newHashSet(
-    Instance.DISCOVERY_SUPPRESS_KEY,
-    Instance.PREVIOUSLY_HELD_KEY,
-    Instance.STATUS_ID_KEY,
     Instance.HRID_KEY,
-    Instance.STAFF_SUPPRESS_KEY,
     Instance.SOURCE_KEY,
     Instance.ALTERNATIVE_TITLES_KEY,
     Instance.SERIES_KEY,
@@ -32,7 +28,12 @@ public class InventoryConfigurationImpl implements InventoryConfiguration {
     Instance.SUBJECTS_KEY,
     Instance.CLASSIFICATIONS_KEY,
     Instance.PARENT_INSTANCES_KEY,
-    Instance.CHILD_INSTANCES_KEY);
+    Instance.CHILD_INSTANCES_KEY,
+    Instance.CATALOGED_DATE_KEY,
+    Instance.TITLE_KEY,
+    Instance.INDEX_TITLE_KEY,
+    Instance.INSTANCE_TYPE_ID_KEY
+    );
 
   public InventoryConfigurationImpl() {
   }
