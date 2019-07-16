@@ -6,28 +6,34 @@ import java.net.MalformedURLException;
 import java.net.URL;
 
 public class WebContext implements Context {
+
+  private static final String OKAPI_TENANT_HEADER = "X-Okapi-Tenant";
+  private static final String OKAPI_TOKEN_HEADER = "X-Okapi-Token";
+  private static final String OKAPI_URL_HEADER = "X-Okapi-Url";
+  private static final String OKAPI_USER_ID_HEADER = "X-Okapi-User-Id";
+
   public WebContext(RoutingContext routingContext) {
     this.routingContext = routingContext;
   }
 
   @Override
   public String getTenantId() {
-    return getHeader("X-Okapi-Tenant", "");
+    return getHeader(OKAPI_TENANT_HEADER, "");
   }
 
   @Override
   public String getToken() {
-    return getHeader("X-Okapi-Token", "");
+    return getHeader(OKAPI_TOKEN_HEADER, "");
   }
 
   @Override
   public String getOkapiLocation() {
-    return getHeader("X-Okapi-Url", "");
+    return getHeader(OKAPI_URL_HEADER, "");
   }
 
   @Override
   public String getUserId() {
-    return getHeader("X-Okapi-User-Id", "");
+    return getHeader(OKAPI_USER_ID_HEADER, "");
   }
 
   @Override
