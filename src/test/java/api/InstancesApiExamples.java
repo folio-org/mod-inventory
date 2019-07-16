@@ -499,9 +499,10 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(errors.size(), is(1));
     assertThat(errors.getString(0), is(
       "Instance is controlled by MARC record, these fields are blocked and can not be updated: " +
-        "physicalDescriptions,previouslyHeld,notes,languages,parentInstances,identifiers,subjects,source," +
-        "publicationFrequency,electronicAccess,publicationRange,classifications,discoverySuppress,editions," +
-        "statusId,childInstances,hrid,series,instanceFormatIds,staffSuppress,publication,contributors,alternativeTitles"));
+        "physicalDescriptions,notes,languages,parentInstances,identifiers,instanceTypeId,subjects," +
+        "catalogedDate,source,title,indexTitle,publicationFrequency,electronicAccess,publicationRange," +
+        "classifications,editions,childInstances,hrid,series,instanceFormatIds,publication,contributors," +
+        "alternativeTitles"));
 
     // Get existing Instance
     CompletableFuture<Response> getCompleted = new CompletableFuture<>();
