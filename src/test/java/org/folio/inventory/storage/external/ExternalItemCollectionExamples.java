@@ -340,24 +340,24 @@ public class ExternalItemCollectionExamples {
     return new Item(null,
       null,
       new Status("Available"), bookMaterialTypeId, canCirculateLoanTypeId, null)
-            .setBarcode("036000291452")
-            .setTemporaryLocationId(annexLibraryLocationId);
+            .withBarcode("036000291452")
+            .withTemporaryLocationId(annexLibraryLocationId);
   }
 
   private Item nod() {
     return new Item(null,
       null,
       new Status("Available"), bookMaterialTypeId, canCirculateLoanTypeId, null)
-             .setBarcode("565578437802")
-            .setTemporaryLocationId(annexLibraryLocationId);
+             .withBarcode("565578437802")
+            .withTemporaryLocationId(annexLibraryLocationId);
   }
 
   private Item uprooted() {
     return new Item(null,
       null,
       new Status("Available"), bookMaterialTypeId,  canCirculateLoanTypeId, null)
-            .setBarcode("657670342075")
-            .setTemporaryLocationId(annexLibraryLocationId);
+            .withBarcode("657670342075")
+            .withTemporaryLocationId(annexLibraryLocationId);
   }
 
   private Item temeraire() {
@@ -365,16 +365,16 @@ public class ExternalItemCollectionExamples {
       null,
       new Status("Available"), bookMaterialTypeId,
       canCirculateLoanTypeId, null)
-            .setBarcode("232142443432")
-            .setTemporaryLocationId(annexLibraryLocationId);
+            .withBarcode("232142443432")
+            .withTemporaryLocationId(annexLibraryLocationId);
   }
 
   private Item interestingTimes() {
     return new Item(null,
       null,
       new Status("Available"), bookMaterialTypeId,  canCirculateLoanTypeId, null)
-            .setBarcode("56454543534")
-            .setTemporaryLocationId(annexLibraryLocationId);
+            .withBarcode("56454543534")
+            .withTemporaryLocationId(annexLibraryLocationId);
   }
 
   private Item getItem(List<Item> allItems, String barcode) {

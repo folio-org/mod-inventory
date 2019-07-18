@@ -9,11 +9,16 @@ import java.io.UnsupportedEncodingException;
 import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -27,6 +32,8 @@ import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.Note;
 import org.folio.inventory.domain.items.Status;
 import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
+import org.folio.inventory.domain.user.User;
+import org.folio.inventory.domain.user.UserCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.support.CqlHelper;
@@ -34,7 +41,12 @@ import org.folio.inventory.support.HoldingsSupport;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
-import org.folio.inventory.support.http.server.*;
+import org.folio.inventory.support.http.server.ClientErrorResponse;
+import org.folio.inventory.support.http.server.FailureResponseConsumer;
+import org.folio.inventory.support.http.server.ForwardResponse;
+import org.folio.inventory.support.http.server.JsonResponse;
+import org.folio.inventory.support.http.server.ServerErrorResponse;
+import org.folio.inventory.support.http.server.SuccessResponse;
 
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
@@ -54,6 +66,9 @@ public class Items {
   private static final int STATUS_SUCCESS = 200;
 
   private final HttpClient client;
+
+  private final DateTimeFormatter dateTimeFormatter =
+    DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").withZone(ZoneOffset.UTC);
 
   public Items(final Storage storage, final HttpClient client) {
     this.storage = storage;
@@ -121,6 +136,7 @@ public class Items {
     Item newItem = requestToItem(item);
 
     ItemCollection itemCollection = storage.getItemCollection(context);
+    UserCollection userCollection = storage.getUserCollection(context);
 
     if(newItem.getBarcode() != null) {
       try {
@@ -128,7 +144,7 @@ public class Items {
           PagingParameters.defaults(), findResult -> {
 
             if(findResult.getResult().records.isEmpty()) {
-              addItem(routingContext, context, newItem, itemCollection);
+              findUserAndAddItem(routingContext, context, newItem, userCollection, itemCollection);
             }
             else {
               ClientErrorResponse.badRequest(routingContext.response(),
@@ -141,7 +157,7 @@ public class Items {
       }
     }
     else {
-      addItem(routingContext, context, newItem, itemCollection);
+      findUserAndAddItem(routingContext, context, newItem, userCollection, itemCollection);
     }
   }
 
@@ -150,17 +166,19 @@ public class Items {
 
     JsonObject itemRequest = routingContext.getBodyAsJson();
 
-    Item updatedItem = requestToItem(itemRequest);
+    Item newItem = requestToItem(itemRequest);
 
     ItemCollection itemCollection = storage.getItemCollection(context);
+    UserCollection userCollection = storage.getUserCollection(context);
 
     itemCollection.findById(routingContext.request().getParam("id"), getItemResult -> {
-      if(getItemResult.getResult() != null) {
-        if(hasSameBarcode(updatedItem, getItemResult.getResult())) {
-          updateItem(routingContext, updatedItem, itemCollection);
+      Item oldItem = getItemResult.getResult();
+      if (oldItem != null) {
+        if (hasSameBarcode(newItem, oldItem)) {
+          findUserAndUpdateItem(routingContext, newItem, oldItem, userCollection, itemCollection);
         } else {
           try {
-            checkForNonUniqueBarcode(routingContext, updatedItem, itemCollection);
+            checkForNonUniqueBarcode(routingContext, newItem, oldItem, itemCollection, userCollection);
           } catch (UnsupportedEncodingException e) {
             ServerErrorResponse.internalError(routingContext.response(), e.toString());
           }
@@ -262,36 +280,36 @@ public class Items {
       materialTypeId,
       permanentLoanTypeId,
       null)
-            .setHrid(itemRequest.getString(Item.HRID_KEY))
-            .setFormerIds(formerIds)
-            .setDiscoverySuppress(itemRequest.getBoolean(Item.DISCOVERY_SUPPRESS_KEY))
-            .setBarcode(itemRequest.getString("barcode"))
-            .setItemLevelCallNumber(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_KEY))
-            .setItemLevelCallNumberPrefix(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY))
-            .setItemLevelCallNumberSuffix(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY))
-            .setItemLevelCallNumberTypeId(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY))
-            .setVolume(itemRequest.getString(Item.VOLUME_KEY))
-            .setEnumeration(itemRequest.getString("enumeration"))
-            .setChronology(itemRequest.getString("chronology"))
-            .setNumberOfPieces(itemRequest.getString("numberOfPieces"))
-            .setDescriptionOfPieces(itemRequest.getString(Item.DESCRIPTION_OF_PIECES_KEY))
-            .setNumberOfMissingPieces(itemRequest.getString(Item.NUMBER_OF_MISSING_PIECES_KEY))
-            .setMissingPieces(itemRequest.getString(Item.MISSING_PIECES_KEY))
-            .setMissingPiecesDate(itemRequest.getString(Item.MISSING_PIECES_DATE_KEY))
-            .setItemDamagedStatusId(itemRequest.getString(Item.ITEM_DAMAGED_STATUS_ID_KEY))
-            .setItemDamagedStatusDate(itemRequest.getString(Item.ITEM_DAMAGED_STATUS_DATE_KEY))
-            .setPermanentLocationId(permanentLocationId)
-            .setTemporaryLocationId(temporaryLocationId)
-            .setTemporaryLoanTypeId(temporaryLoanTypeId)
-            .setCopyNumbers(copyNumbers)
-            .setNotes(notes)
-            .setCirculationNotes(circulationNotes)
-            .setAccessionNumber(itemRequest.getString(Item.ACCESSION_NUMBER_KEY))
-            .setItemIdentifier(itemRequest.getString(Item.ITEM_IDENTIFIER_KEY))
-            .setYearCaption(yearCaption)
-            .setElectronicAccess(electronicAccess)
-            .setStatisticalCodeIds(statisticalCodeIds)
-            .setPurchaseOrderLineidentifier(itemRequest.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER));
+            .withHrid(itemRequest.getString(Item.HRID_KEY))
+            .withFormerIds(formerIds)
+            .withDiscoverySuppress(itemRequest.getBoolean(Item.DISCOVERY_SUPPRESS_KEY))
+            .withBarcode(itemRequest.getString("barcode"))
+            .withItemLevelCallNumber(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_KEY))
+            .withItemLevelCallNumberPrefix(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY))
+            .withItemLevelCallNumberSuffix(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY))
+            .withItemLevelCallNumberTypeId(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY))
+            .withVolume(itemRequest.getString(Item.VOLUME_KEY))
+            .withEnumeration(itemRequest.getString("enumeration"))
+            .withChronology(itemRequest.getString("chronology"))
+            .withNumberOfPieces(itemRequest.getString("numberOfPieces"))
+            .withDescriptionOfPieces(itemRequest.getString(Item.DESCRIPTION_OF_PIECES_KEY))
+            .withNumberOfMissingPieces(itemRequest.getString(Item.NUMBER_OF_MISSING_PIECES_KEY))
+            .withMissingPieces(itemRequest.getString(Item.MISSING_PIECES_KEY))
+            .withMissingPiecesDate(itemRequest.getString(Item.MISSING_PIECES_DATE_KEY))
+            .withItemDamagedStatusId(itemRequest.getString(Item.ITEM_DAMAGED_STATUS_ID_KEY))
+            .withItemDamagedStatusDate(itemRequest.getString(Item.ITEM_DAMAGED_STATUS_DATE_KEY))
+            .withPermanentLocationId(permanentLocationId)
+            .withTemporaryLocationId(temporaryLocationId)
+            .withTemporaryLoanTypeId(temporaryLoanTypeId)
+            .withCopyNumbers(copyNumbers)
+            .withNotes(notes)
+            .withCirculationNotes(circulationNotes)
+            .withAccessionNumber(itemRequest.getString(Item.ACCESSION_NUMBER_KEY))
+            .withItemIdentifier(itemRequest.getString(Item.ITEM_IDENTIFIER_KEY))
+            .withYearCaption(yearCaption)
+            .withElectronicAccess(electronicAccess)
+            .withStatisticalCodeIds(statisticalCodeIds)
+            .withPurchaseOrderLineidentifier(itemRequest.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER));
   }
 
   private void respondWithManyItems(
@@ -509,7 +527,7 @@ public class Items {
 
     return new OkapiHttpClient(client,
       new URL(context.getOkapiLocation()), context.getTenantId(),
-      context.getToken(),
+      context.getToken(), context.getUserId(),
       exception -> ServerErrorResponse.internalError(routingContext.response(),
       String.format("Failed to contact storage module: %s",
         exception.toString())));
@@ -588,13 +606,34 @@ public class Items {
       : null;
   }
 
+  private void findUserAndAddItem(
+    RoutingContext routingContext,
+    WebContext webContext,
+    Item newItem,
+    UserCollection userCollection,
+    ItemCollection itemCollection) {
+
+    String userId = webContext.getUserId();
+    userCollection.findById(userId,
+      success -> addItem(routingContext, webContext, newItem, success.getResult(), itemCollection),
+      failure -> addItem(routingContext, webContext, newItem, null, itemCollection));
+  }
+
   private void addItem(
     RoutingContext routingContext,
     WebContext webContext,
     Item newItem,
+    User user,
     ItemCollection itemCollection) {
 
-    itemCollection.add(newItem, success -> {
+    List<CirculationNote> notes = newItem.getCirculationNotes()
+      .stream()
+      .map(note -> note.withId(UUID.randomUUID().toString()))
+      .map(note -> note.withSource(user))
+      .map(note -> note.withDate(dateTimeFormatter.format(ZonedDateTime.now())))
+      .collect(Collectors.toList());
+
+    itemCollection.add(newItem.withCirculationNotes(notes), success -> {
       Item item = success.getResult();
       respondWithItemRepresentation(item, STATUS_CREATED, routingContext, webContext);
     }, FailureResponseConsumer.serverError(routingContext.response()));
@@ -769,12 +808,36 @@ public class Items {
       || Objects.equals(foundItem.getBarcode(), updatedItem.getBarcode());
   }
 
-  private void updateItem(
+  private void findUserAndUpdateItem(
     RoutingContext routingContext,
-    Item updatedItem,
+    Item newItem,
+    Item oldItem,
+    UserCollection userCollection,
     ItemCollection itemCollection) {
 
-    itemCollection.update(updatedItem,
+    String userId = routingContext.request().getHeader("X-Okapi-User-Id");
+    userCollection.findById(userId,
+      success -> updateItem(routingContext, newItem, oldItem, success.getResult(), itemCollection),
+      failure -> updateItem(routingContext, newItem, oldItem, null, itemCollection));
+  }
+
+  private void updateItem(
+    RoutingContext routingContext,
+    Item newItem,
+    Item oldItem,
+    User user,
+    ItemCollection itemCollection) {
+
+    Map<String, CirculationNote> oldNotes = oldItem.getCirculationNotes()
+      .stream()
+      .collect(Collectors.toMap(CirculationNote::getId, Function.identity()));
+
+    List<CirculationNote> updatedNotes = newItem.getCirculationNotes()
+      .stream()
+      .map(note -> updateCirculationNoteIfChanged(note, user, oldNotes))
+      .collect(Collectors.toList());
+
+    itemCollection.update(newItem.withCirculationNotes(updatedNotes),
       v -> SuccessResponse.noContent(routingContext.response()),
       failure -> ServerErrorResponse.internalError(
         routingContext.response(), failure.getReason()));
@@ -782,27 +845,54 @@ public class Items {
 
   private void checkForNonUniqueBarcode(
     RoutingContext routingContext,
-    Item updatedItem,
-    ItemCollection itemCollection)
+    Item newItem,
+    Item oldItem,
+    ItemCollection itemCollection,
+    UserCollection userCollection)
     throws UnsupportedEncodingException {
 
     itemCollection.findByCql(
-      CqlHelper.barcodeIs(updatedItem.getBarcode()) + " and id<>" + updatedItem.id,
+      CqlHelper.barcodeIs(newItem.getBarcode()) + " and id<>" + newItem.id,
       PagingParameters.defaults(), it -> {
 
         List<Item> items = it.getResult().records;
 
         if(items.isEmpty()) {
-          updateItem(routingContext, updatedItem, itemCollection);
+          findUserAndUpdateItem(routingContext, newItem, oldItem, userCollection, itemCollection);
         }
         else {
           ClientErrorResponse.badRequest(routingContext.response(),
             String.format("Barcode must be unique, %s is already assigned to another item",
-              updatedItem.getBarcode()));
+              newItem.getBarcode()));
         }
       }, FailureResponseConsumer.serverError(routingContext.response()));
   }
 
+  private CirculationNote updateCirculationNoteIfChanged(CirculationNote newNote,
+                                                         User user, Map<String, CirculationNote> oldNotes) {
+    String noteId = newNote.getId();
+
+    if (noteId == null) {
+      return newNote.withId(UUID.randomUUID().toString())
+        .withSource(user)
+        .withDate(dateTimeFormatter.format(ZonedDateTime.now()));
+    } else if (circulationNoteChanged(newNote, oldNotes.get(noteId))) {
+      return newNote.withSource(user)
+        .withDate(dateTimeFormatter.format(ZonedDateTime.now()));
+    } else {
+      return newNote;
+    }
+  }
+
+  private boolean circulationNoteChanged(CirculationNote newNote, CirculationNote oldNote) {
+    if (!newNote.getNoteType().equals(oldNote.getNoteType())) {
+      return true;
+    } else if (!newNote.getNote().equals(oldNote.getNote())) {
+      return true;
+    } else {
+      return !newNote.getStaffOnly().equals(oldNote.getStaffOnly());
+    }
+  }
 }
 
 

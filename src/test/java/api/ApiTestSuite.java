@@ -46,6 +46,7 @@ public class ApiTestSuite {
   public static final String TENANT_ID = "test_tenant";
 
   public static final String TOKEN = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsInRlbmFudCI6ImRlbW9fdGVuYW50In0.29VPjLI6fLJzxQW0UhQ0jsvAn8xHz501zyXAxRflXfJ9wuDzT8TDf-V75PjzD7fe2kHjSV2dzRXbstt3BTtXIQ";
+  public static final String USER_ID = "7e115dfb-d1d6-46ac-b2dc-2b3e74cda694";
 
   private static String bookMaterialTypeId;
   private static String dvdMaterialTypeId;
@@ -173,7 +174,7 @@ public class ApiTestSuite {
 
     return new OkapiHttpClient(
       vertxAssistant.createUsingVertx(Vertx::createHttpClient),
-      new URL(storageOkapiUrl()), TENANT_ID, TOKEN, it ->
+      new URL(storageOkapiUrl()), TENANT_ID, TOKEN, USER_ID, it ->
       System.out.println(
         String.format("Request failed: %s",
           it.toString())));

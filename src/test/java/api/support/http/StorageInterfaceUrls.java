@@ -30,6 +30,10 @@ public class StorageInterfaceUrls {
     return viaOkapiURL("/locations" + subPath);
   }
 
+  public static URL usersStorageUrl(String subPath) {
+    return viaOkapiURL("/users" + subPath);
+  }
+
   private static URL viaOkapiURL(String path) {
     try {
       return URLHelper.joinPath(new URL(storageOkapiUrl()), path);

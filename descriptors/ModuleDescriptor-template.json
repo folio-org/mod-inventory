@@ -33,7 +33,7 @@
     },
     {
       "id": "inventory",
-      "version": "9.0",
+      "version": "9.1",
       "handlers": [
         {
           "methods": ["GET"],
@@ -84,14 +84,19 @@
             "inventory-storage.holdings.collection.get",
             "inventory-storage.holdings.item.get",
             "inventory-storage.instances.collection.get",
-            "inventory-storage.instances.item.get"
+            "inventory-storage.instances.item.get",
+            "users.item.get"
           ]
         }, {
           "methods": ["PUT"],
           "pathPattern": "/inventory/items/{id}",
           "permissionsRequired": ["inventory.items.item.put"],
-          "modulePermissions": ["inventory-storage.items.item.put"]
-        }, {
+          "modulePermissions": [
+            "inventory-storage.items.item.put",
+            "users.item.get"
+          ]
+        },
+        {
           "methods": ["DELETE"],
           "pathPattern": "/inventory/items/{id}",
           "permissionsRequired": ["inventory.items.item.delete"],
@@ -186,7 +191,7 @@
   "requires": [
     {
       "id": "item-storage",
-      "version": "7.3"
+      "version": "7.4"
     },
     {
       "id": "instance-storage",
@@ -219,6 +224,10 @@
     {
       "id": "contributor-name-types",
       "version": "1.0"
+    },
+    {
+      "id": "users",
+      "version": "15.0"
     }
   ],
   "permissionSets": [

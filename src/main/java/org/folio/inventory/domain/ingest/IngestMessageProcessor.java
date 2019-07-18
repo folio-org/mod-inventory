@@ -146,7 +146,7 @@ public class IngestMessageProcessor {
                 ? loanTypes.getString("Can Circulate")
                 : loanTypes.getString("Can circulate"),
                null)
-                    .setBarcode(record.getString("barcode"));
+                    .withBarcode(record.getString("barcode"));
         })
         .forEach(item -> itemCollection.add(item, allItems.receive(),
           failure -> log.error("Item processing failed: " + failure.getReason()))));

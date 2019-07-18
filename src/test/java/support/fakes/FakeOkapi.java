@@ -33,6 +33,7 @@ public class FakeOkapi extends AbstractVerticle {
     registerFakeInstanceTypesModule(router);
     registerFakeIdentifierTypesModule(router);
     registerFakeContributorNameTypesModule(router);
+    registerFakeUsersModule(router);
 
     server.requestHandler(router::accept)
       .listen(PORT_TO_USE, result -> {
@@ -176,6 +177,14 @@ public class FakeOkapi extends AbstractVerticle {
       .withRecordName("contributor type names")
       .withRootPath("/contributor-name-types")
       .withCollectionPropertyName("contributorNameTypes")
+      .create().register(router);
+  }
+
+  private void registerFakeUsersModule(Router router) {
+    new FakeStorageModuleBuilder()
+      .withRecordName("users")
+      .withRootPath("/users")
+      .withCollectionPropertyName("users")
       .create().register(router);
   }
 }

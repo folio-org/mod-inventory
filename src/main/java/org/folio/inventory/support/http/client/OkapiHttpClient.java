@@ -22,22 +22,26 @@ public class OkapiHttpClient {
   private static final String TENANT_HEADER = "X-Okapi-Tenant";
   private static final String TOKEN_HEADER = "X-Okapi-Token";
   private static final String OKAPI_URL_HEADER = "X-Okapi-Url";
+  private static final String OKAPI_USER_ID_HEADER = "X-Okapi-User-Id";
 
   private final HttpClient client;
   private final URL okapiUrl;
   private final String tenantId;
   private final String token;
+  private final String userId;
   private final Consumer<Throwable> exceptionHandler;
 
   public OkapiHttpClient(HttpClient httpClient,
                          URL okapiUrl,
                          String tenantId,
                          String token,
+                         String userId,
                          Consumer<Throwable> exceptionHandler) {
 
     this.client = httpClient;
     this.okapiUrl = okapiUrl;
     this.tenantId = tenantId;
+    this.userId = userId;
     this.token = token;
     this.exceptionHandler = exceptionHandler;
   }
@@ -147,6 +151,7 @@ public class OkapiHttpClient {
     }
 
     request.headers().add(OKAPI_URL_HEADER, okapiUrl.toString());
+    request.headers().add(OKAPI_USER_ID_HEADER, userId);
   }
 
   private static void accept(
