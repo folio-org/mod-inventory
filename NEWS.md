@@ -1,3 +1,14 @@
+## 12.0.0 2019-07-23
+
+* Provides `inventory` interface 9.1 (MODINV-132, MODINV-129)
+* Provides `inventory-batch` interface 0.2 (MODINV-132)
+* Provides `inventory-config` interface 0.1 (MODINV-121)
+* Requires `item-storage` interface 7.4 (MODINV-129)
+* Requires `instance-storage` interface 7.0 (MODINV-132)
+* Propagates changed instance notes structure to/from storage (MODINV-132)
+* Adds configuration for protected instance fields (MODINV-124)
+* Generates source, date for circulation notes (MODINV-129)
+
 ## 11.5.0 2019-06-11
 
 * Provides `inventory-batch` interface 0.1 (MODINV-119)

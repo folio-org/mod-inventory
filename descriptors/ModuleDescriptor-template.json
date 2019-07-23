@@ -3,35 +3,6 @@
   "name": "Inventory Module",
   "provides": [
     {
-      "id": "inventory-config",
-      "version": "0.1",
-      "handlers": [
-        {
-          "methods": ["GET"],
-          "pathPattern": "/inventory/config/instances/blocked-fields",
-          "permissionsRequired": ["inventory.config.instances.blocked-fields.get"],
-          "modulePermissions": []
-        }
-      ]
-    },
-    {
-      "id": "inventory-batch",
-      "version": "0.2",
-      "handlers": [
-        {
-          "methods": ["POST"],
-          "pathPattern": "/inventory/instances/batch",
-          "permissionsRequired": ["inventory.instances.batch.post"],
-          "modulePermissions": [
-            "inventory-storage.instances.item.post",
-            "inventory-storage.instances.item.get",
-            "inventory-storage.instances.item.put",
-            "inventory-storage.instances.item.delete"
-          ]
-        }
-      ]
-    },
-    {
       "id": "inventory",
       "version": "9.1",
       "handlers": [
@@ -160,6 +131,35 @@
           "methods": ["GET"],
           "pathPattern": "/inventory/ingest/mods/status/{id}",
           "permissionsRequired": ["inventory.ingest.mods.status.get"]
+        }
+      ]
+    },
+    {
+      "id": "inventory-batch",
+      "version": "0.2",
+      "handlers": [
+        {
+          "methods": ["POST"],
+          "pathPattern": "/inventory/instances/batch",
+          "permissionsRequired": ["inventory.instances.batch.post"],
+          "modulePermissions": [
+            "inventory-storage.instances.item.post",
+            "inventory-storage.instances.item.get",
+            "inventory-storage.instances.item.put",
+            "inventory-storage.instances.item.delete"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "inventory-config",
+      "version": "0.1",
+      "handlers": [
+        {
+          "methods": ["GET"],
+          "pathPattern": "/inventory/config/instances/blocked-fields",
+          "permissionsRequired": ["inventory.config.instances.blocked-fields.get"],
+          "modulePermissions": []
         }
       ]
     },
