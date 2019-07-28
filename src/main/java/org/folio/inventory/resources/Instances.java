@@ -1,5 +1,16 @@
 package org.folio.inventory.resources;
 
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
 import java.io.UnsupportedEncodingException;
 import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
@@ -15,7 +26,6 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.common.WebContext;
@@ -46,20 +56,6 @@ import org.folio.inventory.support.http.server.FailureResponseConsumer;
 import org.folio.inventory.support.http.server.JsonResponse;
 import org.folio.inventory.support.http.server.RedirectResponse;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
-import org.folio.inventory.support.http.server.SuccessResponse;
-
-import io.vertx.core.CompositeFuture;
-import io.vertx.core.Future;
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.BodyHandler;
-
 import static io.netty.util.internal.StringUtil.COMMA;
 import static org.folio.inventory.support.http.server.SuccessResponse.noContent;
 
@@ -611,6 +607,7 @@ public class Instances {
     putIfNotNull(resp, Instance.STATUS_ID_KEY, instance.getStatusId());
     putIfNotNull(resp, Instance.STATUS_UPDATED_DATE_KEY, instance.getStatusUpdatedDate());
     putIfNotNull(resp, Instance.METADATA_KEY, instance.getMetadata());
+    putIfNotNull(resp, Instance.TAGS_KEY, new JsonObject().put(Instance.TAG_LIST_KEY, new JsonArray(instance.getTags())));
 
     try {
       URL selfUrl = context.absoluteUrl(String.format("%s/%s",
@@ -681,6 +678,9 @@ public class Instances {
           .collect(Collectors.toList())
           : new ArrayList<>();
 
+    List<String> tags = instanceRequest.containsKey(Instance.TAGS_KEY)
+      ? getTags(instanceRequest) : new ArrayList<>();
+
     return new Instance(
       instanceRequest.getString("id"),
       instanceRequest.getString("hrid"),
@@ -713,7 +713,15 @@ public class Instances {
       .setStatisticalCodeIds(toListOfStrings(instanceRequest, Instance.STATISTICAL_CODE_IDS_KEY))
       .setSourceRecordFormat(instanceRequest.getString(Instance.SOURCE_RECORD_FORMAT_KEY))
       .setStatusId(instanceRequest.getString(Instance.STATUS_ID_KEY))
-      .setStatusUpdatedDate(instanceRequest.getString(Instance.STATUS_UPDATED_DATE_KEY));
+      .setStatusUpdatedDate(instanceRequest.getString(Instance.STATUS_UPDATED_DATE_KEY))
+      .setTags(tags);
+  }
+
+  private List<String> getTags(JsonObject instanceRequest) {
+
+    final JsonObject tags = instanceRequest.getJsonObject(Instance.TAGS_KEY);
+    return tags.containsKey(Instance.TAG_LIST_KEY) ?
+     JsonArrayHelper.toListOfStrings(tags.getJsonArray(Instance.TAG_LIST_KEY)) : new ArrayList<>();
   }
 
   // Utilities
