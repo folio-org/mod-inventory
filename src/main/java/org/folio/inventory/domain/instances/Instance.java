@@ -42,6 +42,8 @@ public class Instance {
   public static final String STATUS_ID_KEY = "statusId";
   public static final String STATUS_UPDATED_DATE_KEY = "statusUpdatedDate";
   public static final String METADATA_KEY = "metadata";
+  public static final String TAGS_KEY = "tags";
+  public static final String TAG_LIST_KEY = "tagList";
 
   private final String id;
   private final String hrid;
@@ -76,6 +78,7 @@ public class Instance {
   private String statusId;
   private String statusUpdatedDate;
   private Metadata metadata = null;
+  private List<String> tag;
 
   public Instance(
     String id,
@@ -231,6 +234,11 @@ public class Instance {
     return this;
   }
 
+  public Instance setTags(List<String> tag) {
+    this.tag = tag;
+    return this;
+  }
+
   public boolean hasMetadata () {
     return this.metadata != null;
   }
@@ -368,6 +376,10 @@ public class Instance {
     return metadata;
   }
 
+  public List<String> getTags() {
+    return tag;
+  }
+
   public Instance copyWithNewId(String newId) {
     return new Instance(newId, null, this.source, this.title, this.instanceTypeId)
             .setIndexTitle(indexTitle)
@@ -424,7 +436,8 @@ public class Instance {
             .setSourceRecordFormat(sourceRecordFormat)
             .setStatusId(statusId)
             .setStatusUpdatedDate(statusUpdatedDate)
-            .setMetadata(metadata);
+            .setMetadata(metadata)
+            .setTags(tag);
   }
 
   public Instance addIdentifier(Identifier identifier) {
