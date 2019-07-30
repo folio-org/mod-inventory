@@ -255,8 +255,8 @@ public class InstancesApiExamples extends ApiTests {
     assertTrue(createdAngryPlanetInstance.containsKey(TAGS_KEY));
     final JsonObject tags = createdAngryPlanetInstance.getJsonObject(TAGS_KEY);
     assertTrue(tags.containsKey(TAG_LIST_KEY));
-    final JsonArray tagsList = tags.getJsonArray(TAG_LIST_KEY);
-    assertThat((ArrayList<String>)tagsList.getList(), hasItems(tagNameOne, tagNameTwo));
+    final JsonArray tagList = tags.getJsonArray(TAG_LIST_KEY);
+    assertThat((ArrayList<String>)tagList.getList(), hasItems(tagNameOne, tagNameTwo));
 
     // Get and assert treasureIslandInstance
     CompletableFuture<Response> getTreasureIslandInstanceCompleted = new CompletableFuture<>();

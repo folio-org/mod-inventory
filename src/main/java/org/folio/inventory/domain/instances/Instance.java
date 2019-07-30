@@ -78,7 +78,7 @@ public class Instance {
   private String statusId;
   private String statusUpdatedDate;
   private Metadata metadata = null;
-  private List<String> tag;
+  private List<String> tags;
 
   public Instance(
     String id,
@@ -234,8 +234,8 @@ public class Instance {
     return this;
   }
 
-  public Instance setTags(List<String> tag) {
-    this.tag = tag;
+  public Instance setTags(List<String> tags) {
+    this.tags = tags;
     return this;
   }
 
@@ -377,7 +377,7 @@ public class Instance {
   }
 
   public List<String> getTags() {
-    return tag;
+    return tags;
   }
 
   public Instance copyWithNewId(String newId) {
@@ -437,7 +437,7 @@ public class Instance {
             .setStatusId(statusId)
             .setStatusUpdatedDate(statusUpdatedDate)
             .setMetadata(metadata)
-            .setTags(tag);
+            .setTags(tags);
   }
 
   public Instance addIdentifier(Identifier identifier) {
