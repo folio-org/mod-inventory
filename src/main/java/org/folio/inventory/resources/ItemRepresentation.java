@@ -135,6 +135,7 @@ class ItemRepresentation {
     includeIfPresent(representation, Item.ITEM_DAMAGED_STATUS_DATE_KEY, item.getItemDamagedStatusDate());
     includeIfPresent(representation, Item.ACCESSION_NUMBER_KEY, item.getAccessionNumber());
     includeIfPresent(representation, Item.ITEM_IDENTIFIER_KEY, item.getItemIdentifier());
+    includeIfPresent(representation,Item.TAGS_KEY, new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray(item.getTags())));
     representation.put(Item.YEAR_CAPTION_KEY, item.getYearCaption());
     representation.put(Item.ELECTRONIC_ACCESS_KEY, item.getElectronicAccess());
     representation.put(Item.STATISTICAL_CODE_IDS_KEY, item.getStatisticalCodeIds());

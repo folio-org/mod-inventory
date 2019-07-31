@@ -18,11 +18,13 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.assertThat;
 import static support.matchers.TextDateTimeMatcher.withinSecondsAfter;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -31,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.lang3.StringUtils;
+import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
@@ -47,6 +50,7 @@ import api.support.ApiTests;
 import api.support.InstanceApiClient;
 import api.support.builders.HoldingRequestBuilder;
 import api.support.builders.ItemRequestBuilder;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public class ItemApiExamples extends ApiTests {
@@ -73,11 +77,19 @@ public class ItemApiExamples extends ApiTests {
       .withBarcode("645398607547")
       .temporarilyInReadingRoom()
       .canCirculate()
+      .withTagList(new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray().add("test-tag")))
       .temporarilyCourseReserves());
 
     JsonObject createdItem = itemsClient.getById(postResponse.getId()).getJson();
 
     assertThat(createdItem.containsKey("id"), is(true));
+
+    assertThat(createdItem.containsKey(Item.TAGS_KEY), is(true));
+    final JsonObject tags = createdItem.getJsonObject(Item.TAGS_KEY);
+    assertThat(tags.containsKey(Item.TAG_LIST_KEY), is(true));
+    final JsonArray tagList = tags.getJsonArray(Item.TAG_LIST_KEY);
+    assertThat((ArrayList<String>)tagList.getList(), hasItem("test-tag"));
+
     assertThat(createdItem.getString("title"), is("Long Way to a Small Angry Planet"));
     assertThat(createdItem.getString("barcode"), is("645398607547"));
     assertThat(createdItem.getJsonObject("status").getString("name"), is("Available"));
@@ -128,6 +140,7 @@ public class ItemApiExamples extends ApiTests {
       .withBarcode("645398607547")
       .temporarilyInReadingRoom()
       .canCirculate()
+      .withTagList(new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray().add("test-tag").add("test-tag2")))
       .temporarilyCourseReserves());
 
     JsonObject createdItem = itemsClient.getById(postResponse.getId()).getJson();
@@ -139,6 +152,14 @@ public class ItemApiExamples extends ApiTests {
     assertThat(createdItem.getJsonObject("status").getString("name"), is("Available"));
 
     JsonObject materialType = createdItem.getJsonObject("materialType");
+
+    assertThat(createdItem.containsKey(Item.TAGS_KEY), is(true));
+    final JsonObject tags = createdItem.getJsonObject(Item.TAGS_KEY);
+    assertThat(tags.containsKey(Item.TAG_LIST_KEY), is(true));
+    final JsonArray tagList = tags.getJsonArray(Item.TAG_LIST_KEY);
+    assertThat(tagList.size(), is(2));
+    assertThat((ArrayList<String>)tagList.getList(), hasItem("test-tag"));
+    assertThat((ArrayList<String>)tagList.getList(), hasItem("test-tag2"));
 
     assertThat(materialType.getString("id"), is(ApiTestSuite.getBookMaterialType()));
     assertThat(materialType.getString("name"), is("Book"));
@@ -367,12 +388,14 @@ public class ItemApiExamples extends ApiTests {
       .withBarcode("645398607547")
       .canCirculate()
       .temporarilyInReadingRoom()
+      .withTagList(new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray().add("test-tag")))
       .create();
 
     itemsClient.create(newItemRequest);
 
     JsonObject updateItemRequest = newItemRequest.copy()
-      .put("status", new JsonObject().put("name", "Checked Out"));
+      .put("status", new JsonObject().put("name", "Checked Out"))
+      .put("tags", new JsonObject().put("tagList", new JsonArray().add("")));
 
     itemsClient.replace(itemId, updateItemRequest);
 
@@ -380,6 +403,14 @@ public class ItemApiExamples extends ApiTests {
 
     assertThat(getResponse.getStatusCode(), is(200));
     JsonObject updatedItem = getResponse.getJson();
+
+    assertThat(updatedItem.containsKey(Item.TAGS_KEY), is(true));
+    final JsonObject tags = updatedItem.getJsonObject(Item.TAGS_KEY);
+
+    assertThat(tags.containsKey(Item.TAG_LIST_KEY), is(true));
+
+    final JsonArray tagList = tags.getJsonArray(Item.TAG_LIST_KEY);
+    assertThat((ArrayList<String>)tagList.getList(), hasItem(""));
 
     assertThat(updatedItem.containsKey("id"), is(true));
     assertThat(updatedItem.getString("title"), is("Long Way to a Small Angry Planet"));

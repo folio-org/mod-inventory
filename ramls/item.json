@@ -389,6 +389,12 @@
       "type": "object",
       "$ref": "raml-util/schemas/metadata.schema",
       "readonly": true
+    },
+    "tags": {
+      "description": "arbitrary tags associated with this item",
+      "id": "tags",
+      "type": "object",
+      "$ref": "raml-util/schemas/tags.schema"
     }
   },
   "additionalProperties": false,

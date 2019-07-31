@@ -18,6 +18,11 @@
       "permanentLoanType": {
         "id": "11477028-d9e6-44d2-9364-5c6f51053f51",
         "name": "Reading Room"
+      },
+      "tags" : {
+        "tagList" : [
+          "important"
+        ]
       }
     },
     {
@@ -47,6 +52,11 @@
       "temporaryLocation": {
         "id": "0df935eb-f3f4-4741-9ac6-33c500174b96",
         "name": "Annex"
+      },
+      "tags" : {
+        "tagList" : [
+          "important"
+        ]
       }
     }
   ],
