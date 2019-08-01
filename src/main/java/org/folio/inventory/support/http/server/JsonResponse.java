@@ -54,17 +54,6 @@ public class JsonResponse {
     response(response, new JsonObject().put(ERRORS, errorsArray), 422);
   }
 
-  public static void badRequest(
-    HttpServerResponse response,
-    ValidationError error) {
-
-    JsonArray errorsArray = new JsonArray();
-
-    errorsArray.add(error.toJson());
-
-    response(response, new JsonObject().put(ERRORS, errorsArray), 400);
-  }
-
   public static void unprocessableEntity(HttpServerResponse response, String errorMessage) {
     JsonArray error = new JsonArray();
     error.add(errorMessage);
