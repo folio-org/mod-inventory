@@ -41,7 +41,10 @@ import static api.support.InstanceSamples.taoOfPooh;
 import static api.support.InstanceSamples.temeraire;
 import static api.support.InstanceSamples.treasureIslandInstance;
 import static api.support.InstanceSamples.uprooted;
-import static org.hamcrest.CoreMatchers.equalTo;
+import static org.folio.inventory.domain.instances.Instance.TAGS_KEY;
+import static org.folio.inventory.domain.instances.Instance.TAG_LIST_KEY;
+import static org.hamcrest.CoreMatchers.hasItem;
+import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
@@ -51,7 +54,11 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 public class InstancesApiExamples extends ApiTests {
+
   private static final InventoryConfiguration config = new InventoryConfigurationImpl();
+  private final String tagNameOne = "important";
+  private final String tagNameTwo = "very important";
+
   public InstancesApiExamples() throws MalformedURLException {
     super();
   }
@@ -73,7 +80,8 @@ public class InstancesApiExamples extends ApiTests {
         .put("contributorNameTypeId", ApiTestSuite.getPersonalContributorNameType())
         .put("name", "Chambers, Becky")))
       .put("source", "Local")
-      .put("instanceTypeId", ApiTestSuite.getTextInstanceType());
+      .put("instanceTypeId", ApiTestSuite.getTextInstanceType())
+      .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameOne)));
 
     CompletableFuture<Response> postCompleted = new CompletableFuture<>();
 
@@ -117,6 +125,12 @@ public class InstancesApiExamples extends ApiTests {
       is(ApiTestSuite.getPersonalContributorNameType()));
 
     assertThat(firstContributor.getString("name"), is("Chambers, Becky"));
+
+    assertTrue(createdInstance.containsKey(TAGS_KEY));
+    final JsonObject tags = createdInstance.getJsonObject(TAGS_KEY);
+    assertTrue(tags.containsKey(TAG_LIST_KEY));
+    final JsonArray tagList = tags.getJsonArray(TAG_LIST_KEY);
+    assertThat((ArrayList<String>)tagList.getList(), hasItem(tagNameOne));
 
     expressesDublinCoreMetadata(createdInstance);
     dublinCoreContextLinkRespectsWayResourceWasReached(createdInstance);
@@ -203,7 +217,8 @@ public class InstancesApiExamples extends ApiTests {
       .put("id", angryPlanetInstanceId)
       .put("title", "Long Way to a Small Angry Planet")
       .put("source", "Local")
-      .put("instanceTypeId", ApiTestSuite.getTextInstanceType());
+      .put("instanceTypeId", ApiTestSuite.getTextInstanceType())
+      .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameOne).add(tagNameTwo)));
 
     String treasureIslandInstanceId = UUID.randomUUID().toString();
     JsonObject treasureIslandInstance = new JsonObject()
@@ -238,6 +253,12 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(createdAngryPlanetInstance.getString("title"), is("Long Way to a Small Angry Planet"));
     assertThat(createdAngryPlanetInstance.getString("source"), is("Local"));
     assertThat(createdAngryPlanetInstance.getString("instanceTypeId"), is(ApiTestSuite.getTextInstanceType()));
+
+    assertTrue(createdAngryPlanetInstance.containsKey(TAGS_KEY));
+    final JsonObject tags = createdAngryPlanetInstance.getJsonObject(TAGS_KEY);
+    assertTrue(tags.containsKey(TAG_LIST_KEY));
+    final JsonArray tagList = tags.getJsonArray(TAG_LIST_KEY);
+    assertThat((ArrayList<String>)tagList.getList(), hasItems(tagNameOne, tagNameTwo));
 
     // Get and assert treasureIslandInstance
     CompletableFuture<Response> getTreasureIslandInstanceCompleted = new CompletableFuture<>();
@@ -362,7 +383,8 @@ public class InstancesApiExamples extends ApiTests {
     JsonObject newInstance = createInstance(smallAngryPlanet(id));
 
     JsonObject updateInstanceRequest = smallAngryPlanet(id)
-      .put("title", "The Long Way to a Small, Angry Planet");
+      .put("title", "The Long Way to a Small, Angry Planet")
+      .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameTwo)));
 
     URL instanceLocation = new URL(String.format("%s/%s", ApiRoot.instances(),
       newInstance.getString("id")));
@@ -389,6 +411,12 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(updatedInstance.getString("id"), is(newInstance.getString("id")));
     assertThat(updatedInstance.getString("title"), is("The Long Way to a Small, Angry Planet"));
     assertThat(updatedInstance.getJsonArray("identifiers").size(), is(1));
+
+    assertTrue(updatedInstance.containsKey(TAGS_KEY));
+    final JsonObject tags = updatedInstance.getJsonObject(TAGS_KEY);
+    assertTrue(tags.containsKey(TAG_LIST_KEY));
+    final JsonArray tagList = tags.getJsonArray(TAG_LIST_KEY);
+    assertThat((ArrayList<String>)tagList.getList(), hasItem(tagNameTwo));
 
     selfLinkRespectsWayResourceWasReached(updatedInstance);
     selfLinkShouldBeReachable(updatedInstance);

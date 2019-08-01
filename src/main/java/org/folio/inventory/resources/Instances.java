@@ -611,6 +611,7 @@ public class Instances {
     putIfNotNull(resp, Instance.STATUS_ID_KEY, instance.getStatusId());
     putIfNotNull(resp, Instance.STATUS_UPDATED_DATE_KEY, instance.getStatusUpdatedDate());
     putIfNotNull(resp, Instance.METADATA_KEY, instance.getMetadata());
+    putIfNotNull(resp, Instance.TAGS_KEY, new JsonObject().put(Instance.TAG_LIST_KEY, new JsonArray(instance.getTags())));
 
     try {
       URL selfUrl = context.absoluteUrl(String.format("%s/%s",
@@ -681,6 +682,9 @@ public class Instances {
           .collect(Collectors.toList())
           : new ArrayList<>();
 
+    List<String> tags = instanceRequest.containsKey(Instance.TAGS_KEY)
+      ? getTags(instanceRequest) : new ArrayList<>();
+
     return new Instance(
       instanceRequest.getString("id"),
       instanceRequest.getString("hrid"),
@@ -713,7 +717,15 @@ public class Instances {
       .setStatisticalCodeIds(toListOfStrings(instanceRequest, Instance.STATISTICAL_CODE_IDS_KEY))
       .setSourceRecordFormat(instanceRequest.getString(Instance.SOURCE_RECORD_FORMAT_KEY))
       .setStatusId(instanceRequest.getString(Instance.STATUS_ID_KEY))
-      .setStatusUpdatedDate(instanceRequest.getString(Instance.STATUS_UPDATED_DATE_KEY));
+      .setStatusUpdatedDate(instanceRequest.getString(Instance.STATUS_UPDATED_DATE_KEY))
+      .setTags(tags);
+  }
+
+  private List<String> getTags(JsonObject instanceRequest) {
+
+    final JsonObject tags = instanceRequest.getJsonObject(Instance.TAGS_KEY);
+    return tags.containsKey(Instance.TAG_LIST_KEY) ?
+     JsonArrayHelper.toListOfStrings(tags.getJsonArray(Instance.TAG_LIST_KEY)) : new ArrayList<>();
   }
 
   // Utilities

@@ -75,6 +75,7 @@ class ExternalStorageModuleInstanceCollection
     includeIfPresent(instanceToSend, Instance.SOURCE_RECORD_FORMAT_KEY, instance.getSourceRecordFormat());
     instanceToSend.put(Instance.STATUS_ID_KEY, instance.getStatusId());
     instanceToSend.put(Instance.STATUS_UPDATED_DATE_KEY, instance.getStatusUpdatedDate());
+    instanceToSend.put(Instance.TAGS_KEY, new JsonObject().put(Instance.TAG_LIST_KEY, new JsonArray(instance.getTags())));
 
     return instanceToSend;
   }
@@ -130,6 +131,9 @@ class ExternalStorageModuleInstanceCollection
       .map(it -> new Note(it))
       .collect(Collectors.toList());
 
+    List<String> tags = instanceFromServer.containsKey(Instance.TAGS_KEY)
+      ? jsonArrayAsListOfStrings(instanceFromServer.getJsonObject(Instance.TAGS_KEY), Instance.TAG_LIST_KEY)
+      : new ArrayList<>();
 
     JsonObject metadataJson = instanceFromServer.getJsonObject(Instance.METADATA_KEY);
 
@@ -164,7 +168,8 @@ class ExternalStorageModuleInstanceCollection
       .setSourceRecordFormat(instanceFromServer.getString(Instance.SOURCE_RECORD_FORMAT_KEY))
       .setStatusId(instanceFromServer.getString(Instance.STATUS_ID_KEY))
       .setStatusUpdatedDate(instanceFromServer.getString(Instance.STATUS_UPDATED_DATE_KEY))
-      .setMetadata(new Metadata(metadataJson));
+      .setMetadata(new Metadata(metadataJson))
+      .setTags(tags);
   }
 
   @Override
