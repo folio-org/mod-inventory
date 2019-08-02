@@ -329,7 +329,7 @@ public class InstancesApiExamples extends ApiTests {
     Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
 
     // Assertions
-    assertThat(postResponse.getStatusCode(), is(HttpResponseStatus.INTERNAL_SERVER_ERROR.code()));
+    assertThat(postResponse.getStatusCode(), is(HttpResponseStatus.CREATED.code()));
     assertEquals(postResponse.getJson().getJsonArray("instances").size(), 2);
     assertEquals(postResponse.getJson().getJsonArray("errorMessages").size(), 1);
     assertEquals(postResponse.getJson().getInteger("totalRecords"), Integer.valueOf(2));
