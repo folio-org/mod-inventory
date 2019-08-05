@@ -1,6 +1,6 @@
 #%RAML 1.0
 title: Inventory API
-version: v1
+version: v2
 protocols: [ HTTP, HTTPS ]
 baseUri: http://localhost
 
@@ -9,7 +9,6 @@ documentation:
     content: <b>API for validation and conversion of ISBN-10 and ISBN-13 numbers </b>
 
 types:
-  errors: !include raml-util/schemas/errors.schema
   isbn:
     type: object
     properties:
@@ -47,11 +46,8 @@ types:
         400:
           description: "Bad request, an invalid ISBNs is provided"
           body:
-            application/json:
-              type: errors
-              example:
-                strict: false
-                value: !include raml-util/examples/errors.sample
+            text/plain:
+              example: "ISBN value is invalid"
 
   /convertTo10:
     get:
@@ -77,11 +73,9 @@ types:
         400:
           description: "Bad request, an invalid ISBNs is provided"
           body:
-            application/json:
-              type: errors
-              example:
-                strict: false
-                value: !include raml-util/examples/errors.sample
+            text/plain:
+              example: "ISBN value is invalid"
+
   /validator:
     get:
       description: Checks the code is a valid ISBN code.
@@ -97,8 +91,5 @@ types:
         400:
           description: "Bad request, invalid query parameter is provided"
           body:
-            application/json:
-              type: errors
-              example:
-                strict: false
-                value: !include raml-util/examples/errors.sample
+            text/plain:
+              example: "Only one of following query params must be specified: isbn, isbn10, isbn13"

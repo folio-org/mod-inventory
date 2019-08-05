@@ -3,15 +3,13 @@ package org.folio.inventory.resources;
 import static org.apache.commons.collections.CollectionUtils.isEmpty;
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.folio.inventory.support.http.server.JsonResponse.badRequest;
+import static org.folio.inventory.support.http.server.ClientErrorResponse.badRequest;
 
 import java.lang.invoke.MethodHandles;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
-
 import org.folio.inventory.support.http.server.JsonResponse;
-import org.folio.inventory.support.http.server.ValidationError;
 import org.folio.isbn.IsbnUtil;
 
 import com.github.ladutsko.isbn.ISBNException;
@@ -35,7 +33,7 @@ public class IsbnUtilsApi {
   public static final String IS_VALID = "isValid";
   public static final String CONVERTER_MISSING_REQUIRED_PARAM_MSG = "Isbn must be specified";
   public static final String INVALID_HYPHENS_VALUE_MSG = "Hyphens must be true or false";
-  public static final String INVALID_ISBN_MESSAGE = "ISBN value is invalid";
+  public static final String INVALID_ISBN_MESSAGE = "ISBN value %s is invalid";
   public static final String VALIDATOR_MISSING_REQUIRED_PARAMS_MSG = "Only one of following query params must be specified: isbn, isbn10, isbn13";
   public static final String QUERY = "query";
 
@@ -84,12 +82,10 @@ public class IsbnUtilsApi {
 
     } catch (ISBNException e) {
       log.error(e);
-      ValidationError error = new ValidationError(e.getMessage(), ISBN_PARAM, isbnCode);
-      badRequest(routingContext.response(), error);
+      badRequest(routingContext.response(), String.format(e.getMessage(), isbnCode));
     } catch (IllegalArgumentException e) {
       log.error(e);
-      ValidationError error = new ValidationError(e.getMessage(), QUERY, routingContext.request().query());
-      badRequest(routingContext.response(), error);
+      badRequest(routingContext.response(), e.getMessage());
     }
   }
 
@@ -148,8 +144,7 @@ public class IsbnUtilsApi {
         isValid = IsbnUtil.isValid10DigitNumber(isbnCode) || IsbnUtil.isValid13DigitNumber(isbnCode);
         break;
       default:
-        badRequest(routingContext.response(),
-          new ValidationError(VALIDATOR_MISSING_REQUIRED_PARAMS_MSG, QUERY, routingContext.request().query()));
+        badRequest(routingContext.response(), VALIDATOR_MISSING_REQUIRED_PARAMS_MSG);
         return;
     }
 
