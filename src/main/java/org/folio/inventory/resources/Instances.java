@@ -205,13 +205,15 @@ public class Instances {
       JsonObject response = new JsonObject();
       if (ar.failed()) {
         List<String> errorMessages = futures.stream().filter(Future::failed).map(future -> future.cause().getMessage()).collect(Collectors.toList());
-        List<Object> savedInstances = futures.stream().filter(Future::succeeded).map(future -> future.result()).collect(Collectors.toList());
-        response.put("instances", new JsonArray(savedInstances));
+        List<JsonObject> savedInstances = futures.stream().filter(Future::succeeded)
+          .map(future -> toRepresentation((Instance) future.result(), new ArrayList<>(), new ArrayList<>(), webContext)).collect(Collectors.toList());
+        response.put("instances", savedInstances);
         response.put("errorMessages", new JsonArray(errorMessages));
         response.put("totalRecords", savedInstances.size());
         RedirectResponse.serverError(routingContext.response(), response.toBuffer());
       } else {
-        List<Object> savedInstances = ar.result().list();
+        List<JsonObject> savedInstances = ar.result().list().stream()
+          .map(instance -> toRepresentation((Instance) instance, new ArrayList<>(), new ArrayList<>(), webContext)).collect(Collectors.toList());
         response.put("instances", savedInstances);
         response.put("errorMessages", new JsonArray());
         response.put("totalRecords", savedInstances.size());
