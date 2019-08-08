@@ -85,8 +85,10 @@ public class ItemApiExamples extends ApiTests {
     assertThat(createdItem.containsKey("id"), is(true));
 
     assertThat(createdItem.containsKey(Item.TAGS_KEY), is(true));
+
     final JsonObject tags = createdItem.getJsonObject(Item.TAGS_KEY);
     assertThat(tags.containsKey(Item.TAG_LIST_KEY), is(true));
+
     final JsonArray tagList = tags.getJsonArray(Item.TAG_LIST_KEY);
     assertThat((ArrayList<String>)tagList.getList(), hasItem("test-tag"));
 
@@ -154,8 +156,10 @@ public class ItemApiExamples extends ApiTests {
     JsonObject materialType = createdItem.getJsonObject("materialType");
 
     assertThat(createdItem.containsKey(Item.TAGS_KEY), is(true));
+
     final JsonObject tags = createdItem.getJsonObject(Item.TAGS_KEY);
     assertThat(tags.containsKey(Item.TAG_LIST_KEY), is(true));
+
     final JsonArray tagList = tags.getJsonArray(Item.TAG_LIST_KEY);
     assertThat(tagList.size(), is(2));
     assertThat((ArrayList<String>)tagList.getList(), hasItem("test-tag"));
