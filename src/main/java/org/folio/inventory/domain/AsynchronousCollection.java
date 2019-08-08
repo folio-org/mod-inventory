@@ -5,6 +5,7 @@ import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 
+import java.util.List;
 import java.util.function.Consumer;
 
 public interface AsynchronousCollection<T> {
@@ -30,4 +31,10 @@ public interface AsynchronousCollection<T> {
   void update(T item,
               Consumer<Success<Void>> completionCallback,
               Consumer<Failure> failureCallback);
+
+  default void addBatch(List<T> items,
+                        Consumer<Success<BatchResult<T>>> resultCallback,
+                        Consumer<Failure> failureCallback) {
+    throw new UnsupportedOperationException();
+  }
 }

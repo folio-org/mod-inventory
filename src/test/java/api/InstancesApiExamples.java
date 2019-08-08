@@ -298,7 +298,7 @@ public class InstancesApiExamples extends ApiTests {
   }
 
   @Test
-  public void shouldReturnServerErrorIfOneOfInstancesPostedWithoutTitle() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+  public void shouldReturnCreatedIfOneOfInstancesPostedWithoutTitle() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
     // Prepare request data
     String angryPlanetInstanceId = UUID.randomUUID().toString();
     JsonObject angryPlanetInstance = new JsonObject()

@@ -2,6 +2,7 @@ package org.folio.inventory.resources;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
@@ -20,6 +21,7 @@ import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.config.InventoryConfiguration;
 import org.folio.inventory.config.InventoryConfigurationImpl;
+import org.folio.inventory.domain.BatchResult;
 import org.folio.inventory.domain.instances.AlternativeTitle;
 import org.folio.inventory.domain.instances.Classification;
 import org.folio.inventory.domain.instances.Contributor;
@@ -50,7 +52,6 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -63,7 +64,6 @@ import java.util.stream.Collectors;
 import static io.netty.util.internal.StringUtil.COMMA;
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.apache.http.HttpStatus.SC_CREATED;
 import static org.folio.inventory.support.http.server.SuccessResponse.noContent;
 
 public class Instances {
@@ -209,29 +209,32 @@ public class Instances {
       respondWithErrorMessages(errorMessages, routingContext);
     } else {
       setInstancesIdIfNecessary(validInstances);
-      requestBody.put(BATCH_RESPONSE_FIELD_INSTANCES, new JsonArray(validInstances));
+      List<Instance> instancesToCreate = validInstances.stream()
+        .map(this::requestToInstance)
+        .collect(Collectors.toList());
 
-      CollectionResourceClient instanceBatchClient = createInstanceBatchClient(routingContext, webContext);
-      if (instanceBatchClient != null) {
-        instanceBatchClient.post(requestBody, response -> {
-          JsonObject responseBody = response.getJson();
-          if (response.getStatusCode() == SC_CREATED) {
-            JsonArray createdInstances = responseBody.getJsonArray(BATCH_RESPONSE_FIELD_INSTANCES);
-            log.info(format("Was created instances from batch %d/%d", createdInstances.size(), requestBody.getInteger(BATCH_RESPONSE_FIELD_TOTAL_RECORDS)));
-            updateInstancesRelationships(validInstances, createdInstances, routingContext, webContext).setHandler(ar -> {
-              responseBody.getJsonArray(BATCH_RESPONSE_FIELD_ERROR_MESSAGES).addAll(new JsonArray(errorMessages));
-              RedirectResponse.created(routingContext.response(), responseBody.toBuffer());
-            });
-          } else {
-            RedirectResponse.serverError(routingContext.response(), responseBody.toBuffer());
-            log.error("All instances from batch were not created, cause:" + responseBody.getJsonArray(BATCH_RESPONSE_FIELD_ERROR_MESSAGES));
-          }
-        });
-      } else {
-        String message = "Can not processed batch instances, cause instances batch client was not created";
-        log.error(message);
-        respondWithErrorMessages(Collections.singletonList(message), routingContext);
-      }
+      storage.getInstanceCollection(webContext).addBatch(instancesToCreate, success -> {
+        BatchResult<Instance> batchResult = success.getResult();
+        List<Instance> createdInstances = batchResult.getBatchItems();
+        errorMessages.addAll(batchResult.getErrorMessages());
+
+        log.info(format("Was created instances from batch %d/%d", createdInstances.size(),
+          requestBody.getInteger(BATCH_RESPONSE_FIELD_TOTAL_RECORDS)));
+
+        if (!createdInstances.isEmpty()) {
+          updateInstancesRelationships(validInstances, createdInstances, routingContext, webContext).setHandler(ar -> {
+            JsonObject responseBody = getBatchResponse(createdInstances, errorMessages, webContext);
+            RedirectResponse.created(routingContext.response(), Buffer.buffer(responseBody.encodePrettily()));
+          });
+        } else {
+          JsonObject responseBody = getBatchResponse(createdInstances, errorMessages, webContext);
+          RedirectResponse.serverError(routingContext.response(), Buffer.buffer(responseBody.encodePrettily()));
+        }
+      },
+      failure -> {
+        RedirectResponse.serverError(routingContext.response(), Buffer.buffer(failure.getReason()));
+        log.error("All instances from batch were not created, cause:" + failure.getReason());
+      });
     }
   }
 
@@ -251,7 +254,7 @@ public class Instances {
       if (validationMessages.isEmpty()) {
         validInstances.add(instances.getJsonObject(i));
       } else {
-        errorMessages.add("Instance is not valid for further processing: " + errorMessages);
+        errorMessages.add("Instance is not valid for further processing: " + validationMessages);
       }
     }
     return Pair.of(validInstances, errorMessages);
@@ -287,6 +290,16 @@ public class Instances {
     RedirectResponse.serverError(routingContext.response(), responseBody.toBuffer());
   }
 
+  private JsonObject getBatchResponse(List<Instance> createdInstances, List<String> errorMessages, WebContext webContext) {
+    List<JsonObject> jsonInstances = createdInstances.stream()
+      .map(instance -> toRepresentation((Instance) instance, new ArrayList<>(), new ArrayList<>(), webContext)).collect(Collectors.toList());
+
+    return new JsonObject()
+      .put(BATCH_RESPONSE_FIELD_INSTANCES, new JsonArray(jsonInstances))
+      .put(BATCH_RESPONSE_FIELD_ERROR_MESSAGES, new JsonArray(errorMessages))
+      .put(BATCH_RESPONSE_FIELD_TOTAL_RECORDS, createdInstances.size());
+  }
+
   /**
    * Sets id to each instance if instance have not.
    *
@@ -307,7 +320,7 @@ public class Instances {
    * @param routingContext routingContext
    * @param webContext webContext
    */
-  private Future<CompositeFuture> updateInstancesRelationships(List<JsonObject> newInstances, JsonArray createdInstances,
+  private Future<CompositeFuture> updateInstancesRelationships(List<JsonObject> newInstances, List<Instance> createdInstances,
                                                                RoutingContext routingContext, WebContext webContext) {
     Future<CompositeFuture> resultFuture = Future.future();
     try {
@@ -315,8 +328,7 @@ public class Instances {
         .collect(Collectors.toMap(instance -> instance.getString("id"), this::requestToInstance));
 
       List<Future> updateRelationshipsFutures = new ArrayList<>();
-      for (int i = 0; i < createdInstances.size(); i++) {
-        Instance createdInstance = requestToInstance(createdInstances.getJsonObject(i));
+      for (Instance createdInstance : createdInstances) {
         Instance newInstance = mapInstanceById.get(createdInstance.getId());
         if (newInstance != null) {
           createdInstance.setParentInstances(newInstance.getParentInstances());
@@ -332,18 +344,6 @@ public class Instances {
       resultFuture.fail(e);
     }
     return resultFuture;
-  }
-
-  private CollectionResourceClient createInstanceBatchClient(RoutingContext routingContext, WebContext context) {
-    CollectionResourceClient instanceBatchClient = null;
-    try {
-      OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
-      instanceBatchClient = new CollectionResourceClient(okapiClient,
-        new URL(context.getOkapiLocation() + "/instance-storage/batch/instances"));
-    } catch (MalformedURLException mfue) {
-      log.error(mfue);
-    }
-    return instanceBatchClient;
   }
 
   private void update(RoutingContext rContext) {
