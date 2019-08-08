@@ -199,7 +199,7 @@ abstract class ExternalStorageModuleCollection<T> {
     request.end();
   }
 
-  private void acceptJson(HttpClientRequest request) {
+  protected void acceptJson(HttpClientRequest request) {
     accept(request, ContentType.APPLICATION_JSON);
   }
 
@@ -224,7 +224,7 @@ abstract class ExternalStorageModuleCollection<T> {
     return it -> failureCallback.accept(new Failure(it.getMessage(), null));
   }
 
-  private void jsonContentType(HttpClientRequest request) {
+  protected void jsonContentType(HttpClientRequest request) {
     request.putHeader(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_JSON);
   }
 
@@ -258,7 +258,7 @@ abstract class ExternalStorageModuleCollection<T> {
       });
   }
 
-  private HttpClientRequest createRequest(
+  protected HttpClientRequest createRequest(
     HttpMethod method,
     String location,
     Handler<HttpClientResponse> onResponse,

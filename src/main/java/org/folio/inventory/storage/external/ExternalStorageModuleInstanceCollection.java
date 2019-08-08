@@ -1,13 +1,17 @@
 package org.folio.inventory.storage.external;
 
-import static org.folio.inventory.support.JsonArrayHelper.toList;
-import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpClientRequest;
+import io.vertx.core.http.HttpClientResponse;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import org.folio.inventory.common.domain.Failure;
+import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.domain.BatchResult;
 import org.folio.inventory.domain.Metadata;
 import org.folio.inventory.domain.instances.AlternativeTitle;
 import org.folio.inventory.domain.instances.Classification;
@@ -19,14 +23,24 @@ import org.folio.inventory.domain.instances.Note;
 import org.folio.inventory.domain.instances.Publication;
 import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+
+import static io.vertx.core.http.HttpHeaders.CONTENT_TYPE;
+import static org.apache.http.HttpStatus.SC_CREATED;
+import static org.apache.http.HttpStatus.SC_INTERNAL_SERVER_ERROR;
+import static org.folio.inventory.support.JsonArrayHelper.toList;
+import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
+import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
 
 class ExternalStorageModuleInstanceCollection
   extends ExternalStorageModuleCollection<Instance>
   implements InstanceCollection {
+
+  private String batchAddress;
 
   ExternalStorageModuleInstanceCollection(
     Vertx vertx,
@@ -37,6 +51,7 @@ class ExternalStorageModuleInstanceCollection
 
     super(vertx, String.format("%s/%s", baseAddress, "instance-storage/instances"),
       tenant, token, "instances", client);
+    batchAddress = String.format("%s/%s", baseAddress, "instance-storage/batch/instances");
   }
 
   @Override
@@ -183,4 +198,51 @@ class ExternalStorageModuleInstanceCollection
       : new ArrayList<>();
   }
 
+  @Override
+  public void addBatch(List<Instance> items,
+              Consumer<Success<BatchResult<Instance>>> resultCallback, Consumer<Failure> failureCallback) {
+
+    Handler<HttpClientResponse> onResponse = response ->
+      response.bodyHandler(buffer -> {
+        String responseBody = buffer.getString(0, buffer.length());
+
+        if (isBatchResponse(response)) {
+          JsonObject batchResponse = new JsonObject(responseBody);
+          JsonArray createdInstances = batchResponse.getJsonArray("instances");
+
+          List<Instance> instancesList  = new ArrayList<>();
+          for (int i = 0; i < createdInstances.size(); i++) {
+            instancesList.add(mapFromJson(createdInstances.getJsonObject(i)));
+          }
+          BatchResult<Instance> batchResult = new BatchResult<>();
+          batchResult.setBatchItems(instancesList);
+          batchResult.setErrorMessages(batchResponse.getJsonArray("errorMessages").getList());
+
+          resultCallback.accept(new Success<>(batchResult));
+        }
+        else {
+          failureCallback.accept(new Failure(responseBody, response.statusCode()));
+        }
+      });
+
+    List<JsonObject> jsonList = items.stream()
+      .map(this::mapToRequest)
+      .collect(Collectors.toList());
+
+    JsonObject batchRequest = new JsonObject()
+      .put("instances", new JsonArray(jsonList))
+      .put("totalRecords", jsonList.size());
+
+    HttpClientRequest request = createRequest(HttpMethod.POST, batchAddress, onResponse, failureCallback);
+    jsonContentType(request);
+    acceptJson(request);
+    request.end(Json.encodePrettily(batchRequest));
+  }
+
+  private boolean isBatchResponse(HttpClientResponse response) {
+    int statusCode = response.statusCode();
+    String contentHeaderValue = response.getHeader(CONTENT_TYPE);
+    return statusCode == SC_CREATED
+      || (statusCode == SC_INTERNAL_SERVER_ERROR && APPLICATION_JSON.equals(contentHeaderValue));
+  }
 }

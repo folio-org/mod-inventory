@@ -76,6 +76,35 @@ class FakeStorageModule extends AbstractVerticle {
     router.delete(rootPath + "/:id").handler(this::delete);
   }
 
+  void registerBatch(Router router, String batchPath) {
+    String pathTree = batchPath + "/*";
+
+    router.post(pathTree).handler(BodyHandler.create());
+    router.route(batchPath).handler(this::checkTokenHeader);
+    router.post(batchPath).handler(this::createBatch);
+  }
+
+  private void createBatch(RoutingContext routingContext) {
+    WebContext context = new WebContext(routingContext);
+    JsonObject body = getJsonFromBody(routingContext);
+    JsonArray batchElements = body.getJsonArray(collectionPropertyName);
+
+    for (int i = 0; i < batchElements.size(); i++) {
+      JsonObject element = batchElements.getJsonObject(i);
+      setDefaultProperties(element);
+      String id = element.getString("id");
+      getResourcesForTenant(context).put(id, element);
+      System.out.println(
+        String.format("Created %s resource: %s", recordTypeName, id));
+    }
+
+    JsonObject responseBody = new JsonObject()
+      .put(collectionPropertyName, batchElements)
+      .put("errorMessages", new JsonArray())
+      .put("totalRecords", batchElements.size());
+    JsonResponse.created(routingContext.response(), responseBody);
+  }
+
   private void create(RoutingContext routingContext) {
 
     WebContext context = new WebContext(routingContext);

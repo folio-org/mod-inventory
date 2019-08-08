@@ -64,12 +64,14 @@ public class FakeOkapi extends AbstractVerticle {
   }
 
   private void registerFakeInstanceStorageModule(Router router) {
-    new FakeStorageModuleBuilder()
+    FakeStorageModule fakeInstanceStorageModule = new FakeStorageModuleBuilder()
       .withRecordName("instance")
       .withRootPath("/instance-storage/instances")
       .withCollectionPropertyName("instances")
       .withRequiredProperties("source", "title", "contributors", "instanceTypeId")
-      .create().register(router);
+      .create();
+    fakeInstanceStorageModule.register(router);
+    fakeInstanceStorageModule.registerBatch(router, "/instance-storage/batch/instances");
 
     new FakeStorageModuleBuilder()
       .withRecordName("instance relationship")
@@ -77,7 +79,6 @@ public class FakeOkapi extends AbstractVerticle {
       .withCollectionPropertyName("instanceRelationships")
       .withRequiredProperties("superInstanceId", "subInstanceId", "instanceRelationshipTypeId")
       .create().register(router);
-
   }
 
   private void registerFakeHoldingStorageModule(Router router) {
