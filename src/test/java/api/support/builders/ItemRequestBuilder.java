@@ -26,11 +26,12 @@ public class ItemRequestBuilder implements Builder {
   private final JsonObject permanentLoanType;
   private final JsonObject temporaryLoanType;
   private final JsonArray circulationNotes;
+  private final JsonObject tags;
 
   public ItemRequestBuilder() {
     this(UUID.randomUUID(), null, null, null, "645398607547",
       AVAILABLE_STATUS, bookMaterialType(), null, null, null,
-      canCirculateLoanType(), null, null
+      canCirculateLoanType(), null, null, null
     );
   }
 
@@ -47,7 +48,8 @@ public class ItemRequestBuilder implements Builder {
     JsonObject temporaryLocation,
     JsonObject permanentLoanType,
     JsonObject temporaryLoanType,
-    JsonArray circulationNotes) {
+    JsonArray circulationNotes,
+    JsonObject tags) {
 
     this.id = id;
     this.holdingId = holdingId;
@@ -62,6 +64,7 @@ public class ItemRequestBuilder implements Builder {
     this.temporaryLoanType = temporaryLoanType;
     this.materialType = materialType;
     this.circulationNotes = circulationNotes;
+    this.tags = tags;
   }
 
   public JsonObject create() {
@@ -91,6 +94,8 @@ public class ItemRequestBuilder implements Builder {
 
     includeWhenPresent(itemRequest, "circulationNotes", circulationNotes);
 
+    includeWhenPresent(itemRequest, "tags", tags);
+
     return itemRequest;
   }
 
@@ -108,7 +113,8 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLocation,
       this.permanentLoanType,
       this.temporaryLoanType,
-      this.circulationNotes);
+      this.circulationNotes,
+      this.tags);
   }
 
   public ItemRequestBuilder forHolding(UUID holdingId) {
@@ -125,7 +131,8 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLocation,
       this.permanentLoanType,
       this.temporaryLoanType,
-      this.circulationNotes);
+      this.circulationNotes,
+      this.tags);
   }
 
   public ItemRequestBuilder withReadOnlyTitle(String title) {
@@ -142,7 +149,8 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLocation,
       this.permanentLoanType,
       this.temporaryLoanType,
-      this.circulationNotes);
+      this.circulationNotes,
+      this.tags);
   }
 
   public ItemRequestBuilder withReadOnlyCallNumber(String callNumber) {
@@ -159,7 +167,8 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLocation,
       this.permanentLoanType,
       this.temporaryLoanType,
-      this.circulationNotes);
+      this.circulationNotes,
+      this.tags);
   }
 
   public ItemRequestBuilder withBarcode(String barcode) {
@@ -176,7 +185,8 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLocation,
       this.permanentLoanType,
       this.temporaryLoanType,
-      this.circulationNotes);
+      this.circulationNotes,
+      this.tags);
   }
 
   public ItemRequestBuilder withNoBarcode() {
@@ -197,7 +207,8 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLocation,
       this.permanentLoanType,
       this.temporaryLoanType,
-      this.circulationNotes);
+      this.circulationNotes,
+      this.tags);
   }
 
   private ItemRequestBuilder withMaterialType(JsonObject materialType) {
@@ -214,7 +225,8 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLocation,
       this.permanentLoanType,
       this.temporaryLoanType,
-      this.circulationNotes);
+      this.circulationNotes,
+      this.tags);
   }
 
   public ItemRequestBuilder book() {
@@ -243,7 +255,8 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLocation,
       this.permanentLoanType,
       this.temporaryLoanType,
-      this.circulationNotes);
+      this.circulationNotes,
+      this.tags);
   }
 
   private ItemRequestBuilder withTemporaryLocation(JsonObject location) {
@@ -260,7 +273,8 @@ public class ItemRequestBuilder implements Builder {
       location,
       this.permanentLoanType,
       this.temporaryLoanType,
-      this.circulationNotes);
+      this.circulationNotes,
+      this.tags);
   }
 
     private ItemRequestBuilder withPermanentLocation(JsonObject location) {
@@ -277,7 +291,8 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLocation,
       this.permanentLoanType,
       this.temporaryLoanType,
-      this.circulationNotes);
+      this.circulationNotes,
+      this.tags);
   }
 
   public ItemRequestBuilder permanentlyInThirdFloor() {
@@ -310,7 +325,8 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLocation,
       loanType,
       this.temporaryLoanType,
-      this.circulationNotes);
+      this.circulationNotes,
+      this.tags);
   }
 
   public ItemRequestBuilder canCirculate() {
@@ -339,7 +355,26 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLocation,
       this.permanentLoanType,
       loanType,
-      this.circulationNotes);
+      this.circulationNotes,
+      this.tags);
+  }
+
+  public ItemRequestBuilder withTagList(JsonObject tags) {
+    return new ItemRequestBuilder(
+      this.id,
+      this.holdingId,
+      this.readOnlyTitle,
+      this.readOnlyCallNumber,
+      this.barcode,
+      this.status,
+      this.materialType,
+      this.readOnlyEffectiveLocation,
+      this.permanentLocation,
+      this.temporaryLocation,
+      this.permanentLoanType,
+      this.temporaryLoanType,
+      this.circulationNotes,
+      tags);
   }
 
   public ItemRequestBuilder temporarilyCourseReserves() {
@@ -371,7 +406,8 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLocation,
       this.permanentLoanType,
       this.temporaryLoanType,
-      circulationNotes);
+      circulationNotes,
+      this.tags);
   }
 
   private static JsonObject bookMaterialType() {

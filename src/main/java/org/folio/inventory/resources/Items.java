@@ -266,6 +266,9 @@ public class Items {
           .collect(Collectors.toList())
           : new ArrayList<>();
 
+    List<String> tags = itemRequest.containsKey(Item.TAGS_KEY)
+      ? getTags(itemRequest) : new ArrayList<>();
+
 
     String materialTypeId = getNestedProperty(itemRequest, "materialType", "id");
     String permanentLocationId = getNestedProperty(itemRequest, "permanentLocation", "id");
@@ -309,7 +312,8 @@ public class Items {
             .withYearCaption(yearCaption)
             .withElectronicAccess(electronicAccess)
             .withStatisticalCodeIds(statisticalCodeIds)
-            .withPurchaseOrderLineidentifier(itemRequest.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER));
+            .withPurchaseOrderLineidentifier(itemRequest.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER))
+            .withTags(tags);
   }
 
   private void respondWithManyItems(
@@ -604,6 +608,12 @@ public class Items {
       && requestFuture.join().getStatusCode() == 200
       ? requestFuture.join().getJson()
       : null;
+  }
+
+  private List<String> getTags(JsonObject itemRequest) {
+    final JsonObject tags = itemRequest.getJsonObject(Item.TAGS_KEY);
+    return tags.containsKey(Item.TAG_LIST_KEY) ?
+      JsonArrayHelper.toListOfStrings(tags.getJsonArray(Item.TAG_LIST_KEY)) : new ArrayList<>();
   }
 
   private void findUserAndAddItem(
