@@ -287,7 +287,7 @@ public class Instances {
       .put(BATCH_RESPONSE_FIELD_ERROR_MESSAGES, new JsonArray(errorMessages))
       .put(BATCH_RESPONSE_FIELD_INSTANCES, new JsonArray())
       .put(BATCH_RESPONSE_FIELD_TOTAL_RECORDS, 0);
-    RedirectResponse.serverError(routingContext.response(), responseBody.toBuffer());
+    RedirectResponse.serverError(routingContext.response(), Buffer.buffer(responseBody.encodePrettily()));
   }
 
   private JsonObject getBatchResponse(List<Instance> createdInstances, List<String> errorMessages, WebContext webContext) {
