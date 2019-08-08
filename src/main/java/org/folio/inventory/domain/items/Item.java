@@ -18,6 +18,8 @@ public class Item {
   public static final String YEAR_CAPTION_KEY = "yearCaption";
   public static final String ELECTRONIC_ACCESS_KEY = "electronicAccess";
   public static final String STATISTICAL_CODE_IDS_KEY = "statisticalCodeIds";
+  public static final String TAGS_KEY = "tags";
+  public static final String TAG_LIST_KEY = "tagList";
 
   public static final String ITEM_LEVEL_CALL_NUMBER_KEY = "itemLevelCallNumber";
   public static final String ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY = "itemLevelCallNumberPrefix";
@@ -73,6 +75,7 @@ public class Item {
   private List<ElectronicAccess> electronicAccess = new ArrayList();
   private List<String> statisticalCodeIds = new ArrayList();
   private String purchaseOrderLineidentifier;
+  private List<String> tags = new ArrayList<>();
 
   private final JsonObject metadata;
 
@@ -377,6 +380,15 @@ public class Item {
     return this;
   }
 
+  public Item withTags(List<String> tags) {
+    this.tags = tags;
+    return this;
+  }
+
+  public List<String> getTags() {
+    return tags;
+  }
+
   public JsonObject getMetadata() {
     return metadata;
   }
@@ -448,7 +460,8 @@ public class Item {
             .withYearCaption(this.yearCaption)
             .withElectronicAccess(this.electronicAccess)
             .withStatisticalCodeIds(this.statisticalCodeIds)
-            .withPurchaseOrderLineidentifier(purchaseOrderLineidentifier);
+            .withPurchaseOrderLineidentifier(purchaseOrderLineidentifier)
+            .withTags(tags);
   }
 
   @Override

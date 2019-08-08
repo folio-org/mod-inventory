@@ -2,6 +2,7 @@ package org.folio.inventory.storage.external;
 
 import static org.folio.inventory.support.JsonArrayHelper.toList;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -66,6 +67,11 @@ class ExternalStorageModuleItemCollection
             .map(it -> new ElectronicAccess(it))
             .collect(Collectors.toList());
 
+    List<String> tags = itemFromServer.containsKey(Item.TAGS_KEY)
+      ? JsonArrayHelper.toListOfStrings(
+        itemFromServer.getJsonObject(Item.TAGS_KEY).getJsonArray(Item.TAG_LIST_KEY))
+      : new ArrayList<>();
+
     return new Item(
       itemFromServer.getString("id"),
       itemFromServer.getString("holdingsRecordId"),
@@ -102,7 +108,8 @@ class ExternalStorageModuleItemCollection
             .withYearCaption(yearCaption)
             .withElectronicAccess(mappedElectronicAccess)
             .withStatisticalCodeIds(statisticalCodeIds)
-            .withPurchaseOrderLineidentifier(itemFromServer.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER));
+            .withPurchaseOrderLineidentifier(itemFromServer.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER))
+            .withTags(tags);
   }
 
   @Override
@@ -156,6 +163,7 @@ class ExternalStorageModuleItemCollection
     itemToSend.put(Item.ELECTRONIC_ACCESS_KEY, item.getElectronicAccess());
     itemToSend.put(Item.STATISTICAL_CODE_IDS_KEY, item.getStatisticalCodeIds());
     itemToSend.put(Item.PURCHASE_ORDER_LINE_IDENTIFIER, item.getPurchaseOrderLineidentifier());
+    itemToSend.put(Item.TAGS_KEY, new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray(item.getTags())));
 
     return itemToSend;
   }
