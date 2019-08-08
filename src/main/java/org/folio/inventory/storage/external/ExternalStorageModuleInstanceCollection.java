@@ -40,7 +40,7 @@ class ExternalStorageModuleInstanceCollection
   extends ExternalStorageModuleCollection<Instance>
   implements InstanceCollection {
 
-  public String batchAddress;
+  private String batchAddress;
 
   ExternalStorageModuleInstanceCollection(
     Vertx vertx,
