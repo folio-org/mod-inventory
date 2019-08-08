@@ -206,7 +206,7 @@ class ExternalStorageModuleInstanceCollection
       response.bodyHandler(buffer -> {
         String responseBody = buffer.getString(0, buffer.length());
 
-        if (isBatchOperationBody(response)) {
+        if (isBatchResponse(response)) {
           JsonObject batchResponse = new JsonObject(responseBody);
           JsonArray createdInstances = batchResponse.getJsonArray("instances");
 
@@ -239,7 +239,7 @@ class ExternalStorageModuleInstanceCollection
     request.end(Json.encodePrettily(batchRequest));
   }
 
-  private boolean isBatchOperationBody(HttpClientResponse response) {
+  private boolean isBatchResponse(HttpClientResponse response) {
     int statusCode = response.statusCode();
     String contentHeaderValue = response.getHeader(CONTENT_TYPE);
     return statusCode == SC_CREATED

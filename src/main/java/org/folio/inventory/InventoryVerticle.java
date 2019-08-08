@@ -13,6 +13,7 @@ import io.vertx.ext.web.Router;
 import org.folio.inventory.common.WebRequestDiagnostics;
 import org.folio.inventory.domain.ingest.IngestMessageProcessor;
 import org.folio.inventory.resources.Instances;
+import org.folio.inventory.resources.InstancesBatch;
 import org.folio.inventory.resources.IsbnUtilsApi;
 import org.folio.inventory.resources.Items;
 import org.folio.inventory.resources.ingest.ModsIngestion;
@@ -51,6 +52,7 @@ public class InventoryVerticle extends AbstractVerticle {
     new ModsIngestion(storage, client).register(router);
     new Items(storage, client).register(router);
     new Instances(storage, client).register(router);
+    new InstancesBatch(storage, client).register(router);
     new IsbnUtilsApi().register(router);
 
     Handler<AsyncResult<HttpServer>> onHttpServerStart = result -> {
