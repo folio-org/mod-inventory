@@ -9,6 +9,7 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.folio.HttpStatus;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
@@ -21,13 +22,14 @@ import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.support.JsonArrayHelper;
-import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.server.ClientErrorResponse;
 import org.folio.inventory.support.http.server.FailureResponseConsumer;
 import org.folio.inventory.support.http.server.JsonResponse;
 import org.folio.inventory.support.http.server.RedirectResponse;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
+import org.folio.rest.client.SourceStorageClient;
+import org.folio.rest.jaxrs.model.SuppressFromDiscoveryDto;
 
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
@@ -52,7 +54,7 @@ public class Instances extends AbstractInstances {
     + "these fields are blocked and can not be updated: ";
 
   public Instances(final Storage storage, final HttpClient client) {
-   super(storage, client);
+    super(storage, client);
   }
 
   public void register(Router router) {
@@ -171,12 +173,40 @@ public class Instances extends AbstractInstances {
             JsonResponse.unprocessableEntity(rContext.response(), errorMessage);
           } else {
             updateInstance(updatedInstance, rContext, wContext);
+            updateSuppressFromDiscoveryFlag(wContext, updatedInstance);
           }
         } else {
           ClientErrorResponse.notFound(rContext.response());
         }
       },
       FailureResponseConsumer.serverError(rContext.response()));
+  }
+
+  /**
+   * Call Source record storage to update suppress from discovery flag in underlying record
+   *
+   * @param wContext        - webContext
+   * @param updatedInstance - Updated instance entity
+   */
+  private void updateSuppressFromDiscoveryFlag(WebContext wContext, Instance updatedInstance) {
+    try {
+      SourceStorageClient client = new SourceStorageClient(wContext.getOkapiLocation(), wContext.getTenantId(), wContext.getToken());
+      SuppressFromDiscoveryDto dto = new SuppressFromDiscoveryDto()
+        .withId(updatedInstance.getId())
+        .withIncomingIdType(SuppressFromDiscoveryDto.IncomingIdType.INSTANCE)
+        .withSuppressFromDiscovery(updatedInstance.getDiscoverySuppress());
+      client.putSourceStorageRecordSuppressFromDiscovery(dto, httpClientResponse -> {
+        if (httpClientResponse.statusCode() == HttpStatus.HTTP_OK.toInt()) {
+          log.info(format("Suppress from discovery flag was successfully updated for record in SRS. InstanceID: %s",
+            updatedInstance.getId()));
+        } else {
+          log.error(format("Suppress from discovery wasn't changed for SRS record. InstanceID: %s StatusCode: %s",
+            updatedInstance.getId(), httpClientResponse.statusCode()));
+        }
+      });
+    } catch (Exception e) {
+      log.error("Error during updating suppress from discovery flag for record in SRS", e);
+    }
   }
 
   /**
@@ -254,7 +284,6 @@ public class Instances extends AbstractInstances {
         }
       }, FailureResponseConsumer.serverError(routingContext.response()));
   }
-
 
 
   /**
