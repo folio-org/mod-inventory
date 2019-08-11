@@ -173,7 +173,6 @@ public class Instances extends AbstractInstances {
             JsonResponse.unprocessableEntity(rContext.response(), errorMessage);
           } else {
             updateInstance(updatedInstance, rContext, wContext);
-            updateSuppressFromDiscoveryFlag(wContext, updatedInstance);
           }
         } else {
           ClientErrorResponse.notFound(rContext.response());
@@ -230,7 +229,12 @@ public class Instances extends AbstractInstances {
     InstanceCollection instanceCollection = storage.getInstanceCollection(wContext);
     instanceCollection.update(
       instance,
-      v -> updateInstanceRelationships(instance, rContext, wContext, (x) -> noContent(rContext.response())),
+      v -> {
+        updateInstanceRelationships(instance, rContext, wContext, (x) -> noContent(rContext.response()));
+        if (isInstanceControlledByRecord(instance)) {
+          updateSuppressFromDiscoveryFlag(wContext, instance);
+        }
+      },
       FailureResponseConsumer.serverError(rContext.response()));
   }
 
