@@ -100,7 +100,8 @@
           "modulePermissions": ["inventory-storage.instances.item.put",
                                 "inventory-storage.instances.item.get",
                                 "inventory-storage.instances.item.post",
-                                "inventory-storage.instances.item.delete"]
+                                "inventory-storage.instances.item.delete",
+                                "source-storage.record.update"]
         }, {
           "methods": ["DELETE"],
           "pathPattern": "/inventory/instances/{id}",
@@ -232,6 +233,10 @@
     {
       "id": "users",
       "version": "15.0"
+    },
+    {
+      "id": "source-record-storage",
+      "version": "2.2"
     }
   ],
   "permissionSets": [
