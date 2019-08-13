@@ -41,6 +41,7 @@ import static api.support.InstanceSamples.taoOfPooh;
 import static api.support.InstanceSamples.temeraire;
 import static api.support.InstanceSamples.treasureIslandInstance;
 import static api.support.InstanceSamples.uprooted;
+import static java.util.Arrays.asList;
 import static org.folio.inventory.domain.instances.Instance.TAGS_KEY;
 import static org.folio.inventory.domain.instances.Instance.TAG_LIST_KEY;
 import static org.hamcrest.CoreMatchers.hasItem;
@@ -81,7 +82,8 @@ public class InstancesApiExamples extends ApiTests {
         .put("name", "Chambers, Becky")))
       .put("source", "Local")
       .put("instanceTypeId", ApiTestSuite.getTextInstanceType())
-      .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameOne)));
+      .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameOne)))
+      .put("natureOfContentTermIds", new JsonArray(asList("96879b60-098b-453b-bf9a-c47866f1ab2a", "f5908d05-b16a-49cf-b192-96d55a94a0d1")));
 
     CompletableFuture<Response> postCompleted = new CompletableFuture<>();
 
@@ -131,6 +133,11 @@ public class InstancesApiExamples extends ApiTests {
     assertTrue(tags.containsKey(TAG_LIST_KEY));
     final JsonArray tagList = tags.getJsonArray(TAG_LIST_KEY);
     assertThat((ArrayList<String>)tagList.getList(), hasItem(tagNameOne));
+
+    JsonArray natureOfContentTermIds = createdInstance.getJsonArray("natureOfContentTermIds");
+    assertThat(natureOfContentTermIds.size(), is(2));
+    assertThat(natureOfContentTermIds.getString(0), is("96879b60-098b-453b-bf9a-c47866f1ab2a"));
+    assertThat(natureOfContentTermIds.getString(1), is("f5908d05-b16a-49cf-b192-96d55a94a0d1"));
 
     expressesDublinCoreMetadata(createdInstance);
     dublinCoreContextLinkRespectsWayResourceWasReached(createdInstance);
