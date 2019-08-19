@@ -1,12 +1,8 @@
 package api.support.http;
 
-import api.support.builders.Builder;
-import io.vertx.core.json.JsonObject;
-import org.folio.inventory.support.JsonArrayHelper;
-import org.folio.inventory.support.http.client.IndividualResource;
-import org.folio.inventory.support.http.client.OkapiHttpClient;
-import org.folio.inventory.support.http.client.Response;
-import org.folio.inventory.support.http.client.ResponseHandler;
+import static org.hamcrest.core.Is.is;
+import static org.hamcrest.core.IsNull.notNullValue;
+import static org.hamcrest.junit.MatcherAssert.assertThat;
 
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -18,9 +14,14 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static org.hamcrest.core.Is.is;
-import static org.hamcrest.core.IsNull.notNullValue;
-import static org.hamcrest.junit.MatcherAssert.assertThat;
+import org.folio.inventory.support.JsonArrayHelper;
+import org.folio.inventory.support.http.client.IndividualResource;
+import org.folio.inventory.support.http.client.OkapiHttpClient;
+import org.folio.inventory.support.http.client.Response;
+import org.folio.inventory.support.http.client.ResponseHandler;
+
+import api.support.builders.Builder;
+import io.vertx.core.json.JsonObject;
 
 public class ResourceClient {
 
@@ -77,6 +78,15 @@ public class ResourceClient {
   public static ResourceClient forUsers(OkapiHttpClient client) {
     return new ResourceClient(client, StorageInterfaceUrls::usersStorageUrl,
       "users");
+  }
+
+  public static ResourceClient forNatureOfContentTerms(OkapiHttpClient client) {
+    return new ResourceClient(
+      client,
+      StorageInterfaceUrls::natureOfContentTermsStorageUrl,
+      "Nature of content terms",
+      "natureOfContentTerms"
+    );
   }
 
   private ResourceClient(

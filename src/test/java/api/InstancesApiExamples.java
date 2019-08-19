@@ -1,38 +1,5 @@
 package api;
 
-import api.support.ApiRoot;
-import api.support.ApiTests;
-import api.support.InstanceApiClient;
-import com.github.jsonldjava.core.DocumentLoader;
-import com.github.jsonldjava.core.JsonLdError;
-import com.github.jsonldjava.core.JsonLdOptions;
-import com.github.jsonldjava.core.JsonLdProcessor;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import org.apache.http.Header;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
-import org.apache.http.message.BasicHeader;
-import org.folio.inventory.config.InventoryConfiguration;
-import org.folio.inventory.config.InventoryConfigurationImpl;
-import org.folio.inventory.support.JsonArrayHelper;
-import org.folio.inventory.support.http.client.Response;
-import org.folio.inventory.support.http.client.ResponseHandler;
-import org.junit.Assert;
-import org.junit.Test;
-
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-
 import static api.support.InstanceSamples.leviathanWakes;
 import static api.support.InstanceSamples.marcInstanceWithDefaultBlockedFields;
 import static api.support.InstanceSamples.nod;
@@ -53,6 +20,41 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+import org.apache.http.Header;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
+import org.apache.http.message.BasicHeader;
+import org.folio.inventory.config.InventoryConfiguration;
+import org.folio.inventory.config.InventoryConfigurationImpl;
+import org.folio.inventory.support.JsonArrayHelper;
+import org.folio.inventory.support.http.client.Response;
+import org.folio.inventory.support.http.client.ResponseHandler;
+import org.junit.Assert;
+import org.junit.Test;
+
+import com.github.jsonldjava.core.DocumentLoader;
+import com.github.jsonldjava.core.JsonLdError;
+import com.github.jsonldjava.core.JsonLdOptions;
+import com.github.jsonldjava.core.JsonLdProcessor;
+
+import api.support.ApiRoot;
+import api.support.ApiTests;
+import api.support.InstanceApiClient;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 public class InstancesApiExamples extends ApiTests {
 
@@ -83,7 +85,12 @@ public class InstancesApiExamples extends ApiTests {
       .put("source", "Local")
       .put("instanceTypeId", ApiTestSuite.getTextInstanceType())
       .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameOne)))
-      .put("natureOfContentTermIds", new JsonArray(asList("96879b60-098b-453b-bf9a-c47866f1ab2a", "f5908d05-b16a-49cf-b192-96d55a94a0d1")));
+      .put("natureOfContentTermIds",
+        new JsonArray(asList(
+          ApiTestSuite.getAudiobookNatureOfContentTermId(),
+          ApiTestSuite.getBibliographyNatureOfContentTermId()
+        ))
+      );
 
     CompletableFuture<Response> postCompleted = new CompletableFuture<>();
 
@@ -136,8 +143,8 @@ public class InstancesApiExamples extends ApiTests {
 
     JsonArray natureOfContentTermIds = createdInstance.getJsonArray("natureOfContentTermIds");
     assertThat(natureOfContentTermIds.size(), is(2));
-    assertThat(natureOfContentTermIds.getString(0), is("96879b60-098b-453b-bf9a-c47866f1ab2a"));
-    assertThat(natureOfContentTermIds.getString(1), is("f5908d05-b16a-49cf-b192-96d55a94a0d1"));
+    assertThat((ArrayList<String>)natureOfContentTermIds.getList(), hasItem(ApiTestSuite.getAudiobookNatureOfContentTermId()));
+    assertThat((ArrayList<String>)natureOfContentTermIds.getList(), hasItem(ApiTestSuite.getBibliographyNatureOfContentTermId()));
 
     expressesDublinCoreMetadata(createdInstance);
     dublinCoreContextLinkRespectsWayResourceWasReached(createdInstance);
