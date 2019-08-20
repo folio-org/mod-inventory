@@ -394,11 +394,19 @@ public class InstancesApiExamples extends ApiTests {
 
     UUID id = UUID.randomUUID();
 
-    JsonObject newInstance = createInstance(smallAngryPlanet(id));
+    JsonObject smallAngryPlanet = smallAngryPlanet(id);
+    smallAngryPlanet.put("natureOfContentTermIds",
+      new JsonArray(asList(ApiTestSuite.getBibliographyNatureOfContentTermId()))
+    );
+
+    JsonObject newInstance = createInstance(smallAngryPlanet);
 
     JsonObject updateInstanceRequest = smallAngryPlanet(id)
       .put("title", "The Long Way to a Small, Angry Planet")
-      .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameTwo)));
+      .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameTwo)))
+      .put("natureOfContentTermIds",
+        new JsonArray(asList(ApiTestSuite.getAudiobookNatureOfContentTermId()))
+      );
 
     URL instanceLocation = new URL(String.format("%s/%s", ApiRoot.instances(),
       newInstance.getString("id")));
@@ -431,6 +439,10 @@ public class InstancesApiExamples extends ApiTests {
     assertTrue(tags.containsKey(TAG_LIST_KEY));
     final JsonArray tagList = tags.getJsonArray(TAG_LIST_KEY);
     assertThat((ArrayList<String>)tagList.getList(), hasItem(tagNameTwo));
+
+    JsonArray natureOfContentTermIds = updatedInstance.getJsonArray("natureOfContentTermIds");
+    assertThat(natureOfContentTermIds.size(), is(1));
+    assertThat(natureOfContentTermIds.getString(0), is(ApiTestSuite.getAudiobookNatureOfContentTermId()));
 
     selfLinkRespectsWayResourceWasReached(updatedInstance);
     selfLinkShouldBeReachable(updatedInstance);
