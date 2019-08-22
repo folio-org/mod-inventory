@@ -33,6 +33,9 @@ public class StorageInterfaceUrls {
   public static URL usersStorageUrl(String subPath) {
     return viaOkapiURL("/users" + subPath);
   }
+  public static URL natureOfContentTermsStorageUrl(String subPath) {
+    return viaOkapiURL("/nature-of-content-terms" + subPath);
+  }
 
   private static URL viaOkapiURL(String path) {
     try {

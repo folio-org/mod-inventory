@@ -1,26 +1,25 @@
 package api;
 
-import api.support.ApiRoot;
-import api.support.ApiTests;
-import api.support.InstanceApiClient;
-import com.github.jsonldjava.core.DocumentLoader;
-import com.github.jsonldjava.core.JsonLdError;
-import com.github.jsonldjava.core.JsonLdOptions;
-import com.github.jsonldjava.core.JsonLdProcessor;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import org.apache.http.Header;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
-import org.apache.http.message.BasicHeader;
-import org.folio.inventory.config.InventoryConfiguration;
-import org.folio.inventory.config.InventoryConfigurationImpl;
-import org.folio.inventory.support.JsonArrayHelper;
-import org.folio.inventory.support.http.client.Response;
-import org.folio.inventory.support.http.client.ResponseHandler;
-import org.junit.Assert;
-import org.junit.Test;
+import static api.support.InstanceSamples.leviathanWakes;
+import static api.support.InstanceSamples.marcInstanceWithDefaultBlockedFields;
+import static api.support.InstanceSamples.nod;
+import static api.support.InstanceSamples.smallAngryPlanet;
+import static api.support.InstanceSamples.taoOfPooh;
+import static api.support.InstanceSamples.temeraire;
+import static api.support.InstanceSamples.treasureIslandInstance;
+import static api.support.InstanceSamples.uprooted;
+import static java.util.Arrays.asList;
+import static org.folio.inventory.domain.instances.Instance.TAGS_KEY;
+import static org.folio.inventory.domain.instances.Instance.TAG_LIST_KEY;
+import static org.hamcrest.CoreMatchers.hasItem;
+import static org.hamcrest.CoreMatchers.hasItems;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -33,25 +32,29 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static api.support.InstanceSamples.leviathanWakes;
-import static api.support.InstanceSamples.marcInstanceWithDefaultBlockedFields;
-import static api.support.InstanceSamples.nod;
-import static api.support.InstanceSamples.smallAngryPlanet;
-import static api.support.InstanceSamples.taoOfPooh;
-import static api.support.InstanceSamples.temeraire;
-import static api.support.InstanceSamples.treasureIslandInstance;
-import static api.support.InstanceSamples.uprooted;
-import static org.folio.inventory.domain.instances.Instance.TAGS_KEY;
-import static org.folio.inventory.domain.instances.Instance.TAG_LIST_KEY;
-import static org.hamcrest.CoreMatchers.hasItem;
-import static org.hamcrest.CoreMatchers.hasItems;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import org.apache.http.Header;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
+import org.apache.http.message.BasicHeader;
+import org.folio.inventory.config.InventoryConfiguration;
+import org.folio.inventory.config.InventoryConfigurationImpl;
+import org.folio.inventory.support.JsonArrayHelper;
+import org.folio.inventory.support.http.client.Response;
+import org.folio.inventory.support.http.client.ResponseHandler;
+import org.junit.Assert;
+import org.junit.Test;
+
+import com.github.jsonldjava.core.DocumentLoader;
+import com.github.jsonldjava.core.JsonLdError;
+import com.github.jsonldjava.core.JsonLdOptions;
+import com.github.jsonldjava.core.JsonLdProcessor;
+
+import api.support.ApiRoot;
+import api.support.ApiTests;
+import api.support.InstanceApiClient;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 public class InstancesApiExamples extends ApiTests {
 
@@ -81,7 +84,13 @@ public class InstancesApiExamples extends ApiTests {
         .put("name", "Chambers, Becky")))
       .put("source", "Local")
       .put("instanceTypeId", ApiTestSuite.getTextInstanceType())
-      .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameOne)));
+      .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameOne)))
+      .put("natureOfContentTermIds",
+        new JsonArray(asList(
+          ApiTestSuite.getAudiobookNatureOfContentTermId(),
+          ApiTestSuite.getBibliographyNatureOfContentTermId()
+        ))
+      );
 
     CompletableFuture<Response> postCompleted = new CompletableFuture<>();
 
@@ -131,6 +140,11 @@ public class InstancesApiExamples extends ApiTests {
     assertTrue(tags.containsKey(TAG_LIST_KEY));
     final JsonArray tagList = tags.getJsonArray(TAG_LIST_KEY);
     assertThat((ArrayList<String>)tagList.getList(), hasItem(tagNameOne));
+
+    JsonArray natureOfContentTermIds = createdInstance.getJsonArray("natureOfContentTermIds");
+    assertThat(natureOfContentTermIds.size(), is(2));
+    assertThat((ArrayList<String>)natureOfContentTermIds.getList(), hasItem(ApiTestSuite.getAudiobookNatureOfContentTermId()));
+    assertThat((ArrayList<String>)natureOfContentTermIds.getList(), hasItem(ApiTestSuite.getBibliographyNatureOfContentTermId()));
 
     expressesDublinCoreMetadata(createdInstance);
     dublinCoreContextLinkRespectsWayResourceWasReached(createdInstance);
@@ -380,11 +394,19 @@ public class InstancesApiExamples extends ApiTests {
 
     UUID id = UUID.randomUUID();
 
-    JsonObject newInstance = createInstance(smallAngryPlanet(id));
+    JsonObject smallAngryPlanet = smallAngryPlanet(id);
+    smallAngryPlanet.put("natureOfContentTermIds",
+      new JsonArray(asList(ApiTestSuite.getBibliographyNatureOfContentTermId()))
+    );
+
+    JsonObject newInstance = createInstance(smallAngryPlanet);
 
     JsonObject updateInstanceRequest = smallAngryPlanet(id)
       .put("title", "The Long Way to a Small, Angry Planet")
-      .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameTwo)));
+      .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameTwo)))
+      .put("natureOfContentTermIds",
+        new JsonArray(asList(ApiTestSuite.getAudiobookNatureOfContentTermId()))
+      );
 
     URL instanceLocation = new URL(String.format("%s/%s", ApiRoot.instances(),
       newInstance.getString("id")));
@@ -417,6 +439,10 @@ public class InstancesApiExamples extends ApiTests {
     assertTrue(tags.containsKey(TAG_LIST_KEY));
     final JsonArray tagList = tags.getJsonArray(TAG_LIST_KEY);
     assertThat((ArrayList<String>)tagList.getList(), hasItem(tagNameTwo));
+
+    JsonArray natureOfContentTermIds = updatedInstance.getJsonArray("natureOfContentTermIds");
+    assertThat(natureOfContentTermIds.size(), is(1));
+    assertThat(natureOfContentTermIds.getString(0), is(ApiTestSuite.getAudiobookNatureOfContentTermId()));
 
     selfLinkRespectsWayResourceWasReached(updatedInstance);
     selfLinkShouldBeReachable(updatedInstance);

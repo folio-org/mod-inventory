@@ -44,6 +44,7 @@ public class Instance {
   public static final String METADATA_KEY = "metadata";
   public static final String TAGS_KEY = "tags";
   public static final String TAG_LIST_KEY = "tagList";
+  public static final String NATURE_OF_CONTENT_TERM_IDS_KEY = "natureOfContentTermIds";
 
   private final String id;
   private final String hrid;
@@ -79,6 +80,7 @@ public class Instance {
   private String statusUpdatedDate;
   private Metadata metadata = null;
   private List<String> tags;
+  private List<String> natureOfContentIds = new ArrayList<>();
 
   public Instance(
     String id,
@@ -239,6 +241,11 @@ public class Instance {
     return this;
   }
 
+  public Instance setNatureOfContentIds(List<String> natureOfContentIds) {
+    this.natureOfContentIds = natureOfContentIds;
+    return this;
+  }
+
   public boolean hasMetadata () {
     return this.metadata != null;
   }
@@ -380,6 +387,10 @@ public class Instance {
     return tags;
   }
 
+  public List<String> getNatureOfContentIds() {
+    return natureOfContentIds;
+  }
+
   public Instance copyWithNewId(String newId) {
     return new Instance(newId, null, this.source, this.title, this.instanceTypeId)
             .setIndexTitle(indexTitle)
@@ -406,7 +417,10 @@ public class Instance {
             .setStatisticalCodeIds(statisticalCodeIds)
             .setSourceRecordFormat(sourceRecordFormat)
             .setStatusId(statusId)
-            .setStatusUpdatedDate(statusUpdatedDate);
+            .setStatusUpdatedDate(statusUpdatedDate)
+            .setMetadata(metadata)
+            .setTags(tags)
+            .setNatureOfContentIds(natureOfContentIds);
   }
 
   public Instance copyInstance() {
@@ -437,7 +451,8 @@ public class Instance {
             .setStatusId(statusId)
             .setStatusUpdatedDate(statusUpdatedDate)
             .setMetadata(metadata)
-            .setTags(tags);
+            .setTags(tags)
+            .setNatureOfContentIds(natureOfContentIds);
   }
 
   public Instance addIdentifier(Identifier identifier) {

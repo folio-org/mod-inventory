@@ -230,6 +230,7 @@ public abstract class AbstractInstances {
     putIfNotNull(resp, Instance.STATUS_UPDATED_DATE_KEY, instance.getStatusUpdatedDate());
     putIfNotNull(resp, Instance.METADATA_KEY, instance.getMetadata());
     putIfNotNull(resp, Instance.TAGS_KEY, new JsonObject().put(Instance.TAG_LIST_KEY, new JsonArray(instance.getTags())));
+    putIfNotNull(resp, Instance.NATURE_OF_CONTENT_TERM_IDS_KEY, instance.getNatureOfContentIds());
 
     try {
       URL selfUrl = context.absoluteUrl(format("%s/%s",
@@ -336,7 +337,9 @@ public abstract class AbstractInstances {
       .setSourceRecordFormat(instanceRequest.getString(Instance.SOURCE_RECORD_FORMAT_KEY))
       .setStatusId(instanceRequest.getString(Instance.STATUS_ID_KEY))
       .setStatusUpdatedDate(instanceRequest.getString(Instance.STATUS_UPDATED_DATE_KEY))
-      .setTags(tags);
+      .setTags(tags)
+      .setNatureOfContentIds(toListOfStrings(instanceRequest, Instance.NATURE_OF_CONTENT_TERM_IDS_KEY));
+
   }
 
   private List<String> getTags(JsonObject instanceRequest) {

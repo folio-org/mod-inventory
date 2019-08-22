@@ -11,7 +11,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import api.isbns.IsbnUtilsApiExamples;
 import org.folio.inventory.InventoryVerticle;
 import org.folio.inventory.common.VertxAssistant;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
@@ -20,6 +19,7 @@ import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
+import api.isbns.IsbnUtilsApiExamples;
 import api.items.ItemApiCallNumberExamples;
 import api.items.ItemApiExamples;
 import api.items.ItemApiLocationExamples;
@@ -62,6 +62,8 @@ public class ApiTestSuite {
   private static UUID mezzanineDisplayCaseLocationId;
   private static UUID readingRoomLocationId;
   private static UUID mainLibraryLocationId;
+  private static UUID audiobookNatureOfContentTermId;
+  private static UUID bibliographyNatureOfContentTermId;
 
   private static String isbnIdentifierTypeId;
   private static String asinIdentifierTypeId;
@@ -101,6 +103,7 @@ public class ApiTestSuite {
     createIdentifierTypes();
     createInstanceTypes();
     createContributorNameTypes();
+    createNatureOfContentTerms();
     startInventoryVerticle();
 
     initialised = true;
@@ -167,6 +170,14 @@ public class ApiTestSuite {
 
   public static String getPersonalContributorNameType() {
     return personalContributorNameTypeId;
+  }
+
+  public static String getAudiobookNatureOfContentTermId() {
+    return audiobookNatureOfContentTermId.toString();
+  }
+
+  public static String getBibliographyNatureOfContentTermId() {
+    return bibliographyNatureOfContentTermId.toString();
   }
 
   public static OkapiHttpClient createOkapiHttpClient()
@@ -379,6 +390,27 @@ public class ApiTestSuite {
         //TODO: Replace with created service point
         .put("primaryServicePoint", fakeServicePointId.toString())
         .put("servicePointIds", new JsonArray().add(fakeServicePointId.toString())));
+  }
+
+  private static void createNatureOfContentTerms()
+    throws MalformedURLException,
+    InterruptedException,
+    ExecutionException,
+    TimeoutException {
+
+    ResourceClient client = ResourceClient.forNatureOfContentTerms(createOkapiHttpClient());
+
+    audiobookNatureOfContentTermId = createReferenceRecord(client,
+      new JsonObject()
+        .put("name", "audiobook")
+        .put("source", "folio")
+    );
+
+    bibliographyNatureOfContentTermId = createReferenceRecord(client,
+      new JsonObject()
+        .put("name", "bibliography")
+        .put("source", "folio")
+    );
   }
 
   private static void createIdentifierTypes()
