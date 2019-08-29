@@ -309,8 +309,8 @@
         "type": "object",
         "properties": {
           "instanceNoteTypeId": {
-            "description": "ID of the type of note",
-            "$ref": "uuid.json"
+            "type": "string",
+            "description": "ID of the type of note"
           },
           "note": {
             "type": "string",
