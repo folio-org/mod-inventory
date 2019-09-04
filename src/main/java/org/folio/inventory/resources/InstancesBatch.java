@@ -187,6 +187,9 @@ public class InstancesBatch extends AbstractInstances {
         if (newInstance != null) {
           createdInstance.setParentInstances(newInstance.getParentInstances());
           createdInstance.setChildInstances(newInstance.getChildInstances());
+          createdInstance.setSucceedingTitles(newInstance.getSucceedingTitles());
+          createdInstance.setPrecedingTitles(newInstance.getPrecedingTitles());
+
           Future updateFuture = Future.future();
           updateRelationshipsFutures.add(updateFuture);
           updateInstanceRelationships(createdInstance, routingContext, webContext, o -> updateFuture.complete());
