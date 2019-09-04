@@ -1,6 +1,10 @@
 package api.support;
 
 import static api.ApiTestSuite.*;
+import static org.folio.inventory.domain.instances.Instance.CHILD_INSTANCES_KEY;
+import static org.folio.inventory.domain.instances.Instance.PARENT_INSTANCES_KEY;
+import static org.folio.inventory.domain.instances.Instance.PRECEDING_TITLES_KEY;
+import static org.folio.inventory.domain.instances.Instance.SUCCEEDING_TITLES_KEY;
 
 import java.time.LocalDate;
 import java.util.UUID;
@@ -13,8 +17,9 @@ import org.folio.inventory.domain.instances.Contributor;
 import org.folio.inventory.domain.instances.Identifier;
 import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
 import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
+import org.folio.inventory.domain.instances.PrecedingTitleRelationship;
 import org.folio.inventory.domain.instances.Publication;
-import org.folio.inventory.domain.items.Note;
+import org.folio.inventory.domain.instances.SucceedingTitleRelationship;
 import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 
 public class InstanceSamples {
@@ -35,6 +40,44 @@ public class InstanceSamples {
       .put("instanceTypeId", getTextInstanceType());
   }
 
+  public static JsonObject addRelationshipsToInstance(
+    JsonObject baseInstance,
+    TestInstanceRelationships relationships) {
+
+    if (relationships.getSucceedingId() != null) {
+      baseInstance.put(SUCCEEDING_TITLES_KEY, new JsonArray()
+        .add(new JsonObject().put(SucceedingTitleRelationship.SUPER_INSTANCE_ID_KEY,
+          relationships.getSucceedingId())));
+    }
+
+    if (relationships.getPrecedingId() != null) {
+      baseInstance.put(PRECEDING_TITLES_KEY, new JsonArray()
+        .add(new JsonObject().put(PrecedingTitleRelationship.SUB_INSTANCE_ID_KEY,
+          relationships.getPrecedingId())));
+    }
+
+    if (relationships.getChildId() != null) {
+      baseInstance.put(CHILD_INSTANCES_KEY, new JsonArray()
+        .add(new JsonObject()
+          .put(InstanceRelationshipToChild.SUB_INSTANCE_ID_KEY,
+            relationships.getChildId())
+          .put(InstanceRelationshipToChild.INSTANCE_RELATIONSHIP_TYPE_ID_KEY,
+            relationships.getChildRelationshipType())
+        ));
+    }
+
+    if (relationships.getParentId() != null) {
+      baseInstance.put(PARENT_INSTANCES_KEY, new JsonArray()
+        .add(new JsonObject()
+          .put(InstanceRelationshipToParent.SUPER_INSTANCE_ID_KEY, relationships.getParentId())
+          .put(InstanceRelationshipToParent.INSTANCE_RELATIONSHIP_TYPE_ID_KEY,
+            relationships.getParentRelationshipType())
+        ));
+    }
+
+    return baseInstance;
+  }
+
   public static JsonObject smallAngryPlanet(UUID id) {
     JsonArray identifiers = new JsonArray();
 
@@ -49,6 +92,12 @@ public class InstanceSamples {
 
     return createInstanceRequest(id, "Long Way to a Small Angry Planet",
       identifiers, contributors, notes);
+  }
+
+  public static JsonObject smallAngryPlanetWithRelationships(UUID id,
+    TestInstanceRelationships relationships) {
+
+    return addRelationshipsToInstance(smallAngryPlanet(id), relationships);
   }
 
   public static JsonObject nod(UUID id) {

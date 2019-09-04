@@ -1,14 +1,20 @@
 package api;
 
+import static api.support.InstanceSamples.addRelationshipsToInstance;
 import static api.support.InstanceSamples.leviathanWakes;
 import static api.support.InstanceSamples.marcInstanceWithDefaultBlockedFields;
 import static api.support.InstanceSamples.nod;
 import static api.support.InstanceSamples.smallAngryPlanet;
+import static api.support.InstanceSamples.smallAngryPlanetWithRelationships;
 import static api.support.InstanceSamples.taoOfPooh;
 import static api.support.InstanceSamples.temeraire;
 import static api.support.InstanceSamples.treasureIslandInstance;
 import static api.support.InstanceSamples.uprooted;
 import static java.util.Arrays.asList;
+import static org.folio.inventory.domain.instances.Instance.CHILD_INSTANCES_KEY;
+import static org.folio.inventory.domain.instances.Instance.PARENT_INSTANCES_KEY;
+import static org.folio.inventory.domain.instances.Instance.PRECEDING_TITLES_KEY;
+import static org.folio.inventory.domain.instances.Instance.SUCCEEDING_TITLES_KEY;
 import static org.folio.inventory.domain.instances.Instance.TAGS_KEY;
 import static org.folio.inventory.domain.instances.Instance.TAG_LIST_KEY;
 import static org.hamcrest.CoreMatchers.hasItem;
@@ -38,6 +44,10 @@ import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
 import org.apache.http.message.BasicHeader;
 import org.folio.inventory.config.InventoryConfiguration;
 import org.folio.inventory.config.InventoryConfigurationImpl;
+import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
+import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
+import org.folio.inventory.domain.instances.PrecedingTitleRelationship;
+import org.folio.inventory.domain.instances.SucceedingTitleRelationship;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
@@ -52,6 +62,7 @@ import com.github.jsonldjava.core.JsonLdProcessor;
 import api.support.ApiRoot;
 import api.support.ApiTests;
 import api.support.InstanceApiClient;
+import api.support.TestInstanceRelationships;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -826,6 +837,118 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(getResponse.getStatusCode(), is(404));
   }
 
+  @Test
+  public void canCreateInstanceWithAllRelationshipTypes() throws Exception {
+    String nodId = UUID.randomUUID().toString();
+    String uprootedId = UUID.randomUUID().toString();
+    String leviathanWakesId = UUID.randomUUID().toString();
+    String temeraireId = UUID.randomUUID().toString();
+
+    createInstance(nod(UUID.fromString(nodId)));
+    createInstance(uprooted(UUID.fromString(uprootedId)));
+    createInstance(temeraire(UUID.fromString(temeraireId)));
+    createInstance(leviathanWakes(UUID.fromString(leviathanWakesId)));
+
+    TestInstanceRelationships instanceRelationships = new TestInstanceRelationships()
+      .withSucceedingId(nodId)
+      .withPrecedingId(uprootedId)
+      .withChildId(leviathanWakesId)
+      .withParentId(temeraireId);
+
+    JsonObject smallAngryPlanet = createInstance(smallAngryPlanetWithRelationships(
+      UUID.randomUUID(), instanceRelationships));
+
+    assertInstanceRelationships(smallAngryPlanet, instanceRelationships);
+  }
+
+  @Test
+  public void canUpdateInstanceWithAllRelationshipTypes() throws Exception {
+    UUID smallAngryPlanetId = UUID.randomUUID();
+    String nodId = UUID.randomUUID().toString();
+    String uprootedId = UUID.randomUUID().toString();
+    String leviathanWakesId = UUID.randomUUID().toString();
+    String temeraireId = UUID.randomUUID().toString();
+
+    createInstance(nod(UUID.fromString(nodId)));
+    createInstance(uprooted(UUID.fromString(uprootedId)));
+    createInstance(temeraire(UUID.fromString(temeraireId)));
+    createInstance(leviathanWakes(UUID.fromString(leviathanWakesId)));
+
+    JsonObject smallAngryPlanetInstance = createInstance(smallAngryPlanet(smallAngryPlanetId))
+      .copy();
+
+    TestInstanceRelationships instanceRelationships = new TestInstanceRelationships()
+      .withSucceedingId(nodId)
+      .withPrecedingId(uprootedId)
+      .withChildId(leviathanWakesId)
+      .withParentId(temeraireId);
+    addRelationshipsToInstance(smallAngryPlanetInstance, instanceRelationships);
+
+    JsonObject createdInstance = updateInstance(smallAngryPlanetId.toString(),
+      smallAngryPlanetInstance);
+    assertInstanceRelationships(createdInstance, instanceRelationships);
+  }
+
+  @Test
+  public void canFetchSeveralInstancesWithRelationships() throws Exception {
+    String smallAngryPlanetId = UUID.randomUUID().toString();
+    String nodId = UUID.randomUUID().toString();
+    String uprootedId = UUID.randomUUID().toString();
+    String leviathanWakesId = UUID.randomUUID().toString();
+    String temeraireId = UUID.randomUUID().toString();
+
+    createInstance(nod(UUID.fromString(nodId)));
+    createInstance(uprooted(UUID.fromString(uprootedId)));
+    createInstance(temeraire(UUID.fromString(temeraireId)));
+    createInstance(leviathanWakes(UUID.fromString(leviathanWakesId)));
+
+    TestInstanceRelationships instanceRelationships = new TestInstanceRelationships()
+      .withSucceedingId(nodId)
+      .withPrecedingId(uprootedId)
+      .withChildId(leviathanWakesId)
+      .withParentId(temeraireId);
+    createInstance(smallAngryPlanetWithRelationships(UUID
+      .fromString(smallAngryPlanetId), instanceRelationships));
+
+    List<JsonObject> allInstances = instancesClient.getAll();
+
+    JsonObject smallAngryPlanet = allInstances.stream()
+      .filter(inst -> inst.getString("id").equals(smallAngryPlanetId))
+      .findFirst().orElse(null);
+    JsonObject uprooted = allInstances.stream()
+      .filter(inst -> inst.getString("id").equals(uprootedId))
+      .findFirst().orElse(null);
+    JsonObject nod = allInstances.stream()
+      .filter(inst -> inst.getString("id").equals(nodId))
+      .findFirst().orElse(null);
+    JsonObject leviathanWakes = allInstances.stream()
+      .filter(inst -> inst.getString("id").equals(leviathanWakesId))
+      .findFirst().orElse(null);
+    JsonObject temeraire = allInstances.stream()
+      .filter(inst -> inst.getString("id").equals(temeraireId))
+      .findFirst().orElse(null);
+
+
+    assertNotNull(smallAngryPlanet);
+    assertInstanceRelationships(smallAngryPlanet, instanceRelationships);
+
+    assertNotNull(uprooted);
+    assertInstanceRelationships(uprooted, new TestInstanceRelationships()
+      .withSucceedingId(smallAngryPlanetId));
+
+    assertNotNull(nod);
+    assertInstanceRelationships(nod, new TestInstanceRelationships()
+      .withPrecedingId(smallAngryPlanetId));
+
+    assertNotNull(leviathanWakes);
+    assertInstanceRelationships(leviathanWakes, new TestInstanceRelationships()
+      .withParentId(smallAngryPlanetId));
+
+    assertNotNull(temeraire);
+    assertInstanceRelationships(temeraire, new TestInstanceRelationships()
+      .withChildId(smallAngryPlanetId));
+  }
+
   private void hasCollectionProperties(List<JsonObject> instances) {
     instances.stream().forEach(instance -> {
       try {
@@ -893,6 +1016,17 @@ public class InstancesApiExamples extends ApiTests {
     return InstanceApiClient.createInstance(okapiClient, newInstanceRequest);
   }
 
+  private JsonObject updateInstance(String instanceId,
+                                    JsonObject updateInstanceRequest)
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    return InstanceApiClient
+      .updateInstance(okapiClient, instanceId, updateInstanceRequest);
+  }
+
   private void selfLinkShouldBeReachable(JsonObject instance)
     throws InterruptedException,
     ExecutionException,
@@ -920,5 +1054,48 @@ public class InstancesApiExamples extends ApiTests {
 
   private static void containsApiRoot(String link) {
     assertThat(link.contains(ApiTestSuite.apiRoot()), is(true));
+  }
+
+  private void assertInstanceRelationships(JsonObject instance,
+                                           TestInstanceRelationships relationship) {
+
+    if (relationship.getSucceedingId() != null) {
+      assertThat(instance.getJsonArray(SUCCEEDING_TITLES_KEY).size(), is(1));
+      assertThat(instance.getJsonArray(SUCCEEDING_TITLES_KEY).getJsonObject(0)
+        .getString(SucceedingTitleRelationship.SUPER_INSTANCE_ID_KEY),
+        is(relationship.getSucceedingId()));
+    }
+
+    if(relationship.getPrecedingId() != null) {
+      assertThat(instance.getJsonArray(PRECEDING_TITLES_KEY).size(), is(1));
+      assertThat(instance.getJsonArray(PRECEDING_TITLES_KEY).getJsonObject(0)
+        .getString(PrecedingTitleRelationship.SUB_INSTANCE_ID_KEY),
+        is(relationship.getPrecedingId()));
+    }
+
+    if (relationship.getChildId() != null) {
+      JsonArray childInstances = instance.getJsonArray(CHILD_INSTANCES_KEY);
+      assertThat(childInstances.size(), is(1));
+      assertThat(childInstances.getJsonObject(0).getString(
+        InstanceRelationshipToParent.INSTANCE_RELATIONSHIP_TYPE_ID_KEY),
+        is(relationship.getChildRelationshipType())
+      );
+      assertThat(childInstances.getJsonObject(0).getString(
+        InstanceRelationshipToChild.SUB_INSTANCE_ID_KEY),
+        is(relationship.getChildId())
+      );
+    }
+
+    if(relationship.getParentId() != null) {
+      JsonArray parentInstances = instance.getJsonArray(PARENT_INSTANCES_KEY);
+      assertThat(parentInstances.size(), is(1));
+      assertThat(parentInstances.getJsonObject(0)
+          .getString(InstanceRelationshipToParent.INSTANCE_RELATIONSHIP_TYPE_ID_KEY),
+        is(relationship.getParentRelationshipType())
+      );
+      assertThat(parentInstances.getJsonObject(0)
+        .getString(InstanceRelationshipToParent.SUPER_INSTANCE_ID_KEY),
+        is(relationship.getParentId()));
+    }
   }
 }

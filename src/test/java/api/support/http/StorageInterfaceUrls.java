@@ -37,6 +37,10 @@ public class StorageInterfaceUrls {
     return viaOkapiURL("/nature-of-content-terms" + subPath);
   }
 
+  public static URL instanceRelationshipTypes(String subPath) {
+    return viaOkapiURL("/instance-relationship-types" + subPath);
+  }
+
   private static URL viaOkapiURL(String path) {
     try {
       return URLHelper.joinPath(new URL(storageOkapiUrl()), path);

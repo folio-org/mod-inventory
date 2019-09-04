@@ -45,12 +45,18 @@ public class Instance {
   public static final String TAGS_KEY = "tags";
   public static final String TAG_LIST_KEY = "tagList";
   public static final String NATURE_OF_CONTENT_TERM_IDS_KEY = "natureOfContentTermIds";
+  public static final String PRECEDING_TITLES_KEY = "precedingTitles";
+  public static final String SUCCEEDING_TITLES_KEY = "succeedingTitles";
 
   private final String id;
   private final String hrid;
   private final String source;
   private List<InstanceRelationshipToParent> parentInstances = new ArrayList();
   private List<InstanceRelationshipToChild> childInstances = new ArrayList();
+
+  private List<PrecedingTitleRelationship> precedingTitles = new ArrayList<>();
+  private List<SucceedingTitleRelationship> succeedingTitles = new ArrayList<>();
+
   private final String title;
   private String indexTitle;
   private List<AlternativeTitle> alternativeTitles = new ArrayList();
@@ -106,9 +112,35 @@ public class Instance {
     return this;
   }
 
+  public void addParentInstance(InstanceRelationshipToParent parentInstance) {
+    this.parentInstances.add(parentInstance);
+  }
+
   public Instance setChildInstances(List<InstanceRelationshipToChild> childInstances) {
     this.childInstances = childInstances;
     return this;
+  }
+
+  public void addChildInstance(InstanceRelationshipToChild childInstance) {
+    this.childInstances.add(childInstance);
+  }
+
+  public Instance setPrecedingTitles(List<PrecedingTitleRelationship> precedingTitles) {
+    this.precedingTitles.addAll(precedingTitles);
+    return this;
+  }
+
+  public void addPrecedingTitle(PrecedingTitleRelationship precedingTitle) {
+    this.precedingTitles.add(precedingTitle);
+  }
+
+  public Instance setSucceedingTitles(List<SucceedingTitleRelationship> succeedingTitles) {
+    this.succeedingTitles.addAll(succeedingTitles);
+    return this;
+  }
+
+  public void addSucceedingTitle(SucceedingTitleRelationship succeedingTitle) {
+    this.succeedingTitles.add(succeedingTitle);
   }
 
   public Instance setAlternativeTitles(List<AlternativeTitle> alternativeTitles) {
@@ -270,6 +302,14 @@ public class Instance {
     return childInstances;
   }
 
+  public List<PrecedingTitleRelationship> getPrecedingTitles() {
+    return precedingTitles;
+  }
+
+  public List<SucceedingTitleRelationship> getSucceedingTitles() {
+    return succeedingTitles;
+  }
+
   public String getTitle() {
     return title;
   }
@@ -420,7 +460,9 @@ public class Instance {
             .setStatusUpdatedDate(statusUpdatedDate)
             .setMetadata(metadata)
             .setTags(tags)
-            .setNatureOfContentIds(natureOfContentIds);
+            .setNatureOfContentIds(natureOfContentIds)
+            .setPrecedingTitles(precedingTitles)
+            .setSucceedingTitles(succeedingTitles);
   }
 
   public Instance copyInstance() {
@@ -452,7 +494,9 @@ public class Instance {
             .setStatusUpdatedDate(statusUpdatedDate)
             .setMetadata(metadata)
             .setTags(tags)
-            .setNatureOfContentIds(natureOfContentIds);
+            .setNatureOfContentIds(natureOfContentIds)
+            .setPrecedingTitles(precedingTitles)
+            .setSucceedingTitles(succeedingTitles);
   }
 
   public Instance addIdentifier(Identifier identifier) {

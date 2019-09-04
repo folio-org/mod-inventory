@@ -44,4 +44,32 @@ public class InstanceApiClient {
 
     return getResponse.getJson();
   }
+
+  public static JsonObject updateInstance(
+    OkapiHttpClient client, String instanceId, JsonObject updatedInstance)
+    throws MalformedURLException,
+    InterruptedException,
+    ExecutionException,
+    TimeoutException {
+    final String instancesUrl = ApiRoot.instances() + "/" + instanceId;
+
+    CompletableFuture<Response> updateCompleted = new CompletableFuture<>();
+    client.put(instancesUrl, updatedInstance,
+      ResponseHandler.any(updateCompleted));
+
+    Response updateResponse = updateCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat("Failed to update instance",
+      updateResponse.getStatusCode(), is(204));
+
+    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+    client.get(instancesUrl, ResponseHandler.json(getCompleted));
+
+    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat("Failed to get instance",
+      getResponse.getStatusCode(), is(200));
+
+    return getResponse.getJson();
+  }
 }

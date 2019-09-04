@@ -80,6 +80,13 @@ public class FakeOkapi extends AbstractVerticle {
       .withCollectionPropertyName("instanceRelationships")
       .withRequiredProperties("superInstanceId", "subInstanceId", "instanceRelationshipTypeId")
       .create().register(router);
+
+    new FakeStorageModuleBuilder()
+      .withRecordName("instance relationship types")
+      .withRootPath("/instance-relationship-types")
+      .withCollectionPropertyName("instanceRelationshipTypes")
+      .withRequiredProperties("name")
+      .create().register(router);
   }
 
   private void registerFakeHoldingStorageModule(Router router) {

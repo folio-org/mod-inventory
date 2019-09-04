@@ -1,12 +1,24 @@
 package org.folio.inventory.resources;
 
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.BodyHandler;
+import static io.netty.util.internal.StringUtil.COMMA;
+import static java.lang.String.format;
+import static org.folio.inventory.support.http.server.SuccessResponse.noContent;
+
+import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
@@ -16,11 +28,13 @@ import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
-import org.folio.inventory.domain.instances.InstanceRelationship;
 import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
 import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
+import org.folio.inventory.domain.instances.PrecedingTitleRelationship;
+import org.folio.inventory.domain.instances.SucceedingTitleRelationship;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
+import org.folio.inventory.storage.external.ReferenceRecord;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.server.ClientErrorResponse;
@@ -31,21 +45,13 @@ import org.folio.inventory.support.http.server.ServerErrorResponse;
 import org.folio.rest.client.SourceStorageClient;
 import org.folio.rest.jaxrs.model.SuppressFromDiscoveryDto;
 
-import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLEncoder;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Collectors;
-
-import static io.netty.util.internal.StringUtil.COMMA;
-import static java.lang.String.format;
-import static org.folio.inventory.support.http.server.SuccessResponse.noContent;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
 
 public class Instances extends AbstractInstances {
   private static final String INSTANCES_CONTEXT_PATH = INSTANCES_PATH + "/context";
@@ -143,6 +149,9 @@ public class Instances extends AbstractInstances {
         Instance response = success.getResult();
         response.setParentInstances(newInstance.getParentInstances());
         response.setChildInstances(newInstance.getChildInstances());
+        response.setPrecedingTitles(newInstance.getPrecedingTitles());
+        response.setSucceedingTitles(newInstance.getSucceedingTitles());
+
         updateInstanceRelationships(response, routingContext, context,
           x -> {
             try {
@@ -314,22 +323,57 @@ public class Instances extends AbstractInstances {
 
     if (relatedInstancesClient != null) {
       relatedInstancesClient.getMany(query, (Response result) -> {
-        Map<String, List<InstanceRelationshipToParent>> parentInstanceMap = new HashMap();
-        Map<String, List<InstanceRelationshipToChild>> childInstanceMap = new HashMap();
-        if (result.getStatusCode() == 200) {
-          JsonObject json = result.getJson();
-          List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("instanceRelationships"));
-          relationsList.stream().map(rel -> {
-            addToList(childInstanceMap, rel.getString("superInstanceId"), new InstanceRelationshipToChild(rel));
-            return rel;
-          }).forEachOrdered(rel -> {
-            addToList(parentInstanceMap, rel.getString("subInstanceId"), new InstanceRelationshipToParent(rel));
-          });
-        }
-        JsonResponse.success(routingContext.response(),
-          toRepresentation(success.getResult(), parentInstanceMap, childInstanceMap, context));
+        populateInstancesRelationships(success.getResult().records, result, routingContext, context)
+          .thenAccept(instances -> JsonResponse.success(routingContext.response(),
+            toRepresentation(instances, success.getResult().totalRecords, context)));
       });
     }
+  }
+
+  private CompletableFuture<List<Instance>> populateInstancesRelationships(
+    List<Instance> instances, Response relationshipsResponse,
+    RoutingContext routingContext, WebContext context) {
+
+    if (relationshipsResponse.getStatusCode() != 200) {
+      return CompletableFuture.completedFuture(instances);
+    }
+
+    return getInstanceRelationshipTypeRecord(routingContext, context, PRECEDING_SUCCEEDING_RELATIONSHIP_NAME)
+      .thenApply(precedingSucceedingRelationship -> {
+        JsonObject json = relationshipsResponse.getJson();
+        List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("instanceRelationships"));
+        Map<String, Instance> instanceIdToInstanceMap = buildInstanceIdToInstanceMap(instances);
+
+        relationsList.forEach(rel -> {
+          String subInstanceId = rel.getString("subInstanceId");
+          String superInstanceId = rel.getString("superInstanceId");
+
+          if (isPrecedingSucceedingRelationship(precedingSucceedingRelationship, rel)) {
+            getValueFromMap(instanceIdToInstanceMap, superInstanceId)
+              .ifPresent(instance -> instance.addPrecedingTitle(new PrecedingTitleRelationship(rel)));
+            getValueFromMap(instanceIdToInstanceMap, subInstanceId)
+              .ifPresent(instance -> instance.addSucceedingTitle(new SucceedingTitleRelationship(rel)));
+          } else {
+            getValueFromMap(instanceIdToInstanceMap, superInstanceId)
+              .ifPresent(instance -> instance.addChildInstance(new InstanceRelationshipToChild(rel)));
+            getValueFromMap(instanceIdToInstanceMap, subInstanceId)
+              .ifPresent(instance -> instance.addParentInstance(new InstanceRelationshipToParent(rel)));
+          }
+        });
+
+        return instances;
+      });
+  }
+
+  private Map<String, Instance> buildInstanceIdToInstanceMap(List<Instance> records) {
+    return records.stream()
+      .collect(Collectors.toMap(Instance::getId, instance -> instance));
+  }
+
+  private boolean isPrecedingSucceedingRelationship(ReferenceRecord precedingSucceedingRel,
+                                                    JsonObject relationship) {
+    String relationshipType = relationship.getString("instanceRelationshipTypeId");
+    return precedingSucceedingRel != null && relationshipType.equals(precedingSucceedingRel.id);
   }
 
   /**
@@ -350,28 +394,11 @@ public class Instances extends AbstractInstances {
     CollectionResourceClient relatedInstancesClient = createInstanceRelationshipsClient(routingContext, context);
 
     if (relatedInstancesClient != null) {
-      relatedInstancesClient.getMany(query, (Response result) -> {
-        List<InstanceRelationshipToParent> parentInstanceList = new ArrayList();
-        List<InstanceRelationshipToChild> childInstanceList = new ArrayList();
-        if (result.getStatusCode() == 200) {
-          JsonObject json = result.getJson();
-          List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("instanceRelationships"));
-          relationsList.forEach(rel -> {
-            if (rel.getString(InstanceRelationship.SUPER_INSTANCE_ID_KEY).equals(instance.getId())) {
-              childInstanceList.add(new InstanceRelationshipToChild(rel));
-            } else if (rel.getString(InstanceRelationship.SUB_INSTANCE_ID_KEY).equals(instance.getId())) {
-              parentInstanceList.add(new InstanceRelationshipToParent(rel));
-            }
-          });
-        }
-        JsonResponse.success(
-          routingContext.response(),
-          toRepresentation(
-            success.getResult(),
-            parentInstanceList,
-            childInstanceList,
-            context));
-      });
+      relatedInstancesClient.getMany(query, (Response result) ->
+        populateInstancesRelationships(Collections.singletonList(instance), result, routingContext, context)
+          .thenAccept(instances -> JsonResponse
+            .success(routingContext.response(), toRepresentation(instances.get(0), context)))
+      );
     }
   }
 
@@ -391,36 +418,7 @@ public class Instances extends AbstractInstances {
     return instanceIds;
   }
 
-  private synchronized void addToList(Map<String, List<InstanceRelationshipToChild>> items, String mapKey, InstanceRelationshipToChild myItem) {
-    List<InstanceRelationshipToChild> itemsList = items.get(mapKey);
-
-    // if list does not exist create it
-    if (itemsList == null) {
-      itemsList = new ArrayList();
-      itemsList.add(myItem);
-      items.put(mapKey, itemsList);
-    } else {
-      // add if item is not already in list
-      if (!itemsList.contains(myItem)) {
-        itemsList.add(myItem);
-      }
-    }
+  private <Key, Value> Optional<Value> getValueFromMap(Map<Key, Value> map, Key key) {
+    return Optional.ofNullable(map.get(key));
   }
-
-  private synchronized void addToList(Map<String, List<InstanceRelationshipToParent>> items, String mapKey, InstanceRelationshipToParent myItem) {
-    List<InstanceRelationshipToParent> itemsList = items.get(mapKey);
-
-    // if list does not exist create it
-    if (itemsList == null) {
-      itemsList = new ArrayList();
-      itemsList.add(myItem);
-      items.put(mapKey, itemsList);
-    } else {
-      // add if item is not already in list
-      if (!itemsList.contains(myItem)) {
-        itemsList.add(myItem);
-      }
-    }
-  }
-
 }

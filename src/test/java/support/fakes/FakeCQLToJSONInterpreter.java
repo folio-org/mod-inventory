@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.BinaryOperator;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -73,7 +74,7 @@ public class FakeCQLToJSONInterpreter {
     }
 
     List<ImmutableTriple<String, String, String>> pairs =
-      Arrays.stream(query.split(" and "))
+      Arrays.stream(query.split(useAndSeparator(query) ? " and " : " or "))
         .map( pairText -> {
           String[] split = pairText.split("==|=|<>|<|>");
 
@@ -81,7 +82,8 @@ public class FakeCQLToJSONInterpreter {
             String.join(", ", split)));
 
           String searchField = split[0]
-            .replaceAll("\"", "");
+            .replaceAll("\"", "")
+            .replaceAll("[()]", "");
 
           String searchTerm = split[1]
             .replaceAll("\"", "")
@@ -112,7 +114,13 @@ public class FakeCQLToJSONInterpreter {
     return consolidateToSinglePredicate(
       pairs.stream()
         .map(pair -> filterByField(pair.getLeft(), pair.getMiddle(), pair.getRight()))
-        .collect(Collectors.toList()));
+        .collect(Collectors.toList()),
+      useAndSeparator(query) ? Predicate::and: Predicate::or);
+  }
+
+  private boolean useAndSeparator(String query) {
+    // Use OR separator only when it joins two expressions
+    return !query.matches(".+=.+ or .+?=.+");
   }
 
   private Predicate<JsonObject> filterByField(String field, String term, String operator) {
@@ -173,7 +181,7 @@ public class FakeCQLToJSONInterpreter {
   }
 
   private String removeBrackets(String term) {
-    return term.replace("(", "").replace(")", "");
+    return term.replaceAll("[()]", "");
   }
 
   private Predicate<String> filter(String term) {
@@ -198,9 +206,10 @@ public class FakeCQLToJSONInterpreter {
   }
 
   private Predicate<JsonObject> consolidateToSinglePredicate(
-    Collection<Predicate<JsonObject>> predicates) {
+    Collection<Predicate<JsonObject>> predicates,
+    BinaryOperator<Predicate<JsonObject>> concatenatePredicate) {
 
-    return predicates.stream().reduce(Predicate::and).orElse(t -> false);
+    return predicates.stream().reduce(concatenatePredicate).orElse(t -> false);
   }
 
   private ImmutablePair<String, String> splitQueryAndSort(String query) {

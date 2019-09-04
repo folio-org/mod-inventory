@@ -89,6 +89,13 @@ public class ResourceClient {
     );
   }
 
+  public static ResourceClient forInstanceRelationshipTypes(OkapiHttpClient client) {
+    return new ResourceClient(client,
+      StorageInterfaceUrls::instanceRelationshipTypes,
+      "Instance Relationship Types",
+      "instanceRelationshipTypes");
+  }
+
   private ResourceClient(
     OkapiHttpClient client,
     UrlMaker urlMaker, String resourceName,

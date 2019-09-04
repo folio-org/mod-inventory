@@ -398,6 +398,50 @@
         "description": "Single UUID for the Instance nature of content",
         "$ref": "uuid.json"
       }
+    },
+    "precedingTitles" : {
+      "type": "array",
+      "description": "Preceding titles of the instance",
+      "items": {
+        "type": "object",
+        "description": "Preceding instances IDs",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Relationship ID",
+            "$ref": "uuid.json"
+          },
+          "subInstanceId": {
+            "type": "string",
+            "description": "Sub instance ID",
+            "$ref": "uuid.json"
+          }
+        },
+        "additionalProperties": false,
+        "required": ["id","subInstanceId"]
+      }
+    },
+    "succeedingTitles": {
+      "type": "array",
+      "description": "Succeeding titles of the instance",
+      "items": {
+        "type": "object",
+        "description": "Succeeding instances IDs",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Relationship ID",
+            "$ref": "uuid.json"
+          },
+          "superInstanceId": {
+            "type": "string",
+            "description": "Super instance ID",
+            "$ref": "uuid.json"
+          }
+        },
+        "additionalProperties": false,
+        "required": ["id", "superInstanceId"]
+      }
     }
   },
   "additionalProperties": false,

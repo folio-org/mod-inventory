@@ -64,6 +64,8 @@ public class ApiTestSuite {
   private static UUID mainLibraryLocationId;
   private static UUID audiobookNatureOfContentTermId;
   private static UUID bibliographyNatureOfContentTermId;
+  private static UUID precedingSucceedingTitlesRelationship;
+  private static UUID multipartMonographRelationship;
 
   private static String isbnIdentifierTypeId;
   private static String asinIdentifierTypeId;
@@ -104,6 +106,7 @@ public class ApiTestSuite {
     createInstanceTypes();
     createContributorNameTypes();
     createNatureOfContentTerms();
+    createInstanceRelationshipTypes();
     startInventoryVerticle();
 
     initialised = true;
@@ -413,6 +416,25 @@ public class ApiTestSuite {
     );
   }
 
+  private static void createInstanceRelationshipTypes()
+    throws MalformedURLException,
+    InterruptedException,
+    ExecutionException,
+    TimeoutException  {
+    ResourceClient client = ResourceClient
+      .forInstanceRelationshipTypes(createOkapiHttpClient());
+
+    precedingSucceedingTitlesRelationship = createReferenceRecord(client,
+      new JsonObject()
+        .put("name", "preceding-succeeding")
+    );
+
+    multipartMonographRelationship = createReferenceRecord(client,
+      new JsonObject()
+        .put("name", "multipart monograph")
+    );
+  }
+
   private static void createIdentifierTypes()
     throws MalformedURLException,
     InterruptedException,
@@ -510,5 +532,13 @@ public class ApiTestSuite {
   private static boolean existsInList(List<JsonObject> existingRecords, String name) {
     return existingRecords.stream()
       .noneMatch(materialType -> materialType.getString("name").equals(name));
+  }
+
+  public static String getPrecedingSucceedingTitlesRelationship() {
+    return precedingSucceedingTitlesRelationship.toString();
+  }
+
+  public static String getMultipartMonographRelationship() {
+    return multipartMonographRelationship.toString();
   }
 }

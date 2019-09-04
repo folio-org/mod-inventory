@@ -146,7 +146,7 @@ public class InstancesBatch extends AbstractInstances {
 
   private JsonObject getBatchResponse(List<Instance> createdInstances, List<String> errorMessages, WebContext webContext) {
     List<JsonObject> jsonInstances = createdInstances.stream()
-      .map(instance -> toRepresentation((Instance) instance, new ArrayList<>(), new ArrayList<>(), webContext)).collect(Collectors.toList());
+      .map(instance -> toRepresentation(instance, webContext)).collect(Collectors.toList());
 
     return new JsonObject()
       .put(BATCH_RESPONSE_FIELD_INSTANCES, new JsonArray(jsonInstances))
