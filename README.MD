@@ -155,3 +155,12 @@ If these methods don't work for you, please do get in touch, so this section can
 On Linux, `ifconfig docker0 | grep 'inet addr:'` should give output similar to `inet addr:192.168.X.X  Bcast:0.0.0.0  Mask:255.255.0.0`, , the first IP address is usually routable from within containers.
 
 On Mac OS X (using Docker Native), `ifconfig en0 | grep 'inet '` should give output similar to `inet 192.168.X.X netmask 0xffffff00 broadcast 192.168.X.X`, the first IP address is usually routable from within containers.
+
+# Instance schema
+The [instance schema](https://github.com/folio-org/mod-inventory/blob/master/ramls/instance.json) defined in this module
+is also used by mod-source-record-manager for data import flow. Therefore changing the instance schema only in this module is a critical changes.
+To avoid the failure of the data import flow when changing the schema, you should also update [the instance schema in mod-source-record-manager](https://github.com/folio-org/mod-source-record-manager/blob/master/ramls/instance.json).
+This module contains a test that serves as a notification of an instance schema change.
+The test covers the current state of the instance schema and fails if the schema has been changed.
+In this case, appropriate measures should be taken to update the instance schema in mod-source-record-manager before test fixing.
+To fix the test you should copy the changed instance schema and copy/add other related schemas to the 'schema' directory in test resources.
