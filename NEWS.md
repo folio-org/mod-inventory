@@ -1,3 +1,16 @@
+## 13.0.0 2019-09-09
+
+* Adds nature of content terms to `instances` (MODINV-149)
+* Adds tags to `items` (MODINV-147)
+* Adds tags to `instances` (MODINV-146)
+* `ISBN validation` uses 422 responses instead of 400 for errors (MODINV-139)
+* `Instance batch` API uses batch storage API (MODINV-134)  
+* Provides `inventory 9.4` interface (MODINV-149, MODINV-146, MODINV-147)
+* Provides `inventory-batch 0.3` interface (MODINV-149)
+* Provides `isbn-utils 2.0` interface (MODINV-139)
+* Requires `item-storage 7.5` interface (MODINV-147)
+* Requires `instance-storage 7.2` interface (MODINV-149)
+
 ## 12.0.0 2019-07-23
 
 * Provides `inventory` interface 9.1 (MODINV-132, MODINV-129)
