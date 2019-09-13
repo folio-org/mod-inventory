@@ -72,6 +72,7 @@ public class Item {
   private String temporaryLoanTypeId;
   private String permanentLocationId;
   private String temporaryLocationId;
+  private String effectiveLocationId;
   private List<ElectronicAccess> electronicAccess = new ArrayList();
   private List<String> statisticalCodeIds = new ArrayList();
   private String purchaseOrderLineidentifier;
@@ -301,6 +302,15 @@ public class Item {
     return temporaryLocationId;
   }
 
+  public Item withEffectiveLocationId(String effectiveLocationId) {
+    this.effectiveLocationId = effectiveLocationId;
+    return this;
+  }
+
+  public String getEffectiveLocationId() {
+    return effectiveLocationId;
+  }
+
   public Item withTemporaryLoanTypeId(String temporaryLoanTypeId) {
     this.temporaryLoanTypeId = temporaryLoanTypeId;
     return this;
@@ -419,6 +429,7 @@ public class Item {
             .withNotes(this.notes)
             .withPermanentLocationId(this.permanentLocationId)
             .withTemporaryLocationId(this.temporaryLocationId)
+            .withEffectiveLocationId(this.effectiveLocationId)
             .withTemporaryLoanTypeId(this.temporaryLoanTypeId)
             .withAccessionNumber(this.accessionNumber)
             .withItemIdentifier(this.itemIdentifier)
@@ -454,6 +465,7 @@ public class Item {
             .withNotes(this.notes)
             .withPermanentLocationId(this.permanentLocationId)
             .withTemporaryLocationId(this.temporaryLocationId)
+            .withEffectiveLocationId(this.effectiveLocationId)
             .withTemporaryLoanTypeId(this.temporaryLoanTypeId)
             .withAccessionNumber(this.accessionNumber)
             .withItemIdentifier(this.itemIdentifier)

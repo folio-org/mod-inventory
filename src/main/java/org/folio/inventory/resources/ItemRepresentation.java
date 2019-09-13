@@ -176,7 +176,6 @@ class ItemRepresentation {
     Map<String, JsonObject> materialTypes,
     Map<String, JsonObject> loanTypes,
     Map<String, JsonObject> locations,
-    Map<String, JsonObject> effectiveLocations,
     WebContext context) {
 
     JsonObject representation = new JsonObject();
@@ -194,9 +193,7 @@ class ItemRepresentation {
 
       JsonObject instance = instanceForHolding(holding, instances).orElse(null);
 
-      String effectiveLocationId = determineEffectiveLocationIdForItem(
-        holding, item);
-      JsonObject effectiveLocation = effectiveLocations.get(effectiveLocationId);
+      JsonObject effectiveLocation = locations.get(item.getEffectiveLocationId());
       JsonObject permanentLocation = locations.get(item.getPermanentLocationId());
       JsonObject temporaryLocation = locations.get(item.getTemporaryLocationId());
 

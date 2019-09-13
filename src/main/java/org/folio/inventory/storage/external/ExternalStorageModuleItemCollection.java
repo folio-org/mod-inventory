@@ -102,6 +102,7 @@ class ExternalStorageModuleItemCollection
             .withCirculationNotes(mappedCirculationNotes)
             .withPermanentLocationId(itemFromServer.getString("permanentLocationId"))
             .withTemporaryLocationId(itemFromServer.getString("temporaryLocationId"))
+            .withEffectiveLocationId(itemFromServer.getString("effectiveLocationId"))
             .withTemporaryLoanTypeId(itemFromServer.getString("temporaryLoanTypeId"))
             .withAccessionNumber(itemFromServer.getString(Item.ACCESSION_NUMBER_KEY))
             .withItemIdentifier(itemFromServer.getString(Item.ITEM_IDENTIFIER_KEY))

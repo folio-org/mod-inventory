@@ -1,6 +1,11 @@
 package api.items;
 
 import static api.ApiTestSuite.USER_ID;
+import static api.ApiTestSuite.getCanCirculateLoanType;
+import static api.ApiTestSuite.getDvdMaterialType;
+import static api.ApiTestSuite.getMainLibraryLocation;
+import static api.ApiTestSuite.getReadingRoomLocation;
+import static api.ApiTestSuite.getThirdFloorLocation;
 import static api.support.InstanceSamples.girlOnTheTrain;
 import static api.support.InstanceSamples.nod;
 import static api.support.InstanceSamples.smallAngryPlanet;
@@ -14,11 +19,13 @@ import static org.folio.inventory.domain.user.Personal.FIRST_NAME_KEY;
 import static org.folio.inventory.domain.user.Personal.LAST_NAME_KEY;
 import static org.folio.inventory.domain.user.User.ID_KEY;
 import static org.folio.inventory.domain.user.User.PERSONAL_KEY;
+import static org.folio.util.StringUtil.urlEncode;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertThat;
 import static support.matchers.TextDateTimeMatcher.withinSecondsAfter;
 
@@ -50,6 +57,7 @@ import api.support.ApiTests;
 import api.support.InstanceApiClient;
 import api.support.builders.HoldingRequestBuilder;
 import api.support.builders.ItemRequestBuilder;
+import api.support.http.BusinessLogicInterfaceUrls;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -1144,6 +1152,84 @@ public class ItemApiExamples extends ApiTests {
     selfLinkShouldBeReachable(updatedItem);
   }
 
+  @Test
+  public void canPopulateLocationProperties() throws Exception {
+    UUID itemId = UUID.randomUUID();
+
+    JsonObject newItemRequest = new JsonObject()
+      .put("id", itemId.toString())
+      .put("holdingsRecordId", createInstanceAndHolding().toString())
+      .put("materialTypeId", getDvdMaterialType())
+      .put("permanentLoanTypeId", getCanCirculateLoanType())
+      .put("permanentLocationId", getMainLibraryLocation())
+      .put("temporaryLocationId", getReadingRoomLocation())
+      .put("effectiveLocationId", getReadingRoomLocation());
+
+    itemsStorageClient.create(newItemRequest);
+
+    JsonObject item = itemsClient.getById(itemId).getJson();
+
+    assertThat(item.getJsonObject("permanentLocation"), notNullValue());
+    assertThat(item.getJsonObject("permanentLocation").getString("id"),
+      is(getMainLibraryLocation()));
+    assertThat(item.getJsonObject("permanentLocation").getString("name"),
+      is("Main Library"));
+
+    assertThat(item.getJsonObject("temporaryLocation"), notNullValue());
+    assertThat(item.getJsonObject("temporaryLocation").getString("id"),
+      is(getReadingRoomLocation()));
+    assertThat(item.getJsonObject("temporaryLocation").getString("name"),
+      is("Reading Room"));
+
+    assertThat(item.getJsonObject("effectiveLocation"), notNullValue());
+    assertThat(item.getJsonObject("effectiveLocation").getString("id"),
+      is(getReadingRoomLocation()));
+    assertThat(item.getJsonObject("effectiveLocation").getString("name"),
+      is("Reading Room"));
+  }
+
+  @Test
+  public void canSearchItemsByLocation() throws Exception {
+    JsonObject readingRoomItem = new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("holdingsRecordId", createInstanceAndHolding().toString())
+      .put("materialTypeId", getDvdMaterialType())
+      .put("permanentLoanTypeId", getCanCirculateLoanType())
+      .put("permanentLocationId", getMainLibraryLocation())
+      .put("temporaryLocationId", getReadingRoomLocation())
+      .put("effectiveLocationId", getReadingRoomLocation());
+
+    JsonObject thirdFloorItem = readingRoomItem.copy()
+      .put("id", UUID.randomUUID().toString())
+      .put("temporaryLocationId", getThirdFloorLocation())
+      .put("effectiveLocationId", getThirdFloorLocation());
+
+    JsonObject mainLibraryItem = readingRoomItem.copy()
+      .put("id", UUID.randomUUID().toString())
+      .put("effectiveLocationId", getMainLibraryLocation());
+      mainLibraryItem.remove("temporaryLocationId");
+
+    itemsStorageClient.create(readingRoomItem);
+    itemsStorageClient.create(thirdFloorItem);
+    itemsStorageClient.create(mainLibraryItem);
+
+    JsonObject readingRoomItems = findItems("effectiveLocationId=" + getReadingRoomLocation());
+    JsonObject thirdFloorItems = findItems("effectiveLocationId=" + getThirdFloorLocation());
+    JsonObject mainLibraryItems = findItems("effectiveLocationId=" + getMainLibraryLocation());
+
+    assertThat(readingRoomItems.getInteger("totalRecords"), is(1));
+    assertThat(readingRoomItems.getJsonArray("items").getJsonObject(0).getString("id"),
+      is(readingRoomItem.getString("id")));
+
+    assertThat(thirdFloorItems.getInteger("totalRecords"), is(1));
+    assertThat(thirdFloorItems.getJsonArray("items").getJsonObject(0).getString("id"),
+      is(thirdFloorItem.getString("id")));
+
+    assertThat(mainLibraryItems.getInteger("totalRecords"), is(1));
+    assertThat(mainLibraryItems.getJsonArray("items").getJsonObject(0).getString("id"),
+      is(mainLibraryItem.getString("id")));
+  }
+
   private static void selfLinkRespectsWayResourceWasReached(JsonObject item) {
     containsApiRoot(item.getJsonObject("links").getString("self"));
   }
@@ -1257,5 +1343,25 @@ public class ItemApiExamples extends ApiTests {
     ExecutionException {
 
     return InstanceApiClient.createInstance(okapiClient, newInstanceRequest);
+  }
+
+  private UUID createInstanceAndHolding()
+    throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+    UUID instanceId = UUID.randomUUID();
+
+    createInstance(smallAngryPlanet(instanceId));
+    return holdingsStorageClient
+      .create(new HoldingRequestBuilder().forInstance(instanceId))
+      .getId();
+  }
+
+  private JsonObject findItems(String searchQuery)
+    throws InterruptedException, TimeoutException, ExecutionException {
+
+    CompletableFuture<Response> getCompletedFuture = new CompletableFuture<>();
+    okapiClient.get(BusinessLogicInterfaceUrls.items("?query=") + urlEncode(searchQuery),
+      ResponseHandler.json(getCompletedFuture));
+
+    return getCompletedFuture.get(5, TimeUnit.SECONDS).getJson();
   }
 }
