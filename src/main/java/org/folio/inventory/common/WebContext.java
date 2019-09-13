@@ -11,6 +11,7 @@ public class WebContext implements Context {
   private static final String OKAPI_TOKEN_HEADER = "X-Okapi-Token";
   private static final String OKAPI_URL_HEADER = "X-Okapi-Url";
   private static final String OKAPI_USER_ID_HEADER = "X-Okapi-User-Id";
+  private static final String OKAPI_REQUEST_ID = "X-Okapi-Request-Id";
 
   public WebContext(RoutingContext routingContext) {
     this.routingContext = routingContext;
@@ -34,6 +35,11 @@ public class WebContext implements Context {
   @Override
   public String getUserId() {
     return getHeader(OKAPI_USER_ID_HEADER, "");
+  }
+
+  @Override
+  public String getRequestId() {
+    return getHeader(OKAPI_REQUEST_ID);
   }
 
   @Override

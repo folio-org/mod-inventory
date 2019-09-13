@@ -30,6 +30,11 @@ public class MessagingContext implements Context {
   }
 
   @Override
+  public String getRequestId() {
+    return null;
+  }
+
+  @Override
   public String getHeader(String header) {
     return headers.get(header);
   }

@@ -408,7 +408,7 @@ public abstract class AbstractInstances {
 
     return new OkapiHttpClient(client,
       new URL(context.getOkapiLocation()), context.getTenantId(),
-      context.getToken(), context.getUserId(),
+      context.getToken(), context.getUserId(), context.getRequestId(),
       exception -> {
         ServerErrorResponse.internalError(routingContext.response(), format("Failed to contact storage module: %s",
           exception.toString()));
