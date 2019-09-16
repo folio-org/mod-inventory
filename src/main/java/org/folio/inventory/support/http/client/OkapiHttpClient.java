@@ -9,6 +9,7 @@ import io.vertx.core.json.Json;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import org.apache.commons.lang3.StringUtils;
+import org.folio.inventory.common.WebContext;
 import org.folio.inventory.support.http.ContentType;
 
 import java.lang.invoke.MethodHandles;
@@ -34,12 +35,21 @@ public class OkapiHttpClient {
   private final Consumer<Throwable> exceptionHandler;
 
   public OkapiHttpClient(HttpClient httpClient,
-                         URL okapiUrl,
-                         String tenantId,
-                         String token,
-                         String userId,
-                         String requestId,
-                         Consumer<Throwable> exceptionHandler) {
+    WebContext context, Consumer<Throwable> exceptionHandler)
+    throws MalformedURLException {
+
+    this(httpClient, new URL(context.getOkapiLocation()),
+      context.getTenantId(), context.getToken(), context.getUserId(),
+      context.getRequestId(), exceptionHandler);
+  }
+
+  public OkapiHttpClient(HttpClient httpClient,
+    URL okapiUrl,
+    String tenantId,
+    String token,
+    String userId,
+    String requestId,
+    Consumer<Throwable> exceptionHandler) {
 
     this.client = httpClient;
     this.okapiUrl = okapiUrl;
