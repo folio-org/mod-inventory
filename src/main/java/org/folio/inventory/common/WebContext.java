@@ -37,23 +37,19 @@ public class WebContext implements Context {
     return getHeader(OKAPI_USER_ID_HEADER, "");
   }
 
-  @Override
   public String getRequestId() {
     return getHeader(OKAPI_REQUEST_ID);
   }
 
-  @Override
-  public String getHeader(String header) {
+  private String getHeader(String header) {
     return routingContext.request().getHeader(header);
   }
 
-  @Override
-  public String getHeader(String header, String defaultValue) {
+  private String getHeader(String header, String defaultValue) {
     return hasHeader(header) ? getHeader(header) : defaultValue;
   }
 
-  @Override
-  public boolean hasHeader(String header) {
+  private boolean hasHeader(String header) {
     return routingContext.request().headers().contains(header);
   }
 

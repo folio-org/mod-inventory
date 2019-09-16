@@ -35,24 +35,8 @@ public class MessagingContext implements Context {
     return null;
   }
 
-  @Override
-  public String getRequestId() {
-    return null;
-  }
-
-  @Override
-  public String getHeader(String header) {
+  private String getHeader(String header) {
     return headers.get(header);
-  }
-
-  @Override
-  public String getHeader(String header, String defaultValue) {
-    return hasHeader(header) ? getHeader(header) : defaultValue;
-  }
-
-  @Override
-  public boolean hasHeader(String header) {
-    return headers.contains(header);
   }
 
   public String getJobId() {

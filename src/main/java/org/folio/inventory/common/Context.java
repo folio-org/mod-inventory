@@ -5,8 +5,4 @@ public interface Context {
   String getToken();
   String getOkapiLocation();
   String getUserId();
-  String getRequestId();
-  String getHeader(String header);
-  String getHeader(String header, String defaultValue);
-  boolean hasHeader(String header);
 }
