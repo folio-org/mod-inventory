@@ -3,6 +3,12 @@ package org.folio.inventory.common;
 import io.vertx.core.MultiMap;
 
 public class MessagingContext implements Context {
+
+  public final static String TENANT_ID = "tenantId";
+  public final static String TOKEN = "token";
+  public final static String OKAPI_LOCATION = "okapiLocation";
+  public final static String JOB_ID = "jobId";
+
   private final MultiMap headers;
 
   public MessagingContext(final MultiMap headers) {
@@ -11,17 +17,17 @@ public class MessagingContext implements Context {
 
   @Override
   public String getTenantId() {
-    return getHeader("tenantId");
+    return getHeader(TENANT_ID);
   }
 
   @Override
   public String getToken() {
-    return getHeader("token");
+    return getHeader(TOKEN);
   }
 
   @Override
   public String getOkapiLocation() {
-    return getHeader("okapiLocation");
+    return getHeader(OKAPI_LOCATION);
   }
 
   @Override
@@ -50,6 +56,6 @@ public class MessagingContext implements Context {
   }
 
   public String getJobId() {
-    return getHeader("jobId");
+    return getHeader(JOB_ID);
   }
 }
