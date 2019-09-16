@@ -375,12 +375,17 @@
   },
   "launchDescriptor": {
     "dockerImage": "${artifactId}:${version}",
+    "dockerPull": false,
     "dockerArgs": {
-      "HostConfig": { "PortBindings": { "9403/tcp":  [{ "HostPort": "%p" }] } }
+      "HostConfig": {
+        "Memory": 357913941,
+        "PortBindings": { "9403/tcp": [ { "HostPort": "%p" } ] }
+      }
     },
     "env": [
-      { "name": "JAVA_OPTIONS", "value": "-Dorg.folio.metadata.inventory.storage.type=okapi" }
-    ],
-    "dockerPull" : false
+      { "name": "JAVA_OPTIONS",
+        "value": "-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -Dorg.folio.metadata.inventory.storage.type=okapi"
+      }
+    ]
   }
 }
