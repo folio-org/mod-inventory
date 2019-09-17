@@ -4,10 +4,10 @@ import io.vertx.core.MultiMap;
 
 public class MessagingContext implements Context {
 
-  public final static String TENANT_ID = "tenantId";
-  public final static String TOKEN = "token";
-  public final static String OKAPI_LOCATION = "okapiLocation";
-  public final static String JOB_ID = "jobId";
+  public static final String TENANT_ID = "tenantId";
+  public static final String TOKEN = "token";
+  public static final String OKAPI_LOCATION = "okapiLocation";
+  public static final String JOB_ID = "jobId";
 
   private final MultiMap headers;
 
