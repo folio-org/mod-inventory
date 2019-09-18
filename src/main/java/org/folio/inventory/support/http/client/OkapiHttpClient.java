@@ -43,6 +43,16 @@ public class OkapiHttpClient {
       context.getRequestId(), exceptionHandler);
   }
 
+  /** HTTP client that calls via Okapi
+   *
+   * @param httpClient as returned from vertx createHttpClient
+   * @param okapiUrl OkapiUrl string (must not be null)
+   * @param tenantId Okapi tenantId - ignored if blank/empty
+   * @param token - Okapi token - ignored if blank/empty
+   * @param userId - Folio User ID - ignored if blank/empty
+   * @param requestId - Okapi Request ID - ignored if null
+   * @param exceptionHandler - exceptionHandler (for POST only, not PUT??)
+   */
   public OkapiHttpClient(HttpClient httpClient,
     URL okapiUrl,
     String tenantId,
