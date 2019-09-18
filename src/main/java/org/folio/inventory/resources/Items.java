@@ -529,9 +529,7 @@ public class Items {
     WebContext context)
     throws MalformedURLException {
 
-    return new OkapiHttpClient(client,
-      new URL(context.getOkapiLocation()), context.getTenantId(),
-      context.getToken(), context.getUserId(),
+    return new OkapiHttpClient(client, context,
       exception -> ServerErrorResponse.internalError(routingContext.response(),
       String.format("Failed to contact storage module: %s",
         exception.toString())));
