@@ -9,6 +9,7 @@ import io.vertx.core.json.Json;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import org.apache.commons.lang3.StringUtils;
+import org.folio.inventory.common.WebContext;
 import org.folio.inventory.support.http.ContentType;
 
 import java.lang.invoke.MethodHandles;
@@ -23,26 +24,49 @@ public class OkapiHttpClient {
   private static final String TOKEN_HEADER = "X-Okapi-Token";
   private static final String OKAPI_URL_HEADER = "X-Okapi-Url";
   private static final String OKAPI_USER_ID_HEADER = "X-Okapi-User-Id";
+  private static final String OKAPI_REQUEST_ID = "X-Okapi-Request-Id";
 
   private final HttpClient client;
   private final URL okapiUrl;
   private final String tenantId;
   private final String token;
   private final String userId;
+  private final String requestId;
   private final Consumer<Throwable> exceptionHandler;
 
   public OkapiHttpClient(HttpClient httpClient,
-                         URL okapiUrl,
-                         String tenantId,
-                         String token,
-                         String userId,
-                         Consumer<Throwable> exceptionHandler) {
+    WebContext context, Consumer<Throwable> exceptionHandler)
+    throws MalformedURLException {
+
+    this(httpClient, new URL(context.getOkapiLocation()),
+      context.getTenantId(), context.getToken(), context.getUserId(),
+      context.getRequestId(), exceptionHandler);
+  }
+
+  /** HTTP client that calls via Okapi
+   *
+   * @param httpClient as returned from vertx createHttpClient
+   * @param okapiUrl Okapi URL (java.net.URL)
+   * @param tenantId Okapi tenantId - ignored if blank/empty
+   * @param token - Okapi token - ignored if blank/empty
+   * @param userId - Folio User ID - ignored if blank/empty
+   * @param requestId - Okapi Request ID - ignored if null
+   * @param exceptionHandler - exceptionHandler (for POST only, not PUT??)
+   */
+  public OkapiHttpClient(HttpClient httpClient,
+    URL okapiUrl,
+    String tenantId,
+    String token,
+    String userId,
+    String requestId,
+    Consumer<Throwable> exceptionHandler) {
 
     this.client = httpClient;
     this.okapiUrl = okapiUrl;
     this.tenantId = tenantId;
     this.userId = userId;
     this.token = token;
+    this.requestId = requestId;
     this.exceptionHandler = exceptionHandler;
   }
 
@@ -148,6 +172,10 @@ public class OkapiHttpClient {
 
     if(StringUtils.isNotBlank(this.token)) {
       request.headers().add(TOKEN_HEADER, this.token);
+    }
+
+    if (this.requestId != null) {
+      request.headers().add(OKAPI_REQUEST_ID, this.requestId);
     }
 
     request.headers().add(OKAPI_URL_HEADER, okapiUrl.toString());

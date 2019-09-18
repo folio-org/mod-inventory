@@ -87,7 +87,7 @@ public class ExternalStorageSuite {
 
     return new OkapiHttpClient(
       vertxAssistant.createUsingVertx(Vertx::createHttpClient),
-      new URL(getStorageAddress()), TENANT_ID, TENANT_TOKEN, USER_ID, it ->
+      new URL(getStorageAddress()), TENANT_ID, TENANT_TOKEN, USER_ID, "1234", it ->
       System.out.println(
         String.format("Request failed: %s",
           it.toString())));
