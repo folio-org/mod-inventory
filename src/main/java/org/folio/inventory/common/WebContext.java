@@ -11,6 +11,7 @@ public class WebContext implements Context {
   private static final String OKAPI_TOKEN_HEADER = "X-Okapi-Token";
   private static final String OKAPI_URL_HEADER = "X-Okapi-Url";
   private static final String OKAPI_USER_ID_HEADER = "X-Okapi-User-Id";
+  private static final String OKAPI_REQUEST_ID = "X-Okapi-Request-Id";
 
   public WebContext(RoutingContext routingContext) {
     this.routingContext = routingContext;
@@ -36,18 +37,19 @@ public class WebContext implements Context {
     return getHeader(OKAPI_USER_ID_HEADER, "");
   }
 
-  @Override
-  public String getHeader(String header) {
+  public String getRequestId() {
+    return getHeader(OKAPI_REQUEST_ID);
+  }
+
+  private String getHeader(String header) {
     return routingContext.request().getHeader(header);
   }
 
-  @Override
-  public String getHeader(String header, String defaultValue) {
+  private String getHeader(String header, String defaultValue) {
     return hasHeader(header) ? getHeader(header) : defaultValue;
   }
 
-  @Override
-  public boolean hasHeader(String header) {
+  private boolean hasHeader(String header) {
     return routingContext.request().headers().contains(header);
   }
 

@@ -183,7 +183,7 @@ public class ApiTestSuite {
 
     return new OkapiHttpClient(
       vertxAssistant.createUsingVertx(Vertx::createHttpClient),
-      new URL(storageOkapiUrl()), TENANT_ID, TOKEN, USER_ID, it ->
+      new URL(storageOkapiUrl()), TENANT_ID, TOKEN, USER_ID, null, it ->
       System.out.println(
         String.format("Request failed: %s",
           it.toString())));
