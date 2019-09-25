@@ -1,3 +1,6 @@
+## 13.0.1 2019-09-25
+* Fix Does not pass X-Okapi-Request-Id (MODINV-156)
+
 ## 13.0.0 2019-09-09
 
 * Adds nature of content terms to `instances` (MODINV-149)
