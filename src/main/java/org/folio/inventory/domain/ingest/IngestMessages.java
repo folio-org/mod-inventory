@@ -4,6 +4,7 @@ import io.vertx.core.json.JsonObject;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.messaging.JsonMessage;
 import org.folio.inventory.domain.Messages;
+import org.folio.inventory.common.MessagingContext;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -39,10 +40,10 @@ public class IngestMessages {
 
   private static Map<String, String> headers(String jobId, Context context) {
     LinkedHashMap<String, String> map = new LinkedHashMap<>(4);
-    map.put("jobId", jobId);
-    map.put("tenantId", context.getTenantId());
-    map.put("token", context.getToken());
-    map.put("okapiLocation", context.getOkapiLocation());
+    map.put(MessagingContext.JOB_ID, jobId);
+    map.put(MessagingContext.TENANT_ID, context.getTenantId());
+    map.put(MessagingContext.TOKEN, context.getToken());
+    map.put(MessagingContext.OKAPI_LOCATION, context.getOkapiLocation());
     return map;
   }
 }
