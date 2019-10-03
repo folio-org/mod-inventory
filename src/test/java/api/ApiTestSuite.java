@@ -320,26 +320,29 @@ public class ApiTestSuite {
     ResourceClient institutionsClient = ResourceClient.forInstitutions(client);
 
     nottinghamUniversityInstitution = createReferenceRecord(institutionsClient,
-      "Nottingham University");
+      "Nottingham University", "NOTT");
 
     ResourceClient campusesClient = ResourceClient.forCampuses(client);
 
     jubileeCampus = createReferenceRecord(campusesClient,
       new JsonObject()
         .put("name", "Jubilee Campus")
-        .put("institutionId", nottinghamUniversityInstitution.toString()));
+        .put("institutionId", nottinghamUniversityInstitution.toString())
+        .put("code", "JUBILEE"));
 
     ResourceClient librariesClient = ResourceClient.forLibraries(client);
 
     djanoglyLibrary = createReferenceRecord(librariesClient,
       new JsonObject()
         .put("name", "Djanogly Learning Resource Centre")
-        .put("campusId", jubileeCampus.toString()));
+        .put("campusId", jubileeCampus.toString())
+        .put("code", "DJANOGLY"));
 
     businessLibrary = createReferenceRecord(librariesClient,
       new JsonObject()
         .put("name", "Business Library")
-        .put("campusId", jubileeCampus.toString()));
+        .put("campusId", jubileeCampus.toString())
+        .put("code", "BUSINESS"));
 
     ResourceClient locationsClient = ResourceClient.forLocations(client);
 
@@ -489,14 +492,16 @@ public class ApiTestSuite {
 
   private static UUID createReferenceRecord(
     ResourceClient client,
-    String name)
+    String name,
+    String code)
     throws MalformedURLException,
     InterruptedException,
     ExecutionException,
     TimeoutException {
 
     return createReferenceRecord(client, new JsonObject()
-      .put("name", name));
+      .put("name", name)
+      .put("code", code));
   }
 
   private static UUID findFirstByName(List<JsonObject> existingRecords, String name) {
