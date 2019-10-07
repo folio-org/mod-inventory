@@ -5,6 +5,7 @@ import io.vertx.core.Future;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
+import support.fakes.processor.item.ItemCreateUpdateEffectiveLocationProcessor;
 
 public class FakeOkapi extends AbstractVerticle {
   private static final int PORT_TO_USE = 9493;
@@ -97,6 +98,8 @@ public class FakeOkapi extends AbstractVerticle {
       .withRootPath("/item-storage/items")
       .withRequiredProperties("materialTypeId", "permanentLoanTypeId")
       .withDefault("status", new JsonObject().put("name", "Available"))
+      .withCreateProcessors(new ItemCreateUpdateEffectiveLocationProcessor())
+      .withUpdateProcessors(new ItemCreateUpdateEffectiveLocationProcessor())
       .create().register(router);
   }
 

@@ -1,6 +1,8 @@
 package support.fakes;
 
 import api.ApiTestSuite;
+import support.fakes.processor.RecordCreateProcessor;
+import support.fakes.processor.RecordUpdateProcessor;
 
 import java.util.*;
 import java.util.function.Supplier;
@@ -14,10 +16,14 @@ public class FakeStorageModuleBuilder {
   private final Map<String, Supplier<Object>> defaultProperties;
   private final Boolean hasCollectionDelete;
   private final String recordName;
+  private final List<RecordCreateProcessor> createProcessors;
+  private final List<RecordUpdateProcessor> updateProcessors;
 
   FakeStorageModuleBuilder() {
     this(null, null, ApiTestSuite.TENANT_ID, new ArrayList<>(), true, "",
-      new ArrayList<>(), new HashMap<>());
+      new ArrayList<>(), new HashMap<>(),
+      new ArrayList<>(),
+      new ArrayList<>());
   }
 
   private FakeStorageModuleBuilder(
@@ -28,7 +34,9 @@ public class FakeStorageModuleBuilder {
     boolean hasCollectionDelete,
     String recordName,
     Collection<String> uniqueProperties,
-    Map<String, Supplier<Object>> defaultProperties) {
+    Map<String, Supplier<Object>> defaultProperties,
+    List<RecordCreateProcessor> createProcessors,
+    List<RecordUpdateProcessor> updateProcessors) {
 
     this.rootPath = rootPath;
     this.collectionPropertyName = collectionPropertyName;
@@ -38,12 +46,14 @@ public class FakeStorageModuleBuilder {
     this.recordName = recordName;
     this.uniqueProperties = uniqueProperties;
     this.defaultProperties = defaultProperties;
+    this.createProcessors = createProcessors;
+    this.updateProcessors = updateProcessors;
   }
 
   public FakeStorageModule create() {
     return new FakeStorageModule(rootPath, collectionPropertyName, tenantId,
       requiredProperties, hasCollectionDelete, recordName, uniqueProperties,
-      defaultProperties);
+      defaultProperties, createProcessors, updateProcessors);
   }
 
   FakeStorageModuleBuilder withRootPath(String rootPath) {
@@ -59,7 +69,9 @@ public class FakeStorageModuleBuilder {
       this.hasCollectionDelete,
       this.recordName,
       this.uniqueProperties,
-      this.defaultProperties);
+      this.defaultProperties,
+      this.createProcessors,
+      this.updateProcessors);
   }
 
   FakeStorageModuleBuilder withCollectionPropertyName(String collectionPropertyName) {
@@ -71,7 +83,9 @@ public class FakeStorageModuleBuilder {
       this.hasCollectionDelete,
       this.recordName,
       this.uniqueProperties,
-      this.defaultProperties);
+      this.defaultProperties,
+      this.createProcessors,
+      this.updateProcessors);
   }
 
   FakeStorageModuleBuilder withRecordName(String recordName) {
@@ -83,7 +97,9 @@ public class FakeStorageModuleBuilder {
       this.hasCollectionDelete,
       recordName,
       this.uniqueProperties,
-      this.defaultProperties);
+      this.defaultProperties,
+      this.createProcessors,
+      this.updateProcessors);
   }
 
   private FakeStorageModuleBuilder withRequiredProperties(
@@ -97,7 +113,9 @@ public class FakeStorageModuleBuilder {
       this.hasCollectionDelete,
       this.recordName,
       this.uniqueProperties,
-      this.defaultProperties);
+      this.defaultProperties,
+      this.createProcessors,
+      this.updateProcessors);
   }
 
   FakeStorageModuleBuilder withRequiredProperties(String... requiredProperties) {
@@ -117,7 +135,37 @@ public class FakeStorageModuleBuilder {
       this.hasCollectionDelete,
       this.recordName,
       this.uniqueProperties,
-      newDefaults);
+      newDefaults,
+      this.createProcessors,
+      this.updateProcessors);
+  }
+
+  FakeStorageModuleBuilder withUpdateProcessors(RecordUpdateProcessor ... updateProcessors) {
+    return new FakeStorageModuleBuilder(
+      this.rootPath,
+      this.collectionPropertyName,
+      this.tenantId,
+      this.requiredProperties,
+      this.hasCollectionDelete,
+      this.recordName,
+      this.uniqueProperties,
+      this.defaultProperties,
+      this.createProcessors,
+      Arrays.asList(updateProcessors));
+  }
+
+  FakeStorageModuleBuilder withCreateProcessors(RecordCreateProcessor ... createProcessors) {
+    return new FakeStorageModuleBuilder(
+      this.rootPath,
+      this.collectionPropertyName,
+      this.tenantId,
+      this.requiredProperties,
+      this.hasCollectionDelete,
+      this.recordName,
+      this.uniqueProperties,
+      this.defaultProperties,
+      Arrays.asList(createProcessors),
+      this.updateProcessors);
   }
 }
 

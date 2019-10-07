@@ -1162,8 +1162,7 @@ public class ItemApiExamples extends ApiTests {
       .put("materialTypeId", getDvdMaterialType())
       .put("permanentLoanTypeId", getCanCirculateLoanType())
       .put("permanentLocationId", getMainLibraryLocation())
-      .put("temporaryLocationId", getReadingRoomLocation())
-      .put("effectiveLocationId", getReadingRoomLocation());
+      .put("temporaryLocationId", getReadingRoomLocation());
 
     itemsStorageClient.create(newItemRequest);
 
@@ -1196,17 +1195,14 @@ public class ItemApiExamples extends ApiTests {
       .put("materialTypeId", getDvdMaterialType())
       .put("permanentLoanTypeId", getCanCirculateLoanType())
       .put("permanentLocationId", getMainLibraryLocation())
-      .put("temporaryLocationId", getReadingRoomLocation())
-      .put("effectiveLocationId", getReadingRoomLocation());
+      .put("temporaryLocationId", getReadingRoomLocation());
 
     JsonObject thirdFloorItem = readingRoomItem.copy()
       .put("id", UUID.randomUUID().toString())
-      .put("temporaryLocationId", getThirdFloorLocation())
-      .put("effectiveLocationId", getThirdFloorLocation());
+      .put("temporaryLocationId", getThirdFloorLocation());
 
     JsonObject mainLibraryItem = readingRoomItem.copy()
-      .put("id", UUID.randomUUID().toString())
-      .put("effectiveLocationId", getMainLibraryLocation());
+      .put("id", UUID.randomUUID().toString());
       mainLibraryItem.remove("temporaryLocationId");
 
     itemsStorageClient.create(readingRoomItem);

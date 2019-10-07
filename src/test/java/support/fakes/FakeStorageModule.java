@@ -1,11 +1,14 @@
 package support.fakes;
 
-import io.vertx.core.AbstractVerticle;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.BodyHandler;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.support.http.server.ClientErrorResponse;
@@ -13,9 +16,14 @@ import org.folio.inventory.support.http.server.JsonResponse;
 import org.folio.inventory.support.http.server.SuccessResponse;
 import org.folio.inventory.support.http.server.ValidationError;
 
-import java.util.*;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
+import io.vertx.core.AbstractVerticle;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
+import support.fakes.processor.RecordCreateProcessor;
+import support.fakes.processor.RecordUpdateProcessor;
 
 class FakeStorageModule extends AbstractVerticle {
   private final String rootPath;
@@ -26,6 +34,8 @@ class FakeStorageModule extends AbstractVerticle {
   private final String recordTypeName;
   private final Collection<String> uniqueProperties;
   private final Map<String, Supplier<Object>> defaultProperties;
+  private final List<RecordCreateProcessor> createProcessors;
+  private final List<RecordUpdateProcessor> updateProcessors;
 
   FakeStorageModule(
     String rootPath,
@@ -35,7 +45,9 @@ class FakeStorageModule extends AbstractVerticle {
     boolean hasCollectionDelete,
     String recordTypeName,
     Collection<String> uniqueProperties,
-    Map<String, Supplier<Object>> defaultProperties) {
+    Map<String, Supplier<Object>> defaultProperties,
+    List<RecordCreateProcessor> createProcessors,
+    List<RecordUpdateProcessor> updateProcessor) {
 
     this.rootPath = rootPath;
     this.collectionPropertyName = collectionPropertyName;
@@ -52,6 +64,8 @@ class FakeStorageModule extends AbstractVerticle {
 
     storedResourcesByTenant = new HashMap<>();
     storedResourcesByTenant.put(tenantId, new HashMap<>());
+    this.createProcessors = new ArrayList<>(createProcessors);
+    this.updateProcessors = new ArrayList<>(updateProcessor);
   }
 
   void register(Router router) {
@@ -115,6 +129,10 @@ class FakeStorageModule extends AbstractVerticle {
 
     String id = body.getString("id");
 
+    createProcessors.forEach(createProcessors ->
+      createProcessors.onCreate(body)
+    );
+
     getResourcesForTenant(context).put(id, body);
 
     System.out.println(
@@ -133,6 +151,10 @@ class FakeStorageModule extends AbstractVerticle {
     setDefaultProperties(body);
 
     Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
+
+    updateProcessors.forEach(updateProcessor ->
+      updateProcessor.onUpdate(resourcesForTenant.get(id), body)
+    );
 
     if(resourcesForTenant.containsKey(id)) {
       System.out.println(
