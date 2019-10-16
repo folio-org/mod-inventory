@@ -27,8 +27,6 @@ public class InventoryConfigurationImpl implements InventoryConfiguration {
     Instance.ELECTRONIC_ACCESS_KEY,
     Instance.SUBJECTS_KEY,
     Instance.CLASSIFICATIONS_KEY,
-    Instance.PARENT_INSTANCES_KEY,
-    Instance.CHILD_INSTANCES_KEY,
     Instance.CATALOGED_DATE_KEY,
     Instance.TITLE_KEY,
     Instance.INDEX_TITLE_KEY,
