@@ -233,10 +233,6 @@
     {
       "id": "users",
       "version": "15.0"
-    },
-    {
-      "id": "source-record-storage",
-      "version": "2.2"
     }
   ],
   "permissionSets": [
