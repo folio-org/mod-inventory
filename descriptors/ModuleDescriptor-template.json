@@ -204,7 +204,7 @@
     },
     {
       "id": "holdings-storage",
-      "version": "2.0 3.0"
+      "version": "2.0 3.0 4.0"
     },
     {
       "id": "material-types",
@@ -233,10 +233,6 @@
     {
       "id": "users",
       "version": "15.0"
-    },
-    {
-      "id": "source-record-storage",
-      "version": "2.2"
     }
   ],
   "permissionSets": [
