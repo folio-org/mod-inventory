@@ -37,7 +37,6 @@ import org.folio.inventory.domain.user.UserCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.support.CqlHelper;
-import org.folio.inventory.support.HoldingsSupport;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
@@ -326,7 +325,6 @@ public class Items {
     CollectionResourceClient materialTypesClient;
     CollectionResourceClient loanTypesClient;
     CollectionResourceClient locationsClient;
-    CollectionResourceClient effectiveLocationsClient;
 
     try {
       OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
@@ -335,7 +333,6 @@ public class Items {
       materialTypesClient = createMaterialTypesClient(okapiClient, context);
       loanTypesClient = createLoanTypesClient(okapiClient, context);
       locationsClient = createLocationsClient(okapiClient, context);
-      effectiveLocationsClient = createLocationsClient(okapiClient, context);
     }
     catch (MalformedURLException e) {
       invalidOkapiUrlResponse(routingContext, context);
@@ -345,7 +342,6 @@ public class Items {
 
     ArrayList<CompletableFuture<Response>> allMaterialTypeFutures = new ArrayList<>();
     ArrayList<CompletableFuture<Response>> allLoanTypeFutures = new ArrayList<>();
-    ArrayList<CompletableFuture<Response>> allEffectiveLocationsFutures = new ArrayList<>();
     ArrayList<CompletableFuture<Response>> allLocationsFutures = new ArrayList<>();
     ArrayList<CompletableFuture<Response>> allFutures = new ArrayList<>();
 
@@ -439,20 +435,10 @@ public class Items {
           });
 
         List<String> effectiveLocationIds = wrappedItems.records.stream()
-          .map(item -> HoldingsSupport.determineEffectiveLocationIdForItem(
-            HoldingsSupport.holdingForItem(item, holdings).orElse(null), item))
+          .map(Item::getEffectiveLocationId)
           .filter(Objects::nonNull)
           .distinct()
           .collect(Collectors.toList());
-
-        effectiveLocationIds.stream().forEach(id -> {
-          CompletableFuture<Response> newFuture = new CompletableFuture<>();
-
-          allFutures.add(newFuture);
-          allEffectiveLocationsFutures.add(newFuture);
-
-          effectiveLocationsClient.get(id, newFuture::complete);
-        });
 
         List<String> permanentLocationIds = wrappedItems.records.stream()
           .map(item -> item.getPermanentLocationId())
@@ -466,7 +452,7 @@ public class Items {
           .distinct()
           .collect(Collectors.toList());
 
-        Stream.concat(permanentLocationIds.stream(), temporaryLocationIds.stream())
+        Stream.concat(Stream.concat(permanentLocationIds.stream(), temporaryLocationIds.stream()), effectiveLocationIds.stream())
           .distinct()
           .forEach(id -> {
 
@@ -498,13 +484,6 @@ public class Items {
               .map(Response::getJson)
               .collect(Collectors.toMap(r -> r.getString("id"), r -> r));
 
-            Map<String, JsonObject> foundEffectiveLocations
-              = allEffectiveLocationsFutures.stream()
-              .map(CompletableFuture::join)
-              .filter(response -> response.getStatusCode() == 200)
-              .map(Response::getJson)
-              .collect(Collectors.toMap(r -> r.getString("id"), r-> r));
-
             Map<String, JsonObject> foundLocations
               = allLocationsFutures.stream()
               .map(CompletableFuture::join)
@@ -515,7 +494,7 @@ public class Items {
             JsonResponse.success(routingContext.response(),
               new ItemRepresentation(RELATIVE_ITEMS_PATH)
                 .toJson(wrappedItems, holdings, instances, foundMaterialTypes,
-                  foundLoanTypes, foundLocations, foundEffectiveLocations, context));
+                  foundLoanTypes, foundLocations, context));
           } catch (Exception e) {
             ServerErrorResponse.internalError(routingContext.response(), e.toString());
           }
@@ -682,13 +661,6 @@ public class Items {
           ? instanceResponse.getJson()
           : null;
 
-        String effectiveLocationId = holdingResponse.getStatusCode() == 200
-          ? HoldingsSupport.determineEffectiveLocationIdForItem(
-              holdingResponse.getJson(), item)
-          : null;
-
-        log.info("Effective location ID in Items: " + effectiveLocationId);
-
         ArrayList<CompletableFuture<Response>> allFutures = new ArrayList<>();
 
         CompletableFuture<Response> materialTypeFuture = getReferenceRecord(
@@ -707,7 +679,7 @@ public class Items {
           item.getTemporaryLocationId(), locationsClient, allFutures);
 
         CompletableFuture<Response> effectiveLocationFuture = getReferenceRecord(
-          effectiveLocationId, locationsClient, allFutures);
+          item.getEffectiveLocationId(), locationsClient, allFutures);
 
         CompletableFuture<Void> allDoneFuture = allOf(allFutures);
 
@@ -716,7 +688,6 @@ public class Items {
             JsonObject representation = includeReferenceRecordInformationInItem(
                       webContext, item, holding, instance,
                       materialTypeFuture,
-                      effectiveLocationId,
                       permanentLoanTypeFuture,
                       temporaryLoanTypeFuture,
                       temporaryLocationFuture,
@@ -773,7 +744,6 @@ public class Items {
     JsonObject holding,
     JsonObject instance,
     CompletableFuture<Response> materialTypeFuture,
-    String effectiveLocationId,
     CompletableFuture<Response> permanentLoanTypeFuture,
     CompletableFuture<Response> temporaryLoanTypeFuture,
     CompletableFuture<Response> temporaryLocationFuture,
@@ -796,7 +766,7 @@ public class Items {
       referenceRecordFrom(item.getTemporaryLocationId(), temporaryLocationFuture);
 
     JsonObject foundEffectiveLocation =
-      referenceRecordFrom(effectiveLocationId, effectiveLocationFuture);
+      referenceRecordFrom(item.getEffectiveLocationId(), effectiveLocationFuture);
 
     return new ItemRepresentation(RELATIVE_ITEMS_PATH)
         .toJson(item,

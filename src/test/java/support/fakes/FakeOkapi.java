@@ -1,5 +1,7 @@
 package support.fakes;
 
+import org.apache.commons.lang3.ObjectUtils;
+
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServer;
@@ -97,6 +99,7 @@ public class FakeOkapi extends AbstractVerticle {
       .withRootPath("/item-storage/items")
       .withRequiredProperties("materialTypeId", "permanentLoanTypeId")
       .withDefault("status", new JsonObject().put("name", "Available"))
+      .withRecordPreProcessor(this::setEffectiveLocationForItem)
       .create().register(router);
   }
 
@@ -196,5 +199,17 @@ public class FakeOkapi extends AbstractVerticle {
       .withRootPath("/nature-of-content-terms")
       .withCollectionPropertyName("natureOfContentTerms")
       .create().register(router);
+  }
+
+  private JsonObject setEffectiveLocationForItem(JsonObject item) {
+    String permanentLocationId = item.getString("permanentLocationId");
+    String temporaryLocationId = item.getString("temporaryLocationId");
+
+    if (permanentLocationId != null || temporaryLocationId != null) {
+      item.put("effectiveLocationId",
+        ObjectUtils.firstNonNull(temporaryLocationId, permanentLocationId));
+    }
+
+    return item;
   }
 }

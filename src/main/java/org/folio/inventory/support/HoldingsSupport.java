@@ -10,20 +10,6 @@ import io.vertx.core.json.JsonObject;
 public class HoldingsSupport {
   private HoldingsSupport() { }
 
-  public static String determineEffectiveLocationIdForItem(JsonObject holding, Item item) {
-    String effectiveLocationId = null;
-    if (item.getTemporaryLocationId() != null) {
-      effectiveLocationId = item.getTemporaryLocationId();
-    } else if (item.getPermanentLocationId() != null) {
-      effectiveLocationId = item.getPermanentLocationId();
-    } else if (holding != null && holding.containsKey("temporaryLocationId")) {
-      effectiveLocationId = holding.getString("temporaryLocationId");
-    } else if (holding != null && holding.containsKey("permanentLocationId")) {
-      effectiveLocationId = holding.getString("permanentLocationId");
-    }
-    return effectiveLocationId;
-  }
-
   public static Optional<JsonObject> holdingForItem(
     Item item,
     Collection<JsonObject> holdings) {

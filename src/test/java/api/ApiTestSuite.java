@@ -22,7 +22,6 @@ import org.junit.runners.Suite;
 import api.isbns.IsbnUtilsApiExamples;
 import api.items.ItemApiCallNumberExamples;
 import api.items.ItemApiExamples;
-import api.items.ItemApiLocationExamples;
 import api.items.ItemApiTitleExamples;
 import api.support.ControlledVocabularyPreparation;
 import api.support.http.ResourceClient;
@@ -35,7 +34,6 @@ import support.fakes.FakeOkapi;
 @Suite.SuiteClasses({
   InstancesApiExamples.class,
   ItemApiExamples.class,
-  ItemApiLocationExamples.class,
   ItemApiTitleExamples.class,
   ItemApiCallNumberExamples.class,
   ModsIngestExamples.class,
