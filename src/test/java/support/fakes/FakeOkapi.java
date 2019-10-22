@@ -1,11 +1,12 @@
 package support.fakes;
 
+import org.apache.commons.lang3.ObjectUtils;
+
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
-import support.fakes.processor.item.ItemCreateUpdateEffectiveLocationProcessor;
 
 public class FakeOkapi extends AbstractVerticle {
   private static final int PORT_TO_USE = 9493;
@@ -98,8 +99,7 @@ public class FakeOkapi extends AbstractVerticle {
       .withRootPath("/item-storage/items")
       .withRequiredProperties("materialTypeId", "permanentLoanTypeId")
       .withDefault("status", new JsonObject().put("name", "Available"))
-      .withCreateProcessors(new ItemCreateUpdateEffectiveLocationProcessor())
-      .withUpdateProcessors(new ItemCreateUpdateEffectiveLocationProcessor())
+      .withRecordPreProcessor(this::setEffectiveLocationForItem)
       .create().register(router);
   }
 
@@ -199,5 +199,17 @@ public class FakeOkapi extends AbstractVerticle {
       .withRootPath("/nature-of-content-terms")
       .withCollectionPropertyName("natureOfContentTerms")
       .create().register(router);
+  }
+
+  private JsonObject setEffectiveLocationForItem(JsonObject item) {
+    String permanentLocationId = item.getString("permanentLocationId");
+    String temporaryLocationId = item.getString("temporaryLocationId");
+
+    if (permanentLocationId != null || temporaryLocationId != null) {
+      item.put("effectiveLocationId",
+        ObjectUtils.firstNonNull(temporaryLocationId, permanentLocationId));
+    }
+
+    return item;
   }
 }
