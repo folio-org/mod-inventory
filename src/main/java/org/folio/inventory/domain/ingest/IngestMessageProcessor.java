@@ -14,6 +14,7 @@ import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
+import org.folio.inventory.domain.items.LastCheckIn;
 import org.folio.inventory.domain.items.Status;
 import org.folio.inventory.resources.ingest.IngestJob;
 import org.folio.inventory.resources.ingest.IngestJobState;
@@ -146,7 +147,9 @@ public class IngestMessageProcessor {
                 ? loanTypes.getString("Can Circulate")
                 : loanTypes.getString("Can circulate"),
                null)
-                    .withBarcode(record.getString("barcode"));
+                    .withBarcode(record.getString("barcode"))
+                .withLastCheckIn(
+                    LastCheckIn.from(record.getJsonObject("lastCheckIn")));
         })
         .forEach(item -> itemCollection.add(item, allItems.receive(),
           failure -> log.error("Item processing failed: " + failure.getReason()))));

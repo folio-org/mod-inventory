@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import org.folio.inventory.domain.items.CirculationNote;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
+import org.folio.inventory.domain.items.LastCheckIn;
 import org.folio.inventory.domain.items.Note;
 import org.folio.inventory.domain.items.Status;
 import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
@@ -110,7 +111,8 @@ class ExternalStorageModuleItemCollection
             .withElectronicAccess(mappedElectronicAccess)
             .withStatisticalCodeIds(statisticalCodeIds)
             .withPurchaseOrderLineidentifier(itemFromServer.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER))
-            .withTags(tags);
+            .withTags(tags)
+            .withLastCheckIn(LastCheckIn.from(itemFromServer.getJsonObject("lastCheckIn")));
   }
 
   @Override

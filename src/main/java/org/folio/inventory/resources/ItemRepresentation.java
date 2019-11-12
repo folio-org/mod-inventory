@@ -1,7 +1,12 @@
 package org.folio.inventory.resources;
 
-import static org.folio.inventory.support.HoldingsSupport.*;
+import static org.folio.inventory.support.HoldingsSupport.holdingForItem;
+import static org.folio.inventory.support.HoldingsSupport.instanceForHolding;
 
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -10,16 +15,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.Status;
-
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 
 class ItemRepresentation {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
@@ -164,6 +163,10 @@ class ItemRepresentation {
       representation.put("links", new JsonObject().put("self", selfUrl.toString()));
     } catch (MalformedURLException e) {
       log.warn(String.format("Failed to create self link for item: %s", e.toString()));
+    }
+
+    if (item.getLastCheckIn() != null) {
+      representation.put("lastCheckIn", item.getLastCheckIn().toJson());
     }
 
     return representation;
