@@ -1411,6 +1411,6 @@ public class ItemApiExamples extends ApiTests {
     okapiClient.get(BusinessLogicInterfaceUrls.items("?query=") + urlEncode(searchQuery),
       ResponseHandler.json(getCompletedFuture));
 
-    return getCompletedFuture.get(50, TimeUnit.SECONDS).getJson();
+    return getCompletedFuture.get(5, TimeUnit.SECONDS).getJson();
   }
 }
