@@ -8,8 +8,6 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import java.util.Date;
-import javax.validation.constraints.Pattern;
-import org.joda.time.DateTime;
 import org.joda.time.format.ISODateTimeFormat;
 
 /**
@@ -24,14 +22,9 @@ import org.joda.time.format.ISODateTimeFormat;
 })
 public class LastCheckIn {
 
-    static final LastCheckIn EMPTY = new LastCheckIn();
-
     public static LastCheckIn from(JsonObject representation) {
-        if (representation != null) {
-            return representation.mapTo(LastCheckIn.class);
-        }
-
-        return LastCheckIn.EMPTY;
+        return representation != null ?
+            representation.mapTo(LastCheckIn.class) : null;
     }
 
     public JsonObject toJson(){
@@ -54,7 +47,6 @@ public class LastCheckIn {
      */
     @JsonProperty("servicePointId")
     @JsonPropertyDescription("A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/")
-    @Pattern(regexp = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")
     private String servicePointId;
     /**
      * A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/
@@ -62,7 +54,6 @@ public class LastCheckIn {
      */
     @JsonProperty("staffMemberId")
     @JsonPropertyDescription("A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/")
-    @Pattern(regexp = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")
     private String staffMemberId;
 
     /**

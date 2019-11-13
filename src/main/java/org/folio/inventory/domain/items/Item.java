@@ -392,7 +392,7 @@ public class Item {
   }
 
   public Item withLastCheckIn(LastCheckIn lastCheckIn) {
-    if (lastCheckIn != LastCheckIn.EMPTY) {
+    if (lastCheckIn != null) {
       this.lastCheckIn = lastCheckIn;
     }
 
