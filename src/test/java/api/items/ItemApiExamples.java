@@ -1231,7 +1231,12 @@ public class ItemApiExamples extends ApiTests {
   }
 
   @Test
-  public void itemHasLastCheckInPropertiesWhenTheyAreSet() throws Exception {
+  public void itemHasLastCheckInPropertiesWhenTheyAreSet()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
     JsonObject readingRoomItem = new JsonObject()
       .put("id", UUID.randomUUID().toString())
       .put("holdingsRecordId", createInstanceAndHolding().toString())
@@ -1277,7 +1282,6 @@ public class ItemApiExamples extends ApiTests {
     assertThat(actualItem, is(notNullValue()));
     assertThat(actualItem.getJsonObject(LAST_CHECK_IN_FIELD), is(nullValue()));
   }
-
 
   private static void selfLinkRespectsWayResourceWasReached(JsonObject item) {
     containsApiRoot(item.getJsonObject("links").getString("self"));
