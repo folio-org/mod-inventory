@@ -1246,9 +1246,13 @@ public class ItemApiExamples extends ApiTests {
       .put("temporaryLocationId", getReadingRoomLocation());
 
     JsonObject lastCheckInObj = new JsonObject();
-    lastCheckInObj.put(USER_ID_FIELD, UUID.randomUUID().toString());
-    lastCheckInObj.put(SERVICE_POINT_FIELD, UUID.randomUUID().toString());
-    lastCheckInObj.put(DATETIME_FIELD, DateTime.now().toString());
+    UUID userId = UUID.randomUUID();
+    UUID servicePointId = UUID.randomUUID();
+    DateTime checkInDate = DateTime.now();
+
+    lastCheckInObj.put(SERVICE_POINT_FIELD, servicePointId.toString());
+    lastCheckInObj.put(USER_ID_FIELD, userId.toString());
+    lastCheckInObj.put(DATETIME_FIELD, checkInDate.toString());
 
     readingRoomItem.put(LAST_CHECK_IN_FIELD, lastCheckInObj);
 
@@ -1258,10 +1262,9 @@ public class ItemApiExamples extends ApiTests {
     JsonObject actualItem = readingRoomItems.getJsonArray("items").getJsonObject(0);
     JsonObject actualLastCheckIn = actualItem.getJsonObject(LAST_CHECK_IN_FIELD);
 
-    assertThat(actualLastCheckIn.getString(DATETIME_FIELD), is(notNullValue()));
-    assertThat(actualLastCheckIn.getString(SERVICE_POINT_FIELD), is(notNullValue()));
-    assertThat(actualLastCheckIn.getString(USER_ID_FIELD), is(notNullValue()));
-
+    assertThat(actualLastCheckIn.getString(DATETIME_FIELD), is(checkInDate.toString()));
+    assertThat(actualLastCheckIn.getString(SERVICE_POINT_FIELD), is(servicePointId.toString()));
+    assertThat(actualLastCheckIn.getString(USER_ID_FIELD), is(userId.toString()));
   }
 
   @Test
