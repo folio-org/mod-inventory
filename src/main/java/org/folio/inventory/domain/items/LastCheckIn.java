@@ -1,19 +1,10 @@
 
 package org.folio.inventory.domain.items;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonPropertyDescription;
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import io.vertx.core.json.JsonObject;
-import java.util.UUID;
 import org.joda.time.DateTime;
 import org.joda.time.format.ISODateTimeFormat;
 
-/**
- * Information about when an item was last scanned in the Inventory app.
- *
- */
 public class LastCheckIn {
 
   private final DateTime dateTime;
@@ -30,6 +21,7 @@ public class LastCheckIn {
     if (representation==null) {
       return null;
     }
+
     String dateTime = representation.getString("dateTime");
     return new LastCheckIn(
       dateTime != null ? DateTime.parse(dateTime): null,
