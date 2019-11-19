@@ -77,6 +77,7 @@ public class Item {
   private List<String> statisticalCodeIds = new ArrayList();
   private String purchaseOrderLineidentifier;
   private List<String> tags = new ArrayList<>();
+  private LastCheckIn lastCheckIn;
 
   private final JsonObject metadata;
 
@@ -390,6 +391,14 @@ public class Item {
     return this;
   }
 
+  public Item withLastCheckIn(LastCheckIn lastCheckIn) {
+    if (lastCheckIn != null) {
+      this.lastCheckIn = lastCheckIn;
+    }
+
+    return this;
+  }
+
   public Item withTags(List<String> tags) {
     this.tags = tags;
     return this;
@@ -479,5 +488,9 @@ public class Item {
   @Override
   public String toString() {
     return String.format("Item ID: %s, Barcode: %s", id, barcode);
+  }
+
+  public LastCheckIn getLastCheckIn() {
+    return lastCheckIn;
   }
 }

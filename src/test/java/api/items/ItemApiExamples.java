@@ -29,6 +29,15 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertThat;
 import static support.matchers.TextDateTimeMatcher.withinSecondsAfter;
 
+import api.ApiTestSuite;
+import api.support.ApiRoot;
+import api.support.ApiTests;
+import api.support.InstanceApiClient;
+import api.support.builders.HoldingRequestBuilder;
+import api.support.builders.ItemRequestBuilder;
+import api.support.http.BusinessLogicInterfaceUrls;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -38,7 +47,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.support.JsonArrayHelper;
@@ -51,17 +59,13 @@ import org.joda.time.Seconds;
 import org.junit.Assert;
 import org.junit.Test;
 
-import api.ApiTestSuite;
-import api.support.ApiRoot;
-import api.support.ApiTests;
-import api.support.InstanceApiClient;
-import api.support.builders.HoldingRequestBuilder;
-import api.support.builders.ItemRequestBuilder;
-import api.support.http.BusinessLogicInterfaceUrls;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-
 public class ItemApiExamples extends ApiTests {
+
+  private static final String LAST_CHECK_IN_FIELD = "lastCheckIn";
+  private static final String USER_ID_FIELD = "staffMemberId";
+  private static final String SERVICE_POINT_FIELD = "servicePointId";
+  private static final String DATETIME_FIELD = "dateTime";
+
   public ItemApiExamples() throws MalformedURLException {
     super();
   }
@@ -1224,6 +1228,62 @@ public class ItemApiExamples extends ApiTests {
     assertThat(mainLibraryItems.getInteger("totalRecords"), is(1));
     assertThat(mainLibraryItems.getJsonArray("items").getJsonObject(0).getString("id"),
       is(mainLibraryItem.getString("id")));
+  }
+
+  @Test
+  public void itemHasLastCheckInPropertiesWhenTheyAreSet()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    JsonObject readingRoomItem = new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("holdingsRecordId", createInstanceAndHolding().toString())
+      .put("materialTypeId", getDvdMaterialType())
+      .put("permanentLoanTypeId", getCanCirculateLoanType())
+      .put("permanentLocationId", getMainLibraryLocation())
+      .put("temporaryLocationId", getReadingRoomLocation());
+
+    JsonObject lastCheckInObj = new JsonObject();
+    UUID userId = UUID.randomUUID();
+    UUID servicePointId = UUID.randomUUID();
+    DateTime checkInDate = DateTime.now();
+
+    lastCheckInObj.put(SERVICE_POINT_FIELD, servicePointId.toString());
+    lastCheckInObj.put(USER_ID_FIELD, userId.toString());
+    lastCheckInObj.put(DATETIME_FIELD, checkInDate.toString());
+
+    readingRoomItem.put(LAST_CHECK_IN_FIELD, lastCheckInObj);
+
+    itemsStorageClient.create(readingRoomItem);
+
+    JsonObject readingRoomItems = findItems("effectiveLocationId=" + getReadingRoomLocation());
+    JsonObject actualItem = readingRoomItems.getJsonArray("items").getJsonObject(0);
+    JsonObject actualLastCheckIn = actualItem.getJsonObject(LAST_CHECK_IN_FIELD);
+
+    assertThat(actualLastCheckIn.getString(DATETIME_FIELD), is(checkInDate.toString()));
+    assertThat(actualLastCheckIn.getString(SERVICE_POINT_FIELD), is(servicePointId.toString()));
+    assertThat(actualLastCheckIn.getString(USER_ID_FIELD), is(userId.toString()));
+  }
+
+  @Test
+  public void itemHasNoLastCheckInPropertiesWhenNotSet() throws Exception {
+    JsonObject readingRoomItem = new JsonObject()
+        .put("id", UUID.randomUUID().toString())
+        .put("holdingsRecordId", createInstanceAndHolding().toString())
+        .put("materialTypeId", getDvdMaterialType())
+        .put("permanentLoanTypeId", getCanCirculateLoanType())
+        .put("permanentLocationId", getMainLibraryLocation())
+        .put("temporaryLocationId", getReadingRoomLocation());
+
+    itemsStorageClient.create(readingRoomItem);
+
+    JsonObject readingRoomItems = findItems("effectiveLocationId=" + getReadingRoomLocation());
+
+    JsonObject actualItem = readingRoomItems.getJsonArray("items").getJsonObject(0);
+    assertThat(actualItem, is(notNullValue()));
+    assertThat(actualItem.getJsonObject(LAST_CHECK_IN_FIELD), is(nullValue()));
   }
 
   private static void selfLinkRespectsWayResourceWasReached(JsonObject item) {
