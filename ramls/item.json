@@ -75,6 +75,27 @@
       "description": "Call number type, refers to a call-number-type reference record",
       "type": "string"
     },
+    "effectiveCallNumberComponents": {
+      "type": "object",
+      "description": "Elements of a full call number generated from the item or holding",
+      "properties": {
+        "callNumber": {
+          "type": "string",
+          "description": "Effective Call Number is an identifier assigned to an item or its holding and associated with the item.",
+          "readonly": true
+        },
+        "prefix": {
+          "type": "string",
+          "description": "Effective Call Number Prefix is the prefix of the identifier assigned to an item or its holding and associated with the item.",
+          "readonly": true
+        },
+        "suffix": {
+          "type": "string",
+          "description": "Effective Call Number Suffix is the suffix of the identifier assigned to an item or its holding and associated with the item.",
+          "readonly": true
+        }
+      }
+    },
     "volume": {
       "description": "Volume is intended for monographs when a multipart monograph (e.g. a biography of Gerorge Bernard Shaw in three volumes)",
       "type": "string"
