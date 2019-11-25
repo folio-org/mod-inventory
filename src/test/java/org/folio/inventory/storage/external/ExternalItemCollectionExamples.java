@@ -1,8 +1,13 @@
 package org.folio.inventory.storage.external;
 
-import static org.folio.inventory.common.FutureAssistance.*;
+import static org.folio.inventory.common.FutureAssistance.fail;
+import static org.folio.inventory.common.FutureAssistance.getOnCompletion;
+import static org.folio.inventory.common.FutureAssistance.succeed;
+import static org.folio.inventory.common.FutureAssistance.waitForCompletion;
 import static org.folio.inventory.storage.external.ExternalStorageSuite.getStorageAddress;
-import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertThat;
 
 import java.io.UnsupportedEncodingException;
@@ -340,24 +345,35 @@ public class ExternalItemCollectionExamples {
     return new Item(null,
       null,
       new Status("Available"), bookMaterialTypeId, canCirculateLoanTypeId, null)
-            .withBarcode("036000291452")
-            .withTemporaryLocationId(annexLibraryLocationId);
+      .withBarcode("036000291452")
+      .withTemporaryLocationId(annexLibraryLocationId)
+      // Have to set call number components directly,
+      // otherwise we will get timeout on retrieve holdings in preprocessor
+      .withItemLevelCallNumber("123456")
+      .withItemLevelCallNumberPrefix("prefix")
+      .withItemLevelCallNumberSuffix("suffix");
   }
 
   private Item nod() {
     return new Item(null,
       null,
       new Status("Available"), bookMaterialTypeId, canCirculateLoanTypeId, null)
-             .withBarcode("565578437802")
-            .withTemporaryLocationId(annexLibraryLocationId);
+      .withBarcode("565578437802")
+      .withTemporaryLocationId(annexLibraryLocationId)
+      .withItemLevelCallNumber("123456")
+      .withItemLevelCallNumberPrefix("prefix")
+      .withItemLevelCallNumberSuffix("suffix");
   }
 
   private Item uprooted() {
     return new Item(null,
       null,
-      new Status("Available"), bookMaterialTypeId,  canCirculateLoanTypeId, null)
-            .withBarcode("657670342075")
-            .withTemporaryLocationId(annexLibraryLocationId);
+      new Status("Available"), bookMaterialTypeId, canCirculateLoanTypeId, null)
+      .withBarcode("657670342075")
+      .withTemporaryLocationId(annexLibraryLocationId)
+      .withItemLevelCallNumber("123456")
+      .withItemLevelCallNumberPrefix("prefix")
+      .withItemLevelCallNumberSuffix("suffix");
   }
 
   private Item temeraire() {
@@ -365,16 +381,22 @@ public class ExternalItemCollectionExamples {
       null,
       new Status("Available"), bookMaterialTypeId,
       canCirculateLoanTypeId, null)
-            .withBarcode("232142443432")
-            .withTemporaryLocationId(annexLibraryLocationId);
+      .withBarcode("232142443432")
+      .withTemporaryLocationId(annexLibraryLocationId)
+      .withItemLevelCallNumber("123456")
+      .withItemLevelCallNumberPrefix("prefix")
+      .withItemLevelCallNumberSuffix("suffix");
   }
 
   private Item interestingTimes() {
     return new Item(null,
       null,
-      new Status("Available"), bookMaterialTypeId,  canCirculateLoanTypeId, null)
-            .withBarcode("56454543534")
-            .withTemporaryLocationId(annexLibraryLocationId);
+      new Status("Available"), bookMaterialTypeId, canCirculateLoanTypeId, null)
+      .withBarcode("56454543534")
+      .withTemporaryLocationId(annexLibraryLocationId)
+      .withItemLevelCallNumber("123456")
+      .withItemLevelCallNumberPrefix("prefix")
+      .withItemLevelCallNumberSuffix("suffix");
   }
 
   private Item getItem(List<Item> allItems, String barcode) {

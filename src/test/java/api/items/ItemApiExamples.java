@@ -26,18 +26,10 @@ import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static support.matchers.TextDateTimeMatcher.withinSecondsAfter;
 
-import api.ApiTestSuite;
-import api.support.ApiRoot;
-import api.support.ApiTests;
-import api.support.InstanceApiClient;
-import api.support.builders.HoldingRequestBuilder;
-import api.support.builders.ItemRequestBuilder;
-import api.support.http.BusinessLogicInterfaceUrls;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -47,6 +39,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.support.JsonArrayHelper;
@@ -59,12 +52,26 @@ import org.joda.time.Seconds;
 import org.junit.Assert;
 import org.junit.Test;
 
+import api.ApiTestSuite;
+import api.support.ApiRoot;
+import api.support.ApiTests;
+import api.support.InstanceApiClient;
+import api.support.builders.HoldingRequestBuilder;
+import api.support.builders.ItemRequestBuilder;
+import api.support.http.BusinessLogicInterfaceUrls;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+
 public class ItemApiExamples extends ApiTests {
 
   private static final String LAST_CHECK_IN_FIELD = "lastCheckIn";
   private static final String USER_ID_FIELD = "staffMemberId";
   private static final String SERVICE_POINT_FIELD = "servicePointId";
   private static final String DATETIME_FIELD = "dateTime";
+
+  private static final String CALL_NUMBER = "callNumber";
+  private static final String CALL_NUMBER_SUFFIX = "callNumberSuffix";
+  private static final String CALL_NUMBER_PREFIX = "callNumberPrefix";
 
   public ItemApiExamples() throws MalformedURLException {
     super();
@@ -89,6 +96,9 @@ public class ItemApiExamples extends ApiTests {
       .withBarcode("645398607547")
       .temporarilyInReadingRoom()
       .canCirculate()
+      .withItemLevelCallNumber(CALL_NUMBER)
+      .withItemLevelCallNumberSuffix(CALL_NUMBER_SUFFIX)
+      .withItemLevelCallNumberPrefix(CALL_NUMBER_PREFIX)
       .withTagList(new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray().add("test-tag")))
       .temporarilyCourseReserves());
 
@@ -127,6 +137,8 @@ public class ItemApiExamples extends ApiTests {
       createdItem.containsKey("permanentLocation"), is(false));
 
     assertThat(createdItem.getJsonObject("temporaryLocation").getString("name"), is("Reading Room"));
+
+    assertCallNumbers(createdItem);
 
     selfLinkRespectsWayResourceWasReached(createdItem);
     selfLinkShouldBeReachable(createdItem);
@@ -403,6 +415,9 @@ public class ItemApiExamples extends ApiTests {
       .forHolding(holdingId)
       .withBarcode("645398607547")
       .canCirculate()
+      .withItemLevelCallNumber(CALL_NUMBER)
+      .withItemLevelCallNumberSuffix(CALL_NUMBER_SUFFIX)
+      .withItemLevelCallNumberPrefix(CALL_NUMBER_PREFIX)
       .temporarilyInReadingRoom()
       .withTagList(new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray().add("test-tag")))
       .create();
@@ -447,6 +462,8 @@ public class ItemApiExamples extends ApiTests {
       updatedItem.containsKey("permanentLocation"), is(false));
 
     assertThat(updatedItem.getJsonObject("temporaryLocation").getString("name"), is("Reading Room"));
+
+    assertCallNumbers(updatedItem);
 
     selfLinkRespectsWayResourceWasReached(updatedItem);
     selfLinkShouldBeReachable(updatedItem);
@@ -574,8 +591,11 @@ public class ItemApiExamples extends ApiTests {
 
     UUID smallAngryHoldingId = holdingsStorageClient.create(
       new HoldingRequestBuilder()
-        .forInstance(UUID.fromString(smallAngryInstance.getString("id"))))
-      .getId();
+        .forInstance(UUID.fromString(smallAngryInstance.getString("id")))
+        .withCallNumber(CALL_NUMBER)
+        .withCallNumberSuffix(CALL_NUMBER_SUFFIX)
+        .withCallNumberPrefix(CALL_NUMBER_PREFIX)
+    ).getId();
 
     itemsClient.create(new ItemRequestBuilder()
       .forHolding(smallAngryHoldingId)
@@ -593,8 +613,11 @@ public class ItemApiExamples extends ApiTests {
 
     UUID girlOnTheTrainHoldingId = holdingsStorageClient.create(
       new HoldingRequestBuilder()
-        .forInstance(UUID.fromString(girlOnTheTrainInstance.getString("id"))))
-      .getId();
+        .forInstance(UUID.fromString(girlOnTheTrainInstance.getString("id")))
+        .withCallNumber(CALL_NUMBER)
+        .withCallNumberSuffix(CALL_NUMBER_SUFFIX)
+        .withCallNumberPrefix(CALL_NUMBER_PREFIX)
+    ).getId();
 
     itemsClient.create(new ItemRequestBuilder()
       .forHolding(girlOnTheTrainHoldingId)
@@ -607,8 +630,11 @@ public class ItemApiExamples extends ApiTests {
 
     UUID nodHoldingId = holdingsStorageClient.create(
       new HoldingRequestBuilder()
-        .forInstance(UUID.fromString(nodInstance.getString("id"))))
-      .getId();
+        .forInstance(UUID.fromString(nodInstance.getString("id")))
+        .withCallNumber(CALL_NUMBER)
+        .withCallNumberSuffix(CALL_NUMBER_SUFFIX)
+        .withCallNumberPrefix(CALL_NUMBER_PREFIX)
+    ).getId();
 
     itemsClient.create(new ItemRequestBuilder()
       .forHolding(nodHoldingId)
@@ -658,6 +684,7 @@ public class ItemApiExamples extends ApiTests {
     firstPageItems.forEach(ItemApiExamples::hasStatus);
     firstPageItems.forEach(ItemApiExamples::hasConsistentPermanentLocation);
     firstPageItems.forEach(ItemApiExamples::hasConsistentTemporaryLocation);
+    firstPageItems.forEach(this::assertCallNumbers);
 
     secondPageItems.forEach(ItemApiExamples::selfLinkRespectsWayResourceWasReached);
     secondPageItems.forEach(this::selfLinkShouldBeReachable);
@@ -667,6 +694,7 @@ public class ItemApiExamples extends ApiTests {
     secondPageItems.forEach(ItemApiExamples::hasStatus);
     secondPageItems.forEach(ItemApiExamples::hasConsistentPermanentLocation);
     secondPageItems.forEach(ItemApiExamples::hasConsistentTemporaryLocation);
+    secondPageItems.forEach(this::assertCallNumbers);
   }
 
   @Test
@@ -1419,5 +1447,15 @@ public class ItemApiExamples extends ApiTests {
       ResponseHandler.json(getCompletedFuture));
 
     return getCompletedFuture.get(5, TimeUnit.SECONDS).getJson();
+  }
+
+  private void assertCallNumbers(JsonObject item) {
+    JsonObject callNumberComponents = item.getJsonObject("effectiveCallNumberComponents");
+
+    assertNotNull(callNumberComponents);
+
+    assertThat(callNumberComponents.getString("callNumber"), is(CALL_NUMBER));
+    assertThat(callNumberComponents.getString("suffix"), is(CALL_NUMBER_SUFFIX));
+    assertThat(callNumberComponents.getString("prefix"), is(CALL_NUMBER_PREFIX));
   }
 }

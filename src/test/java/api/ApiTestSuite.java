@@ -20,7 +20,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 import api.isbns.IsbnUtilsApiExamples;
-import api.items.ItemApiCallNumberExamples;
 import api.items.ItemApiExamples;
 import api.items.ItemApiTitleExamples;
 import api.support.ControlledVocabularyPreparation;
@@ -35,7 +34,6 @@ import support.fakes.FakeOkapi;
   InstancesApiExamples.class,
   ItemApiExamples.class,
   ItemApiTitleExamples.class,
-  ItemApiCallNumberExamples.class,
   ModsIngestExamples.class,
   IsbnUtilsApiExamples.class
 })

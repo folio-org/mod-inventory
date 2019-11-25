@@ -27,11 +27,15 @@ public class ItemRequestBuilder implements Builder {
   private final JsonObject temporaryLoanType;
   private final JsonArray circulationNotes;
   private final JsonObject tags;
+  private final String itemLevelCallNumber;
+  private final String itemLevelCallNumberPrefix;
+  private final String itemLevelCallNumberSuffix;
 
   public ItemRequestBuilder() {
     this(UUID.randomUUID(), null, null, null, "645398607547",
       AVAILABLE_STATUS, bookMaterialType(), null, null, null,
-      canCirculateLoanType(), null, null, null
+      canCirculateLoanType(), null, null, null,
+      null, null, null
     );
   }
 
@@ -49,7 +53,10 @@ public class ItemRequestBuilder implements Builder {
     JsonObject permanentLoanType,
     JsonObject temporaryLoanType,
     JsonArray circulationNotes,
-    JsonObject tags) {
+    JsonObject tags,
+    String itemLevelCallNumber,
+    String itemLevelCallNumberPrefix,
+    String itemLevelCallNumberSuffix) {
 
     this.id = id;
     this.holdingId = holdingId;
@@ -65,6 +72,9 @@ public class ItemRequestBuilder implements Builder {
     this.materialType = materialType;
     this.circulationNotes = circulationNotes;
     this.tags = tags;
+    this.itemLevelCallNumber = itemLevelCallNumber;
+    this.itemLevelCallNumberPrefix = itemLevelCallNumberPrefix;
+    this.itemLevelCallNumberSuffix = itemLevelCallNumberSuffix;
   }
 
   public JsonObject create() {
@@ -95,6 +105,9 @@ public class ItemRequestBuilder implements Builder {
     includeWhenPresent(itemRequest, "circulationNotes", circulationNotes);
 
     includeWhenPresent(itemRequest, "tags", tags);
+    includeWhenPresent(itemRequest, "itemLevelCallNumber", itemLevelCallNumber);
+    includeWhenPresent(itemRequest, "itemLevelCallNumberSuffix", itemLevelCallNumberSuffix);
+    includeWhenPresent(itemRequest, "itemLevelCallNumberPrefix", itemLevelCallNumberPrefix);
 
     return itemRequest;
   }
@@ -114,7 +127,10 @@ public class ItemRequestBuilder implements Builder {
       this.permanentLoanType,
       this.temporaryLoanType,
       this.circulationNotes,
-      this.tags);
+      this.tags,
+      this.itemLevelCallNumber,
+      this.itemLevelCallNumberPrefix,
+      this.itemLevelCallNumberSuffix);
   }
 
   public ItemRequestBuilder forHolding(UUID holdingId) {
@@ -132,7 +148,10 @@ public class ItemRequestBuilder implements Builder {
       this.permanentLoanType,
       this.temporaryLoanType,
       this.circulationNotes,
-      this.tags);
+      this.tags,
+      this.itemLevelCallNumber,
+      this.itemLevelCallNumberPrefix,
+      this.itemLevelCallNumberSuffix);
   }
 
   public ItemRequestBuilder withReadOnlyTitle(String title) {
@@ -150,7 +169,10 @@ public class ItemRequestBuilder implements Builder {
       this.permanentLoanType,
       this.temporaryLoanType,
       this.circulationNotes,
-      this.tags);
+      this.tags,
+      this.itemLevelCallNumber,
+      this.itemLevelCallNumberPrefix,
+      this.itemLevelCallNumberSuffix);
   }
 
   public ItemRequestBuilder withReadOnlyCallNumber(String callNumber) {
@@ -168,7 +190,10 @@ public class ItemRequestBuilder implements Builder {
       this.permanentLoanType,
       this.temporaryLoanType,
       this.circulationNotes,
-      this.tags);
+      this.tags,
+      this.itemLevelCallNumber,
+      this.itemLevelCallNumberPrefix,
+      this.itemLevelCallNumberSuffix);
   }
 
   public ItemRequestBuilder withBarcode(String barcode) {
@@ -186,7 +211,10 @@ public class ItemRequestBuilder implements Builder {
       this.permanentLoanType,
       this.temporaryLoanType,
       this.circulationNotes,
-      this.tags);
+      this.tags,
+      this.itemLevelCallNumber,
+      this.itemLevelCallNumberPrefix,
+      this.itemLevelCallNumberSuffix);
   }
 
   public ItemRequestBuilder withNoBarcode() {
@@ -208,7 +236,10 @@ public class ItemRequestBuilder implements Builder {
       this.permanentLoanType,
       this.temporaryLoanType,
       this.circulationNotes,
-      this.tags);
+      this.tags,
+      this.itemLevelCallNumber,
+      this.itemLevelCallNumberPrefix,
+      this.itemLevelCallNumberSuffix);
   }
 
   private ItemRequestBuilder withMaterialType(JsonObject materialType) {
@@ -226,7 +257,10 @@ public class ItemRequestBuilder implements Builder {
       this.permanentLoanType,
       this.temporaryLoanType,
       this.circulationNotes,
-      this.tags);
+      this.tags,
+      this.itemLevelCallNumber,
+      this.itemLevelCallNumberPrefix,
+      this.itemLevelCallNumberSuffix);
   }
 
   public ItemRequestBuilder book() {
@@ -256,7 +290,10 @@ public class ItemRequestBuilder implements Builder {
       this.permanentLoanType,
       this.temporaryLoanType,
       this.circulationNotes,
-      this.tags);
+      this.tags,
+      this.itemLevelCallNumber,
+      this.itemLevelCallNumberPrefix,
+      this.itemLevelCallNumberSuffix);
   }
 
   private ItemRequestBuilder withTemporaryLocation(JsonObject location) {
@@ -274,7 +311,10 @@ public class ItemRequestBuilder implements Builder {
       this.permanentLoanType,
       this.temporaryLoanType,
       this.circulationNotes,
-      this.tags);
+      this.tags,
+      this.itemLevelCallNumber,
+      this.itemLevelCallNumberPrefix,
+      this.itemLevelCallNumberSuffix);
   }
 
     private ItemRequestBuilder withPermanentLocation(JsonObject location) {
@@ -292,7 +332,10 @@ public class ItemRequestBuilder implements Builder {
       this.permanentLoanType,
       this.temporaryLoanType,
       this.circulationNotes,
-      this.tags);
+      this.tags,
+      this.itemLevelCallNumber,
+      this.itemLevelCallNumberPrefix,
+      this.itemLevelCallNumberSuffix);
   }
 
   public ItemRequestBuilder permanentlyInThirdFloor() {
@@ -326,7 +369,10 @@ public class ItemRequestBuilder implements Builder {
       loanType,
       this.temporaryLoanType,
       this.circulationNotes,
-      this.tags);
+      this.tags,
+      this.itemLevelCallNumber,
+      this.itemLevelCallNumberPrefix,
+      this.itemLevelCallNumberSuffix);
   }
 
   public ItemRequestBuilder canCirculate() {
@@ -356,7 +402,10 @@ public class ItemRequestBuilder implements Builder {
       this.permanentLoanType,
       loanType,
       this.circulationNotes,
-      this.tags);
+      this.tags,
+      this.itemLevelCallNumber,
+      this.itemLevelCallNumberPrefix,
+      this.itemLevelCallNumberSuffix);
   }
 
   public ItemRequestBuilder withTagList(JsonObject tags) {
@@ -374,7 +423,10 @@ public class ItemRequestBuilder implements Builder {
       this.permanentLoanType,
       this.temporaryLoanType,
       this.circulationNotes,
-      tags);
+      tags,
+      this.itemLevelCallNumber,
+      this.itemLevelCallNumberPrefix,
+      this.itemLevelCallNumberSuffix);
   }
 
   public ItemRequestBuilder temporarilyCourseReserves() {
@@ -407,7 +459,10 @@ public class ItemRequestBuilder implements Builder {
       this.permanentLoanType,
       this.temporaryLoanType,
       circulationNotes,
-      this.tags);
+      this.tags,
+      this.itemLevelCallNumber,
+      this.itemLevelCallNumberPrefix,
+      this.itemLevelCallNumberSuffix);
   }
 
   private static JsonObject bookMaterialType() {
@@ -484,5 +539,68 @@ public class ItemRequestBuilder implements Builder {
     if (value != null) {
       itemRequest.put(property, value);
     }
+  }
+
+  public ItemRequestBuilder withItemLevelCallNumber(String itemLevelCallNumber) {
+    return new ItemRequestBuilder(
+      this.id,
+      this.holdingId,
+      this.readOnlyTitle,
+      this.readOnlyCallNumber,
+      this.barcode,
+      this.status,
+      this.materialType,
+      this.readOnlyEffectiveLocation,
+      this.permanentLocation,
+      this.temporaryLocation,
+      this.permanentLoanType,
+      this.temporaryLoanType,
+      this.circulationNotes,
+      this.tags,
+      itemLevelCallNumber,
+      this.itemLevelCallNumberPrefix,
+      this.itemLevelCallNumberSuffix);
+  }
+
+  public ItemRequestBuilder withItemLevelCallNumberSuffix(String itemLevelCallNumberSuffix) {
+    return new ItemRequestBuilder(
+      id,
+      this.holdingId,
+      this.readOnlyTitle,
+      this.readOnlyCallNumber,
+      this.barcode,
+      this.status,
+      this.materialType,
+      this.readOnlyEffectiveLocation,
+      this.permanentLocation,
+      this.temporaryLocation,
+      this.permanentLoanType,
+      this.temporaryLoanType,
+      this.circulationNotes,
+      this.tags,
+      this.itemLevelCallNumber,
+      this.itemLevelCallNumberPrefix,
+      itemLevelCallNumberSuffix);
+  }
+
+  public ItemRequestBuilder withItemLevelCallNumberPrefix(String itemLevelCallNumberPrefix) {
+    return new ItemRequestBuilder(
+      id,
+      this.holdingId,
+      this.readOnlyTitle,
+      this.readOnlyCallNumber,
+      this.barcode,
+      this.status,
+      this.materialType,
+      this.readOnlyEffectiveLocation,
+      this.permanentLocation,
+      this.temporaryLocation,
+      this.permanentLoanType,
+      this.temporaryLoanType,
+      this.circulationNotes,
+      this.tags,
+      this.itemLevelCallNumber,
+      itemLevelCallNumberPrefix,
+      this.itemLevelCallNumberSuffix);
   }
 }

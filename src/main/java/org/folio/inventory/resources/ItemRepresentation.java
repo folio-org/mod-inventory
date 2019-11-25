@@ -172,7 +172,7 @@ class ItemRepresentation {
     if (item.getEffectiveCallNumberComponents() != null) {
       representation.put(
         "effectiveCallNumberComponents",
-        item.getEffectiveCallNumberComponents());
+        item.getEffectiveCallNumberComponents().toJson());
     }
 
     return representation;
