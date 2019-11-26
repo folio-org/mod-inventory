@@ -1,12 +1,15 @@
 package support.fakes;
 
+import static java.util.concurrent.CompletableFuture.completedFuture;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Function;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -33,7 +36,7 @@ class FakeStorageModule extends AbstractVerticle {
   private final String recordTypeName;
   private final Collection<String> uniqueProperties;
   private final Map<String, Supplier<Object>> defaultProperties;
-  private final Function<JsonObject, JsonObject> recordPreProcessor;
+  private final List<BiFunction<JsonObject, JsonObject, CompletableFuture<JsonObject>>> recordPreProcessors;
 
   FakeStorageModule(
     String rootPath,
@@ -44,7 +47,7 @@ class FakeStorageModule extends AbstractVerticle {
     String recordTypeName,
     Collection<String> uniqueProperties,
     Map<String, Supplier<Object>> defaultProperties,
-    Function<JsonObject, JsonObject> recordPreProcessor) {
+    List<BiFunction<JsonObject, JsonObject, CompletableFuture<JsonObject>>> recordPreProcessors) {
 
     this.rootPath = rootPath;
     this.collectionPropertyName = collectionPropertyName;
@@ -61,7 +64,7 @@ class FakeStorageModule extends AbstractVerticle {
 
     storedResourcesByTenant = new HashMap<>();
     storedResourcesByTenant.put(tenantId, new HashMap<>());
-    this.recordPreProcessor = recordPreProcessor;
+    this.recordPreProcessors = recordPreProcessors;
   }
 
   void register(Router router) {
@@ -99,20 +102,26 @@ class FakeStorageModule extends AbstractVerticle {
     JsonObject body = getJsonFromBody(routingContext);
     JsonArray batchElements = body.getJsonArray(collectionPropertyName);
 
+    CompletableFuture<Void> lastCreate = completedFuture(null);
+
     for (int i = 0; i < batchElements.size(); i++) {
       JsonObject element = batchElements.getJsonObject(i);
       setDefaultProperties(element);
       String id = element.getString("id");
-      getResourcesForTenant(context).put(id, element);
+
+      lastCreate = lastCreate.thenCompose(prev -> createElement(context, element));
+
       System.out.println(
         String.format("Created %s resource: %s", recordTypeName, id));
     }
 
-    JsonObject responseBody = new JsonObject()
-      .put(collectionPropertyName, batchElements)
-      .put("errorMessages", new JsonArray())
-      .put("totalRecords", batchElements.size());
-    JsonResponse.created(routingContext.response(), responseBody);
+    lastCreate.thenAccept(notUsed -> {
+      JsonObject responseBody = new JsonObject()
+        .put(collectionPropertyName, batchElements)
+        .put("errorMessages", new JsonArray())
+        .put("totalRecords", batchElements.size());
+      JsonResponse.created(routingContext.response(), responseBody);
+    });
   }
 
   private void create(RoutingContext routingContext) {
@@ -125,16 +134,20 @@ class FakeStorageModule extends AbstractVerticle {
 
     String id = body.getString("id");
 
-    if (recordPreProcessor != null) {
-      body = recordPreProcessor.apply(body);
-    }
+    createElement(context, body).thenAccept(notUsed -> {
+      System.out.println(
+        String.format("Created %s resource: %s", recordTypeName, id));
 
-    getResourcesForTenant(context).put(id, body);
+      JsonResponse.created(routingContext.response(), body);
+    });
+  }
 
-    System.out.println(
-      String.format("Created %s resource: %s", recordTypeName, id));
+  private CompletableFuture<Void> createElement(WebContext context, JsonObject rawBody) {
+    String id = rawBody.getString("id");
 
-    JsonResponse.created(routingContext.response(), body);
+    return preProcessRecords(null, rawBody).thenAccept(body -> {
+      getResourcesForTenant(context).put(id, body);
+    });
   }
 
   private void replace(RoutingContext routingContext) {
@@ -142,30 +155,26 @@ class FakeStorageModule extends AbstractVerticle {
 
     String id = routingContext.request().getParam("id");
 
-    JsonObject body = getJsonFromBody(routingContext);
-
-    if (recordPreProcessor != null) {
-      body = recordPreProcessor.apply(body);
-    }
-
-    setDefaultProperties(body);
-
+    JsonObject rawBody = getJsonFromBody(routingContext);
     Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
 
-    if(resourcesForTenant.containsKey(id)) {
-      System.out.println(
-        String.format("Replaced %s resource: %s", recordTypeName, id));
+    preProcessRecords(resourcesForTenant.get(id), rawBody).thenAccept(body -> {
+      setDefaultProperties(body);
 
-      resourcesForTenant.replace(id, body);
-      SuccessResponse.noContent(routingContext.response());
-    }
-    else {
-      System.out.println(
-        String.format("Created %s resource: %s", recordTypeName, id));
+      if (resourcesForTenant.containsKey(id)) {
+        System.out.println(
+          String.format("Replaced %s resource: %s", recordTypeName, id));
 
-      resourcesForTenant.put(id, body);
-      SuccessResponse.noContent(routingContext.response());
-    }
+        resourcesForTenant.replace(id, body);
+        SuccessResponse.noContent(routingContext.response());
+      } else {
+        System.out.println(
+          String.format("Created %s resource: %s", recordTypeName, id));
+
+        resourcesForTenant.put(id, body);
+        SuccessResponse.noContent(routingContext.response());
+      }
+    });
   }
 
   private void get(RoutingContext routingContext) {
@@ -340,6 +349,17 @@ class FakeStorageModule extends AbstractVerticle {
         representation.put(property, valueSupplier.get());
       }
     });
+  }
+
+  private CompletableFuture<JsonObject> preProcessRecords(JsonObject oldBody, JsonObject newBody) {
+    CompletableFuture<JsonObject> lastPreProcess = completedFuture(newBody);
+
+    for (BiFunction<JsonObject, JsonObject, CompletableFuture<JsonObject>> preProcessor : recordPreProcessors) {
+      lastPreProcess = lastPreProcess
+        .thenCompose(prev -> preProcessor.apply(oldBody, newBody));
+    }
+
+    return lastPreProcess;
   }
 }
 

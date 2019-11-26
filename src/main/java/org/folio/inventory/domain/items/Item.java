@@ -78,6 +78,7 @@ public class Item {
   private String purchaseOrderLineidentifier;
   private List<String> tags = new ArrayList<>();
   private LastCheckIn lastCheckIn;
+  private EffectiveCallNumberComponents effectiveCallNumberComponents;
 
   private final JsonObject metadata;
 
@@ -397,6 +398,18 @@ public class Item {
     }
 
     return this;
+  }
+
+  public Item withEffectiveCallNumberComponents(EffectiveCallNumberComponents components) {
+    if (components != null) {
+      this.effectiveCallNumberComponents = components;
+    }
+
+    return this;
+  }
+
+  public EffectiveCallNumberComponents getEffectiveCallNumberComponents() {
+    return effectiveCallNumberComponents;
   }
 
   public Item withTags(List<String> tags) {

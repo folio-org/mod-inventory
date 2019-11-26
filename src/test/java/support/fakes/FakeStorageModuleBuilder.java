@@ -4,7 +4,8 @@ import api.ApiTestSuite;
 import io.vertx.core.json.JsonObject;
 
 import java.util.*;
-import java.util.function.Function;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
 public class FakeStorageModuleBuilder {
@@ -16,11 +17,11 @@ public class FakeStorageModuleBuilder {
   private final Map<String, Supplier<Object>> defaultProperties;
   private final Boolean hasCollectionDelete;
   private final String recordName;
-  private final Function<JsonObject, JsonObject> recordPreProcessor;
+  private final List<BiFunction<JsonObject, JsonObject, CompletableFuture<JsonObject>>> recordPreProcessors;
 
   FakeStorageModuleBuilder() {
     this(null, null, ApiTestSuite.TENANT_ID, new ArrayList<>(), true, "",
-      new ArrayList<>(), new HashMap<>(), null);
+      new ArrayList<>(), new HashMap<>(), Collections.emptyList());
   }
 
   private FakeStorageModuleBuilder(
@@ -32,7 +33,7 @@ public class FakeStorageModuleBuilder {
     String recordName,
     Collection<String> uniqueProperties,
     Map<String, Supplier<Object>> defaultProperties,
-    Function<JsonObject, JsonObject> recordPreProcessor) {
+    List<BiFunction<JsonObject, JsonObject, CompletableFuture<JsonObject>>> recordPreProcessors) {
 
     this.rootPath = rootPath;
     this.collectionPropertyName = collectionPropertyName;
@@ -42,13 +43,13 @@ public class FakeStorageModuleBuilder {
     this.recordName = recordName;
     this.uniqueProperties = uniqueProperties;
     this.defaultProperties = defaultProperties;
-    this.recordPreProcessor = recordPreProcessor;
+    this.recordPreProcessors = recordPreProcessors;
   }
 
   public FakeStorageModule create() {
     return new FakeStorageModule(rootPath, collectionPropertyName, tenantId,
       requiredProperties, hasCollectionDelete, recordName, uniqueProperties,
-      defaultProperties, recordPreProcessor);
+      defaultProperties, recordPreProcessors);
   }
 
   FakeStorageModuleBuilder withRootPath(String rootPath) {
@@ -65,7 +66,7 @@ public class FakeStorageModuleBuilder {
       this.recordName,
       this.uniqueProperties,
       this.defaultProperties,
-      this.recordPreProcessor);
+      this.recordPreProcessors);
   }
 
   FakeStorageModuleBuilder withCollectionPropertyName(String collectionPropertyName) {
@@ -78,7 +79,7 @@ public class FakeStorageModuleBuilder {
       this.recordName,
       this.uniqueProperties,
       this.defaultProperties,
-      this.recordPreProcessor);
+      this.recordPreProcessors);
   }
 
   FakeStorageModuleBuilder withRecordName(String recordName) {
@@ -91,7 +92,7 @@ public class FakeStorageModuleBuilder {
       recordName,
       this.uniqueProperties,
       this.defaultProperties,
-      this.recordPreProcessor);
+      this.recordPreProcessors);
   }
 
   private FakeStorageModuleBuilder withRequiredProperties(
@@ -106,7 +107,7 @@ public class FakeStorageModuleBuilder {
       this.recordName,
       this.uniqueProperties,
       this.defaultProperties,
-      this.recordPreProcessor);
+      this.recordPreProcessors);
   }
 
   FakeStorageModuleBuilder withRequiredProperties(String... requiredProperties) {
@@ -127,10 +128,13 @@ public class FakeStorageModuleBuilder {
       this.recordName,
       this.uniqueProperties,
       newDefaults,
-      this.recordPreProcessor);
+      this.recordPreProcessors);
   }
 
-  FakeStorageModuleBuilder withRecordPreProcessor(Function<JsonObject, JsonObject> preProcessor) {
+  @SafeVarargs
+  final FakeStorageModuleBuilder withRecordPreProcessors(
+    BiFunction<JsonObject, JsonObject, CompletableFuture<JsonObject>> ... preProcessors) {
+
     return new FakeStorageModuleBuilder(
       this.rootPath,
       this.collectionPropertyName,
@@ -140,7 +144,7 @@ public class FakeStorageModuleBuilder {
       this.recordName,
       this.uniqueProperties,
       this.defaultProperties,
-      preProcessor);
+      Arrays.asList(preProcessors));
   }
 }
 

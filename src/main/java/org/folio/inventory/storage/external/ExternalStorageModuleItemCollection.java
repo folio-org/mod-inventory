@@ -8,6 +8,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.folio.inventory.domain.items.CirculationNote;
+import org.folio.inventory.domain.items.EffectiveCallNumberComponents;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.LastCheckIn;
@@ -112,7 +113,9 @@ class ExternalStorageModuleItemCollection
             .withStatisticalCodeIds(statisticalCodeIds)
             .withPurchaseOrderLineidentifier(itemFromServer.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER))
             .withTags(tags)
-            .withLastCheckIn(LastCheckIn.from(itemFromServer.getJsonObject("lastCheckIn")));
+            .withLastCheckIn(LastCheckIn.from(itemFromServer.getJsonObject("lastCheckIn")))
+            .withEffectiveCallNumberComponents(
+              EffectiveCallNumberComponents.from(itemFromServer.getJsonObject("effectiveCallNumberComponents")));
   }
 
   @Override

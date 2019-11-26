@@ -169,6 +169,12 @@ class ItemRepresentation {
       representation.put("lastCheckIn", item.getLastCheckIn().toJson());
     }
 
+    if (item.getEffectiveCallNumberComponents() != null) {
+      representation.put(
+        "effectiveCallNumberComponents",
+        item.getEffectiveCallNumberComponents().toJson());
+    }
+
     return representation;
   }
 
