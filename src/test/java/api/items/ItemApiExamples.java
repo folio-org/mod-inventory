@@ -102,6 +102,8 @@ public class ItemApiExamples extends ApiTests {
       .withTagList(new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray().add("test-tag")))
       .temporarilyCourseReserves());
 
+    assertCallNumbers(postResponse.getJson());
+
     JsonObject createdItem = itemsClient.getById(postResponse.getId()).getJson();
 
     assertThat(createdItem.containsKey("id"), is(true));
@@ -415,9 +417,6 @@ public class ItemApiExamples extends ApiTests {
       .forHolding(holdingId)
       .withBarcode("645398607547")
       .canCirculate()
-      .withItemLevelCallNumber(CALL_NUMBER)
-      .withItemLevelCallNumberSuffix(CALL_NUMBER_SUFFIX)
-      .withItemLevelCallNumberPrefix(CALL_NUMBER_PREFIX)
       .temporarilyInReadingRoom()
       .withTagList(new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray().add("test-tag")))
       .create();
@@ -462,8 +461,6 @@ public class ItemApiExamples extends ApiTests {
       updatedItem.containsKey("permanentLocation"), is(false));
 
     assertThat(updatedItem.getJsonObject("temporaryLocation").getString("name"), is("Reading Room"));
-
-    assertCallNumbers(updatedItem);
 
     selfLinkRespectsWayResourceWasReached(updatedItem);
     selfLinkShouldBeReachable(updatedItem);
