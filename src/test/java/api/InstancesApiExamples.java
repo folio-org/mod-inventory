@@ -20,6 +20,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static support.matchers.ResponseMatchers.hasValidationError;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -150,10 +151,12 @@ public class InstancesApiExamples extends ApiTests {
     dublinCoreContextLinkRespectsWayResourceWasReached(createdInstance);
     selfLinkRespectsWayResourceWasReached(createdInstance);
     selfLinkShouldBeReachable(createdInstance);
+
+    assertThat(createdInstance.getString("hrid"), notNullValue());
   }
 
   @Test
-  public void canCreateAnInstanceWithAnID()
+  public void canCreateAnInstanceWithAnIDAndHrid()
     throws InterruptedException,
     MalformedURLException,
     TimeoutException,
@@ -161,9 +164,11 @@ public class InstancesApiExamples extends ApiTests {
     JsonLdError {
 
     String instanceId = UUID.randomUUID().toString();
+    final String hrid = "in777";
 
     JsonObject newInstanceRequest = new JsonObject()
       .put("id", instanceId)
+      .put("hrid", hrid)
       .put("title", "Long Way to a Small Angry Planet")
       .put("identifiers", new JsonArray().add(new JsonObject()
       .put("identifierTypeId", ApiTestSuite.getIsbnIdentifierType())
@@ -221,6 +226,7 @@ public class InstancesApiExamples extends ApiTests {
     dublinCoreContextLinkRespectsWayResourceWasReached(createdInstance);
     selfLinkRespectsWayResourceWasReached(createdInstance);
     selfLinkShouldBeReachable(createdInstance);
+    assertThat(createdInstance.getString("hrid"), is(hrid));
   }
 
   @Test
@@ -401,7 +407,7 @@ public class InstancesApiExamples extends ApiTests {
 
     JsonObject newInstance = createInstance(smallAngryPlanet);
 
-    JsonObject updateInstanceRequest = smallAngryPlanet(id)
+    JsonObject updateInstanceRequest = newInstance.copy()
       .put("title", "The Long Way to a Small, Angry Planet")
       .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameTwo)))
       .put("natureOfContentTermIds",
@@ -480,7 +486,7 @@ public class InstancesApiExamples extends ApiTests {
     UUID id = UUID.randomUUID();
     // Create new Instance
     JsonObject newInstance = createInstance(treasureIslandInstance(id));
-    JsonObject instanceForUpdate = treasureIslandInstance(id);
+    JsonObject instanceForUpdate = newInstance.copy();
     URL instanceLocation = new URL(String.format("%s/%s", ApiRoot.instances(), newInstance.getString("id")));
     // Put Instance for update
     CompletableFuture<Response> putCompleted = new CompletableFuture<>();
@@ -588,7 +594,7 @@ public class InstancesApiExamples extends ApiTests {
     // Create new Instance
     JsonObject newInstance = createInstance(createInstanceRequest);
 
-    JsonObject instanceForUpdate = treasureIslandInstance(id)
+    JsonObject instanceForUpdate = newInstance.copy()
       .put("sourceRecordFormat", "test-format-1");
     URL instanceLocation = new URL(String.format("%s/%s", ApiRoot.instances(), newInstance.getString("id")));
     // Put Instance for update
@@ -824,6 +830,31 @@ public class InstancesApiExamples extends ApiTests {
     Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
 
     assertThat(getResponse.getStatusCode(), is(404));
+  }
+
+  @Test
+  public void cannotUpdateHrid() throws Exception {
+    UUID instanceId = UUID.randomUUID();
+    JsonObject createdInstance = createInstance(smallAngryPlanet(instanceId));
+
+    assertThat(createdInstance.getString("hrid"), notNullValue());
+
+    JsonObject instanceToUpdate = createdInstance.copy()
+      .put("title", "updatedTitle")
+      .put("hrid", "updatedHrid");
+
+    CompletableFuture<Response> putFuture = new CompletableFuture<>();
+    String instanceUpdateUri = String
+      .format("%s/%s", ApiRoot.instances(), instanceToUpdate.getString("id"));
+    okapiClient.put(instanceUpdateUri, instanceToUpdate, ResponseHandler.any(putFuture));
+
+    Response instanceUpdateResponse = putFuture.get(5, TimeUnit.SECONDS);
+
+    assertThat(instanceUpdateResponse,
+      hasValidationError("HRID can not be updated", "hrid", "updatedHrid"));
+
+    JsonObject existingInstance = instancesClient.getById(instanceId).getJson();
+    assertThat(existingInstance, is(createdInstance));
   }
 
   private void hasCollectionProperties(List<JsonObject> instances) {
