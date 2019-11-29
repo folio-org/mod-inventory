@@ -1339,16 +1339,59 @@ public class ItemApiExamples extends ApiTests {
       .put("itemLevelCallNumber", "callNumber")
       .put("hrid", "updatedHrid");
 
-    String itemUpdateUri = String.format("%s/%s", ApiRoot.items(), postResponse.getId());
-    CompletableFuture<Response> putItemCompleted = new CompletableFuture<>();
-    okapiClient.put(itemUpdateUri, updatedItem, ResponseHandler.any(putItemCompleted));
+    Response updateResponse = updateItem(updatedItem);
 
-    assertThat(putItemCompleted.get(5, TimeUnit.SECONDS),
+    assertThat(updateResponse,
       hasValidationError("HRID can not be updated", "hrid", "updatedHrid")
     );
 
     JsonObject existingItem = itemsClient.getById(postResponse.getId()).getJson();
     assertThat(existingItem, is(createdItem));
+  }
+
+  @Test
+  public void cannotRemoveHRID() throws Exception {
+    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
+
+    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withHrid("it777")
+      .withBarcode("645398607547")
+      .temporarilyInReadingRoom());
+
+    JsonObject createdItem = postResponse.getJson();
+    assertThat(createdItem.getString("hrid"), notNullValue());
+
+    JsonObject updatedItem = createdItem.copy()
+      .put("barcode", "645398607548")
+      .put("itemLevelCallNumber", "callNumber");
+
+    updatedItem.remove("hrid");
+
+    Response updateResponse = updateItem(updatedItem);
+
+    assertThat(updateResponse,
+      hasValidationError("HRID can not be updated", "hrid", null)
+    );
+
+    JsonObject existingItem = itemsClient.getById(postResponse.getId()).getJson();
+    assertThat(existingItem, is(createdItem));
+  }
+
+  private Response updateItem(JsonObject item) throws MalformedURLException,
+    InterruptedException, ExecutionException, TimeoutException {
+
+    String itemUpdateUri = String.format("%s/%s", ApiRoot.items(), item.getString("id"));
+    CompletableFuture<Response> putItemCompleted = new CompletableFuture<>();
+
+    okapiClient.put(itemUpdateUri, item, ResponseHandler.any(putItemCompleted));
+
+    return putItemCompleted.get(5, TimeUnit.SECONDS);
   }
 
   private static void selfLinkRespectsWayResourceWasReached(JsonObject item) {

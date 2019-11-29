@@ -843,15 +843,31 @@ public class InstancesApiExamples extends ApiTests {
       .put("title", "updatedTitle")
       .put("hrid", "updatedHrid");
 
-    CompletableFuture<Response> putFuture = new CompletableFuture<>();
-    String instanceUpdateUri = String
-      .format("%s/%s", ApiRoot.instances(), instanceToUpdate.getString("id"));
-    okapiClient.put(instanceUpdateUri, instanceToUpdate, ResponseHandler.any(putFuture));
-
-    Response instanceUpdateResponse = putFuture.get(5, TimeUnit.SECONDS);
+    Response instanceUpdateResponse = updateInstance(instanceToUpdate);
 
     assertThat(instanceUpdateResponse,
       hasValidationError("HRID can not be updated", "hrid", "updatedHrid"));
+
+    JsonObject existingInstance = instancesClient.getById(instanceId).getJson();
+    assertThat(existingInstance, is(createdInstance));
+  }
+
+  @Test
+  public void cannotRemoveHRID() throws Exception {
+    UUID instanceId = UUID.randomUUID();
+    JsonObject createdInstance = createInstance(smallAngryPlanet(instanceId));
+
+    assertThat(createdInstance.getString("hrid"), notNullValue());
+
+    JsonObject instanceToUpdate = createdInstance.copy()
+      .put("title", "updatedTitle");
+
+    instanceToUpdate.remove("hrid");
+
+    Response instanceUpdateResponse = updateInstance(instanceToUpdate);
+
+    assertThat(instanceUpdateResponse,
+      hasValidationError("HRID can not be updated", "hrid", null));
 
     JsonObject existingInstance = instancesClient.getById(instanceId).getJson();
     assertThat(existingInstance, is(createdInstance));
@@ -951,5 +967,17 @@ public class InstancesApiExamples extends ApiTests {
 
   private static void containsApiRoot(String link) {
     assertThat(link.contains(ApiTestSuite.apiRoot()), is(true));
+  }
+
+  private Response updateInstance(JsonObject instance) throws MalformedURLException,
+    InterruptedException, ExecutionException, TimeoutException {
+
+    CompletableFuture<Response> putFuture = new CompletableFuture<>();
+    String instanceUpdateUri = String
+      .format("%s/%s", ApiRoot.instances(), instance.getString("id"));
+
+    okapiClient.put(instanceUpdateUri, instance, ResponseHandler.any(putFuture));
+
+    return putFuture.get(5, TimeUnit.SECONDS);
   }
 }
