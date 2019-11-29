@@ -28,6 +28,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
+import static support.matchers.ResponseMatchers.hasValidationError;
 import static support.matchers.TextDateTimeMatcher.withinSecondsAfter;
 
 import java.net.MalformedURLException;
@@ -78,7 +79,7 @@ public class ItemApiExamples extends ApiTests {
   }
 
   @Test
-  public void canCreateAnItem()
+  public void canCreateAnItemWithoutIDAndHRID()
     throws InterruptedException,
     MalformedURLException,
     TimeoutException,
@@ -144,16 +145,18 @@ public class ItemApiExamples extends ApiTests {
 
     selfLinkRespectsWayResourceWasReached(createdItem);
     selfLinkShouldBeReachable(createdItem);
+    assertThat(createdItem.getString("hrid"), notNullValue());
   }
 
   @Test
-  public void canCreateItemWithAnID()
+  public void canCreateItemWithAnIDAndHRID()
     throws InterruptedException,
     MalformedURLException,
     TimeoutException,
     ExecutionException {
 
     UUID itemId = UUID.randomUUID();
+    final String hrid = "it777";
 
     JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
@@ -164,6 +167,7 @@ public class ItemApiExamples extends ApiTests {
 
     IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
       .withId(itemId)
+      .withHrid(hrid)
       .forHolding(holdingId)
       .withBarcode("645398607547")
       .temporarilyInReadingRoom()
@@ -210,6 +214,7 @@ public class ItemApiExamples extends ApiTests {
 
     selfLinkRespectsWayResourceWasReached(createdItem);
     selfLinkShouldBeReachable(createdItem);
+    assertThat(createdItem.getString("hrid"), is(hrid));
   }
 
   @Test
@@ -421,7 +426,7 @@ public class ItemApiExamples extends ApiTests {
       .withTagList(new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray().add("test-tag")))
       .create();
 
-    itemsClient.create(newItemRequest);
+    newItemRequest = itemsClient.create(newItemRequest).getJson();
 
     JsonObject updateItemRequest = newItemRequest.copy()
       .put("status", new JsonObject().put("name", "Checked Out"))
@@ -1134,15 +1139,16 @@ public class ItemApiExamples extends ApiTests {
 
     DateTime createItemRequestMade = DateTime.now();
 
-    itemsClient.create(newItemRequest);
+    itemsClient.create(newItemRequest).getJson();
 
-    String createdItemCirculationNoteDate = itemsClient.getById(itemId)
-      .getJson()
+    JsonObject createdItem = itemsClient.getById(itemId).getJson();
+    String createdItemCirculationNoteDate = createdItem
       .getJsonArray(CIRCULATION_NOTES_KEY)
       .getJsonObject(0)
       .getString(DATE_KEY);
 
     JsonObject updateItemRequest = newItemRequest.copy()
+      .put("hrid", createdItem.getString("hrid"))
       .put("status", new JsonObject().put("name", "Checked Out"));
 
     itemsClient.replace(itemId, updateItemRequest);
@@ -1309,6 +1315,83 @@ public class ItemApiExamples extends ApiTests {
     JsonObject actualItem = readingRoomItems.getJsonArray("items").getJsonObject(0);
     assertThat(actualItem, is(notNullValue()));
     assertThat(actualItem.getJsonObject(LAST_CHECK_IN_FIELD), is(nullValue()));
+  }
+
+  @Test
+  public void cannotChangeHRID() throws Exception {
+    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
+
+    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withBarcode("645398607547")
+      .temporarilyInReadingRoom());
+
+    JsonObject createdItem = postResponse.getJson();
+    assertThat(createdItem.getString("hrid"), notNullValue());
+
+    JsonObject updatedItem = createdItem.copy()
+      .put("barcode", "645398607548")
+      .put("itemLevelCallNumber", "callNumber")
+      .put("hrid", "updatedHrid");
+
+    Response updateResponse = updateItem(updatedItem);
+
+    assertThat(updateResponse,
+      hasValidationError("HRID can not be updated", "hrid", "updatedHrid")
+    );
+
+    JsonObject existingItem = itemsClient.getById(postResponse.getId()).getJson();
+    assertThat(existingItem, is(createdItem));
+  }
+
+  @Test
+  public void cannotRemoveHRID() throws Exception {
+    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
+
+    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withHrid("it777")
+      .withBarcode("645398607547")
+      .temporarilyInReadingRoom());
+
+    JsonObject createdItem = postResponse.getJson();
+    assertThat(createdItem.getString("hrid"), notNullValue());
+
+    JsonObject updatedItem = createdItem.copy()
+      .put("barcode", "645398607548")
+      .put("itemLevelCallNumber", "callNumber");
+
+    updatedItem.remove("hrid");
+
+    Response updateResponse = updateItem(updatedItem);
+
+    assertThat(updateResponse,
+      hasValidationError("HRID can not be updated", "hrid", null)
+    );
+
+    JsonObject existingItem = itemsClient.getById(postResponse.getId()).getJson();
+    assertThat(existingItem, is(createdItem));
+  }
+
+  private Response updateItem(JsonObject item) throws MalformedURLException,
+    InterruptedException, ExecutionException, TimeoutException {
+
+    String itemUpdateUri = String.format("%s/%s", ApiRoot.items(), item.getString("id"));
+    CompletableFuture<Response> putItemCompleted = new CompletableFuture<>();
+
+    okapiClient.put(itemUpdateUri, item, ResponseHandler.any(putItemCompleted));
+
+    return putItemCompleted.get(5, TimeUnit.SECONDS);
   }
 
   private static void selfLinkRespectsWayResourceWasReached(JsonObject item) {

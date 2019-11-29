@@ -71,7 +71,9 @@ public class FakeOkapi extends AbstractVerticle {
       .withRootPath("/instance-storage/instances")
       .withCollectionPropertyName("instances")
       .withRequiredProperties("source", "title", "contributors", "instanceTypeId")
-      .create();
+      .withRecordPreProcessors(
+        StorageRecordPreProcessors.setHridProcessor("in")
+      ).create();
     fakeInstanceStorageModule.register(router);
     fakeInstanceStorageModule.registerBatch(router, "/instance-storage/batch/instances");
 
@@ -99,6 +101,7 @@ public class FakeOkapi extends AbstractVerticle {
       .withRequiredProperties("materialTypeId", "permanentLoanTypeId")
       .withDefault("status", new JsonObject().put("name", "Available"))
       .withRecordPreProcessors(
+        StorageRecordPreProcessors.setHridProcessor("it"),
         StorageRecordPreProcessors::setEffectiveLocationForItem,
         StorageRecordPreProcessors::setEffectiveCallNumberComponents
       )

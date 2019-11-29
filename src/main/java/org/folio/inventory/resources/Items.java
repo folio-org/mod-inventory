@@ -173,6 +173,17 @@ public class Items {
     itemCollection.findById(routingContext.request().getParam("id"), getItemResult -> {
       Item oldItem = getItemResult.getResult();
       if (oldItem != null) {
+        if (!Objects.equals(newItem.getHrid(), oldItem.getHrid())) {
+          log.warn("The HRID property can not be updated, old value is '{}' but new is '{}'",
+            oldItem.getHrid(), newItem.getHrid()
+          );
+
+          JsonResponse.unprocessableEntity(routingContext.response(),
+            "HRID can not be updated", "hrid", newItem.getHrid()
+          );
+          return;
+        }
+
         if (hasSameBarcode(newItem, oldItem)) {
           findUserAndUpdateItem(routingContext, newItem, oldItem, userCollection, itemCollection);
         } else {

@@ -1,12 +1,21 @@
 package org.folio.inventory.resources;
 
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.BodyHandler;
+import static io.netty.util.internal.StringUtil.COMMA;
+import static java.lang.String.format;
+import static org.folio.inventory.support.http.server.SuccessResponse.noContent;
+
+import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
@@ -31,21 +40,13 @@ import org.folio.inventory.support.http.server.ServerErrorResponse;
 import org.folio.rest.client.SourceStorageClient;
 import org.folio.rest.jaxrs.model.SuppressFromDiscoveryDto;
 
-import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLEncoder;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Collectors;
-
-import static io.netty.util.internal.StringUtil.COMMA;
-import static java.lang.String.format;
-import static org.folio.inventory.support.http.server.SuccessResponse.noContent;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
 
 public class Instances extends AbstractInstances {
   private static final String INSTANCES_CONTEXT_PATH = INSTANCES_PATH + "/context";
@@ -171,6 +172,14 @@ public class Instances extends AbstractInstances {
             String errorMessage = BLOCKED_FIELDS_UPDATE_ERROR_MESSAGE + StringUtils.join(config.getInstanceBlockedFields(), COMMA);
             log.error(errorMessage);
             JsonResponse.unprocessableEntity(rContext.response(), errorMessage);
+          } else if (!Objects.equals(existingInstance.getHrid(), updatedInstance.getHrid())) {
+            log.warn("The HRID property can not be updated, old value is '{}' but new is '{}'",
+              existingInstance.getHrid(), updatedInstance.getHrid()
+            );
+
+            JsonResponse.unprocessableEntity(rContext.response(),
+              "HRID can not be updated", "hrid", updatedInstance.getHrid()
+            );
           } else {
             updateInstance(updatedInstance, rContext, wContext);
           }

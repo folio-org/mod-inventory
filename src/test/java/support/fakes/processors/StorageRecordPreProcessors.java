@@ -6,6 +6,8 @@ import java.net.MalformedURLException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiFunction;
 
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -19,6 +21,7 @@ import api.support.http.StorageInterfaceUrls;
 import io.vertx.core.json.JsonObject;
 
 public final class StorageRecordPreProcessors {
+  private static final AtomicLong hridSequence = new AtomicLong(1L);
 
   // Holdings record property name, item property name, effective property name
   private static final List<Triple<String, String, String>> CALL_NUMBER_PROPERTIES = Arrays.asList(
@@ -104,5 +107,19 @@ public final class StorageRecordPreProcessors {
       response -> response.getJson().getJsonArray("holdingsRecords")
         .getJsonObject(0)
     );
+  }
+
+  public static BiFunction<JsonObject, JsonObject, CompletableFuture<JsonObject>> setHridProcessor(
+    String hridPrefix) {
+
+    return (oldEntity, newEntity) -> {
+      if (StringUtils.isBlank(newEntity.getString("hrid"))) {
+        String hridToSet = hridPrefix + hridSequence.getAndIncrement();
+
+        newEntity.put("hrid", hridToSet);
+      }
+
+      return completedFuture(newEntity);
+    };
   }
 }
