@@ -79,7 +79,7 @@ public class ItemApiExamples extends ApiTests {
   }
 
   @Test
-  public void canCreateAnItem()
+  public void canCreateAnItemWithoutIdAndHRID()
     throws InterruptedException,
     MalformedURLException,
     TimeoutException,
@@ -149,7 +149,7 @@ public class ItemApiExamples extends ApiTests {
   }
 
   @Test
-  public void canCreateItemWithAnIDAndHrid()
+  public void canCreateItemWithAnIDAndHRID()
     throws InterruptedException,
     MalformedURLException,
     TimeoutException,
@@ -1318,7 +1318,7 @@ public class ItemApiExamples extends ApiTests {
   }
 
   @Test
-  public void cannotUpdateHrid() throws Exception {
+  public void cannotChangeHRID() throws Exception {
     JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
     UUID holdingId = holdingsStorageClient.create(

@@ -68,7 +68,7 @@ public class InstancesApiExamples extends ApiTests {
   }
 
   @Test
-  public void canCreateAnInstance()
+  public void canCreateInstanceWithoutAnIDAndHRID()
     throws InterruptedException,
     MalformedURLException,
     TimeoutException,
@@ -156,7 +156,7 @@ public class InstancesApiExamples extends ApiTests {
   }
 
   @Test
-  public void canCreateAnInstanceWithAnIDAndHrid()
+  public void canCreateAnInstanceWithAnIDAndHRID()
     throws InterruptedException,
     MalformedURLException,
     TimeoutException,
@@ -833,7 +833,7 @@ public class InstancesApiExamples extends ApiTests {
   }
 
   @Test
-  public void cannotUpdateHrid() throws Exception {
+  public void cannotChangeHRID() throws Exception {
     UUID instanceId = UUID.randomUUID();
     JsonObject createdInstance = createInstance(smallAngryPlanet(instanceId));
 
