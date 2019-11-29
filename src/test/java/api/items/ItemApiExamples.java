@@ -79,7 +79,7 @@ public class ItemApiExamples extends ApiTests {
   }
 
   @Test
-  public void canCreateAnItemWithoutIdAndHRID()
+  public void canCreateAnItemWithoutIDAndHRID()
     throws InterruptedException,
     MalformedURLException,
     TimeoutException,
