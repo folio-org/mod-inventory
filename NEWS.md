@@ -1,10 +1,24 @@
+## 13.1.0 2019-12-03
+
+* Generates HRIDs for instance and item records (MODINV-160, MODINV-162)
+* Allow editing of instance relationships when source is MARC (MODINV-163)
+* Includes `effective location ID` property for instances (MODINV-157)
+* Includes `effective call number` properties for instances (MODINV-174)
+* Includes `last check in` properties for items (MODINV-173)
+* Forwards X-Okapi-Request-Id (MODINV-156)
+* Changes container memory management (MODINV-175, FOLIO-2358)
+* Provides `inventory 9.6`
+* Requires `item-storage 7.8`
+* Requires `holdings-storage 2.0, 3.0 or 4.0`
+* No longer requires `source-record-storage 2.2`
+
 ## 13.0.0 2019-09-09
 
 * Adds nature of content terms to `instances` (MODINV-149)
 * Adds tags to `items` (MODINV-147)
 * Adds tags to `instances` (MODINV-146)
 * `ISBN validation` uses 422 responses instead of 400 for errors (MODINV-139)
-* `Instance batch` API uses batch storage API (MODINV-134)  
+* `Instance batch` API uses batch storage API (MODINV-134)
 * Provides `inventory 9.4` interface (MODINV-149, MODINV-146, MODINV-147)
 * Provides `inventory-batch 0.3` interface (MODINV-149)
 * Provides `isbn-utils 2.0` interface (MODINV-139)
