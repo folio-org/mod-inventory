@@ -4,6 +4,7 @@ import static org.folio.inventory.common.FutureAssistance.allOf;
 import static org.folio.inventory.support.CqlHelper.multipleRecordsCqlQuery;
 import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
 import static org.folio.inventory.support.JsonHelper.getNestedProperty;
+import static org.folio.inventory.validation.ItemStatusValidator.itemHasNoOrKnownStatus;
 
 import java.io.UnsupportedEncodingException;
 import java.lang.invoke.MethodHandles;
@@ -16,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -46,6 +48,7 @@ import org.folio.inventory.support.http.server.ForwardResponse;
 import org.folio.inventory.support.http.server.JsonResponse;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
 import org.folio.inventory.support.http.server.SuccessResponse;
+import org.folio.inventory.support.http.server.ValidationError;
 
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
@@ -132,6 +135,12 @@ public class Items {
 
     JsonObject item = routingContext.getBodyAsJson();
 
+    Optional<ValidationError> validationError = itemHasNoOrKnownStatus(item);
+    if (validationError.isPresent()) {
+      JsonResponse.unprocessableEntity(routingContext.response(), validationError.get());
+      return;
+    }
+
     Item newItem = requestToItem(item);
 
     ItemCollection itemCollection = storage.getItemCollection(context);
@@ -164,6 +173,12 @@ public class Items {
     WebContext context = new WebContext(routingContext);
 
     JsonObject itemRequest = routingContext.getBodyAsJson();
+
+    Optional<ValidationError> validationError = itemHasNoOrKnownStatus(itemRequest);
+    if (validationError.isPresent()) {
+      JsonResponse.unprocessableEntity(routingContext.response(), validationError.get());
+      return;
+    }
 
     Item newItem = requestToItem(itemRequest);
 
@@ -247,9 +262,6 @@ public class Items {
     List<String> formerIds = toListOfStrings(
       itemRequest.getJsonArray(Item.FORMER_IDS_KEY));
 
-    List<String> copyNumbers = toListOfStrings(
-      itemRequest.getJsonArray("copyNumbers"));
-
     List<String> statisticalCodeIds = toListOfStrings(
       itemRequest.getJsonArray(Item.STATISTICAL_CODE_IDS_KEY));
 
@@ -314,7 +326,7 @@ public class Items {
             .withPermanentLocationId(permanentLocationId)
             .withTemporaryLocationId(temporaryLocationId)
             .withTemporaryLoanTypeId(temporaryLoanTypeId)
-            .withCopyNumbers(copyNumbers)
+            .withCopyNumber(itemRequest.getString("copyNumber"))
             .withNotes(notes)
             .withCirculationNotes(circulationNotes)
             .withAccessionNumber(itemRequest.getString(Item.ACCESSION_NUMBER_KEY))

@@ -23,6 +23,7 @@ import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
+import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.domain.items.Status;
 import org.junit.Before;
 import org.junit.Test;
@@ -153,7 +154,7 @@ public class ExternalItemCollectionExamples {
 
     CompletableFuture<Void> updateFinished = new CompletableFuture<>();
 
-    Item changed = added.changeStatus("Checked Out");
+    Item changed = added.changeStatus(ItemStatusName.CHECKED_OUT);
 
     collection.update(changed, succeed(updateFinished),
       fail(updateFinished));
@@ -172,7 +173,7 @@ public class ExternalItemCollectionExamples {
     assertThat(updated.getTemporaryLocationId(), is(added.getTemporaryLocationId()));
     assertThat(updated.getMaterialTypeId(), is(added.getMaterialTypeId()));
     assertThat(updated.getPermanentLoanTypeId(), is(added.getPermanentLoanTypeId()));
-    assertThat(updated.getStatus().getString(Status.NAME_KEY), is("Checked Out"));
+    assertThat(updated.getStatus().getString(Status.NAME_KEY), is(ItemStatusName.CHECKED_OUT.value()));
   }
 
   @Test

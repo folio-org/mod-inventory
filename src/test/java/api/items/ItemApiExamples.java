@@ -26,6 +26,7 @@ import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static support.matchers.ResponseMatchers.hasValidationError;
@@ -43,6 +44,7 @@ import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.domain.items.Item;
+import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
@@ -429,7 +431,7 @@ public class ItemApiExamples extends ApiTests {
     newItemRequest = itemsClient.create(newItemRequest).getJson();
 
     JsonObject updateItemRequest = newItemRequest.copy()
-      .put("status", new JsonObject().put("name", "Checked Out"))
+      .put("status", new JsonObject().put("name", ItemStatusName.CHECKED_OUT.value()))
       .put("tags", new JsonObject().put("tagList", new JsonArray().add("")));
 
     itemsClient.replace(itemId, updateItemRequest);
@@ -450,7 +452,8 @@ public class ItemApiExamples extends ApiTests {
     assertThat(updatedItem.containsKey("id"), is(true));
     assertThat(updatedItem.getString("title"), is("Long Way to a Small Angry Planet"));
     assertThat(updatedItem.getString("barcode"), is("645398607547"));
-    assertThat(updatedItem.getJsonObject("status").getString("name"), is("Checked Out"));
+    assertThat(updatedItem.getJsonObject("status").getString("name"),
+      is(ItemStatusName.CHECKED_OUT.value()));
 
     JsonObject materialType = updatedItem.getJsonObject("materialType");
 
@@ -1149,7 +1152,7 @@ public class ItemApiExamples extends ApiTests {
 
     JsonObject updateItemRequest = newItemRequest.copy()
       .put("hrid", createdItem.getString("hrid"))
-      .put("status", new JsonObject().put("name", "Checked Out"));
+      .put("status", new JsonObject().put("name", ItemStatusName.CHECKED_OUT.value()));
 
     itemsClient.replace(itemId, updateItemRequest);
 
@@ -1161,7 +1164,8 @@ public class ItemApiExamples extends ApiTests {
     assertThat(updatedItem.containsKey("id"), is(true));
     assertThat(updatedItem.getString("title"), is("Long Way to a Small Angry Planet"));
     assertThat(updatedItem.getString("barcode"), is("645398607547"));
-    assertThat(updatedItem.getJsonObject("status").getString("name"), is("Checked Out"));
+    assertThat(updatedItem.getJsonObject("status").getString("name"),
+      is(ItemStatusName.CHECKED_OUT.value()));
 
     JsonObject materialType = updatedItem.getJsonObject("materialType");
 
@@ -1381,6 +1385,169 @@ public class ItemApiExamples extends ApiTests {
 
     JsonObject existingItem = itemsClient.getById(postResponse.getId()).getJson();
     assertThat(existingItem, is(createdItem));
+  }
+
+  @Test
+  public void cannotSetWrongStatus() throws Exception {
+    JsonObject itemWithWrongStatus = new ItemRequestBuilder()
+      .forHolding(UUID.randomUUID())
+      .withBarcode("645398607547")
+      .temporarilyInReadingRoom()
+      .create()
+      .put("status", new JsonObject().put("name", "Wrong name"));
+
+    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+
+    okapiClient.post(BusinessLogicInterfaceUrls.items(""),
+      itemWithWrongStatus,
+      ResponseHandler.any(postCompleted)
+    );
+
+    Response response = postCompleted.get(5, TimeUnit.SECONDS);
+    assertThat(response, hasValidationError(
+      "Undefined status specified",
+      "status.name",
+      "Wrong name"
+    ));
+  }
+
+  @Test
+  public void cannotUpdateItemWithWrongStatus() throws Exception {
+    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
+
+    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .temporarilyInReadingRoom());
+
+    JsonObject createdItem = postResponse.getJson();
+    assertThat(createdItem.getJsonObject("status").getString("name"),
+      is(ItemStatusName.AVAILABLE.value()));
+
+    JsonObject updatedItem = createdItem.copy()
+      .put("status", new JsonObject().put("name", "Wrong name"));
+
+    Response updateResponse = updateItem(updatedItem);
+    assertThat(updateResponse, hasValidationError(
+      "Undefined status specified",
+      "status.name",
+      "Wrong name"
+    ));
+  }
+
+  @Test
+  public void canRemoveEntireStatus() throws Exception {
+    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
+
+    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .temporarilyInReadingRoom());
+
+    JsonObject createdItem = postResponse.getJson();
+    assertThat(createdItem.getJsonObject("status").getString("name"),
+      is(ItemStatusName.AVAILABLE.value()));
+
+    JsonObject updatedItem = createdItem.copy();
+    updatedItem.remove("status");
+
+    Response updateResponse = updateItem(updatedItem);
+    assertThat(updateResponse.getStatusCode(), is(204));
+  }
+
+  @Test
+  public void canRemoveStatusName() throws Exception {
+    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
+
+    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .temporarilyInReadingRoom());
+
+    JsonObject createdItem = postResponse.getJson();
+    assertThat(createdItem.getJsonObject("status").getString("name"),
+      is(ItemStatusName.AVAILABLE.value()));
+
+    JsonObject updatedItem = createdItem.copy()
+      .put("status", new JsonObject());
+
+    Response updateResponse = updateItem(updatedItem);
+    assertThat(updateResponse.getStatusCode(), is(204));
+  }
+
+  @Test
+  public void canSetCopyNumberProperty() throws Exception {
+    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
+
+    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withCopyNumber("cp1")
+      .withBarcode("645398607547")
+      .temporarilyInReadingRoom()
+      .canCirculate()
+      .temporarilyCourseReserves());
+
+    assertThat(postResponse.getJson().getString("copyNumber"), is("cp1"));
+    assertFalse(postResponse.getJson().containsKey("copyNumbers"));
+
+    JsonObject createdItem = itemsClient.getById(postResponse.getId()).getJson();
+    assertThat(createdItem.getString("copyNumber"), is("cp1"));
+    assertFalse(createdItem.containsKey("copyNumbers"));
+
+    JsonObject itemInStorage = itemsStorageClient.getById(postResponse.getId()).getJson();
+    assertThat(itemInStorage.getString("copyNumber"), is("cp1"));
+    assertFalse(itemInStorage.containsKey("copyNumbers"));
+  }
+
+  @Test
+  public void canUpdateCopyNumberProperty() throws Exception {
+    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
+
+    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withCopyNumber("cp1")
+      .withBarcode("645398607547")
+      .temporarilyInReadingRoom()
+      .canCirculate()
+      .temporarilyCourseReserves());
+
+    assertThat(postResponse.getJson().getString("copyNumber"), is("cp1"));
+    assertFalse(postResponse.getJson().containsKey("copyNumbers"));
+
+    JsonObject itemToUpdate = postResponse.getJson().copy()
+      .put("copyNumber", "updatedCp1");
+
+    itemsClient.replace(postResponse.getId(), itemToUpdate);
+
+    JsonObject updatedItem = itemsClient.getById(postResponse.getId()).getJson();
+    assertThat(updatedItem.getString("copyNumber"), is("updatedCp1"));
+    assertFalse(updatedItem.containsKey("copyNumbers"));
+
+    JsonObject itemInStorage = itemsStorageClient.getById(postResponse.getId()).getJson();
+    assertThat(itemInStorage.getString("copyNumber"), is("updatedCp1"));
+    assertFalse(itemInStorage.containsKey("copyNumbers"));
   }
 
   private Response updateItem(JsonObject item) throws MalformedURLException,

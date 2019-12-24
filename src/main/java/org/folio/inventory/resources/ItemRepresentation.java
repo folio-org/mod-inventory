@@ -122,7 +122,7 @@ class ItemRepresentation {
     includeIfPresent(representation, Item.VOLUME_KEY, item.getVolume());
     includeIfPresent(representation, "enumeration", item.getEnumeration());
     includeIfPresent(representation, "chronology", item.getChronology());
-    representation.put("copyNumbers",item.getCopyNumbers());
+    includeIfPresent(representation, "copyNumber", item.getCopyNumber());
     representation.put(Item.NOTES_KEY, item.getNotes());
     representation.put(Item.CIRCULATION_NOTES_KEY, item.getCirculationNotes());
     includeIfPresent(representation, "numberOfPieces", item.getNumberOfPieces());

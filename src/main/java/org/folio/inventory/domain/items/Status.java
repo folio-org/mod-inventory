@@ -5,36 +5,63 @@
  */
 package org.folio.inventory.domain.items;
 
+import static org.folio.inventory.support.JsonHelper.getInstant;
+import static org.folio.inventory.support.JsonHelper.getString;
+import static org.folio.inventory.support.JsonHelper.includeIfPresent;
+
+import java.time.Instant;
+
 import io.vertx.core.json.JsonObject;
 
 /**
- *
  * @author ne
  */
 public class Status {
   public static final String NAME_KEY = "name";
   public static final String DATE_KEY = "date";
 
-  private JsonObject json = new JsonObject();
+  private final ItemStatusName name;
+  private final Instant date;
 
-  public Status (String name) {
-    json.put(NAME_KEY,name);
+  public Status(ItemStatusName name) {
+    this.name = name;
+    this.date = null;
   }
 
-  public Status (JsonObject status) {
-    this.json = status;
+  public Status(String name) {
+    this(name, null);
+  }
+
+  public Status(JsonObject status) {
+    this(
+      getString(status, NAME_KEY),
+      getInstant(status, DATE_KEY)
+    );
+  }
+
+  private Status(String itemStatusName, Instant date) {
+    this.name = itemStatusName != null
+      ? ItemStatusName.forName(itemStatusName)
+      : null;
+    this.date = date;
   }
 
   public JsonObject getJson() {
-    return json;
+    JsonObject status = new JsonObject();
+
+    if (name != null) {
+      status.put(NAME_KEY, name.value());
+    }
+    includeIfPresent(status, DATE_KEY, date);
+
+    return status;
   }
 
-  public String getName () {
-    return json.getString(NAME_KEY);
+  public ItemStatusName getName() {
+    return name;
   }
 
-  public String getDate () {
-    return json.getString(DATE_KEY);
+  public Instant getDate() {
+    return date;
   }
-
 }

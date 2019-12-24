@@ -8,6 +8,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.folio.inventory.support.http.ContentType;
 
+import java.util.Collections;
 import java.util.List;
 
 public class JsonResponse {
@@ -52,6 +53,12 @@ public class JsonResponse {
     errors.forEach(error -> errorsArray.add(error.toJson()));
 
     response(response, new JsonObject().put(ERRORS, errorsArray), 422);
+  }
+
+  public static void unprocessableEntity(
+    HttpServerResponse response, ValidationError error) {
+
+    unprocessableEntity(response, Collections.singletonList(error));
   }
 
   public static void unprocessableEntity(HttpServerResponse response, String errorMessage) {
