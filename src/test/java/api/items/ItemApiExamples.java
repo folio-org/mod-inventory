@@ -51,6 +51,7 @@ import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Seconds;
 import org.junit.Assert;
 import org.junit.Test;
@@ -1548,6 +1549,41 @@ public class ItemApiExamples extends ApiTests {
     JsonObject itemInStorage = itemsStorageClient.getById(postResponse.getId()).getJson();
     assertThat(itemInStorage.getString("copyNumber"), is("updatedCp1"));
     assertFalse(itemInStorage.containsKey("copyNumbers"));
+  }
+
+  @Test
+  public void canHandleStatusDateProperty() throws Exception {
+    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
+
+    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withBarcode("645398607547")
+      .temporarilyInReadingRoom()
+      .canCirculate()
+      .temporarilyCourseReserves());
+
+    assertThat(postResponse.getJson().getJsonObject("status").getString("name"),
+      is(ItemStatusName.AVAILABLE.value()));
+    assertFalse(postResponse.getJson().getJsonObject("status").containsKey("date"));
+
+    final JsonObject itemToUpdate = postResponse.getJson().copy()
+      .put("status", new JsonObject().put("name", ItemStatusName.CHECKED_OUT.value()));
+    final DateTime beforeUpdateTime = DateTime.now(DateTimeZone.UTC);
+
+    itemsClient.replace(postResponse.getId(), itemToUpdate);
+
+    JsonObject updatedItem = itemsClient.getById(postResponse.getId()).getJson();
+    assertThat(updatedItem.getJsonObject("status").getString("name"),
+      is(ItemStatusName.CHECKED_OUT.value())
+    );
+    assertThat(updatedItem.getJsonObject("status").getString("date"),
+      withinSecondsAfter(Seconds.seconds(2), beforeUpdateTime)
+    );
   }
 
   private Response updateItem(JsonObject item) throws MalformedURLException,

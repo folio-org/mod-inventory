@@ -103,7 +103,8 @@ public class FakeOkapi extends AbstractVerticle {
       .withRecordPreProcessors(
         StorageRecordPreProcessors.setHridProcessor("it"),
         StorageRecordPreProcessors::setEffectiveLocationForItem,
-        StorageRecordPreProcessors::setEffectiveCallNumberComponents
+        StorageRecordPreProcessors::setEffectiveCallNumberComponents,
+        StorageRecordPreProcessors::setStatusDateProcessor
       )
       .create().register(router);
   }

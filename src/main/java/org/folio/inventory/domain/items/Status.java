@@ -5,11 +5,8 @@
  */
 package org.folio.inventory.domain.items;
 
-import static org.folio.inventory.support.JsonHelper.getInstant;
 import static org.folio.inventory.support.JsonHelper.getString;
 import static org.folio.inventory.support.JsonHelper.includeIfPresent;
-
-import java.time.Instant;
 
 import io.vertx.core.json.JsonObject;
 
@@ -21,7 +18,7 @@ public class Status {
   public static final String DATE_KEY = "date";
 
   private final ItemStatusName name;
-  private final Instant date;
+  private final String date;
 
   public Status(ItemStatusName name) {
     this.name = name;
@@ -35,11 +32,11 @@ public class Status {
   public Status(JsonObject status) {
     this(
       getString(status, NAME_KEY),
-      getInstant(status, DATE_KEY)
+      getString(status, DATE_KEY)
     );
   }
 
-  private Status(String itemStatusName, Instant date) {
+  private Status(String itemStatusName, String date) {
     this.name = itemStatusName != null
       ? ItemStatusName.forName(itemStatusName)
       : null;
@@ -61,7 +58,7 @@ public class Status {
     return name;
   }
 
-  public Instant getDate() {
+  public String getDate() {
     return date;
   }
 }
