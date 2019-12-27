@@ -4,7 +4,7 @@ import static org.folio.inventory.common.FutureAssistance.allOf;
 import static org.folio.inventory.support.CqlHelper.multipleRecordsCqlQuery;
 import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
 import static org.folio.inventory.support.JsonHelper.getNestedProperty;
-import static org.folio.inventory.validation.ItemStatusValidator.itemHasNoOrKnownStatus;
+import static org.folio.inventory.validation.ItemStatusValidator.itemHasCorrectStatus;
 
 import java.io.UnsupportedEncodingException;
 import java.lang.invoke.MethodHandles;
@@ -135,7 +135,7 @@ public class Items {
 
     JsonObject item = routingContext.getBodyAsJson();
 
-    Optional<ValidationError> validationError = itemHasNoOrKnownStatus(item);
+    Optional<ValidationError> validationError = itemHasCorrectStatus(item);
     if (validationError.isPresent()) {
       JsonResponse.unprocessableEntity(routingContext.response(), validationError.get());
       return;
@@ -174,7 +174,7 @@ public class Items {
 
     JsonObject itemRequest = routingContext.getBodyAsJson();
 
-    Optional<ValidationError> validationError = itemHasNoOrKnownStatus(itemRequest);
+    Optional<ValidationError> validationError = itemHasCorrectStatus(itemRequest);
     if (validationError.isPresent()) {
       JsonResponse.unprocessableEntity(routingContext.response(), validationError.get());
       return;

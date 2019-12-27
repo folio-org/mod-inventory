@@ -238,29 +238,6 @@ public class ItemRequestBuilder implements Builder {
     return withBarcode(null);
   }
 
-  public ItemRequestBuilder withNoStatus() {
-    return new ItemRequestBuilder(
-      this.id,
-      this.holdingId,
-      this.readOnlyTitle,
-      this.readOnlyCallNumber,
-      this.barcode,
-      null,
-      this.materialType,
-      this.readOnlyEffectiveLocation,
-      this.permanentLocation,
-      this.temporaryLocation,
-      this.permanentLoanType,
-      this.temporaryLoanType,
-      this.circulationNotes,
-      this.tags,
-      this.itemLevelCallNumber,
-      this.itemLevelCallNumberPrefix,
-      this.itemLevelCallNumberSuffix,
-      this.hrid,
-      this.copyNumber);
-  }
-
   private ItemRequestBuilder withMaterialType(JsonObject materialType) {
     return new ItemRequestBuilder(
       this.id,

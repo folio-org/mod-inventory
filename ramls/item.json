@@ -457,6 +457,7 @@
   "additionalProperties": false,
   "required": [
     "materialType",
-    "permanentLoanType"
+    "permanentLoanType",
+    "status"
   ]
 }

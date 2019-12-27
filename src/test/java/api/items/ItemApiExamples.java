@@ -9,6 +9,7 @@ import static api.ApiTestSuite.getThirdFloorLocation;
 import static api.support.InstanceSamples.girlOnTheTrain;
 import static api.support.InstanceSamples.nod;
 import static api.support.InstanceSamples.smallAngryPlanet;
+import static api.support.http.BusinessLogicInterfaceUrls.items;
 import static org.folio.inventory.domain.items.CirculationNote.DATE_KEY;
 import static org.folio.inventory.domain.items.CirculationNote.NOTE_KEY;
 import static org.folio.inventory.domain.items.CirculationNote.NOTE_TYPE_KEY;
@@ -62,7 +63,6 @@ import api.support.ApiTests;
 import api.support.InstanceApiClient;
 import api.support.builders.HoldingRequestBuilder;
 import api.support.builders.ItemRequestBuilder;
-import api.support.http.BusinessLogicInterfaceUrls;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -375,7 +375,7 @@ public class ItemApiExamples extends ApiTests {
   }
 
   @Test
-  public void canCreateAnItemWithoutStatus()
+  public void cannotCreateAnItemWithoutStatus()
     throws InterruptedException,
     MalformedURLException,
     TimeoutException,
@@ -389,18 +389,47 @@ public class ItemApiExamples extends ApiTests {
         .forInstance(UUID.fromString(createdInstance.getString("id"))))
       .getId();
 
-    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
+    JsonObject item = new ItemRequestBuilder()
       .forHolding(holdingId)
-      .withNoStatus());
+      .create();
+    item.remove("status");
 
-    Response getResponse = itemsClient.getById(postResponse.getId());
+    CompletableFuture<Response> createCompleted = new CompletableFuture<>();
+    okapiClient.post(items(""), item, ResponseHandler.json(createCompleted));
 
-    JsonObject createdItem = getResponse.getJson();
+    Response createResponse = createCompleted.get(5, TimeUnit.SECONDS);
+    assertThat(createResponse,
+      hasValidationError("Status is a required field", "status", null)
+    );
+  }
 
-    assertThat("Should have a defaulted status property",
-      createdItem.containsKey("status"), is(true));
+  @Test
+  public void cannotCreateAnItemWithoutStatusName()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
 
-    assertThat(createdItem.getJsonObject("status").getString("name"), is("Available"));
+    JsonObject createdInstance = createInstance(
+      smallAngryPlanet(UUID.randomUUID()));
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
+
+    JsonObject item = new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .create();
+    item.getJsonObject("status").remove("name");
+
+    CompletableFuture<Response> createCompleted = new CompletableFuture<>();
+    okapiClient.post(items(""), item, ResponseHandler.json(createCompleted));
+
+    Response createResponse = createCompleted.get(5, TimeUnit.SECONDS);
+    assertThat(createResponse,
+      hasValidationError("Status is a required field", "status", null)
+    );
   }
 
   @Test
@@ -1198,6 +1227,7 @@ public class ItemApiExamples extends ApiTests {
 
     JsonObject newItemRequest = new JsonObject()
       .put("id", itemId.toString())
+      .put("status", new JsonObject().put("name", ItemStatusName.AVAILABLE.value()))
       .put("holdingsRecordId", createInstanceAndHolding().toString())
       .put("materialTypeId", getDvdMaterialType())
       .put("permanentLoanTypeId", getCanCirculateLoanType())
@@ -1231,6 +1261,7 @@ public class ItemApiExamples extends ApiTests {
   public void canSearchItemsByLocation() throws Exception {
     JsonObject readingRoomItem = new JsonObject()
       .put("id", UUID.randomUUID().toString())
+      .put("status", new JsonObject().put("name", ItemStatusName.AVAILABLE.value()))
       .put("holdingsRecordId", createInstanceAndHolding().toString())
       .put("materialTypeId", getDvdMaterialType())
       .put("permanentLoanTypeId", getCanCirculateLoanType())
@@ -1275,6 +1306,7 @@ public class ItemApiExamples extends ApiTests {
 
     JsonObject readingRoomItem = new JsonObject()
       .put("id", UUID.randomUUID().toString())
+      .put("status", new JsonObject().put("name", ItemStatusName.AVAILABLE.value()))
       .put("holdingsRecordId", createInstanceAndHolding().toString())
       .put("materialTypeId", getDvdMaterialType())
       .put("permanentLoanTypeId", getCanCirculateLoanType())
@@ -1307,6 +1339,7 @@ public class ItemApiExamples extends ApiTests {
   public void itemHasNoLastCheckInPropertiesWhenNotSet() throws Exception {
     JsonObject readingRoomItem = new JsonObject()
         .put("id", UUID.randomUUID().toString())
+        .put("status", new JsonObject().put("name", ItemStatusName.AVAILABLE.value()))
         .put("holdingsRecordId", createInstanceAndHolding().toString())
         .put("materialTypeId", getDvdMaterialType())
         .put("permanentLoanTypeId", getCanCirculateLoanType())
@@ -1399,7 +1432,7 @@ public class ItemApiExamples extends ApiTests {
 
     CompletableFuture<Response> postCompleted = new CompletableFuture<>();
 
-    okapiClient.post(BusinessLogicInterfaceUrls.items(""),
+    okapiClient.post(items(""),
       itemWithWrongStatus,
       ResponseHandler.any(postCompleted)
     );
@@ -1441,7 +1474,7 @@ public class ItemApiExamples extends ApiTests {
   }
 
   @Test
-  public void canRemoveEntireStatus() throws Exception {
+  public void cannotRemoveEntireStatus() throws Exception {
     JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
     UUID holdingId = holdingsStorageClient.create(
@@ -1461,7 +1494,9 @@ public class ItemApiExamples extends ApiTests {
     updatedItem.remove("status");
 
     Response updateResponse = updateItem(updatedItem);
-    assertThat(updateResponse.getStatusCode(), is(204));
+    assertThat(updateResponse,
+      hasValidationError("Status is a required field", "status", null)
+    );
   }
 
   @Test
@@ -1485,7 +1520,9 @@ public class ItemApiExamples extends ApiTests {
       .put("status", new JsonObject());
 
     Response updateResponse = updateItem(updatedItem);
-    assertThat(updateResponse.getStatusCode(), is(204));
+    assertThat(updateResponse,
+      hasValidationError("Status is a required field", "status", null)
+    );
   }
 
   @Test
@@ -1726,7 +1763,7 @@ public class ItemApiExamples extends ApiTests {
     throws InterruptedException, TimeoutException, ExecutionException {
 
     CompletableFuture<Response> getCompletedFuture = new CompletableFuture<>();
-    okapiClient.get(BusinessLogicInterfaceUrls.items("?query=") + urlEncode(searchQuery),
+    okapiClient.get(items("?query=") + urlEncode(searchQuery),
       ResponseHandler.json(getCompletedFuture));
 
     return getCompletedFuture.get(5, TimeUnit.SECONDS).getJson();

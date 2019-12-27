@@ -37,7 +37,7 @@ public enum ItemStatusName {
     return VALUE_TO_INSTANCE_MAP.get(value);
   }
 
-  public static boolean hasKnownValue(String value) {
+  public static boolean isStatusCorrect(String value) {
     return VALUE_TO_INSTANCE_MAP.containsKey(value);
   }
 
