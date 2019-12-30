@@ -104,7 +104,9 @@ public class ItemApiExamples extends ApiTests {
       .withItemLevelCallNumberSuffix(CALL_NUMBER_SUFFIX)
       .withItemLevelCallNumberPrefix(CALL_NUMBER_PREFIX)
       .withTagList(new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray().add("test-tag")))
-      .temporarilyCourseReserves());
+      .temporarilyCourseReserves()
+      .withCopyNumber("cp")
+    );
 
     assertCallNumbers(postResponse.getJson());
 
@@ -149,6 +151,7 @@ public class ItemApiExamples extends ApiTests {
     selfLinkRespectsWayResourceWasReached(createdItem);
     selfLinkShouldBeReachable(createdItem);
     assertThat(createdItem.getString("hrid"), notNullValue());
+    assertThat(createdItem.getString("copyNumber"), is("cp"));
   }
 
   @Test
@@ -456,12 +459,16 @@ public class ItemApiExamples extends ApiTests {
       .canCirculate()
       .temporarilyInReadingRoom()
       .withTagList(new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray().add("test-tag")))
+      .withCopyNumber("cp")
       .create();
 
     newItemRequest = itemsClient.create(newItemRequest).getJson();
 
+    assertThat(newItemRequest.getString("copyNumber"), is("cp"));
+
     JsonObject updateItemRequest = newItemRequest.copy()
       .put("status", new JsonObject().put("name", ItemStatusName.CHECKED_OUT.value()))
+      .put("copyNumber", "updatedCp")
       .put("tags", new JsonObject().put("tagList", new JsonArray().add("")));
 
     itemsClient.replace(itemId, updateItemRequest);
@@ -502,6 +509,7 @@ public class ItemApiExamples extends ApiTests {
 
     selfLinkRespectsWayResourceWasReached(updatedItem);
     selfLinkShouldBeReachable(updatedItem);
+    assertThat(updatedItem.getString("copyNumber"), is("updatedCp"));
   }
 
   @Test
@@ -1422,18 +1430,18 @@ public class ItemApiExamples extends ApiTests {
   }
 
   @Test
-  public void cannotSetWrongStatus() throws Exception {
-    JsonObject itemWithWrongStatus = new ItemRequestBuilder()
+  public void cannotCreateItemWithUnrecognisedStatusName() throws Exception {
+    JsonObject itemWithUnrecognizedStatus = new ItemRequestBuilder()
       .forHolding(UUID.randomUUID())
       .withBarcode("645398607547")
       .temporarilyInReadingRoom()
       .create()
-      .put("status", new JsonObject().put("name", "Wrong name"));
+      .put("status", new JsonObject().put("name", "Unrecognized name"));
 
     CompletableFuture<Response> postCompleted = new CompletableFuture<>();
 
     okapiClient.post(items(""),
-      itemWithWrongStatus,
+      itemWithUnrecognizedStatus,
       ResponseHandler.any(postCompleted)
     );
 
@@ -1441,12 +1449,12 @@ public class ItemApiExamples extends ApiTests {
     assertThat(response, hasValidationError(
       "Undefined status specified",
       "status.name",
-      "Wrong name"
+      "Unrecognized name"
     ));
   }
 
   @Test
-  public void cannotUpdateItemWithWrongStatus() throws Exception {
+  public void cannotUpdateItemWithUnrecognisedStatusName() throws Exception {
     JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
     UUID holdingId = holdingsStorageClient.create(
@@ -1463,18 +1471,18 @@ public class ItemApiExamples extends ApiTests {
       is(ItemStatusName.AVAILABLE.value()));
 
     JsonObject updatedItem = createdItem.copy()
-      .put("status", new JsonObject().put("name", "Wrong name"));
+      .put("status", new JsonObject().put("name", "Unrecognized name"));
 
     Response updateResponse = updateItem(updatedItem);
     assertThat(updateResponse, hasValidationError(
       "Undefined status specified",
       "status.name",
-      "Wrong name"
+      "Unrecognized name"
     ));
   }
 
   @Test
-  public void cannotRemoveEntireStatus() throws Exception {
+  public void cannotRemoveStatusFromItem() throws Exception {
     JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
     UUID holdingId = holdingsStorageClient.create(
@@ -1500,7 +1508,7 @@ public class ItemApiExamples extends ApiTests {
   }
 
   @Test
-  public void canRemoveStatusName() throws Exception {
+  public void cannotRemoveStatusNameFromItem() throws Exception {
     JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
     UUID holdingId = holdingsStorageClient.create(
@@ -1523,69 +1531,6 @@ public class ItemApiExamples extends ApiTests {
     assertThat(updateResponse,
       hasValidationError("Status is a required field", "status", null)
     );
-  }
-
-  @Test
-  public void canSetCopyNumberProperty() throws Exception {
-    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
-
-    UUID holdingId = holdingsStorageClient.create(
-      new HoldingRequestBuilder()
-        .forInstance(UUID.fromString(createdInstance.getString("id"))))
-      .getId();
-
-    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
-      .forHolding(holdingId)
-      .withCopyNumber("cp1")
-      .withBarcode("645398607547")
-      .temporarilyInReadingRoom()
-      .canCirculate()
-      .temporarilyCourseReserves());
-
-    assertThat(postResponse.getJson().getString("copyNumber"), is("cp1"));
-    assertFalse(postResponse.getJson().containsKey("copyNumbers"));
-
-    JsonObject createdItem = itemsClient.getById(postResponse.getId()).getJson();
-    assertThat(createdItem.getString("copyNumber"), is("cp1"));
-    assertFalse(createdItem.containsKey("copyNumbers"));
-
-    JsonObject itemInStorage = itemsStorageClient.getById(postResponse.getId()).getJson();
-    assertThat(itemInStorage.getString("copyNumber"), is("cp1"));
-    assertFalse(itemInStorage.containsKey("copyNumbers"));
-  }
-
-  @Test
-  public void canUpdateCopyNumberProperty() throws Exception {
-    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
-
-    UUID holdingId = holdingsStorageClient.create(
-      new HoldingRequestBuilder()
-        .forInstance(UUID.fromString(createdInstance.getString("id"))))
-      .getId();
-
-    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
-      .forHolding(holdingId)
-      .withCopyNumber("cp1")
-      .withBarcode("645398607547")
-      .temporarilyInReadingRoom()
-      .canCirculate()
-      .temporarilyCourseReserves());
-
-    assertThat(postResponse.getJson().getString("copyNumber"), is("cp1"));
-    assertFalse(postResponse.getJson().containsKey("copyNumbers"));
-
-    JsonObject itemToUpdate = postResponse.getJson().copy()
-      .put("copyNumber", "updatedCp1");
-
-    itemsClient.replace(postResponse.getId(), itemToUpdate);
-
-    JsonObject updatedItem = itemsClient.getById(postResponse.getId()).getJson();
-    assertThat(updatedItem.getString("copyNumber"), is("updatedCp1"));
-    assertFalse(updatedItem.containsKey("copyNumbers"));
-
-    JsonObject itemInStorage = itemsStorageClient.getById(postResponse.getId()).getJson();
-    assertThat(itemInStorage.getString("copyNumber"), is("updatedCp1"));
-    assertFalse(itemInStorage.containsKey("copyNumbers"));
   }
 
   @Test

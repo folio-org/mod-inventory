@@ -37,6 +37,8 @@ public final class StorageRecordPreProcessors {
   private static final String HOLDINGS_RECORD_PROPERTY_NAME = "holdingsRecordId";
   private static final String PERMANENT_LOCATION_PROPERTY = "permanentLocationId";
   private static final String TEMPORARY_LOCATION_PROPERTY = "temporaryLocationId";
+  // RMB uses ISO-8601 compatible date time format by default.
+  private static final String RMB_DATETIME_PATTERN = "yyyy-MM-dd'T'HH:mm:ss.SSS+0000";
 
   private StorageRecordPreProcessors() {
     throw new AssertionError("Do not instantiate");
@@ -113,8 +115,7 @@ public final class StorageRecordPreProcessors {
 
         newStatusObject = newStatusObject.put("date",
           DateTime.now(DateTimeZone.UTC)
-            // RMB format
-            .toString("yyyy-MM-dd'T'HH:mm:ss.SSS+0000")
+            .toString(RMB_DATETIME_PATTERN)
         );
         return newItem.put("status", newStatusObject);
       }

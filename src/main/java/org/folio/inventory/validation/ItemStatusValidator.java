@@ -18,19 +18,13 @@ public final class ItemStatusValidator {
     final String statusName = JsonHelper.getNestedProperty(itemRequest, "status", "name");
 
     if (StringUtils.isBlank(statusName)) {
-      return Optional.of(new ValidationError(
-        "Status is a required field",
-        "status",
-        null
-      ));
+      return Optional.of(
+        new ValidationError("Status is a required field", "status", null));
     }
 
     if (!ItemStatusName.isStatusCorrect(statusName)) {
-      return Optional.of(new ValidationError(
-        "Undefined status specified",
-        "status.name",
-        statusName
-      ));
+      return Optional.of(
+        new ValidationError("Undefined status specified", "status.name", statusName));
     }
 
     return Optional.empty();

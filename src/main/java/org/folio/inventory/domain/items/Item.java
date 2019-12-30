@@ -37,6 +37,7 @@ public class Item {
   public static final String NOTES_KEY = "notes";
   public static final String CIRCULATION_NOTES_KEY = "circulationNotes";
   public static final String PURCHASE_ORDER_LINE_IDENTIFIER = "purchaseOrderLineIdentifier";
+  public static final String COPY_NUMBER_KEY = "copyNumber";
 
   public final String id;
   private String hrid;

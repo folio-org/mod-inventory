@@ -28,9 +28,11 @@ public class JsonHelper {
     return null;
   }
 
-  public static void includeIfPresent(JsonObject target, String propertyName, String value) {
-    if (target != null && StringUtils.isNotBlank(propertyName) && value != null) {
-      target.put(propertyName, value);
+  public static void includeIfPresent(
+    JsonObject representation, String propertyName, String value) {
+
+    if (representation != null && StringUtils.isNotBlank(propertyName) && value != null) {
+      representation.put(propertyName, value);
     }
   }
 

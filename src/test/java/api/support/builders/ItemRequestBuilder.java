@@ -3,6 +3,8 @@ package api.support.builders;
 import java.util.Collections;
 import java.util.UUID;
 
+import org.folio.inventory.domain.items.Item;
+
 import api.ApiTestSuite;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -32,11 +34,9 @@ public class ItemRequestBuilder implements Builder {
   private final String copyNumber;
 
   public ItemRequestBuilder() {
-    this(UUID.randomUUID(), null, null, null, "645398607547",
-      AVAILABLE_STATUS, bookMaterialType(), null, null, null,
-      canCirculateLoanType(), null, null, null,
-      null, null, null,
-      null, null
+    this(UUID.randomUUID(), null, null, null, "645398607547", AVAILABLE_STATUS,
+      bookMaterialType(), null, null, null, canCirculateLoanType(),
+      null, null, null, null, null, null, null, null
     );
   }
 
@@ -114,7 +114,7 @@ public class ItemRequestBuilder implements Builder {
     includeWhenPresent(itemRequest, "itemLevelCallNumberSuffix", itemLevelCallNumberSuffix);
     includeWhenPresent(itemRequest, "itemLevelCallNumberPrefix", itemLevelCallNumberPrefix);
     includeWhenPresent(itemRequest, "hrid", hrid);
-    includeWhenPresent(itemRequest, "copyNumber", copyNumber);
+    includeWhenPresent(itemRequest, Item.COPY_NUMBER_KEY, copyNumber);
 
     return itemRequest;
   }

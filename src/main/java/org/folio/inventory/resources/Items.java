@@ -326,7 +326,7 @@ public class Items {
             .withPermanentLocationId(permanentLocationId)
             .withTemporaryLocationId(temporaryLocationId)
             .withTemporaryLoanTypeId(temporaryLoanTypeId)
-            .withCopyNumber(itemRequest.getString("copyNumber"))
+            .withCopyNumber(itemRequest.getString(Item.COPY_NUMBER_KEY))
             .withNotes(notes)
             .withCirculationNotes(circulationNotes)
             .withAccessionNumber(itemRequest.getString(Item.ACCESSION_NUMBER_KEY))
