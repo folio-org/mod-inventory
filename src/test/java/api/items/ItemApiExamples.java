@@ -45,7 +45,6 @@ import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.domain.items.Item;
-import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
@@ -467,7 +466,7 @@ public class ItemApiExamples extends ApiTests {
     assertThat(newItemRequest.getString("copyNumber"), is("cp"));
 
     JsonObject updateItemRequest = newItemRequest.copy()
-      .put("status", new JsonObject().put("name", ItemStatusName.CHECKED_OUT.value()))
+      .put("status", new JsonObject().put("name", "Checked out"))
       .put("copyNumber", "updatedCp")
       .put("tags", new JsonObject().put("tagList", new JsonArray().add("")));
 
@@ -489,8 +488,7 @@ public class ItemApiExamples extends ApiTests {
     assertThat(updatedItem.containsKey("id"), is(true));
     assertThat(updatedItem.getString("title"), is("Long Way to a Small Angry Planet"));
     assertThat(updatedItem.getString("barcode"), is("645398607547"));
-    assertThat(updatedItem.getJsonObject("status").getString("name"),
-      is(ItemStatusName.CHECKED_OUT.value()));
+    assertThat(updatedItem.getJsonObject("status").getString("name"), is("Checked out"));
 
     JsonObject materialType = updatedItem.getJsonObject("materialType");
 
@@ -1190,7 +1188,7 @@ public class ItemApiExamples extends ApiTests {
 
     JsonObject updateItemRequest = newItemRequest.copy()
       .put("hrid", createdItem.getString("hrid"))
-      .put("status", new JsonObject().put("name", ItemStatusName.CHECKED_OUT.value()));
+      .put("status", new JsonObject().put("name", "Checked out"));
 
     itemsClient.replace(itemId, updateItemRequest);
 
@@ -1202,8 +1200,7 @@ public class ItemApiExamples extends ApiTests {
     assertThat(updatedItem.containsKey("id"), is(true));
     assertThat(updatedItem.getString("title"), is("Long Way to a Small Angry Planet"));
     assertThat(updatedItem.getString("barcode"), is("645398607547"));
-    assertThat(updatedItem.getJsonObject("status").getString("name"),
-      is(ItemStatusName.CHECKED_OUT.value()));
+    assertThat(updatedItem.getJsonObject("status").getString("name"), is("Checked out"));
 
     JsonObject materialType = updatedItem.getJsonObject("materialType");
 
@@ -1235,7 +1232,7 @@ public class ItemApiExamples extends ApiTests {
 
     JsonObject newItemRequest = new JsonObject()
       .put("id", itemId.toString())
-      .put("status", new JsonObject().put("name", ItemStatusName.AVAILABLE.value()))
+      .put("status", new JsonObject().put("name", "Available"))
       .put("holdingsRecordId", createInstanceAndHolding().toString())
       .put("materialTypeId", getDvdMaterialType())
       .put("permanentLoanTypeId", getCanCirculateLoanType())
@@ -1269,7 +1266,7 @@ public class ItemApiExamples extends ApiTests {
   public void canSearchItemsByLocation() throws Exception {
     JsonObject readingRoomItem = new JsonObject()
       .put("id", UUID.randomUUID().toString())
-      .put("status", new JsonObject().put("name", ItemStatusName.AVAILABLE.value()))
+      .put("status", new JsonObject().put("name", "Available"))
       .put("holdingsRecordId", createInstanceAndHolding().toString())
       .put("materialTypeId", getDvdMaterialType())
       .put("permanentLoanTypeId", getCanCirculateLoanType())
@@ -1314,7 +1311,7 @@ public class ItemApiExamples extends ApiTests {
 
     JsonObject readingRoomItem = new JsonObject()
       .put("id", UUID.randomUUID().toString())
-      .put("status", new JsonObject().put("name", ItemStatusName.AVAILABLE.value()))
+      .put("status", new JsonObject().put("name", "Available"))
       .put("holdingsRecordId", createInstanceAndHolding().toString())
       .put("materialTypeId", getDvdMaterialType())
       .put("permanentLoanTypeId", getCanCirculateLoanType())
@@ -1347,7 +1344,7 @@ public class ItemApiExamples extends ApiTests {
   public void itemHasNoLastCheckInPropertiesWhenNotSet() throws Exception {
     JsonObject readingRoomItem = new JsonObject()
         .put("id", UUID.randomUUID().toString())
-        .put("status", new JsonObject().put("name", ItemStatusName.AVAILABLE.value()))
+        .put("status", new JsonObject().put("name", "Available"))
         .put("holdingsRecordId", createInstanceAndHolding().toString())
         .put("materialTypeId", getDvdMaterialType())
         .put("permanentLoanTypeId", getCanCirculateLoanType())
@@ -1467,8 +1464,7 @@ public class ItemApiExamples extends ApiTests {
       .temporarilyInReadingRoom());
 
     JsonObject createdItem = postResponse.getJson();
-    assertThat(createdItem.getJsonObject("status").getString("name"),
-      is(ItemStatusName.AVAILABLE.value()));
+    assertThat(createdItem.getJsonObject("status").getString("name"), is("Available"));
 
     JsonObject updatedItem = createdItem.copy()
       .put("status", new JsonObject().put("name", "Unrecognized name"));
@@ -1495,8 +1491,7 @@ public class ItemApiExamples extends ApiTests {
       .temporarilyInReadingRoom());
 
     JsonObject createdItem = postResponse.getJson();
-    assertThat(createdItem.getJsonObject("status").getString("name"),
-      is(ItemStatusName.AVAILABLE.value()));
+    assertThat(createdItem.getJsonObject("status").getString("name"), is("Available"));
 
     JsonObject updatedItem = createdItem.copy();
     updatedItem.remove("status");
@@ -1521,8 +1516,7 @@ public class ItemApiExamples extends ApiTests {
       .temporarilyInReadingRoom());
 
     JsonObject createdItem = postResponse.getJson();
-    assertThat(createdItem.getJsonObject("status").getString("name"),
-      is(ItemStatusName.AVAILABLE.value()));
+    assertThat(createdItem.getJsonObject("status").getString("name"), is("Available"));
 
     JsonObject updatedItem = createdItem.copy()
       .put("status", new JsonObject());
@@ -1550,19 +1544,17 @@ public class ItemApiExamples extends ApiTests {
       .temporarilyCourseReserves());
 
     assertThat(postResponse.getJson().getJsonObject("status").getString("name"),
-      is(ItemStatusName.AVAILABLE.value()));
+      is("Available"));
     assertFalse(postResponse.getJson().getJsonObject("status").containsKey("date"));
 
     final JsonObject itemToUpdate = postResponse.getJson().copy()
-      .put("status", new JsonObject().put("name", ItemStatusName.CHECKED_OUT.value()));
+      .put("status", new JsonObject().put("name", "Checked out"));
     final DateTime beforeUpdateTime = DateTime.now(DateTimeZone.UTC);
 
     itemsClient.replace(postResponse.getId(), itemToUpdate);
 
     JsonObject updatedItem = itemsClient.getById(postResponse.getId()).getJson();
-    assertThat(updatedItem.getJsonObject("status").getString("name"),
-      is(ItemStatusName.CHECKED_OUT.value())
-    );
+    assertThat(updatedItem.getJsonObject("status").getString("name"), is("Checked out"));
     assertThat(updatedItem.getJsonObject("status").getString("date"),
       withinSecondsAfter(Seconds.seconds(2), beforeUpdateTime)
     );

@@ -11,7 +11,6 @@ import org.folio.inventory.support.http.server.ValidationError;
 import io.vertx.core.json.JsonObject;
 
 public final class ItemStatusValidator {
-
   private ItemStatusValidator() {}
 
   public static Optional<ValidationError> itemHasCorrectStatus(JsonObject itemRequest) {
