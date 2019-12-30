@@ -1427,7 +1427,9 @@ public class ItemApiExamples extends ApiTests {
   }
 
   @Test
-  public void cannotCreateItemWithUnrecognisedStatusName() throws Exception {
+  public void cannotCreateItemWithUnrecognisedStatusName()
+    throws InterruptedException, ExecutionException, TimeoutException {
+
     JsonObject itemWithUnrecognizedStatus = new ItemRequestBuilder()
       .forHolding(UUID.randomUUID())
       .withBarcode("645398607547")
@@ -1451,7 +1453,9 @@ public class ItemApiExamples extends ApiTests {
   }
 
   @Test
-  public void cannotUpdateItemWithUnrecognisedStatusName() throws Exception {
+  public void cannotUpdateItemWithUnrecognisedStatusName()
+    throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+
     JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
     UUID holdingId = holdingsStorageClient.create(
@@ -1478,7 +1482,9 @@ public class ItemApiExamples extends ApiTests {
   }
 
   @Test
-  public void cannotRemoveStatusFromItem() throws Exception {
+  public void cannotRemoveStatusFromItem()
+    throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+
     JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
     UUID holdingId = holdingsStorageClient.create(
@@ -1503,7 +1509,9 @@ public class ItemApiExamples extends ApiTests {
   }
 
   @Test
-  public void cannotRemoveStatusNameFromItem() throws Exception {
+  public void cannotRemoveStatusNameFromItem()
+    throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+
     JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
     UUID holdingId = holdingsStorageClient.create(
@@ -1528,7 +1536,9 @@ public class ItemApiExamples extends ApiTests {
   }
 
   @Test
-  public void canHandleStatusDateProperty() throws Exception {
+  public void statusDatePropertyPresentOnStatusUpdated()
+    throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+
     JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
     UUID holdingId = holdingsStorageClient.create(
