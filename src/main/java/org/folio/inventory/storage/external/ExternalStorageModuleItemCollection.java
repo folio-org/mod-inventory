@@ -170,6 +170,7 @@ class ExternalStorageModuleItemCollection
     itemToSend.put(Item.STATISTICAL_CODE_IDS_KEY, item.getStatisticalCodeIds());
     itemToSend.put(Item.PURCHASE_ORDER_LINE_IDENTIFIER, item.getPurchaseOrderLineidentifier());
     itemToSend.put(Item.TAGS_KEY, new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray(item.getTags())));
+    itemToSend.put(Item.LAST_CHECK_IN, item.getLastCheckIn().toJson());
 
     return itemToSend;
   }
