@@ -324,7 +324,7 @@ public class Items {
             .withElectronicAccess(electronicAccess)
             .withStatisticalCodeIds(statisticalCodeIds)
             .withPurchaseOrderLineidentifier(itemRequest.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER))
-            .withLastCheckIn(LastCheckIn.from(itemRequest.getJsonObject("lastCheckIn")))
+            .withLastCheckIn(LastCheckIn.from(itemRequest.getJsonObject(Item.LAST_CHECK_IN)))
             .withTags(tags);
   }
 
