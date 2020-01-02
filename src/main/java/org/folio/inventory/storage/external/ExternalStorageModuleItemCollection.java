@@ -136,6 +136,10 @@ class ExternalStorageModuleItemCollection
       itemToSend.put("status", item.getStatus());
     }
 
+    if(item.getLastCheckIn() != null) {
+      itemToSend.put(Item.LAST_CHECK_IN, item.getLastCheckIn().toJson());
+    }
+
     includeIfPresent(itemToSend, Item.HRID_KEY, item.getHrid());
     itemToSend.put(Item.FORMER_IDS_KEY, item.getFormerIds());
     itemToSend.put(Item.DISCOVERY_SUPPRESS_KEY, item.getDiscoverySuppress());
@@ -170,7 +174,6 @@ class ExternalStorageModuleItemCollection
     itemToSend.put(Item.STATISTICAL_CODE_IDS_KEY, item.getStatisticalCodeIds());
     itemToSend.put(Item.PURCHASE_ORDER_LINE_IDENTIFIER, item.getPurchaseOrderLineidentifier());
     itemToSend.put(Item.TAGS_KEY, new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray(item.getTags())));
-    itemToSend.put(Item.LAST_CHECK_IN, item.getLastCheckIn().toJson());
 
     return itemToSend;
   }

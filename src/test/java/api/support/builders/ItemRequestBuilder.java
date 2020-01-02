@@ -25,6 +25,7 @@ public class ItemRequestBuilder implements Builder {
   private final JsonObject temporaryLoanType;
   private final JsonArray circulationNotes;
   private final JsonObject tags;
+  private final JsonObject lastCheckIn;
   private final String itemLevelCallNumber;
   private final String itemLevelCallNumberPrefix;
   private final String itemLevelCallNumberSuffix;
@@ -35,7 +36,7 @@ public class ItemRequestBuilder implements Builder {
       AVAILABLE_STATUS, bookMaterialType(), null, null, null,
       canCirculateLoanType(), null, null, null,
       null, null, null,
-      null
+      null, null
     );
   }
 
@@ -54,6 +55,7 @@ public class ItemRequestBuilder implements Builder {
     JsonObject temporaryLoanType,
     JsonArray circulationNotes,
     JsonObject tags,
+    JsonObject lastCheckIn,
     String itemLevelCallNumber,
     String itemLevelCallNumberPrefix,
     String itemLevelCallNumberSuffix,
@@ -73,6 +75,7 @@ public class ItemRequestBuilder implements Builder {
     this.materialType = materialType;
     this.circulationNotes = circulationNotes;
     this.tags = tags;
+    this.lastCheckIn = lastCheckIn;
     this.itemLevelCallNumber = itemLevelCallNumber;
     this.itemLevelCallNumberPrefix = itemLevelCallNumberPrefix;
     this.itemLevelCallNumberSuffix = itemLevelCallNumberSuffix;
@@ -111,6 +114,7 @@ public class ItemRequestBuilder implements Builder {
     includeWhenPresent(itemRequest, "itemLevelCallNumberSuffix", itemLevelCallNumberSuffix);
     includeWhenPresent(itemRequest, "itemLevelCallNumberPrefix", itemLevelCallNumberPrefix);
     includeWhenPresent(itemRequest, "hrid", hrid);
+    includeWhenPresent(itemRequest, "lastCheckIn", lastCheckIn);
 
     return itemRequest;
   }
@@ -131,6 +135,7 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLoanType,
       this.circulationNotes,
       this.tags,
+      this.lastCheckIn,
       this.itemLevelCallNumber,
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
@@ -153,6 +158,7 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLoanType,
       this.circulationNotes,
       this.tags,
+      this.lastCheckIn,
       this.itemLevelCallNumber,
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
@@ -175,6 +181,7 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLoanType,
       this.circulationNotes,
       this.tags,
+      this.lastCheckIn,
       this.itemLevelCallNumber,
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
@@ -197,6 +204,7 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLoanType,
       this.circulationNotes,
       this.tags,
+      this.lastCheckIn,
       this.itemLevelCallNumber,
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
@@ -219,6 +227,7 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLoanType,
       this.circulationNotes,
       this.tags,
+      this.lastCheckIn,
       this.itemLevelCallNumber,
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
@@ -245,6 +254,7 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLoanType,
       this.circulationNotes,
       this.tags,
+      this.lastCheckIn,
       this.itemLevelCallNumber,
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
@@ -267,6 +277,7 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLoanType,
       this.circulationNotes,
       this.tags,
+      this.lastCheckIn,
       this.itemLevelCallNumber,
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
@@ -301,6 +312,7 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLoanType,
       this.circulationNotes,
       this.tags,
+      this.lastCheckIn,
       this.itemLevelCallNumber,
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
@@ -323,6 +335,7 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLoanType,
       this.circulationNotes,
       this.tags,
+      this.lastCheckIn,
       this.itemLevelCallNumber,
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
@@ -345,6 +358,7 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLoanType,
       this.circulationNotes,
       this.tags,
+      this.lastCheckIn,
       this.itemLevelCallNumber,
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
@@ -383,6 +397,7 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLoanType,
       this.circulationNotes,
       this.tags,
+      this.lastCheckIn,
       this.itemLevelCallNumber,
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
@@ -417,6 +432,7 @@ public class ItemRequestBuilder implements Builder {
       loanType,
       this.circulationNotes,
       this.tags,
+      this.lastCheckIn,
       this.itemLevelCallNumber,
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
@@ -439,6 +455,30 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLoanType,
       this.circulationNotes,
       tags,
+      this.lastCheckIn,
+      this.itemLevelCallNumber,
+      this.itemLevelCallNumberPrefix,
+      this.itemLevelCallNumberSuffix,
+      this.hrid);
+  }
+
+  public ItemRequestBuilder withLastCheckInt(JsonObject lastCheckIn) {
+    return new ItemRequestBuilder(
+      this.id,
+      this.holdingId,
+      this.readOnlyTitle,
+      this.readOnlyCallNumber,
+      this.barcode,
+      this.status,
+      this.materialType,
+      this.readOnlyEffectiveLocation,
+      this.permanentLocation,
+      this.temporaryLocation,
+      this.permanentLoanType,
+      this.temporaryLoanType,
+      this.circulationNotes,
+      tags,
+      this.lastCheckIn,
       this.itemLevelCallNumber,
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
@@ -476,6 +516,7 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLoanType,
       circulationNotes,
       this.tags,
+      this.lastCheckIn,
       this.itemLevelCallNumber,
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
@@ -574,6 +615,7 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLoanType,
       this.circulationNotes,
       this.tags,
+      this.lastCheckIn,
       itemLevelCallNumber,
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
@@ -596,6 +638,7 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLoanType,
       this.circulationNotes,
       this.tags,
+      this.lastCheckIn,
       this.itemLevelCallNumber,
       this.itemLevelCallNumberPrefix,
       itemLevelCallNumberSuffix,
@@ -618,6 +661,7 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLoanType,
       this.circulationNotes,
       this.tags,
+      this.lastCheckIn,
       this.itemLevelCallNumber,
       itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
@@ -640,6 +684,7 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLoanType,
       this.circulationNotes,
       this.tags,
+      this.lastCheckIn,
       this.itemLevelCallNumber,
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,

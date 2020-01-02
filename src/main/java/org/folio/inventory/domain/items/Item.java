@@ -459,6 +459,7 @@ public class Item {
             .withYearCaption(this.yearCaption)
             .withElectronicAccess(this.electronicAccess)
             .withStatisticalCodeIds(this.statisticalCodeIds)
+            .withLastCheckIn(this.lastCheckIn)
             .withPurchaseOrderLineidentifier(this.purchaseOrderLineidentifier);
   }
 
