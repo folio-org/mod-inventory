@@ -417,6 +417,12 @@ public class ItemApiExamples extends ApiTests {
 
     UUID itemId = UUID.randomUUID();
 
+    JsonObject lastCheckIn = new JsonObject()
+      .put("servicePointId", "7c5abc9f-f3d7-4856-b8d7-6712462ca007")
+      .put("staffMemberId", "12115707-d7c8-54e7-8287-22e97f7250a4")
+      .put("dateTime", "2020-01-02T13:02:46.000Z");
+
+
     JsonObject newItemRequest = new ItemRequestBuilder()
       .withId(itemId)
       .forHolding(holdingId)
@@ -424,6 +430,7 @@ public class ItemApiExamples extends ApiTests {
       .canCirculate()
       .temporarilyInReadingRoom()
       .withTagList(new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray().add("test-tag")))
+      .withLastCheckIn(lastCheckIn)
       .create();
 
     newItemRequest = itemsClient.create(newItemRequest).getJson();
@@ -451,6 +458,9 @@ public class ItemApiExamples extends ApiTests {
     assertThat(updatedItem.getString("title"), is("Long Way to a Small Angry Planet"));
     assertThat(updatedItem.getString("barcode"), is("645398607547"));
     assertThat(updatedItem.getJsonObject("status").getString("name"), is("Checked Out"));
+    assertThat(updatedItem.getJsonObject("lastCheckIn").getString("servicePointId"), is("7c5abc9f-f3d7-4856-b8d7-6712462ca007"));
+    assertThat(updatedItem.getJsonObject("lastCheckIn").getString("staffMemberId"), is("12115707-d7c8-54e7-8287-22e97f7250a4"));
+    assertThat(updatedItem.getJsonObject("lastCheckIn").getString("dateTime"), is("2020-01-02T13:02:46.000Z"));
 
     JsonObject materialType = updatedItem.getJsonObject("materialType");
 

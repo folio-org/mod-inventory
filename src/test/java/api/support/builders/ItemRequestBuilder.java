@@ -462,7 +462,7 @@ public class ItemRequestBuilder implements Builder {
       this.hrid);
   }
 
-  public ItemRequestBuilder withLastCheckInt(JsonObject lastCheckIn) {
+  public ItemRequestBuilder withLastCheckIn(JsonObject lastCheckIn) {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
@@ -477,8 +477,8 @@ public class ItemRequestBuilder implements Builder {
       this.permanentLoanType,
       this.temporaryLoanType,
       this.circulationNotes,
-      tags,
-      this.lastCheckIn,
+      this.tags,
+      lastCheckIn,
       this.itemLevelCallNumber,
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
