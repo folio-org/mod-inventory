@@ -421,7 +421,6 @@
       "type": "object",
       "additionalProperties": false,
       "description": "Information about when an item was last checked in",
-      "readonly": true,
       "properties": {
         "dateTime": {
           "type": "string",
