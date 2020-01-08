@@ -29,6 +29,7 @@ import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.items.CirculationNote;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
+import org.folio.inventory.domain.items.LastCheckIn;
 import org.folio.inventory.domain.items.Note;
 import org.folio.inventory.domain.items.Status;
 import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
@@ -323,6 +324,7 @@ public class Items {
             .withElectronicAccess(electronicAccess)
             .withStatisticalCodeIds(statisticalCodeIds)
             .withPurchaseOrderLineidentifier(itemRequest.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER))
+            .withLastCheckIn(LastCheckIn.from(itemRequest.getJsonObject(Item.LAST_CHECK_IN)))
             .withTags(tags);
   }
 
