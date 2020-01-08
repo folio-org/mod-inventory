@@ -352,7 +352,8 @@ public class ExternalItemCollectionExamples {
       // otherwise we will get timeout on retrieve holdings in preprocessor
       .withItemLevelCallNumber("123456")
       .withItemLevelCallNumberPrefix("prefix")
-      .withItemLevelCallNumberSuffix("suffix");
+      .withItemLevelCallNumberSuffix("suffix")
+      .withItemLevelCallNumberTypeId(UUID.randomUUID().toString());
   }
 
   private Item nod() {
@@ -363,7 +364,8 @@ public class ExternalItemCollectionExamples {
       .withTemporaryLocationId(annexLibraryLocationId)
       .withItemLevelCallNumber("123456")
       .withItemLevelCallNumberPrefix("prefix")
-      .withItemLevelCallNumberSuffix("suffix");
+      .withItemLevelCallNumberSuffix("suffix")
+      .withItemLevelCallNumberTypeId(UUID.randomUUID().toString());
   }
 
   private Item uprooted() {
@@ -374,7 +376,8 @@ public class ExternalItemCollectionExamples {
       .withTemporaryLocationId(annexLibraryLocationId)
       .withItemLevelCallNumber("123456")
       .withItemLevelCallNumberPrefix("prefix")
-      .withItemLevelCallNumberSuffix("suffix");
+      .withItemLevelCallNumberSuffix("suffix")
+      .withItemLevelCallNumberTypeId(UUID.randomUUID().toString());
   }
 
   private Item temeraire() {
@@ -386,7 +389,8 @@ public class ExternalItemCollectionExamples {
       .withTemporaryLocationId(annexLibraryLocationId)
       .withItemLevelCallNumber("123456")
       .withItemLevelCallNumberPrefix("prefix")
-      .withItemLevelCallNumberSuffix("suffix");
+      .withItemLevelCallNumberSuffix("suffix")
+      .withItemLevelCallNumberTypeId(UUID.randomUUID().toString());
   }
 
   private Item interestingTimes() {
@@ -397,7 +401,8 @@ public class ExternalItemCollectionExamples {
       .withTemporaryLocationId(annexLibraryLocationId)
       .withItemLevelCallNumber("123456")
       .withItemLevelCallNumberPrefix("prefix")
-      .withItemLevelCallNumberSuffix("suffix");
+      .withItemLevelCallNumberSuffix("suffix")
+      .withItemLevelCallNumberTypeId(UUID.randomUUID().toString());
   }
 
   private Item getItem(List<Item> allItems, String barcode) {

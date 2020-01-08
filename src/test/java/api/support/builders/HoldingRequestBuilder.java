@@ -13,12 +13,14 @@ public class HoldingRequestBuilder implements Builder {
   private final String callNumber;
   private final String callNumberSuffix;
   private final String callNumberPrefix;
+  private final String callNumberTypeId;
 
   public HoldingRequestBuilder() {
     this(
       null,
       UUID.fromString(ApiTestSuite.getThirdFloorLocation()),
       UUID.fromString(ApiTestSuite.getReadingRoomLocation()),
+      null,
       null,
       null,
       null);
@@ -30,7 +32,8 @@ public class HoldingRequestBuilder implements Builder {
     UUID temporaryLocationId,
     String callNumber,
     String callNumberSuffix,
-    String callNumberPrefix) {
+    String callNumberPrefix,
+    String callNumberTypeId) {
 
     this.instanceId = instanceId;
     this.permanentLocationId = permanentLocationId;
@@ -38,6 +41,7 @@ public class HoldingRequestBuilder implements Builder {
     this.callNumber = callNumber;
     this.callNumberSuffix = callNumberSuffix;
     this.callNumberPrefix = callNumberPrefix;
+    this.callNumberTypeId = callNumberTypeId;
   }
 
   @Override
@@ -54,6 +58,7 @@ public class HoldingRequestBuilder implements Builder {
     holding.put("callNumber", callNumber);
     holding.put("callNumberPrefix", callNumberPrefix);
     holding.put("callNumberSuffix", callNumberSuffix);
+    holding.put("callNumberTypeId", callNumberTypeId);
 
     return holding;
   }
@@ -65,7 +70,8 @@ public class HoldingRequestBuilder implements Builder {
       this.temporaryLocationId,
       callNumber,
       this.callNumberSuffix,
-      this.callNumberPrefix);
+      this.callNumberPrefix,
+      this.callNumberTypeId);
   }
 
   private HoldingRequestBuilder withTemporaryLocation(UUID temporaryLocationId) {
@@ -75,7 +81,8 @@ public class HoldingRequestBuilder implements Builder {
       temporaryLocationId,
       this.callNumber,
       this.callNumberSuffix,
-      this.callNumberPrefix);
+      this.callNumberPrefix,
+      this.callNumberTypeId);
   }
 
   public HoldingRequestBuilder permanentlyInMainLibrary() {
@@ -97,7 +104,8 @@ public class HoldingRequestBuilder implements Builder {
       this.temporaryLocationId,
       this.callNumber,
       this.callNumberSuffix,
-      this.callNumberPrefix);
+      this.callNumberPrefix,
+      this.callNumberTypeId);
   }
 
   public HoldingRequestBuilder withCallNumber(String callNumber) {
@@ -107,7 +115,8 @@ public class HoldingRequestBuilder implements Builder {
       this.temporaryLocationId,
       callNumber,
       this.callNumberSuffix,
-      this.callNumberPrefix);
+      this.callNumberPrefix,
+      this.callNumberTypeId);
   }
 
   public HoldingRequestBuilder withCallNumberSuffix(String suffix) {
@@ -117,7 +126,8 @@ public class HoldingRequestBuilder implements Builder {
       this.temporaryLocationId,
       this.callNumber,
       suffix,
-      this.callNumberPrefix);
+      this.callNumberPrefix,
+      this.callNumberTypeId);
   }
 
   public HoldingRequestBuilder withCallNumberPrefix(String prefix) {
@@ -127,6 +137,18 @@ public class HoldingRequestBuilder implements Builder {
       this.temporaryLocationId,
       this.callNumber,
       this.callNumberSuffix,
-      prefix);
+      prefix,
+      this.callNumberTypeId);
+  }
+
+  public HoldingRequestBuilder withCallNumberTypeId(String callNumberTypeId) {
+    return new HoldingRequestBuilder(
+      this.instanceId,
+      this.permanentLocationId,
+      this.temporaryLocationId,
+      this.callNumber,
+      this.callNumberSuffix,
+      this.callNumberPrefix,
+      callNumberTypeId);
   }
 }
