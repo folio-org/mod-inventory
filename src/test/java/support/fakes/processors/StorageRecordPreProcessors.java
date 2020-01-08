@@ -27,7 +27,8 @@ public final class StorageRecordPreProcessors {
   private static final List<Triple<String, String, String>> CALL_NUMBER_PROPERTIES = Arrays.asList(
     new ImmutableTriple<>("callNumber", "itemLevelCallNumber", "callNumber"),
     new ImmutableTriple<>("callNumberPrefix", "itemLevelCallNumberPrefix", "prefix"),
-    new ImmutableTriple<>("callNumberSuffix", "itemLevelCallNumberSuffix", "suffix")
+    new ImmutableTriple<>("callNumberSuffix", "itemLevelCallNumberSuffix", "suffix"),
+    new ImmutableTriple<>("callNumberTypeId", "itemLevelCallNumberTypeId", "typeId")
   );
 
   private static final String HOLDINGS_RECORD_PROPERTY_NAME = "holdingsRecordId";
