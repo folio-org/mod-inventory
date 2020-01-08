@@ -35,7 +35,7 @@ public class ItemRequestBuilder implements Builder {
   public ItemRequestBuilder() {
     this(UUID.randomUUID(), null, null, null, "645398607547",
       AVAILABLE_STATUS, bookMaterialType(), null, null, null,
-      canCirculateLoanType(), null, null, null,
+      canCirculateLoanType(), null, null, null, null,
       null, null, null,
       null, null
     );
@@ -475,6 +475,7 @@ public class ItemRequestBuilder implements Builder {
       this.itemLevelCallNumber,
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
+      this.itemLevelCallNumberTypeId,
       this.hrid);
   }
 
@@ -705,6 +706,7 @@ public class ItemRequestBuilder implements Builder {
       this.temporaryLoanType,
       this.circulationNotes,
       this.tags,
+      this.lastCheckIn,
       this.itemLevelCallNumber,
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
