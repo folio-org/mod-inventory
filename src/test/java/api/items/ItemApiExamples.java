@@ -73,6 +73,7 @@ public class ItemApiExamples extends ApiTests {
   private static final String CALL_NUMBER = "callNumber";
   private static final String CALL_NUMBER_SUFFIX = "callNumberSuffix";
   private static final String CALL_NUMBER_PREFIX = "callNumberPrefix";
+  private static final String CALL_NUMBER_TYPE_ID = UUID.randomUUID().toString();
 
   public ItemApiExamples() throws MalformedURLException {
     super();
@@ -100,6 +101,7 @@ public class ItemApiExamples extends ApiTests {
       .withItemLevelCallNumber(CALL_NUMBER)
       .withItemLevelCallNumberSuffix(CALL_NUMBER_SUFFIX)
       .withItemLevelCallNumberPrefix(CALL_NUMBER_PREFIX)
+      .withItemLevelCallNumberTypeId(CALL_NUMBER_TYPE_ID)
       .withTagList(new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray().add("test-tag")))
       .temporarilyCourseReserves());
 
@@ -610,6 +612,7 @@ public class ItemApiExamples extends ApiTests {
         .withCallNumber(CALL_NUMBER)
         .withCallNumberSuffix(CALL_NUMBER_SUFFIX)
         .withCallNumberPrefix(CALL_NUMBER_PREFIX)
+        .withCallNumberTypeId(CALL_NUMBER_TYPE_ID)
     ).getId();
 
     itemsClient.create(new ItemRequestBuilder()
@@ -632,6 +635,7 @@ public class ItemApiExamples extends ApiTests {
         .withCallNumber(CALL_NUMBER)
         .withCallNumberSuffix(CALL_NUMBER_SUFFIX)
         .withCallNumberPrefix(CALL_NUMBER_PREFIX)
+        .withCallNumberTypeId(CALL_NUMBER_TYPE_ID)
     ).getId();
 
     itemsClient.create(new ItemRequestBuilder()
@@ -649,6 +653,7 @@ public class ItemApiExamples extends ApiTests {
         .withCallNumber(CALL_NUMBER)
         .withCallNumberSuffix(CALL_NUMBER_SUFFIX)
         .withCallNumberPrefix(CALL_NUMBER_PREFIX)
+        .withCallNumberTypeId(CALL_NUMBER_TYPE_ID)
     ).getId();
 
     itemsClient.create(new ItemRequestBuilder()
@@ -1550,5 +1555,6 @@ public class ItemApiExamples extends ApiTests {
     assertThat(callNumberComponents.getString("callNumber"), is(CALL_NUMBER));
     assertThat(callNumberComponents.getString("suffix"), is(CALL_NUMBER_SUFFIX));
     assertThat(callNumberComponents.getString("prefix"), is(CALL_NUMBER_PREFIX));
+    assertThat(callNumberComponents.getString("typeId"), is(CALL_NUMBER_TYPE_ID));
   }
 }

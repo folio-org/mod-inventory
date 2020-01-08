@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "inventory",
-      "version": "9.6",
+      "version": "9.7",
       "handlers": [
         {
           "methods": ["GET"],
@@ -192,7 +192,7 @@
   "requires": [
     {
       "id": "item-storage",
-      "version": "7.8"
+      "version": "7.9"
     },
     {
       "id": "instance-storage",
