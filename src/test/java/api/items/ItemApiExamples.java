@@ -497,7 +497,7 @@ public class ItemApiExamples extends ApiTests {
     assertThat(updatedItem.containsKey("id"), is(true));
     assertThat(updatedItem.getString("title"), is("Long Way to a Small Angry Planet"));
     assertThat(updatedItem.getString("barcode"), is("645398607547"));
-    assertThat(updatedItem.getJsonObject("status").getString("name"), is("Checked Out"));
+    assertThat(updatedItem.getJsonObject("status").getString("name"), is("Checked out"));
     assertThat(updatedItem.getJsonObject(Item.LAST_CHECK_IN).getString("servicePointId"),
       is("7c5abc9f-f3d7-4856-b8d7-6712462ca007"));
     assertThat(updatedItem.getJsonObject(Item.LAST_CHECK_IN).getString("staffMemberId"),
