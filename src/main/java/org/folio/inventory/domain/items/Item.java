@@ -37,6 +37,7 @@ public class Item {
   public static final String NOTES_KEY = "notes";
   public static final String CIRCULATION_NOTES_KEY = "circulationNotes";
   public static final String PURCHASE_ORDER_LINE_IDENTIFIER = "purchaseOrderLineIdentifier";
+  public static final String LAST_CHECK_IN = "lastCheckIn";
   public static final String COPY_NUMBER_KEY = "copyNumber";
 
   public final String id;
@@ -459,6 +460,7 @@ public class Item {
             .withYearCaption(this.yearCaption)
             .withElectronicAccess(this.electronicAccess)
             .withStatisticalCodeIds(this.statisticalCodeIds)
+            .withLastCheckIn(this.lastCheckIn)
             .withPurchaseOrderLineidentifier(this.purchaseOrderLineidentifier);
   }
 
