@@ -15,7 +15,6 @@ public enum ItemStatusName {
   MISSING("Missing"),
   ON_ORDER("On order"),
   PAGED("Paged"),
-  WITHDRAWN("Withdrawn"),
   DECLARED_LOST("Declared lost"),
   RECEIVED("Received"),
   ORDER_CLOSED("Order closed");
