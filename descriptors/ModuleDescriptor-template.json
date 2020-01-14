@@ -147,7 +147,8 @@
             "inventory-storage.instances.item.post",
             "inventory-storage.instances.item.get",
             "inventory-storage.instances.item.put",
-            "inventory-storage.instances.item.delete"
+            "inventory-storage.instances.item.delete",
+            "inventory-storage.instances.batch.post"
           ]
         }
       ]
