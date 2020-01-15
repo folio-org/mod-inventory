@@ -1,3 +1,6 @@
+## 13.1.1 2020-01-15
+* Adds "inventory-storage.instances.batch.post" permission for inventory-batch interface
+
 ## 13.1.0 2019-12-03
 
 * Generates HRIDs for instance and item records (MODINV-160, MODINV-162)
