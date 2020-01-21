@@ -23,7 +23,12 @@ public class TenantApiExamples extends ApiTests {
   }
 
   @Test
-  public void shouldReturnNoContent() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+  public void shouldReturnNoContent()
+    throws MalformedURLException,
+    InterruptedException,
+    ExecutionException,
+    TimeoutException {
+
     CompletableFuture<Response> postCompleted = new CompletableFuture<>();
     okapiClient.post(ApiRoot.tenant(), null, ResponseHandler.any(postCompleted));
     Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
