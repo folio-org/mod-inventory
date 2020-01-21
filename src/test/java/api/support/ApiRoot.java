@@ -61,4 +61,9 @@ public class ApiRoot {
   public static URL blockedFieldsConfig() throws MalformedURLException {
     return new URL(String.format("%s/inventory/config/instances/blocked-fields", ApiTestSuite.apiRoot()));
   }
+
+  public static URL tenant()
+    throws MalformedURLException {
+    return new URL(String.format("%s/_/tenant", ApiTestSuite.apiRoot()));
+  }
 }
