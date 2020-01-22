@@ -294,20 +294,32 @@ class FakeStorageModule extends AbstractVerticle {
   private void checkRequiredProperties(RoutingContext routingContext) {
     JsonObject body = getJsonFromBody(routingContext);
 
-    ArrayList<ValidationError> errors = new ArrayList<>();
+    List<ValidationError> errors = new ArrayList<>();
 
-    requiredProperties.stream().forEach(requiredProperty -> {
-      if(!body.getMap().containsKey(requiredProperty)) {
+    requiredProperties.forEach(requiredProperty -> {
+      if (getPropertyValue(body, requiredProperty) == null) {
         errors.add(new ValidationError("Required property missing", requiredProperty, ""));
       }
     });
 
-    if(errors.isEmpty()) {
+    if (errors.isEmpty()) {
       routingContext.next();
-    }
-    else {
+    } else {
       JsonResponse.unprocessableEntity(routingContext.response(), errors);
     }
+  }
+
+  private Object getPropertyValue(JsonObject body, String requiredProperty) {
+    String[] pathElements = requiredProperty.split("\\.");
+    JsonObject lastObject = body;
+
+    for (int i = 0; i < pathElements.length - 1; i++) {
+      lastObject = lastObject.getJsonObject(pathElements[i]);
+    }
+
+    return lastObject != null
+      ? lastObject.getValue(pathElements[pathElements.length - 1])
+      : null;
   }
 
   private void checkUniqueProperties(RoutingContext routingContext) {

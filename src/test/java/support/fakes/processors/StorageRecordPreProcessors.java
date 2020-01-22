@@ -1,10 +1,12 @@
 package support.fakes.processors;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.folio.inventory.support.JsonHelper.getNestedProperty;
 
 import java.net.MalformedURLException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
@@ -15,6 +17,8 @@ import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.apache.commons.lang3.tuple.Triple;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 
 import api.ApiTestSuite;
 import api.support.http.StorageInterfaceUrls;
@@ -34,6 +38,8 @@ public final class StorageRecordPreProcessors {
   private static final String HOLDINGS_RECORD_PROPERTY_NAME = "holdingsRecordId";
   private static final String PERMANENT_LOCATION_PROPERTY = "permanentLocationId";
   private static final String TEMPORARY_LOCATION_PROPERTY = "temporaryLocationId";
+  // RMB uses ISO-8601 compatible date time format by default.
+  private static final String RMB_DATETIME_PATTERN = "yyyy-MM-dd'T'HH:mm:ss.SSS+0000";
 
   private StorageRecordPreProcessors() {
     throw new AssertionError("Do not instantiate");
@@ -45,7 +51,8 @@ public final class StorageRecordPreProcessors {
     CompletableFuture<JsonObject> holdings = completedFuture(new JsonObject());
     if (StringUtils.isBlank(newItem.getString(TEMPORARY_LOCATION_PROPERTY))
       && StringUtils.isBlank(newItem.getString(PERMANENT_LOCATION_PROPERTY))) {
-      holdings = getHoldingById(newItem.getString(HOLDINGS_RECORD_PROPERTY_NAME));
+
+      holdings = findHoldingForItem(newItem);
     }
 
     return holdings.thenApply(holdingsRecord ->
@@ -67,8 +74,7 @@ public final class StorageRecordPreProcessors {
       .anyMatch(property -> StringUtils.isBlank(newItem.getString(property)));
 
     if (shouldRetrieveHoldings) {
-      String holdingsId = newItem.getString(HOLDINGS_RECORD_PROPERTY_NAME);
-      holdings = getHoldingById(holdingsId);
+      holdings = findHoldingForItem(newItem);
     }
 
     return holdings.thenApply(holding -> {
@@ -91,7 +97,39 @@ public final class StorageRecordPreProcessors {
     });
   }
 
+  public static CompletableFuture<JsonObject> setStatusDateProcessor(
+    JsonObject oldItem, JsonObject newItem) {
+
+    // Create case
+    if (oldItem == null) {
+      return completedFuture(newItem);
+    }
+
+    return findHoldingForItem(newItem).thenApply(holding -> {
+      final String oldStatus = getNestedProperty(oldItem, "status", "name");
+      final String newStatus = getNestedProperty(newItem, "status", "name");
+
+      if (!Objects.equals(oldStatus, newStatus)) {
+        JsonObject newStatusObject = newItem.containsKey("status")
+          ? newItem.getJsonObject("status")
+          : new JsonObject();
+
+        newStatusObject = newStatusObject.put("date",
+          DateTime.now(DateTimeZone.UTC)
+            .toString(RMB_DATETIME_PATTERN)
+        );
+        return newItem.put("status", newStatusObject);
+      }
+
+      return newItem;
+    });
+  }
+
   private static CompletableFuture<JsonObject> getHoldingById(String id) {
+    if (StringUtils.isBlank(id)) {
+      return completedFuture(new JsonObject());
+    }
+
     CompletableFuture<Response> getCompleted = new CompletableFuture<>();
 
     try {
@@ -122,5 +160,11 @@ public final class StorageRecordPreProcessors {
 
       return completedFuture(newEntity);
     };
+  }
+
+  private static CompletableFuture<JsonObject> findHoldingForItem(JsonObject item) {
+    final String holdingsId = item.getString(HOLDINGS_RECORD_PROPERTY_NAME);
+
+    return getHoldingById(holdingsId);
   }
 }

@@ -126,13 +126,9 @@
       "description": "Item identifier number, e.g. imported from the union catalogue (read only)",
       "type": "string"
     },
-    "copyNumbers": {
-      "description": "Copy number is the piece identifier. The copy number reflects if the library has one (or more) copies of a single-volume monograph; one (or more) copies of a multi-volume, (e.g. Copy 1, or C.7.)",
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "uniqueItems": true
+    "copyNumber": {
+      "description": "Copy number is the piece identifier. The copy number reflects if the library has a copy of a single-volume monograph; a copy of a multi-volume, (e.g. Copy 1, or C.7.)",
+      "type": "string"
     },
     "numberOfPieces": {
       "description": "Number of pieces. Used when an item is checked out or returned to verify that all parts are present (e.g. 7 CDs in a set)",
@@ -248,11 +244,26 @@
       "properties": {
         "name": {
           "description": "Name of the item state (e.g. Available, Checked out, In transit, Awaiting pickup, On order). Default value is set to: Available",
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "Available",
+            "Awaiting pickup",
+            "Awaiting delivery",
+            "Checked out",
+            "In process",
+            "In transit",
+            "Missing",
+            "On order",
+            "Paged",
+            "Declared lost",
+            "Order closed"
+          ]
         },
         "date": {
           "description": "Date of the current item state. E.g. date set when item state was changed by the Check out app",
-          "type": "string"
+          "type": "string",
+          "readonly": true,
+          "format": "date-time"
         }
       },
       "additionalProperties": false,
@@ -452,6 +463,7 @@
   "additionalProperties": false,
   "required": [
     "materialType",
-    "permanentLoanType"
+    "permanentLoanType",
+    "status"
   ]
 }

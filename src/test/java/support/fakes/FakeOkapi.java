@@ -98,12 +98,12 @@ public class FakeOkapi extends AbstractVerticle {
     new FakeStorageModuleBuilder()
       .withRecordName("item")
       .withRootPath("/item-storage/items")
-      .withRequiredProperties("materialTypeId", "permanentLoanTypeId")
-      .withDefault("status", new JsonObject().put("name", "Available"))
+      .withRequiredProperties("materialTypeId", "permanentLoanTypeId", "status.name")
       .withRecordPreProcessors(
         StorageRecordPreProcessors.setHridProcessor("it"),
         StorageRecordPreProcessors::setEffectiveLocationForItem,
-        StorageRecordPreProcessors::setEffectiveCallNumberComponents
+        StorageRecordPreProcessors::setEffectiveCallNumberComponents,
+        StorageRecordPreProcessors::setStatusDateProcessor
       )
       .create().register(router);
   }

@@ -38,6 +38,7 @@ public class Item {
   public static final String CIRCULATION_NOTES_KEY = "circulationNotes";
   public static final String PURCHASE_ORDER_LINE_IDENTIFIER = "purchaseOrderLineIdentifier";
   public static final String LAST_CHECK_IN = "lastCheckIn";
+  public static final String COPY_NUMBER_KEY = "copyNumber";
 
   public final String id;
   private String hrid;
@@ -55,7 +56,7 @@ public class Item {
   private List<String> yearCaption = new ArrayList();
   private String enumeration;
   private String chronology;
-  private List<String> copyNumbers = new ArrayList();
+  private String copyNumber;
   private String numberOfPieces;
   private final String holdingId;
   private String descriptionOfPieces;
@@ -197,13 +198,13 @@ public class Item {
     return chronology;
   }
 
-  public Item withCopyNumbers(List<String> copyNumbers) {
-    this.copyNumbers = copyNumbers;
+  public Item withCopyNumber(String copyNumber) {
+    this.copyNumber = copyNumber;
     return this;
   }
 
-  public List<String> getCopyNumbers() {
-    return this.copyNumbers;
+  public String getCopyNumber() {
+    return this.copyNumber;
   }
 
   public Item withNumberOfPieces(String numberOfPieces) {
@@ -441,7 +442,7 @@ public class Item {
             .withVolume(this.volume)
             .withEnumeration(this.enumeration)
             .withChronology(this.chronology)
-            .withCopyNumbers(this.copyNumbers)
+            .withCopyNumber(this.copyNumber)
             .withNumberOfPieces(this.numberOfPieces)
             .withDescriptionOfPieces(this.descriptionOfPieces)
             .withNumberOfMissingPieces(this.numberOfMissingPieces)
@@ -463,41 +464,41 @@ public class Item {
             .withPurchaseOrderLineidentifier(this.purchaseOrderLineidentifier);
   }
 
-  public Item changeStatus(String newStatus) {
+  public Item changeStatus(ItemStatusName newStatus) {
     return new Item(this.id,
       holdingId, new Status(newStatus), this.materialTypeId,
       this.permanentLoanTypeId, this.metadata)
-            .withHrid(this.hrid)
-            .withFormerIds(this.formerIds)
-            .withDiscoverySuppress(this.discoverySuppress)
-            .withBarcode(this.barcode)
-            .withItemLevelCallNumber(this.itemLevelCallNumber)
-            .withItemLevelCallNumberPrefix(this.itemLevelCallNumberPrefix)
-            .withItemLevelCallNumberSuffix(this.itemLevelCallNumberSuffix)
-            .withItemLevelCallNumberTypeId(this.itemLevelCallNumberTypeId)
-            .withVolume(this.volume)
-            .withEnumeration(this.enumeration)
-            .withChronology(this.chronology)
-            .withCopyNumbers(this.copyNumbers)
-            .withNumberOfPieces(this.numberOfPieces)
-            .withDescriptionOfPieces(this.descriptionOfPieces)
-            .withNumberOfMissingPieces(this.numberOfMissingPieces)
-            .withMissingPieces(this.missingPieces)
-            .withMissingPiecesDate(this.missingPiecesDate)
-            .withItemDamagedStatusId(this.itemDamagedStatusId)
-            .withItemDamagedStatusDate(this.itemDamagedStatusDate)
-            .withNotes(this.notes)
-            .withPermanentLocationId(this.permanentLocationId)
-            .withTemporaryLocationId(this.temporaryLocationId)
-            .withEffectiveLocationId(this.effectiveLocationId)
-            .withTemporaryLoanTypeId(this.temporaryLoanTypeId)
-            .withAccessionNumber(this.accessionNumber)
-            .withItemIdentifier(this.itemIdentifier)
-            .withYearCaption(this.yearCaption)
-            .withElectronicAccess(this.electronicAccess)
-            .withStatisticalCodeIds(this.statisticalCodeIds)
-            .withPurchaseOrderLineidentifier(purchaseOrderLineidentifier)
-            .withTags(tags);
+      .withHrid(this.hrid)
+      .withFormerIds(this.formerIds)
+      .withDiscoverySuppress(this.discoverySuppress)
+      .withBarcode(this.barcode)
+      .withItemLevelCallNumber(this.itemLevelCallNumber)
+      .withItemLevelCallNumberPrefix(this.itemLevelCallNumberPrefix)
+      .withItemLevelCallNumberSuffix(this.itemLevelCallNumberSuffix)
+      .withItemLevelCallNumberTypeId(this.itemLevelCallNumberTypeId)
+      .withVolume(this.volume)
+      .withEnumeration(this.enumeration)
+      .withChronology(this.chronology)
+      .withCopyNumber(this.copyNumber)
+      .withNumberOfPieces(this.numberOfPieces)
+      .withDescriptionOfPieces(this.descriptionOfPieces)
+      .withNumberOfMissingPieces(this.numberOfMissingPieces)
+      .withMissingPieces(this.missingPieces)
+      .withMissingPiecesDate(this.missingPiecesDate)
+      .withItemDamagedStatusId(this.itemDamagedStatusId)
+      .withItemDamagedStatusDate(this.itemDamagedStatusDate)
+      .withNotes(this.notes)
+      .withPermanentLocationId(this.permanentLocationId)
+      .withTemporaryLocationId(this.temporaryLocationId)
+      .withEffectiveLocationId(this.effectiveLocationId)
+      .withTemporaryLoanTypeId(this.temporaryLoanTypeId)
+      .withAccessionNumber(this.accessionNumber)
+      .withItemIdentifier(this.itemIdentifier)
+      .withYearCaption(this.yearCaption)
+      .withElectronicAccess(this.electronicAccess)
+      .withStatisticalCodeIds(this.statisticalCodeIds)
+      .withPurchaseOrderLineidentifier(purchaseOrderLineidentifier)
+      .withTags(tags);
   }
 
   @Override

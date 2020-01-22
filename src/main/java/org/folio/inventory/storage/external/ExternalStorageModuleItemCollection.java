@@ -41,8 +41,6 @@ class ExternalStorageModuleItemCollection
 
     List<String> formerIds = JsonArrayHelper
             .toListOfStrings(itemFromServer.getJsonArray(Item.FORMER_IDS_KEY));
-    List<String> copyNumberList = JsonArrayHelper
-            .toListOfStrings(itemFromServer.getJsonArray("copyNumbers"));
     List<String> statisticalCodeIds = JsonArrayHelper
             .toListOfStrings(itemFromServer.getJsonArray(Item.STATISTICAL_CODE_IDS_KEY));
     List<String> yearCaption = JsonArrayHelper
@@ -92,7 +90,7 @@ class ExternalStorageModuleItemCollection
             .withVolume(itemFromServer.getString(Item.VOLUME_KEY))
             .withEnumeration(itemFromServer.getString("enumeration"))
             .withChronology(itemFromServer.getString("chronology"))
-            .withCopyNumbers(copyNumberList)
+            .withCopyNumber(itemFromServer.getString("copyNumber"))
             .withNumberOfPieces(itemFromServer.getString("numberOfPieces"))
             .withDescriptionOfPieces(itemFromServer.getString(Item.DESCRIPTION_OF_PIECES_KEY))
             .withNumberOfMissingPieces(itemFromServer.getString(Item.NUMBER_OF_MISSING_PIECES_KEY))
@@ -143,7 +141,7 @@ class ExternalStorageModuleItemCollection
     includeIfPresent(itemToSend, Item.HRID_KEY, item.getHrid());
     itemToSend.put(Item.FORMER_IDS_KEY, item.getFormerIds());
     itemToSend.put(Item.DISCOVERY_SUPPRESS_KEY, item.getDiscoverySuppress());
-    itemToSend.put("copyNumbers", item.getCopyNumbers());
+    includeIfPresent(itemToSend, "copyNumber", item.getCopyNumber());
     itemToSend.put("notes", item.getNotes());
     itemToSend.put(Item.CIRCULATION_NOTES_KEY, item.getCirculationNotes());
     includeIfPresent(itemToSend, "barcode", item.getBarcode());

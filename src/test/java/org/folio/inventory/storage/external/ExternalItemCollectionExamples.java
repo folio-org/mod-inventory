@@ -23,6 +23,7 @@ import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
+import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.domain.items.Status;
 import org.junit.Before;
 import org.junit.Test;
@@ -153,7 +154,7 @@ public class ExternalItemCollectionExamples {
 
     CompletableFuture<Void> updateFinished = new CompletableFuture<>();
 
-    Item changed = added.changeStatus("Checked Out");
+    Item changed = added.changeStatus(ItemStatusName.CHECKED_OUT);
 
     collection.update(changed, succeed(updateFinished),
       fail(updateFinished));
@@ -172,7 +173,7 @@ public class ExternalItemCollectionExamples {
     assertThat(updated.getTemporaryLocationId(), is(added.getTemporaryLocationId()));
     assertThat(updated.getMaterialTypeId(), is(added.getMaterialTypeId()));
     assertThat(updated.getPermanentLoanTypeId(), is(added.getPermanentLoanTypeId()));
-    assertThat(updated.getStatus().getString(Status.NAME_KEY), is("Checked Out"));
+    assertThat(updated.getStatus().getString(Status.NAME_KEY), is(ItemStatusName.CHECKED_OUT.value()));
   }
 
   @Test
@@ -344,7 +345,7 @@ public class ExternalItemCollectionExamples {
   private Item smallAngryPlanet() {
     return new Item(null,
       null,
-      new Status("Available"), bookMaterialTypeId, canCirculateLoanTypeId, null)
+      new Status(ItemStatusName.AVAILABLE), bookMaterialTypeId, canCirculateLoanTypeId, null)
       .withBarcode("036000291452")
       .withTemporaryLocationId(annexLibraryLocationId)
       // Have to set call number components directly,
@@ -358,7 +359,7 @@ public class ExternalItemCollectionExamples {
   private Item nod() {
     return new Item(null,
       null,
-      new Status("Available"), bookMaterialTypeId, canCirculateLoanTypeId, null)
+      new Status(ItemStatusName.AVAILABLE), bookMaterialTypeId, canCirculateLoanTypeId, null)
       .withBarcode("565578437802")
       .withTemporaryLocationId(annexLibraryLocationId)
       .withItemLevelCallNumber("123456")
@@ -370,7 +371,7 @@ public class ExternalItemCollectionExamples {
   private Item uprooted() {
     return new Item(null,
       null,
-      new Status("Available"), bookMaterialTypeId, canCirculateLoanTypeId, null)
+      new Status(ItemStatusName.AVAILABLE), bookMaterialTypeId, canCirculateLoanTypeId, null)
       .withBarcode("657670342075")
       .withTemporaryLocationId(annexLibraryLocationId)
       .withItemLevelCallNumber("123456")
@@ -382,7 +383,7 @@ public class ExternalItemCollectionExamples {
   private Item temeraire() {
     return new Item(null,
       null,
-      new Status("Available"), bookMaterialTypeId,
+      new Status(ItemStatusName.AVAILABLE), bookMaterialTypeId,
       canCirculateLoanTypeId, null)
       .withBarcode("232142443432")
       .withTemporaryLocationId(annexLibraryLocationId)
@@ -395,7 +396,7 @@ public class ExternalItemCollectionExamples {
   private Item interestingTimes() {
     return new Item(null,
       null,
-      new Status("Available"), bookMaterialTypeId, canCirculateLoanTypeId, null)
+      new Status(ItemStatusName.AVAILABLE), bookMaterialTypeId, canCirculateLoanTypeId, null)
       .withBarcode("56454543534")
       .withTemporaryLocationId(annexLibraryLocationId)
       .withItemLevelCallNumber("123456")

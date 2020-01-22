@@ -9,6 +9,7 @@ import static api.ApiTestSuite.getThirdFloorLocation;
 import static api.support.InstanceSamples.girlOnTheTrain;
 import static api.support.InstanceSamples.nod;
 import static api.support.InstanceSamples.smallAngryPlanet;
+import static api.support.http.BusinessLogicInterfaceUrls.items;
 import static org.folio.inventory.domain.items.CirculationNote.DATE_KEY;
 import static org.folio.inventory.domain.items.CirculationNote.NOTE_KEY;
 import static org.folio.inventory.domain.items.CirculationNote.NOTE_TYPE_KEY;
@@ -26,6 +27,7 @@ import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static support.matchers.ResponseMatchers.hasValidationError;
@@ -49,6 +51,7 @@ import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Seconds;
 import org.junit.Assert;
 import org.junit.Test;
@@ -59,7 +62,6 @@ import api.support.ApiTests;
 import api.support.InstanceApiClient;
 import api.support.builders.HoldingRequestBuilder;
 import api.support.builders.ItemRequestBuilder;
-import api.support.http.BusinessLogicInterfaceUrls;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -103,7 +105,9 @@ public class ItemApiExamples extends ApiTests {
       .withItemLevelCallNumberPrefix(CALL_NUMBER_PREFIX)
       .withItemLevelCallNumberTypeId(CALL_NUMBER_TYPE_ID)
       .withTagList(new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray().add("test-tag")))
-      .temporarilyCourseReserves());
+      .temporarilyCourseReserves()
+      .withCopyNumber("cp")
+    );
 
     assertCallNumbers(postResponse.getJson());
 
@@ -148,6 +152,7 @@ public class ItemApiExamples extends ApiTests {
     selfLinkRespectsWayResourceWasReached(createdItem);
     selfLinkShouldBeReachable(createdItem);
     assertThat(createdItem.getString("hrid"), notNullValue());
+    assertThat(createdItem.getString("copyNumber"), is("cp"));
   }
 
   @Test
@@ -374,7 +379,7 @@ public class ItemApiExamples extends ApiTests {
   }
 
   @Test
-  public void canCreateAnItemWithoutStatus()
+  public void cannotCreateAnItemWithoutStatus()
     throws InterruptedException,
     MalformedURLException,
     TimeoutException,
@@ -388,18 +393,47 @@ public class ItemApiExamples extends ApiTests {
         .forInstance(UUID.fromString(createdInstance.getString("id"))))
       .getId();
 
-    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
+    JsonObject item = new ItemRequestBuilder()
       .forHolding(holdingId)
-      .withNoStatus());
+      .create();
+    item.remove("status");
 
-    Response getResponse = itemsClient.getById(postResponse.getId());
+    CompletableFuture<Response> createCompleted = new CompletableFuture<>();
+    okapiClient.post(items(""), item, ResponseHandler.json(createCompleted));
 
-    JsonObject createdItem = getResponse.getJson();
+    Response createResponse = createCompleted.get(5, TimeUnit.SECONDS);
+    assertThat(createResponse,
+      hasValidationError("Status is a required field", "status", null)
+    );
+  }
 
-    assertThat("Should have a defaulted status property",
-      createdItem.containsKey("status"), is(true));
+  @Test
+  public void cannotCreateAnItemWithoutStatusName()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
 
-    assertThat(createdItem.getJsonObject("status").getString("name"), is("Available"));
+    JsonObject createdInstance = createInstance(
+      smallAngryPlanet(UUID.randomUUID()));
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
+
+    JsonObject item = new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .create();
+    item.getJsonObject("status").remove("name");
+
+    CompletableFuture<Response> createCompleted = new CompletableFuture<>();
+    okapiClient.post(items(""), item, ResponseHandler.json(createCompleted));
+
+    Response createResponse = createCompleted.get(5, TimeUnit.SECONDS);
+    assertThat(createResponse,
+      hasValidationError("Status is a required field", "status", null)
+    );
   }
 
   @Test
@@ -433,12 +467,16 @@ public class ItemApiExamples extends ApiTests {
       .temporarilyInReadingRoom()
       .withTagList(new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray().add("test-tag")))
       .withLastCheckIn(lastCheckIn)
+      .withCopyNumber("cp")
       .create();
 
     newItemRequest = itemsClient.create(newItemRequest).getJson();
 
+    assertThat(newItemRequest.getString("copyNumber"), is("cp"));
+
     JsonObject updateItemRequest = newItemRequest.copy()
-      .put("status", new JsonObject().put("name", "Checked Out"))
+      .put("status", new JsonObject().put("name", "Checked out"))
+      .put("copyNumber", "updatedCp")
       .put("tags", new JsonObject().put("tagList", new JsonArray().add("")));
 
     itemsClient.replace(itemId, updateItemRequest);
@@ -459,13 +497,14 @@ public class ItemApiExamples extends ApiTests {
     assertThat(updatedItem.containsKey("id"), is(true));
     assertThat(updatedItem.getString("title"), is("Long Way to a Small Angry Planet"));
     assertThat(updatedItem.getString("barcode"), is("645398607547"));
-    assertThat(updatedItem.getJsonObject("status").getString("name"), is("Checked Out"));
+    assertThat(updatedItem.getJsonObject("status").getString("name"), is("Checked out"));
     assertThat(updatedItem.getJsonObject(Item.LAST_CHECK_IN).getString("servicePointId"),
       is("7c5abc9f-f3d7-4856-b8d7-6712462ca007"));
     assertThat(updatedItem.getJsonObject(Item.LAST_CHECK_IN).getString("staffMemberId"),
       is("12115707-d7c8-54e7-8287-22e97f7250a4"));
     assertThat(updatedItem.getJsonObject(Item.LAST_CHECK_IN).getString("dateTime"),
       is("2020-01-02T13:02:46.000Z"));
+    assertThat(updatedItem.getJsonObject("status").getString("name"), is("Checked out"));
 
     JsonObject materialType = updatedItem.getJsonObject("materialType");
 
@@ -484,6 +523,7 @@ public class ItemApiExamples extends ApiTests {
 
     selfLinkRespectsWayResourceWasReached(updatedItem);
     selfLinkShouldBeReachable(updatedItem);
+    assertThat(updatedItem.getString("copyNumber"), is("updatedCp"));
   }
 
   @Test
@@ -1167,7 +1207,7 @@ public class ItemApiExamples extends ApiTests {
 
     JsonObject updateItemRequest = newItemRequest.copy()
       .put("hrid", createdItem.getString("hrid"))
-      .put("status", new JsonObject().put("name", "Checked Out"));
+      .put("status", new JsonObject().put("name", "Checked out"));
 
     itemsClient.replace(itemId, updateItemRequest);
 
@@ -1179,7 +1219,7 @@ public class ItemApiExamples extends ApiTests {
     assertThat(updatedItem.containsKey("id"), is(true));
     assertThat(updatedItem.getString("title"), is("Long Way to a Small Angry Planet"));
     assertThat(updatedItem.getString("barcode"), is("645398607547"));
-    assertThat(updatedItem.getJsonObject("status").getString("name"), is("Checked Out"));
+    assertThat(updatedItem.getJsonObject("status").getString("name"), is("Checked out"));
 
     JsonObject materialType = updatedItem.getJsonObject("materialType");
 
@@ -1211,6 +1251,7 @@ public class ItemApiExamples extends ApiTests {
 
     JsonObject newItemRequest = new JsonObject()
       .put("id", itemId.toString())
+      .put("status", new JsonObject().put("name", "Available"))
       .put("holdingsRecordId", createInstanceAndHolding().toString())
       .put("materialTypeId", getDvdMaterialType())
       .put("permanentLoanTypeId", getCanCirculateLoanType())
@@ -1244,6 +1285,7 @@ public class ItemApiExamples extends ApiTests {
   public void canSearchItemsByLocation() throws Exception {
     JsonObject readingRoomItem = new JsonObject()
       .put("id", UUID.randomUUID().toString())
+      .put("status", new JsonObject().put("name", "Available"))
       .put("holdingsRecordId", createInstanceAndHolding().toString())
       .put("materialTypeId", getDvdMaterialType())
       .put("permanentLoanTypeId", getCanCirculateLoanType())
@@ -1288,6 +1330,7 @@ public class ItemApiExamples extends ApiTests {
 
     JsonObject readingRoomItem = new JsonObject()
       .put("id", UUID.randomUUID().toString())
+      .put("status", new JsonObject().put("name", "Available"))
       .put("holdingsRecordId", createInstanceAndHolding().toString())
       .put("materialTypeId", getDvdMaterialType())
       .put("permanentLoanTypeId", getCanCirculateLoanType())
@@ -1320,6 +1363,7 @@ public class ItemApiExamples extends ApiTests {
   public void itemHasNoLastCheckInPropertiesWhenNotSet() throws Exception {
     JsonObject readingRoomItem = new JsonObject()
         .put("id", UUID.randomUUID().toString())
+        .put("status", new JsonObject().put("name", "Available"))
         .put("holdingsRecordId", createInstanceAndHolding().toString())
         .put("materialTypeId", getDvdMaterialType())
         .put("permanentLoanTypeId", getCanCirculateLoanType())
@@ -1399,6 +1443,150 @@ public class ItemApiExamples extends ApiTests {
 
     JsonObject existingItem = itemsClient.getById(postResponse.getId()).getJson();
     assertThat(existingItem, is(createdItem));
+  }
+
+  @Test
+  public void cannotCreateItemWithUnrecognisedStatusName()
+    throws InterruptedException, ExecutionException, TimeoutException {
+
+    JsonObject itemWithUnrecognizedStatus = new ItemRequestBuilder()
+      .forHolding(UUID.randomUUID())
+      .withBarcode("645398607547")
+      .temporarilyInReadingRoom()
+      .create()
+      .put("status", new JsonObject().put("name", "Unrecognized name"));
+
+    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+
+    okapiClient.post(items(""),
+      itemWithUnrecognizedStatus,
+      ResponseHandler.any(postCompleted)
+    );
+
+    Response response = postCompleted.get(5, TimeUnit.SECONDS);
+    assertThat(response, hasValidationError(
+      "Undefined status specified",
+      "status.name",
+      "Unrecognized name"
+    ));
+  }
+
+  @Test
+  public void cannotUpdateItemWithUnrecognisedStatusName()
+    throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+
+    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
+
+    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .temporarilyInReadingRoom());
+
+    JsonObject createdItem = postResponse.getJson();
+    assertThat(createdItem.getJsonObject("status").getString("name"), is("Available"));
+
+    JsonObject updatedItem = createdItem.copy()
+      .put("status", new JsonObject().put("name", "Unrecognized name"));
+
+    Response updateResponse = updateItem(updatedItem);
+    assertThat(updateResponse, hasValidationError(
+      "Undefined status specified",
+      "status.name",
+      "Unrecognized name"
+    ));
+  }
+
+  @Test
+  public void cannotRemoveStatusFromItem()
+    throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+
+    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
+
+    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .temporarilyInReadingRoom());
+
+    JsonObject createdItem = postResponse.getJson();
+    assertThat(createdItem.getJsonObject("status").getString("name"), is("Available"));
+
+    JsonObject updatedItem = createdItem.copy();
+    updatedItem.remove("status");
+
+    Response updateResponse = updateItem(updatedItem);
+    assertThat(updateResponse,
+      hasValidationError("Status is a required field", "status", null)
+    );
+  }
+
+  @Test
+  public void cannotRemoveStatusNameFromItem()
+    throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+
+    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
+
+    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .temporarilyInReadingRoom());
+
+    JsonObject createdItem = postResponse.getJson();
+    assertThat(createdItem.getJsonObject("status").getString("name"), is("Available"));
+
+    JsonObject updatedItem = createdItem.copy()
+      .put("status", new JsonObject());
+
+    Response updateResponse = updateItem(updatedItem);
+    assertThat(updateResponse,
+      hasValidationError("Status is a required field", "status", null)
+    );
+  }
+
+  @Test
+  public void statusDatePropertyPresentOnStatusUpdated()
+    throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+
+    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
+
+    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withBarcode("645398607547")
+      .temporarilyInReadingRoom()
+      .canCirculate()
+      .temporarilyCourseReserves());
+
+    assertThat(postResponse.getJson().getJsonObject("status").getString("name"),
+      is("Available"));
+    assertFalse(postResponse.getJson().getJsonObject("status").containsKey("date"));
+
+    final JsonObject itemToUpdate = postResponse.getJson().copy()
+      .put("status", new JsonObject().put("name", "Checked out"));
+    final DateTime beforeUpdateTime = DateTime.now(DateTimeZone.UTC);
+
+    itemsClient.replace(postResponse.getId(), itemToUpdate);
+
+    JsonObject updatedItem = itemsClient.getById(postResponse.getId()).getJson();
+    assertThat(updatedItem.getJsonObject("status").getString("name"), is("Checked out"));
+    assertThat(updatedItem.getJsonObject("status").getString("date"),
+      withinSecondsAfter(Seconds.seconds(2), beforeUpdateTime)
+    );
   }
 
   private Response updateItem(JsonObject item) throws MalformedURLException,
@@ -1541,7 +1729,7 @@ public class ItemApiExamples extends ApiTests {
     throws InterruptedException, TimeoutException, ExecutionException {
 
     CompletableFuture<Response> getCompletedFuture = new CompletableFuture<>();
-    okapiClient.get(BusinessLogicInterfaceUrls.items("?query=") + urlEncode(searchQuery),
+    okapiClient.get(items("?query=") + urlEncode(searchQuery),
       ResponseHandler.json(getCompletedFuture));
 
     return getCompletedFuture.get(5, TimeUnit.SECONDS).getJson();

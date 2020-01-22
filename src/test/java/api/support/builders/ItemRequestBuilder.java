@@ -3,6 +3,8 @@ package api.support.builders;
 import java.util.Collections;
 import java.util.UUID;
 
+import org.folio.inventory.domain.items.Item;
+
 import api.ApiTestSuite;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -31,13 +33,14 @@ public class ItemRequestBuilder implements Builder {
   private final String itemLevelCallNumberSuffix;
   private final String itemLevelCallNumberTypeId;
   private final String hrid;
+  private final String copyNumber;
 
   public ItemRequestBuilder() {
     this(UUID.randomUUID(), null, null, null, "645398607547",
       AVAILABLE_STATUS, bookMaterialType(), null, null, null,
       canCirculateLoanType(), null, null, null, null,
       null, null, null,
-      null, null
+      null, null, null
     );
   }
 
@@ -61,7 +64,8 @@ public class ItemRequestBuilder implements Builder {
     String itemLevelCallNumberPrefix,
     String itemLevelCallNumberSuffix,
     String itemLevelCallNumberTypeId,
-    String hrid) {
+    String hrid,
+    String copyNumber) {
 
     this.id = id;
     this.holdingId = holdingId;
@@ -83,6 +87,7 @@ public class ItemRequestBuilder implements Builder {
     this.itemLevelCallNumberSuffix = itemLevelCallNumberSuffix;
     this.itemLevelCallNumberTypeId = itemLevelCallNumberTypeId;
     this.hrid = hrid;
+    this.copyNumber = copyNumber;
   }
 
   public JsonObject create() {
@@ -119,6 +124,7 @@ public class ItemRequestBuilder implements Builder {
     includeWhenPresent(itemRequest, "itemLevelCallNumberTypeId", itemLevelCallNumberTypeId);
     includeWhenPresent(itemRequest, "hrid", hrid);
     includeWhenPresent(itemRequest, "lastCheckIn", lastCheckIn);
+    includeWhenPresent(itemRequest, Item.COPY_NUMBER_KEY, copyNumber);
 
     return itemRequest;
   }
@@ -144,7 +150,8 @@ public class ItemRequestBuilder implements Builder {
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
       this.itemLevelCallNumberTypeId,
-      this.hrid);
+      this.hrid,
+      this.copyNumber);
   }
 
   public ItemRequestBuilder forHolding(UUID holdingId) {
@@ -168,7 +175,8 @@ public class ItemRequestBuilder implements Builder {
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
       this.itemLevelCallNumberTypeId,
-      this.hrid);
+      this.hrid,
+      this.copyNumber);
   }
 
   public ItemRequestBuilder withReadOnlyTitle(String title) {
@@ -192,7 +200,8 @@ public class ItemRequestBuilder implements Builder {
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
       this.itemLevelCallNumberTypeId,
-      this.hrid);
+      this.hrid,
+      this.copyNumber);
   }
 
   public ItemRequestBuilder withReadOnlyCallNumber(String callNumber) {
@@ -216,7 +225,8 @@ public class ItemRequestBuilder implements Builder {
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
       this.itemLevelCallNumberTypeId,
-      this.hrid);
+      this.hrid,
+      this.copyNumber);
   }
 
   public ItemRequestBuilder withBarcode(String barcode) {
@@ -240,35 +250,12 @@ public class ItemRequestBuilder implements Builder {
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
       this.itemLevelCallNumberTypeId,
-      this.hrid);
+      this.hrid,
+      this.copyNumber);
   }
 
   public ItemRequestBuilder withNoBarcode() {
     return withBarcode(null);
-  }
-
-  public ItemRequestBuilder withNoStatus() {
-    return new ItemRequestBuilder(
-      this.id,
-      this.holdingId,
-      this.readOnlyTitle,
-      this.readOnlyCallNumber,
-      this.barcode,
-      null,
-      this.materialType,
-      this.readOnlyEffectiveLocation,
-      this.permanentLocation,
-      this.temporaryLocation,
-      this.permanentLoanType,
-      this.temporaryLoanType,
-      this.circulationNotes,
-      this.tags,
-      this.lastCheckIn,
-      this.itemLevelCallNumber,
-      this.itemLevelCallNumberPrefix,
-      this.itemLevelCallNumberSuffix,
-      this.itemLevelCallNumberTypeId,
-      this.hrid);
   }
 
   private ItemRequestBuilder withMaterialType(JsonObject materialType) {
@@ -292,7 +279,8 @@ public class ItemRequestBuilder implements Builder {
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
       this.itemLevelCallNumberTypeId,
-      this.hrid);
+      this.hrid,
+      this.copyNumber);
   }
 
   public ItemRequestBuilder book() {
@@ -328,7 +316,8 @@ public class ItemRequestBuilder implements Builder {
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
       this.itemLevelCallNumberTypeId,
-      this.hrid);
+      this.hrid,
+      this.copyNumber);
   }
 
   private ItemRequestBuilder withTemporaryLocation(JsonObject location) {
@@ -352,7 +341,8 @@ public class ItemRequestBuilder implements Builder {
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
       this.itemLevelCallNumberTypeId,
-      this.hrid);
+      this.hrid,
+      this.copyNumber);
   }
 
     private ItemRequestBuilder withPermanentLocation(JsonObject location) {
@@ -376,7 +366,8 @@ public class ItemRequestBuilder implements Builder {
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
       this.itemLevelCallNumberTypeId,
-      this.hrid);
+      this.hrid,
+      this.copyNumber);
   }
 
   public ItemRequestBuilder permanentlyInThirdFloor() {
@@ -416,7 +407,8 @@ public class ItemRequestBuilder implements Builder {
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
       this.itemLevelCallNumberTypeId,
-      this.hrid);
+      this.hrid,
+      this.copyNumber);
   }
 
   public ItemRequestBuilder canCirculate() {
@@ -452,7 +444,8 @@ public class ItemRequestBuilder implements Builder {
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
       this.itemLevelCallNumberTypeId,
-      this.hrid);
+      this.hrid,
+      this.copyNumber);
   }
 
   public ItemRequestBuilder withTagList(JsonObject tags) {
@@ -476,7 +469,8 @@ public class ItemRequestBuilder implements Builder {
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
       this.itemLevelCallNumberTypeId,
-      this.hrid);
+      this.hrid,
+      this.copyNumber);
   }
 
   public ItemRequestBuilder withLastCheckIn(JsonObject lastCheckIn) {
@@ -500,7 +494,8 @@ public class ItemRequestBuilder implements Builder {
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
       this.itemLevelCallNumberTypeId,
-      this.hrid);
+      this.hrid,
+      this.copyNumber);
   }
 
   public ItemRequestBuilder temporarilyCourseReserves() {
@@ -539,7 +534,8 @@ public class ItemRequestBuilder implements Builder {
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
       this.itemLevelCallNumberTypeId,
-      this.hrid);
+      this.hrid,
+      this.copyNumber);
   }
 
   private static JsonObject bookMaterialType() {
@@ -639,7 +635,8 @@ public class ItemRequestBuilder implements Builder {
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
       this.itemLevelCallNumberTypeId,
-      this.hrid);
+      this.hrid,
+      this.copyNumber);
   }
 
   public ItemRequestBuilder withItemLevelCallNumberSuffix(String itemLevelCallNumberSuffix) {
@@ -663,7 +660,8 @@ public class ItemRequestBuilder implements Builder {
       this.itemLevelCallNumberPrefix,
       itemLevelCallNumberSuffix,
       this.itemLevelCallNumberTypeId,
-      this.hrid);
+      this.hrid,
+      this.copyNumber);
   }
 
   public ItemRequestBuilder withItemLevelCallNumberPrefix(String itemLevelCallNumberPrefix) {
@@ -687,7 +685,8 @@ public class ItemRequestBuilder implements Builder {
       itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
       this.itemLevelCallNumberTypeId,
-      this.hrid);
+      this.hrid,
+      this.copyNumber);
   }
 
   public ItemRequestBuilder withItemLevelCallNumberTypeId(String itemLevelCallNumberTypeId) {
@@ -711,7 +710,8 @@ public class ItemRequestBuilder implements Builder {
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
       itemLevelCallNumberTypeId,
-      this.hrid);
+      this.hrid,
+      this.copyNumber);
   }
 
   public ItemRequestBuilder withHrid(String hrid) {
@@ -735,6 +735,32 @@ public class ItemRequestBuilder implements Builder {
       this.itemLevelCallNumberPrefix,
       this.itemLevelCallNumberSuffix,
       this.itemLevelCallNumberTypeId,
-      hrid);
+      hrid,
+      this.copyNumber);
+  }
+
+  public ItemRequestBuilder withCopyNumber(String copyNumber) {
+    return new ItemRequestBuilder(
+      this.id,
+      this.holdingId,
+      this.readOnlyTitle,
+      this.readOnlyCallNumber,
+      this.barcode,
+      this.status,
+      this.materialType,
+      this.readOnlyEffectiveLocation,
+      this.permanentLocation,
+      this.temporaryLocation,
+      this.permanentLoanType,
+      this.temporaryLoanType,
+      this.circulationNotes,
+      this.tags,
+      this.lastCheckIn,
+      this.itemLevelCallNumber,
+      this.itemLevelCallNumberPrefix,
+      this.itemLevelCallNumberSuffix,
+      this.itemLevelCallNumberTypeId,
+      this.hrid,
+      copyNumber);
   }
 }
