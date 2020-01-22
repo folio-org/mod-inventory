@@ -7,18 +7,6 @@
       "signed": false
     },
     {
-      "eventType": "CREATED_HOLDINGS_RECORD",
-      "description": "Created holdings record",
-      "eventTTL": 1,
-      "signed": false
-    },
-    {
-      "eventType": "CREATED_ITEM_RECORD",
-      "description": "Created item record",
-      "eventTTL": 1,
-      "signed": false
-    },
-    {
       "eventType": "UPDATED_INVENTORY_INSTANCE",
       "description": "Updated inventory instance",
       "eventTTL": 1,
