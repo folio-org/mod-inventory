@@ -1,10 +1,13 @@
 package org.folio.inventory.support;
 
-import io.vertx.core.json.JsonObject;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+
+import org.apache.commons.lang3.StringUtils;
+
+import io.vertx.core.json.JsonObject;
 
 public class JsonHelper {
   public static String getNestedProperty(
@@ -15,6 +18,22 @@ public class JsonHelper {
     return representation.containsKey(objectPropertyName)
       ? representation.getJsonObject(objectPropertyName).getString(nestedPropertyName)
       : null;
+  }
+
+  public static String getString(JsonObject representation, String propertyName) {
+    if (representation != null) {
+      return representation.getString(propertyName);
+    }
+
+    return null;
+  }
+
+  public static void includeIfPresent(
+    JsonObject representation, String propertyName, String value) {
+
+    if (representation != null && StringUtils.isNotBlank(propertyName) && value != null) {
+      representation.put(propertyName, value);
+    }
   }
 
   public JsonObject getJsonFileAsJsonObject(String filePath) throws IOException {
