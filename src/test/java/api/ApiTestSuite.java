@@ -20,6 +20,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 import api.isbns.IsbnUtilsApiExamples;
+import api.items.ItemAllowedStatusesSchemaTest;
 import api.items.ItemApiExamples;
 import api.items.ItemApiTitleExamples;
 import api.support.ControlledVocabularyPreparation;
@@ -35,7 +36,8 @@ import support.fakes.FakeOkapi;
   ItemApiExamples.class,
   ItemApiTitleExamples.class,
   ModsIngestExamples.class,
-  IsbnUtilsApiExamples.class
+  IsbnUtilsApiExamples.class,
+  ItemAllowedStatusesSchemaTest.class
 })
 public class ApiTestSuite {
   public static final int INVENTORY_VERTICLE_TEST_PORT = 9603;
