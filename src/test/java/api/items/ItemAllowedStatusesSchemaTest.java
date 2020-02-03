@@ -62,8 +62,7 @@ public class ItemAllowedStatusesSchemaTest extends ApiTests {
       new ItemRequestBuilder()
         .forHolding(holdingsId)
         .canCirculate()
-        .withStatus(itemStatus)
-    );
+        .withStatus(itemStatus));
 
     assertThat(createResponse.getJson().getJsonObject("status").getString("name"),
       is(itemStatus));
