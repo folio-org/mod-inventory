@@ -16,7 +16,8 @@ public enum ItemStatusName {
   ON_ORDER("On order"),
   PAGED("Paged"),
   DECLARED_LOST("Declared lost"),
-  ORDER_CLOSED("Order closed");
+  ORDER_CLOSED("Order closed"),
+  CLAIMED_RETURNED("Claimed returned");
 
   private static final Map<String, ItemStatusName> VALUE_TO_INSTANCE_MAP = initValueToInstanceMap();
   private final String value;

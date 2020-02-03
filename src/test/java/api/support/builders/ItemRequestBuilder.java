@@ -763,4 +763,29 @@ public class ItemRequestBuilder implements Builder {
       this.hrid,
       copyNumber);
   }
+
+  public ItemRequestBuilder withStatus(String status) {
+    return new ItemRequestBuilder(
+      this.id,
+      this.holdingId,
+      this.readOnlyTitle,
+      this.readOnlyCallNumber,
+      this.barcode,
+      status,
+      this.materialType,
+      this.readOnlyEffectiveLocation,
+      this.permanentLocation,
+      this.temporaryLocation,
+      this.permanentLoanType,
+      this.temporaryLoanType,
+      this.circulationNotes,
+      this.tags,
+      this.lastCheckIn,
+      this.itemLevelCallNumber,
+      this.itemLevelCallNumberPrefix,
+      this.itemLevelCallNumberSuffix,
+      this.itemLevelCallNumberTypeId,
+      this.hrid,
+      this.copyNumber);
+  }
 }

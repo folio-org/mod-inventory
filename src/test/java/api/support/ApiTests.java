@@ -13,7 +13,7 @@ import java.util.concurrent.TimeoutException;
 
 public abstract class ApiTests {
   private static boolean runningOnOwn;
-  protected final OkapiHttpClient okapiClient;
+  protected static OkapiHttpClient okapiClient;
 
   protected final ResourceClient holdingsStorageClient;
   protected final ResourceClient itemsStorageClient;
@@ -22,8 +22,7 @@ public abstract class ApiTests {
   protected final ResourceClient isbnClient;
   protected final ResourceClient usersClient;
 
-  public ApiTests() throws MalformedURLException {
-    okapiClient = ApiTestSuite.createOkapiHttpClient();
+  public ApiTests() {
     holdingsStorageClient = ResourceClient.forHoldingsStorage(okapiClient);
     itemsStorageClient = ResourceClient.forItemsStorage(okapiClient);
     itemsClient = ResourceClient.forItems(okapiClient);
@@ -44,6 +43,8 @@ public abstract class ApiTests {
       runningOnOwn = true;
       ApiTestSuite.before();
     }
+
+    okapiClient = ApiTestSuite.createOkapiHttpClient();
   }
 
   @AfterClass
