@@ -116,6 +116,11 @@
       <version>2.6.0</version>
       <type>jar</type>
     </dependency>
+    <dependency>
+      <groupId>org.folio</groupId>
+      <artifactId>mod-pubsub-client</artifactId>
+      <version>1.0.2</version>
+    </dependency>
   </dependencies>
 
   <properties>

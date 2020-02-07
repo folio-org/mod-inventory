@@ -25,6 +25,7 @@ import api.items.ItemApiExamples;
 import api.items.ItemApiTitleExamples;
 import api.support.ControlledVocabularyPreparation;
 import api.support.http.ResourceClient;
+import api.tenant.TenantApiExamples;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -37,7 +38,8 @@ import support.fakes.FakeOkapi;
   ItemApiTitleExamples.class,
   ModsIngestExamples.class,
   IsbnUtilsApiExamples.class,
-  ItemAllowedStatusesSchemaTest.class
+  ItemAllowedStatusesSchemaTest.class,
+  TenantApiExamples.class
 })
 public class ApiTestSuite {
   public static final int INVENTORY_VERTICLE_TEST_PORT = 9603;
