@@ -20,6 +20,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 import api.isbns.IsbnUtilsApiExamples;
+import api.items.ItemAllowedStatusesSchemaTest;
 import api.items.ItemApiExamples;
 import api.items.ItemApiTitleExamples;
 import api.support.ControlledVocabularyPreparation;
@@ -37,6 +38,7 @@ import support.fakes.FakeOkapi;
   ItemApiTitleExamples.class,
   ModsIngestExamples.class,
   IsbnUtilsApiExamples.class,
+  ItemAllowedStatusesSchemaTest.class,
   TenantApiExamples.class
 })
 public class ApiTestSuite {
