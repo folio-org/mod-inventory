@@ -77,10 +77,6 @@ public class ItemApiExamples extends ApiTests {
   private static final String CALL_NUMBER_PREFIX = "callNumberPrefix";
   private static final String CALL_NUMBER_TYPE_ID = UUID.randomUUID().toString();
 
-  public ItemApiExamples() throws MalformedURLException {
-    super();
-  }
-
   @Test
   public void canCreateAnItemWithoutIDAndHRID()
     throws InterruptedException,
@@ -1586,6 +1582,36 @@ public class ItemApiExamples extends ApiTests {
     assertThat(updatedItem.getJsonObject("status").getString("name"), is("Checked out"));
     assertThat(updatedItem.getJsonObject("status").getString("date"),
       withinSecondsAfter(Seconds.seconds(2), beforeUpdateTime)
+    );
+  }
+
+  @Test
+  public void cannotMarkClaimedReturnedItemAsMissing()
+    throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+
+    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
+
+    IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withStatus("Claimed returned")
+      .withBarcode("645398607547")
+      .canCirculate());
+
+    String itemStatus = createdItem.getJson().getJsonObject("status")
+      .getString("name");
+    assertThat(itemStatus, is("Claimed returned"));
+
+    JsonObject updatedItem = createdItem.getJson().copy()
+      .put("status", new JsonObject().put("name", "Missing"));
+
+    Response updateResponse = updateItem(updatedItem);
+    assertThat(updateResponse,
+      hasValidationError("Claimed returned item can not be marked as missing",
+        "status.name", "Missing")
     );
   }
 

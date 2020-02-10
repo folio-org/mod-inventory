@@ -96,8 +96,8 @@ class ItemRepresentation {
     JsonObject representation = new JsonObject();
     representation.put("id", item.id);
 
-    if(item.getStatus().getString(Status.NAME_KEY) != null) {
-      representation.put(Item.STATUS_KEY, item.status.getJson());
+    if(item.getStatus().getName() != null) {
+      representation.put(Item.STATUS_KEY, item.getStatus().getJson());
     }
 
     List<JsonObject> contributorNames = new ArrayList<>();

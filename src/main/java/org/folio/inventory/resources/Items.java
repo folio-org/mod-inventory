@@ -4,7 +4,9 @@ import static org.folio.inventory.common.FutureAssistance.allOf;
 import static org.folio.inventory.support.CqlHelper.multipleRecordsCqlQuery;
 import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
 import static org.folio.inventory.support.JsonHelper.getNestedProperty;
+import static org.folio.inventory.support.http.server.JsonResponse.unprocessableEntity;
 import static org.folio.inventory.validation.ItemStatusValidator.itemHasCorrectStatus;
+import static org.folio.inventory.validation.ItemUpdateValidator.validateItemUpdate;
 
 import java.io.UnsupportedEncodingException;
 import java.lang.invoke.MethodHandles;
@@ -31,6 +33,7 @@ import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.items.CirculationNote;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
+import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.domain.items.LastCheckIn;
 import org.folio.inventory.domain.items.Note;
 import org.folio.inventory.domain.items.Status;
@@ -50,6 +53,7 @@ import org.folio.inventory.support.http.server.JsonResponse;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
 import org.folio.inventory.support.http.server.SuccessResponse;
 import org.folio.inventory.support.http.server.ValidationError;
+import org.folio.inventory.validation.ItemUpdateValidator;
 
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
@@ -138,7 +142,7 @@ public class Items {
 
     Optional<ValidationError> validationError = itemHasCorrectStatus(item);
     if (validationError.isPresent()) {
-      JsonResponse.unprocessableEntity(routingContext.response(), validationError.get());
+      unprocessableEntity(routingContext.response(), validationError.get());
       return;
     }
 
@@ -177,7 +181,7 @@ public class Items {
 
     Optional<ValidationError> validationError = itemHasCorrectStatus(itemRequest);
     if (validationError.isPresent()) {
-      JsonResponse.unprocessableEntity(routingContext.response(), validationError.get());
+      unprocessableEntity(routingContext.response(), validationError.get());
       return;
     }
 
@@ -186,17 +190,15 @@ public class Items {
     ItemCollection itemCollection = storage.getItemCollection(context);
     UserCollection userCollection = storage.getUserCollection(context);
 
-    itemCollection.findById(routingContext.request().getParam("id"), getItemResult -> {
+    final String itemId = routingContext.request().getParam("id");
+    itemCollection.findById(itemId, getItemResult -> {
       Item oldItem = getItemResult.getResult();
       if (oldItem != null) {
-        if (!Objects.equals(newItem.getHrid(), oldItem.getHrid())) {
-          log.warn("The HRID property can not be updated, old value is '{}' but new is '{}'",
-            oldItem.getHrid(), newItem.getHrid()
-          );
+        Optional<ValidationError> updateValidationErrors =
+          validateItemUpdate(oldItem, newItem);
 
-          JsonResponse.unprocessableEntity(routingContext.response(),
-            "HRID can not be updated", "hrid", newItem.getHrid()
-          );
+        if (updateValidationErrors.isPresent()) {
+          unprocessableEntity(routingContext.response(), updateValidationErrors.get());
           return;
         }
 

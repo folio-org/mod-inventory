@@ -130,8 +130,8 @@ class ExternalStorageModuleItemCollection
       ? item.id
       : UUID.randomUUID().toString());
 
-    if(item.getStatus().getString(Status.NAME_KEY) != null) {
-      itemToSend.put("status", item.getStatus());
+    if(item.getStatus().getName() != null) {
+      itemToSend.put("status", item.getStatus().getJson());
     }
 
     if(item.getLastCheckIn() != null) {

@@ -328,8 +328,8 @@ public class Item {
     return holdingId;
   }
 
-  public JsonObject getStatus() {
-    return status.getJson();
+  public Status getStatus() {
+    return status;
   }
 
   public String getMaterialTypeId() {
