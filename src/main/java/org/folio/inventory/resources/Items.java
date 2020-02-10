@@ -33,7 +33,6 @@ import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.items.CirculationNote;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
-import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.domain.items.LastCheckIn;
 import org.folio.inventory.domain.items.Note;
 import org.folio.inventory.domain.items.Status;
@@ -53,7 +52,6 @@ import org.folio.inventory.support.http.server.JsonResponse;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
 import org.folio.inventory.support.http.server.SuccessResponse;
 import org.folio.inventory.support.http.server.ValidationError;
-import org.folio.inventory.validation.ItemUpdateValidator;
 
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
@@ -196,7 +194,6 @@ public class Items {
       if (oldItem != null) {
         Optional<ValidationError> updateValidationErrors =
           validateItemUpdate(oldItem, newItem);
-
         if (updateValidationErrors.isPresent()) {
           unprocessableEntity(routingContext.response(), updateValidationErrors.get());
           return;

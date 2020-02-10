@@ -11,6 +11,8 @@ import io.vertx.ext.web.RoutingContext;
 
 public final class ItemUpdateValidator {
 
+  private ItemUpdateValidator() {}
+
   /**
    * Validation logic for {@link org.folio.inventory.resources.Items#update(RoutingContext)}
    * method.
