@@ -8,8 +8,12 @@ public class ClientErrorResponse {
   private ClientErrorResponse() { }
 
   public static void notFound(HttpServerResponse response) {
+    notFound(response, "Not Found");
+  }
+
+  public static void notFound(HttpServerResponse response, String message) {
     response.setStatusCode(404);
-    response.end("Not Found");
+    response.end(message);
   }
 
   public static void badRequest(HttpServerResponse response, String reason) {

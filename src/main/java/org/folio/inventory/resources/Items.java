@@ -6,7 +6,8 @@ import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
 import static org.folio.inventory.support.JsonHelper.getNestedProperty;
 import static org.folio.inventory.support.http.server.JsonResponse.unprocessableEntity;
 import static org.folio.inventory.validation.ItemStatusValidator.itemHasCorrectStatus;
-import static org.folio.inventory.validation.ItemUpdateValidator.validateItemUpdate;
+import static org.folio.inventory.validation.ItemsValidator.claimedReturnedMarkedAsMissing;
+import static org.folio.inventory.validation.ItemsValidator.hridChanged;
 
 import java.io.UnsupportedEncodingException;
 import java.lang.invoke.MethodHandles;
@@ -42,6 +43,7 @@ import org.folio.inventory.domain.user.UserCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.support.CqlHelper;
+import org.folio.inventory.support.EndpointFailureHandler;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
@@ -52,7 +54,9 @@ import org.folio.inventory.support.http.server.JsonResponse;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
 import org.folio.inventory.support.http.server.SuccessResponse;
 import org.folio.inventory.support.http.server.ValidationError;
+import org.folio.inventory.validation.ItemsValidator;
 
+import io.vertx.core.Future;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -189,16 +193,23 @@ public class Items {
     UserCollection userCollection = storage.getUserCollection(context);
 
     final String itemId = routingContext.request().getParam("id");
-    itemCollection.findById(itemId, getItemResult -> {
-      Item oldItem = getItemResult.getResult();
-      if (oldItem != null) {
-        Optional<ValidationError> updateValidationErrors =
-          validateItemUpdate(oldItem, newItem);
-        if (updateValidationErrors.isPresent()) {
-          unprocessableEntity(routingContext.response(), updateValidationErrors.get());
+    final Future<Success<Item>> getItemFuture = Future.future();
+
+    itemCollection.findById(itemId, getItemFuture::complete,
+      FailureResponseConsumer.serverError(routingContext.response()));
+
+    getItemFuture
+      .map(Success::getResult)
+      .compose(ItemsValidator::itemNotFound)
+      .compose(oldItem -> hridChanged(oldItem, newItem))
+      .compose(oldItem -> claimedReturnedMarkedAsMissing(oldItem, newItem))
+      .setHandler(result -> {
+        if (result.failed()) {
+          EndpointFailureHandler.handleFailure(result, routingContext);
           return;
         }
 
+        Item oldItem = result.result();
         if (hasSameBarcode(newItem, oldItem)) {
           findUserAndUpdateItem(routingContext, newItem, oldItem, userCollection, itemCollection);
         } else {
@@ -208,11 +219,7 @@ public class Items {
             ServerErrorResponse.internalError(routingContext.response(), e.toString());
           }
         }
-      }
-      else {
-        ClientErrorResponse.notFound(routingContext.response());
-      }
-    }, FailureResponseConsumer.serverError(routingContext.response()));
+      });
   }
 
   private void deleteById(RoutingContext routingContext) {
