@@ -31,7 +31,7 @@ public final class ItemUpdateValidator {
 
     if (claimedReturnedItemMarkedMissing(oldItem, newItem)) {
       validationError = new ValidationError(
-        "Claimed returned item can not be marked as missing",
+        "Claimed returned item cannot be marked as missing",
         "status.name", ItemStatusName.MISSING.value());
     }
 
