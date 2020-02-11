@@ -1610,9 +1610,36 @@ public class ItemApiExamples extends ApiTests {
 
     Response updateResponse = updateItem(updatedItem);
     assertThat(updateResponse,
-      hasValidationError("Claimed returned item can not be marked as missing",
+      hasValidationError("Claimed returned item cannot be marked as missing",
         "status.name", "Missing")
     );
+  }
+
+  @Test
+  public void canMarkClaimedReturnedItemAsAvailable()
+    throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+
+    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
+
+    IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withStatus("Claimed returned")
+      .withBarcode("645398607547")
+      .canCirculate());
+
+    String itemStatus = createdItem.getJson().getJsonObject("status")
+      .getString("name");
+    assertThat(itemStatus, is("Claimed returned"));
+
+    JsonObject updatedItem = createdItem.getJson().copy()
+      .put("status", new JsonObject().put("name", "Available"));
+
+    Response updateResponse = updateItem(updatedItem);
+    assertThat(updateResponse.getStatusCode(), is(204));
   }
 
   private Response updateItem(JsonObject item) throws MalformedURLException,
