@@ -1,5 +1,6 @@
 package org.folio.inventory.storage.external;
 
+import static org.folio.inventory.domain.converters.EntityConverters.converterForClass;
 import static org.folio.inventory.support.JsonArrayHelper.toList;
 
 import java.util.ArrayList;
@@ -75,7 +76,7 @@ class ExternalStorageModuleItemCollection
     return new Item(
       itemFromServer.getString("id"),
       itemFromServer.getString("holdingsRecordId"),
-      new Status(itemFromServer.getJsonObject("status")),
+      converterForClass(Status.class).fromJson(itemFromServer.getJsonObject("status")),
       itemFromServer.getString("materialTypeId"),
       itemFromServer.getString("permanentLoanTypeId"),
       itemFromServer.getJsonObject("metadata"))
@@ -130,9 +131,7 @@ class ExternalStorageModuleItemCollection
       ? item.id
       : UUID.randomUUID().toString());
 
-    if(item.getStatus().getName() != null) {
-      itemToSend.put("status", item.getStatus().getJson());
-    }
+    itemToSend.put("status", converterForClass(Status.class).toJson(item.getStatus()));
 
     if(item.getLastCheckIn() != null) {
       itemToSend.put(Item.LAST_CHECK_IN, item.getLastCheckIn().toJson());

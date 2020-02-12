@@ -1,6 +1,7 @@
 package org.folio.inventory.resources;
 
 import static org.folio.inventory.common.FutureAssistance.allOf;
+import static org.folio.inventory.domain.converters.EntityConverters.converterForClass;
 import static org.folio.inventory.support.CqlHelper.multipleRecordsCqlQuery;
 import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
 import static org.folio.inventory.support.JsonHelper.getNestedProperty;
@@ -275,7 +276,8 @@ public class Items {
     List<String> yearCaption = toListOfStrings(
       itemRequest.getJsonArray(Item.YEAR_CAPTION_KEY));
 
-    Status status = new Status(itemRequest.getJsonObject(Item.STATUS_KEY));
+    Status status = converterForClass(Status.class)
+      .fromJson(itemRequest.getJsonObject(Item.STATUS_KEY));
 
     List<Note> notes = itemRequest.containsKey(Item.NOTES_KEY)
       ? JsonArrayHelper.toList(itemRequest.getJsonArray(Item.NOTES_KEY)).stream()
