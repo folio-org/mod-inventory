@@ -14,6 +14,7 @@ import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
+import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.domain.items.Status;
 import org.folio.inventory.resources.ingest.IngestJob;
 import org.folio.inventory.resources.ingest.IngestJobState;
@@ -138,7 +139,7 @@ public class IngestMessageProcessor {
 
             return new Item(null,
               holdingId,
-              new Status("Available"),
+              new Status(ItemStatusName.AVAILABLE),
               materialTypes.getString("Book") != null
                 ? materialTypes.getString("Book")
                 : materialTypes.getString("book"),

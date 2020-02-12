@@ -2,6 +2,7 @@ package org.folio.inventory.domain.items;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 
@@ -67,7 +68,7 @@ public class Item {
   private String itemDamagedStatusDate;
   private List<Note> notes = new ArrayList();
   private List<CirculationNote> circulationNotes = new ArrayList();
-  public final Status status;
+  private final Status status;
   private final String materialTypeId;
   private final String permanentLoanTypeId;
 
@@ -93,7 +94,7 @@ public class Item {
 
     this.id = id;
     this.holdingId = holdingId;
-    this.status = status;
+    this.status = Objects.requireNonNull(status, "Status is required");
     this.materialTypeId = materialTypeId;
     this.permanentLoanTypeId = permanentLoanTypeId;
     this.metadata = metadata;
@@ -328,8 +329,8 @@ public class Item {
     return holdingId;
   }
 
-  public JsonObject getStatus() {
-    return status.getJson();
+  public Status getStatus() {
+    return status;
   }
 
   public String getMaterialTypeId() {

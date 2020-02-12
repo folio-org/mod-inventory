@@ -1,10 +1,14 @@
 package org.folio.inventory.resources;
 
 import static org.folio.inventory.common.FutureAssistance.allOf;
+import static org.folio.inventory.domain.converters.EntityConverters.converterForClass;
 import static org.folio.inventory.support.CqlHelper.multipleRecordsCqlQuery;
 import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
 import static org.folio.inventory.support.JsonHelper.getNestedProperty;
+import static org.folio.inventory.support.http.server.JsonResponse.unprocessableEntity;
 import static org.folio.inventory.validation.ItemStatusValidator.itemHasCorrectStatus;
+import static org.folio.inventory.validation.ItemsValidator.claimedReturnedMarkedAsMissing;
+import static org.folio.inventory.validation.ItemsValidator.hridChanged;
 
 import java.io.UnsupportedEncodingException;
 import java.lang.invoke.MethodHandles;
@@ -40,6 +44,7 @@ import org.folio.inventory.domain.user.UserCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.support.CqlHelper;
+import org.folio.inventory.support.EndpointFailureHandler;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
@@ -50,7 +55,9 @@ import org.folio.inventory.support.http.server.JsonResponse;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
 import org.folio.inventory.support.http.server.SuccessResponse;
 import org.folio.inventory.support.http.server.ValidationError;
+import org.folio.inventory.validation.ItemsValidator;
 
+import io.vertx.core.Future;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -138,7 +145,7 @@ public class Items {
 
     Optional<ValidationError> validationError = itemHasCorrectStatus(item);
     if (validationError.isPresent()) {
-      JsonResponse.unprocessableEntity(routingContext.response(), validationError.get());
+      unprocessableEntity(routingContext.response(), validationError.get());
       return;
     }
 
@@ -177,7 +184,7 @@ public class Items {
 
     Optional<ValidationError> validationError = itemHasCorrectStatus(itemRequest);
     if (validationError.isPresent()) {
-      JsonResponse.unprocessableEntity(routingContext.response(), validationError.get());
+      unprocessableEntity(routingContext.response(), validationError.get());
       return;
     }
 
@@ -186,20 +193,24 @@ public class Items {
     ItemCollection itemCollection = storage.getItemCollection(context);
     UserCollection userCollection = storage.getUserCollection(context);
 
-    itemCollection.findById(routingContext.request().getParam("id"), getItemResult -> {
-      Item oldItem = getItemResult.getResult();
-      if (oldItem != null) {
-        if (!Objects.equals(newItem.getHrid(), oldItem.getHrid())) {
-          log.warn("The HRID property can not be updated, old value is '{}' but new is '{}'",
-            oldItem.getHrid(), newItem.getHrid()
-          );
+    final String itemId = routingContext.request().getParam("id");
+    final Future<Success<Item>> getItemFuture = Future.future();
 
-          JsonResponse.unprocessableEntity(routingContext.response(),
-            "HRID can not be updated", "hrid", newItem.getHrid()
-          );
+    itemCollection.findById(itemId, getItemFuture::complete,
+      FailureResponseConsumer.serverError(routingContext.response()));
+
+    getItemFuture
+      .map(Success::getResult)
+      .compose(ItemsValidator::itemNotFound)
+      .compose(oldItem -> hridChanged(oldItem, newItem))
+      .compose(oldItem -> claimedReturnedMarkedAsMissing(oldItem, newItem))
+      .setHandler(result -> {
+        if (result.failed()) {
+          EndpointFailureHandler.handleFailure(result, routingContext);
           return;
         }
 
+        Item oldItem = result.result();
         if (hasSameBarcode(newItem, oldItem)) {
           findUserAndUpdateItem(routingContext, newItem, oldItem, userCollection, itemCollection);
         } else {
@@ -209,11 +220,7 @@ public class Items {
             ServerErrorResponse.internalError(routingContext.response(), e.toString());
           }
         }
-      }
-      else {
-        ClientErrorResponse.notFound(routingContext.response());
-      }
-    }, FailureResponseConsumer.serverError(routingContext.response()));
+      });
   }
 
   private void deleteById(RoutingContext routingContext) {
@@ -269,7 +276,8 @@ public class Items {
     List<String> yearCaption = toListOfStrings(
       itemRequest.getJsonArray(Item.YEAR_CAPTION_KEY));
 
-    Status status = new Status(itemRequest.getJsonObject(Item.STATUS_KEY));
+    Status status = converterForClass(Status.class)
+      .fromJson(itemRequest.getJsonObject(Item.STATUS_KEY));
 
     List<Note> notes = itemRequest.containsKey(Item.NOTES_KEY)
       ? JsonArrayHelper.toList(itemRequest.getJsonArray(Item.NOTES_KEY)).stream()

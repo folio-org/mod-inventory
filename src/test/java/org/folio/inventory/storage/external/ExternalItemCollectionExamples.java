@@ -103,7 +103,7 @@ public class ExternalItemCollectionExamples {
     Item smallAngry = getItem(allItems, "036000291452");
 
     assertThat(smallAngry, notNullValue());
-    assertThat(smallAngry.getStatus().getString(Status.NAME_KEY), is("Available"));
+    assertThat(smallAngry.getStatus().getName(), is(ItemStatusName.AVAILABLE));
     assertThat(smallAngry.getMaterialTypeId(), is(bookMaterialTypeId));
     assertThat(smallAngry.getPermanentLoanTypeId(), is(canCirculateLoanTypeId));
     assertThat(smallAngry.getTemporaryLocationId(), is(annexLibraryLocationId));
@@ -111,7 +111,7 @@ public class ExternalItemCollectionExamples {
     Item nod = getItem(allItems, "565578437802");
 
     assertThat(nod, notNullValue());
-    assertThat(nod.getStatus().getString(Status.NAME_KEY), is("Available"));
+    assertThat(nod.getStatus().getName(), is(ItemStatusName.AVAILABLE));
     assertThat(nod.getMaterialTypeId(), is(bookMaterialTypeId));
     assertThat(nod.getPermanentLoanTypeId(), is(canCirculateLoanTypeId));
     assertThat(nod.getTemporaryLocationId(), is(annexLibraryLocationId));
@@ -119,7 +119,7 @@ public class ExternalItemCollectionExamples {
     Item uprooted = getItem(allItems, "657670342075");
 
     assertThat(uprooted, notNullValue());
-    assertThat(uprooted.getStatus().getString(Status.NAME_KEY), is("Available"));
+    assertThat(uprooted.getStatus().getName(), is(ItemStatusName.AVAILABLE));
     assertThat(uprooted.getMaterialTypeId(), is(bookMaterialTypeId));
     assertThat(uprooted.getPermanentLoanTypeId(), is(canCirculateLoanTypeId));
     assertThat(uprooted.getTemporaryLocationId(), is(annexLibraryLocationId));
@@ -173,7 +173,7 @@ public class ExternalItemCollectionExamples {
     assertThat(updated.getTemporaryLocationId(), is(added.getTemporaryLocationId()));
     assertThat(updated.getMaterialTypeId(), is(added.getMaterialTypeId()));
     assertThat(updated.getPermanentLoanTypeId(), is(added.getPermanentLoanTypeId()));
-    assertThat(updated.getStatus().getString(Status.NAME_KEY), is(ItemStatusName.CHECKED_OUT.value()));
+    assertThat(updated.getStatus().getName(), is(ItemStatusName.CHECKED_OUT));
   }
 
   @Test
@@ -317,14 +317,14 @@ public class ExternalItemCollectionExamples {
 
     assertThat(foundItem, notNullValue());
     assertThat(foundItem.getBarcode(), is("036000291452"));
-    assertThat(foundItem.getStatus().getString(Status.NAME_KEY), is("Available"));
+    assertThat(foundItem.getStatus().getName(), is(ItemStatusName.AVAILABLE));
     assertThat(foundItem.getMaterialTypeId(), is(bookMaterialTypeId));
     assertThat(foundItem.getPermanentLoanTypeId(), is(canCirculateLoanTypeId));
     assertThat(foundItem.getTemporaryLocationId(), is(annexLibraryLocationId));
 
     assertThat(otherFoundItem, notNullValue());
     assertThat(otherFoundItem.getBarcode(), is("565578437802"));
-    assertThat(otherFoundItem.getStatus().getString(Status.NAME_KEY), is("Available"));
+    assertThat(otherFoundItem.getStatus().getName(), is(ItemStatusName.AVAILABLE));
     assertThat(otherFoundItem.getMaterialTypeId(), is(bookMaterialTypeId));
     assertThat(otherFoundItem.getPermanentLoanTypeId(), is(canCirculateLoanTypeId));
     assertThat(otherFoundItem.getTemporaryLocationId(), is(annexLibraryLocationId));
