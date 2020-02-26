@@ -561,6 +561,8 @@ public class InstancesApiExamples extends ApiTests {
       "Instance is controlled by MARC record, these fields are blocked and can not be updated: " +
         "physicalDescriptions,notes,languages,identifiers,instanceTypeId,modeOfIssuanceId,subjects," +
         "catalogedDate,source,title,indexTitle,publicationFrequency,electronicAccess,publicationRange," +
+        "physicalDescriptions,notes,languages,identifiers,instanceTypeId,subjects," +
+        "source,title,indexTitle,publicationFrequency,electronicAccess,publicationRange," +
         "classifications,editions,hrid,series,instanceFormatIds,publication,contributors," +
         "alternativeTitles"));
 
