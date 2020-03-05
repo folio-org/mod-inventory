@@ -76,10 +76,11 @@ public class InstancesBatch extends AbstractInstances {
             requestBody.getInteger(BATCH_RESPONSE_FIELD_TOTAL_RECORDS)));
 
           if (!createdInstances.isEmpty()) {
-            updateInstancesRelationships(validInstances, createdInstances, routingContext, webContext).setHandler(ar -> {
-              JsonObject responseBody = getBatchResponse(createdInstances, errorMessages, webContext);
-              RedirectResponse.created(routingContext.response(), Buffer.buffer(responseBody.encodePrettily()));
-            });
+            updateReletedRecords(validInstances, createdInstances, routingContext, webContext).
+              setHandler(ar -> {
+                JsonObject responseBody = getBatchResponse(createdInstances, errorMessages, webContext);
+                RedirectResponse.created(routingContext.response(), Buffer.buffer(responseBody.encodePrettily()));
+              });
           } else {
             JsonObject responseBody = getBatchResponse(createdInstances, errorMessages, webContext);
             RedirectResponse.serverError(routingContext.response(), Buffer.buffer(responseBody.encodePrettily()));
@@ -146,7 +147,9 @@ public class InstancesBatch extends AbstractInstances {
 
   private JsonObject getBatchResponse(List<Instance> createdInstances, List<String> errorMessages, WebContext webContext) {
     List<JsonObject> jsonInstances = createdInstances.stream()
-      .map(instance -> toRepresentation((Instance) instance, new ArrayList<>(), new ArrayList<>(), webContext)).collect(Collectors.toList());
+      .map(instance -> toRepresentation(instance, new ArrayList<>(), new ArrayList<>(),
+        instance.getPrecedingTitles(), instance.getSucceedingTitles(), webContext))
+      .collect(Collectors.toList());
 
     return new JsonObject()
       .put(BATCH_RESPONSE_FIELD_INSTANCES, new JsonArray(jsonInstances))
@@ -174,7 +177,7 @@ public class InstancesBatch extends AbstractInstances {
    * @param routingContext routingContext
    * @param webContext webContext
    */
-  private Future<CompositeFuture> updateInstancesRelationships(List<JsonObject> newInstances, List<Instance> createdInstances,
+  private Future<CompositeFuture> updateReletedRecords(List<JsonObject> newInstances, List<Instance> createdInstances,
                                                                RoutingContext routingContext, WebContext webContext) {
     Future<CompositeFuture> resultFuture = Future.future();
     try {
@@ -187,9 +190,11 @@ public class InstancesBatch extends AbstractInstances {
         if (newInstance != null) {
           createdInstance.setParentInstances(newInstance.getParentInstances());
           createdInstance.setChildInstances(newInstance.getChildInstances());
+          createdInstance.setPrecedingTitles(newInstance.getPrecedingTitles());
+          createdInstance.setSucceedingTitles(newInstance.getSucceedingTitles());
           Future updateFuture = Future.future();
           updateRelationshipsFutures.add(updateFuture);
-          updateInstanceRelationships(createdInstance, routingContext, webContext, o -> updateFuture.complete());
+          updateRelatedRecords(routingContext, webContext, createdInstance, o -> updateFuture.complete());
         }
       }
       resultFuture.handle(CompositeFuture.join(updateRelationshipsFutures));
