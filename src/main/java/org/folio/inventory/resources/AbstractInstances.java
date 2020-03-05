@@ -84,10 +84,8 @@ public abstract class AbstractInstances {
           JsonObject json = result.getJson();
           List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("instanceRelationships"));
           Map<String, InstanceRelationship> existingRelationships = new HashMap();
-          relationsList.stream().map(rel -> new InstanceRelationship(rel)).forEachOrdered(relObj -> {
-            existingRelationships.put(relObj.id, relObj);
-
-          });
+          relationsList.stream().map(rel -> new InstanceRelationship(rel)).forEachOrdered(relObj ->
+            existingRelationships.put(relObj.id, relObj));
           Map<String, InstanceRelationship> updatingRelationships = new HashMap();
           if (instance.getParentInstances() != null) {
             instance.getParentInstances().forEach(parent -> {
@@ -111,27 +109,8 @@ public abstract class AbstractInstances {
                   child.instanceRelationshipTypeId));
             });
           }
-          updatingRelationships.keySet().forEach(updatingKey -> {
-            InstanceRelationship relation = updatingRelationships.get(updatingKey);
-            if (existingRelationships.containsKey(updatingKey)) {
-              if (!updatingRelationships.get(updatingKey).equals(existingRelationships.get(updatingKey))) {
-                CompletableFuture<Response> newFuture = new CompletableFuture<>();
-                allFutures.add(newFuture);
-                relatedInstancesClient.put(updatingKey, relation, newFuture::complete);
-              }
-            } else {
-              CompletableFuture<Response> newFuture = new CompletableFuture<>();
-              allFutures.add(newFuture);
-              relatedInstancesClient.post(relation, newFuture::complete);
-            }
-          });
-          existingRelationships.keySet().forEach(existingKey -> {
-            if (!updatingRelationships.containsKey(existingKey)) {
-              CompletableFuture<Response> newFuture = new CompletableFuture<>();
-              allFutures.add(newFuture);
-              relatedInstancesClient.delete(existingKey, newFuture::complete);
-            }
-          });
+          update(relatedInstancesClient, allFutures, existingRelationships, updatingRelationships);
+
           CompletableFuture.allOf(allFutures.toArray(new CompletableFuture<?>[]{}))
             .thenAccept(respond);
         }
@@ -166,64 +145,100 @@ public abstract class AbstractInstances {
         if (result.getStatusCode() == 200) {
           JsonObject json = result.getJson();
           List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("precedingSucceedingTitles"));
-          Map<String, PrecedingSucceedingTitle> existingPrecedingSucceedingTitles = new HashMap();
-          relationsList.stream().map(PrecedingSucceedingTitle::new).forEachOrdered(relObj -> {
-            existingPrecedingSucceedingTitles.put(relObj.id, relObj);
-          });
-          Map<String, PrecedingSucceedingTitle> updatingPrecedingSuccedingTitles = new HashMap();
-          if (instance.getPrecedingTitles() != null) {
-            instance.getPrecedingTitles().forEach(parent -> {
-              String id = (parent.id == null ? UUID.randomUUID().toString() : parent.id);
-              PrecedingSucceedingTitle precedingSucceedingTitle = new PrecedingSucceedingTitle(
-                id,
-                parent.precedingInstanceId,
-                instance.getId(),
-                parent.title,
-                parent.hrid,
-                parent.identifiers);
+          Map<String, PrecedingSucceedingTitle> existingPrecedingSucceedingTitles =
+            getExistedPrecedingSucceedingTitles(relationsList);
+          Map<String, PrecedingSucceedingTitle> updatingPrecedingSucceedingTitles =
+            getUpdatingPrecedingSucceedingTitles(instance);
 
-              updatingPrecedingSuccedingTitles.put(id, precedingSucceedingTitle);
-            });
-          }
-          if (instance.getSucceedingTitles() != null) {
-            instance.getSucceedingTitles().forEach(child -> {
-              String id = (child.id == null ? UUID.randomUUID().toString() : child.id);
-              updatingPrecedingSuccedingTitles.put(id,
-                new PrecedingSucceedingTitle(
-                  id,
-                  instance.getId(),
-                  child.succeedingInstanceId,
-                  child.title,
-                  child.hrid,
-                  child.identifiers));
-            });
-          }
-          updatingPrecedingSuccedingTitles.keySet().forEach(updatingKey -> {
-            PrecedingSucceedingTitle relation = updatingPrecedingSuccedingTitles.get(updatingKey);
-            if (existingPrecedingSucceedingTitles.containsKey(updatingKey)) {
-              if (!updatingPrecedingSuccedingTitles.get(updatingKey).equals(existingPrecedingSucceedingTitles.get(updatingKey))) {
-                CompletableFuture<Response> newFuture = new CompletableFuture<>();
-                allFutures.add(newFuture);
-                precedingSucceedingTitlesClient.put(updatingKey, relation, newFuture::complete);
-              }
-            } else {
-              CompletableFuture<Response> newFuture = new CompletableFuture<>();
-              allFutures.add(newFuture);
-              precedingSucceedingTitlesClient.post(relation, newFuture::complete);
-            }
-          });
-          existingPrecedingSucceedingTitles.keySet().forEach(existingKey -> {
-            if (!updatingPrecedingSuccedingTitles.containsKey(existingKey)) {
-              CompletableFuture<Response> newFuture = new CompletableFuture<>();
-              allFutures.add(newFuture);
-              precedingSucceedingTitlesClient.delete(existingKey, newFuture::complete);
-            }
-          });
-          allOf(allFutures)
-            .thenAccept(respond);
+          update(precedingSucceedingTitlesClient,
+            allFutures, existingPrecedingSucceedingTitles, updatingPrecedingSucceedingTitles);
+
+          allOf(allFutures).thenAccept(respond);
         }
       });
     }
+  }
+
+  private Map<String, PrecedingSucceedingTitle> getExistedPrecedingSucceedingTitles(
+    List<JsonObject> relationsList) {
+
+    Map<String, PrecedingSucceedingTitle> existingPrecedingSucceedingTitles = new HashMap();
+    relationsList.stream().map(PrecedingSucceedingTitle::new).forEachOrdered(relObj ->
+      existingPrecedingSucceedingTitles.put(relObj.id, relObj));
+
+    return existingPrecedingSucceedingTitles;
+  }
+
+  private <T> void update(CollectionResourceClient resourceClient,
+    List<CompletableFuture<Response>> allFutures,
+    Map<String, T> existingObjects, Map<String, T> updatingObjects) {
+
+    createOrEdit(resourceClient, allFutures, existingObjects, updatingObjects);
+    delete(resourceClient, allFutures, existingObjects, updatingObjects);
+  }
+
+  private <T> void delete(CollectionResourceClient resourceClient,
+   List<CompletableFuture<Response>> allFutures, Map<String, T> existingObjects,
+   Map<String, T> updatingObjects) {
+
+    existingObjects.keySet().stream()
+      .filter(key -> !updatingObjects.containsKey(key)).forEach(existingKey -> {
+      CompletableFuture<Response> newFuture = new CompletableFuture<>();
+      allFutures.add(newFuture);
+      resourceClient.delete(existingKey, newFuture::complete);
+    });
+  }
+
+  private <T> void createOrEdit(CollectionResourceClient resourceClient,
+                                List<CompletableFuture<Response>> allFutures, Map<String, T> existingObjects,
+                                Map<String, T> updatingObjects) {
+
+    updatingObjects.keySet().forEach(updatingKey -> {
+      T object = updatingObjects.get(updatingKey);
+      if (existingObjects.containsKey(updatingKey)) {
+        if (!updatingObjects.get(updatingKey).equals(existingObjects.get(updatingKey))) {
+          CompletableFuture<Response> newFuture = new CompletableFuture<>();
+          allFutures.add(newFuture);
+          resourceClient.put(updatingKey, object, newFuture::complete);
+        }
+      } else {
+        CompletableFuture<Response> newFuture = new CompletableFuture<>();
+        allFutures.add(newFuture);
+        resourceClient.post(object, newFuture::complete);
+      }
+    });
+  }
+
+  private Map<String, PrecedingSucceedingTitle> getUpdatingPrecedingSucceedingTitles(Instance instance) {
+    Map<String, PrecedingSucceedingTitle> updatingPrecedingSucceedingTitles = new HashMap();
+    if (instance.getPrecedingTitles() != null) {
+      instance.getPrecedingTitles().forEach(parent -> {
+        String id = (parent.id == null ? UUID.randomUUID().toString() : parent.id);
+        PrecedingSucceedingTitle precedingSucceedingTitle = new PrecedingSucceedingTitle(
+          id,
+          parent.precedingInstanceId,
+          instance.getId(),
+          parent.title,
+          parent.hrid,
+          parent.identifiers);
+
+        updatingPrecedingSucceedingTitles.put(id, precedingSucceedingTitle);
+      });
+    }
+    if (instance.getSucceedingTitles() != null) {
+      instance.getSucceedingTitles().forEach(child -> {
+        String id = (child.id == null ? UUID.randomUUID().toString() : child.id);
+        updatingPrecedingSucceedingTitles.put(id,
+          new PrecedingSucceedingTitle(
+            id,
+            instance.getId(),
+            child.succeedingInstanceId,
+            child.title,
+            child.hrid,
+            child.identifiers));
+      });
+    }
+    return updatingPrecedingSucceedingTitles;
   }
 
   /**
@@ -485,7 +500,7 @@ public abstract class AbstractInstances {
     return format("query=succeedingInstanceId==(%s)+or+precedingInstanceId==(%s)", idList, idList);
   }
 
-  protected  <T> CompletableFuture<List<T>> allResultsOf(
+  protected <T> CompletableFuture<List<T>> allResultsOf(
     List<CompletableFuture<T>> allFutures) {
     return allOf(allFutures)
       .thenApply(v -> allFutures.stream()
