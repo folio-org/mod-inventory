@@ -3,7 +3,6 @@ package support.fakes;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServer;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import support.fakes.processors.StorageRecordPreProcessors;
 
@@ -83,6 +82,12 @@ public class FakeOkapi extends AbstractVerticle {
       .withRootPath("/instance-storage/instance-relationships")
       .withCollectionPropertyName("instanceRelationships")
       .withRequiredProperties("superInstanceId", "subInstanceId", "instanceRelationshipTypeId")
+      .create().register(router);
+
+    new FakeStorageModuleBuilder()
+      .withRecordName("preceding succeeding titles")
+      .withRootPath("/preceding-succeeding-titles")
+      .withCollectionPropertyName("precedingSucceedingTitles")
       .create().register(router);
   }
 

@@ -18,5 +18,33 @@
     "tagList" : [
       "important"
     ]
-  }
+  },
+  "precedingTitles": [
+    {
+      "id": "cb4f8537-7643-4ef4-8cc4-6dbf7bbe8a6b",
+      "precedingInstanceId": "1b74ab75-9f41-4837-8662-a1d99118008d",
+      "title": "A semantic web primer",
+      "hrid": "inst000000000022",
+      "identifiers": [
+        {
+          "identifierTypeId": "8261054f-be78-422d-bd51-4ed9f33c3422",
+          "value": "0262012103"
+        }
+      ]
+    }
+  ],
+  "succeedingTitles": [
+    {
+      "id": "1b4f8537-7643-4ef4-8cc4-6dbf7bbe8a6b",
+      "succeedingInstanceId": "8be05cf5-fb4f-4752-8094-8e179d08fb99",
+      "title": "A semantic web primer",
+      "hrid": "inst000000000022",
+      "identifiers": [
+        {
+          "identifierTypeId": "8261054f-be78-422d-bd51-4ed9f33c3422",
+          "value": "0262012103"
+        }
+      ]
+    }
+  ]
 }

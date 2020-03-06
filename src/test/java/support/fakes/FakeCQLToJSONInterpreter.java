@@ -9,11 +9,13 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.BinaryOperator;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class FakeCQLToJSONInterpreter {
+  private static final String PRECEDING_SUCCEEDING_URL_REGEX = "succeedingInstanceId==\\((.+)\\) or precedingInstanceId==\\((.+)\\)";
   private final boolean diagnosticsEnabled;
 
   public FakeCQLToJSONInterpreter(boolean diagnosticsEnabled) {
@@ -72,9 +74,21 @@ public class FakeCQLToJSONInterpreter {
       return t -> true;
     }
 
+    String splitRegex;
+    BinaryOperator<Predicate<JsonObject>> accumulator;
+    //TODO Need to implement operator 'or' for query which contains search by different fields.
+    //This is just a temporary solution.
+    if (query.matches(PRECEDING_SUCCEEDING_URL_REGEX)) {
+      splitRegex = " or ";
+      accumulator = Predicate::or;
+    } else {
+      splitRegex = " and ";
+      accumulator = Predicate::and;
+    }
+
     List<ImmutableTriple<String, String, String>> pairs =
-      Arrays.stream(query.split(" and "))
-        .map( pairText -> {
+      Arrays.stream(query.split(splitRegex))
+        .map(pairText -> {
           String[] split = pairText.split("==|=|<>|<|>");
 
           printDiagnostics(() -> String.format("Split clause: %s",
@@ -112,7 +126,7 @@ public class FakeCQLToJSONInterpreter {
     return consolidateToSinglePredicate(
       pairs.stream()
         .map(pair -> filterByField(pair.getLeft(), pair.getMiddle(), pair.getRight()))
-        .collect(Collectors.toList()));
+        .collect(Collectors.toList()), accumulator);
   }
 
   private Predicate<JsonObject> filterByField(String field, String term, String operator) {
@@ -198,9 +212,9 @@ public class FakeCQLToJSONInterpreter {
   }
 
   private Predicate<JsonObject> consolidateToSinglePredicate(
-    Collection<Predicate<JsonObject>> predicates) {
+    Collection<Predicate<JsonObject>> predicates, BinaryOperator<Predicate<JsonObject>> accumulator) {
 
-    return predicates.stream().reduce(Predicate::and).orElse(t -> false);
+    return predicates.stream().reduce(accumulator).orElse(t -> false);
   }
 
   private ImmutablePair<String, String> splitQueryAndSort(String query) {
