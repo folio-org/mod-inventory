@@ -132,11 +132,12 @@ public class Instances extends AbstractInstances {
 
   private void makeInstancesResponse(Success<MultipleRecords<Instance>> success,
     RoutingContext routingContext, WebContext context) {
-    InstancesResponseWrapper instancesResponseWrapper = new InstancesResponseWrapper();
-    instancesResponseWrapper.setSuccess(success);
-    completedFuture(instancesResponseWrapper)
-      .thenCompose(response -> fetchBatchRelationships(response, routingContext, context))
-      .thenCompose(response -> fetchBatchPrecedingSucceedingTitles(response, routingContext, context))
+
+    InstancesResponse instancesResponse = new InstancesResponse();
+    instancesResponse.setSuccess(success);
+    completedFuture(instancesResponse)
+      .thenCompose(response -> fetchRelationships(response, routingContext, context))
+      .thenCompose(response -> fetchPrecedingSucceedingTitles(response, routingContext, context))
       .thenAccept(response -> JsonResponse.success(routingContext.response(),
         toRepresentation(response, context)));
   }
@@ -214,7 +215,8 @@ public class Instances extends AbstractInstances {
    */
   private void updateSuppressFromDiscoveryFlag(WebContext wContext, Instance updatedInstance) {
     try {
-      SourceStorageClient client = new SourceStorageClient(wContext.getOkapiLocation(), wContext.getTenantId(), wContext.getToken());
+      SourceStorageClient client = new SourceStorageClient(wContext.getOkapiLocation(),
+        wContext.getTenantId(), wContext.getToken());
       SuppressFromDiscoveryDto dto = new SuppressFromDiscoveryDto()
         .withId(updatedInstance.getId())
         .withIncomingIdType(SuppressFromDiscoveryDto.IncomingIdType.INSTANCE)
@@ -322,16 +324,16 @@ public class Instances extends AbstractInstances {
   /**
    * Fetches instance relationships for multiple Instance records, populates, responds
    *
-   * @param instancesResponseWrapper Multi record Instances result
+   * @param instancesResponse Multi record Instances result
    * @param routingContext
    * @param context
    */
-  private CompletableFuture<InstancesResponseWrapper> fetchBatchRelationships(
-    InstancesResponseWrapper instancesResponseWrapper,
+  private CompletableFuture<InstancesResponse> fetchRelationships(
+    InstancesResponse instancesResponse,
     RoutingContext routingContext,
     WebContext context) {
 
-    List<String> instanceIds = getInstanceIdsFromInstanceResult(instancesResponseWrapper.getSuccess());
+    List<String> instanceIds = getInstanceIdsFromInstanceResult(instancesResponse.getSuccess());
     String query = createQueryForRelatedInstances(instanceIds);
 
     try {
@@ -347,16 +349,16 @@ public class Instances extends AbstractInstances {
       relatedInstancesClient.getMany(query, relatedInstancesFetched::complete);
 
       return relatedInstancesFetched
-        .thenCompose(response -> withInstancesRelationships(instancesResponseWrapper, response));
+        .thenCompose(response -> withInstancesRelationships(instancesResponse, response));
 
     }
     return completedFuture(null);
   }
 
-  private CompletableFuture<InstancesResponseWrapper> fetchBatchPrecedingSucceedingTitles(
-    InstancesResponseWrapper instancesResponseWrapper, RoutingContext routingContext, WebContext context) {
+  private CompletableFuture<InstancesResponse> fetchPrecedingSucceedingTitles(
+    InstancesResponse instancesResponse, RoutingContext routingContext, WebContext context) {
 
-    List<String> instanceIds = getInstanceIdsFromInstanceResult(instancesResponseWrapper.getSuccess());
+    List<String> instanceIds = getInstanceIdsFromInstanceResult(instancesResponse.getSuccess());
     String query = createQueryForPrecedingSucceedingInstances(instanceIds);
 
     try {
@@ -365,14 +367,16 @@ public class Instances extends AbstractInstances {
       log.error(format("Cannot encode query %s", query));
     }
 
-    CollectionResourceClient precedingSucceedingTitlesClient = createPrecedingSucceedingTitlesClient(routingContext, context);
+    CollectionResourceClient precedingSucceedingTitlesClient =
+      createPrecedingSucceedingTitlesClient(routingContext, context);
     CompletableFuture<Response> precedingSucceedingTitlesFetched = new CompletableFuture<>();
 
     precedingSucceedingTitlesClient.getMany(query, precedingSucceedingTitlesFetched::complete);
 
     return precedingSucceedingTitlesFetched
       .thenCompose(response ->
-        withPrecedingSucceedingTitlesMany(routingContext, context, instancesResponseWrapper, response));
+        withPrecedingSucceedingTitles(routingContext, context,
+          instancesResponse, response));
   }
 
   /**
@@ -383,14 +387,13 @@ public class Instances extends AbstractInstances {
    * @param context
    */
   private CompletableFuture<Instance> fetchInstanceRelationships(
-    Success<Instance> success,
-    RoutingContext routingContext,
-    WebContext context) {
+    Success<Instance> success, RoutingContext routingContext, WebContext context) {
 
     Instance instance = success.getResult();
     List<String> instanceIds = getInstanceIdsFromInstanceResult(success);
     String query = createQueryForRelatedInstances(instanceIds);
-    CollectionResourceClient relatedInstancesClient = createInstanceRelationshipsClient(routingContext, context);
+    CollectionResourceClient relatedInstancesClient =
+      createInstanceRelationshipsClient(routingContext, context);
 
     if (relatedInstancesClient != null) {
       CompletableFuture<Response> relatedInstancesFetched = new CompletableFuture<>();
@@ -404,15 +407,16 @@ public class Instances extends AbstractInstances {
   }
 
   private void successResponse(RoutingContext routingContext, WebContext context,
-                               Instance instance) {
+    Instance instance) {
 
     JsonResponse.success(routingContext.response(), toRepresentation(instance,
       new ArrayList<>(), new ArrayList<>(),
       instance.getPrecedingTitles(), instance.getSucceedingTitles(), context));
   }
 
-  private CompletableFuture<InstancesResponseWrapper> withInstancesRelationships(InstancesResponseWrapper instancesResponseWrapper,
-                                                                                 Response result) {
+  private CompletableFuture<InstancesResponse> withInstancesRelationships(
+    InstancesResponse instancesResponse, Response result) {
+
     if (result.getStatusCode() == 200) {
       Map<String, List<InstanceRelationshipToParent>> parentInstanceMap = new HashMap();
       Map<String, List<InstanceRelationshipToChild>> childInstanceMap = new HashMap();
@@ -426,15 +430,16 @@ public class Instances extends AbstractInstances {
         addToList(parentInstanceMap, rel.getString("subInstanceId"), new InstanceRelationshipToParent(rel));
       });
 
-      instancesResponseWrapper.setChildInstanceMap(childInstanceMap);
-      instancesResponseWrapper.setParentInstanceMap(parentInstanceMap);
-      return completedFuture(instancesResponseWrapper);
+      instancesResponse.setChildInstanceMap(childInstanceMap);
+      instancesResponse.setParentInstanceMap(parentInstanceMap);
+      return completedFuture(instancesResponse);
     }
     return completedFuture(null);
   }
 
   private CompletableFuture<Instance> withInstanceRelationships(Instance instance,
-                                                                Response result) {
+    Response result) {
+
     List<InstanceRelationshipToParent> parentInstanceList = new ArrayList();
     List<InstanceRelationshipToChild> childInstanceList = new ArrayList();
     if (result.getStatusCode() == 200) {
@@ -488,7 +493,8 @@ public class Instances extends AbstractInstances {
   }
 
   private synchronized <T> void addToList(Map<String, List<T>> items,
-                                          String mapKey, T myItem) {
+    String mapKey, T myItem) {
+
     List<T> itemsList = items.get(mapKey);
 
     // if list does not exist create it
@@ -504,35 +510,42 @@ public class Instances extends AbstractInstances {
     }
   }
 
-  private CompletableFuture<InstancesResponseWrapper> withPrecedingSucceedingTitlesMany(
-    RoutingContext routingContext, WebContext context, InstancesResponseWrapper instancesResponseWrapper, Response result) {
+  private CompletableFuture<InstancesResponse> withPrecedingSucceedingTitles(
+    RoutingContext routingContext, WebContext context,
+    InstancesResponse instancesResponse, Response result) {
+
     if (result.getStatusCode() == 200) {
-      Map<String, List<PrecedingSucceedingTitle>> precedingTitlesMap = new HashMap();
-      Map<String, List<PrecedingSucceedingTitle>> succeedingTitlesMap = new HashMap();
+      Map<String, List<CompletableFuture<PrecedingSucceedingTitle>>> precedingTitlesMap = new HashMap<>();
+      Map<String, List<CompletableFuture<PrecedingSucceedingTitle>>> succeedingTitlesMap = new HashMap<>();
       JsonObject json = result.getJson();
       List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("precedingSucceedingTitles"));
       relationsList.stream().map(rel -> {
-        final String precedingInstanceId = rel.getString("precedingInstanceId");
+        final String precedingInstanceId = rel.getString(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY);
         if (StringUtils.isNotBlank(precedingInstanceId)) {
-          addToList(precedingTitlesMap, precedingInstanceId, new PrecedingSucceedingTitle(rel));
+          addToList(precedingTitlesMap, precedingInstanceId, getPrecedingSucceedingTitle(routingContext, context, rel,
+            PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY));
         }
         return rel;
       }).forEachOrdered(rel -> {
-          final String succeedingInstanceId = rel.getString("succeedingInstanceId");
+          final String succeedingInstanceId = rel.getString(PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY);
           if (StringUtils.isNotBlank(succeedingInstanceId)) {
-            addToList(succeedingTitlesMap, succeedingInstanceId, new PrecedingSucceedingTitle(rel));
+            addToList(succeedingTitlesMap, succeedingInstanceId, getPrecedingSucceedingTitle(routingContext, context, rel,
+              PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY));
           }
         }
       );
-      instancesResponseWrapper.setPrecedingTitlesMap(precedingTitlesMap);
-      instancesResponseWrapper.setSucceedingTitlesMap(succeedingTitlesMap);
-      return completedFuture(instancesResponseWrapper);
+
+      return completedFuture(instancesResponse)
+        .thenCompose(r -> withPrecedingTitles(instancesResponse, precedingTitlesMap))
+        .thenCompose(r -> withSucceedingTitles(instancesResponse, succeedingTitlesMap));
     }
     return completedFuture(null);
   }
 
   private CompletableFuture<Instance> withPrecedingSucceedingTitles(
-    RoutingContext routingContext, WebContext context, Instance instance, Response result) {
+    RoutingContext routingContext, WebContext context, Instance instance,
+    Response result) {
+
     if (result.getStatusCode() == 200) {
       JsonObject json = result.getJson();
       List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("precedingSucceedingTitles"));
@@ -540,7 +553,7 @@ public class Instances extends AbstractInstances {
       List<CompletableFuture<PrecedingSucceedingTitle>> precedingTitleCompletableFutures =
         relationsList.stream().filter(rel -> isPrecedingTitle(instance, rel))
           .map(rel -> getPrecedingSucceedingTitle(routingContext, context, rel,
-            PrecedingSucceedingTitle.PRECEDING_INSTANCE_INSTANCE_ID_KEY)).collect(Collectors.toList());
+            PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY)).collect(Collectors.toList());
 
       List<CompletableFuture<PrecedingSucceedingTitle>> succeedingTitleCompletableFutures =
         relationsList.stream().filter(rel -> isSucceedingTitle(instance, rel))
@@ -555,27 +568,61 @@ public class Instances extends AbstractInstances {
   }
 
   private boolean isPrecedingTitle(Instance instance, JsonObject rel) {
-    return instance.getId().equals(rel.getString(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY));
+    return instance.getId().equals(
+      rel.getString(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY));
   }
 
   private boolean isSucceedingTitle(Instance instance, JsonObject rel) {
-    return instance.getId().equals(rel.getString(PrecedingSucceedingTitle.PRECEDING_INSTANCE_INSTANCE_ID_KEY));
+    return instance.getId().equals(
+      rel.getString(PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY));
   }
 
   private CompletionStage<Instance> withSucceedingTitles(Instance instance,
     List<CompletableFuture<PrecedingSucceedingTitle>> succeedingTitleCompletableFutures) {
+
     return allResultsOf(succeedingTitleCompletableFutures)
       .thenApply(resultItem -> instance.setSucceedingTitles(resultItem));
   }
 
   private CompletableFuture<Instance> withPrecedingTitles(Instance instance,
     List<CompletableFuture<PrecedingSucceedingTitle>> precedingTitleCompletableFutures) {
+
     return allResultsOf(precedingTitleCompletableFutures)
       .thenApply(resultItem -> instance.setPrecedingTitles(resultItem));
   }
 
+  private CompletableFuture<InstancesResponse> withPrecedingTitles(
+    InstancesResponse instance,
+    Map<String, List<CompletableFuture<PrecedingSucceedingTitle>>> precedingTitles) {
+
+    return mapToCompletableFutureMap(precedingTitles)
+      .thenApply(res -> instance.setPrecedingTitlesMap(res));
+  }
+
+  private CompletableFuture<InstancesResponse> withSucceedingTitles(
+    InstancesResponse instance,
+    Map<String, List<CompletableFuture<PrecedingSucceedingTitle>>> precedingTitles) {
+
+    return mapToCompletableFutureMap(precedingTitles)
+      .thenApply(res -> instance.setSucceedingTitlesMap(res));
+  }
+
+  private CompletableFuture<Map<String, List<PrecedingSucceedingTitle>>> mapToCompletableFutureMap(
+    Map<String, List<CompletableFuture<PrecedingSucceedingTitle>>> precedingTitles) {
+
+    Map<String, CompletableFuture<List<PrecedingSucceedingTitle>>> map =
+      precedingTitles.entrySet().stream()
+        .collect(Collectors.toMap(Map.Entry::getKey, e -> allResultsOf(e.getValue())));
+
+    return CompletableFuture.allOf(map.values().toArray(new CompletableFuture[0]))
+      .thenApply(r -> map.entrySet().stream()
+        .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().join())));
+  }
+
   private CompletableFuture<PrecedingSucceedingTitle> getPrecedingSucceedingTitle(
-    RoutingContext routingContext, WebContext context, JsonObject rel, String precedingSucceedingKey) {
+    RoutingContext routingContext, WebContext context,
+    JsonObject rel, String precedingSucceedingKey) {
+
     if (!StringUtils.isBlank(rel.getString(precedingSucceedingKey))) {
       String precedingInstanceId = rel.getString(precedingSucceedingKey);
       CompletableFuture<Success<Instance>> getInstanceFuture = new CompletableFuture<>();
@@ -586,7 +633,7 @@ public class Instances extends AbstractInstances {
       return getInstanceFuture.thenApply(response -> {
         Instance precedingInstance = response.getResult();
         if (precedingInstance != null) {
-          return new PrecedingSucceedingTitle(rel,
+          return PrecedingSucceedingTitle.from(rel,
             precedingInstance.getTitle(),
             precedingInstance.getHrid(),
             new JsonArray(precedingInstance.getIdentifiers()));
@@ -595,7 +642,7 @@ public class Instances extends AbstractInstances {
         }
       });
     } else {
-      return completedFuture(new PrecedingSucceedingTitle(rel));
+      return completedFuture(PrecedingSucceedingTitle.from(rel));
     }
   }
 }

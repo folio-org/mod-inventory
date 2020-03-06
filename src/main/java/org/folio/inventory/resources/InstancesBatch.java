@@ -76,7 +76,7 @@ public class InstancesBatch extends AbstractInstances {
             requestBody.getInteger(BATCH_RESPONSE_FIELD_TOTAL_RECORDS)));
 
           if (!createdInstances.isEmpty()) {
-            updateReletedRecords(validInstances, createdInstances, routingContext, webContext).
+            updateRelatedRecords(validInstances, createdInstances, routingContext, webContext).
               setHandler(ar -> {
                 JsonObject responseBody = getBatchResponse(createdInstances, errorMessages, webContext);
                 RedirectResponse.created(routingContext.response(), Buffer.buffer(responseBody.encodePrettily()));
@@ -177,8 +177,9 @@ public class InstancesBatch extends AbstractInstances {
    * @param routingContext routingContext
    * @param webContext webContext
    */
-  private Future<CompositeFuture> updateReletedRecords(List<JsonObject> newInstances, List<Instance> createdInstances,
-                                                               RoutingContext routingContext, WebContext webContext) {
+  private Future<CompositeFuture> updateRelatedRecords(List<JsonObject> newInstances, List<Instance> createdInstances,
+    RoutingContext routingContext, WebContext webContext) {
+
     Future<CompositeFuture> resultFuture = Future.future();
     try {
       Map<String, Instance> mapInstanceById = newInstances.stream()

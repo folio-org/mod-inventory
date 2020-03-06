@@ -7,11 +7,12 @@ import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
 import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class InstancesResponseWrapper {
+public class InstancesResponse {
   private Success<MultipleRecords<Instance>> success;
   private Map<String, List<InstanceRelationshipToParent>> parentInstanceMap = new HashMap();
   private Map<String, List<InstanceRelationshipToChild>> childInstanceMap = new HashMap();
@@ -22,39 +23,52 @@ public class InstancesResponseWrapper {
     return success;
   }
 
-  public void setSuccess(Success<MultipleRecords<Instance>> success) {
+  public InstancesResponse setSuccess(Success<MultipleRecords<Instance>> success) {
     this.success = success;
+    return this;
   }
 
   public Map<String, List<InstanceRelationshipToParent>> getParentInstanceMap() {
-    return parentInstanceMap;
+    return Collections.unmodifiableMap(parentInstanceMap);
   }
 
-  public void setParentInstanceMap(Map<String, List<InstanceRelationshipToParent>> parentInstanceMap) {
+  public InstancesResponse setParentInstanceMap(
+    Map<String, List<InstanceRelationshipToParent>> parentInstanceMap) {
+
     this.parentInstanceMap = parentInstanceMap;
+    return this;
   }
 
   public Map<String, List<InstanceRelationshipToChild>> getChildInstanceMap() {
-    return childInstanceMap;
+    return Collections.unmodifiableMap(childInstanceMap);
   }
 
-  public void setChildInstanceMap(Map<String, List<InstanceRelationshipToChild>> childInstanceMap) {
+  public InstancesResponse setChildInstanceMap(
+    Map<String, List<InstanceRelationshipToChild>> childInstanceMap) {
+
     this.childInstanceMap = childInstanceMap;
+    return this;
   }
 
   public Map<String, List<PrecedingSucceedingTitle>> getPrecedingTitlesMap() {
-    return precedingTitlesMap;
+    return Collections.unmodifiableMap(precedingTitlesMap);
   }
 
-  public void setPrecedingTitlesMap(Map<String, List<PrecedingSucceedingTitle>> precedingTitlesMap) {
+  public InstancesResponse setPrecedingTitlesMap(
+    Map<String, List<PrecedingSucceedingTitle>> precedingTitlesMap) {
+
     this.precedingTitlesMap = precedingTitlesMap;
+    return this;
   }
 
   public Map<String, List<PrecedingSucceedingTitle>> getSucceedingTitlesMap() {
-    return succeedingTitlesMap;
+    return Collections.unmodifiableMap(succeedingTitlesMap);
   }
 
-  public void setSucceedingTitlesMap(Map<String, List<PrecedingSucceedingTitle>> succeedingTitlesMap) {
+  public InstancesResponse setSucceedingTitlesMap(
+    Map<String, List<PrecedingSucceedingTitle>> succeedingTitlesMap) {
+
     this.succeedingTitlesMap = succeedingTitlesMap;
+    return this;
   }
 }

@@ -408,11 +408,13 @@
       "properties": {
         "id": {
           "description": "Id of the preceding title",
-          "type": "string"
+          "type": "string",
+          "$ref": "uuid.json"
         },
         "precedingInstanceId": {
           "description": "Id of the preceding instance id",
-          "type": "string"
+          "type": "string",
+          "$ref": "uuid.json"
         },
         "title": {
           "type": "string",
@@ -457,11 +459,13 @@
       "properties": {
         "id": {
           "description": "Id of the succeeding title",
-          "type": "string"
+          "type": "string",
+          "$ref": "uuid.json"
         },
         "succeedingInstanceId": {
           "description": "Id of the succeeding instance id",
-          "type": "string"
+          "type": "string",
+          "$ref": "uuid.json"
         },
         "title": {
           "type": "string",

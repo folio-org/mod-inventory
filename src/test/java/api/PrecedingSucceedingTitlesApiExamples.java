@@ -16,9 +16,11 @@ import org.folio.inventory.support.http.client.Response;
 import org.junit.Test;
 
 import java.net.MalformedURLException;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Stream;
 
 public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
 
@@ -414,7 +416,7 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
   }
 
   private void verifyRelatedInstancePrecedingTitle(IndividualResource relatedInstance,
-                                                   IndividualResource createdInstance) throws MalformedURLException,
+    IndividualResource createdInstance) throws MalformedURLException,
     InterruptedException, ExecutionException, TimeoutException {
 
     Response response = instancesClient.getById(relatedInstance.getId());
@@ -424,7 +426,7 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
   }
 
   private void verifyRelatedInstanceSucceedingTitle(IndividualResource relatedInstance,
-                                                    IndividualResource createdInstance) throws MalformedURLException,
+    IndividualResource createdInstance) throws MalformedURLException,
     InterruptedException, ExecutionException, TimeoutException {
 
     Response response = instancesClient.getById(relatedInstance.getId());
@@ -452,8 +454,9 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
       .findFirst().get();
   }
 
-  private JsonArray getUnconnectedPrecedingSucceedingTitle(String id1,
-                                                           String id2) {
+  private JsonArray getUnconnectedPrecedingSucceedingTitle(
+    String id1, String id2) {
+
     JsonObject precedingSucceedingTitle1 = createSemanticWebUnconnectedTitle(id1);
     JsonObject precedingSucceedingTitle2 = createOpenBibliographyUnconnectedTitle(id2);
 
@@ -485,8 +488,9 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
           .put("value", "0262012103")));
   }
 
-  private void assertPrecedingSucceedingTitles(JsonObject actualPrecedingTitle, JsonObject expected, String precedingInstanceId,
-                                               String succeedingInstanceId) {
+  private void assertPrecedingSucceedingTitles(JsonObject actualPrecedingTitle,
+    JsonObject expected, String precedingInstanceId, String succeedingInstanceId) {
+
     assertThat(actualPrecedingTitle.getString("title"), is(expected.getString("title")));
     assertThat(actualPrecedingTitle.getString("hrid"), is(expected.getString("hrid")));
     assertThat(actualPrecedingTitle.getJsonArray("identifiers"), is(expected.getJsonArray("identifiers")));

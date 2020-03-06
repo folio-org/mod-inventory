@@ -1,6 +1,7 @@
 package org.folio.inventory.domain.instances;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -54,8 +55,8 @@ public class Instance {
   private final String source;
   private List<InstanceRelationshipToParent> parentInstances = new ArrayList();
   private List<InstanceRelationshipToChild> childInstances = new ArrayList();
-  private List<PrecedingSucceedingTitle> precedingTitles = new ArrayList();
-  private List<PrecedingSucceedingTitle> succeedingTitles = new ArrayList();
+  private List<PrecedingSucceedingTitle> precedingTitles = new ArrayList<>();
+  private List<PrecedingSucceedingTitle> succeedingTitles = new ArrayList<>();
   private final String title;
   private String indexTitle;
   private List<AlternativeTitle> alternativeTitles = new ArrayList();
@@ -117,12 +118,12 @@ public class Instance {
   }
 
   public Instance setPrecedingTitles(List<PrecedingSucceedingTitle> precedingTitles) {
-    this.precedingTitles = precedingTitles;
+    this.precedingTitles = new ArrayList<>(precedingTitles);
     return this;
   }
 
   public Instance setSucceedingTitles(List<PrecedingSucceedingTitle> succeedingTitles) {
-    this.succeedingTitles = succeedingTitles;
+    this.succeedingTitles = new ArrayList<>(succeedingTitles);
     return this;
   }
 
@@ -166,12 +167,12 @@ public class Instance {
     return this;
   }
 
-  public Instance setPublicationFrequency (List<String> publicationFrequency) {
+  public Instance setPublicationFrequency(List<String> publicationFrequency) {
     this.publicationFrequency = publicationFrequency;
     return this;
   }
 
-  public Instance setPublicationRange (List<String> publicationRange) {
+  public Instance setPublicationRange(List<String> publicationRange) {
     this.publicationRange = publicationRange;
     return this;
   }
@@ -246,7 +247,7 @@ public class Instance {
     return this;
   }
 
-  public Instance setMetadata (Metadata metadata) {
+  public Instance setMetadata(Metadata metadata) {
     this.metadata = metadata;
     return this;
   }
@@ -286,11 +287,11 @@ public class Instance {
   }
 
   public List<PrecedingSucceedingTitle> getPrecedingTitles() {
-    return precedingTitles;
+    return Collections.unmodifiableList(precedingTitles);
   }
 
   public List<PrecedingSucceedingTitle> getSucceedingTitles() {
-    return succeedingTitles;
+    return Collections.unmodifiableList(succeedingTitles);
   }
 
   public String getTitle() {

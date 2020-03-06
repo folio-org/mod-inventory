@@ -97,7 +97,12 @@
           "permissionsRequired": ["inventory.instances.item.post"],
           "modulePermissions": [
             "inventory-storage.instances.item.post",
-            "inventory-storage.instances.item.get"]
+            "inventory-storage.instances.item.get",
+            "inventory-storage.preceding-succeeding-titles.collection.get",
+            "inventory-storage.preceding-succeeding-titles.item.post",
+            "inventory-storage.preceding-succeeding-titles.item.put",
+            "inventory-storage.preceding-succeeding-titles.item.delete"
+          ]
         }, {
           "methods": ["PUT"],
           "pathPattern": "/inventory/instances/{id}",
@@ -281,6 +286,10 @@
     },
     {
       "id": "pubsub-publish",
+      "version": "0.1"
+    },
+    {
+      "id": "instance-preceding-succeeding-titles",
       "version": "0.1"
     }
   ],

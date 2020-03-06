@@ -70,9 +70,8 @@ public abstract class AbstractInstances {
    * @param context
    */
   protected void updateInstanceRelationships(Instance instance,
-                                           RoutingContext routingContext,
-                                           WebContext context,
-                                           Consumer respond) {
+    RoutingContext routingContext, WebContext context, Consumer respond) {
+
     CollectionResourceClient relatedInstancesClient = createInstanceRelationshipsClient(routingContext, context);
     List<String> instanceId = Arrays.asList(instance.getId());
     String query = createQueryForRelatedInstances(instanceId);
@@ -135,6 +134,7 @@ public abstract class AbstractInstances {
 
   protected void updatePrecedingSucceedingTitles(Instance instance, RoutingContext routingContext,
     WebContext context, Consumer respond) {
+
     CollectionResourceClient precedingSucceedingTitlesClient = createPrecedingSucceedingTitlesClient(routingContext, context);
     List<String> instanceId = Arrays.asList(instance.getId());
     String query = createQueryForPrecedingSucceedingInstances(instanceId);
@@ -150,8 +150,8 @@ public abstract class AbstractInstances {
           Map<String, PrecedingSucceedingTitle> updatingPrecedingSucceedingTitles =
             getUpdatingPrecedingSucceedingTitles(instance);
 
-          update(precedingSucceedingTitlesClient,
-            allFutures, existingPrecedingSucceedingTitles, updatingPrecedingSucceedingTitles);
+          update(precedingSucceedingTitlesClient, allFutures,
+            existingPrecedingSucceedingTitles, updatingPrecedingSucceedingTitles);
 
           allOf(allFutures).thenAccept(respond);
         }
@@ -163,7 +163,7 @@ public abstract class AbstractInstances {
     List<JsonObject> relationsList) {
 
     Map<String, PrecedingSucceedingTitle> existingPrecedingSucceedingTitles = new HashMap();
-    relationsList.stream().map(PrecedingSucceedingTitle::new).forEachOrdered(relObj ->
+    relationsList.stream().map(PrecedingSucceedingTitle::from).forEachOrdered(relObj ->
       existingPrecedingSucceedingTitles.put(relObj.id, relObj));
 
     return existingPrecedingSucceedingTitles;
@@ -190,8 +190,8 @@ public abstract class AbstractInstances {
   }
 
   private <T> void createOrEdit(CollectionResourceClient resourceClient,
-                                List<CompletableFuture<Response>> allFutures, Map<String, T> existingObjects,
-                                Map<String, T> updatingObjects) {
+    List<CompletableFuture<Response>> allFutures, Map<String, T> existingObjects,
+    Map<String, T> updatingObjects) {
 
     updatingObjects.keySet().forEach(updatingKey -> {
       T object = updatingObjects.get(updatingKey);
@@ -211,6 +211,34 @@ public abstract class AbstractInstances {
 
   private Map<String, PrecedingSucceedingTitle> getUpdatingPrecedingSucceedingTitles(Instance instance) {
     Map<String, PrecedingSucceedingTitle> updatingPrecedingSucceedingTitles = new HashMap();
+
+    updatePrecedingTitles(instance, updatingPrecedingSucceedingTitles);
+    updateSucceedingTitles(instance, updatingPrecedingSucceedingTitles);
+
+    return updatingPrecedingSucceedingTitles;
+  }
+
+  private void updateSucceedingTitles(Instance instance,
+    Map<String, PrecedingSucceedingTitle> updatingPrecedingSucceedingTitles) {
+
+    if (instance.getSucceedingTitles() != null) {
+      instance.getSucceedingTitles().forEach(child -> {
+        String id = (child.id == null ? UUID.randomUUID().toString() : child.id);
+        updatingPrecedingSucceedingTitles.put(id,
+          new PrecedingSucceedingTitle(
+            id,
+            instance.getId(),
+            child.succeedingInstanceId,
+            child.title,
+            child.hrid,
+            child.identifiers));
+      });
+    }
+  }
+
+  private void updatePrecedingTitles(Instance instance,
+    Map<String, PrecedingSucceedingTitle> updatingPrecedingSucceedingTitles) {
+
     if (instance.getPrecedingTitles() != null) {
       instance.getPrecedingTitles().forEach(parent -> {
         String id = (parent.id == null ? UUID.randomUUID().toString() : parent.id);
@@ -225,44 +253,30 @@ public abstract class AbstractInstances {
         updatingPrecedingSucceedingTitles.put(id, precedingSucceedingTitle);
       });
     }
-    if (instance.getSucceedingTitles() != null) {
-      instance.getSucceedingTitles().forEach(child -> {
-        String id = (child.id == null ? UUID.randomUUID().toString() : child.id);
-        updatingPrecedingSucceedingTitles.put(id,
-          new PrecedingSucceedingTitle(
-            id,
-            instance.getId(),
-            child.succeedingInstanceId,
-            child.title,
-            child.hrid,
-            child.identifiers));
-      });
-    }
-    return updatingPrecedingSucceedingTitles;
   }
 
   /**
    * Populates multiple Instances representation (downwards)
    *
-   * @param instancesResponseWrapper Set of Instances to transform to representations
+   * @param instancesResponse Set of Instances to transform to representations
    * @param context
    * @return
    */
-  protected JsonObject toRepresentation(InstancesResponseWrapper instancesResponseWrapper,
+  protected JsonObject toRepresentation(InstancesResponse instancesResponse,
     WebContext context) {
 
     JsonObject representation = new JsonObject();
 
     JsonArray results = new JsonArray();
 
-    MultipleRecords<Instance> wrappedInstances = instancesResponseWrapper.getSuccess().getResult();
+    MultipleRecords<Instance> wrappedInstances = instancesResponse.getSuccess().getResult();
     List<Instance> instances = wrappedInstances.records;
 
     instances.stream().forEach(instance -> {
-      List<InstanceRelationshipToParent> parentInstances = instancesResponseWrapper.getParentInstanceMap().get(instance.getId());
-      List<InstanceRelationshipToChild> childInstances = instancesResponseWrapper.getChildInstanceMap().get(instance.getId());
-      List<PrecedingSucceedingTitle> precedingTitles = instancesResponseWrapper.getPrecedingTitlesMap().get(instance.getId());
-      List<PrecedingSucceedingTitle> succeedingTitles = instancesResponseWrapper.getSucceedingTitlesMap().get(instance.getId());
+      List<InstanceRelationshipToParent> parentInstances = instancesResponse.getParentInstanceMap().get(instance.getId());
+      List<InstanceRelationshipToChild> childInstances = instancesResponse.getChildInstanceMap().get(instance.getId());
+      List<PrecedingSucceedingTitle> precedingTitles = instancesResponse.getPrecedingTitlesMap().get(instance.getId());
+      List<PrecedingSucceedingTitle> succeedingTitles = instancesResponse.getSucceedingTitlesMap().get(instance.getId());
       results.add(toRepresentation(instance, parentInstances, childInstances, precedingTitles, succeedingTitles, context));
     });
 
@@ -363,13 +377,13 @@ public abstract class AbstractInstances {
 
     List<PrecedingSucceedingTitle> precedingTitles = instanceRequest.containsKey(Instance.PRECEDING_TITLES_KEY)
       ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.PRECEDING_TITLES_KEY)).stream()
-      .map(PrecedingSucceedingTitle::new)
+      .map(PrecedingSucceedingTitle::from)
       .collect(Collectors.toList())
       : new ArrayList<>();
 
     List<PrecedingSucceedingTitle> succeedingTitles = instanceRequest.containsKey(Instance.SUCCEEDING_TITLES_KEY)
       ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.SUCCEEDING_TITLES_KEY)).stream()
-      .map(PrecedingSucceedingTitle::new)
+      .map(PrecedingSucceedingTitle::from)
       .collect(Collectors.toList())
       : new ArrayList<>();
 
@@ -481,7 +495,9 @@ public abstract class AbstractInstances {
     return relatedInstancesClient;
   }
 
-  protected CollectionResourceClient createPrecedingSucceedingTitlesClient(RoutingContext routingContext, WebContext context) {
+  protected CollectionResourceClient createPrecedingSucceedingTitlesClient(
+    RoutingContext routingContext, WebContext context) {
+
     CollectionResourceClient relatedInstancesClient = null;
     try {
       OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
@@ -496,19 +512,20 @@ public abstract class AbstractInstances {
   }
 
   protected String createQueryForPrecedingSucceedingInstances(List<String> instanceIds) {
-    String idList = instanceIds.stream().map(String::toString).distinct().collect(Collectors.joining(" or "));
+    String idList = instanceIds.stream().distinct().collect(Collectors.joining(" or "));
     return format("query=succeedingInstanceId==(%s)+or+precedingInstanceId==(%s)", idList, idList);
   }
 
   protected <T> CompletableFuture<List<T>> allResultsOf(
     List<CompletableFuture<T>> allFutures) {
+
     return allOf(allFutures)
       .thenApply(v -> allFutures.stream()
         .map(CompletableFuture::join).collect(Collectors.toList()));
   }
 
   protected String createQueryForRelatedInstances(List<String> instanceIds) {
-    String idList = instanceIds.stream().map(String::toString).distinct().collect(Collectors.joining(" or "));
+    String idList = instanceIds.stream().distinct().collect(Collectors.joining(" or "));
     String query = format("query=(subInstanceId==(%s)+or+superInstanceId==(%s))", idList, idList);
     return query;
   }
