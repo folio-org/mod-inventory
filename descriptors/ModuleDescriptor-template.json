@@ -190,6 +190,24 @@
       ]
     },
     {
+      "id": "inventory-event-handlers",
+      "version": "0.1",
+      "handlers": [
+        {
+          "methods": [
+            "POST"
+          ],
+          "pathPattern": "/inventory/handlers/created-srs-marc-bib-record",
+          "permissionsRequired": [
+            "inventory.events.post"
+          ],
+          "modulePermissions": [
+            "pubsub.publish.post"
+          ]
+        }
+      ]
+    },
+    {
       "id": "_tenant",
       "version": "1.2",
       "interfaceType": "system",
@@ -350,6 +368,11 @@
       "permissionName": "inventory.config.instances.blocked-fields.get",
       "displayName": "Inventory - get configuration for blocked fields of instances",
       "description": "Get configuration for blocked fields of instances"
+    },
+    {
+      "permissionName": "inventory.events.post",
+      "displayName": "Inventory - post event",
+      "description": "Post event to handle in inventory"
     },
     {
       "permissionName": "inventory.all",
