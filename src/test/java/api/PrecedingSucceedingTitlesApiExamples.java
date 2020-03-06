@@ -134,7 +134,7 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
   }
 
   @Test
-  public void canDeleteAnInstanceWithUnconnectedPrecedingTitles()
+  public void canDeleteUnconnectedPrecedingTitle()
     throws InterruptedException, MalformedURLException, TimeoutException,
     ExecutionException {
 
@@ -154,7 +154,7 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
   }
 
   @Test
-  public void canDeleteAnInstanceWithUnconnectedSucceedingTitles()
+  public void canDeleteUnconnectedSucceedingTitle()
     throws InterruptedException, MalformedURLException, TimeoutException,
     ExecutionException {
 
