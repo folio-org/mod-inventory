@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "inventory",
-      "version": "10.1",
+      "version": "10.2",
       "handlers": [
         {
           "methods": ["GET"],
@@ -81,27 +81,42 @@
           "methods": ["GET"],
           "pathPattern": "/inventory/instances",
           "permissionsRequired": ["inventory.instances.collection.get"],
-          "modulePermissions": ["inventory-storage.instances.collection.get"]
+          "modulePermissions": [
+            "inventory-storage.instances.collection.get",
+            "inventory-storage.preceding-succeeding-titles.collection.get"]
         }, {
           "methods": ["GET"],
           "pathPattern": "/inventory/instances/{id}",
           "permissionsRequired": ["inventory.instances.item.get"],
-          "modulePermissions": ["inventory-storage.instances.item.get"]
+          "modulePermissions": [
+            "inventory-storage.instances.item.get",
+            "inventory-storage.preceding-succeeding-titles.collection.get"]
         }, {
           "methods": ["POST"],
           "pathPattern": "/inventory/instances",
           "permissionsRequired": ["inventory.instances.item.post"],
-          "modulePermissions": ["inventory-storage.instances.item.post",
-                                "inventory-storage.instances.item.get"]
+          "modulePermissions": [
+            "inventory-storage.instances.item.post",
+            "inventory-storage.instances.item.get",
+            "inventory-storage.preceding-succeeding-titles.collection.get",
+            "inventory-storage.preceding-succeeding-titles.item.post",
+            "inventory-storage.preceding-succeeding-titles.item.put",
+            "inventory-storage.preceding-succeeding-titles.item.delete"
+          ]
         }, {
           "methods": ["PUT"],
           "pathPattern": "/inventory/instances/{id}",
           "permissionsRequired": ["inventory.instances.item.put"],
-          "modulePermissions": ["inventory-storage.instances.item.put",
-                                "inventory-storage.instances.item.get",
-                                "inventory-storage.instances.item.post",
-                                "inventory-storage.instances.item.delete",
-                                "source-storage.record.update"]
+          "modulePermissions": [
+            "inventory-storage.instances.item.put",
+            "inventory-storage.instances.item.get",
+            "inventory-storage.instances.item.post",
+            "inventory-storage.instances.item.delete",
+            "source-storage.record.update",
+            "inventory-storage.preceding-succeeding-titles.collection.get",
+            "inventory-storage.preceding-succeeding-titles.item.post",
+            "inventory-storage.preceding-succeeding-titles.item.put",
+            "inventory-storage.preceding-succeeding-titles.item.delete"]
         }, {
           "methods": ["DELETE"],
           "pathPattern": "/inventory/instances/{id}",
@@ -137,7 +152,7 @@
     },
     {
       "id": "inventory-batch",
-      "version": "0.3",
+      "version": "0.5",
       "handlers": [
         {
           "methods": ["POST"],
@@ -148,7 +163,11 @@
             "inventory-storage.instances.item.get",
             "inventory-storage.instances.item.put",
             "inventory-storage.instances.item.delete",
-            "inventory-storage.instances.batch.post"
+            "inventory-storage.instances.batch.post",
+            "inventory-storage.preceding-succeeding-titles.collection.get",
+            "inventory-storage.preceding-succeeding-titles.item.post",
+            "inventory-storage.preceding-succeeding-titles.item.put",
+            "inventory-storage.preceding-succeeding-titles.item.delete"
           ]
         }
       ]
@@ -285,6 +304,10 @@
     },
     {
       "id": "pubsub-publish",
+      "version": "0.1"
+    },
+    {
+      "id": "instance-preceding-succeeding-titles",
       "version": "0.1"
     }
   ],

@@ -1,11 +1,13 @@
 package org.folio.inventory.domain.instances;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.domain.Metadata;
+import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 
 public class Instance {
@@ -14,6 +16,8 @@ public class Instance {
   public static final String SOURCE_KEY = "source";
   public static final String PARENT_INSTANCES_KEY = "parentInstances";
   public static final String CHILD_INSTANCES_KEY = "childInstances";
+  public static final String PRECEDING_TITLES_KEY = "precedingTitles";
+  public static final String SUCCEEDING_TITLES_KEY = "succeedingTitles";
   public static final String TITLE_KEY = "title";
   public static final String INDEX_TITLE_KEY = "indexTitle";
   public static final String ALTERNATIVE_TITLES_KEY = "alternativeTitles";
@@ -51,6 +55,8 @@ public class Instance {
   private final String source;
   private List<InstanceRelationshipToParent> parentInstances = new ArrayList();
   private List<InstanceRelationshipToChild> childInstances = new ArrayList();
+  private List<PrecedingSucceedingTitle> precedingTitles = new ArrayList<>();
+  private List<PrecedingSucceedingTitle> succeedingTitles = new ArrayList<>();
   private final String title;
   private String indexTitle;
   private List<AlternativeTitle> alternativeTitles = new ArrayList();
@@ -111,6 +117,16 @@ public class Instance {
     return this;
   }
 
+  public Instance setPrecedingTitles(List<PrecedingSucceedingTitle> precedingTitles) {
+    this.precedingTitles = new ArrayList<>(precedingTitles);
+    return this;
+  }
+
+  public Instance setSucceedingTitles(List<PrecedingSucceedingTitle> succeedingTitles) {
+    this.succeedingTitles = new ArrayList<>(succeedingTitles);
+    return this;
+  }
+
   public Instance setAlternativeTitles(List<AlternativeTitle> alternativeTitles) {
     this.alternativeTitles = alternativeTitles;
     return this;
@@ -151,12 +167,12 @@ public class Instance {
     return this;
   }
 
-  public Instance setPublicationFrequency (List<String> publicationFrequency) {
+  public Instance setPublicationFrequency(List<String> publicationFrequency) {
     this.publicationFrequency = publicationFrequency;
     return this;
   }
 
-  public Instance setPublicationRange (List<String> publicationRange) {
+  public Instance setPublicationRange(List<String> publicationRange) {
     this.publicationRange = publicationRange;
     return this;
   }
@@ -231,7 +247,7 @@ public class Instance {
     return this;
   }
 
-  public Instance setMetadata (Metadata metadata) {
+  public Instance setMetadata(Metadata metadata) {
     this.metadata = metadata;
     return this;
   }
@@ -268,6 +284,14 @@ public class Instance {
 
   public List<InstanceRelationshipToChild> getChildInstances() {
     return childInstances;
+  }
+
+  public List<PrecedingSucceedingTitle> getPrecedingTitles() {
+    return Collections.unmodifiableList(precedingTitles);
+  }
+
+  public List<PrecedingSucceedingTitle> getSucceedingTitles() {
+    return Collections.unmodifiableList(succeedingTitles);
   }
 
   public String getTitle() {

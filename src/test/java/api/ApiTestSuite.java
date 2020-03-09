@@ -39,7 +39,8 @@ import support.fakes.FakeOkapi;
   ModsIngestExamples.class,
   IsbnUtilsApiExamples.class,
   ItemAllowedStatusesSchemaTest.class,
-  TenantApiExamples.class
+  TenantApiExamples.class,
+  PrecedingSucceedingTitlesApiExamples.class
 })
 public class ApiTestSuite {
   public static final int INVENTORY_VERTICLE_TEST_PORT = 9603;
