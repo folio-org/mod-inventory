@@ -83,6 +83,7 @@
           "permissionsRequired": ["inventory.instances.collection.get"],
           "modulePermissions": [
             "inventory-storage.instances.collection.get",
+            "inventory-storage.instances.item.get",
             "inventory-storage.preceding-succeeding-titles.collection.get"]
         }, {
           "methods": ["GET"],
