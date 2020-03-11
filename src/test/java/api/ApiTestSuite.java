@@ -41,8 +41,7 @@ import support.fakes.FakeOkapi;
   IsbnUtilsApiExamples.class,
   ItemAllowedStatusesSchemaTest.class,
   TenantApiExamples.class,
-  PrecedingSucceedingTitlesApiExamples.class,
-  InstanceRelationshipsTest.class
+  PrecedingSucceedingTitlesApiExamples.class
 })
 public class ApiTestSuite {
   public static final int INVENTORY_VERTICLE_TEST_PORT = 9603;
@@ -83,7 +82,7 @@ public class ApiTestSuite {
     Boolean.parseBoolean(System.getProperty("use.okapi.storage.requests", ""));
   private static String okapiAddress = System.getProperty("okapi.address", "");
 
-  private static boolean initialised;
+  private static volatile boolean initialised;
 
   @BeforeClass
   public static void before()
