@@ -22,6 +22,7 @@ public abstract class ApiTests {
   protected final ResourceClient isbnClient;
   protected final ResourceClient usersClient;
   protected final ResourceClient instancesBatchClient;
+  protected final ResourceClient precedingSucceedingTitlesClient;
 
   public ApiTests() {
     holdingsStorageClient = ResourceClient.forHoldingsStorage(okapiClient);
@@ -31,6 +32,7 @@ public abstract class ApiTests {
     isbnClient = ResourceClient.forIsbns(okapiClient);
     usersClient = ResourceClient.forUsers(okapiClient);
     instancesBatchClient = ResourceClient.forInstancesBatch(okapiClient);
+    precedingSucceedingTitlesClient = ResourceClient.forPrecedingSucceedingTitles(okapiClient);
   }
 
   @BeforeClass
@@ -72,5 +74,7 @@ public abstract class ApiTests {
     preparation.deleteItems();
     holdingsStorageClient.deleteAll();
     preparation.deleteInstances();
+
+    precedingSucceedingTitlesClient.deleteAll();
   }
 }

@@ -8,7 +8,6 @@ import static org.folio.inventory.support.http.server.SuccessResponse.noContent;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -32,8 +31,10 @@ import org.folio.inventory.domain.instances.InstanceRelationship;
 import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
 import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
+import org.folio.inventory.services.InstanceRelationshipsService;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
+import org.folio.inventory.support.EndpointFailureHandler;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.server.ClientErrorResponse;
@@ -44,6 +45,7 @@ import org.folio.inventory.support.http.server.ServerErrorResponse;
 import org.folio.rest.client.SourceStorageClient;
 import org.folio.rest.jaxrs.model.SuppressFromDiscoveryDto;
 
+import io.vertx.core.Future;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
@@ -135,11 +137,19 @@ public class Instances extends AbstractInstances {
 
     InstancesResponse instancesResponse = new InstancesResponse();
     instancesResponse.setSuccess(success);
-    completedFuture(instancesResponse)
-      .thenCompose(response -> fetchRelationships(response, routingContext, context))
-      .thenCompose(response -> fetchPrecedingSucceedingTitles(response, routingContext, context))
-      .thenAccept(response -> JsonResponse.success(routingContext.response(),
-        toRepresentation(response, context)));
+
+    Future.succeededFuture(instancesResponse)
+      .compose(response -> fetchRelationships(response, routingContext))
+      .compose(response -> fetchPrecedingSucceedingTitles(response, routingContext, context))
+      .setHandler(result -> {
+        if (result.succeeded()) {
+          JsonResponse.success(routingContext.response(),
+            toRepresentation(result.result(), context));
+        } else {
+          log.warn("Exception occurred", result.cause());
+          EndpointFailureHandler.handleFailure(result, routingContext);
+        }
+      });
   }
 
   private void create(RoutingContext routingContext) {
@@ -326,57 +336,28 @@ public class Instances extends AbstractInstances {
    *
    * @param instancesResponse Multi record Instances result
    * @param routingContext
-   * @param context
    */
-  private CompletableFuture<InstancesResponse> fetchRelationships(
+  private Future<InstancesResponse> fetchRelationships(
     InstancesResponse instancesResponse,
-    RoutingContext routingContext,
-    WebContext context) {
+    RoutingContext routingContext) {
 
-    List<String> instanceIds = getInstanceIdsFromInstanceResult(instancesResponse.getSuccess());
-    String query = createQueryForRelatedInstances(instanceIds);
+    final List<String> instanceIds =
+      getInstanceIdsFromInstanceResult(instancesResponse.getSuccess());
 
-    try {
-      query = URLEncoder.encode(query, "UTF-8");
-    } catch (UnsupportedEncodingException e) {
-      log.error(format("Cannot encode query %s", query));
-    }
-    CollectionResourceClient relatedInstancesClient = createInstanceRelationshipsClient(routingContext, context);
-
-    if (relatedInstancesClient != null) {
-      CompletableFuture<Response> relatedInstancesFetched = new CompletableFuture<>();
-
-      relatedInstancesClient.getMany(query, relatedInstancesFetched::complete);
-
-      return relatedInstancesFetched
-        .thenCompose(response -> withInstancesRelationships(instancesResponse, response));
-
-    }
-    return completedFuture(null);
+    return createInstanceRelationshipsService(routingContext)
+      .fetchInstanceRelationships(instanceIds)
+      .compose(response -> withInstancesRelationships(instancesResponse, response));
   }
 
-  private CompletableFuture<InstancesResponse> fetchPrecedingSucceedingTitles(
+  private Future<InstancesResponse> fetchPrecedingSucceedingTitles(
     InstancesResponse instancesResponse, RoutingContext routingContext, WebContext context) {
 
     List<String> instanceIds = getInstanceIdsFromInstanceResult(instancesResponse.getSuccess());
-    String query = createQueryForPrecedingSucceedingInstances(instanceIds);
 
-    try {
-      query = URLEncoder.encode(query, "UTF-8");
-    } catch (UnsupportedEncodingException e) {
-      log.error(format("Cannot encode query %s", query));
-    }
-
-    CollectionResourceClient precedingSucceedingTitlesClient =
-      createPrecedingSucceedingTitlesClient(routingContext, context);
-    CompletableFuture<Response> precedingSucceedingTitlesFetched = new CompletableFuture<>();
-
-    precedingSucceedingTitlesClient.getMany(query, precedingSucceedingTitlesFetched::complete);
-
-    return precedingSucceedingTitlesFetched
-      .thenCompose(response ->
-        withPrecedingSucceedingTitles(routingContext, context,
-          instancesResponse, response));
+    return createInstanceRelationshipsService(routingContext)
+      .fetchInstancePrecedingSucceedingTitles(instanceIds)
+      .compose(response ->
+        withPrecedingSucceedingTitles(routingContext, context, instancesResponse, response));
   }
 
   /**
@@ -414,27 +395,21 @@ public class Instances extends AbstractInstances {
       instance.getPrecedingTitles(), instance.getSucceedingTitles(), context));
   }
 
-  private CompletableFuture<InstancesResponse> withInstancesRelationships(
-    InstancesResponse instancesResponse, Response result) {
+  private Future<InstancesResponse> withInstancesRelationships(
+    InstancesResponse instancesResponse, List<JsonObject> relationsList) {
 
-    if (result.getStatusCode() == 200) {
-      Map<String, List<InstanceRelationshipToParent>> parentInstanceMap = new HashMap();
-      Map<String, List<InstanceRelationshipToChild>> childInstanceMap = new HashMap();
+    Map<String, List<InstanceRelationshipToParent>> parentInstanceMap = new HashMap<>();
+    Map<String, List<InstanceRelationshipToChild>> childInstanceMap = new HashMap<>();
 
-      JsonObject json = result.getJson();
-      List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("instanceRelationships"));
-      relationsList.stream().map(rel -> {
-        addToList(childInstanceMap, rel.getString("superInstanceId"), new InstanceRelationshipToChild(rel));
-        return rel;
-      }).forEachOrdered(rel -> {
-        addToList(parentInstanceMap, rel.getString("subInstanceId"), new InstanceRelationshipToParent(rel));
-      });
+    relationsList.forEach(rel -> {
+      addToList(childInstanceMap, rel.getString("superInstanceId"), new InstanceRelationshipToChild(rel));
+      addToList(parentInstanceMap, rel.getString("subInstanceId"), new InstanceRelationshipToParent(rel));
+    });
 
-      instancesResponse.setChildInstanceMap(childInstanceMap);
-      instancesResponse.setParentInstanceMap(parentInstanceMap);
-      return completedFuture(instancesResponse);
-    }
-    return completedFuture(null);
+    instancesResponse.setChildInstanceMap(childInstanceMap);
+    instancesResponse.setParentInstanceMap(parentInstanceMap);
+
+    return Future.succeededFuture(instancesResponse);
   }
 
   private CompletableFuture<Instance> withInstanceRelationships(Instance instance,
@@ -510,36 +485,33 @@ public class Instances extends AbstractInstances {
     }
   }
 
-  private CompletableFuture<InstancesResponse> withPrecedingSucceedingTitles(
+  private Future<InstancesResponse> withPrecedingSucceedingTitles(
     RoutingContext routingContext, WebContext context,
-    InstancesResponse instancesResponse, Response result) {
+    InstancesResponse instancesResponse, List<JsonObject> relationsList) {
 
-    if (result.getStatusCode() == 200) {
-      Map<String, List<CompletableFuture<PrecedingSucceedingTitle>>> precedingTitlesMap = new HashMap<>();
-      Map<String, List<CompletableFuture<PrecedingSucceedingTitle>>> succeedingTitlesMap = new HashMap<>();
-      JsonObject json = result.getJson();
-      List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("precedingSucceedingTitles"));
-      relationsList.stream().map(rel -> {
-        final String precedingInstanceId = rel.getString(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY);
-        if (StringUtils.isNotBlank(precedingInstanceId)) {
-          addToList(precedingTitlesMap, precedingInstanceId, getPrecedingSucceedingTitle(routingContext, context, rel,
-            PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY));
-        }
-        return rel;
-      }).forEachOrdered(rel -> {
-          final String succeedingInstanceId = rel.getString(PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY);
-          if (StringUtils.isNotBlank(succeedingInstanceId)) {
-            addToList(succeedingTitlesMap, succeedingInstanceId, getPrecedingSucceedingTitle(routingContext, context, rel,
-              PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY));
-          }
-        }
-      );
+    Map<String, List<CompletableFuture<PrecedingSucceedingTitle>>> precedingTitlesMap = new HashMap<>();
+    Map<String, List<CompletableFuture<PrecedingSucceedingTitle>>> succeedingTitlesMap = new HashMap<>();
 
-      return completedFuture(instancesResponse)
-        .thenCompose(r -> withPrecedingTitles(instancesResponse, precedingTitlesMap))
-        .thenCompose(r -> withSucceedingTitles(instancesResponse, succeedingTitlesMap));
-    }
-    return completedFuture(null);
+    relationsList.forEach(rel -> {
+      final String precedingInstanceId = rel.getString(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY);
+      if (StringUtils.isNotBlank(precedingInstanceId)) {
+        addToList(precedingTitlesMap, precedingInstanceId, getPrecedingSucceedingTitle(routingContext, context, rel,
+          PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY));
+      }
+      final String succeedingInstanceId = rel.getString(PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY);
+      if (StringUtils.isNotBlank(succeedingInstanceId)) {
+        addToList(succeedingTitlesMap, succeedingInstanceId, getPrecedingSucceedingTitle(routingContext, context, rel,
+          PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY));
+      }
+    });
+
+    final Future<InstancesResponse> future = Future.future();
+    completedFuture(instancesResponse)
+      .thenCompose(r -> withPrecedingTitles(instancesResponse, precedingTitlesMap))
+      .thenCompose(r -> withSucceedingTitles(instancesResponse, succeedingTitlesMap))
+      .thenAccept(future::complete);
+
+    return future;
   }
 
   private CompletableFuture<Instance> withPrecedingSucceedingTitles(
@@ -644,5 +616,13 @@ public class Instances extends AbstractInstances {
     } else {
       return completedFuture(PrecedingSucceedingTitle.from(rel));
     }
+  }
+
+  private InstanceRelationshipsService createInstanceRelationshipsService(RoutingContext routingContext) {
+    final WebContext webContext = new WebContext(routingContext);
+
+    return new InstanceRelationshipsService(
+      createInstanceRelationshipsClient(routingContext, webContext),
+      createPrecedingSucceedingTitlesClient(routingContext, webContext));
   }
 }
