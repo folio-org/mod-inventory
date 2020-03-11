@@ -1,0 +1,25 @@
+#%RAML 1.0
+title: Inventory Event Handlers API
+version: v0.1
+protocols: [ HTTP, HTTPS ]
+baseUri: http://localhost
+
+documentation:
+  - title: "Inventory Event Handlers API"
+    content: <b>API for handling events</b>
+
+/inventory/handlers/created-srs-marc-bib-record:
+  displayName: API for handling DI_SRS_MARC_BIB_RECORD_CREATED event
+  post:
+    description: "Handler for DI_SRS_MARC_BIB_RECORD_CREATED event"
+    body:
+      application/text:
+        type: string
+    responses:
+      204:
+        description: "Received DI_SRS_MARC_BIB_RECORD_CREATED event"
+      500:
+        description: "Internal server error"
+        body:
+          text/plain:
+            example: "Internal server error"
