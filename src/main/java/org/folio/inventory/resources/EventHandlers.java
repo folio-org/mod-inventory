@@ -12,6 +12,8 @@ import org.folio.inventory.support.http.server.ServerErrorResponse;
 import org.folio.inventory.support.http.server.SuccessResponse;
 import org.folio.processing.events.EventManager;
 import org.folio.processing.matching.loader.MatchValueLoaderFactory;
+import org.folio.processing.matching.reader.MarcValueReaderImpl;
+import org.folio.processing.matching.reader.MatchValueReaderFactory;
 
 public class EventHandlers {
 
@@ -20,6 +22,7 @@ public class EventHandlers {
   public EventHandlers(final Storage storage) {
     MatchValueLoaderFactory.register(new InstanceLoader(storage));
     EventManager.registerEventHandler(new MatchInstanceEventHandler());
+    MatchValueReaderFactory.register(new MarcValueReaderImpl());
   }
 
   public void register(Router router) {

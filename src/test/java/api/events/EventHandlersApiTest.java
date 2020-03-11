@@ -18,6 +18,7 @@ import org.junit.Test;
 
 import java.net.MalformedURLException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -42,11 +43,7 @@ public class EventHandlersApiTest extends ApiTests {
   @Test
   public void shouldReturnNoContentOnValidBody() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
     CompletableFuture<Response> conversionCompleted = new CompletableFuture<>();
-    DataImportEventPayload payload = new DataImportEventPayload();
-    payload.setJobExecutionId(UUID.randomUUID().toString());
-    payload.setEventType("DI_SRS_MARC_BIB_RECORD_CREATED");
-    payload.setProfileSnapshot(new ProfileSnapshotWrapper().withProfileId(UUID.randomUUID().toString()).withContentType(ProfileSnapshotWrapper.ContentType.MATCH_PROFILE).withOrder(0).withContent(new MatchProfile().withId(UUID.randomUUID().toString())));
-    okapiClient.post(ApiRoot.dataImportEventHandler(), JsonObject.mapFrom(payload), ResponseHandler.any(conversionCompleted));
+    okapiClient.post(ApiRoot.dataImportEventHandler(), new JsonObject(), ResponseHandler.any(conversionCompleted));
     Response response = conversionCompleted.get(5, TimeUnit.SECONDS);
     assertThat(response.getStatusCode(), is(204));
   }
@@ -54,16 +51,22 @@ public class EventHandlersApiTest extends ApiTests {
   @Test
   public void shouldReturnNoContentOnValidData() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
     CompletableFuture<Response> conversionCompleted = new CompletableFuture<>();
-    DataImportEventPayload payload = new DataImportEventPayload();
-    payload.setJobExecutionId(UUID.randomUUID().toString());
-    payload.setEventType("DI_SRS_MARC_BIB_RECORD_CREATED");
-    payload.setProfileSnapshot(prepareSnapshot());
-    okapiClient.post(ApiRoot.dataImportEventHandler(), JsonObject.mapFrom(payload), ResponseHandler.any(conversionCompleted));
+    okapiClient.post(ApiRoot.dataImportEventHandler(), JsonObject.mapFrom(prepareSnapshot()), ResponseHandler.any(conversionCompleted));
     Response response = conversionCompleted.get(5, TimeUnit.SECONDS);
     assertThat(response.getStatusCode(), is(204));
   }
 
-  private ProfileSnapshotWrapper prepareSnapshot() {
+  private DataImportEventPayload prepareSnapshot() {
+
+    DataImportEventPayload payload = new DataImportEventPayload();
+    payload.setJobExecutionId(UUID.randomUUID().toString());
+    payload.setEventType("DI_SRS_MARC_BIB_RECORD_CREATED");
+    payload.setOkapiUrl("localhost");
+    payload.setTenant("diku");
+    payload.setToken("token");
+    payload.setContext(new HashMap<>());
+    payload.getContext().put(EntityType.MARC_BIBLIOGRAPHIC.value(), "{ \"leader\":\"01314nam  22003851a 4500\", \"fields\":[ { \"001\":\"ybp7406411\" } ] }");
+
     String jobProfileId = UUID.randomUUID().toString();
     String matchProfileId = UUID.randomUUID().toString();
     ProfileSnapshotWrapper root = new ProfileSnapshotWrapper();
@@ -90,12 +93,16 @@ public class EventHandlersApiTest extends ApiTests {
         .withIncomingRecordType(EntityType.MARC_BIBLIOGRAPHIC)
         .withName("name")
         .withMatchDetails(Collections.singletonList(new MatchDetail()
+          .withIncomingMatchExpression(new MatchExpression()
+            .withDataValueType(VALUE_FROM_RECORD)
+            .withFields(Collections.singletonList(new Field().withLabel("id").withValue("instance.id"))))
           .withMatchCriterion(EXACTLY_MATCHES)
           .withExistingMatchExpression(new MatchExpression()
             .withDataValueType(VALUE_FROM_RECORD)
             .withFields(Collections.singletonList(new Field().withLabel("id").withValue("instance.id")))
           ))))));
-    return root;
+    payload.setProfileSnapshot(root);
+    return payload;
   }
 
 }
