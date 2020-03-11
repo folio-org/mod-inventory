@@ -216,7 +216,7 @@
           "methods": [
             "POST"
           ],
-          "pathPattern": "/inventory/handlers/created-srs-marc-bib-record",
+          "pathPattern": "/inventory/handlers/data-import",
           "permissionsRequired": [
             "inventory.events.post"
           ],
