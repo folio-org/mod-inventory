@@ -2,7 +2,9 @@ package org.folio.inventory.support;
 
 import static org.folio.inventory.support.http.server.JsonResponse.unprocessableEntity;
 
+import org.folio.inventory.storage.external.exceptions.ExternalResourceFetchException;
 import org.folio.inventory.support.http.server.ClientErrorResponse;
+import org.folio.inventory.support.http.server.ForwardResponse;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
 import org.folio.inventory.validation.exceptions.NotFoundException;
 import org.folio.inventory.validation.exceptions.UnprocessableEntityException;
@@ -26,6 +28,11 @@ public final class EndpointFailureHandler {
       unprocessableEntity(context.response(), validationFailure.getValidationError());
     } else if (failure instanceof NotFoundException) {
       ClientErrorResponse.notFound(context.response(), failure.getMessage());
+    } else if (failure instanceof ExternalResourceFetchException) {
+      final ExternalResourceFetchException externalException =
+        (ExternalResourceFetchException) failure;
+
+      ForwardResponse.forward(context.response(), externalException.getFailedResponse());
     } else {
       ServerErrorResponse.internalError(context.response(), failure);
     }

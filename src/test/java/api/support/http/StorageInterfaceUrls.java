@@ -37,6 +37,10 @@ public class StorageInterfaceUrls {
     return viaOkapiURL("/nature-of-content-terms" + subPath);
   }
 
+  public static URL precedingSucceedingTitlesUrl(String subPath) {
+    return viaOkapiURL("/preceding-succeeding-titles" + subPath);
+  }
+
   private static URL viaOkapiURL(String path) {
     try {
       return URLHelper.joinPath(new URL(storageOkapiUrl()), path);
