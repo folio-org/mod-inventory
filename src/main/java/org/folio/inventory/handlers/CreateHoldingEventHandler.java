@@ -1,4 +1,4 @@
-package org.folio.inventory.event.handlers;
+package org.folio.inventory.handlers;
 
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
