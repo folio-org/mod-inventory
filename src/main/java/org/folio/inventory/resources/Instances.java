@@ -36,7 +36,6 @@ import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.services.InstanceRelationshipsService;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
-import org.folio.inventory.support.EndpointFailureHandler;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.server.ClientErrorResponse;
@@ -47,7 +46,6 @@ import org.folio.inventory.support.http.server.ServerErrorResponse;
 import org.folio.rest.client.SourceStorageClient;
 import org.folio.rest.jaxrs.model.SuppressFromDiscoveryDto;
 
-import io.vertx.core.Future;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
