@@ -3,6 +3,8 @@ package org.folio.inventory.resources;
 import static io.netty.util.internal.StringUtil.COMMA;
 import static java.lang.String.format;
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.folio.inventory.support.EndpointFailureHandler.getKnownException;
+import static org.folio.inventory.support.EndpointFailureHandler.handleFailure;
 import static org.folio.inventory.support.http.server.SuccessResponse.noContent;
 
 import java.io.UnsupportedEncodingException;
@@ -138,16 +140,16 @@ public class Instances extends AbstractInstances {
     InstancesResponse instancesResponse = new InstancesResponse();
     instancesResponse.setSuccess(success);
 
-    Future.succeededFuture(instancesResponse)
-      .compose(response -> fetchRelationships(response, routingContext))
-      .compose(response -> fetchPrecedingSucceedingTitles(response, routingContext, context))
-      .setHandler(result -> {
-        if (result.succeeded()) {
+    completedFuture(instancesResponse)
+      .thenCompose(response -> fetchRelationships(response, routingContext))
+      .thenCompose(response -> fetchPrecedingSucceedingTitles(response, routingContext, context))
+      .whenComplete((result, ex) -> {
+        if (ex == null) {
           JsonResponse.success(routingContext.response(),
-            toRepresentation(result.result(), context));
+            toRepresentation(result, context));
         } else {
-          log.warn("Exception occurred", result.cause());
-          EndpointFailureHandler.handleFailure(result, routingContext);
+          log.warn("Exception occurred", ex);
+          handleFailure(getKnownException(ex), routingContext);
         }
       });
   }
@@ -337,7 +339,7 @@ public class Instances extends AbstractInstances {
    * @param instancesResponse Multi record Instances result
    * @param routingContext
    */
-  private Future<InstancesResponse> fetchRelationships(
+  private CompletableFuture<InstancesResponse> fetchRelationships(
     InstancesResponse instancesResponse,
     RoutingContext routingContext) {
 
@@ -346,17 +348,17 @@ public class Instances extends AbstractInstances {
 
     return createInstanceRelationshipsService(routingContext)
       .fetchInstanceRelationships(instanceIds)
-      .compose(response -> withInstancesRelationships(instancesResponse, response));
+      .thenCompose(response -> withInstancesRelationships(instancesResponse, response));
   }
 
-  private Future<InstancesResponse> fetchPrecedingSucceedingTitles(
+  private CompletableFuture<InstancesResponse> fetchPrecedingSucceedingTitles(
     InstancesResponse instancesResponse, RoutingContext routingContext, WebContext context) {
 
     List<String> instanceIds = getInstanceIdsFromInstanceResult(instancesResponse.getSuccess());
 
     return createInstanceRelationshipsService(routingContext)
       .fetchInstancePrecedingSucceedingTitles(instanceIds)
-      .compose(response ->
+      .thenCompose(response ->
         withPrecedingSucceedingTitles(routingContext, context, instancesResponse, response));
   }
 
@@ -395,7 +397,7 @@ public class Instances extends AbstractInstances {
       instance.getPrecedingTitles(), instance.getSucceedingTitles(), context));
   }
 
-  private Future<InstancesResponse> withInstancesRelationships(
+  private CompletableFuture<InstancesResponse> withInstancesRelationships(
     InstancesResponse instancesResponse, List<JsonObject> relationsList) {
 
     Map<String, List<InstanceRelationshipToParent>> parentInstanceMap = new HashMap<>();
@@ -409,7 +411,7 @@ public class Instances extends AbstractInstances {
     instancesResponse.setChildInstanceMap(childInstanceMap);
     instancesResponse.setParentInstanceMap(parentInstanceMap);
 
-    return Future.succeededFuture(instancesResponse);
+    return CompletableFuture.completedFuture(instancesResponse);
   }
 
   private CompletableFuture<Instance> withInstanceRelationships(Instance instance,
@@ -485,7 +487,7 @@ public class Instances extends AbstractInstances {
     }
   }
 
-  private Future<InstancesResponse> withPrecedingSucceedingTitles(
+  private CompletableFuture<InstancesResponse> withPrecedingSucceedingTitles(
     RoutingContext routingContext, WebContext context,
     InstancesResponse instancesResponse, List<JsonObject> relationsList) {
 
@@ -505,13 +507,9 @@ public class Instances extends AbstractInstances {
       }
     });
 
-    final Future<InstancesResponse> future = Future.future();
-    completedFuture(instancesResponse)
+    return completedFuture(instancesResponse)
       .thenCompose(r -> withPrecedingTitles(instancesResponse, precedingTitlesMap))
-      .thenCompose(r -> withSucceedingTitles(instancesResponse, succeedingTitlesMap))
-      .thenAccept(future::complete);
-
-    return future;
+      .thenCompose(r -> withSucceedingTitles(instancesResponse, succeedingTitlesMap));
   }
 
   private CompletableFuture<Instance> withPrecedingSucceedingTitles(

@@ -2,6 +2,7 @@ package org.folio.inventory.support;
 
 import static org.folio.inventory.support.http.server.JsonResponse.unprocessableEntity;
 
+import org.folio.inventory.exceptions.AbstractInventoryException;
 import org.folio.inventory.storage.external.exceptions.ExternalResourceFetchException;
 import org.folio.inventory.support.http.server.ClientErrorResponse;
 import org.folio.inventory.support.http.server.ForwardResponse;
@@ -19,8 +20,10 @@ public final class EndpointFailureHandler {
       return;
     }
 
-    final Throwable failure = result.cause();
+    handleFailure(result.cause(), context);
+  }
 
+  public static void handleFailure(Throwable failure, RoutingContext context) {
     if (failure instanceof UnprocessableEntityException) {
       UnprocessableEntityException validationFailure =
         (UnprocessableEntityException) failure;
@@ -36,5 +39,10 @@ public final class EndpointFailureHandler {
     } else {
       ServerErrorResponse.internalError(context.response(), failure);
     }
+  }
+
+  public static Throwable getKnownException(Throwable throwable) {
+    return throwable.getCause() instanceof AbstractInventoryException
+      ? throwable.getCause() : throwable;
   }
 }

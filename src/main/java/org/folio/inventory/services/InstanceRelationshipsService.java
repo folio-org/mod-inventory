@@ -1,12 +1,12 @@
 package org.folio.inventory.services;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.storage.external.CqlQuery;
 import org.folio.inventory.storage.external.MultipleRecordsFetchClient;
 
-import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 public class InstanceRelationshipsService {
@@ -22,11 +22,11 @@ public class InstanceRelationshipsService {
       createPrecedingSucceedingTitlesFetchClient(precedingSucceedingTitleClient);
   }
 
-  public Future<List<JsonObject>> fetchInstanceRelationships(List<String> instanceIds) {
+  public CompletableFuture<List<JsonObject>> fetchInstanceRelationships(List<String> instanceIds) {
     return relationshipsFetchClient.find(instanceIds, this::fetchRelatedInstancesCql);
   }
 
-  public Future<List<JsonObject>> fetchInstancePrecedingSucceedingTitles(List<String> instanceIds) {
+  public CompletableFuture<List<JsonObject>> fetchInstancePrecedingSucceedingTitles(List<String> instanceIds) {
     return precedingSucceedingFetchClient.find(instanceIds, this::fetchPrecedingSucceedingTitleCql);
   }
 
