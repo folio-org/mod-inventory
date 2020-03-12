@@ -82,7 +82,7 @@ public class ApiTestSuite {
     Boolean.parseBoolean(System.getProperty("use.okapi.storage.requests", ""));
   private static String okapiAddress = System.getProperty("okapi.address", "");
 
-  private static volatile boolean initialised;
+  private static boolean initialised;
 
   @BeforeClass
   public static void before()

@@ -45,6 +45,7 @@ public class InstanceRelationshipsService {
 
     return MultipleRecordsFetchClient.builder()
       .withCollectionPropertyName("instanceRelationships")
+      .withExpectedStatus(200)
       .withCollectionResourceClient(relationshipsClient)
       .build();
   }
@@ -54,6 +55,7 @@ public class InstanceRelationshipsService {
 
     return MultipleRecordsFetchClient.builder()
       .withCollectionPropertyName("precedingSucceedingTitles")
+      .withExpectedStatus(200)
       .withCollectionResourceClient(relationshipsClient)
       .build();
   }

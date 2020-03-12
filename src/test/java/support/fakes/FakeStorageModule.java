@@ -114,8 +114,7 @@ class FakeStorageModule extends AbstractVerticle {
       return false;
     }
 
-    return endpointFailureDescriptor != null
-      && DateTime.now().toDate()
+    return endpointFailureDescriptor != null && DateTime.now().toDate()
       .before(endpointFailureDescriptor.getFailureExpireDate());
   }
 
