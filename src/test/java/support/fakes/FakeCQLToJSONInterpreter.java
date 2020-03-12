@@ -12,10 +12,14 @@ import java.util.List;
 import java.util.function.BinaryOperator;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class FakeCQLToJSONInterpreter {
-  private static final String PRECEDING_SUCCEEDING_URL_REGEX = "succeedingInstanceId==\\((.+)\\) or precedingInstanceId==\\((.+)\\)";
+  // " or ) at the left and a-z at right
+  private static final String OR_REGEX = "(?<=[\")]) or (?=[a-z])";
+  private static final Pattern PATTERN = Pattern.compile(OR_REGEX);
   private final boolean diagnosticsEnabled;
 
   public FakeCQLToJSONInterpreter(boolean diagnosticsEnabled) {
@@ -76,10 +80,10 @@ public class FakeCQLToJSONInterpreter {
 
     String splitRegex;
     BinaryOperator<Predicate<JsonObject>> accumulator;
-    //TODO Need to implement operator 'or' for query which contains search by different fields.
-    //This is just a temporary solution.
-    if (query.matches(PRECEDING_SUCCEEDING_URL_REGEX)) {
-      splitRegex = " or ";
+
+    final Matcher matcher = PATTERN.matcher(query);
+    if (matcher.find()) {
+      splitRegex = OR_REGEX;
       accumulator = Predicate::or;
     } else {
       splitRegex = " and ";
