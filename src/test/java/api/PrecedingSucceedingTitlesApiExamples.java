@@ -5,37 +5,23 @@ import static api.support.InstanceSamples.smallAngryPlanet;
 import static api.support.InstanceSamples.taoOfPooh;
 import static api.support.InstanceSamples.uprooted;
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.junit.Assert.assertThat;
 
 import java.net.MalformedURLException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
-import org.joda.time.DateTime;
-import org.junit.After;
 import org.junit.Test;
 
 import api.support.ApiTests;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import support.fakes.EndpointFailureDescriptor;
 
 public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
-
-  @After
-  public void expireFailureEmulation() throws Exception {
-    precedingSucceedingTitlesClient.expireFailureEmulation();
-  }
 
   @Test
   public void canCreateAnInstanceWithUnconnectedPrecedingTitles()
@@ -428,82 +414,6 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
       uprootedId.toString(), angryPlanetId.toString());
   }
 
-  @Test
-  public void canFetchMultipleInstancesWithPrecedingSucceedingTitles() throws Exception {
-    final int expectedCount = 200;
-    final Map<String, String> precedingToSucceedingMap =
-      createPrecedingSucceedingInstances(expectedCount / 2);
-
-    final Map<String, JsonObject> precedingSucceedingInstances = instancesClient
-      .getMany("title=(\"preceding\" or \"succeeding\"", expectedCount).stream()
-      .collect(Collectors.toMap(json -> json.getString("id"), Function.identity()));
-
-    assertThat(precedingSucceedingInstances.size(), is(expectedCount));
-
-    precedingToSucceedingMap.forEach((precedingInstanceId, succeedingInstanceId) -> {
-      final JsonObject precedingInstance = precedingSucceedingInstances.get(precedingInstanceId);
-      final JsonObject succeedingInstance = precedingSucceedingInstances.get(succeedingInstanceId);
-
-      verifyInstancesInPrecedingSucceedingRelationship(precedingInstance, succeedingInstance);
-    });
-  }
-
-  @Test
-  public void canForwardInstancePrecedingSucceedingTitlesFetchFailure() throws Exception {
-    final int expectedCount = 4;
-    createPrecedingSucceedingInstances(expectedCount);
-
-    final JsonObject expectedErrorResponse = new JsonObject().put("message", "Server error");
-    precedingSucceedingTitlesClient.emulateFailure(
-      new EndpointFailureDescriptor()
-      .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
-      .setStatusCode(500)
-      .setContentType("application/json")
-      .setBody(expectedErrorResponse.toString()));
-
-    Response response = instancesClient
-      .attemptGetMany("title=(\"preceding\" or \"succeeding\"", expectedCount);
-
-    assertThat(response.getStatusCode(), is(500));
-    assertThat(response.getContentType(), is("application/json"));
-    assertThat(response.getJson(), is(expectedErrorResponse));
-  }
-
-  private Map<String, String> createPrecedingSucceedingInstances(int count)
-    throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
-
-    final Map<String, String> map = new HashMap<>();
-    for (int i = 0; i < count; i++) {
-      UUID firstInstanceId = UUID.randomUUID();
-      UUID secondInstanceId = UUID.randomUUID();
-
-      instancesClient.create(nod(firstInstanceId)
-        .put("title", randomString("preceding"))
-        .put("identifiers", createIdentifier()));
-
-      instancesClient.create(nod(secondInstanceId)
-        .put("title", randomString("succeeding"))
-        .put("identifiers", createIdentifier()));
-
-      precedingSucceedingTitlesClient.create(
-        createPrecedingSucceedingRelationship(firstInstanceId, secondInstanceId));
-
-      map.put(firstInstanceId.toString(), secondInstanceId.toString());
-    }
-
-    return map;
-  }
-
-  private String randomString(String prefix) {
-    return prefix + new Random().nextLong();
-  }
-
-  private JsonArray createIdentifier() {
-    return new JsonArray().add(new JsonObject()
-      .put("identifierTypeId", UUID.randomUUID().toString())
-      .put("value", randomString("")));
-  }
-
   private void verifyRelatedInstancePrecedingTitle(IndividualResource relatedInstance,
     IndividualResource createdInstance) throws MalformedURLException,
     InterruptedException, ExecutionException, TimeoutException {
@@ -534,13 +444,6 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
     return new JsonObject()
       .put("id", id)
       .put("succeedingInstanceId", succeedingInstanceId);
-  }
-
-  private JsonObject createPrecedingSucceedingRelationship(UUID precedingId, UUID succeedingId) {
-    return new JsonObject()
-      .put("id", UUID.randomUUID().toString())
-      .put("precedingInstanceId", precedingId.toString())
-      .put("succeedingInstanceId", succeedingId.toString());
   }
 
   private JsonObject getRecordById(JsonArray collection, String id) {
@@ -592,30 +495,5 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
     assertThat(actualPrecedingTitle.getJsonArray("identifiers"), is(expected.getJsonArray("identifiers")));
     assertThat(actualPrecedingTitle.getString("precedingInstanceId"), is(precedingInstanceId));
     assertThat(actualPrecedingTitle.getString("succeedingInstanceId"), is(succeedingInstanceId));
-  }
-
-  private void verifyInstancesInPrecedingSucceedingRelationship(
-    JsonObject precedingInstance, JsonObject succeedingInstance) {
-
-    assertThat(precedingInstance, notNullValue());
-    assertThat(succeedingInstance, notNullValue());
-
-    final JsonObject succeedingTitle = precedingInstance.getJsonArray("succeedingTitles").getJsonObject(0);
-    final JsonObject precedingTitle = succeedingInstance.getJsonArray("precedingTitles").getJsonObject(0);
-
-    assertThat(succeedingTitle, notNullValue());
-    assertThat(precedingTitle, notNullValue());
-
-    assertThat(succeedingTitle.getString("title"), is(succeedingInstance.getString("title")));
-    assertThat(succeedingTitle.getString("hrid"), is(succeedingInstance.getString("hrid")));
-    assertThat(succeedingTitle.getJsonArray("identifiers"),
-      is(succeedingInstance.getJsonArray("identifiers")));
-    assertThat(succeedingTitle.getString("succeedingInstanceId"), is(succeedingInstance.getString("id")));
-
-    assertThat(precedingTitle.getString("title"), is(precedingInstance.getString("title")));
-    assertThat(precedingTitle.getString("hrid"), is(precedingInstance.getString("hrid")));
-    assertThat(precedingTitle.getJsonArray("identifiers"),
-      is(precedingInstance.getJsonArray("identifiers")));
-    assertThat(precedingTitle.getString("precedingInstanceId"), is(precedingInstance.getString("id")));
   }
 }
