@@ -15,6 +15,7 @@ import org.folio.rest.jaxrs.model.Field;
 import org.folio.rest.jaxrs.model.MatchExpression;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.junit.Test;
+import support.fakes.FakeOkapi;
 
 import java.net.MalformedURLException;
 import java.util.Collections;
@@ -61,7 +62,7 @@ public class EventHandlersApiTest extends ApiTests {
     DataImportEventPayload payload = new DataImportEventPayload();
     payload.setJobExecutionId(UUID.randomUUID().toString());
     payload.setEventType("DI_SRS_MARC_BIB_RECORD_CREATED");
-    payload.setOkapiUrl("localhost");
+    payload.setOkapiUrl(FakeOkapi.getAddress());
     payload.setTenant("diku");
     payload.setToken("token");
     payload.setContext(new HashMap<>());
@@ -71,7 +72,8 @@ public class EventHandlersApiTest extends ApiTests {
     String matchProfileId = UUID.randomUUID().toString();
     ProfileSnapshotWrapper root = new ProfileSnapshotWrapper();
     root.setContentType(ProfileSnapshotWrapper.ContentType.JOB_PROFILE);
-    root.setId(jobProfileId);
+    root.setId(UUID.randomUUID().toString());
+    root.setProfileId(jobProfileId);
     root.setOrder(0);
     root.setContent(new JobProfile()
       .withId(jobProfileId)
@@ -83,6 +85,7 @@ public class EventHandlersApiTest extends ApiTests {
         .withLastName("admin"))
       .withName("test"));
     root.setChildSnapshotWrappers(Collections.singletonList(new ProfileSnapshotWrapper()
+      .withId(UUID.randomUUID().toString())
       .withContentType(ProfileSnapshotWrapper.ContentType.MATCH_PROFILE)
       .withOrder(0)
       .withProfileId(matchProfileId)

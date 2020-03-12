@@ -1,4 +1,4 @@
-package org.folio.inventory.matching;
+package org.folio.inventory.dataimport.handlers.matching;
 
 import io.vertx.core.json.JsonObject;
 import org.folio.DataImportEventPayload;
@@ -18,9 +18,7 @@ public class MatchInstanceEventHandler implements EventHandler {
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
     dataImportEventPayload.getCurrentNode()
-      .setContent(new JsonObject((LinkedHashMap) dataImportEventPayload.getCurrentNode().getContent())
-        .mapTo(MatchProfile.class)
-      );
+      .setContent(new JsonObject((LinkedHashMap) dataImportEventPayload.getCurrentNode().getContent()).mapTo(MatchProfile.class));
     boolean matched = MatchingManager.match(dataImportEventPayload);
     if (matched) {
       dataImportEventPayload.setEventType("DI_INVENTORY_INSTANCE_MATCHED");

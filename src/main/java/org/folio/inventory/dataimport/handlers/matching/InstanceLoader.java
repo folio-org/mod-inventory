@@ -1,4 +1,4 @@
-package org.folio.inventory.matching;
+package org.folio.inventory.dataimport.handlers.matching;
 
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
