@@ -1,8 +1,5 @@
 package org.folio.inventory.services;
 
-import static org.folio.inventory.storage.external.MultipleRecordsFetchClient.forInstanceRelationships;
-import static org.folio.inventory.storage.external.MultipleRecordsFetchClient.forPrecedingSucceedingTitles;
-
 import java.util.List;
 
 import org.folio.inventory.storage.external.CollectionResourceClient;
@@ -19,8 +16,10 @@ public class InstanceRelationshipsService {
   public InstanceRelationshipsService(CollectionResourceClient relationshipsClient,
     CollectionResourceClient precedingSucceedingTitleClient) {
 
-    this.relationshipsFetchClient = forInstanceRelationships(relationshipsClient);
-    this.precedingSucceedingFetchClient = forPrecedingSucceedingTitles(precedingSucceedingTitleClient);
+    this.relationshipsFetchClient =
+      createInstanceRelationshipsFetchClient(relationshipsClient);
+    this.precedingSucceedingFetchClient =
+      createPrecedingSucceedingTitlesFetchClient(precedingSucceedingTitleClient);
   }
 
   public Future<List<JsonObject>> fetchInstanceRelationships(List<String> instanceIds) {
@@ -39,5 +38,23 @@ public class InstanceRelationshipsService {
   private CqlQuery fetchPrecedingSucceedingTitleCql(List<String> instanceIds) {
     return CqlQuery.exactMatchAny("succeedingInstanceId", instanceIds)
       .or(CqlQuery.exactMatchAny("precedingInstanceId", instanceIds));
+  }
+
+  private MultipleRecordsFetchClient createInstanceRelationshipsFetchClient(
+    CollectionResourceClient relationshipsClient) {
+
+    return MultipleRecordsFetchClient.builder()
+      .withCollectionPropertyName("instanceRelationships")
+      .withCollectionResourceClient(relationshipsClient)
+      .build();
+  }
+
+  private MultipleRecordsFetchClient createPrecedingSucceedingTitlesFetchClient(
+    CollectionResourceClient relationshipsClient) {
+
+    return MultipleRecordsFetchClient.builder()
+      .withCollectionPropertyName("precedingSucceedingTitles")
+      .withCollectionResourceClient(relationshipsClient)
+      .build();
   }
 }
