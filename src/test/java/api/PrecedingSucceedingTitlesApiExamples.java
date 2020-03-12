@@ -21,13 +21,21 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
+import org.joda.time.DateTime;
+import org.junit.After;
 import org.junit.Test;
 
 import api.support.ApiTests;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import support.fakes.EndpointFailureDescriptor;
 
 public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
+
+  @After
+  public void expireFailureEmulate() throws Exception {
+    precedingSucceedingTitlesClient.expireFailureEmulation();
+  }
 
   @Test
   public void canCreateAnInstanceWithUnconnectedPrecedingTitles()
@@ -438,6 +446,27 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
 
       verifyInstancesPrecedingSucceeding(precedingInstance, succeedingInstance);
     });
+  }
+
+  @Test
+  public void canForwardInstancePrecedingSucceedingTitlesFetchFailure() throws Exception {
+    final int expectedCount = 4;
+    createPrecedingSucceedingInstances(expectedCount);
+
+    final JsonObject expectedErrorResponse = new JsonObject().put("message", "Server error");
+    precedingSucceedingTitlesClient.emulateFailure(
+      new EndpointFailureDescriptor()
+      .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
+      .setStatusCode(500)
+      .setContentType("application/json")
+      .setBody(expectedErrorResponse.toString()));
+
+    Response response = instancesClient
+      .attemptGetMany("title=(\"preceding\" or \"succeeding\"", expectedCount);
+
+    assertThat(response.getStatusCode(), is(500));
+    assertThat(response.getContentType(), is("application/json"));
+    assertThat(response.getJson(), is(expectedErrorResponse));
   }
 
   private Map<String, String> createPrecedingSucceedingInstances(int count)

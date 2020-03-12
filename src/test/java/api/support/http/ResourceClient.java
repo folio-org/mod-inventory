@@ -1,6 +1,7 @@
 package api.support.http;
 
 import static java.lang.String.format;
+import static org.folio.inventory.support.http.client.ResponseHandler.any;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNull.notNullValue;
 import static org.hamcrest.junit.MatcherAssert.assertThat;
@@ -21,9 +22,11 @@ import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
 import org.folio.util.StringUtil;
+import org.joda.time.DateTime;
 
 import api.support.builders.Builder;
 import io.vertx.core.json.JsonObject;
+import support.fakes.EndpointFailureDescriptor;
 
 public class ResourceClient {
 
@@ -312,6 +315,24 @@ public class ResourceClient {
       ResponseHandler.any(getFinished));
 
     return getFinished.get(5, TimeUnit.SECONDS);
+  }
+
+  public void emulateFailure(EndpointFailureDescriptor failureDescriptor)
+    throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+
+    final CompletableFuture<Response> future = new CompletableFuture<>();
+
+    client.post(urlMaker.combine("/emulate-failure"),
+      JsonObject.mapFrom(failureDescriptor), any(future));
+
+    assertThat(future.get(5, TimeUnit.SECONDS).getStatusCode(), is(201));
+  }
+
+  public void expireFailureEmulation()
+    throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+
+    emulateFailure(new EndpointFailureDescriptor()
+      .setFailureExpireDate(DateTime.now().minusMinutes(1).toDate()));
   }
 
   @FunctionalInterface
