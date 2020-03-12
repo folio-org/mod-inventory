@@ -4,16 +4,14 @@ import static org.apache.commons.collections4.ListUtils.partition;
 import static org.folio.inventory.support.JsonArrayHelper.toList;
 import static org.folio.util.StringUtil.urlEncode;
 
-import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.folio.inventory.storage.external.exceptions.ExternalResourceFetchException;
 import org.folio.inventory.support.http.client.Response;
 
-import io.vertx.core.CompositeFuture;
-import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 public class MultipleRecordsFetchClient {
@@ -31,34 +29,37 @@ public class MultipleRecordsFetchClient {
     this.expectedStatus = builder.expectedStatus;
   }
 
-  public <T> Future<List<JsonObject>> find(
+  public <T> CompletableFuture<List<JsonObject>> find(
     List<T> elements, Function<List<T>, CqlQuery> toQueryConverter) {
 
-    final List<Future<Response>> allFutures = partition(elements, partitionSize).stream()
+    final List<CompletableFuture<Response>> allFutures = partition(elements, partitionSize).stream()
       .map(toQueryConverter)
       .map(this::getAllMatched)
       .collect(Collectors.toList());
 
-    return CompositeFuture.all(Collections.unmodifiableList(allFutures))
-      .map(CompositeFuture::<Response>list)
-      .map(list -> list.stream()
+    return CompletableFuture.allOf(allFutures.toArray(new CompletableFuture[0]))
+      .thenApply(notUsed -> allFutures.stream()
+        .map(CompletableFuture::join)
         .map(Response::getJson)
         .flatMap(json -> toList(json.getJsonArray(collectionPropertyName)).stream())
         .collect(Collectors.toList()));
   }
 
-  private Future<Response> getAllMatched(CqlQuery query) {
-    final Future<Response> future = Future.future();
+  private CompletableFuture<Response> getAllMatched(CqlQuery query) {
+    final CompletableFuture<Response> future = new CompletableFuture<>();
 
     resourceClient.getMany(urlEncode(query.toString()), Integer.MAX_VALUE, 0,
       future::complete);
 
-    return future.compose(response -> {
+    return future.thenCompose(response -> {
       if (response.getStatusCode() != expectedStatus) {
-        return Future.failedFuture(new ExternalResourceFetchException(response));
+        final CompletableFuture<Response> failed = new CompletableFuture<>();
+        failed.completeExceptionally(new ExternalResourceFetchException(response));
+
+        return failed;
       }
 
-      return Future.succeededFuture(response);
+      return CompletableFuture.completedFuture(response);
     });
   }
 
