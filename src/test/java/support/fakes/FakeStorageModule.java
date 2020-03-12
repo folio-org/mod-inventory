@@ -19,8 +19,10 @@ import org.folio.inventory.support.http.server.ClientErrorResponse;
 import org.folio.inventory.support.http.server.JsonResponse;
 import org.folio.inventory.support.http.server.SuccessResponse;
 import org.folio.inventory.support.http.server.ValidationError;
+import org.joda.time.DateTime;
 
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
@@ -37,6 +39,7 @@ class FakeStorageModule extends AbstractVerticle {
   private final Collection<String> uniqueProperties;
   private final Map<String, Supplier<Object>> defaultProperties;
   private final List<BiFunction<JsonObject, JsonObject, CompletableFuture<JsonObject>>> recordPreProcessors;
+  private EndpointFailureDescriptor endpointFailureDescriptor = null;
 
   FakeStorageModule(
     String rootPath,
@@ -70,6 +73,7 @@ class FakeStorageModule extends AbstractVerticle {
   void register(Router router) {
     String pathTree = rootPath + "/*";
 
+    router.route(pathTree).handler(this::emulateFailureIfNeeded);
     router.route(pathTree).handler(this::checkTokenHeader);
 
     router.post(pathTree).handler(BodyHandler.create());
@@ -87,6 +91,32 @@ class FakeStorageModule extends AbstractVerticle {
 
     router.get(rootPath + "/:id").handler(this::get);
     router.delete(rootPath + "/:id").handler(this::delete);
+    router.post(rootPath + "/emulate-failure").handler(this::emulateFailure);
+  }
+
+  private void emulateFailureIfNeeded(RoutingContext routingContext) {
+    if (shouldEmulateFailure(routingContext)) {
+      final String body = endpointFailureDescriptor.getBody();
+
+      routingContext.response()
+        .setStatusCode(endpointFailureDescriptor.getStatusCode())
+        .putHeader(HttpHeaders.CONTENT_TYPE, endpointFailureDescriptor.getContentType())
+        .putHeader(HttpHeaders.CONTENT_LENGTH, Integer.toString(body.length()))
+        .write(body)
+        .end();
+    } else {
+      routingContext.next();
+    }
+  }
+
+  private boolean shouldEmulateFailure(RoutingContext routingContext) {
+    if (routingContext.request().uri().endsWith("/emulate-failure")) {
+      return false;
+    }
+
+    return endpointFailureDescriptor != null
+      && DateTime.now().toDate()
+      .before(endpointFailureDescriptor.getFailureExpireDate());
   }
 
   void registerBatch(Router router, String batchPath) {
@@ -372,6 +402,13 @@ class FakeStorageModule extends AbstractVerticle {
     }
 
     return lastPreProcess;
+  }
+
+  private void emulateFailure(RoutingContext routingContext) {
+    endpointFailureDescriptor = routingContext.getBodyAsJson()
+      .mapTo(EndpointFailureDescriptor.class);
+
+    routingContext.response().setStatusCode(201).end();
   }
 }
 
