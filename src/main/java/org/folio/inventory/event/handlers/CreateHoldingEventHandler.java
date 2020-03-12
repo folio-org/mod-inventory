@@ -1,4 +1,4 @@
-package org.folio.inventory.matching;
+package org.folio.inventory.event.handlers;
 
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
@@ -32,10 +32,13 @@ import io.vertx.core.logging.LoggerFactory;
 public class CreateHoldingEventHandler implements EventHandler {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CreateHoldingEventHandler.class);
-  private static final String ERROR_EVENT_TYPE = "DI_ERROR";
   private static final String CREATED_HOLDINGS_RECORD_EVENT_TYPE = "DI_CREATED_HOLDINGS_RECORD";
+  private static final String INSTANCE_ID_ERROR_MESSAGE = "Error: 'instanceId' is empty";
+  private static final String INSTANCE_ID_FIELD = "instanceId";
+  private static final String PERMANENT_LOCATION_ID_FIELD = "permanentLocationId";
 
   private Storage storage;
+  private CompletableFuture<DataImportEventPayload> future;
 
   public CreateHoldingEventHandler(Storage storage) {
     this.storage = storage;
@@ -43,26 +46,21 @@ public class CreateHoldingEventHandler implements EventHandler {
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
-    CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
-      String instanceAsString = dataImportEventPayload.getContext().get(INSTANCE.value());
-      //Check this string (empty)
-      JsonObject instanceAsJson = new JsonObject(instanceAsString);
-      String instanceId = instanceAsJson.getString("id");
-      if (instanceId.isEmpty()){
-        LOGGER.error("Error: 'instanceId' is empty");
-        future.completeExceptionally(new EventProcessingException("Error: 'instanceId' is empty"));
+      future = new CompletableFuture<>();
+      dataImportEventPayload.getContext().put(HOLDINGS.value(), new JsonObject().encode());
+      MappingManager.map(dataImportEventPayload);
+      JsonObject holdingAsJson = new JsonObject(dataImportEventPayload.getContext().get(HOLDINGS.value()));
+
+      fillInstanceIdIfNeeded(dataImportEventPayload, holdingAsJson);
+
+      if(holdingAsJson.getString(PERMANENT_LOCATION_ID_FIELD).isEmpty()) {
+        throwException("Can`t create Holding entity: 'permanentLocationId' is empty");
       }
 
-      JsonObject holdingJsonObject = new JsonObject().put("instanceId", instanceId);
-      dataImportEventPayload.getContext().put(HOLDINGS.value(), holdingJsonObject.encode());
-      MappingManager.map(dataImportEventPayload);
-      String holdingAsJson = dataImportEventPayload.getContext().get(HOLDINGS.value());
-      Holdingsrecord holding = ObjectMapperTool.getMapper().readValue(holdingAsJson, Holdingsrecord.class);
-
+      Holdingsrecord holding = ObjectMapperTool.getMapper().readValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), Holdingsrecord.class);
       if (!isValidHolding(holding)) {
-        LOGGER.error("Holding entity isn`t valid");
-        future.completeExceptionally(new EventProcessingException("Holding isn`t valid"));
+        throwException("Can`t create Holding entity: holding entity isn`t valid");
       }
 
       Context context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
@@ -72,7 +70,7 @@ public class CreateHoldingEventHandler implements EventHandler {
         dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encodePrettily(createdHolding));
         dataImportEventPayload.setEventType(CREATED_HOLDINGS_RECORD_EVENT_TYPE);
         future.complete(dataImportEventPayload);
-      }, failure -> dataImportEventPayload.setEventType(ERROR_EVENT_TYPE));
+      }, failure -> throwException("Can`t save new holding"));
     } catch (IOException e) {
       LOGGER.error("Can`t create Holding entity", e);
       future.completeExceptionally(e);
@@ -87,6 +85,31 @@ public class CreateHoldingEventHandler implements EventHandler {
       return actionProfile.getAction() == ActionProfile.Action.CREATE && actionProfile.getFolioRecord() == ActionProfile.FolioRecord.HOLDINGS;
     }
     return false;
+  }
+
+  private void fillInstanceIdIfNeeded(DataImportEventPayload dataImportEventPayload, JsonObject holdingAsJson) {
+    if (holdingAsJson.getString(INSTANCE_ID_FIELD).isEmpty()) {
+      String instanceAsString = dataImportEventPayload.getContext().get(INSTANCE.value());
+      JsonObject instanceAsJson = new JsonObject(instanceAsString);
+      String instanceId = instanceAsJson.getString(INSTANCE_ID_FIELD);
+      if (instanceId.isEmpty()) {
+        throwException(INSTANCE_ID_ERROR_MESSAGE);
+      }
+      holdingAsJson.put(INSTANCE_ID_FIELD, instanceId);
+      dataImportEventPayload.getContext().put(HOLDINGS.value(), holdingAsJson.encode());
+    }
+  }
+
+  private boolean isValidHolding(Holdingsrecord holding) {
+    ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
+    Validator validator = factory.getValidator();
+    Set<ConstraintViolation<Holdingsrecord>> constraintViolations = validator.validate(holding);
+    return constraintViolations.isEmpty();
+  }
+
+  private void throwException(String errorMessage) {
+    LOGGER.error(errorMessage);
+    future.completeExceptionally(new EventProcessingException(errorMessage));
   }
 
   private Context constructContext(String tenantId, String token, String okapiUrl) {
@@ -112,12 +135,5 @@ public class CreateHoldingEventHandler implements EventHandler {
         return "";
       }
     };
-  }
-
-  private boolean isValidHolding(Holdingsrecord holding) {
-    ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
-    Validator validator = factory.getValidator();
-    Set<ConstraintViolation<Holdingsrecord>> constraintViolations = validator.validate(holding);
-    return constraintViolations.isEmpty();
   }
 }
