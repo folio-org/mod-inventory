@@ -17,7 +17,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class FakeCQLToJSONInterpreter {
-  private static final String OR_REG_EX = "(?<=[\")]) or (?=[a-z])";
+  // " or ) at the left and a-z at right
+  private static final String OR_REGEX = "(?<=[\")]) or (?=[a-z])";
   private final boolean diagnosticsEnabled;
 
   public FakeCQLToJSONInterpreter(boolean diagnosticsEnabled) {
@@ -79,11 +80,11 @@ public class FakeCQLToJSONInterpreter {
     String splitRegex;
     BinaryOperator<Predicate<JsonObject>> accumulator;
 
-    final Matcher matcher = Pattern.compile(OR_REG_EX)
+    final Matcher matcher = Pattern.compile(OR_REGEX)
       .matcher(query);
 
     if (matcher.find()) {
-      splitRegex = OR_REG_EX;
+      splitRegex = OR_REGEX;
       accumulator = Predicate::or;
     } else {
       splitRegex = " and ";

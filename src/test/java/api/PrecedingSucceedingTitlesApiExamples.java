@@ -33,7 +33,7 @@ import support.fakes.EndpointFailureDescriptor;
 public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
 
   @After
-  public void expireFailureEmulate() throws Exception {
+  public void expireFailureEmulation() throws Exception {
     precedingSucceedingTitlesClient.expireFailureEmulation();
   }
 
@@ -444,7 +444,7 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
       final JsonObject precedingInstance = precedingSucceedingInstances.get(precedingInstanceId);
       final JsonObject succeedingInstance = precedingSucceedingInstances.get(succeedingInstanceId);
 
-      verifyInstancesPrecedingSucceeding(precedingInstance, succeedingInstance);
+      verifyInstancesInPrecedingSucceedingRelationship(precedingInstance, succeedingInstance);
     });
   }
 
@@ -486,7 +486,7 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
         .put("identifiers", createIdentifier()));
 
       precedingSucceedingTitlesClient.create(
-        createPrecedingSucceeding(firstInstanceId, secondInstanceId));
+        createPrecedingSucceedingRelationship(firstInstanceId, secondInstanceId));
 
       map.put(firstInstanceId.toString(), secondInstanceId.toString());
     }
@@ -536,7 +536,7 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
       .put("succeedingInstanceId", succeedingInstanceId);
   }
 
-  private JsonObject createPrecedingSucceeding(UUID precedingId, UUID succeedingId) {
+  private JsonObject createPrecedingSucceedingRelationship(UUID precedingId, UUID succeedingId) {
     return new JsonObject()
       .put("id", UUID.randomUUID().toString())
       .put("precedingInstanceId", precedingId.toString())
@@ -594,7 +594,7 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
     assertThat(actualPrecedingTitle.getString("succeedingInstanceId"), is(succeedingInstanceId));
   }
 
-  private void verifyInstancesPrecedingSucceeding(
+  private void verifyInstancesInPrecedingSucceedingRelationship(
     JsonObject precedingInstance, JsonObject succeedingInstance) {
 
     assertThat(precedingInstance, notNullValue());

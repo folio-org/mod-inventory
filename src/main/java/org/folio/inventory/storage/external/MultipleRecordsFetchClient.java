@@ -22,13 +22,13 @@ public class MultipleRecordsFetchClient {
   private final CollectionResourceClient resourceClient;
   private final int partitionSize;
   private final String collectionPropertyName;
-  private final int expectStatus;
+  private final int expectedStatus;
 
   private MultipleRecordsFetchClient(Builder builder) {
     this.resourceClient = builder.collectionResourceClient;
     this.partitionSize = builder.partitionSize;
     this.collectionPropertyName = builder.collectionPropertyName;
-    this.expectStatus = builder.expectStatus;
+    this.expectedStatus = builder.expectedStatus;
   }
 
   public <T> Future<List<JsonObject>> find(
@@ -54,7 +54,7 @@ public class MultipleRecordsFetchClient {
       future::complete);
 
     return future.compose(response -> {
-      if (response.getStatusCode() != expectStatus) {
+      if (response.getStatusCode() != expectedStatus) {
         return Future.failedFuture(new ExternalResourceFetchException(response));
       }
 
@@ -68,7 +68,7 @@ public class MultipleRecordsFetchClient {
 
   public static class Builder {
     private CollectionResourceClient collectionResourceClient;
-    private int expectStatus = 200;
+    private int expectedStatus = 200;
     private String collectionPropertyName;
     private int partitionSize = DEFAULT_PARTITION_SIZE;
 
@@ -83,7 +83,7 @@ public class MultipleRecordsFetchClient {
     }
 
     public Builder withExpectedStatus(int expectedStatus) {
-      this.expectStatus = expectedStatus;
+      this.expectedStatus = expectedStatus;
       return this;
     }
 
