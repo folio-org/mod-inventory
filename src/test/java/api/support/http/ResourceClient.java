@@ -104,6 +104,11 @@ public class ResourceClient {
       "Preceding-succeeding titles", "precedingSucceedingTitles");
   }
 
+  public static ResourceClient forInstanceRelationship(OkapiHttpClient okapiClient) {
+    return new ResourceClient(okapiClient, StorageInterfaceUrls::instanceRelationshipUrl,
+      "Instance relationships", "instanceRelationships");
+  }
+
   private ResourceClient(
     OkapiHttpClient client,
     UrlMaker urlMaker, String resourceName,
