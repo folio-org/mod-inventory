@@ -62,24 +62,6 @@ public class MultipleRecordsFetchClient {
     });
   }
 
-  public static MultipleRecordsFetchClient forInstanceRelationships(
-    CollectionResourceClient resourceClient) {
-
-    return builder()
-      .withCollectionPropertyName("instanceRelationships")
-      .withCollectionResourceClient(resourceClient)
-      .build();
-  }
-
-  public static MultipleRecordsFetchClient forPrecedingSucceedingTitles(
-    CollectionResourceClient resourceClient) {
-
-    return builder()
-      .withCollectionPropertyName("precedingSucceedingTitles")
-      .withCollectionResourceClient(resourceClient)
-      .build();
-  }
-
   public static Builder builder() {
     return new Builder();
   }
