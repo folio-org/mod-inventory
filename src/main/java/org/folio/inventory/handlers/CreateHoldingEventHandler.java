@@ -1,5 +1,6 @@
 package org.folio.inventory.handlers;
 
+import static java.util.Objects.isNull;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
@@ -48,13 +49,15 @@ public class CreateHoldingEventHandler implements EventHandler {
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     try {
       future = new CompletableFuture<>();
+      dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
       dataImportEventPayload.getContext().put(HOLDINGS.value(), new JsonObject().encode());
+      dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
       MappingManager.map(dataImportEventPayload);
       JsonObject holdingAsJson = new JsonObject(dataImportEventPayload.getContext().get(HOLDINGS.value()));
 
       fillInstanceIdIfNeeded(dataImportEventPayload, holdingAsJson);
 
-      if(holdingAsJson.getString(PERMANENT_LOCATION_ID_FIELD).isEmpty()) {
+      if(isNull(holdingAsJson.getString(PERMANENT_LOCATION_ID_FIELD)) || holdingAsJson.getString(PERMANENT_LOCATION_ID_FIELD).isEmpty()) {
         throwException("Can`t create Holding entity: 'permanentLocationId' is empty");
       }
 
@@ -88,10 +91,10 @@ public class CreateHoldingEventHandler implements EventHandler {
   }
 
   private void fillInstanceIdIfNeeded(DataImportEventPayload dataImportEventPayload, JsonObject holdingAsJson) {
-    if (holdingAsJson.getString(INSTANCE_ID_FIELD).isEmpty()) {
+    if (isNull(holdingAsJson.getString(INSTANCE_ID_FIELD)) || holdingAsJson.getString(INSTANCE_ID_FIELD).isEmpty()) {
       String instanceAsString = dataImportEventPayload.getContext().get(INSTANCE.value());
       JsonObject instanceAsJson = new JsonObject(instanceAsString);
-      String instanceId = instanceAsJson.getString(INSTANCE_ID_FIELD);
+      String instanceId = instanceAsJson.getString("id");
       if (instanceId.isEmpty()) {
         throwException(INSTANCE_ID_ERROR_MESSAGE);
       }
