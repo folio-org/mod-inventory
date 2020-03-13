@@ -154,4 +154,94 @@ public class CreateHoldingEventHandlerTest {
     Assert.assertEquals(instanceId, new JsonObject(dataImportEventPayload1.getContext().get(HOLDINGS.value())).getString("instanceId"));
     Assert.assertEquals(permanentLocationId, new JsonObject(dataImportEventPayload1.getContext().get(HOLDINGS.value())).getString("permanentLocationId"));
   }
+
+  @Test(expected = ExecutionException.class)
+  public void shouldNotProcessEventIfInstanceIdIsNotExistsInContext() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    String permanentLocationId = UUID.randomUUID().toString();
+
+    Mockito.when(fakeReader.read(eq("permanentLocationExpression"))).thenReturn(StringValue.of(permanentLocationId));
+
+    Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+
+    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
+
+    doAnswer(invocationOnMock -> {
+      MultipleRecords result = new MultipleRecords<>(new ArrayList<>(), 0);
+      Consumer<Success<MultipleRecords>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
+      return null;
+    }).when(holdingsRecordsCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    doAnswer(invocationOnMock -> {
+      Holdingsrecord holdingsRecord = invocationOnMock.getArgument(0);
+      Consumer<Success<Holdingsrecord>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(holdingsRecord));
+      return null;
+    }).when(holdingsRecordsCollection).add(any(), any(Consumer.class), any(Consumer.class));
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new HoldingsWriterFactory());
+
+    String instanceId = String.valueOf(UUID.randomUUID());
+    Instance instance = new Instance(instanceId, String.valueOf(UUID.randomUUID()),
+      String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
+    HashMap<String, String> context = new HashMap<>();
+    context.put("HOLDINGS", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(new Holdingsrecord())).encode());
+    context.put("INSTANCE", new JsonObject().encode());
+    CreateHoldingEventHandler createHoldingEventHandler = new CreateHoldingEventHandler(storage);
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType("DI_CREATED_HOLDINGS_RECORD")
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload dataImportEventPayload1 = future.get(5, TimeUnit.MILLISECONDS);
+  }
+
+  @Test(expected = ExecutionException.class)
+  public void shouldNotProcessEventIfPermanentLocationIdIsNotExistsInContext() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    Mockito.when(fakeReader.read(eq("permanentLocationExpression"))).thenReturn(StringValue.of(""));
+
+    Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+
+    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
+
+    doAnswer(invocationOnMock -> {
+      MultipleRecords result = new MultipleRecords<>(new ArrayList<>(), 0);
+      Consumer<Success<MultipleRecords>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
+      return null;
+    }).when(holdingsRecordsCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    doAnswer(invocationOnMock -> {
+      Holdingsrecord holdingsRecord = invocationOnMock.getArgument(0);
+      Consumer<Success<Holdingsrecord>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(holdingsRecord));
+      return null;
+    }).when(holdingsRecordsCollection).add(any(), any(Consumer.class), any(Consumer.class));
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new HoldingsWriterFactory());
+
+    String instanceId = String.valueOf(UUID.randomUUID());
+    Instance instance = new Instance(instanceId, String.valueOf(UUID.randomUUID()),
+      String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
+    HashMap<String, String> context = new HashMap<>();
+    context.put("HOLDINGS", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(new Holdingsrecord())).encode());
+    context.put("INSTANCE", new JsonObject().encode());
+    CreateHoldingEventHandler createHoldingEventHandler = new CreateHoldingEventHandler(storage);
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType("DI_CREATED_HOLDINGS_RECORD")
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload dataImportEventPayload1 = future.get(5, TimeUnit.MILLISECONDS);
+  }
 }
