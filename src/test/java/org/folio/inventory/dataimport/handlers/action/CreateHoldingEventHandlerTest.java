@@ -1,4 +1,4 @@
-package org.folio.inventory;
+package org.folio.inventory.dataimport.handlers.action;
 
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
@@ -32,7 +32,6 @@ import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.instances.Instance;
-import org.folio.inventory.handlers.CreateHoldingEventHandler;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.mapper.reader.Reader;
