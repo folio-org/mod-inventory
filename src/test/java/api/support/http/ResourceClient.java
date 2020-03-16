@@ -1,5 +1,7 @@
 package api.support.http;
 
+import static java.lang.String.format;
+import static org.folio.inventory.support.http.client.ResponseHandler.any;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNull.notNullValue;
 import static org.hamcrest.junit.MatcherAssert.assertThat;
@@ -19,9 +21,12 @@ import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
+import org.folio.util.StringUtil;
+import org.joda.time.DateTime;
 
 import api.support.builders.Builder;
 import io.vertx.core.json.JsonObject;
+import support.fakes.EndpointFailureDescriptor;
 
 public class ResourceClient {
 
@@ -92,6 +97,16 @@ public class ResourceClient {
       "Nature of content terms",
       "natureOfContentTerms"
     );
+  }
+
+  public static ResourceClient forPrecedingSucceedingTitles(OkapiHttpClient okapiClient) {
+    return new ResourceClient(okapiClient, StorageInterfaceUrls::precedingSucceedingTitlesUrl,
+      "Preceding-succeeding titles", "precedingSucceedingTitles");
+  }
+
+  public static ResourceClient forInstanceRelationship(OkapiHttpClient okapiClient) {
+    return new ResourceClient(okapiClient, StorageInterfaceUrls::instanceRelationshipUrl,
+      "Instance relationships", "instanceRelationships");
   }
 
   private ResourceClient(
@@ -277,11 +292,52 @@ public class ResourceClient {
 
     Response response = getFinished.get(5, TimeUnit.SECONDS);
 
-    assertThat(String.format("Get all records failed: %s", response.getBody()),
+    assertThat(format("Get all records failed: %s", response.getBody()),
       response.getStatusCode(), is(200));
 
     return JsonArrayHelper.toList(response.getJson()
       .getJsonArray(collectionArrayPropertyName));
+  }
+
+  public List<JsonObject> getMany(String query, Integer limit) throws MalformedURLException,
+    InterruptedException, ExecutionException, TimeoutException {
+
+    Response response = attemptGetMany(query, limit);
+
+    assertThat(format("Get all records failed: %s", response.getBody()),
+      response.getStatusCode(), is(200));
+
+    return JsonArrayHelper.toList(response.getJson()
+      .getJsonArray(collectionArrayPropertyName));
+  }
+
+  public Response attemptGetMany(String query, Integer limit) throws MalformedURLException,
+    InterruptedException, ExecutionException, TimeoutException {
+
+    CompletableFuture<Response> getFinished = new CompletableFuture<>();
+
+    client.get(urlMaker.combine(format("?query=%s&limit=%s", StringUtil.urlEncode(query), limit)),
+      ResponseHandler.any(getFinished));
+
+    return getFinished.get(5, TimeUnit.SECONDS);
+  }
+
+  public void emulateFailure(EndpointFailureDescriptor failureDescriptor)
+    throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+
+    final CompletableFuture<Response> future = new CompletableFuture<>();
+
+    client.post(urlMaker.combine("/emulate-failure"),
+      JsonObject.mapFrom(failureDescriptor), any(future));
+
+    assertThat(future.get(5, TimeUnit.SECONDS).getStatusCode(), is(201));
+  }
+
+  public void expireFailureEmulation()
+    throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+
+    emulateFailure(new EndpointFailureDescriptor()
+      .setFailureExpireDate(DateTime.now().minusMinutes(1).toDate()));
   }
 
   @FunctionalInterface
