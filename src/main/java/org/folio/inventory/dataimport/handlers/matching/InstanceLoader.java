@@ -1,4 +1,4 @@
-package org.folio.inventory.matching;
+package org.folio.inventory.dataimport.handlers.matching;
 
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -30,6 +30,9 @@ public class InstanceLoader implements MatchValueLoader {
 
   @Override
   public LoadResult loadEntity(LoadQuery loadQuery, DataImportEventPayload eventPayload) {
+    if (loadQuery == null){
+      return new LoadResult();
+    }
     CompletableFuture<LoadResult> future = new CompletableFuture<>();
     LoadResult loadResult = new LoadResult();
     loadResult.setEntityType(EntityType.INSTANCE.value());

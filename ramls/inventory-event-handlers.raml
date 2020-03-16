@@ -8,16 +8,15 @@ documentation:
   - title: "Inventory Event Handlers API"
     content: <b>API for handling events</b>
 
-/inventory/handlers/created-srs-marc-bib-record:
-  displayName: API for handling DI_SRS_MARC_BIB_RECORD_CREATED event
+/inventory/handlers/data-import:
+  displayName: API for handling all data-import events
   post:
-    description: "Handler for DI_SRS_MARC_BIB_RECORD_CREATED event"
+    description: "Handler for data-import events"
     body:
-      application/text:
-        type: string
+      application/json:
     responses:
       204:
-        description: "Received DI_SRS_MARC_BIB_RECORD_CREATED event"
+        description: "Received data-import event"
       500:
         description: "Internal server error"
         body:
