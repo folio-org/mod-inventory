@@ -4,6 +4,8 @@ import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -11,6 +13,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -97,10 +100,26 @@ public class CreateHoldingEventHandlerTest {
             .withContentType(MAPPING_PROFILE)
             .withContent(mappingProfile)))));
 
+  private CreateHoldingEventHandler createHoldingEventHandler;
+
   @Before
-  public void setUp(){
+  public void setUp() throws UnsupportedEncodingException {
     MockitoAnnotations.initMocks(this);
     MappingManager.clearReaderFactories();
+    createHoldingEventHandler = new CreateHoldingEventHandler(storage);
+    doAnswer(invocationOnMock -> {
+      MultipleRecords result = new MultipleRecords<>(new ArrayList<>(), 0);
+      Consumer<Success<MultipleRecords>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
+      return null;
+    }).when(holdingsRecordsCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    doAnswer(invocationOnMock -> {
+      Holdingsrecord holdingsRecord = invocationOnMock.getArgument(0);
+      Consumer<Success<Holdingsrecord>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(holdingsRecord));
+      return null;
+    }).when(holdingsRecordsCollection).add(any(), any(Consumer.class), any(Consumer.class));
   }
 
   @Test
@@ -115,20 +134,6 @@ public class CreateHoldingEventHandlerTest {
 
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
 
-    doAnswer(invocationOnMock -> {
-      MultipleRecords result = new MultipleRecords<>(new ArrayList<>(), 0);
-      Consumer<Success<MultipleRecords>> successHandler = invocationOnMock.getArgument(2);
-      successHandler.accept(new Success<>(result));
-      return null;
-    }).when(holdingsRecordsCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
-
-    doAnswer(invocationOnMock -> {
-      Holdingsrecord holdingsRecord = invocationOnMock.getArgument(0);
-      Consumer<Success<Holdingsrecord>> successHandler = invocationOnMock.getArgument(1);
-      successHandler.accept(new Success<>(holdingsRecord));
-      return null;
-    }).when(holdingsRecordsCollection).add(any(), any(Consumer.class), any(Consumer.class));
-
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new HoldingsWriterFactory());
 
@@ -138,7 +143,7 @@ public class CreateHoldingEventHandlerTest {
     HashMap<String, String> context = new HashMap<>();
     context.put("HOLDINGS", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(new Holdingsrecord())).encode());
     context.put("INSTANCE", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
-    CreateHoldingEventHandler createHoldingEventHandler = new CreateHoldingEventHandler(storage);
+
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType("DI_CREATED_HOLDINGS_RECORD")
       .withContext(context)
@@ -166,30 +171,13 @@ public class CreateHoldingEventHandlerTest {
 
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
 
-    doAnswer(invocationOnMock -> {
-      MultipleRecords result = new MultipleRecords<>(new ArrayList<>(), 0);
-      Consumer<Success<MultipleRecords>> successHandler = invocationOnMock.getArgument(2);
-      successHandler.accept(new Success<>(result));
-      return null;
-    }).when(holdingsRecordsCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
-
-    doAnswer(invocationOnMock -> {
-      Holdingsrecord holdingsRecord = invocationOnMock.getArgument(0);
-      Consumer<Success<Holdingsrecord>> successHandler = invocationOnMock.getArgument(1);
-      successHandler.accept(new Success<>(holdingsRecord));
-      return null;
-    }).when(holdingsRecordsCollection).add(any(), any(Consumer.class), any(Consumer.class));
-
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new HoldingsWriterFactory());
 
-    String instanceId = String.valueOf(UUID.randomUUID());
-    Instance instance = new Instance(instanceId, String.valueOf(UUID.randomUUID()),
-      String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
     HashMap<String, String> context = new HashMap<>();
     context.put("HOLDINGS", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(new Holdingsrecord())).encode());
     context.put("INSTANCE", new JsonObject().encode());
-    CreateHoldingEventHandler createHoldingEventHandler = new CreateHoldingEventHandler(storage);
+
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType("DI_CREATED_HOLDINGS_RECORD")
       .withContext(context)
@@ -197,7 +185,7 @@ public class CreateHoldingEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
-    DataImportEventPayload dataImportEventPayload1 = future.get(5, TimeUnit.MILLISECONDS);
+    future.get(5, TimeUnit.MILLISECONDS);
   }
 
   @Test(expected = ExecutionException.class)
@@ -210,20 +198,6 @@ public class CreateHoldingEventHandlerTest {
 
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
 
-    doAnswer(invocationOnMock -> {
-      MultipleRecords result = new MultipleRecords<>(new ArrayList<>(), 0);
-      Consumer<Success<MultipleRecords>> successHandler = invocationOnMock.getArgument(2);
-      successHandler.accept(new Success<>(result));
-      return null;
-    }).when(holdingsRecordsCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
-
-    doAnswer(invocationOnMock -> {
-      Holdingsrecord holdingsRecord = invocationOnMock.getArgument(0);
-      Consumer<Success<Holdingsrecord>> successHandler = invocationOnMock.getArgument(1);
-      successHandler.accept(new Success<>(holdingsRecord));
-      return null;
-    }).when(holdingsRecordsCollection).add(any(), any(Consumer.class), any(Consumer.class));
-
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new HoldingsWriterFactory());
 
@@ -232,8 +206,8 @@ public class CreateHoldingEventHandlerTest {
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
     HashMap<String, String> context = new HashMap<>();
     context.put("HOLDINGS", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(new Holdingsrecord())).encode());
-    context.put("INSTANCE", new JsonObject().encode());
-    CreateHoldingEventHandler createHoldingEventHandler = new CreateHoldingEventHandler(storage);
+    context.put("INSTANCE", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
+
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType("DI_CREATED_HOLDINGS_RECORD")
       .withContext(context)
@@ -241,6 +215,79 @@ public class CreateHoldingEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
-    DataImportEventPayload dataImportEventPayload1 = future.get(5, TimeUnit.MILLISECONDS);
+    future.get(5, TimeUnit.MILLISECONDS);
+  }
+
+  @Test
+  public void isEligibleShouldReturnTrue() {
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType("DI_CREATED_HOLDINGS_RECORD")
+      .withContext(new HashMap<>())
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+    assertTrue(createHoldingEventHandler.isEligible(dataImportEventPayload));
+  }
+
+  @Test
+  public void isEligibleShouldReturnFalseIfCurrentNodeIsEmpty() {
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType("DI_CREATED_HOLDINGS_RECORD")
+      .withContext(new HashMap<>())
+      .withProfileSnapshot(profileSnapshotWrapper);
+    assertFalse(createHoldingEventHandler.isEligible(dataImportEventPayload));
+  }
+
+  @Test
+  public void isEligibleShouldReturnFalseIfCurrentNodeIsNotActionProfile() {
+
+    ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
+      .withId(UUID.randomUUID().toString())
+      .withProfileId(jobProfile.getId())
+      .withContentType(JOB_PROFILE)
+      .withContent(jobProfile);
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType("DI_CREATED_HOLDINGS_RECORD")
+      .withContext(new HashMap<>())
+      .withProfileSnapshot(profileSnapshotWrapper);
+    assertFalse(createHoldingEventHandler.isEligible(dataImportEventPayload));
+  }
+
+  @Test
+  public void isEligibleShouldReturnFalseIfActionIsNotCreate() {
+    ActionProfile actionProfile = new ActionProfile()
+      .withId(UUID.randomUUID().toString())
+      .withName("Create preliminary Item")
+      .withAction(ActionProfile.Action.DELETE)
+      .withFolioRecord(HOLDINGS);
+    ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
+      .withId(UUID.randomUUID().toString())
+      .withProfileId(actionProfile.getId())
+      .withContentType(JOB_PROFILE)
+      .withContent(actionProfile);
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType("DI_CREATED_HOLDINGS_RECORD")
+      .withContext(new HashMap<>())
+      .withProfileSnapshot(profileSnapshotWrapper);
+    assertFalse(createHoldingEventHandler.isEligible(dataImportEventPayload));
+  }
+
+  @Test
+  public void isEligibleShouldReturnFalseIfRecordIsNotHoldings() {
+    ActionProfile actionProfile = new ActionProfile()
+      .withId(UUID.randomUUID().toString())
+      .withName("Create preliminary Item")
+      .withAction(ActionProfile.Action.CREATE)
+      .withFolioRecord(ActionProfile.FolioRecord.INSTANCE);
+    ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
+      .withId(UUID.randomUUID().toString())
+      .withProfileId(actionProfile.getId())
+      .withContentType(JOB_PROFILE)
+      .withContent(actionProfile);
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType("DI_CREATED_HOLDINGS_RECORD")
+      .withContext(new HashMap<>())
+      .withProfileSnapshot(profileSnapshotWrapper);
+    assertFalse(createHoldingEventHandler.isEligible(dataImportEventPayload));
   }
 }
