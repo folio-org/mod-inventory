@@ -53,6 +53,8 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 
+import com.google.common.collect.Lists;
+
 import io.vertx.core.json.JsonObject;
 
 public class CreateHoldingEventHandlerTest {
@@ -206,6 +208,63 @@ public class CreateHoldingEventHandlerTest {
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
     HashMap<String, String> context = new HashMap<>();
     context.put("HOLDINGS", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(new Holdingsrecord())).encode());
+    context.put("INSTANCE", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType("DI_CREATED_HOLDINGS_RECORD")
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
+    future.get(5, TimeUnit.MILLISECONDS);
+  }
+
+  @Test(expected = ExecutionException.class)
+  public void shouldNotProcessEventIfHoldingRecordIsInvalid() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    MappingProfile mappingProfile = new MappingProfile()
+      .withId(UUID.randomUUID().toString())
+      .withName("Prelim item from MARC")
+      .withIncomingRecordType(EntityType.MARC_BIBLIOGRAPHIC)
+      .withExistingRecordType(EntityType.HOLDINGS)
+      .withMappingDetails(new MappingDetail()
+        .withMappingFields(Lists.newArrayList(
+          new MappingRule().withPath("permanentLocationId").withValue("permanentLocationExpression"),
+          new MappingRule().withPath("invalidField").withValue("invalidFieldValue"))));
+
+    ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
+      .withId(UUID.randomUUID().toString())
+      .withProfileId(jobProfile.getId())
+      .withContentType(JOB_PROFILE)
+      .withContent(jobProfile)
+      .withChildSnapshotWrappers(Collections.singletonList(
+        new ProfileSnapshotWrapper()
+          .withProfileId(actionProfile.getId())
+          .withContentType(ACTION_PROFILE)
+          .withContent(actionProfile)
+          .withChildSnapshotWrappers(Collections.singletonList(
+            new ProfileSnapshotWrapper()
+              .withProfileId(mappingProfile.getId())
+              .withContentType(MAPPING_PROFILE)
+              .withContent(mappingProfile)))));
+
+    Mockito.when(fakeReader.read(eq("permanentLocationExpression"))).thenReturn(StringValue.of(String.valueOf(UUID.randomUUID())));
+    Mockito.when(fakeReader.read(eq("invalidFieldValue"))).thenReturn(StringValue.of(String.valueOf(UUID.randomUUID())));
+
+    Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+
+    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new HoldingsWriterFactory());
+
+    String instanceId = String.valueOf(UUID.randomUUID());
+    Instance instance = new Instance(instanceId, String.valueOf(UUID.randomUUID()),
+      String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
+    HashMap<String, String> context = new HashMap<>();
+    context.put("HOLDINGS", new JsonObject().put("permanentLocationId", UUID.randomUUID().toString()).put("invalidField", "invalidFieldValue").encode());
     context.put("INSTANCE", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
