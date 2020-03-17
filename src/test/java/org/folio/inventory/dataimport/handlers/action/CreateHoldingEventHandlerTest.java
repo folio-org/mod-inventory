@@ -100,7 +100,7 @@ public class CreateHoldingEventHandlerTest {
           new ProfileSnapshotWrapper()
             .withProfileId(mappingProfile.getId())
             .withContentType(MAPPING_PROFILE)
-            .withContent(mappingProfile)))));
+            .withContent(JsonObject.mapFrom(mappingProfile).getMap())))));
 
   private CreateHoldingEventHandler createHoldingEventHandler;
 
@@ -147,7 +147,7 @@ public class CreateHoldingEventHandlerTest {
     context.put("INSTANCE", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType("DI_CREATED_HOLDINGS_RECORD")
+      .withEventType("DI_INVENTORY_HOLDING_CREATED")
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
@@ -155,7 +155,7 @@ public class CreateHoldingEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload dataImportEventPayload1 = future.get(5, TimeUnit.MILLISECONDS);
 
-    Assert.assertEquals("DI_CREATED_HOLDINGS_RECORD", dataImportEventPayload1.getEventType());
+    Assert.assertEquals("DI_INVENTORY_HOLDING_CREATED", dataImportEventPayload1.getEventType());
     Assert.assertNotNull(dataImportEventPayload1.getContext().get(HOLDINGS.value()));
     Assert.assertEquals(instanceId, new JsonObject(dataImportEventPayload1.getContext().get(HOLDINGS.value())).getString("instanceId"));
     Assert.assertEquals(permanentLocationId, new JsonObject(dataImportEventPayload1.getContext().get(HOLDINGS.value())).getString("permanentLocationId"));

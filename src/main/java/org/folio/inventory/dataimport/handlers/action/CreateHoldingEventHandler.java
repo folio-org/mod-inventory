@@ -64,7 +64,7 @@ public class CreateHoldingEventHandler implements EventHandler {
         holdingsRecords.add(holding, holdingSuccess -> constructDataImportEventPayload(future, dataImportEventPayload, holdingSuccess),
           failure -> throwException(future, SAVE_HOLDING_ERROR_MESSAGE));
       }
-    } catch (IOException e) {
+    } catch (Exception e) {
       LOGGER.error(CREATING_HOLDING_ENTITY_ERROR_MESSAGE, e);
       future.completeExceptionally(e);
     }
