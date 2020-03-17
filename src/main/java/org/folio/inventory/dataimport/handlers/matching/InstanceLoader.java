@@ -18,6 +18,8 @@ import org.folio.rest.jaxrs.model.EntityType;
 import java.io.UnsupportedEncodingException;
 import java.util.concurrent.CompletableFuture;
 
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
+
 public class InstanceLoader implements MatchValueLoader {
 
   private static final Logger LOG = LoggerFactory.getLogger(InstanceLoader.class);
@@ -66,27 +68,4 @@ public class InstanceLoader implements MatchValueLoader {
     return EntityType.INSTANCE == entityType;
   }
 
-  private Context constructContext(String tenantId, String token, String okapiUrl) {
-    return new Context() {
-      @Override
-      public String getTenantId() {
-        return tenantId;
-      }
-
-      @Override
-      public String getToken() {
-        return token;
-      }
-
-      @Override
-      public String getOkapiLocation() {
-        return okapiUrl;
-      }
-
-      @Override
-      public String getUserId() {
-        return "";
-      }
-    };
-  }
 }

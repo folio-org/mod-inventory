@@ -7,20 +7,19 @@ import static api.support.InstanceSamples.uprooted;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
-import api.support.ApiTests;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
+import java.net.MalformedURLException;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
 import org.junit.Test;
 
-import java.net.MalformedURLException;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
-import java.util.stream.Stream;
+import api.support.ApiTests;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
 

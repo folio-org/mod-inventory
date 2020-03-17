@@ -16,7 +16,9 @@ public class MatchInstanceEventHandler implements EventHandler {
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
-    dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
+    if (dataImportEventPayload.getEventType() != null) {
+      dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
+    }
     dataImportEventPayload.getCurrentNode()
       .setContent(new JsonObject((LinkedHashMap) dataImportEventPayload.getCurrentNode().getContent()).mapTo(MatchProfile.class));
     boolean matched = MatchingManager.match(dataImportEventPayload);

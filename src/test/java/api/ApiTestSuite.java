@@ -13,6 +13,7 @@ import java.util.concurrent.TimeoutException;
 
 import org.folio.inventory.InventoryVerticle;
 import org.folio.inventory.common.VertxAssistant;
+import org.folio.inventory.domain.instances.InstanceRelationship;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -40,7 +41,8 @@ import support.fakes.FakeOkapi;
   IsbnUtilsApiExamples.class,
   ItemAllowedStatusesSchemaTest.class,
   TenantApiExamples.class,
-  PrecedingSucceedingTitlesApiExamples.class
+  PrecedingSucceedingTitlesApiExamples.class,
+  InstanceRelationshipsTest.class
 })
 public class ApiTestSuite {
   public static final int INVENTORY_VERTICLE_TEST_PORT = 9603;
