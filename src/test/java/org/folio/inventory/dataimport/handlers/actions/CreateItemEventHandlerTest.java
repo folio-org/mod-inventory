@@ -64,7 +64,7 @@ public class CreateItemEventHandlerTest {
   @Spy
   private MarcBibReaderFactory fakeReaderFactory = new MarcBibReaderFactory();
 
-  protected JobProfile jobProfile = new JobProfile()
+  private JobProfile jobProfile = new JobProfile()
     .withId(UUID.randomUUID().toString())
     .withName("Create MARC Bibs")
     .withDataType(JobProfile.DataType.MARC);
@@ -87,7 +87,7 @@ public class CreateItemEventHandlerTest {
         new MappingRule().withPath("materialType.id").withValue("materialTypeExpression"),
         new MappingRule().withPath("holdingsRecordId").withValue("holdingsRecordIdExpression"))));
 
-  protected ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
+  private ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
     .withId(UUID.randomUUID().toString())
     .withProfileId(jobProfile.getId())
     .withContentType(JOB_PROFILE)
