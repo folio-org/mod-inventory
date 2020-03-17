@@ -22,6 +22,7 @@ import org.folio.processing.exceptions.MatchingException;
 import org.folio.processing.matching.loader.MatchValueLoaderFactory;
 import org.folio.processing.matching.reader.MarcValueReaderImpl;
 import org.folio.processing.matching.reader.MatchValueReaderFactory;
+import org.folio.processing.value.MissingValue;
 import org.folio.processing.value.StringValue;
 import org.folio.rest.jaxrs.model.Field;
 import org.folio.rest.jaxrs.model.MatchExpression;
@@ -159,7 +160,7 @@ public class MatchInstanceEventHandlerUnitTest {
     DataImportEventPayload eventPayload = createEventPayload();
 
     try {
-      eventHandler.handle(eventPayload);
+      eventHandler.handle(eventPayload.withEventType(null));
       fail();
     } catch (MatchingException e) {
       assertNotNull(e.getMessage());
@@ -205,6 +206,28 @@ public class MatchInstanceEventHandlerUnitTest {
     } catch (MatchingException e) {
       assertNotNull(e.getMessage());
     }
+  }
+
+  @Test
+  public void shouldNotMatchOnHandleEventPayloadIfValueIsMissing(TestContext testContext) {
+    Async async = testContext.async();
+
+    when(marcValueReader.read(any(DataImportEventPayload.class), any(MatchDetail.class)))
+      .thenReturn(MissingValue.getInstance());
+
+    EventHandler eventHandler = new MatchInstanceEventHandler();
+    DataImportEventPayload eventPayload = createEventPayload();
+
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
+      testContext.assertNull(throwable);
+      testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
+      testContext.assertEquals(
+        updatedEventPayload.getEventsChain(),
+        singletonList("DI_SRS_MARC_BIB_RECORD_CREATED")
+      );
+      testContext.assertEquals("DI_INVENTORY_INSTANCE_NOT_MATCHED", updatedEventPayload.getEventType());
+      async.complete();
+    });
   }
 
   @Test
