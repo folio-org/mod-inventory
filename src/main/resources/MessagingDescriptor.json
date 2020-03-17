@@ -31,7 +31,7 @@
       "signed": false
     },
     {
-      "eventType": "DI_CREATED_HOLDINGS_RECORD",
+      "eventType": "DI_INVENTORY_HOLDING_CREATED",
       "description": "Created holding record",
       "eventTTL": 1,
       "signed": false

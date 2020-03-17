@@ -7,11 +7,13 @@ import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlin
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.concurrent.CompletableFuture;
 
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.Holdingsrecord;
+import org.folio.MappingProfile;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.HoldingsRecordCollection;
@@ -29,7 +31,7 @@ import io.vertx.core.logging.LoggerFactory;
 public class CreateHoldingEventHandler implements EventHandler {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CreateHoldingEventHandler.class);
-  private static final String CREATED_HOLDINGS_RECORD_EVENT_TYPE = "DI_CREATED_HOLDINGS_RECORD";
+  private static final String CREATED_HOLDINGS_RECORD_EVENT_TYPE = "DI_INVENTORY_HOLDING_CREATED";
   private static final String INSTANCE_ID_FIELD = "instanceId";
   private static final String PERMANENT_LOCATION_ID_FIELD = "permanentLocationId";
   private static final String INSTANCE_ID_ERROR_MESSAGE = "Error: 'instanceId' is empty";
@@ -38,7 +40,6 @@ public class CreateHoldingEventHandler implements EventHandler {
   private static final String CREATING_HOLDING_ENTITY_ERROR_MESSAGE = "Can`t create Holding entity";
 
   private Storage storage;
-  private CompletableFuture<DataImportEventPayload> future;
 
   public CreateHoldingEventHandler(Storage storage) {
     this.storage = storage;
@@ -46,22 +47,22 @@ public class CreateHoldingEventHandler implements EventHandler {
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
+    CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
-      future = new CompletableFuture<>();
       prepareEvent(dataImportEventPayload);
       MappingManager.map(dataImportEventPayload);
       JsonObject holdingAsJson = new JsonObject(dataImportEventPayload.getContext().get(HOLDINGS.value()));
 
-      fillInstanceIdIfNeeded(dataImportEventPayload, holdingAsJson);
+      fillInstanceIdIfNeeded(future, dataImportEventPayload, holdingAsJson);
 
       if (isEmpty(holdingAsJson.getString(PERMANENT_LOCATION_ID_FIELD))) {
-        throwException(PERMANENT_LOCATION_ID_ERROR_MESSAGE);
+        throwException(future, PERMANENT_LOCATION_ID_ERROR_MESSAGE);
       } else {
         Holdingsrecord holding = ObjectMapperTool.getMapper().readValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), Holdingsrecord.class);
         Context context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
         HoldingsRecordCollection holdingsRecords = storage.getHoldingsRecordCollection(context);
-        holdingsRecords.add(holding, holdingSuccess -> constructDataImportEventPayload(dataImportEventPayload, holdingSuccess),
-          failure -> throwException(SAVE_HOLDING_ERROR_MESSAGE));
+        holdingsRecords.add(holding, holdingSuccess -> constructDataImportEventPayload(future, dataImportEventPayload, holdingSuccess),
+          failure -> throwException(future, SAVE_HOLDING_ERROR_MESSAGE));
       }
     } catch (IOException e) {
       LOGGER.error(CREATING_HOLDING_ENTITY_ERROR_MESSAGE, e);
@@ -82,23 +83,23 @@ public class CreateHoldingEventHandler implements EventHandler {
   private void prepareEvent(DataImportEventPayload dataImportEventPayload) {
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
     dataImportEventPayload.getContext().put(HOLDINGS.value(), new JsonObject().encode());
-    dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
+    dataImportEventPayload.getCurrentNode().setContent(new JsonObject((LinkedHashMap) dataImportEventPayload.getCurrentNode().getContent()).mapTo(MappingProfile.class));
   }
 
-  private void constructDataImportEventPayload(DataImportEventPayload dataImportEventPayload, Success<Holdingsrecord> holdingSuccess) {
+  private void constructDataImportEventPayload(CompletableFuture<DataImportEventPayload> future, DataImportEventPayload dataImportEventPayload, Success<Holdingsrecord> holdingSuccess) {
     Holdingsrecord createdHolding = holdingSuccess.getResult();
     dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encodePrettily(createdHolding));
     dataImportEventPayload.setEventType(CREATED_HOLDINGS_RECORD_EVENT_TYPE);
     future.complete(dataImportEventPayload);
   }
 
-  private void fillInstanceIdIfNeeded(DataImportEventPayload dataImportEventPayload, JsonObject holdingAsJson) {
+  private void fillInstanceIdIfNeeded(CompletableFuture<DataImportEventPayload> future, DataImportEventPayload dataImportEventPayload, JsonObject holdingAsJson) {
     if (isEmpty(holdingAsJson.getString(INSTANCE_ID_FIELD))) {
       String instanceAsString = dataImportEventPayload.getContext().get(INSTANCE.value());
       JsonObject instanceAsJson = new JsonObject(instanceAsString);
       String instanceId = instanceAsJson.getString("id");
       if (isEmpty(instanceId)) {
-        throwException(INSTANCE_ID_ERROR_MESSAGE);
+        throwException(future, INSTANCE_ID_ERROR_MESSAGE);
       } else {
         holdingAsJson.put(INSTANCE_ID_FIELD, instanceId);
         dataImportEventPayload.getContext().put(HOLDINGS.value(), holdingAsJson.encode());
@@ -106,7 +107,7 @@ public class CreateHoldingEventHandler implements EventHandler {
     }
   }
 
-  private void throwException(String errorMessage) {
+  private void throwException(CompletableFuture<DataImportEventPayload> future, String errorMessage) {
     LOGGER.error(errorMessage);
     future.completeExceptionally(new EventProcessingException(errorMessage));
   }
