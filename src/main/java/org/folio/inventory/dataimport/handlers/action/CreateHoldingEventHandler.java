@@ -3,6 +3,7 @@ package org.folio.inventory.dataimport.handlers.action;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 import java.io.IOException;
@@ -110,30 +111,5 @@ public class CreateHoldingEventHandler implements EventHandler {
   private void throwException(String errorMessage) {
     LOGGER.error(errorMessage);
     future.completeExceptionally(new EventProcessingException(errorMessage));
-  }
-
-  private Context constructContext(String tenantId, String token, String okapiUrl) {
-
-    return new Context() {
-      @Override
-      public String getTenantId() {
-        return tenantId;
-      }
-
-      @Override
-      public String getToken() {
-        return token;
-      }
-
-      @Override
-      public String getOkapiLocation() {
-        return okapiUrl;
-      }
-
-      @Override
-      public String getUserId() {
-        return "";
-      }
-    };
   }
 }
