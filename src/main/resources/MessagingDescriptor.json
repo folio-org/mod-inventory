@@ -29,6 +29,12 @@
       "description": "Match not found for Inventory Instance",
       "eventTTL": 1,
       "signed": false
+    },
+    {
+      "eventType": "DI_INVENTORY_ITEM_CREATED",
+      "description": "Created inventory instance",
+      "eventTTL": 1,
+      "signed": false
     }
   ],
   "subscriptions": [
