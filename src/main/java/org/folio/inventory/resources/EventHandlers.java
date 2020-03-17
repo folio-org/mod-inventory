@@ -12,6 +12,8 @@ import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
 import org.folio.inventory.support.http.server.SuccessResponse;
 import org.folio.processing.events.EventManager;
+import org.folio.processing.mapping.MappingManager;
+import org.folio.processing.mapping.mapper.writer.holding.HoldingsWriterFactory;
 import org.folio.processing.matching.loader.MatchValueLoaderFactory;
 import org.folio.processing.matching.reader.MarcValueReaderImpl;
 import org.folio.processing.matching.reader.MatchValueReaderFactory;
@@ -24,6 +26,7 @@ public class EventHandlers {
     MatchValueLoaderFactory.register(new InstanceLoader(storage));
     EventManager.registerEventHandler(new MatchInstanceEventHandler());
     EventManager.registerEventHandler(new CreateHoldingEventHandler(storage));
+    MappingManager.registerWriterFactory(new HoldingsWriterFactory());
     MatchValueReaderFactory.register(new MarcValueReaderImpl());
   }
 
@@ -45,6 +48,4 @@ public class EventHandlers {
     }
 
   }
-
-
 }
