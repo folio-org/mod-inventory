@@ -29,6 +29,12 @@
       "description": "Match not found for Inventory Instance",
       "eventTTL": 1,
       "signed": false
+    },
+    {
+      "eventType": "DI_CREATED_HOLDINGS_RECORD",
+      "description": "Created holding record",
+      "eventTTL": 1,
+      "signed": false
     }
   ],
   "subscriptions": [
