@@ -47,6 +47,8 @@ public class CreateHoldingEventHandler implements EventHandler {
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     try {
       future = new CompletableFuture<>();
+      dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
+      dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
       prepareEvent(dataImportEventPayload);
       MappingManager.map(dataImportEventPayload);
       JsonObject holdingAsJson = new JsonObject(dataImportEventPayload.getContext().get(HOLDINGS.value()));
