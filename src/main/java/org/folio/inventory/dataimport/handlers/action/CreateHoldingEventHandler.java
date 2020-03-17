@@ -6,7 +6,6 @@ import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
-import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.concurrent.CompletableFuture;
 
