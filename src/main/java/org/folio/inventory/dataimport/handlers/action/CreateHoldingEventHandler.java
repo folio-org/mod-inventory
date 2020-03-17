@@ -83,7 +83,9 @@ public class CreateHoldingEventHandler implements EventHandler {
   private void prepareEvent(DataImportEventPayload dataImportEventPayload) {
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
     dataImportEventPayload.getContext().put(HOLDINGS.value(), new JsonObject().encode());
-    dataImportEventPayload.getCurrentNode().setContent(new JsonObject((LinkedHashMap) dataImportEventPayload.getCurrentNode().getContent()).mapTo(MappingProfile.class));
+    dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
+    dataImportEventPayload.getCurrentNode()
+      .setContent(new JsonObject((LinkedHashMap) dataImportEventPayload.getCurrentNode().getContent()).mapTo(MappingProfile.class));
   }
 
   private void constructDataImportEventPayload(CompletableFuture<DataImportEventPayload> future, DataImportEventPayload dataImportEventPayload, Success<Holdingsrecord> holdingSuccess) {
