@@ -1,6 +1,15 @@
 package org.folio.inventory.resources;
 
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
 import org.folio.DataImportEventPayload;
+import org.folio.inventory.dataimport.handlers.matching.MatchHoldingEventHandler;
+import org.folio.inventory.dataimport.handlers.matching.MatchItemEventHandler;
+import org.folio.inventory.dataimport.handlers.matching.loaders.HoldingLoader;
+import org.folio.inventory.dataimport.handlers.matching.loaders.InstanceLoader;
+import org.folio.inventory.dataimport.handlers.matching.loaders.ItemLoader;
 import org.folio.inventory.dataimport.handlers.actions.CreateHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.InstanceLoader;
@@ -28,8 +37,14 @@ public class EventHandlers {
 
   public EventHandlers(final Storage storage) {
     MatchValueLoaderFactory.register(new InstanceLoader(storage));
+    MatchValueLoaderFactory.register(new ItemLoader(storage));
+    MatchValueLoaderFactory.register(new HoldingLoader(storage));
+
     EventManager.registerEventHandler(new MatchInstanceEventHandler());
     EventManager.registerEventHandler(new CreateItemEventHandler(storage));
+    EventManager.registerEventHandler(new MatchItemEventHandler());
+    EventManager.registerEventHandler(new MatchHoldingEventHandler());
+
     MatchValueReaderFactory.register(new MarcValueReaderImpl());
     MappingManager.registerReaderFactory(new MarcBibReaderFactory());
     MappingManager.registerWriterFactory(new ItemWriterFactory());
@@ -55,4 +70,6 @@ public class EventHandlers {
     }
 
   }
+
+
 }
