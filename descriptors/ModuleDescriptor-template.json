@@ -210,6 +210,35 @@
       ]
     },
     {
+      "id": "inventory-event-handlers",
+      "version": "0.1",
+      "handlers": [
+        {
+          "methods": [
+            "POST"
+          ],
+          "pathPattern": "/inventory/handlers/data-import",
+          "permissionsRequired": [
+            "inventory.events.post"
+          ],
+          "modulePermissions": [
+            "pubsub.publish.post",
+            "inventory-storage.items.collection.get",
+            "inventory-storage.material-types.item.get",
+            "inventory-storage.material-types.collection.get",
+            "inventory-storage.loan-types.item.get",
+            "inventory-storage.loan-types.collection.get",
+            "inventory-storage.locations.item.get",
+            "inventory-storage.locations.collection.get",
+            "inventory-storage.holdings.collection.get",
+            "inventory-storage.holdings.item.get",
+            "inventory-storage.instances.collection.get",
+            "inventory-storage.instances.item.get"
+          ]
+        }
+      ]
+    },
+    {
       "id": "_tenant",
       "version": "1.2",
       "interfaceType": "system",
@@ -374,6 +403,11 @@
       "permissionName": "inventory.config.instances.blocked-fields.get",
       "displayName": "Inventory - get configuration for blocked fields of instances",
       "description": "Get configuration for blocked fields of instances"
+    },
+    {
+      "permissionName": "inventory.events.post",
+      "displayName": "Inventory - post event",
+      "description": "Post event to handle in inventory"
     },
     {
       "permissionName": "inventory.all",

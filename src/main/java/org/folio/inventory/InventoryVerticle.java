@@ -12,6 +12,7 @@ import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.Router;
 import org.folio.inventory.common.WebRequestDiagnostics;
 import org.folio.inventory.domain.ingest.IngestMessageProcessor;
+import org.folio.inventory.resources.EventHandlers;
 import org.folio.inventory.resources.Instances;
 import org.folio.inventory.resources.InstancesBatch;
 import org.folio.inventory.resources.IsbnUtilsApi;
@@ -56,6 +57,7 @@ public class InventoryVerticle extends AbstractVerticle {
     new InstancesBatch(storage, client).register(router);
     new IsbnUtilsApi().register(router);
     new TenantApi().register(router);
+    new EventHandlers(storage).register(router);
 
     Handler<AsyncResult<HttpServer>> onHttpServerStart = result -> {
       if (result.succeeded()) {
