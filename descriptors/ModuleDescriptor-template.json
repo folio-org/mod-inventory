@@ -232,6 +232,7 @@
             "inventory-storage.locations.collection.get",
             "inventory-storage.holdings.collection.get",
             "inventory-storage.holdings.item.get",
+            "inventory-storage.holdings.item.post",
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get"
           ]
