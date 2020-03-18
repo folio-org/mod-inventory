@@ -200,6 +200,57 @@ public class CreateHoldingEventHandlerTest {
     Assert.assertEquals(permanentLocationId, new JsonObject(dataImportEventPayload1.getContext().get(HOLDINGS.value())).getString("permanentLocationId"));
   }
 
+
+  @Test(expected = ExecutionException.class)
+  public void shouldNotProcessEventIfContextIsNull() throws InterruptedException, ExecutionException, TimeoutException {
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    String permanentLocationId = UUID.randomUUID().toString();
+
+    Mockito.when(fakeReader.read(eq("permanentLocationExpression"))).thenReturn(StringValue.of(permanentLocationId));
+
+    Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+
+    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new HoldingsWriterFactory());
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType("DI_CREATED_HOLDINGS_RECORD")
+      .withContext(null)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
+    future.get(5, TimeUnit.MILLISECONDS);
+  }
+
+  @Test(expected = ExecutionException.class)
+  public void shouldNotProcessEventIfContextIsEmpty() throws InterruptedException, ExecutionException, TimeoutException {
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    String permanentLocationId = UUID.randomUUID().toString();
+
+    Mockito.when(fakeReader.read(eq("permanentLocationExpression"))).thenReturn(StringValue.of(permanentLocationId));
+
+    Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+
+    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new HoldingsWriterFactory());
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType("DI_CREATED_HOLDINGS_RECORD")
+      .withContext(new HashMap<>())
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
+    future.get(5, TimeUnit.MILLISECONDS);
+  }
+
   @Test(expected = ExecutionException.class)
   public void shouldNotProcessEventIfInstanceIdIsNotExistsInInstanceInContextAndNotExistsInMarcBibliographicWithoutExternalHoldingsIds() throws InterruptedException, ExecutionException, TimeoutException {
     Reader fakeReader = Mockito.mock(Reader.class);
