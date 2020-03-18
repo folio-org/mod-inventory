@@ -275,6 +275,43 @@ public class CreateHoldingEventHandlerTest {
   }
 
   @Test(expected = ExecutionException.class)
+  public void shouldNotProcessEventIfInstanceIdIsNotExistsInInstanceInContextAndNotIsEmptyInMarcBibliographicInExternalHoldingsIds() throws InterruptedException, ExecutionException, TimeoutException {
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    String permanentLocationId = UUID.randomUUID().toString();
+
+    Mockito.when(fakeReader.read(eq("permanentLocationExpression"))).thenReturn(StringValue.of(permanentLocationId));
+
+    Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+
+    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new HoldingsWriterFactory());
+
+    String instanceId = String.valueOf(UUID.randomUUID());
+    Record record = new Record().withExternalIdsHolder(new ExternalIdsHolder().withInstanceId(""));
+
+    HashMap<String, String> context = new HashMap<>();
+    context.put("INSTANCE", new JsonObject().encode());
+    context.put(MARC_BIBLIOGRAPHIC.value(), JsonObject.mapFrom(record).encode());
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType("DI_CREATED_HOLDINGS_RECORD")
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload dataImportEventPayload1 = future.get(5, TimeUnit.MILLISECONDS);
+
+    Assert.assertEquals("DI_INVENTORY_HOLDING_CREATED", dataImportEventPayload1.getEventType());
+    Assert.assertNotNull(dataImportEventPayload1.getContext().get(HOLDINGS.value()));
+    Assert.assertEquals(instanceId, new JsonObject(dataImportEventPayload1.getContext().get(HOLDINGS.value())).getString("instanceId"));
+    Assert.assertEquals(permanentLocationId, new JsonObject(dataImportEventPayload1.getContext().get(HOLDINGS.value())).getString("permanentLocationId"));
+  }
+
+  @Test(expected = ExecutionException.class)
   public void shouldNotProcessEventIfInstanceIdIsNotExistsInContextAndInMarcBibliographic() throws InterruptedException, ExecutionException, TimeoutException {
     Reader fakeReader = Mockito.mock(Reader.class);
 

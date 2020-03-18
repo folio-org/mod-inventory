@@ -123,10 +123,6 @@ public class CreateHoldingEventHandler implements EventHandler {
       Record record = new JsonObject(marcBibliographic).mapTo(Record.class);
       if (Objects.nonNull(record.getExternalIdsHolder()) && !isEmpty(record.getExternalIdsHolder().getInstanceId())) {
         instanceId = record.getExternalIdsHolder().getInstanceId();
-        if (isEmpty(instanceId)) {
-          failFuture(future, INSTANCE_ID_ERROR_MESSAGE);
-          return false;
-        }
         fillInstanceId(dataImportEventPayload, holdingAsJson, instanceId);
         return true;
       }
