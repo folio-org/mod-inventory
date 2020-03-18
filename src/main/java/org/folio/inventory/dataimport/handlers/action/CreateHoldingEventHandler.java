@@ -40,7 +40,6 @@ public class CreateHoldingEventHandler implements EventHandler {
   private static final String PERMANENT_LOCATION_ID_ERROR_MESSAGE = "Can`t create Holding entity: 'permanentLocationId' is empty";
   private static final String SAVE_HOLDING_ERROR_MESSAGE = "Can`t save new holding";
   private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t create Holding entity: context is empty or doesn`t exists";
-  private static final String CREATING_HOLDING_ENTITY_ERROR_MESSAGE = "Can`t create Holding entity";
 
   private Storage storage;
 
