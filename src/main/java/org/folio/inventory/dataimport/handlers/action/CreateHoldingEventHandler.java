@@ -70,11 +70,8 @@ public class CreateHoldingEventHandler implements EventHandler {
             future.completeExceptionally(new EventProcessingException(SAVE_HOLDING_ERROR_MESSAGE));
           });
       }
-    } catch (EventProcessingException e) {
-      LOGGER.error(e);
-      future.completeExceptionally(e);
     } catch (Exception e) {
-      LOGGER.error(CREATING_HOLDING_ENTITY_ERROR_MESSAGE, e);
+      LOGGER.error(e);
       future.completeExceptionally(e);
     }
     return future;
