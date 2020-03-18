@@ -280,12 +280,7 @@ public class CreateHoldingEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
-    DataImportEventPayload dataImportEventPayload1 = future.get(5, TimeUnit.MILLISECONDS);
-
-    Assert.assertEquals("DI_INVENTORY_HOLDING_CREATED", dataImportEventPayload1.getEventType());
-    Assert.assertNotNull(dataImportEventPayload1.getContext().get(HOLDINGS.value()));
-    Assert.assertEquals(instanceId, new JsonObject(dataImportEventPayload1.getContext().get(HOLDINGS.value())).getString("instanceId"));
-    Assert.assertEquals(permanentLocationId, new JsonObject(dataImportEventPayload1.getContext().get(HOLDINGS.value())).getString("permanentLocationId"));
+    future.get(5, TimeUnit.MILLISECONDS);
   }
 
   @Test(expected = ExecutionException.class)
@@ -317,12 +312,7 @@ public class CreateHoldingEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
-    DataImportEventPayload dataImportEventPayload1 = future.get(5, TimeUnit.MILLISECONDS);
-
-    Assert.assertEquals("DI_INVENTORY_HOLDING_CREATED", dataImportEventPayload1.getEventType());
-    Assert.assertNotNull(dataImportEventPayload1.getContext().get(HOLDINGS.value()));
-    Assert.assertEquals(instanceId, new JsonObject(dataImportEventPayload1.getContext().get(HOLDINGS.value())).getString("instanceId"));
-    Assert.assertEquals(permanentLocationId, new JsonObject(dataImportEventPayload1.getContext().get(HOLDINGS.value())).getString("permanentLocationId"));
+    future.get(5, TimeUnit.MILLISECONDS);
   }
 
   @Test(expected = ExecutionException.class)
@@ -354,12 +344,7 @@ public class CreateHoldingEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
-    DataImportEventPayload dataImportEventPayload1 = future.get(5, TimeUnit.MILLISECONDS);
-
-    Assert.assertEquals("DI_INVENTORY_HOLDING_CREATED", dataImportEventPayload1.getEventType());
-    Assert.assertNotNull(dataImportEventPayload1.getContext().get(HOLDINGS.value()));
-    Assert.assertEquals(instanceId, new JsonObject(dataImportEventPayload1.getContext().get(HOLDINGS.value())).getString("instanceId"));
-    Assert.assertEquals(permanentLocationId, new JsonObject(dataImportEventPayload1.getContext().get(HOLDINGS.value())).getString("permanentLocationId"));
+    future.get(5, TimeUnit.MILLISECONDS);
   }
 
   @Test(expected = ExecutionException.class)
