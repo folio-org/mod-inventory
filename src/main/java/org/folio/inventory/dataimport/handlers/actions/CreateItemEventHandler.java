@@ -22,14 +22,15 @@ import org.folio.inventory.support.JsonHelper;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
+import org.folio.rest.jaxrs.model.EntityType;
 
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.UUID;
@@ -43,6 +44,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTI
 public class CreateItemEventHandler implements EventHandler {
 
   public static final String ITEM_CREATED_EVENT_TYPE = "DI_INVENTORY_ITEM_CREATED";
+  private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
 
   private static final Logger LOG = LoggerFactory.getLogger(CreateItemEventHandler.class);
 
@@ -61,12 +63,18 @@ public class CreateItemEventHandler implements EventHandler {
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
+      HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
+      if (payloadContext == null || StringUtils.isBlank(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()))) {
+        LOG.error(PAYLOAD_HAS_NO_DATA_MSG);
+        future.completeExceptionally(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
+        return future;
+      }
+
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
       dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
       dataImportEventPayload.getCurrentNode()
         .setContent(new JsonObject((LinkedHashMap) dataImportEventPayload.getCurrentNode().getContent()).mapTo(MappingProfile.class));
-
       dataImportEventPayload.getContext().put(ITEM.value(), new JsonObject().encode());
 
       MappingManager.map(dataImportEventPayload);
@@ -96,7 +104,7 @@ public class CreateItemEventHandler implements EventHandler {
         LOG.error(msg);
         future.completeExceptionally(new EventProcessingException(msg));
       }
-    } catch (IOException e) {
+    } catch (Exception e) {
       LOG.error("Error creating inventory Item" , e);
       future.completeExceptionally(e);
     }

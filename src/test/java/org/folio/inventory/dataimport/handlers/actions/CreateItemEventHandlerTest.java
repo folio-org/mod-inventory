@@ -287,6 +287,26 @@ public class CreateItemEventHandlerTest {
     future.get(5, TimeUnit.SECONDS);
   }
 
+  @Test(expected = ExecutionException.class)
+  public void shouldReturnFailedFutureWhenHasNoMarcRecord()
+    throws InterruptedException,
+    ExecutionException,
+    TimeoutException {
+
+    // given
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withContext(new HashMap<>())
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    // when
+    CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
+
+    // then
+    future.get(5, TimeUnit.SECONDS);
+  }
+
   @Test
   public void shouldReturnTrueWhenHandlerIsEligibleForActionProfile() {
     // given
