@@ -143,7 +143,6 @@ public class CreateHoldingEventHandlerTest {
     Instance instance = new Instance(instanceId, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
     HashMap<String, String> context = new HashMap<>();
-    context.put("HOLDINGS", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(new Holdingsrecord())).encode());
     context.put("INSTANCE", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
@@ -177,7 +176,6 @@ public class CreateHoldingEventHandlerTest {
     MappingManager.registerWriterFactory(new HoldingsWriterFactory());
 
     HashMap<String, String> context = new HashMap<>();
-    context.put("HOLDINGS", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(new Holdingsrecord())).encode());
     context.put("INSTANCE", new JsonObject().encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
@@ -207,7 +205,6 @@ public class CreateHoldingEventHandlerTest {
     Instance instance = new Instance(instanceId, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
     HashMap<String, String> context = new HashMap<>();
-    context.put("HOLDINGS", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(new Holdingsrecord())).encode());
     context.put("INSTANCE", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
@@ -248,7 +245,7 @@ public class CreateHoldingEventHandlerTest {
             new ProfileSnapshotWrapper()
               .withProfileId(mappingProfile.getId())
               .withContentType(MAPPING_PROFILE)
-              .withContent(mappingProfile)))));
+              .withContent(JsonObject.mapFrom(mappingProfile).getMap())))));
 
     Mockito.when(fakeReader.read(eq("permanentLocationExpression"))).thenReturn(StringValue.of(String.valueOf(UUID.randomUUID())));
     Mockito.when(fakeReader.read(eq("invalidFieldValue"))).thenReturn(StringValue.of(String.valueOf(UUID.randomUUID())));
@@ -264,7 +261,6 @@ public class CreateHoldingEventHandlerTest {
     Instance instance = new Instance(instanceId, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
     HashMap<String, String> context = new HashMap<>();
-    context.put("HOLDINGS", new JsonObject().put("permanentLocationId", UUID.randomUUID().toString()).put("invalidField", "invalidFieldValue").encode());
     context.put("INSTANCE", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
