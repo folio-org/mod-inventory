@@ -3,10 +3,12 @@ package org.folio.inventory.dataimport.handlers.action;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
+import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 import java.util.LinkedHashMap;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 import org.folio.ActionProfile;
@@ -20,6 +22,7 @@ import org.folio.inventory.storage.Storage;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
+import org.folio.rest.jaxrs.model.Record;
 import org.folio.rest.tools.utils.ObjectMapperTool;
 
 import io.vertx.core.json.Json;
@@ -36,6 +39,7 @@ public class CreateHoldingEventHandler implements EventHandler {
   private static final String INSTANCE_ID_ERROR_MESSAGE = "Error: 'instanceId' is empty";
   private static final String PERMANENT_LOCATION_ID_ERROR_MESSAGE = "Can`t create Holding entity: 'permanentLocationId' is empty";
   private static final String SAVE_HOLDING_ERROR_MESSAGE = "Can`t save new holding";
+  private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t create Holding entity: context is empty or doesn`t exists";
   private static final String CREATING_HOLDING_ENTITY_ERROR_MESSAGE = "Can`t create Holding entity";
 
   private Storage storage;
@@ -48,19 +52,23 @@ public class CreateHoldingEventHandler implements EventHandler {
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
-      prepareEvent(dataImportEventPayload);
-      MappingManager.map(dataImportEventPayload);
-      JsonObject holdingAsJson = new JsonObject(dataImportEventPayload.getContext().get(HOLDINGS.value()));
+      if (dataImportEventPayload.getContext() == null || dataImportEventPayload.getContext().isEmpty()) {
+        failFuture(future, CONTEXT_EMPTY_ERROR_MESSAGE);
+      } else {
+        prepareEvent(dataImportEventPayload);
+        MappingManager.map(dataImportEventPayload);
+        JsonObject holdingAsJson = new JsonObject(dataImportEventPayload.getContext().get(HOLDINGS.value()));
 
-      if (isInstanceIdFilledIfNeeded(future, dataImportEventPayload, holdingAsJson)) {
-        if (isEmpty(holdingAsJson.getString(PERMANENT_LOCATION_ID_FIELD))) {
-          failFuture(future, PERMANENT_LOCATION_ID_ERROR_MESSAGE);
-        } else {
-          Holdingsrecord holding = ObjectMapperTool.getMapper().readValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), Holdingsrecord.class);
-          Context context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
-          HoldingsRecordCollection holdingsRecords = storage.getHoldingsRecordCollection(context);
-          holdingsRecords.add(holding, holdingSuccess -> constructDataImportEventPayload(future, dataImportEventPayload, holdingSuccess),
-            failure -> failFuture(future, SAVE_HOLDING_ERROR_MESSAGE));
+        if (ifInstanceIdFilledIfNeeded(future, dataImportEventPayload, holdingAsJson)) {
+          if (isEmpty(holdingAsJson.getString(PERMANENT_LOCATION_ID_FIELD))) {
+            failFuture(future, PERMANENT_LOCATION_ID_ERROR_MESSAGE);
+          } else {
+            Holdingsrecord holding = ObjectMapperTool.getMapper().readValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), Holdingsrecord.class);
+            Context context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+            HoldingsRecordCollection holdingsRecords = storage.getHoldingsRecordCollection(context);
+            holdingsRecords.add(holding, holdingSuccess -> constructDataImportEventPayload(future, dataImportEventPayload, holdingSuccess),
+              failure -> failFuture(future, SAVE_HOLDING_ERROR_MESSAGE));
+          }
         }
       }
     } catch (Exception e) {
@@ -94,20 +102,42 @@ public class CreateHoldingEventHandler implements EventHandler {
     future.complete(dataImportEventPayload);
   }
 
-  private boolean isInstanceIdFilledIfNeeded(CompletableFuture<DataImportEventPayload> future, DataImportEventPayload dataImportEventPayload, JsonObject holdingAsJson) {
+  private boolean ifInstanceIdFilledIfNeeded(CompletableFuture<DataImportEventPayload> future, DataImportEventPayload dataImportEventPayload, JsonObject holdingAsJson) {
     if (isEmpty(holdingAsJson.getString(INSTANCE_ID_FIELD))) {
       String instanceAsString = dataImportEventPayload.getContext().get(INSTANCE.value());
       JsonObject instanceAsJson = new JsonObject(instanceAsString);
       String instanceId = instanceAsJson.getString("id");
       if (isEmpty(instanceId)) {
-        failFuture(future, INSTANCE_ID_ERROR_MESSAGE);
-        return false;
+        return ifInstanceIdAddedFromMarcRecord(future, dataImportEventPayload, holdingAsJson);
       } else {
-        holdingAsJson.put(INSTANCE_ID_FIELD, instanceId);
-        dataImportEventPayload.getContext().put(HOLDINGS.value(), holdingAsJson.encode());
+        fillInstanceId(dataImportEventPayload, holdingAsJson, instanceId);
       }
     }
     return true;
+  }
+
+  private boolean ifInstanceIdAddedFromMarcRecord(CompletableFuture<DataImportEventPayload> future, DataImportEventPayload dataImportEventPayload, JsonObject holdingAsJson) {
+    String instanceId;
+    String marcBibliographic = dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value());
+    if (!isEmpty(marcBibliographic)) {
+      Record record = new JsonObject(marcBibliographic).mapTo(Record.class);
+      if (Objects.nonNull(record.getExternalIdsHolder()) && !isEmpty(record.getExternalIdsHolder().getInstanceId())) {
+        instanceId = record.getExternalIdsHolder().getInstanceId();
+        if (isEmpty(instanceId)) {
+          failFuture(future, INSTANCE_ID_ERROR_MESSAGE);
+          return false;
+        }
+        fillInstanceId(dataImportEventPayload, holdingAsJson, instanceId);
+        return true;
+      }
+    }
+    failFuture(future, INSTANCE_ID_ERROR_MESSAGE);
+    return false;
+  }
+
+  private void fillInstanceId(DataImportEventPayload dataImportEventPayload, JsonObject holdingAsJson, String instanceId) {
+    holdingAsJson.put(INSTANCE_ID_FIELD, instanceId);
+    dataImportEventPayload.getContext().put(HOLDINGS.value(), holdingAsJson.encode());
   }
 
   private void failFuture(CompletableFuture<DataImportEventPayload> future, String errorMessage) {
