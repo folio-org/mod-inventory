@@ -117,13 +117,11 @@ public class CreateHoldingEventHandler implements EventHandler {
   }
 
   private boolean ifInstanceIdAddedFromMarcRecord(CompletableFuture<DataImportEventPayload> future, DataImportEventPayload dataImportEventPayload, JsonObject holdingAsJson) {
-    String instanceId;
     String marcBibliographic = dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value());
     if (!isEmpty(marcBibliographic)) {
       Record record = new JsonObject(marcBibliographic).mapTo(Record.class);
       if (Objects.nonNull(record.getExternalIdsHolder()) && !isEmpty(record.getExternalIdsHolder().getInstanceId())) {
-        instanceId = record.getExternalIdsHolder().getInstanceId();
-        fillInstanceId(dataImportEventPayload, holdingAsJson, instanceId);
+        fillInstanceId(dataImportEventPayload, holdingAsJson, record.getExternalIdsHolder().getInstanceId());
         return true;
       }
     }
