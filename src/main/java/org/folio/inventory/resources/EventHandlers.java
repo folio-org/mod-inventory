@@ -1,14 +1,8 @@
 package org.folio.inventory.resources;
 
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.BodyHandler;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.dataimport.handlers.actions.CreateHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler;
-import org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler;
-import org.folio.inventory.dataimport.handlers.actions.CreateHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.InstanceLoader;
 import org.folio.inventory.dataimport.handlers.matching.MatchInstanceEventHandler;
 import org.folio.inventory.storage.Storage;
@@ -16,17 +10,17 @@ import org.folio.inventory.support.http.server.ServerErrorResponse;
 import org.folio.inventory.support.http.server.SuccessResponse;
 import org.folio.processing.events.EventManager;
 import org.folio.processing.mapping.MappingManager;
-import org.folio.processing.mapping.mapper.writer.holding.HoldingsWriterFactory;
 import org.folio.processing.mapping.mapper.reader.record.MarcBibReaderFactory;
-import org.folio.processing.mapping.mapper.writer.item.ItemWriterFactory;
-import org.folio.processing.mapping.MappingManager;
-import org.folio.processing.mapping.mapper.reader.record.MarcBibReaderFactory;
-import org.folio.processing.mapping.mapper.writer.item.ItemWriterFactory;
-import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.mapper.writer.holding.HoldingsWriterFactory;
+import org.folio.processing.mapping.mapper.writer.item.ItemWriterFactory;
 import org.folio.processing.matching.loader.MatchValueLoaderFactory;
 import org.folio.processing.matching.reader.MarcValueReaderImpl;
 import org.folio.processing.matching.reader.MatchValueReaderFactory;
+
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
 
 public class EventHandlers {
 
