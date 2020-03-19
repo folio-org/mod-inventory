@@ -1,27 +1,30 @@
-package org.folio.inventory.dataimport.handlers.action;
+package org.folio.inventory.dataimport.handlers.actions;
 
+import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
-import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
+import java.io.IOException;
 import java.util.LinkedHashMap;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.commons.lang3.StringUtils;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.Holdingsrecord;
 import org.folio.MappingProfile;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
+import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Record;
 import org.folio.rest.tools.utils.ObjectMapperTool;
 
@@ -36,10 +39,11 @@ public class CreateHoldingEventHandler implements EventHandler {
   private static final String CREATED_HOLDINGS_RECORD_EVENT_TYPE = "DI_INVENTORY_HOLDING_CREATED";
   private static final String INSTANCE_ID_FIELD = "instanceId";
   private static final String PERMANENT_LOCATION_ID_FIELD = "permanentLocationId";
-  private static final String INSTANCE_ID_ERROR_MESSAGE = "Error: 'instanceId' is empty";
   private static final String PERMANENT_LOCATION_ID_ERROR_MESSAGE = "Can`t create Holding entity: 'permanentLocationId' is empty";
   private static final String SAVE_HOLDING_ERROR_MESSAGE = "Can`t save new holding";
   private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t create Holding entity: context is empty or doesn`t exists";
+  private static final String PAYLOAD_DATA_HAS_NO_INSTANCE_ID_ERROR_MSG = "Failed to extract instanceId from holdingsRecord entity or parsed record";
+
 
   private Storage storage;
 
@@ -93,8 +97,29 @@ public class CreateHoldingEventHandler implements EventHandler {
       .setContent(new JsonObject((LinkedHashMap) dataImportEventPayload.getCurrentNode().getContent()).mapTo(MappingProfile.class));
   }
 
-  private void fillInstanceIdIfNeeded(DataImportEventPayload dataImportEventPayload, JsonObject holdingAsJson) {
-    if (isEmpty(holdingAsJson.getString(INSTANCE_ID_FIELD))) {
+  private void fillInstanceIdIfNeeded(DataImportEventPayload dataImportEventPayload, JsonObject holdingAsJson) throws IOException {
+    if (isBlank(holdingAsJson.getString(INSTANCE_ID_FIELD))) {
+      String instanceId = null;
+      String instanceAsString = dataImportEventPayload.getContext().get(EntityType.INSTANCE.value());
+
+      if (StringUtils.isNotEmpty(instanceAsString)) {
+        JsonObject holdingsRecord = new JsonObject(instanceAsString);
+        instanceId = holdingsRecord.getString("id");
+      }
+      if (isBlank(instanceId)) {
+        String recordAsString = dataImportEventPayload.getContext().get(EntityType.MARC_BIBLIOGRAPHIC.value());
+        Record record = ObjectMapperTool.getMapper().readValue(recordAsString, Record.class);
+        instanceId = ParsedRecordUtil.getAdditionalSubfieldValue(record.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.H);
+      }
+      if (isBlank(instanceId)) {
+        throw new EventProcessingException(PAYLOAD_DATA_HAS_NO_INSTANCE_ID_ERROR_MSG);
+      }
+      fillInstanceId(dataImportEventPayload, holdingAsJson, instanceId);
+    }
+
+
+
+/*    if (isEmpty(holdingAsJson.getString(INSTANCE_ID_FIELD))) {
       if (!dataImportEventPayload.getContext().containsKey(INSTANCE.value())) {
         throw new EventProcessingException(INSTANCE_ID_ERROR_MESSAGE);
       }
@@ -116,10 +141,9 @@ public class CreateHoldingEventHandler implements EventHandler {
         if (Objects.isNull(record.getExternalIdsHolder()) || isEmpty(record.getExternalIdsHolder().getInstanceId())) {
           throw new EventProcessingException(INSTANCE_ID_ERROR_MESSAGE);
         }
-        instanceId = record.getExternalIdsHolder().getInstanceId();
       }
       fillInstanceId(dataImportEventPayload, holdingAsJson, instanceId);
-    }
+    }*/
   }
 
   private void checkIfPermanentLocationIdExists(JsonObject holdingAsJson) {

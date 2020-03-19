@@ -1,4 +1,4 @@
-package org.folio.inventory.dataimport.handlers.action;
+package org.folio.inventory.dataimport.handlers.actions;
 
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
@@ -46,6 +46,7 @@ import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.ExternalIdsHolder;
 import org.folio.rest.jaxrs.model.MappingDetail;
 import org.folio.rest.jaxrs.model.MappingRule;
+import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
 import org.junit.Assert;
@@ -58,9 +59,14 @@ import org.mockito.Spy;
 
 import com.google.common.collect.Lists;
 
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
 public class CreateHoldingEventHandlerTest {
+
+  private static final String PARSED_CONTENT_WITH_INSTANCE_ID = "{ \"leader\": \"01314nam  22003851a 4500\", \"fields\":[ {\"001\":\"ybp7406411\"}, {\"999\": {\"ind1\":\"f\", \"ind2\":\"f\", \"subfields\":[ { \"i\": \"957985c6-97e3-4038-b0e7-343ecd0b8120\"} ] } } ] }";
+  private static final String PARSED_CONTENT_WITHOUT_INSTANCE_ID = "{ \"leader\":\"01314nam  22003851a 4500\", \"fields\":[ { \"001\":\"ybp7406411\" } ] }";
+
 
   @Mock
   private Storage storage;
@@ -145,9 +151,10 @@ public class CreateHoldingEventHandlerTest {
     String instanceId = String.valueOf(UUID.randomUUID());
     Instance instance = new Instance(instanceId, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();
     context.put("INSTANCE", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
-    context.put(MARC_BIBLIOGRAPHIC.value(), new JsonObject().encode());
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
 
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
@@ -166,7 +173,7 @@ public class CreateHoldingEventHandlerTest {
   }
 
   @Test
-  public void shouldProcessEventIfInstanceIdIsNotExistsInInstanceInContextButExistsInMarcBibliographic() throws InterruptedException, ExecutionException, TimeoutException {
+  public void shouldProcessEventIfInstanceIdIsNotExistsInInstanceInContextButExistsInMarcBibliographicParsedRecords() throws InterruptedException, ExecutionException, TimeoutException {
     Reader fakeReader = Mockito.mock(Reader.class);
 
     String permanentLocationId = UUID.randomUUID().toString();
@@ -180,12 +187,12 @@ public class CreateHoldingEventHandlerTest {
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new HoldingsWriterFactory());
 
-    String instanceId = String.valueOf(UUID.randomUUID());
-    Record record = new Record().withExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId));
+    String expectedInstanceId = UUID.randomUUID().toString();
+    JsonObject instanceAsJson = new JsonObject().put("id", expectedInstanceId);
 
     HashMap<String, String> context = new HashMap<>();
-    context.put("INSTANCE", new JsonObject().encode());
-    context.put(MARC_BIBLIOGRAPHIC.value(), JsonObject.mapFrom(record).encode());
+    context.put("INSTANCE", instanceAsJson.encode());
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType("DI_CREATED_HOLDINGS_RECORD")
@@ -198,8 +205,40 @@ public class CreateHoldingEventHandlerTest {
 
     Assert.assertEquals("DI_INVENTORY_HOLDING_CREATED", dataImportEventPayload1.getEventType());
     Assert.assertNotNull(dataImportEventPayload1.getContext().get(HOLDINGS.value()));
-    Assert.assertEquals(instanceId, new JsonObject(dataImportEventPayload1.getContext().get(HOLDINGS.value())).getString("instanceId"));
+    Assert.assertEquals(expectedInstanceId, new JsonObject(dataImportEventPayload1.getContext().get(HOLDINGS.value())).getString("instanceId"));
     Assert.assertEquals(permanentLocationId, new JsonObject(dataImportEventPayload1.getContext().get(HOLDINGS.value())).getString("permanentLocationId"));
+  }
+
+
+  @Test(expected = ExecutionException.class)
+  public void shouldNotProcessEventIfInstanceIdIsNotExistsInInstanceInContextAndNotExistsInParsedParsedRecords() throws InterruptedException, ExecutionException, TimeoutException {
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    String permanentLocationId = UUID.randomUUID().toString();
+
+    Mockito.when(fakeReader.read(eq("permanentLocationExpression"))).thenReturn(StringValue.of(permanentLocationId));
+
+    Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+
+    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new HoldingsWriterFactory());
+
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITHOUT_INSTANCE_ID));
+
+    HashMap<String, String> context = new HashMap<>();
+    context.put("INSTANCE", new JsonObject().encode());
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType("DI_CREATED_HOLDINGS_RECORD")
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
+    future.get(5, TimeUnit.MILLISECONDS);
   }
 
 
@@ -236,7 +275,7 @@ public class CreateHoldingEventHandlerTest {
   }
 
   @Test(expected = ExecutionException.class)
-  public void shouldNotProcessEventIfInContextNoInstance() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+  public void shouldNotProcessEventIfNoContextMarcBibliographic() throws IOException, InterruptedException, ExecutionException, TimeoutException {
     Reader fakeReader = Mockito.mock(Reader.class);
 
     String permanentLocationId = UUID.randomUUID().toString();
@@ -309,130 +348,6 @@ public class CreateHoldingEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType("DI_CREATED_HOLDINGS_RECORD")
       .withContext(new HashMap<>())
-      .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
-
-    CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.MILLISECONDS);
-  }
-
-  @Test(expected = ExecutionException.class)
-  public void shouldNotProcessEventIfInstanceIdIsNotExistsInInstanceInContextAndNotExistsInMarcBibliographicWithoutExternalHoldingsIds() throws InterruptedException, ExecutionException, TimeoutException {
-    Reader fakeReader = Mockito.mock(Reader.class);
-
-    String permanentLocationId = UUID.randomUUID().toString();
-
-    Mockito.when(fakeReader.read(eq("permanentLocationExpression"))).thenReturn(StringValue.of(permanentLocationId));
-
-    Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-
-    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
-
-    MappingManager.registerReaderFactory(fakeReaderFactory);
-    MappingManager.registerWriterFactory(new HoldingsWriterFactory());
-
-    String instanceId = String.valueOf(UUID.randomUUID());
-    Record record = new Record();
-
-    HashMap<String, String> context = new HashMap<>();
-    context.put("INSTANCE", new JsonObject().encode());
-    context.put(MARC_BIBLIOGRAPHIC.value(), JsonObject.mapFrom(record).encode());
-
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType("DI_CREATED_HOLDINGS_RECORD")
-      .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
-
-    CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.MILLISECONDS);
-  }
-
-  @Test(expected = ExecutionException.class)
-  public void shouldNotProcessEventIfInstanceIdIsNotExistsInInstanceInContextAndNotExistsInMarcBibliographicInExternalHoldingsIds() throws InterruptedException, ExecutionException, TimeoutException {
-    Reader fakeReader = Mockito.mock(Reader.class);
-
-    String permanentLocationId = UUID.randomUUID().toString();
-
-    Mockito.when(fakeReader.read(eq("permanentLocationExpression"))).thenReturn(StringValue.of(permanentLocationId));
-
-    Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-
-    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
-
-    MappingManager.registerReaderFactory(fakeReaderFactory);
-    MappingManager.registerWriterFactory(new HoldingsWriterFactory());
-
-    String instanceId = String.valueOf(UUID.randomUUID());
-    Record record = new Record().withExternalIdsHolder(new ExternalIdsHolder());
-
-    HashMap<String, String> context = new HashMap<>();
-    context.put("INSTANCE", new JsonObject().encode());
-    context.put(MARC_BIBLIOGRAPHIC.value(), JsonObject.mapFrom(record).encode());
-
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType("DI_CREATED_HOLDINGS_RECORD")
-      .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
-
-    CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.MILLISECONDS);
-  }
-
-  @Test(expected = ExecutionException.class)
-  public void shouldNotProcessEventIfInstanceIdIsNotExistsInInstanceInContextAndNotIsEmptyInMarcBibliographicInExternalHoldingsIds() throws InterruptedException, ExecutionException, TimeoutException {
-    Reader fakeReader = Mockito.mock(Reader.class);
-
-    String permanentLocationId = UUID.randomUUID().toString();
-
-    Mockito.when(fakeReader.read(eq("permanentLocationExpression"))).thenReturn(StringValue.of(permanentLocationId));
-
-    Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-
-    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
-
-    MappingManager.registerReaderFactory(fakeReaderFactory);
-    MappingManager.registerWriterFactory(new HoldingsWriterFactory());
-
-    String instanceId = String.valueOf(UUID.randomUUID());
-    Record record = new Record().withExternalIdsHolder(new ExternalIdsHolder().withInstanceId(""));
-
-    HashMap<String, String> context = new HashMap<>();
-    context.put("INSTANCE", new JsonObject().encode());
-    context.put(MARC_BIBLIOGRAPHIC.value(), JsonObject.mapFrom(record).encode());
-
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType("DI_CREATED_HOLDINGS_RECORD")
-      .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
-
-    CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.MILLISECONDS);
-  }
-
-  @Test(expected = ExecutionException.class)
-  public void shouldNotProcessEventIfInstanceIdIsNotExistsInContextAndInMarcBibliographic() throws InterruptedException, ExecutionException, TimeoutException {
-    Reader fakeReader = Mockito.mock(Reader.class);
-
-    String permanentLocationId = UUID.randomUUID().toString();
-
-    Mockito.when(fakeReader.read(eq("permanentLocationExpression"))).thenReturn(StringValue.of(permanentLocationId));
-
-    Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-
-    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
-
-    MappingManager.registerReaderFactory(fakeReaderFactory);
-    MappingManager.registerWriterFactory(new HoldingsWriterFactory());
-
-    HashMap<String, String> context = new HashMap<>();
-    context.put("INSTANCE", new JsonObject().encode());
-
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType("DI_CREATED_HOLDINGS_RECORD")
-      .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
