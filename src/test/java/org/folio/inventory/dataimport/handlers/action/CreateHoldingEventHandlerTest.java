@@ -147,6 +147,8 @@ public class CreateHoldingEventHandlerTest {
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
     HashMap<String, String> context = new HashMap<>();
     context.put("INSTANCE", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
+    context.put(MARC_BIBLIOGRAPHIC.value(), new JsonObject().encode());
+
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType("DI_INVENTORY_HOLDING_CREATED")
@@ -200,6 +202,69 @@ public class CreateHoldingEventHandlerTest {
     Assert.assertEquals(permanentLocationId, new JsonObject(dataImportEventPayload1.getContext().get(HOLDINGS.value())).getString("permanentLocationId"));
   }
 
+
+  @Test(expected = ExecutionException.class)
+  public void shouldNotProcessEventIfInstanceIdIsNotExistsInInstanceInContextAndMarcBibliographicNotExists() throws InterruptedException, ExecutionException, TimeoutException {
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    String permanentLocationId = UUID.randomUUID().toString();
+
+    Mockito.when(fakeReader.read(eq("permanentLocationExpression"))).thenReturn(StringValue.of(permanentLocationId));
+
+    Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+
+    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new HoldingsWriterFactory());
+
+    String instanceId = String.valueOf(UUID.randomUUID());
+    Record record = new Record().withExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId));
+
+    HashMap<String, String> context = new HashMap<>();
+    context.put("INSTANCE", new JsonObject().encode());
+    context.put("InvalidField", JsonObject.mapFrom(record).encode());
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType("DI_CREATED_HOLDINGS_RECORD")
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
+    future.get(5, TimeUnit.MILLISECONDS);
+  }
+
+  @Test(expected = ExecutionException.class)
+  public void shouldNotProcessEventIfInContextNoInstance() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    String permanentLocationId = UUID.randomUUID().toString();
+
+    Mockito.when(fakeReader.read(eq("permanentLocationExpression"))).thenReturn(StringValue.of(permanentLocationId));
+
+    Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+
+    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new HoldingsWriterFactory());
+
+    String instanceId = String.valueOf(UUID.randomUUID());
+    Instance instance = new Instance(instanceId, String.valueOf(UUID.randomUUID()),
+      String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
+    HashMap<String, String> context = new HashMap<>();
+    context.put("InvalidField", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType("DI_INVENTORY_HOLDING_CREATED")
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
+    future.get(5, TimeUnit.MILLISECONDS);
+  }
 
   @Test(expected = ExecutionException.class)
   public void shouldNotProcessEventIfContextIsNull() throws InterruptedException, ExecutionException, TimeoutException {

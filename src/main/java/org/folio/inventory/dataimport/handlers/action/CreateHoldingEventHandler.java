@@ -51,24 +51,24 @@ public class CreateHoldingEventHandler implements EventHandler {
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
-      if (dataImportEventPayload.getContext() == null || dataImportEventPayload.getContext().isEmpty()) {
+      if (dataImportEventPayload.getContext() == null || dataImportEventPayload.getContext().isEmpty()
+        || !dataImportEventPayload.getContext().containsKey(MARC_BIBLIOGRAPHIC.value())) {
         throw new EventProcessingException(CONTEXT_EMPTY_ERROR_MESSAGE);
-      } else {
-        prepareEvent(dataImportEventPayload);
-        MappingManager.map(dataImportEventPayload);
-        JsonObject holdingAsJson = new JsonObject(dataImportEventPayload.getContext().get(HOLDINGS.value()));
-        fillInstanceIdIfNeeded(dataImportEventPayload, holdingAsJson);
-        checkIfPermanentLocationIdExists(holdingAsJson);
-
-        Context context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
-        HoldingsRecordCollection holdingsRecords = storage.getHoldingsRecordCollection(context);
-        Holdingsrecord holding = ObjectMapperTool.getMapper().readValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), Holdingsrecord.class);
-        holdingsRecords.add(holding, holdingSuccess -> constructDataImportEventPayload(future, dataImportEventPayload, holdingSuccess),
-          failure -> {
-            LOGGER.error(SAVE_HOLDING_ERROR_MESSAGE);
-            future.completeExceptionally(new EventProcessingException(SAVE_HOLDING_ERROR_MESSAGE));
-          });
       }
+      prepareEvent(dataImportEventPayload);
+      MappingManager.map(dataImportEventPayload);
+      JsonObject holdingAsJson = new JsonObject(dataImportEventPayload.getContext().get(HOLDINGS.value()));
+      fillInstanceIdIfNeeded(dataImportEventPayload, holdingAsJson);
+      checkIfPermanentLocationIdExists(holdingAsJson);
+
+      Context context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+      HoldingsRecordCollection holdingsRecords = storage.getHoldingsRecordCollection(context);
+      Holdingsrecord holding = ObjectMapperTool.getMapper().readValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), Holdingsrecord.class);
+      holdingsRecords.add(holding, holdingSuccess -> constructDataImportEventPayload(future, dataImportEventPayload, holdingSuccess),
+        failure -> {
+          LOGGER.error(SAVE_HOLDING_ERROR_MESSAGE);
+          future.completeExceptionally(new EventProcessingException(SAVE_HOLDING_ERROR_MESSAGE));
+        });
     } catch (Exception e) {
       LOGGER.error(e);
       future.completeExceptionally(e);
@@ -95,20 +95,28 @@ public class CreateHoldingEventHandler implements EventHandler {
 
   private void fillInstanceIdIfNeeded(DataImportEventPayload dataImportEventPayload, JsonObject holdingAsJson) {
     if (isEmpty(holdingAsJson.getString(INSTANCE_ID_FIELD))) {
+      if (!dataImportEventPayload.getContext().containsKey(INSTANCE.value())) {
+        throw new EventProcessingException(INSTANCE_ID_ERROR_MESSAGE);
+      }
       String instanceAsString = dataImportEventPayload.getContext().get(INSTANCE.value());
+      if (isEmpty(instanceAsString)) {
+        throw new EventProcessingException(INSTANCE_ID_ERROR_MESSAGE);
+      }
       JsonObject instanceAsJson = new JsonObject(instanceAsString);
       String instanceId = instanceAsJson.getString("id");
-      if (isEmpty(instanceId)) {
-        String marcBibliographic = dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value());
-        if (isEmpty(marcBibliographic)) {
+      if (!isEmpty(instanceId)) {
+        fillInstanceId(dataImportEventPayload, holdingAsJson, instanceId);
+        return;
+      }
+      String marcBibliographic = dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value());
+      if (isEmpty(marcBibliographic)) {
+        throw new EventProcessingException(INSTANCE_ID_ERROR_MESSAGE);
+      } else {
+        Record record = new JsonObject(marcBibliographic).mapTo(Record.class);
+        if (Objects.isNull(record.getExternalIdsHolder()) || isEmpty(record.getExternalIdsHolder().getInstanceId())) {
           throw new EventProcessingException(INSTANCE_ID_ERROR_MESSAGE);
-        } else {
-          Record record = new JsonObject(marcBibliographic).mapTo(Record.class);
-          if (Objects.isNull(record.getExternalIdsHolder()) || isEmpty(record.getExternalIdsHolder().getInstanceId())) {
-            throw new EventProcessingException(INSTANCE_ID_ERROR_MESSAGE);
-          }
-          instanceId = record.getExternalIdsHolder().getInstanceId();
         }
+        instanceId = record.getExternalIdsHolder().getInstanceId();
       }
       fillInstanceId(dataImportEventPayload, holdingAsJson, instanceId);
     }
