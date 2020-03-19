@@ -168,6 +168,7 @@ public class CreateHoldingEventHandlerTest {
 
     Assert.assertEquals("DI_INVENTORY_HOLDING_CREATED", actualDataImportEventPayload.getEventType());
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
+    Assert.assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("id"));
     Assert.assertEquals(instanceId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("instanceId"));
     Assert.assertEquals(permanentLocationId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("permanentLocationId"));
   }
@@ -207,6 +208,7 @@ public class CreateHoldingEventHandlerTest {
 
     Assert.assertEquals("DI_INVENTORY_HOLDING_CREATED", actualDataImportEventPayload.getEventType());
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
+    Assert.assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("id"));
     Assert.assertEquals(expectedInstanceId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("instanceId"));
     Assert.assertEquals(permanentLocationId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("permanentLocationId"));
   }
@@ -242,6 +244,7 @@ public class CreateHoldingEventHandlerTest {
 
     Assert.assertEquals("DI_INVENTORY_HOLDING_CREATED", actualDataImportEventPayload.getEventType());
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
+    Assert.assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("id"));
     Assert.assertEquals(permanentLocationId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("permanentLocationId"));
   }
 

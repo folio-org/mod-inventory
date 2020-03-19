@@ -4,7 +4,6 @@ import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -22,7 +21,6 @@ import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.InstanceUtil;
-import org.folio.inventory.support.JsonHelper;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
@@ -35,7 +33,7 @@ import io.vertx.core.logging.LoggerFactory;
 
 public class CreateInstanceEventHandler implements EventHandler {
 
-  private static final Logger LOG = LoggerFactory.getLogger(CreateInstanceEventHandler.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(CreateInstanceEventHandler.class);
 
   public static final String INSTANCE_CREATED_EVENT_TYPE = "DI_INVENTORY_INSTANCE_CREATED";
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
@@ -54,44 +52,40 @@ public class CreateInstanceEventHandler implements EventHandler {
     try {
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
       if (payloadContext == null || StringUtils.isBlank(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()))) {
-        LOG.error(PAYLOAD_HAS_NO_DATA_MSG);
+        LOGGER.error(PAYLOAD_HAS_NO_DATA_MSG);
         future.completeExceptionally(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
         return future;
       }
 
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
-      dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
-      dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
-      dataImportEventPayload.getCurrentNode()
-        .setContent(new JsonObject((LinkedHashMap) dataImportEventPayload.getCurrentNode().getContent()).mapTo(MappingProfile.class));
-      dataImportEventPayload.getContext().put(INSTANCE.value(), new JsonObject().encode());
+      prepareEvent(dataImportEventPayload);
 
       MappingManager.map(dataImportEventPayload);
       JsonObject instanceAsJson = new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value()));
       instanceAsJson.put("id", UUID.randomUUID().toString());
 
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
-      List<String> errors = validateInstance(instanceAsJson);
+      List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
       if (errors.isEmpty()) {
         Instance mappedInstance = InstanceUtil.jsonToInstance(instanceAsJson);
         addInstance(mappedInstance, instanceCollection)
           .setHandler(ar -> {
             if (ar.succeeded()) {
               dataImportEventPayload.getContext().put(INSTANCE.value(), instanceAsJson.encode());
-              dataImportEventPayload.setEventType(INSTANCE_CREATED_EVENT_TYPE); //TODO
+              dataImportEventPayload.setEventType(INSTANCE_CREATED_EVENT_TYPE);
               future.complete(dataImportEventPayload);
             } else {
-              LOG.error("Error creating inventory Instance", ar.cause());
+              LOGGER.error("Error creating inventory Instance", ar.cause());
               future.completeExceptionally(ar.cause());
             }
           });
       } else {
         String msg = String.format("Mapped Instance is invalid: %s", errors.toString());
-        LOG.error(msg);
+        LOGGER.error(msg);
         future.completeExceptionally(new EventProcessingException(msg));
       }
     } catch (Exception e) {
-      LOG.error("Error creating inventory Instance", e);
+      LOGGER.error("Error creating inventory Instance", e);
       future.completeExceptionally(e);
     }
     return future;
@@ -106,30 +100,19 @@ public class CreateInstanceEventHandler implements EventHandler {
     return false;
   }
 
-  private List<String> validateInstance(JsonObject instanceAsJson) {
-    ArrayList<String> errorMessages = new ArrayList<>();
-    for (String fieldPath : requiredFields) {
-      String field = StringUtils.substringBefore(fieldPath, ".");
-      String nestedField = StringUtils.substringAfter(fieldPath, ".");
-      if (!isExistsRequiredProperty(instanceAsJson, field, nestedField)) {
-        errorMessages.add(String.format("Field '%s' is a required field and can not be null", fieldPath));
-      }
-    }
-    return errorMessages;
-  }
-
-  private boolean isExistsRequiredProperty(JsonObject representation, String propertyName, String nestedPropertyName) {
-    String propertyValue = StringUtils.isEmpty(nestedPropertyName)
-      ? JsonHelper.getString(representation, propertyName)
-      : JsonHelper.getNestedProperty(representation, propertyName, nestedPropertyName);
-    return StringUtils.isNotEmpty(propertyValue);
+  private void prepareEvent(DataImportEventPayload dataImportEventPayload) {
+    dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
+    dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
+    dataImportEventPayload.getCurrentNode()
+      .setContent(new JsonObject((LinkedHashMap) dataImportEventPayload.getCurrentNode().getContent()).mapTo(MappingProfile.class));
+    dataImportEventPayload.getContext().put(INSTANCE.value(), new JsonObject().encode());
   }
 
   private Future<Instance> addInstance(Instance instance, InstanceCollection instanceCollection) {
     Future<Instance> future = Future.future();
     instanceCollection.add(instance, success -> future.complete(success.getResult()),
       failure -> {
-        LOG.error("Error posting Instance cause %s, status code %s", failure.getReason(), failure.getStatusCode());
+        LOGGER.error("Error posting Instance cause %s, status code %s", failure.getReason(), failure.getStatusCode());
         future.fail(failure.getReason());
       });
     return future;

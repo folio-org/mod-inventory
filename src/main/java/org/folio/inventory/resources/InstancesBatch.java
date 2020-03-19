@@ -15,6 +15,7 @@ import org.folio.inventory.common.WebContext;
 import org.folio.inventory.domain.BatchResult;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.storage.Storage;
+import org.folio.inventory.support.InstanceUtil;
 import org.folio.inventory.support.http.server.RedirectResponse;
 
 import java.util.ArrayList;
@@ -64,7 +65,7 @@ public class InstancesBatch extends AbstractInstances {
     } else {
       setInstancesIdIfNecessary(validInstances);
       List<Instance> instancesToCreate = validInstances.stream()
-        .map(this::requestToInstance)
+        .map(InstanceUtil::jsonToInstance)
         .collect(Collectors.toList());
 
       storage.getInstanceCollection(webContext).addBatch(instancesToCreate, success -> {
@@ -183,7 +184,7 @@ public class InstancesBatch extends AbstractInstances {
     Future<CompositeFuture> resultFuture = Future.future();
     try {
       Map<String, Instance> mapInstanceById = newInstances.stream()
-        .collect(Collectors.toMap(instance -> instance.getString("id"), this::requestToInstance));
+        .collect(Collectors.toMap(instance -> instance.getString("id"), InstanceUtil::jsonToInstance));
 
       List<Future> updateRelationshipsFutures = new ArrayList<>();
       for (Instance createdInstance : createdInstances) {

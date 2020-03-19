@@ -190,7 +190,7 @@ public class Instances extends AbstractInstances {
   private void update(RoutingContext rContext) {
     WebContext wContext = new WebContext(rContext);
     JsonObject instanceRequest = rContext.getBodyAsJson();
-    Instance updatedInstance = requestToInstance(instanceRequest);
+    Instance updatedInstance = InstanceUtil.jsonToInstance(instanceRequest);
     InstanceCollection instanceCollection = storage.getInstanceCollection(wContext);
 
     instanceCollection.findById(rContext.request().getParam("id"), it -> {

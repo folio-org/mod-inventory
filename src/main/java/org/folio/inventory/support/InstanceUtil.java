@@ -1,15 +1,9 @@
 package org.folio.inventory.support;
 
-import static org.folio.inventory.domain.converters.EntityConverters.converterForClass;
-import static org.folio.inventory.support.JsonArrayHelper.toList;
-import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
-import static org.folio.inventory.support.JsonHelper.getNestedProperty;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.folio.inventory.domain.Metadata;
 import org.folio.inventory.domain.instances.AlternativeTitle;
 import org.folio.inventory.domain.instances.Classification;
 import org.folio.inventory.domain.instances.Contributor;
@@ -20,13 +14,8 @@ import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
 import org.folio.inventory.domain.instances.Note;
 import org.folio.inventory.domain.instances.Publication;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
-import org.folio.inventory.domain.items.CirculationNote;
-import org.folio.inventory.domain.items.Item;
-import org.folio.inventory.domain.items.LastCheckIn;
-import org.folio.inventory.domain.items.Status;
 import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public class InstanceUtil {
