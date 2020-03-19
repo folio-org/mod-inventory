@@ -2,6 +2,7 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.logging.log4j.util.Strings.isNotEmpty;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
@@ -11,7 +12,6 @@ import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.concurrent.CompletableFuture;
 
-import org.apache.commons.lang3.StringUtils;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.Holdingsrecord;
@@ -42,7 +42,7 @@ public class CreateHoldingEventHandler implements EventHandler {
   private static final String PERMANENT_LOCATION_ID_ERROR_MESSAGE = "Can`t create Holding entity: 'permanentLocationId' is empty";
   private static final String SAVE_HOLDING_ERROR_MESSAGE = "Can`t save new holding";
   private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t create Holding entity: context is empty or doesn`t exists";
-  private static final String PAYLOAD_DATA_HAS_NO_INSTANCE_ID_ERROR_MSG = "Failed to extract instanceId from holdingsRecord entity or parsed record";
+  private static final String PAYLOAD_DATA_HAS_NO_INSTANCE_ID_ERROR_MSG = "Failed to extract instanceId from instance entity or parsed record";
 
 
   private Storage storage;
@@ -102,14 +102,14 @@ public class CreateHoldingEventHandler implements EventHandler {
       String instanceId = null;
       String instanceAsString = dataImportEventPayload.getContext().get(EntityType.INSTANCE.value());
 
-      if (StringUtils.isNotEmpty(instanceAsString)) {
+      if (isNotEmpty(instanceAsString)) {
         JsonObject holdingsRecord = new JsonObject(instanceAsString);
         instanceId = holdingsRecord.getString("id");
       }
       if (isBlank(instanceId)) {
         String recordAsString = dataImportEventPayload.getContext().get(EntityType.MARC_BIBLIOGRAPHIC.value());
         Record record = ObjectMapperTool.getMapper().readValue(recordAsString, Record.class);
-        instanceId = ParsedRecordUtil.getAdditionalSubfieldValue(record.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.H);
+        instanceId = ParsedRecordUtil.getAdditionalSubfieldValue(record.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.I);
       }
       if (isBlank(instanceId)) {
         throw new EventProcessingException(PAYLOAD_DATA_HAS_NO_INSTANCE_ID_ERROR_MSG);
