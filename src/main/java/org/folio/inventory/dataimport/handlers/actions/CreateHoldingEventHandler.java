@@ -116,34 +116,6 @@ public class CreateHoldingEventHandler implements EventHandler {
       }
       fillInstanceId(dataImportEventPayload, holdingAsJson, instanceId);
     }
-
-
-
-/*    if (isEmpty(holdingAsJson.getString(INSTANCE_ID_FIELD))) {
-      if (!dataImportEventPayload.getContext().containsKey(INSTANCE.value())) {
-        throw new EventProcessingException(INSTANCE_ID_ERROR_MESSAGE);
-      }
-      String instanceAsString = dataImportEventPayload.getContext().get(INSTANCE.value());
-      if (isEmpty(instanceAsString)) {
-        throw new EventProcessingException(INSTANCE_ID_ERROR_MESSAGE);
-      }
-      JsonObject instanceAsJson = new JsonObject(instanceAsString);
-      String instanceId = instanceAsJson.getString("id");
-      if (!isEmpty(instanceId)) {
-        fillInstanceId(dataImportEventPayload, holdingAsJson, instanceId);
-        return;
-      }
-      String marcBibliographic = dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value());
-      if (isEmpty(marcBibliographic)) {
-        throw new EventProcessingException(INSTANCE_ID_ERROR_MESSAGE);
-      } else {
-        Record record = new JsonObject(marcBibliographic).mapTo(Record.class);
-        if (Objects.isNull(record.getExternalIdsHolder()) || isEmpty(record.getExternalIdsHolder().getInstanceId())) {
-          throw new EventProcessingException(INSTANCE_ID_ERROR_MESSAGE);
-        }
-      }
-      fillInstanceId(dataImportEventPayload, holdingAsJson, instanceId);
-    }*/
   }
 
   private void checkIfPermanentLocationIdExists(JsonObject holdingAsJson) {
