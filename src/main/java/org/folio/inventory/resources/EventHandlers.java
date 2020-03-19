@@ -7,6 +7,8 @@ import io.vertx.ext.web.handler.BodyHandler;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.dataimport.handlers.actions.CreateHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler;
+import org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler;
+import org.folio.inventory.dataimport.handlers.actions.CreateHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.InstanceLoader;
 import org.folio.inventory.dataimport.handlers.matching.MatchInstanceEventHandler;
 import org.folio.inventory.storage.Storage;
@@ -17,6 +19,11 @@ import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.mapper.writer.holding.HoldingsWriterFactory;
 import org.folio.processing.mapping.mapper.reader.record.MarcBibReaderFactory;
 import org.folio.processing.mapping.mapper.writer.item.ItemWriterFactory;
+import org.folio.processing.mapping.MappingManager;
+import org.folio.processing.mapping.mapper.reader.record.MarcBibReaderFactory;
+import org.folio.processing.mapping.mapper.writer.item.ItemWriterFactory;
+import org.folio.processing.mapping.MappingManager;
+import org.folio.processing.mapping.mapper.writer.holding.HoldingsWriterFactory;
 import org.folio.processing.matching.loader.MatchValueLoaderFactory;
 import org.folio.processing.matching.reader.MarcValueReaderImpl;
 import org.folio.processing.matching.reader.MatchValueReaderFactory;
@@ -28,12 +35,12 @@ public class EventHandlers {
   public EventHandlers(final Storage storage) {
     MatchValueLoaderFactory.register(new InstanceLoader(storage));
     EventManager.registerEventHandler(new MatchInstanceEventHandler());
-    EventManager.registerEventHandler(new CreateHoldingEventHandler(storage));
-    MappingManager.registerWriterFactory(new HoldingsWriterFactory());
     EventManager.registerEventHandler(new CreateItemEventHandler(storage));
     MatchValueReaderFactory.register(new MarcValueReaderImpl());
     MappingManager.registerReaderFactory(new MarcBibReaderFactory());
     MappingManager.registerWriterFactory(new ItemWriterFactory());
+    EventManager.registerEventHandler(new CreateHoldingEventHandler(storage));
+    MappingManager.registerWriterFactory(new HoldingsWriterFactory());
   }
 
   public void register(Router router) {
