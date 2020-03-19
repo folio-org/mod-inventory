@@ -41,6 +41,12 @@
       "description": "Created holding record",
       "eventTTL": 1,
       "signed": false
+    },
+    {
+      "eventType": "DI_INVENTORY_INSTANCE_CREATED",
+      "description": "Created instance record",
+      "eventTTL": 1,
+      "signed": false
     }
   ],
   "subscriptions": [
