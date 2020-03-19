@@ -10,16 +10,11 @@ public final class ParsedRecordUtil {
 
   public static final String TAG_999 = "999";
   public static final String INDICATOR_F = "f";
-  public static final String SUBFIELD_H = "h";
 
   private ParsedRecordUtil() {
   }
 
-  public static String extractHoldingsRecordId(ParsedRecord parsedRecord) {
-    return getAdditionalSubfieldValue(parsedRecord, SUBFIELD_H);
-  }
-
-  private static String getAdditionalSubfieldValue(ParsedRecord parsedRecord, String subfieldCode) {
+  public static String getAdditionalSubfieldValue(ParsedRecord parsedRecord, AdditionalSubfields additionalSubfield) {
     JsonObject parsedContent = new JsonObject(parsedRecord.getContent().toString());
     JsonArray fields = parsedContent.getJsonArray("fields");
     if (fields == null) {
@@ -33,9 +28,19 @@ public final class ParsedRecordUtil {
         && INDICATOR_F.equals(field.getJsonObject(TAG_999).getString("ind2")))
       .flatMap(targetField -> targetField.getJsonObject(TAG_999).getJsonArray("subfields").stream())
       .map(subfieldAsObject -> (JsonObject) subfieldAsObject)
-      .filter(subfield -> subfield.containsKey(subfieldCode))
+      .filter(subfield -> subfield.containsKey(additionalSubfield.subfieldCode))
       .findFirst()
-      .map(targetSubfield -> targetSubfield.getString(subfieldCode))
+      .map(targetSubfield -> targetSubfield.getString(additionalSubfield.subfieldCode))
       .orElse(EMPTY);
+  }
+
+  public static enum AdditionalSubfields {
+    H("h");
+
+    private String subfieldCode;
+
+    AdditionalSubfields(String subfieldCode) {
+      this.subfieldCode = subfieldCode;
+    }
   }
 }

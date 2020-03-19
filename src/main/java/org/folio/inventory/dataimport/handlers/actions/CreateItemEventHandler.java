@@ -134,7 +134,7 @@ public class CreateItemEventHandler implements EventHandler {
       if (isBlank(holdingsId)) {
         String recordAsString = dataImportEventPayload.getContext().get(EntityType.MARC_BIBLIOGRAPHIC.value());
         Record record = ObjectMapperTool.getMapper().readValue(recordAsString, Record.class);
-        holdingsId = ParsedRecordUtil.extractHoldingsRecordId(record.getParsedRecord());
+        holdingsId = ParsedRecordUtil.getAdditionalSubfieldValue(record.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.H);
       }
       if (isBlank(holdingsId)) {
         LOG.error(PAYLOAD_DATA_HAS_NO_HOLDING_ID_MSG);
