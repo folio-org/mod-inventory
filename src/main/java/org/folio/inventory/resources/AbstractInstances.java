@@ -3,36 +3,6 @@ package org.folio.inventory.resources;
 import static java.lang.String.format;
 import static org.folio.inventory.common.FutureAssistance.allOf;
 
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.web.RoutingContext;
-import org.folio.inventory.common.WebContext;
-import org.folio.inventory.common.domain.MultipleRecords;
-import org.folio.inventory.config.InventoryConfiguration;
-import org.folio.inventory.config.InventoryConfigurationImpl;
-import org.folio.inventory.domain.instances.AlternativeTitle;
-import org.folio.inventory.domain.instances.Classification;
-import org.folio.inventory.domain.instances.Contributor;
-import org.folio.inventory.domain.instances.Identifier;
-import org.folio.inventory.domain.instances.Instance;
-import org.folio.inventory.domain.instances.InstanceRelationship;
-import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
-import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
-import org.folio.inventory.domain.instances.Note;
-import org.folio.inventory.domain.instances.Publication;
-import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
-import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
-import org.folio.inventory.storage.Storage;
-import org.folio.inventory.storage.external.CollectionResourceClient;
-import org.folio.inventory.support.JsonArrayHelper;
-import org.folio.inventory.support.http.client.OkapiHttpClient;
-import org.folio.inventory.support.http.client.Response;
-import org.folio.inventory.support.http.server.ServerErrorResponse;
-
 import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -45,6 +15,30 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+
+import org.folio.inventory.common.WebContext;
+import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.config.InventoryConfiguration;
+import org.folio.inventory.config.InventoryConfigurationImpl;
+import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.domain.instances.InstanceRelationship;
+import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
+import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
+import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
+import org.folio.inventory.storage.Storage;
+import org.folio.inventory.storage.external.CollectionResourceClient;
+import org.folio.inventory.support.JsonArrayHelper;
+import org.folio.inventory.support.http.client.OkapiHttpClient;
+import org.folio.inventory.support.http.client.Response;
+import org.folio.inventory.support.http.server.ServerErrorResponse;
+
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import io.vertx.ext.web.RoutingContext;
 
 public abstract class AbstractInstances {
 

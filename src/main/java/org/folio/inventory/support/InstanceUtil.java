@@ -27,13 +27,13 @@ public class InstanceUtil {
   public static Instance jsonToInstance(JsonObject instanceRequest) {
     List<InstanceRelationshipToParent> parentInstances = instanceRequest.containsKey(Instance.PARENT_INSTANCES_KEY)
       ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.PARENT_INSTANCES_KEY)).stream()
-      .map(json -> new InstanceRelationshipToParent(json))
+      .map(InstanceRelationshipToParent::new)
       .collect(Collectors.toList())
       : new ArrayList<>();
 
     List<InstanceRelationshipToChild> childInstances = instanceRequest.containsKey(Instance.CHILD_INSTANCES_KEY)
       ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.CHILD_INSTANCES_KEY)).stream()
-      .map(json -> new InstanceRelationshipToChild(json))
+      .map(InstanceRelationshipToChild::new)
       .collect(Collectors.toList())
       : new ArrayList<>();
 
@@ -51,43 +51,43 @@ public class InstanceUtil {
 
     List<Identifier> identifiers = instanceRequest.containsKey(Instance.IDENTIFIERS_KEY)
       ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.IDENTIFIERS_KEY)).stream()
-      .map(json -> new Identifier(json))
+      .map(Identifier::new)
       .collect(Collectors.toList())
       : new ArrayList<>();
 
     List<AlternativeTitle> alternativeTitles = instanceRequest.containsKey(Instance.ALTERNATIVE_TITLES_KEY)
       ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.ALTERNATIVE_TITLES_KEY)).stream()
-      .map(json -> new AlternativeTitle(json))
+      .map(AlternativeTitle::new)
       .collect(Collectors.toList())
       : new ArrayList<>();
 
     List<Contributor> contributors = instanceRequest.containsKey(Instance.CONTRIBUTORS_KEY)
       ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.CONTRIBUTORS_KEY)).stream()
-      .map(json -> new Contributor(json))
+      .map(Contributor::new)
       .collect(Collectors.toList())
       : new ArrayList<>();
 
     List<Classification> classifications = instanceRequest.containsKey(Instance.CLASSIFICATIONS_KEY)
       ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.CLASSIFICATIONS_KEY)).stream()
-      .map(json -> new Classification(json))
+      .map(Classification::new)
       .collect(Collectors.toList())
       : new ArrayList<>();
 
     List<Publication> publications = instanceRequest.containsKey(Instance.PUBLICATION_KEY)
       ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.PUBLICATION_KEY)).stream()
-      .map(json -> new Publication(json))
+      .map(Publication::new)
       .collect(Collectors.toList())
       : new ArrayList<>();
 
     List<ElectronicAccess> electronicAccess = instanceRequest.containsKey(Instance.ELECTRONIC_ACCESS_KEY)
       ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.ELECTRONIC_ACCESS_KEY)).stream()
-      .map(json -> new ElectronicAccess(json))
+      .map(ElectronicAccess::new)
       .collect(Collectors.toList())
       : new ArrayList<>();
 
     List<Note> notes = instanceRequest.containsKey(Instance.NOTES_KEY)
       ? JsonArrayHelper.toList(instanceRequest.getJsonArray(Instance.NOTES_KEY)).stream()
-      .map(json -> new Note(json))
+      .map(Note::new)
       .collect(Collectors.toList())
       : new ArrayList<>();
 
