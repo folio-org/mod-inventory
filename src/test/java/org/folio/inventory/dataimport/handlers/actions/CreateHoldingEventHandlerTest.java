@@ -190,6 +190,45 @@ public class CreateHoldingEventHandlerTest {
     String expectedInstanceId = UUID.randomUUID().toString();
     JsonObject instanceAsJson = new JsonObject().put("id", expectedInstanceId);
 
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+
+    HashMap<String, String> context = new HashMap<>();
+    context.put("INSTANCE", instanceAsJson.encode());
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType("DI_CREATED_HOLDINGS_RECORD")
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload dataImportEventPayload1 = future.get(5, TimeUnit.MILLISECONDS);
+
+    Assert.assertEquals("DI_INVENTORY_HOLDING_CREATED", dataImportEventPayload1.getEventType());
+    Assert.assertNotNull(dataImportEventPayload1.getContext().get(HOLDINGS.value()));
+    Assert.assertEquals(expectedInstanceId, new JsonObject(dataImportEventPayload1.getContext().get(HOLDINGS.value())).getString("instanceId"));
+    Assert.assertEquals(permanentLocationId, new JsonObject(dataImportEventPayload1.getContext().get(HOLDINGS.value())).getString("permanentLocationId"));
+  }
+
+  @Test
+  public void shouldProcessEventIfInstanceIdIsEmptyInInstanceInContextButExistsInMarcBibliographicParsedRecords() throws InterruptedException, ExecutionException, TimeoutException {
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    String permanentLocationId = UUID.randomUUID().toString();
+
+    Mockito.when(fakeReader.read(eq("permanentLocationExpression"))).thenReturn(StringValue.of(permanentLocationId));
+
+    Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+
+    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new HoldingsWriterFactory());
+
+    String expectedInstanceId = UUID.randomUUID().toString();
+    JsonObject instanceAsJson = new JsonObject().put("id", expectedInstanceId);
+
     HashMap<String, String> context = new HashMap<>();
     context.put("INSTANCE", instanceAsJson.encode());
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
@@ -371,8 +410,10 @@ public class CreateHoldingEventHandlerTest {
     String instanceId = String.valueOf(UUID.randomUUID());
     Instance instance = new Instance(instanceId, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();
     context.put("INSTANCE", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType("DI_CREATED_HOLDINGS_RECORD")
