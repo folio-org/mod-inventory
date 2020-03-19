@@ -11,6 +11,7 @@ import org.folio.MappingProfile;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
+import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.folio.inventory.domain.items.CirculationNote;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
@@ -23,7 +24,10 @@ import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.rest.jaxrs.model.EntityType;
+import org.folio.rest.jaxrs.model.Record;
+import org.folio.rest.tools.utils.ObjectMapperTool;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -37,6 +41,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.ITEM;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
@@ -45,8 +50,13 @@ public class CreateItemEventHandler implements EventHandler {
 
   public static final String ITEM_CREATED_EVENT_TYPE = "DI_INVENTORY_ITEM_CREATED";
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
+  private static final String PAYLOAD_DATA_HAS_NO_HOLDING_ID_MSG = "Failed to extract holdingsRecordId from holdingsRecord entity or parsed record";
+  public static final String HOLDINGS_RECORD_ID_FIELD = "holdingsRecordId";
+  public static final String HOLDING_ID_FIELD = "id";
+  public static final String ITEM_ID_FIELD = "id";
 
   private static final Logger LOG = LoggerFactory.getLogger(CreateItemEventHandler.class);
+
 
   private final DateTimeFormatter dateTimeFormatter =
     DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").withZone(ZoneOffset.UTC);
@@ -64,7 +74,7 @@ public class CreateItemEventHandler implements EventHandler {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
-      if (payloadContext == null || StringUtils.isBlank(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()))) {
+      if (payloadContext == null || isBlank(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()))) {
         LOG.error(PAYLOAD_HAS_NO_DATA_MSG);
         future.completeExceptionally(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
         return future;
@@ -79,7 +89,8 @@ public class CreateItemEventHandler implements EventHandler {
 
       MappingManager.map(dataImportEventPayload);
       JsonObject itemAsJson = new JsonObject(dataImportEventPayload.getContext().get(ITEM.value()));
-      itemAsJson.put("id", UUID.randomUUID().toString());
+      fillHoldingsRecordIdIfNecessary(dataImportEventPayload, itemAsJson);
+      itemAsJson.put(ITEM_ID_FIELD, UUID.randomUUID().toString());
 
       ItemCollection itemCollection = storage.getItemCollection(context);
       List<String> errors = validateItem(itemAsJson);
@@ -109,6 +120,28 @@ public class CreateItemEventHandler implements EventHandler {
       future.completeExceptionally(e);
     }
     return future;
+  }
+
+  private void fillHoldingsRecordIdIfNecessary(DataImportEventPayload dataImportEventPayload, JsonObject itemAsJson) throws IOException {
+    if (isBlank(itemAsJson.getString(HOLDINGS_RECORD_ID_FIELD))) {
+      String holdingsId = null;
+      String holdingAsString = dataImportEventPayload.getContext().get(EntityType.HOLDINGS.value());
+
+      if (StringUtils.isNotEmpty(holdingAsString)) {
+        JsonObject holdingsRecord = new JsonObject(holdingAsString);
+        holdingsId = holdingsRecord.getString(HOLDING_ID_FIELD);
+      }
+      if (isBlank(holdingsId)) {
+        String recordAsString = dataImportEventPayload.getContext().get(EntityType.MARC_BIBLIOGRAPHIC.value());
+        Record record = ObjectMapperTool.getMapper().readValue(recordAsString, Record.class);
+        holdingsId = ParsedRecordUtil.getAdditionalSubfieldValue(record.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.H);
+      }
+      if (isBlank(holdingsId)) {
+        LOG.error(PAYLOAD_DATA_HAS_NO_HOLDING_ID_MSG);
+        throw new EventProcessingException(PAYLOAD_DATA_HAS_NO_HOLDING_ID_MSG);
+      }
+      itemAsJson.put(HOLDINGS_RECORD_ID_FIELD, holdingsId);
+    }
   }
 
   @Override
