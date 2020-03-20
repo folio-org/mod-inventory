@@ -15,6 +15,5 @@ public class InstanceWriterFactory implements WriterFactory {
   @Override
   public boolean isEligibleForEntityType(EntityType entityType) {
     return EntityType.INSTANCE == entityType;
-
   }
 }
