@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-import org.apache.commons.lang3.StringUtils;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.MappingProfile;
@@ -26,7 +25,6 @@ import org.folio.inventory.support.InstanceUtil;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
-import org.folio.rest.jaxrs.model.EntityType;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;

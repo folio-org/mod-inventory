@@ -39,7 +39,6 @@ import org.folio.inventory.storage.Storage;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.mapper.reader.Reader;
 import org.folio.processing.mapping.mapper.reader.record.MarcBibReaderFactory;
-import org.folio.processing.mapping.mapper.writer.holding.HoldingsWriterFactory;
 import org.folio.processing.value.StringValue;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.MappingDetail;
@@ -61,11 +60,7 @@ import io.vertx.core.json.JsonObject;
 
 public class CreateInstanceEventHandlerTest {
 
-
-  private static final String PARSED_CONTENT_WITH_INSTANCE_ID = "{ \"leader\": \"01314nam  22003851a 4500\", \"fields\":[ {\"001\":\"ybp7406411\"}, {\"999\": {\"ind1\":\"f\", \"ind2\":\"f\", \"subfields\":[ { \"i\": \"957985c6-97e3-4038-b0e7-343ecd0b8120\"} ] } } ] }";
-  private static final String PARSED_CONTENT_WITHOUT_INSTANCE_ID = "{ \"leader\":\"01314nam  22003851a 4500\", \"fields\":[ { \"001\":\"ybp7406411\" } ] }";
   private static final String DI_INVENTORY_INSTANCE_CREATED = "DI_INVENTORY_INSTANCE_CREATED";
-
 
   @Mock
   private Storage storage;
@@ -315,9 +310,6 @@ public class CreateInstanceEventHandlerTest {
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
 
-    String instanceId = String.valueOf(UUID.randomUUID());
-    Instance instance = new Instance(instanceId, String.valueOf(UUID.randomUUID()),
-      String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
     HashMap<String, String> context = new HashMap<>();
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
 
@@ -330,6 +322,62 @@ public class CreateInstanceEventHandlerTest {
 
     CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
+  }
+
+  @Test(expected = ExecutionException.class)
+  public void shouldNotProcessEventIfInstanceRecordIsInvalid() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    MappingProfile mappingProfile = new MappingProfile()
+      .withId(UUID.randomUUID().toString())
+      .withName("Prelim instance from MARC")
+      .withIncomingRecordType(EntityType.MARC_BIBLIOGRAPHIC)
+      .withExistingRecordType(EntityType.INSTANCE)
+      .withMappingDetails(new MappingDetail()
+        .withMappingFields(Lists.newArrayList(
+          new MappingRule().withPath("instanceTypeId").withValue("instanceTypeIdExpression"),
+          new MappingRule().withPath("title").withValue("titleExpression"),
+          new MappingRule().withPath("invalidField").withValue("invalidFieldValue"))));
+
+
+    ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
+      .withId(UUID.randomUUID().toString())
+      .withProfileId(jobProfile.getId())
+      .withContentType(JOB_PROFILE)
+      .withContent(jobProfile)
+      .withChildSnapshotWrappers(Collections.singletonList(
+        new ProfileSnapshotWrapper()
+          .withProfileId(actionProfile.getId())
+          .withContentType(ACTION_PROFILE)
+          .withContent(actionProfile)
+          .withChildSnapshotWrappers(Collections.singletonList(
+            new ProfileSnapshotWrapper()
+              .withProfileId(mappingProfile.getId())
+              .withContentType(MAPPING_PROFILE)
+              .withContent(JsonObject.mapFrom(mappingProfile).getMap())))));
+
+    Mockito.when(fakeReader.read(eq("instanceTypeIdExpression"))).thenReturn(StringValue.of(String.valueOf(UUID.randomUUID())));
+    Mockito.when(fakeReader.read(eq("titleExpression"))).thenReturn(StringValue.of(String.valueOf("title")));
+    Mockito.when(fakeReader.read(eq("invalidFieldValue"))).thenReturn(StringValue.of(String.valueOf(UUID.randomUUID())));
+
+    Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new InstanceWriterFactory());
+
+    HashMap<String, String> context = new HashMap<>();
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED)
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
+    future.get(5, TimeUnit.MILLISECONDS);
   }
 
   @Test
@@ -377,12 +425,12 @@ public class CreateInstanceEventHandlerTest {
   }
 
   @Test
-  public void isEligibleShouldReturnFalseIfRecordIsNotHoldings() {
+  public void isEligibleShouldReturnFalseIfRecordIsNotInstance() {
     ActionProfile actionProfile = new ActionProfile()
       .withId(UUID.randomUUID().toString())
       .withName("Create preliminary Instance")
       .withAction(ActionProfile.Action.CREATE)
-      .withFolioRecord(ActionProfile.FolioRecord.INSTANCE);
+      .withFolioRecord(HOLDINGS);
     ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
       .withId(UUID.randomUUID().toString())
       .withProfileId(actionProfile.getId())
