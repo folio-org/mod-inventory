@@ -1,6 +1,7 @@
 package org.folio.inventory.resources;
 
 import org.folio.DataImportEventPayload;
+import org.folio.inventory.dataimport.InstanceWriterFactory;
 import org.folio.inventory.dataimport.handlers.actions.CreateHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler;
@@ -37,6 +38,7 @@ public class EventHandlers {
     EventManager.registerEventHandler(new CreateHoldingEventHandler(storage));
     MappingManager.registerWriterFactory(new HoldingsWriterFactory());
     EventManager.registerEventHandler(new CreateInstanceEventHandler(storage));
+    MappingManager.registerWriterFactory(new InstanceWriterFactory());
   }
 
   public void register(Router router) {

@@ -63,6 +63,7 @@ public class CreateInstanceEventHandler implements EventHandler {
       MappingManager.map(dataImportEventPayload);
       JsonObject instanceAsJson = new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value()));
       instanceAsJson.put("id", UUID.randomUUID().toString());
+      instanceAsJson.put("source", "MARC");
 
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
       List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
