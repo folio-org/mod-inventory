@@ -324,62 +324,6 @@ public class CreateInstanceEventHandlerTest {
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
   }
 
-  @Test(expected = ExecutionException.class)
-  public void shouldNotProcessEventIfInstanceRecordIsInvalid() throws IOException, InterruptedException, ExecutionException, TimeoutException {
-    Reader fakeReader = Mockito.mock(Reader.class);
-
-    MappingProfile mappingProfile = new MappingProfile()
-      .withId(UUID.randomUUID().toString())
-      .withName("Prelim instance from MARC")
-      .withIncomingRecordType(EntityType.MARC_BIBLIOGRAPHIC)
-      .withExistingRecordType(EntityType.INSTANCE)
-      .withMappingDetails(new MappingDetail()
-        .withMappingFields(Lists.newArrayList(
-          new MappingRule().withPath("instanceTypeId").withValue("instanceTypeIdExpression"),
-          new MappingRule().withPath("title").withValue("titleExpression"),
-          new MappingRule().withPath("invalidField").withValue("invalidFieldValue"))));
-
-
-    ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
-      .withId(UUID.randomUUID().toString())
-      .withProfileId(jobProfile.getId())
-      .withContentType(JOB_PROFILE)
-      .withContent(jobProfile)
-      .withChildSnapshotWrappers(Collections.singletonList(
-        new ProfileSnapshotWrapper()
-          .withProfileId(actionProfile.getId())
-          .withContentType(ACTION_PROFILE)
-          .withContent(actionProfile)
-          .withChildSnapshotWrappers(Collections.singletonList(
-            new ProfileSnapshotWrapper()
-              .withProfileId(mappingProfile.getId())
-              .withContentType(MAPPING_PROFILE)
-              .withContent(JsonObject.mapFrom(mappingProfile).getMap())))));
-
-    Mockito.when(fakeReader.read(eq("instanceTypeIdExpression"))).thenReturn(StringValue.of(String.valueOf(UUID.randomUUID())));
-    Mockito.when(fakeReader.read(eq("titleExpression"))).thenReturn(StringValue.of(String.valueOf("title")));
-    Mockito.when(fakeReader.read(eq("invalidFieldValue"))).thenReturn(StringValue.of(String.valueOf(UUID.randomUUID())));
-
-    Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-
-    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
-
-    MappingManager.registerReaderFactory(fakeReaderFactory);
-    MappingManager.registerWriterFactory(new InstanceWriterFactory());
-
-    HashMap<String, String> context = new HashMap<>();
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
-
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_INSTANCE_CREATED)
-      .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
-
-    CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.MILLISECONDS);
-  }
-
   @Test
   public void isEligibleShouldReturnFalseIfCurrentNodeIsEmpty() {
 
