@@ -16,12 +16,9 @@ import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.handlers.matching.MatchHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchItemEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.loaders.HoldingLoader;
-import org.folio.inventory.domain.Holding;
-import org.folio.inventory.domain.HoldingCollection;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.events.services.handler.EventHandler;
-import org.folio.processing.exceptions.MatchingException;
 import org.folio.processing.matching.loader.MatchValueLoaderFactory;
 import org.folio.processing.matching.reader.MarcValueReaderImpl;
 import org.folio.processing.matching.reader.MatchValueReaderFactory;
@@ -53,9 +50,7 @@ import static org.folio.rest.jaxrs.model.MatchExpression.DataValueType.VALUE_FRO
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MATCH_PROFILE;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -148,7 +143,8 @@ public class MatchHoldingEventHandlerUnitTest {
   }
 
   @Test
-  public void shouldFailOnHandleEventPayloadIfMatchedMultipleHoldings() throws UnsupportedEncodingException {
+  public void shouldFailOnHandleEventPayloadIfMatchedMultipleHoldings(TestContext testContext) throws UnsupportedEncodingException {
+    Async async = testContext.async();
 
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Holdingsrecord>>> callback =
@@ -163,16 +159,15 @@ public class MatchHoldingEventHandlerUnitTest {
     EventHandler eventHandler = new MatchHoldingEventHandler();
     DataImportEventPayload eventPayload = createEventPayload();
 
-    try {
-      eventHandler.handle(eventPayload.withEventType(null));
-      fail();
-    } catch (MatchingException e) {
-      assertNotNull(e.getMessage());
-    }
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
+      testContext.assertNotNull(throwable);
+      async.complete();
+    });
   }
 
   @Test
-  public void shouldFailOnHandleEventPayloadIfFailedCallToInventoryStorage() throws UnsupportedEncodingException {
+  public void shouldFailOnHandleEventPayloadIfFailedCallToInventoryStorage(TestContext testContext) throws UnsupportedEncodingException {
+    Async async = testContext.async();
 
     doAnswer(ans -> {
       Consumer<Failure> callback =
@@ -187,16 +182,15 @@ public class MatchHoldingEventHandlerUnitTest {
     EventHandler eventHandler = new MatchHoldingEventHandler();
     DataImportEventPayload eventPayload = createEventPayload();
 
-    try {
-      eventHandler.handle(eventPayload);
-      fail();
-    } catch (MatchingException e) {
-      assertNotNull(e.getMessage());
-    }
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
+      testContext.assertNotNull(throwable);
+      async.complete();
+    });
   }
 
   @Test
-  public void shouldFailOnHandleEventPayloadIfExceptionThrown() throws UnsupportedEncodingException {
+  public void shouldFailOnHandleEventPayloadIfExceptionThrown(TestContext testContext) throws UnsupportedEncodingException {
+    Async async = testContext.async();
 
     doThrow(new UnsupportedEncodingException()).when(holdingCollection)
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
@@ -204,12 +198,10 @@ public class MatchHoldingEventHandlerUnitTest {
     EventHandler eventHandler = new MatchHoldingEventHandler();
     DataImportEventPayload eventPayload = createEventPayload();
 
-    try {
-      eventHandler.handle(eventPayload);
-      fail();
-    } catch (MatchingException e) {
-      assertNotNull(e.getMessage());
-    }
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
+      testContext.assertNotNull(throwable);
+      async.complete();
+    });
   }
 
   @Test

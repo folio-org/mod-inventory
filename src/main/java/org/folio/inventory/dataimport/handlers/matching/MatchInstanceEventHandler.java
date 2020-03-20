@@ -8,17 +8,17 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_NOT_MATCHED;
 public class MatchInstanceEventHandler extends AbstractMatchEventHandler {
 
   @Override
-  EntityType getEntityType() {
+  protected EntityType getEntityType() {
     return EntityType.INSTANCE;
   }
 
   @Override
-  String getMatchedEventType() {
+  protected String getMatchedEventType() {
     return DI_INVENTORY_INSTANCE_MATCHED.value();
   }
 
   @Override
-  String getNotMatchedEventType() {
+  protected String getNotMatchedEventType() {
     return DI_INVENTORY_INSTANCE_NOT_MATCHED.value();
   }
 }

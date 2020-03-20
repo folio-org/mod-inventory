@@ -62,7 +62,7 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
     return getEntityType() == entityType;
   }
 
-  abstract EntityType getEntityType();
+  protected abstract EntityType getEntityType();
 
-  abstract SearchableCollection<T> getSearchableCollection(Context context);
+  protected abstract SearchableCollection<T> getSearchableCollection(Context context);
 }

@@ -5,17 +5,17 @@ import org.folio.rest.jaxrs.model.EntityType;
 public class MatchItemEventHandler extends AbstractMatchEventHandler {
 
   @Override
-  EntityType getEntityType() {
+  protected EntityType getEntityType() {
     return EntityType.ITEM;
   }
 
   @Override
-  String getMatchedEventType() {
+  protected String getMatchedEventType() {
     return "DI_INVENTORY_ITEM_MATCHED";
   }
 
   @Override
-  String getNotMatchedEventType() {
+  protected String getNotMatchedEventType() {
     return "DI_INVENTORY_ITEM_NOT_MATCHED";
   }
 }

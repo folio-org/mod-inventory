@@ -15,12 +15,12 @@ public class HoldingLoader extends AbstractLoader<Holdingsrecord> {
   }
 
   @Override
-  EntityType getEntityType() {
+  protected EntityType getEntityType() {
     return EntityType.HOLDINGS;
   }
 
   @Override
-  SearchableCollection<Holdingsrecord> getSearchableCollection(Context context) {
+  protected SearchableCollection<Holdingsrecord> getSearchableCollection(Context context) {
     return storage.getHoldingsRecordCollection(context);
   }
 }

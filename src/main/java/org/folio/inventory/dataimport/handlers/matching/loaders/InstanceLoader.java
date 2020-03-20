@@ -15,12 +15,12 @@ public class InstanceLoader extends AbstractLoader<Instance> {
   }
 
   @Override
-  EntityType getEntityType() {
+  protected EntityType getEntityType() {
     return EntityType.INSTANCE;
   }
 
   @Override
-  SearchableCollection<Instance> getSearchableCollection(Context context) {
+  protected SearchableCollection<Instance> getSearchableCollection(Context context) {
     return storage.getInstanceCollection(context);
   }
 

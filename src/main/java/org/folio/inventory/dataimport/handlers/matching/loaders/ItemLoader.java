@@ -15,12 +15,12 @@ public class ItemLoader extends AbstractLoader<Item> {
   }
 
   @Override
-  EntityType getEntityType() {
+  protected EntityType getEntityType() {
     return EntityType.ITEM;
   }
 
   @Override
-  SearchableCollection<Item> getSearchableCollection(Context context) {
+  protected SearchableCollection<Item> getSearchableCollection(Context context) {
     return storage.getItemCollection(context);
   }
 }

@@ -16,18 +16,22 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
-    if (dataImportEventPayload.getEventType() != null) {
+    CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
+    try {
       dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
+      dataImportEventPayload.getCurrentNode()
+        .setContent(new JsonObject((LinkedHashMap) dataImportEventPayload.getCurrentNode().getContent()).mapTo(MatchProfile.class));
+      boolean matched = MatchingManager.match(dataImportEventPayload);
+      if (matched) {
+        dataImportEventPayload.setEventType(getMatchedEventType());
+      } else {
+        dataImportEventPayload.setEventType(getNotMatchedEventType());
+      }
+      future.complete(dataImportEventPayload);
+    } catch (Exception e) {
+      future.completeExceptionally(e);
     }
-    dataImportEventPayload.getCurrentNode()
-      .setContent(new JsonObject((LinkedHashMap) dataImportEventPayload.getCurrentNode().getContent()).mapTo(MatchProfile.class));
-    boolean matched = MatchingManager.match(dataImportEventPayload);
-    if (matched) {
-      dataImportEventPayload.setEventType(getMatchedEventType());
-    } else {
-      dataImportEventPayload.setEventType(getNotMatchedEventType());
-    }
-    return CompletableFuture.completedFuture(dataImportEventPayload);
+    return future;
   }
 
   @Override
@@ -39,10 +43,10 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
     return false;
   }
 
-  abstract EntityType getEntityType();
+  protected abstract EntityType getEntityType();
 
-  abstract String getMatchedEventType();
+  protected abstract String getMatchedEventType();
 
-  abstract String getNotMatchedEventType();
+  protected abstract String getNotMatchedEventType();
 
 }
