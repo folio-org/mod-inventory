@@ -1,7 +1,9 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
+import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 import java.util.Arrays;
@@ -51,7 +53,9 @@ public class CreateInstanceEventHandler implements EventHandler {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
-      if (payloadContext == null || StringUtils.isBlank(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()))) {
+      if (payloadContext == null || payloadContext.isEmpty() ||
+        !dataImportEventPayload.getContext().containsKey(MARC_BIBLIOGRAPHIC.value()) ||
+        isEmpty(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()))) {
         LOGGER.error(PAYLOAD_HAS_NO_DATA_MSG);
         future.completeExceptionally(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
         return future;
