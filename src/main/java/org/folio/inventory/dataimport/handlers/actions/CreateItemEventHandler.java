@@ -93,9 +93,7 @@ public class CreateItemEventHandler implements EventHandler {
       itemAsJson.put(ITEM_ID_FIELD, UUID.randomUUID().toString());
 
       ItemCollection itemCollection = storage.getItemCollection(context);
-      List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(itemAsJson, requiredFields);
-      validateStatusName(itemAsJson, errors);
-
+      List<String> errors = validateItem(itemAsJson, requiredFields);
       if (errors.isEmpty()) {
         Item mappedItem = ItemUtil.jsonToItem(itemAsJson);
         isItemBarcodeUnique(itemAsJson.getString("barcode"), itemCollection)
@@ -124,6 +122,15 @@ public class CreateItemEventHandler implements EventHandler {
     return future;
   }
 
+  @Override
+  public boolean isEligible(DataImportEventPayload dataImportEventPayload) {
+    if (dataImportEventPayload.getCurrentNode() != null && ACTION_PROFILE == dataImportEventPayload.getCurrentNode().getContentType()) {
+      ActionProfile actionProfile = JsonObject.mapFrom(dataImportEventPayload.getCurrentNode().getContent()).mapTo(ActionProfile.class);
+      return actionProfile.getAction() == CREATE && actionProfile.getFolioRecord() == ITEM;
+    }
+    return false;
+  }
+
   private void fillHoldingsRecordIdIfNecessary(DataImportEventPayload dataImportEventPayload, JsonObject itemAsJson) throws IOException {
     if (isBlank(itemAsJson.getString(HOLDINGS_RECORD_ID_FIELD))) {
       String holdingsId = null;
@@ -146,20 +153,17 @@ public class CreateItemEventHandler implements EventHandler {
     }
   }
 
-  @Override
-  public boolean isEligible(DataImportEventPayload dataImportEventPayload) {
-    if (dataImportEventPayload.getCurrentNode() != null && ACTION_PROFILE == dataImportEventPayload.getCurrentNode().getContentType()) {
-      ActionProfile actionProfile = JsonObject.mapFrom(dataImportEventPayload.getCurrentNode().getContent()).mapTo(ActionProfile.class);
-      return actionProfile.getAction() == CREATE && actionProfile.getFolioRecord() == ITEM;
-    }
-    return false;
-  }
-
   private void validateStatusName(JsonObject itemAsJson, List<String> errors) {
     String statusName = JsonHelper.getNestedProperty(itemAsJson, "status", "name");
     if (StringUtils.isNotBlank(statusName) && !ItemStatusName.isStatusCorrect(statusName)) {
       errors.add(String.format("Invalid status specified '%s'", statusName));
     }
+  }
+
+  private List<String> validateItem(JsonObject itemAsJson, List<String> requiredFields) {
+    List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(itemAsJson, requiredFields);
+    validateStatusName(itemAsJson, errors);
+    return errors;
   }
 
   private Future<Boolean> isItemBarcodeUnique(String barcode, ItemCollection itemCollection) throws UnsupportedEncodingException {

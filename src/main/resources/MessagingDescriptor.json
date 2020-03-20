@@ -32,19 +32,13 @@
     },
     {
       "eventType": "DI_INVENTORY_ITEM_CREATED",
-      "description": "Created inventory instance",
+      "description": "Created inventory item",
       "eventTTL": 1,
       "signed": false
     },
     {
       "eventType": "DI_INVENTORY_HOLDING_CREATED",
       "description": "Created holding record",
-      "eventTTL": 1,
-      "signed": false
-    },
-    {
-      "eventType": "DI_INVENTORY_INSTANCE_CREATED",
-      "description": "Created instance record",
       "eventTTL": 1,
       "signed": false
     }
