@@ -7,7 +7,6 @@ import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
-import org.folio.inventory.domain.Holding;
 import org.folio.inventory.domain.SearchableCollection;
 import org.folio.processing.exceptions.MatchingException;
 import org.folio.processing.matching.loader.LoadResult;

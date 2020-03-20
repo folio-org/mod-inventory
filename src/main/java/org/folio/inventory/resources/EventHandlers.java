@@ -5,15 +5,14 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import org.folio.DataImportEventPayload;
+import org.folio.inventory.dataimport.handlers.actions.CreateHoldingEventHandler;
+import org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchHoldingEventHandler;
+import org.folio.inventory.dataimport.handlers.matching.MatchInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchItemEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.loaders.HoldingLoader;
 import org.folio.inventory.dataimport.handlers.matching.loaders.InstanceLoader;
 import org.folio.inventory.dataimport.handlers.matching.loaders.ItemLoader;
-import org.folio.inventory.dataimport.handlers.actions.CreateHoldingEventHandler;
-import org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler;
-import org.folio.inventory.dataimport.handlers.matching.InstanceLoader;
-import org.folio.inventory.dataimport.handlers.matching.MatchInstanceEventHandler;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
 import org.folio.inventory.support.http.server.SuccessResponse;
@@ -26,11 +25,6 @@ import org.folio.processing.matching.loader.MatchValueLoaderFactory;
 import org.folio.processing.matching.reader.MarcValueReaderImpl;
 import org.folio.processing.matching.reader.MatchValueReaderFactory;
 
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.BodyHandler;
-
 public class EventHandlers {
 
   private static final String DATA_IMPORT_EVENT_HANDLER_PATH = "/inventory/handlers/data-import";
@@ -40,16 +34,18 @@ public class EventHandlers {
     MatchValueLoaderFactory.register(new ItemLoader(storage));
     MatchValueLoaderFactory.register(new HoldingLoader(storage));
 
+    MatchValueReaderFactory.register(new MarcValueReaderImpl());
+
+    MappingManager.registerReaderFactory(new MarcBibReaderFactory());
+
+    MappingManager.registerWriterFactory(new ItemWriterFactory());
+    MappingManager.registerWriterFactory(new HoldingsWriterFactory());
+
     EventManager.registerEventHandler(new MatchInstanceEventHandler());
-    EventManager.registerEventHandler(new CreateItemEventHandler(storage));
     EventManager.registerEventHandler(new MatchItemEventHandler());
     EventManager.registerEventHandler(new MatchHoldingEventHandler());
-
-    MatchValueReaderFactory.register(new MarcValueReaderImpl());
-    MappingManager.registerReaderFactory(new MarcBibReaderFactory());
-    MappingManager.registerWriterFactory(new ItemWriterFactory());
+    EventManager.registerEventHandler(new CreateItemEventHandler(storage));
     EventManager.registerEventHandler(new CreateHoldingEventHandler(storage));
-    MappingManager.registerWriterFactory(new HoldingsWriterFactory());
   }
 
   public void register(Router router) {
@@ -68,8 +64,6 @@ public class EventHandlers {
     } catch (Exception e) {
       ServerErrorResponse.internalError(routingContext.response(), e);
     }
-
   }
-
 
 }

@@ -5,6 +5,7 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.folio.DataImportEventPayload;
+import org.folio.Holdingsrecord;
 import org.folio.MatchDetail;
 import org.folio.MatchProfile;
 import org.folio.inventory.common.Context;
@@ -17,6 +18,7 @@ import org.folio.inventory.dataimport.handlers.matching.MatchItemEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.loaders.HoldingLoader;
 import org.folio.inventory.domain.Holding;
 import org.folio.inventory.domain.HoldingCollection;
+import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.MatchingException;
@@ -68,7 +70,7 @@ public class MatchHoldingEventHandlerUnitTest {
   @Mock
   private Storage storage;
   @Mock
-  private HoldingCollection holdingCollection;
+  private HoldingsRecordCollection holdingCollection;
   @Mock
   private MarcValueReaderImpl marcValueReader;
   @InjectMocks
@@ -80,7 +82,7 @@ public class MatchHoldingEventHandlerUnitTest {
     MatchValueLoaderFactory.clearLoaderFactory();
     MockitoAnnotations.initMocks(this);
     when(marcValueReader.isEligibleForEntityType(MARC_BIBLIOGRAPHIC)).thenReturn(true);
-    when(storage.getHoldingCollection(any(Context.class))).thenReturn(holdingCollection);
+    when(storage.getHoldingsRecordCollection(any(Context.class))).thenReturn(holdingCollection);
     when(marcValueReader.read(any(DataImportEventPayload.class), any(MatchDetail.class)))
       .thenReturn(StringValue.of(HOLDING_ID));
     MatchValueReaderFactory.register(marcValueReader);
@@ -92,9 +94,9 @@ public class MatchHoldingEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Holding>>> callback =
-        (Consumer<Success<MultipleRecords<Holding>>>) ans.getArguments()[2];
-      Success<MultipleRecords<Holding>> result =
+      Consumer<Success<MultipleRecords<Holdingsrecord>>> callback =
+        (Consumer<Success<MultipleRecords<Holdingsrecord>>>) ans.getArguments()[2];
+      Success<MultipleRecords<Holdingsrecord>> result =
         new Success<>(new MultipleRecords<>(singletonList(createHolding()), 1));
       callback.accept(result);
       return null;
@@ -121,9 +123,9 @@ public class MatchHoldingEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Holding>>> callback =
-        (Consumer<Success<MultipleRecords<Holding>>>) ans.getArguments()[2];
-      Success<MultipleRecords<Holding>> result =
+      Consumer<Success<MultipleRecords<Holdingsrecord>>> callback =
+        (Consumer<Success<MultipleRecords<Holdingsrecord>>>) ans.getArguments()[2];
+      Success<MultipleRecords<Holdingsrecord>> result =
         new Success<>(new MultipleRecords<>(new ArrayList<>(), 0));
       callback.accept(result);
       return null;
@@ -149,9 +151,9 @@ public class MatchHoldingEventHandlerUnitTest {
   public void shouldFailOnHandleEventPayloadIfMatchedMultipleHoldings() throws UnsupportedEncodingException {
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Holding>>> callback =
-        (Consumer<Success<MultipleRecords<Holding>>>) ans.getArguments()[2];
-      Success<MultipleRecords<Holding>> result =
+      Consumer<Success<MultipleRecords<Holdingsrecord>>> callback =
+        (Consumer<Success<MultipleRecords<Holdingsrecord>>>) ans.getArguments()[2];
+      Success<MultipleRecords<Holdingsrecord>> result =
         new Success<>(new MultipleRecords<>(asList(createHolding(), createHolding()), 2));
       callback.accept(result);
       return null;
@@ -293,8 +295,8 @@ public class MatchHoldingEventHandlerUnitTest {
               ))))).getMap()));
   }
 
-  private Holding createHolding() {
-    return new Holding(UUID.randomUUID().toString(), UUID.randomUUID().toString(), UUID.randomUUID().toString());
+  private Holdingsrecord createHolding() {
+    return new Holdingsrecord().withId(HOLDING_ID);
   }
 
 }
