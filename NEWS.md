@@ -1,3 +1,7 @@
+## 14.0.1 2020-03-21
+
+* Use subsets of ids to fetch preceding and succeeding titles MODINV-212
+
 ## 14.0.0 2020-03-09
 
 * Makes item status required (MODINV-189)
