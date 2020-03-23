@@ -1,5 +1,10 @@
 package org.folio.inventory.resources;
 
+import static java.lang.String.format;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.folio.inventory.support.EndpointFailureHandler.getKnownException;
+import static org.folio.inventory.support.EndpointFailureHandler.handleFailure;
+
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
@@ -22,9 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
-import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 public class InstancesBatch extends AbstractInstances {
 
@@ -195,7 +197,15 @@ public class InstancesBatch extends AbstractInstances {
           createdInstance.setSucceedingTitles(newInstance.getSucceedingTitles());
           Future updateFuture = Future.future();
           updateRelationshipsFutures.add(updateFuture);
-          updateRelatedRecords(routingContext, webContext, createdInstance, o -> updateFuture.complete());
+          updateRelatedRecords(routingContext, webContext, createdInstance)
+            .whenComplete((result, ex) -> {
+              if (ex == null) {
+                updateFuture.complete();
+              } else {
+                log.warn("Exception occurred", ex);
+                handleFailure(getKnownException(ex), routingContext);
+              }
+            });
         }
       }
       resultFuture.handle(CompositeFuture.join(updateRelationshipsFutures));

@@ -115,7 +115,9 @@ class FakeStorageModule extends AbstractVerticle {
     }
 
     return endpointFailureDescriptor != null && DateTime.now().toDate()
-      .before(endpointFailureDescriptor.getFailureExpireDate());
+      .before(endpointFailureDescriptor.getFailureExpireDate())
+      && endpointFailureDescriptor.getMethod().equals(routingContext.request()
+      .method());
   }
 
   void registerBatch(Router router, String batchPath) {

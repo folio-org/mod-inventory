@@ -145,13 +145,7 @@ public class ResourceClient {
     ExecutionException,
     TimeoutException {
 
-    CompletableFuture<Response> createCompleted = new CompletableFuture<>();
-
-    //TODO: Reinstate json checking
-    client.post(urlMaker.combine(""), request,
-      ResponseHandler.any(createCompleted));
-
-    Response response = createCompleted.get(5, TimeUnit.SECONDS);
+    Response response = attemptToCreate(request);
 
     assertThat(
       String.format("Failed to create %s: %s", resourceName, response.getBody()),
@@ -170,6 +164,19 @@ public class ResourceClient {
 
       return new IndividualResource(getCompleted.get(5, TimeUnit.SECONDS));
     }
+  }
+
+  public Response attemptToCreate(JsonObject request)
+    throws MalformedURLException, InterruptedException, ExecutionException,
+    TimeoutException {
+
+    CompletableFuture<Response> createCompleted = new CompletableFuture<>();
+
+    //TODO: Reinstate json checking
+    client.post(urlMaker.combine(""), request,
+      ResponseHandler.any(createCompleted));
+
+    return createCompleted.get(5, TimeUnit.SECONDS);
   }
 
   public void replace(UUID id, Builder builder)

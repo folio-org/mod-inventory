@@ -27,7 +27,7 @@ import org.folio.inventory.domain.instances.Publication;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 import org.folio.inventory.storage.Storage;
-import org.folio.inventory.storage.external.CollectionResourceClient;
+import org.folio.inventory.storage.external.CollectionResourceRepository;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
@@ -43,7 +43,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public abstract class AbstractInstances {
@@ -69,94 +68,95 @@ public abstract class AbstractInstances {
    * @param routingContext
    * @param context
    */
-  protected void updateInstanceRelationships(Instance instance,
-    RoutingContext routingContext, WebContext context, Consumer respond) {
+  protected CompletableFuture<List<Response>> updateInstanceRelationships(Instance instance,
+    RoutingContext routingContext, WebContext context) {
 
-    CollectionResourceClient relatedInstancesClient = createInstanceRelationshipsClient(routingContext, context);
+    CollectionResourceRepository relatedInstancesClient = createInstanceRelationshipsClient(
+      routingContext, context);
     List<String> instanceId = Arrays.asList(instance.getId());
     String query = createQueryForRelatedInstances(instanceId);
 
-    if (relatedInstancesClient != null) {
-      relatedInstancesClient.getMany(query, (Response result) -> {
-        List<CompletableFuture<Response>> allFutures = new ArrayList<>();
-        if (result.getStatusCode() == 200) {
-          JsonObject json = result.getJson();
-          List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("instanceRelationships"));
-          Map<String, InstanceRelationship> existingRelationships = new HashMap();
-          relationsList.stream().map(rel -> new InstanceRelationship(rel)).forEachOrdered(relObj ->
-            existingRelationships.put(relObj.id, relObj));
-          Map<String, InstanceRelationship> updatingRelationships = new HashMap();
-          if (instance.getParentInstances() != null) {
-            instance.getParentInstances().forEach(parent -> {
-              String id = (parent.id == null ? UUID.randomUUID().toString() : parent.id);
-              updatingRelationships.put(id,
-                new InstanceRelationship(
-                  id,
-                  parent.superInstanceId,
-                  instance.getId(),
-                  parent.instanceRelationshipTypeId));
-            });
-          }
-          if (instance.getChildInstances() != null) {
-            instance.getChildInstances().forEach(child -> {
-              String id = (child.id == null ? UUID.randomUUID().toString() : child.id);
-              updatingRelationships.put(id,
-                new InstanceRelationship(
-                  id,
-                  instance.getId(),
-                  child.subInstanceId,
-                  child.instanceRelationshipTypeId));
-            });
-          }
-          update(relatedInstancesClient, allFutures, existingRelationships, updatingRelationships);
+    CompletableFuture<Response> future = new CompletableFuture<>();
+    relatedInstancesClient.getMany(query, future::complete);
 
-          CompletableFuture.allOf(allFutures.toArray(new CompletableFuture<?>[]{}))
-            .thenAccept(respond);
-        }
+    return future.thenCompose(result ->
+      updateInstanceRelationships(instance, relatedInstancesClient, result));
+  }
+
+  private CompletableFuture<List<Response>> updateInstanceRelationships(Instance instance,
+    CollectionResourceRepository relatedInstancesClient, Response result) {
+
+    JsonObject json = result.getJson();
+    List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("instanceRelationships"));
+    Map<String, InstanceRelationship> existingRelationships = new HashMap();
+    relationsList.stream().map(rel -> new InstanceRelationship(rel)).forEachOrdered(relObj ->
+      existingRelationships.put(relObj.id, relObj));
+    Map<String, InstanceRelationship> updatingRelationships = new HashMap();
+    if (instance.getParentInstances() != null) {
+      instance.getParentInstances().forEach(parent -> {
+        String id = (parent.id == null ? UUID.randomUUID().toString() : parent.id);
+        updatingRelationships.put(id,
+          new InstanceRelationship(
+            id,
+            parent.superInstanceId,
+            instance.getId(),
+            parent.instanceRelationshipTypeId));
       });
     }
+    if (instance.getChildInstances() != null) {
+      instance.getChildInstances().forEach(child -> {
+        String id = (child.id == null ? UUID.randomUUID().toString() : child.id);
+        updatingRelationships.put(id,
+          new InstanceRelationship(
+            id,
+            instance.getId(),
+            child.subInstanceId,
+            child.instanceRelationshipTypeId));
+      });
+    }
+
+    List<CompletableFuture<Response>> allFutures = update(relatedInstancesClient,
+      existingRelationships, updatingRelationships);
+
+    return allResultsOf(allFutures);
   }
 
-  protected void updateRelatedRecords(RoutingContext routingContext, WebContext context,
-    Instance instance, Consumer consumer) {
-    List<CompletableFuture<Response>> allFutures = new ArrayList<>();
+  protected CompletableFuture<List<Response>> updateRelatedRecords(
+    RoutingContext routingContext, WebContext context, Instance instance) {
 
-    CompletableFuture updateInstanceRelationshipFuture = new CompletableFuture();
-    allFutures.add(updateInstanceRelationshipFuture);
-    updateInstanceRelationships(instance, routingContext, context, updateInstanceRelationshipFuture::complete);
-
-    CompletableFuture updatePrecedingSucceedingFuture = new CompletableFuture();
-    allFutures.add(updatePrecedingSucceedingFuture);
-    updatePrecedingSucceedingTitles(instance, routingContext, context, updatePrecedingSucceedingFuture::complete);
-
-    allResultsOf(allFutures).thenAccept(consumer);
+    return updateInstanceRelationships(instance, routingContext, context)
+      .thenCompose(r -> updatePrecedingSucceedingTitles(instance, routingContext, context));
   }
 
-  protected void updatePrecedingSucceedingTitles(Instance instance, RoutingContext routingContext,
-    WebContext context, Consumer respond) {
+  protected CompletableFuture<List<Response>> updatePrecedingSucceedingTitles(
+    Instance instance, RoutingContext routingContext, WebContext context) {
 
-    CollectionResourceClient precedingSucceedingTitlesClient = createPrecedingSucceedingTitlesClient(routingContext, context);
+    CollectionResourceRepository precedingSucceedingTitlesClient =
+      createPrecedingSucceedingTitlesClient(routingContext, context);
     List<String> instanceId = Arrays.asList(instance.getId());
     String query = createQueryForPrecedingSucceedingInstances(instanceId);
 
-    if (precedingSucceedingTitlesClient != null) {
-      precedingSucceedingTitlesClient.getMany(query, (Response result) -> {
-        List<CompletableFuture<Response>> allFutures = new ArrayList<>();
-        if (result.getStatusCode() == 200) {
-          JsonObject json = result.getJson();
-          List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("precedingSucceedingTitles"));
-          Map<String, PrecedingSucceedingTitle> existingPrecedingSucceedingTitles =
-            getExistedPrecedingSucceedingTitles(relationsList);
-          Map<String, PrecedingSucceedingTitle> updatingPrecedingSucceedingTitles =
-            getUpdatingPrecedingSucceedingTitles(instance);
+    CompletableFuture<Response> future = new CompletableFuture<>();
+    precedingSucceedingTitlesClient.getMany(query, future::complete);
 
-          update(precedingSucceedingTitlesClient, allFutures,
-            existingPrecedingSucceedingTitles, updatingPrecedingSucceedingTitles);
+    return future.thenCompose(result ->
+      updatePrecedingSucceedingTitles(instance, precedingSucceedingTitlesClient, result));
+  }
 
-          allOf(allFutures).thenAccept(respond);
-        }
-      });
-    }
+  private CompletableFuture<List<Response>> updatePrecedingSucceedingTitles(Instance instance,
+    CollectionResourceRepository precedingSucceedingTitlesClient, Response result) {
+
+    JsonObject json = result.getJson();
+    List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("precedingSucceedingTitles"));
+    Map<String, PrecedingSucceedingTitle> existingPrecedingSucceedingTitles =
+      getExistedPrecedingSucceedingTitles(relationsList);
+    Map<String, PrecedingSucceedingTitle> updatingPrecedingSucceedingTitles =
+      getUpdatingPrecedingSucceedingTitles(instance);
+
+    List<CompletableFuture<Response>> allFutures = update(precedingSucceedingTitlesClient,
+      existingPrecedingSucceedingTitles, updatingPrecedingSucceedingTitles);
+
+    return allResultsOf(allFutures);
   }
 
   private Map<String, PrecedingSucceedingTitle> getExistedPrecedingSucceedingTitles(
@@ -169,44 +169,39 @@ public abstract class AbstractInstances {
     return existingPrecedingSucceedingTitles;
   }
 
-  private <T> void update(CollectionResourceClient resourceClient,
-    List<CompletableFuture<Response>> allFutures,
-    Map<String, T> existingObjects, Map<String, T> updatingObjects) {
+  private <T> List<CompletableFuture<Response>> update(CollectionResourceRepository resourceClient,
+   Map<String, T> existingObjects, Map<String, T> updatingObjects) {
 
-    createOrEdit(resourceClient, allFutures, existingObjects, updatingObjects);
-    delete(resourceClient, allFutures, existingObjects, updatingObjects);
+    List<CompletableFuture<Response>> createOrEdit = createOrEdit(resourceClient, existingObjects, updatingObjects);
+    List<CompletableFuture<Response>> delete = delete(resourceClient, existingObjects, updatingObjects);
+
+    createOrEdit.addAll(delete);
+    return createOrEdit;
   }
 
-  private <T> void delete(CollectionResourceClient resourceClient,
-   List<CompletableFuture<Response>> allFutures, Map<String, T> existingObjects,
-   Map<String, T> updatingObjects) {
+  private <T> List<CompletableFuture<Response>> delete(CollectionResourceRepository resourceClient,
+   Map<String, T> existingObjects, Map<String, T> updatingObjects) {
 
-    existingObjects.keySet().stream()
-      .filter(key -> !updatingObjects.containsKey(key)).forEach(existingKey -> {
-      CompletableFuture<Response> newFuture = new CompletableFuture<>();
-      allFutures.add(newFuture);
-      resourceClient.delete(existingKey, newFuture::complete);
-    });
+    return existingObjects.keySet().stream()
+      .filter(key -> !updatingObjects.containsKey(key)).map(existingKey ->
+        resourceClient.delete(existingKey)).collect(Collectors.toList());
   }
 
-  private <T> void createOrEdit(CollectionResourceClient resourceClient,
-    List<CompletableFuture<Response>> allFutures, Map<String, T> existingObjects,
+  private <T> List<CompletableFuture<Response>> createOrEdit(
+    CollectionResourceRepository resourceClient, Map<String, T> existingObjects,
     Map<String, T> updatingObjects) {
 
-    updatingObjects.keySet().forEach(updatingKey -> {
+    return updatingObjects.keySet().stream().map(updatingKey -> {
       T object = updatingObjects.get(updatingKey);
       if (existingObjects.containsKey(updatingKey)) {
         if (!updatingObjects.get(updatingKey).equals(existingObjects.get(updatingKey))) {
-          CompletableFuture<Response> newFuture = new CompletableFuture<>();
-          allFutures.add(newFuture);
-          resourceClient.put(updatingKey, object, newFuture::complete);
+          return resourceClient.put(updatingKey, object);
         }
+        return new CompletableFuture<Response>();
       } else {
-        CompletableFuture<Response> newFuture = new CompletableFuture<>();
-        allFutures.add(newFuture);
-        resourceClient.post(object, newFuture::complete);
+        return resourceClient.post(object);
       }
-    });
+    }).collect(Collectors.toList());
   }
 
   private Map<String, PrecedingSucceedingTitle> getUpdatingPrecedingSucceedingTitles(Instance instance) {
@@ -481,34 +476,33 @@ public abstract class AbstractInstances {
 
   // Utilities
 
-  protected CollectionResourceClient createInstanceRelationshipsClient(RoutingContext routingContext, WebContext context) {
-    CollectionResourceClient relatedInstancesClient = null;
-    try {
-      OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
-      relatedInstancesClient
-        = new CollectionResourceClient(
-        okapiClient,
-        new URL(context.getOkapiLocation() + "/instance-storage/instance-relationships"));
-    } catch (MalformedURLException mfue) {
-      log.error(mfue);
-    }
-    return relatedInstancesClient;
-  }
-
-  protected CollectionResourceClient createPrecedingSucceedingTitlesClient(
+  protected CollectionResourceRepository createInstanceRelationshipsClient(
     RoutingContext routingContext, WebContext context) {
 
-    CollectionResourceClient relatedInstancesClient = null;
+    return getCollectionResourceRepository(routingContext, context,
+      "/instance-storage/instance-relationships");
+  }
+
+  protected CollectionResourceRepository createPrecedingSucceedingTitlesClient(
+    RoutingContext routingContext, WebContext context) {
+
+    return getCollectionResourceRepository(routingContext, context,
+      "/preceding-succeeding-titles");
+  }
+
+  private CollectionResourceRepository getCollectionResourceRepository(
+    RoutingContext routingContext, WebContext context, String path) {
+    CollectionResourceRepository resourceRepository = null;
     try {
       OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
-      relatedInstancesClient
-        = new CollectionResourceClient(
+      resourceRepository
+        = new CollectionResourceRepository(
         okapiClient,
-        new URL(context.getOkapiLocation() + "/preceding-succeeding-titles"));
+        new URL(context.getOkapiLocation() + path));
     } catch (MalformedURLException mfue) {
       log.error(mfue);
     }
-    return relatedInstancesClient;
+    return resourceRepository;
   }
 
   protected String createQueryForPrecedingSucceedingInstances(List<String> instanceIds) {

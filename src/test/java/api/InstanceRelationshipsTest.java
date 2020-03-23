@@ -1,6 +1,7 @@
 package api;
 
 import static api.support.InstanceSamples.nod;
+import static api.support.InstanceSamples.smallAngryPlanet;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.junit.Assert.assertThat;
@@ -15,6 +16,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import io.vertx.core.http.HttpMethod;
 import org.folio.inventory.support.http.client.Response;
 import org.joda.time.DateTime;
 import org.junit.After;
@@ -64,7 +66,8 @@ public class InstanceRelationshipsTest extends ApiTests {
         .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
         .setStatusCode(500)
         .setContentType("application/json")
-        .setBody(expectedErrorResponse.toString()));
+        .setBody(expectedErrorResponse.toString())
+        .setMethod(HttpMethod.GET));
 
     Response response = instancesClient
       .attemptGetMany("title=(\"super\" or \"sub\"", expectedCount);
@@ -105,7 +108,8 @@ public class InstanceRelationshipsTest extends ApiTests {
         .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
         .setStatusCode(500)
         .setContentType("application/json")
-        .setBody(expectedErrorResponse.toString()));
+        .setBody(expectedErrorResponse.toString())
+        .setMethod(HttpMethod.GET));
 
     Response response = instancesClient
       .attemptGetMany("title=(\"preceding\" or \"succeeding\"", expectedCount);
@@ -134,6 +138,72 @@ public class InstanceRelationshipsTest extends ApiTests {
       verifyInstancesInPrecedingSucceedingRelationship(precedingInstance, succeedingInstance);
       verifyInstancesInRelationship(precedingInstance, succeedingInstance);
     });
+  }
+
+  @Test
+  public void cannotCreateAnInstanceWithNonExistedPrecedingId()
+    throws InterruptedException, MalformedURLException, TimeoutException,
+    ExecutionException {
+
+    String precedingTitleId = UUID.randomUUID().toString();
+    final JsonObject expectedErrorResponse = new JsonObject()
+      .put("message", String.format("Cannot set preceding_succeeding_title.precedinginstanceid = " +
+        "%s because it does not exist in instance.id.", precedingTitleId));
+    precedingSucceedingTitlesClient.emulateFailure(
+      new EndpointFailureDescriptor()
+        .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
+        .setStatusCode(422)
+        .setContentType("application/json")
+        .setBody(expectedErrorResponse.toString())
+        .setMethod(HttpMethod.POST));
+
+    JsonObject precedingTitle = new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("precedingInstanceId", precedingTitleId);
+
+    JsonArray precedingTitles = new JsonArray().add(precedingTitle);
+
+    JsonObject smallAngryPlanetJson = smallAngryPlanet(UUID.randomUUID());
+    smallAngryPlanetJson.put("precedingTitles", precedingTitles);
+
+    Response response = instancesClient.attemptToCreate(smallAngryPlanetJson);
+
+    assertThat(response.getStatusCode(), is(422));
+    assertThat(response.getContentType(), is("application/json"));
+    assertThat(response.getJson(), is(expectedErrorResponse));
+  }
+
+  @Test
+  public void cannotCreateAnInstanceWithNonExistedSucceedingId()
+    throws InterruptedException, MalformedURLException, TimeoutException,
+    ExecutionException {
+
+    String precedingTitleId = UUID.randomUUID().toString();
+    final JsonObject expectedErrorResponse = new JsonObject()
+      .put("message", String.format("Cannot set preceding_succeeding_title.succeedinginstanceid = " +
+        "%s because it does not exist in instance.id.", precedingTitleId));
+    precedingSucceedingTitlesClient.emulateFailure(
+      new EndpointFailureDescriptor()
+        .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
+        .setStatusCode(422)
+        .setContentType("application/json")
+        .setBody(expectedErrorResponse.toString())
+        .setMethod(HttpMethod.POST));
+
+    JsonObject precedingTitle = new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("succeedingInstanceId", precedingTitleId);
+
+    JsonArray precedingTitles = new JsonArray().add(precedingTitle);
+
+    JsonObject smallAngryPlanetJson = smallAngryPlanet(UUID.randomUUID());
+    smallAngryPlanetJson.put("succeedingTitles", precedingTitles);
+
+    Response response = instancesClient.attemptToCreate(smallAngryPlanetJson);
+
+    assertThat(response.getStatusCode(), is(422));
+    assertThat(response.getContentType(), is("application/json"));
+    assertThat(response.getJson(), is(expectedErrorResponse));
   }
 
   private Map<String, String> createPrecedingSucceedingTitlesAndRelationshipsInstances(
