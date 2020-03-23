@@ -5,6 +5,7 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.folio.DataImportEventPayload;
+import org.folio.Holdingsrecord;
 import org.folio.MatchDetail;
 import org.folio.MatchProfile;
 import org.folio.inventory.common.Context;
@@ -12,10 +13,10 @@ import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
-import org.folio.inventory.dataimport.handlers.matching.MatchInstanceEventHandler;
-import org.folio.inventory.dataimport.handlers.matching.loaders.InstanceLoader;
-import org.folio.inventory.domain.instances.Instance;
-import org.folio.inventory.domain.instances.InstanceCollection;
+import org.folio.inventory.dataimport.handlers.matching.MatchHoldingEventHandler;
+import org.folio.inventory.dataimport.handlers.matching.MatchItemEventHandler;
+import org.folio.inventory.dataimport.handlers.matching.loaders.HoldingLoader;
+import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.matching.loader.MatchValueLoaderFactory;
@@ -42,7 +43,8 @@ import java.util.function.Consumer;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.folio.MatchDetail.MatchCriterion.EXACTLY_MATCHES;
-import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
+import static org.folio.rest.jaxrs.model.EntityType.HOLDINGS;
+import static org.folio.rest.jaxrs.model.EntityType.ITEM;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.MatchExpression.DataValueType.VALUE_FROM_RECORD;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
@@ -56,18 +58,18 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
 @RunWith(VertxUnitRunner.class)
-public class MatchInstanceEventHandlerUnitTest {
+public class MatchHoldingEventHandlerUnitTest {
 
-  private static final String INSTANCE_HRID = "in0001234";
+  private static final String HOLDING_ID = "001234";
 
   @Mock
   private Storage storage;
   @Mock
-  private InstanceCollection instanceCollection;
+  private HoldingsRecordCollection holdingCollection;
   @Mock
   private MarcValueReaderImpl marcValueReader;
   @InjectMocks
-  private InstanceLoader instanceLoader = new InstanceLoader(storage);
+  private HoldingLoader holdingLoader = new HoldingLoader(storage);
 
   @Before
   public void setUp() {
@@ -75,11 +77,11 @@ public class MatchInstanceEventHandlerUnitTest {
     MatchValueLoaderFactory.clearLoaderFactory();
     MockitoAnnotations.initMocks(this);
     when(marcValueReader.isEligibleForEntityType(MARC_BIBLIOGRAPHIC)).thenReturn(true);
-    when(storage.getInstanceCollection(any(Context.class))).thenReturn(instanceCollection);
+    when(storage.getHoldingsRecordCollection(any(Context.class))).thenReturn(holdingCollection);
     when(marcValueReader.read(any(DataImportEventPayload.class), any(MatchDetail.class)))
-      .thenReturn(StringValue.of(INSTANCE_HRID));
+      .thenReturn(StringValue.of(HOLDING_ID));
     MatchValueReaderFactory.register(marcValueReader);
-    MatchValueLoaderFactory.register(instanceLoader);
+    MatchValueLoaderFactory.register(holdingLoader);
   }
 
   @Test
@@ -87,16 +89,16 @@ public class MatchInstanceEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback =
-        (Consumer<Success<MultipleRecords<Instance>>>) ans.getArguments()[2];
-      Success<MultipleRecords<Instance>> result =
-        new Success<>(new MultipleRecords<>(singletonList(createInstance()), 1));
+      Consumer<Success<MultipleRecords<Holdingsrecord>>> callback =
+        (Consumer<Success<MultipleRecords<Holdingsrecord>>>) ans.getArguments()[2];
+      Success<MultipleRecords<Holdingsrecord>> result =
+        new Success<>(new MultipleRecords<>(singletonList(createHolding()), 1));
       callback.accept(result);
       return null;
-    }).when(instanceCollection)
+    }).when(holdingCollection)
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchInstanceEventHandler();
+    EventHandler eventHandler = new MatchHoldingEventHandler();
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -106,7 +108,7 @@ public class MatchInstanceEventHandlerUnitTest {
         updatedEventPayload.getEventsChain(),
         singletonList("DI_SRS_MARC_BIB_RECORD_CREATED")
       );
-      testContext.assertEquals("DI_INVENTORY_INSTANCE_MATCHED", updatedEventPayload.getEventType());
+      testContext.assertEquals("DI_INVENTORY_HOLDING_MATCHED", updatedEventPayload.getEventType());
       async.complete();
     });
   }
@@ -116,16 +118,16 @@ public class MatchInstanceEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback =
-        (Consumer<Success<MultipleRecords<Instance>>>) ans.getArguments()[2];
-      Success<MultipleRecords<Instance>> result =
+      Consumer<Success<MultipleRecords<Holdingsrecord>>> callback =
+        (Consumer<Success<MultipleRecords<Holdingsrecord>>>) ans.getArguments()[2];
+      Success<MultipleRecords<Holdingsrecord>> result =
         new Success<>(new MultipleRecords<>(new ArrayList<>(), 0));
       callback.accept(result);
       return null;
-    }).when(instanceCollection)
+    }).when(holdingCollection)
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchInstanceEventHandler();
+    EventHandler eventHandler = new MatchHoldingEventHandler();
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -135,26 +137,26 @@ public class MatchInstanceEventHandlerUnitTest {
         updatedEventPayload.getEventsChain(),
         singletonList("DI_SRS_MARC_BIB_RECORD_CREATED")
       );
-      testContext.assertEquals("DI_INVENTORY_INSTANCE_NOT_MATCHED", updatedEventPayload.getEventType());
+      testContext.assertEquals("DI_INVENTORY_HOLDING_NOT_MATCHED", updatedEventPayload.getEventType());
       async.complete();
     });
   }
 
   @Test
-  public void shouldFailOnHandleEventPayloadIfMatchedMultipleInstances(TestContext testContext) throws UnsupportedEncodingException {
+  public void shouldFailOnHandleEventPayloadIfMatchedMultipleHoldings(TestContext testContext) throws UnsupportedEncodingException {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback =
-        (Consumer<Success<MultipleRecords<Instance>>>) ans.getArguments()[2];
-      Success<MultipleRecords<Instance>> result =
-        new Success<>(new MultipleRecords<>(asList(createInstance(), createInstance()), 2));
+      Consumer<Success<MultipleRecords<Holdingsrecord>>> callback =
+        (Consumer<Success<MultipleRecords<Holdingsrecord>>>) ans.getArguments()[2];
+      Success<MultipleRecords<Holdingsrecord>> result =
+        new Success<>(new MultipleRecords<>(asList(createHolding(), createHolding()), 2));
       callback.accept(result);
       return null;
-    }).when(instanceCollection)
+    }).when(holdingCollection)
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchInstanceEventHandler();
+    EventHandler eventHandler = new MatchHoldingEventHandler();
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -174,10 +176,10 @@ public class MatchInstanceEventHandlerUnitTest {
         new Failure("Internal Server Error", 500);
       callback.accept(result);
       return null;
-    }).when(instanceCollection)
+    }).when(holdingCollection)
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchInstanceEventHandler();
+    EventHandler eventHandler = new MatchHoldingEventHandler();
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -190,10 +192,10 @@ public class MatchInstanceEventHandlerUnitTest {
   public void shouldFailOnHandleEventPayloadIfExceptionThrown(TestContext testContext) throws UnsupportedEncodingException {
     Async async = testContext.async();
 
-    doThrow(new UnsupportedEncodingException()).when(instanceCollection)
+    doThrow(new UnsupportedEncodingException()).when(holdingCollection)
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchInstanceEventHandler();
+    EventHandler eventHandler = new MatchHoldingEventHandler();
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -209,7 +211,7 @@ public class MatchInstanceEventHandlerUnitTest {
     when(marcValueReader.read(any(DataImportEventPayload.class), any(MatchDetail.class)))
       .thenReturn(MissingValue.getInstance());
 
-    EventHandler eventHandler = new MatchInstanceEventHandler();
+    EventHandler eventHandler = new MatchHoldingEventHandler();
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -219,21 +221,21 @@ public class MatchInstanceEventHandlerUnitTest {
         updatedEventPayload.getEventsChain(),
         singletonList("DI_SRS_MARC_BIB_RECORD_CREATED")
       );
-      testContext.assertEquals("DI_INVENTORY_INSTANCE_NOT_MATCHED", updatedEventPayload.getEventType());
+      testContext.assertEquals("DI_INVENTORY_HOLDING_NOT_MATCHED", updatedEventPayload.getEventType());
       async.complete();
     });
   }
 
   @Test
   public void shouldReturnFalseOnIsEligibleIfNullCurrentNode() {
-    EventHandler eventHandler = new MatchInstanceEventHandler();
+    EventHandler eventHandler = new MatchItemEventHandler();
     DataImportEventPayload eventPayload = new DataImportEventPayload();
     assertFalse(eventHandler.isEligible(eventPayload));
   }
 
   @Test
   public void shouldReturnFalseOnIsEligibleIfCurrentNodeTypeIsNotMatchProfile() {
-    EventHandler eventHandler = new MatchInstanceEventHandler();
+    EventHandler eventHandler = new MatchItemEventHandler();
     DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withContentType(MAPPING_PROFILE));
@@ -241,8 +243,8 @@ public class MatchInstanceEventHandlerUnitTest {
   }
 
   @Test
-  public void shouldReturnFalseOnIsEligibleForNotInstanceMatchProfile() {
-    EventHandler eventHandler = new MatchInstanceEventHandler();
+  public void shouldReturnFalseOnIsEligibleForNotItemMatchProfile() {
+    EventHandler eventHandler = new MatchItemEventHandler();
     DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withContentType(MATCH_PROFILE)
@@ -252,13 +254,13 @@ public class MatchInstanceEventHandlerUnitTest {
   }
 
   @Test
-  public void shouldReturnTrueOnIsEligibleForInstanceMatchProfile() {
-    EventHandler eventHandler = new MatchInstanceEventHandler();
+  public void shouldReturnTrueOnIsEligibleForItemMatchProfile() {
+    EventHandler eventHandler = new MatchItemEventHandler();
     DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withContentType(MATCH_PROFILE)
         .withContent(JsonObject.mapFrom(new MatchProfile()
-          .withExistingRecordType(INSTANCE))));
+          .withExistingRecordType(ITEM))));
     assertTrue(eventHandler.isEligible(eventPayload));
   }
 
@@ -274,19 +276,19 @@ public class MatchInstanceEventHandlerUnitTest {
         .withId(UUID.randomUUID().toString())
         .withContentType(MATCH_PROFILE)
         .withContent(JsonObject.mapFrom(new MatchProfile()
-          .withExistingRecordType(INSTANCE)
+          .withExistingRecordType(HOLDINGS)
           .withIncomingRecordType(MARC_BIBLIOGRAPHIC)
           .withMatchDetails(singletonList(new MatchDetail()
             .withMatchCriterion(EXACTLY_MATCHES)
             .withExistingMatchExpression(new MatchExpression()
               .withDataValueType(VALUE_FROM_RECORD)
               .withFields(singletonList(
-                new Field().withLabel("field").withValue("instance.hrid"))
+                new Field().withLabel("field").withValue("item.id"))
               ))))).getMap()));
   }
 
-  private Instance createInstance() {
-    return new Instance(UUID.randomUUID().toString(), INSTANCE_HRID, "MARC", "Wonderful", "12334");
+  private Holdingsrecord createHolding() {
+    return new Holdingsrecord().withId(HOLDING_ID);
   }
 
 }

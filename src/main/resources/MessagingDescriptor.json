@@ -41,6 +41,30 @@
       "description": "Created holding record",
       "eventTTL": 1,
       "signed": false
+    },
+    {
+      "eventType": "DI_INVENTORY_ITEM_MATCHED",
+      "description": "Found match for Inventory Item",
+      "eventTTL": 1,
+      "signed": false
+    },
+    {
+      "eventType": "DI_INVENTORY_ITEM_NOT_MATCHED",
+      "description": "Match not found for Inventory Item",
+      "eventTTL": 1,
+      "signed": false
+    },
+    {
+      "eventType": "DI_INVENTORY_HOLDING_MATCHED",
+      "description": "Found match for Inventory Holding",
+      "eventTTL": 1,
+      "signed": false
+    },
+    {
+      "eventType": "DI_INVENTORY_HOLDING_NOT_MATCHED",
+      "description": "Match not found for Inventory Holding",
+      "eventTTL": 1,
+      "signed": false
     }
   ],
   "subscriptions": [
@@ -54,6 +78,22 @@
     },
     {
       "eventType": "DI_INVENTORY_INSTANCE_NOT_MATCHED",
+      "callbackAddress": "/inventory/handlers/data-import"
+    },
+    {
+      "eventType": "DI_INVENTORY_ITEM_MATCHED",
+      "callbackAddress": "/inventory/handlers/data-import"
+    },
+    {
+      "eventType": "DI_INVENTORY_ITEM_NOT_MATCHED",
+      "callbackAddress": "/inventory/handlers/data-import"
+    },
+    {
+      "eventType": "DI_INVENTORY_HOLDING_MATCHED",
+      "callbackAddress": "/inventory/handlers/data-import"
+    },
+    {
+      "eventType": "DI_INVENTORY_HOLDING_NOT_MATCHED",
       "callbackAddress": "/inventory/handlers/data-import"
     }
   ]
