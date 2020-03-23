@@ -52,7 +52,6 @@ public class CreateInstanceEventHandler implements EventHandler {
     try {
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
       if (payloadContext == null || payloadContext.isEmpty() ||
-        !dataImportEventPayload.getContext().containsKey(MARC_BIBLIOGRAPHIC.value()) ||
         isEmpty(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()))) {
         LOGGER.error(PAYLOAD_HAS_NO_DATA_MSG);
         future.completeExceptionally(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
