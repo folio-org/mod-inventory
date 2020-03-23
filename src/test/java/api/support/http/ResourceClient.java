@@ -194,16 +194,23 @@ public class ResourceClient {
     ExecutionException,
     TimeoutException {
 
+    Response putResponse = attemptToReplace(id, request);
+
+    assertThat(
+      String.format("Failed to update %s %s: %s", resourceName, id, putResponse.getBody()),
+      putResponse.getStatusCode(), is(HttpURLConnection.HTTP_NO_CONTENT));
+  }
+
+  public Response attemptToReplace(UUID id, JsonObject request)
+    throws MalformedURLException, InterruptedException, ExecutionException,
+    TimeoutException {
+
     CompletableFuture<Response> putCompleted = new CompletableFuture<>();
 
     client.put(urlMaker.combine(String.format("/%s", id)), request,
       ResponseHandler.any(putCompleted));
 
-    Response putResponse = putCompleted.get(5, TimeUnit.SECONDS);
-
-    assertThat(
-      String.format("Failed to update %s %s: %s", resourceName, id, putResponse.getBody()),
-      putResponse.getStatusCode(), is(HttpURLConnection.HTTP_NO_CONTENT));
+    return putCompleted.get(5, TimeUnit.SECONDS);
   }
 
   public Response getById(UUID id)

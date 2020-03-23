@@ -17,6 +17,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import io.vertx.core.http.HttpMethod;
+import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
 import org.joda.time.DateTime;
 import org.junit.After;
@@ -141,7 +142,7 @@ public class InstanceRelationshipsTest extends ApiTests {
   }
 
   @Test
-  public void cannotCreateAnInstanceWithNonExistedPrecedingId()
+  public void cannotCreateAnInstanceWithNonExistedPrecedingTitleId()
     throws InterruptedException, MalformedURLException, TimeoutException,
     ExecutionException {
 
@@ -174,14 +175,14 @@ public class InstanceRelationshipsTest extends ApiTests {
   }
 
   @Test
-  public void cannotCreateAnInstanceWithNonExistedSucceedingId()
+  public void cannotCreateAnInstanceWithNonExistedSucceedingTitleId()
     throws InterruptedException, MalformedURLException, TimeoutException,
     ExecutionException {
 
-    String precedingTitleId = UUID.randomUUID().toString();
+    String succeedingTitleId = UUID.randomUUID().toString();
     final JsonObject expectedErrorResponse = new JsonObject()
       .put("message", String.format("Cannot set preceding_succeeding_title.succeedinginstanceid = " +
-        "%s because it does not exist in instance.id.", precedingTitleId));
+        "%s because it does not exist in instance.id.", succeedingTitleId));
     precedingSucceedingTitlesClient.emulateFailure(
       new EndpointFailureDescriptor()
         .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
@@ -190,18 +191,245 @@ public class InstanceRelationshipsTest extends ApiTests {
         .setBody(expectedErrorResponse.toString())
         .setMethod(HttpMethod.POST));
 
-    JsonObject precedingTitle = new JsonObject()
+    JsonObject succeedingTitle = new JsonObject()
       .put("id", UUID.randomUUID().toString())
-      .put("succeedingInstanceId", precedingTitleId);
+      .put("succeedingInstanceId", succeedingTitleId);
 
-    JsonArray precedingTitles = new JsonArray().add(precedingTitle);
+    JsonArray succeedingTitles = new JsonArray().add(succeedingTitle);
 
     JsonObject smallAngryPlanetJson = smallAngryPlanet(UUID.randomUUID());
-    smallAngryPlanetJson.put("succeedingTitles", precedingTitles);
+    smallAngryPlanetJson.put("succeedingTitles", succeedingTitles);
 
     Response response = instancesClient.attemptToCreate(smallAngryPlanetJson);
 
     assertThat(response.getStatusCode(), is(422));
+    assertThat(response.getContentType(), is("application/json"));
+    assertThat(response.getJson(), is(expectedErrorResponse));
+  }
+
+  @Test
+  public void cannotCreateAnInstanceWithNonExistedParentInstanceId()
+    throws InterruptedException, MalformedURLException, TimeoutException,
+    ExecutionException {
+
+    String superInstanceId = UUID.randomUUID().toString();
+    final JsonObject expectedErrorResponse = new JsonObject()
+      .put("message", String.format("Cannot set instance_relationship.superInstanceId = " +
+        "%s because it does not exist in instance.id.", superInstanceId));
+    instanceRelationshipClient.emulateFailure(
+      new EndpointFailureDescriptor()
+        .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
+        .setStatusCode(422)
+        .setContentType("application/json")
+        .setBody(expectedErrorResponse.toString())
+        .setMethod(HttpMethod.POST));
+
+    JsonObject parentInstance = new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("superInstanceId", superInstanceId);
+
+    JsonArray parentInstances = new JsonArray().add(parentInstance);
+
+    JsonObject smallAngryPlanetJson = smallAngryPlanet(UUID.randomUUID());
+    smallAngryPlanetJson.put("parentInstances", parentInstances);
+
+    Response response = instancesClient.attemptToCreate(smallAngryPlanetJson);
+
+    assertThat(response.getStatusCode(), is(422));
+    assertThat(response.getContentType(), is("application/json"));
+    assertThat(response.getJson(), is(expectedErrorResponse));
+  }
+
+  @Test
+  public void cannotCreateAnInstanceWithNonExistedChildInstanceId()
+    throws InterruptedException, MalformedURLException, TimeoutException,
+    ExecutionException {
+
+    String subInstanceId = UUID.randomUUID().toString();
+    final JsonObject expectedErrorResponse = new JsonObject()
+      .put("message", String.format("Cannot set instance_relationship.subInstanceId = " +
+        "%s because it does not exist in instance.id.", subInstanceId));
+    instanceRelationshipClient.emulateFailure(
+      new EndpointFailureDescriptor()
+        .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
+        .setStatusCode(422)
+        .setContentType("application/json")
+        .setBody(expectedErrorResponse.toString())
+        .setMethod(HttpMethod.POST));
+
+    JsonObject childInstance = new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("subInstanceId", subInstanceId);
+
+    JsonArray childInstances = new JsonArray().add(childInstance);
+
+    JsonObject smallAngryPlanetJson = smallAngryPlanet(UUID.randomUUID());
+    smallAngryPlanetJson.put("childInstances", childInstances);
+
+    Response response = instancesClient.attemptToCreate(smallAngryPlanetJson);
+
+    assertThat(response.getStatusCode(), is(422));
+    assertThat(response.getContentType(), is("application/json"));
+    assertThat(response.getJson(), is(expectedErrorResponse));
+  }
+
+  @Test
+  public void canForwardInstancePrecedingSucceedingTitlesUpdateFailure()
+    throws InterruptedException, MalformedURLException, TimeoutException,
+    ExecutionException {
+    UUID nodId = UUID.randomUUID();
+    String titleId = UUID.randomUUID().toString();
+
+    JsonObject succeedingTitle = new JsonObject()
+      .put("id", titleId)
+      .put("title", "A web semantic");
+    JsonObject nod = nod(nodId)
+      .put("hrid", "inst0006320")
+      .put("succeedingTitles", new JsonArray().add(succeedingTitle));
+
+    instancesClient.create(nod);
+
+    final JsonObject expectedErrorResponse = new JsonObject()
+      .put("message", "Server error");
+    precedingSucceedingTitlesClient.emulateFailure(
+      new EndpointFailureDescriptor()
+        .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
+        .setStatusCode(500)
+        .setContentType("application/json")
+        .setBody(expectedErrorResponse.toString())
+        .setMethod(HttpMethod.PUT));
+
+    JsonObject newSucceedingTitle = new JsonObject()
+      .put("id", titleId)
+      .put("succeedingInstanceId", UUID.randomUUID().toString());
+
+    JsonArray succeedingTitles = new JsonArray().add(newSucceedingTitle);
+
+    JsonObject newNod = nod.copy();
+    newNod.put("succeedingTitles", succeedingTitles);
+
+    Response response = instancesClient.attemptToReplace(nodId, newNod);
+
+    assertThat(response.getStatusCode(), is(500));
+    assertThat(response.getContentType(), is("application/json"));
+    assertThat(response.getJson(), is(expectedErrorResponse));
+  }
+
+  @Test
+  public void canForwardInstancePrecedingSucceedingTitlesDeleteFailure()
+    throws InterruptedException, MalformedURLException, TimeoutException,
+    ExecutionException {
+    UUID nodId = UUID.randomUUID();
+
+    JsonObject succeedingTitle = new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("title", "A web semantic");
+    JsonObject nod = nod(nodId)
+      .put("hrid", "inst0006320")
+      .put("succeedingTitles", new JsonArray().add(succeedingTitle));
+
+    instancesClient.create(nod);
+
+    final JsonObject expectedErrorResponse = new JsonObject()
+      .put("message", "Server error");
+    precedingSucceedingTitlesClient.emulateFailure(
+      new EndpointFailureDescriptor()
+        .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
+        .setStatusCode(500)
+        .setContentType("application/json")
+        .setBody(expectedErrorResponse.toString())
+        .setMethod(HttpMethod.DELETE));
+
+    JsonObject newNod = nod.copy();
+    newNod.put("succeedingTitles", new JsonArray());
+
+    Response response = instancesClient.attemptToReplace(nodId, newNod);
+
+    assertThat(response.getStatusCode(), is(500));
+    assertThat(response.getContentType(), is("application/json"));
+    assertThat(response.getJson(), is(expectedErrorResponse));
+  }
+
+  @Test
+  public void canForwardInstanceRelationshipUpdateFailure()
+    throws InterruptedException, MalformedURLException, TimeoutException,
+    ExecutionException {
+    UUID nodId = UUID.randomUUID();
+    String parentInstanceId = UUID.randomUUID().toString();
+    String boundWithInstanceRelationshipTypeId = "758f13db-ffb4-440e-bb10-8a364aa6cb4a";
+
+    IndividualResource smallAngryPlanet = instancesClient.create(smallAngryPlanet(UUID.randomUUID()));
+    JsonObject parentInstance = new JsonObject()
+      .put("id", parentInstanceId)
+      .put("superInstanceId", smallAngryPlanet.getId().toString())
+      .put("instanceRelationshipTypeId", boundWithInstanceRelationshipTypeId);
+    JsonObject nod = nod(nodId)
+      .put("hrid", "inst0006320")
+      .put("parentInstances", new JsonArray().add(parentInstance));
+
+    instancesClient.create(nod);
+
+    final JsonObject expectedErrorResponse = new JsonObject()
+      .put("message", "Server error");
+    instanceRelationshipClient.emulateFailure(
+      new EndpointFailureDescriptor()
+        .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
+        .setStatusCode(500)
+        .setContentType("application/json")
+        .setBody(expectedErrorResponse.toString())
+        .setMethod(HttpMethod.PUT));
+
+    JsonObject newParentInstances = new JsonObject()
+      .put("id", parentInstanceId)
+      .put("superInstanceId", UUID.randomUUID().toString())
+      .put("instanceRelationshipTypeId", boundWithInstanceRelationshipTypeId);
+
+    JsonArray parentInstances = new JsonArray().add(newParentInstances);
+
+    JsonObject newNod = nod.copy();
+    newNod.put("parentInstances", parentInstances);
+
+    Response response = instancesClient.attemptToReplace(nodId, newNod);
+
+    assertThat(response.getStatusCode(), is(500));
+    assertThat(response.getContentType(), is("application/json"));
+    assertThat(response.getJson(), is(expectedErrorResponse));
+  }
+
+  @Test
+  public void canForwardInstanceRelationshipDeleteFailure()
+    throws InterruptedException, MalformedURLException, TimeoutException,
+    ExecutionException {
+    UUID nodId = UUID.randomUUID();
+    String boundWithInstanceRelationshipTypeId = "758f13db-ffb4-440e-bb10-8a364aa6cb4a";
+
+    IndividualResource smallAngryPlanet = instancesClient.create(smallAngryPlanet(UUID.randomUUID()));
+    JsonObject parentInstance = new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("superInstanceId", smallAngryPlanet.getId().toString())
+      .put("instanceRelationshipTypeId", boundWithInstanceRelationshipTypeId);
+    JsonObject nod = nod(nodId)
+      .put("hrid", "inst0006320")
+      .put("parentInstances", new JsonArray().add(parentInstance));
+
+    instancesClient.create(nod);
+
+    final JsonObject expectedErrorResponse = new JsonObject()
+      .put("message", "Server error");
+    instanceRelationshipClient.emulateFailure(
+      new EndpointFailureDescriptor()
+        .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
+        .setStatusCode(500)
+        .setContentType("application/json")
+        .setBody(expectedErrorResponse.toString())
+        .setMethod(HttpMethod.DELETE));
+
+    JsonObject newNod = nod.copy();
+    newNod.put("parentInstances", new JsonArray());
+
+    Response response = instancesClient.attemptToReplace(nodId, newNod);
+
+    assertThat(response.getStatusCode(), is(500));
     assertThat(response.getContentType(), is("application/json"));
     assertThat(response.getJson(), is(expectedErrorResponse));
   }

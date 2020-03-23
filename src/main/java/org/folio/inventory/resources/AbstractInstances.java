@@ -520,7 +520,7 @@ public abstract class AbstractInstances {
 
   protected String createQueryForRelatedInstances(List<String> instanceIds) {
     String idList = instanceIds.stream().distinct().collect(Collectors.joining(" or "));
-    String query = format("query=(subInstanceId==(%s)+or+superInstanceId==(%s))", idList, idList);
+    String query = format("query=subInstanceId==(%s)+or+superInstanceId==(%s)", idList, idList);
     return query;
   }
 
