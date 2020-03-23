@@ -36,6 +36,7 @@ import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.services.InstanceRelationshipsService;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
+import org.folio.inventory.support.InstanceUtil;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.server.ClientErrorResponse;
@@ -163,7 +164,7 @@ public class Instances extends AbstractInstances {
       return;
     }
 
-    Instance newInstance = requestToInstance(instanceRequest);
+    Instance newInstance = InstanceUtil.jsonToInstance(instanceRequest);
 
     storage.getInstanceCollection(context).add(newInstance,
       success -> {
@@ -189,7 +190,7 @@ public class Instances extends AbstractInstances {
   private void update(RoutingContext rContext) {
     WebContext wContext = new WebContext(rContext);
     JsonObject instanceRequest = rContext.getBodyAsJson();
-    Instance updatedInstance = requestToInstance(instanceRequest);
+    Instance updatedInstance = InstanceUtil.jsonToInstance(instanceRequest);
     InstanceCollection instanceCollection = storage.getInstanceCollection(wContext);
 
     instanceCollection.findById(rContext.request().getParam("id"), it -> {
