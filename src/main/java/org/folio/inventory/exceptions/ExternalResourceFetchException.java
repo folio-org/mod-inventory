@@ -1,6 +1,5 @@
-package org.folio.inventory.storage.external.exceptions;
+package org.folio.inventory.exceptions;
 
-import org.folio.inventory.exceptions.AbstractInventoryException;
 import org.folio.inventory.support.http.client.Response;
 
 public class ExternalResourceFetchException extends AbstractInventoryException {

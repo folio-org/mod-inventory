@@ -60,25 +60,22 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 
-public class Items {
+public class Items extends AbstractInventoryResource {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private static final String RELATIVE_ITEMS_PATH = "/inventory/items";
 
-  private final Storage storage;
   private static final int STATUS_CREATED = 201;
   private static final int STATUS_SUCCESS = 200;
-
-  private final HttpClient client;
 
   private final DateTimeFormatter dateTimeFormatter =
     DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").withZone(ZoneOffset.UTC);
 
   public Items(final Storage storage, final HttpClient client) {
-    this.storage = storage;
-    this.client = client;
+    super(storage, client);
   }
 
+  @Override
   public void register(Router router) {
     router.post(RELATIVE_ITEMS_PATH + "*").handler(BodyHandler.create());
     router.put(RELATIVE_ITEMS_PATH + "*").handler(BodyHandler.create());

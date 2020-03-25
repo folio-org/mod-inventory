@@ -9,7 +9,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.folio.inventory.storage.external.exceptions.ExternalResourceFetchException;
+import org.folio.inventory.exceptions.ExternalResourceFetchException;
+import org.folio.inventory.support.CompletableFutures;
 import org.folio.inventory.support.http.client.Response;
 
 import io.vertx.core.json.JsonObject;
@@ -53,10 +54,7 @@ public class MultipleRecordsFetchClient {
 
     return future.thenCompose(response -> {
       if (response.getStatusCode() != expectedStatus) {
-        final CompletableFuture<Response> failed = new CompletableFuture<>();
-        failed.completeExceptionally(new ExternalResourceFetchException(response));
-
-        return failed;
+        return CompletableFutures.failedFuture(new ExternalResourceFetchException(response));
       }
 
       return CompletableFuture.completedFuture(response);
