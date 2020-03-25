@@ -34,7 +34,9 @@ import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.user.User;
 import org.folio.inventory.domain.user.UserCollection;
+import org.folio.inventory.services.ItemService;
 import org.folio.inventory.storage.Storage;
+import org.folio.inventory.storage.external.Clients;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.support.CqlHelper;
 import org.folio.inventory.support.EndpointFailureHandler;
@@ -87,6 +89,20 @@ public class Items extends AbstractInventoryResource {
     router.get(RELATIVE_ITEMS_PATH + "/:id").handler(this::getById);
     router.put(RELATIVE_ITEMS_PATH + "/:id").handler(this::update);
     router.delete(RELATIVE_ITEMS_PATH + "/:id").handler(this::deleteById);
+
+    router.post(RELATIVE_ITEMS_PATH + "/:id/mark-withdrawn")
+      .handler(handle(this::markAsWithdrawn));
+  }
+
+  private CompletableFuture<Void> markAsWithdrawn(
+    RoutingContext routingContext, WebContext webContext, Clients clients) {
+
+    final ItemService itemService = new ItemService(storage
+      .getItemCollection(webContext), clients);
+
+    return itemService.processMarkItemWithdrawn(webContext)
+      .thenAccept(item ->
+        respondWithItemRepresentation(item, 201, routingContext, webContext));
   }
 
   private void getAll(RoutingContext routingContext) {

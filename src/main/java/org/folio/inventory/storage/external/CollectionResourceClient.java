@@ -1,12 +1,15 @@
 package org.folio.inventory.storage.external;
 
-import io.vertx.core.Handler;
-import io.vertx.core.http.HttpClientResponse;
+import java.net.URL;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
+
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
+import org.folio.util.StringUtil;
 
-import java.net.URL;
-import java.util.function.Consumer;
+import io.vertx.core.Handler;
+import io.vertx.core.http.HttpClientResponse;
 
 public class CollectionResourceClient {
 
@@ -34,6 +37,14 @@ public class CollectionResourceClient {
     client.put(String.format(collectionRoot + "/%s", id),
       resourceRepresentation,
       responseConversationHandler(responseHandler));
+  }
+
+  public CompletableFuture<Response> put(String id, Object resourceRepresentation) {
+    final CompletableFuture<Response> future = new CompletableFuture<>();
+
+    put(id, resourceRepresentation, future::complete);
+
+    return future;
   }
 
   public void get(String id, Consumer<Response> responseHandler) {
@@ -74,6 +85,16 @@ public class CollectionResourceClient {
       : collectionRoot.toString();
 
     client.get(url, responseConversationHandler(responseHandler));
+  }
+
+  public CompletableFuture<Response> getMany(
+    CqlQuery cqlQuery, Integer limit, Integer offset) {
+
+    final CompletableFuture<Response> future = new CompletableFuture<>();
+
+    getMany(StringUtil.urlEncode(cqlQuery.toString()), limit, offset, future::complete);
+
+    return future;
   }
 
   private boolean isProvided(String query) {

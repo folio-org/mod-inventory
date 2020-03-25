@@ -1,6 +1,6 @@
 #%RAML 1.0
 title: Inventory API
-version: v10.2
+version: v10.3
 protocols: [ HTTP, HTTPS ]
 baseUri: http://localhost
 
@@ -51,6 +51,31 @@ resourceTypes:
           exampleItem: !include examples/item_get.json
           schema: item
       get:
+      /mark-withdrawn:
+        post:
+          responses:
+            201:
+              description: "Item has marked as withdrawn"
+              body:
+                application/json:
+                  example: !include examples/item_get.json
+                  schema: item
+            404:
+              description: "Item not found"
+              body:
+                text/plain:
+                  example: "Item with such id not found"
+            422:
+              description: "Validation error"
+              body:
+                application/json:
+                  schema: errors
+            500:
+              description: "Internal server error"
+              body:
+                text/plain:
+                  example: "Internal server error"
+
   /instances:
     displayName: Instances
     type:

@@ -17,6 +17,10 @@ public final class CqlQuery {
     return new CqlQuery(format("%s or %s", toString(), other));
   }
 
+  public CqlQuery and(CqlQuery other) {
+    return new CqlQuery(format("%s and %s", toString(), other));
+  }
+
   public static CqlQuery exactMatchAny(String indexName, Collection<String> values) {
     final String valuesQuery = values.stream()
       .filter(Objects::nonNull)
@@ -24,6 +28,10 @@ public final class CqlQuery {
       .collect(Collectors.joining(" or "));
 
     return new CqlQuery(format("%s==(%s)", indexName, valuesQuery));
+  }
+
+  public static CqlQuery exactMatch(String indexName, String value) {
+    return new CqlQuery(format("%s==\"%s\"", indexName, value));
   }
 
   @Override
