@@ -2,7 +2,9 @@ package org.folio.inventory.support;
 
 import java.util.concurrent.CompletableFuture;
 
-public class CompletableFutures {
+public final class CompletableFutures {
+
+  private CompletableFutures() {}
 
   public static <T> CompletableFuture<T> failedFuture(Throwable cause) {
     final CompletableFuture<T> future = new CompletableFuture<>();
