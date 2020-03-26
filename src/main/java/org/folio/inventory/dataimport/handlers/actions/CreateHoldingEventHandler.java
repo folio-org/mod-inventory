@@ -10,6 +10,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTI
 
 import java.io.IOException;
 import java.util.LinkedHashMap;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import org.folio.ActionProfile;
@@ -62,6 +63,7 @@ public class CreateHoldingEventHandler implements EventHandler {
       prepareEvent(dataImportEventPayload);
       MappingManager.map(dataImportEventPayload);
       JsonObject holdingAsJson = new JsonObject(dataImportEventPayload.getContext().get(HOLDINGS.value()));
+      holdingAsJson.put("id", UUID.randomUUID().toString());
       fillInstanceIdIfNeeded(dataImportEventPayload, holdingAsJson);
       checkIfPermanentLocationIdExists(holdingAsJson);
 

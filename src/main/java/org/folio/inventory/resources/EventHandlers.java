@@ -5,7 +5,9 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import org.folio.DataImportEventPayload;
+import org.folio.inventory.dataimport.InstanceWriterFactory;
 import org.folio.inventory.dataimport.handlers.actions.CreateHoldingEventHandler;
+import org.folio.inventory.dataimport.handlers.actions.CreateInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchInstanceEventHandler;
@@ -46,6 +48,9 @@ public class EventHandlers {
     EventManager.registerEventHandler(new MatchHoldingEventHandler());
     EventManager.registerEventHandler(new CreateItemEventHandler(storage));
     EventManager.registerEventHandler(new CreateHoldingEventHandler(storage));
+    MappingManager.registerWriterFactory(new HoldingsWriterFactory());
+    EventManager.registerEventHandler(new CreateInstanceEventHandler(storage));
+    MappingManager.registerWriterFactory(new InstanceWriterFactory());
   }
 
   public void register(Router router) {

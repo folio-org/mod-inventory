@@ -1,9 +1,23 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.folio.ActionProfile.Action.CREATE;
+import static org.folio.ActionProfile.FolioRecord.ITEM;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
+
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.StringUtils;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
@@ -27,24 +41,10 @@ import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Record;
 import org.folio.rest.tools.utils.ObjectMapperTool;
 
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
-
-import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.folio.ActionProfile.Action.CREATE;
-import static org.folio.ActionProfile.FolioRecord.ITEM;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
+import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 public class CreateItemEventHandler implements EventHandler {
 
@@ -93,7 +93,7 @@ public class CreateItemEventHandler implements EventHandler {
       itemAsJson.put(ITEM_ID_FIELD, UUID.randomUUID().toString());
 
       ItemCollection itemCollection = storage.getItemCollection(context);
-      List<String> errors = validateItem(itemAsJson);
+      List<String> errors = validateItem(itemAsJson, requiredFields);
       if (errors.isEmpty()) {
         Item mappedItem = ItemUtil.jsonToItem(itemAsJson);
         isItemBarcodeUnique(itemAsJson.getString("barcode"), itemCollection)
@@ -106,7 +106,7 @@ public class CreateItemEventHandler implements EventHandler {
               dataImportEventPayload.setEventType(ITEM_CREATED_EVENT_TYPE);
               future.complete(dataImportEventPayload);
             } else {
-              LOG.error("Error creating inventory Item" , ar.cause());
+              LOG.error("Error creating inventory Item", ar.cause());
               future.completeExceptionally(ar.cause());
             }
           });
@@ -116,10 +116,19 @@ public class CreateItemEventHandler implements EventHandler {
         future.completeExceptionally(new EventProcessingException(msg));
       }
     } catch (Exception e) {
-      LOG.error("Error creating inventory Item" , e);
+      LOG.error("Error creating inventory Item", e);
       future.completeExceptionally(e);
     }
     return future;
+  }
+
+  @Override
+  public boolean isEligible(DataImportEventPayload dataImportEventPayload) {
+    if (dataImportEventPayload.getCurrentNode() != null && ACTION_PROFILE == dataImportEventPayload.getCurrentNode().getContentType()) {
+      ActionProfile actionProfile = JsonObject.mapFrom(dataImportEventPayload.getCurrentNode().getContent()).mapTo(ActionProfile.class);
+      return actionProfile.getAction() == CREATE && actionProfile.getFolioRecord() == ITEM;
+    }
+    return false;
   }
 
   private void fillHoldingsRecordIdIfNecessary(DataImportEventPayload dataImportEventPayload, JsonObject itemAsJson) throws IOException {
@@ -144,36 +153,17 @@ public class CreateItemEventHandler implements EventHandler {
     }
   }
 
-  @Override
-  public boolean isEligible(DataImportEventPayload dataImportEventPayload) {
-    if (dataImportEventPayload.getCurrentNode() != null && ACTION_PROFILE == dataImportEventPayload.getCurrentNode().getContentType()) {
-      ActionProfile actionProfile = JsonObject.mapFrom(dataImportEventPayload.getCurrentNode().getContent()).mapTo(ActionProfile.class);
-      return actionProfile.getAction() == CREATE && actionProfile.getFolioRecord() == ITEM;
-    }
-    return false;
-  }
-
-  private List<String> validateItem(JsonObject itemAsJson) {
-    ArrayList<String> errorMessages = new ArrayList<>();
-    for (String fieldPath : requiredFields) {
-      String field = StringUtils.substringBefore(fieldPath, ".");
-      String nestedField = StringUtils.substringAfter(fieldPath, ".");
-      if (!isExistsRequiredProperty(itemAsJson, field, nestedField)) {
-        errorMessages.add(String.format("Field '%s' is a required field and can not be null", fieldPath));
-      }
-    }
+  private void validateStatusName(JsonObject itemAsJson, List<String> errors) {
     String statusName = JsonHelper.getNestedProperty(itemAsJson, "status", "name");
     if (StringUtils.isNotBlank(statusName) && !ItemStatusName.isStatusCorrect(statusName)) {
-      errorMessages.add(String.format("Invalid status specified '%s'", statusName));
+      errors.add(String.format("Invalid status specified '%s'", statusName));
     }
-    return errorMessages;
   }
 
-  private boolean isExistsRequiredProperty(JsonObject representation, String propertyName, String nestedPropertyName) {
-    String propertyValue = StringUtils.isEmpty(nestedPropertyName)
-      ? JsonHelper.getString(representation, propertyName)
-      : JsonHelper.getNestedProperty(representation, propertyName, nestedPropertyName);
-    return StringUtils.isNotEmpty(propertyValue);
+  private List<String> validateItem(JsonObject itemAsJson, List<String> requiredFields) {
+    List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(itemAsJson, requiredFields);
+    validateStatusName(itemAsJson, errors);
+    return errors;
   }
 
   private Future<Boolean> isItemBarcodeUnique(String barcode, ItemCollection itemCollection) throws UnsupportedEncodingException {

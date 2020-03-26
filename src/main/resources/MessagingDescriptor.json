@@ -32,7 +32,7 @@
     },
     {
       "eventType": "DI_INVENTORY_ITEM_CREATED",
-      "description": "Created inventory instance",
+      "description": "Created inventory item",
       "eventTTL": 1,
       "signed": false
     },
