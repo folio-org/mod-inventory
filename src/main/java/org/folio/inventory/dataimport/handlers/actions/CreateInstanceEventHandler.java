@@ -29,13 +29,13 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 public class CreateInstanceEventHandler implements EventHandler {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CreateInstanceEventHandler.class);
 
-  public static final String INSTANCE_CREATED_EVENT_TYPE = "DI_INVENTORY_INSTANCE_CREATED";
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
   private static final String MARC_FORMAT = "MARC";
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
@@ -79,7 +79,7 @@ public class CreateInstanceEventHandler implements EventHandler {
           .setHandler(ar -> {
             if (ar.succeeded()) {
               dataImportEventPayload.getContext().put(INSTANCE.value(), instanceAsJson.encode());
-              dataImportEventPayload.setEventType(INSTANCE_CREATED_EVENT_TYPE);
+              dataImportEventPayload.setEventType(DI_INVENTORY_INSTANCE_CREATED.value());
               future.complete(dataImportEventPayload);
             } else {
               LOGGER.error("Error creating inventory Instance", ar.cause());

@@ -3,6 +3,7 @@ package org.folio.inventory.dataimport.handlers.actions;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.ITEM;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_CREATED;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 import java.io.IOException;
@@ -48,7 +49,6 @@ import io.vertx.core.logging.LoggerFactory;
 
 public class CreateItemEventHandler implements EventHandler {
 
-  public static final String ITEM_CREATED_EVENT_TYPE = "DI_INVENTORY_ITEM_CREATED";
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
   private static final String PAYLOAD_DATA_HAS_NO_HOLDING_ID_MSG = "Failed to extract holdingsRecordId from holdingsRecord entity or parsed record";
   public static final String HOLDINGS_RECORD_ID_FIELD = "holdingsRecordId";
@@ -101,7 +101,7 @@ public class CreateItemEventHandler implements EventHandler {
           .setHandler(ar -> {
             if (ar.succeeded()) {
               dataImportEventPayload.getContext().put(ITEM.value(), itemAsJson.encode());
-              dataImportEventPayload.setEventType(ITEM_CREATED_EVENT_TYPE);
+              dataImportEventPayload.setEventType(DI_INVENTORY_ITEM_CREATED.value());
               future.complete(dataImportEventPayload);
             } else {
               LOG.error("Error creating inventory Item", ar.cause());

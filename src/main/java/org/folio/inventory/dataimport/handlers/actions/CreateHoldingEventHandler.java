@@ -28,13 +28,13 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.logging.log4j.util.Strings.isNotEmpty;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 public class CreateHoldingEventHandler implements EventHandler {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CreateHoldingEventHandler.class);
-  private static final String CREATED_HOLDINGS_RECORD_EVENT_TYPE = "DI_INVENTORY_HOLDING_CREATED";
   private static final String INSTANCE_ID_FIELD = "instanceId";
   private static final String PERMANENT_LOCATION_ID_FIELD = "permanentLocationId";
   private static final String PERMANENT_LOCATION_ID_ERROR_MESSAGE = "Can`t create Holding entity: 'permanentLocationId' is empty";
@@ -124,7 +124,7 @@ public class CreateHoldingEventHandler implements EventHandler {
   private void constructDataImportEventPayload(CompletableFuture<DataImportEventPayload> future, DataImportEventPayload dataImportEventPayload, Success<HoldingsRecord> holdingSuccess) {
     HoldingsRecord createdHolding = holdingSuccess.getResult();
     dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encodePrettily(createdHolding));
-    dataImportEventPayload.setEventType(CREATED_HOLDINGS_RECORD_EVENT_TYPE);
+    dataImportEventPayload.setEventType(DI_INVENTORY_HOLDING_CREATED.value());
     future.complete(dataImportEventPayload);
   }
 
