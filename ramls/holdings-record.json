@@ -26,6 +26,7 @@
       "uniqueItems": true
     },
     "instanceId": {
+      "description": "Instance id",
       "type": "string",
       "$ref": "./uuid.json"
     },
@@ -40,6 +41,7 @@
       "$ref": "./uuid.json"
     },
     "electronicAccess": {
+      "description": "Electronic access",
       "type": "array",
       "items": {
         "type": "object",
@@ -93,9 +95,11 @@
       "description": "Indicates the shelving form of title."
     },
     "acquisitionFormat": {
+      "description": "Acquisition format",
       "type": "string"
     },
     "acquisitionMethod": {
+      "description": "Acquisition method",
       "type": "string"
     },
     "receiptStatus": {
@@ -135,10 +139,12 @@
       "description": "Records information regarding how long we have agreed to keep something."
     },
     "digitizationPolicy": {
+      "description": "Digitization policy",
       "type": "string"
     },
     "holdingsStatements": {
       "type": "array",
+      "description": "Holdings statements",
       "items": {
         "type": "object",
         "properties": {
@@ -154,6 +160,7 @@
       }
     },
     "holdingsStatementsForIndexes": {
+      "description": "Holdings statements for indexes",
       "type": "array",
       "items": {
         "type": "object",
@@ -170,6 +177,7 @@
       }
     },
     "holdingsStatementsForSupplements": {
+      "description": "Holdings statements for supplements",
       "type": "array",
       "items": {
         "type": "object",
@@ -194,6 +202,7 @@
       "description": "Text (Number)"
     },
     "receivingHistory": {
+      "description": "Receiving history",
       "type": "object",
       "properties": {
         "displayType": {
@@ -202,7 +211,7 @@
         },
         "entries": {
           "type": "array",
-          "description": ".",
+          "description": "Entries",
           "items": {
             "type": "object",
             "properties": {
@@ -237,6 +246,7 @@
       "uniqueItems": true
     },
     "holdingsItems": {
+      "description": "Holdings Items",
       "type": "array",
       "items": {
         "type": "object",
@@ -250,6 +260,7 @@
       "folio:includedElement": "items"
     },
     "holdingsInstance": {
+      "description": "Holdings Instance",
       "type": "object",
       "folio:$ref": "instance.json",
       "readonly": true,
