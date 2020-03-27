@@ -4,7 +4,7 @@ import java.io.IOException;
 
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.ObjectWriter;
-import org.folio.Holdingsrecord;
+import org.folio.HoldingsRecord;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
 import org.folio.rest.tools.utils.ObjectMapperTool;
@@ -14,7 +14,7 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
 
 class ExternalStorageModuleHoldingsRecordCollection
-  extends ExternalStorageModuleCollection<Holdingsrecord>
+  extends ExternalStorageModuleCollection<HoldingsRecord>
   implements HoldingsRecordCollection {
 
   ExternalStorageModuleHoldingsRecordCollection(Vertx vertx,
@@ -28,21 +28,21 @@ class ExternalStorageModuleHoldingsRecordCollection
   }
 
   @Override
-  protected Holdingsrecord mapFromJson(JsonObject holdingFromServer) {
+  protected HoldingsRecord mapFromJson(JsonObject holdingFromServer) {
     try {
-      return ObjectMapperTool.getMapper().readValue(holdingFromServer.encode(), Holdingsrecord.class);
+      return ObjectMapperTool.getMapper().readValue(holdingFromServer.encode(), HoldingsRecord.class);
     } catch (IOException e) {
       throw new JsonMappingException("Can`t map json to 'Holdingsrecord' entity", e);
     }
   }
 
   @Override
-  protected String getId(Holdingsrecord record) {
+  protected String getId(HoldingsRecord record) {
     return record.getId();
   }
 
   @Override
-  protected JsonObject mapToRequest(Holdingsrecord holding) {
+  protected JsonObject mapToRequest(HoldingsRecord holding) {
     ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
     try {
       return new JsonObject(ow.writeValueAsString(holding));

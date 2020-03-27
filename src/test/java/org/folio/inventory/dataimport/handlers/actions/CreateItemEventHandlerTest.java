@@ -10,6 +10,7 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.dataimport.ItemWriterFactory;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.Status;
@@ -17,7 +18,6 @@ import org.folio.inventory.storage.Storage;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.mapper.reader.Reader;
 import org.folio.processing.mapping.mapper.reader.record.MarcBibReaderFactory;
-import org.folio.processing.mapping.mapper.writer.item.ItemWriterFactory;
 import org.folio.processing.value.StringValue;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.MappingDetail;
@@ -46,6 +46,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
+import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_CREATED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
 import static org.folio.inventory.domain.items.ItemStatusName.AVAILABLE;
 import static org.folio.rest.jaxrs.model.EntityType.ITEM;
@@ -54,7 +55,6 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 
 public class CreateItemEventHandlerTest {
 
@@ -88,9 +88,9 @@ public class CreateItemEventHandlerTest {
     .withExistingRecordType(ITEM)
     .withMappingDetails(new MappingDetail()
       .withMappingFields(Arrays.asList(
-        new MappingRule().withPath("status.name").withValue("statusExpression"),
-        new MappingRule().withPath("permanentLoanType.id").withValue("permanentLoanTypeExpression"),
-        new MappingRule().withPath("materialType.id").withValue("materialTypeExpression"))));
+        new MappingRule().withPath("status.name").withValue("statusExpression").withEnabled("true"),
+        new MappingRule().withPath("permanentLoanType.id").withValue("permanentLoanTypeExpression").withEnabled("true"),
+        new MappingRule().withPath("materialType.id").withValue("materialTypeExpression").withEnabled("true"))));
 
   private ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
     .withId(UUID.randomUUID().toString())
@@ -114,9 +114,7 @@ public class CreateItemEventHandlerTest {
   public void setUp() {
     MockitoAnnotations.initMocks(this);
     Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-    Mockito.when(fakeReader.read(eq("statusExpression"))).thenReturn(StringValue.of(AVAILABLE.value()));
-    Mockito.when(fakeReader.read(eq("permanentLoanTypeExpression"))).thenReturn(StringValue.of(UUID.randomUUID().toString()));
-    Mockito.when(fakeReader.read(eq("materialTypeExpression"))).thenReturn(StringValue.of(UUID.randomUUID().toString()));
+    Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(AVAILABLE.value()), StringValue.of(UUID.randomUUID().toString()), StringValue.of(UUID.randomUUID().toString()));
     Mockito.when(mockedStorage.getItemCollection(ArgumentMatchers.any(Context.class))).thenReturn(mockedItemCollection);
 
     createItemHandler = new CreateItemEventHandler(mockedStorage);
@@ -164,7 +162,7 @@ public class CreateItemEventHandlerTest {
 
     // then
     DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
-    Assert.assertEquals(CreateItemEventHandler.ITEM_CREATED_EVENT_TYPE, eventPayload.getEventType());
+    Assert.assertEquals(DI_INVENTORY_ITEM_CREATED.value(), eventPayload.getEventType());
     Assert.assertNotNull(eventPayload.getContext().get(ITEM.value()));
 
     JsonObject createdItem = new JsonObject(eventPayload.getContext().get(ITEM.value()));
@@ -214,7 +212,7 @@ public class CreateItemEventHandlerTest {
 
     // then
     DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
-    Assert.assertEquals(CreateItemEventHandler.ITEM_CREATED_EVENT_TYPE, eventPayload.getEventType());
+    Assert.assertEquals(DI_INVENTORY_ITEM_CREATED.value(), eventPayload.getEventType());
     Assert.assertNotNull(eventPayload.getContext().get(ITEM.value()));
 
     JsonObject createdItem = new JsonObject(eventPayload.getContext().get(ITEM.value()));
@@ -231,6 +229,8 @@ public class CreateItemEventHandlerTest {
     TimeoutException {
 
     // given
+    Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(""));
+
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new ItemWriterFactory());
 
@@ -245,7 +245,6 @@ public class CreateItemEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     // when
-    Mockito.when(fakeReader.read(eq("statusExpression"))).thenReturn(StringValue.of(""));
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
 
     // then
@@ -259,6 +258,8 @@ public class CreateItemEventHandlerTest {
     TimeoutException {
 
     // given
+    Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of("Invalid status"));
+
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new ItemWriterFactory());
 
@@ -274,7 +275,6 @@ public class CreateItemEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     // when
-    Mockito.when(fakeReader.read(eq("statusExpression"))).thenReturn(StringValue.of("Invalid status"));
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
 
     // then
@@ -325,6 +325,8 @@ public class CreateItemEventHandlerTest {
     TimeoutException {
 
     // given
+    Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(AVAILABLE.value()), StringValue.of(""), StringValue.of(UUID.randomUUID().toString()));
+
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new ItemWriterFactory());
 
@@ -340,7 +342,6 @@ public class CreateItemEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     // when
-    Mockito.when(fakeReader.read(eq("permanentLoanTypeExpression"))).thenReturn(StringValue.of(""));
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
 
     // then

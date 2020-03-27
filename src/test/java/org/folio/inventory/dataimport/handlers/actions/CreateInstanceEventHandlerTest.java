@@ -1,31 +1,8 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
-import static org.folio.ActionProfile.FolioRecord.INSTANCE;
-import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.when;
-
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.function.Consumer;
-
+import com.google.common.collect.Lists;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.JobProfile;
@@ -40,10 +17,12 @@ import org.folio.inventory.storage.Storage;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.mapper.reader.Reader;
 import org.folio.processing.mapping.mapper.reader.record.MarcBibReaderFactory;
+import org.folio.processing.value.MissingValue;
 import org.folio.processing.value.StringValue;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.MappingDetail;
 import org.folio.rest.jaxrs.model.MappingRule;
+import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
 import org.junit.Assert;
@@ -54,14 +33,33 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 
-import com.google.common.collect.Lists;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
+import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
+import static org.folio.ActionProfile.FolioRecord.INSTANCE;
+import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.when;
 
 public class CreateInstanceEventHandlerTest {
-
-  private static final String DI_INVENTORY_INSTANCE_CREATED = "DI_INVENTORY_INSTANCE_CREATED";
 
   @Mock
   private Storage storage;
@@ -88,8 +86,8 @@ public class CreateInstanceEventHandlerTest {
     .withExistingRecordType(EntityType.INSTANCE)
     .withMappingDetails(new MappingDetail()
       .withMappingFields(Lists.newArrayList(
-        new MappingRule().withPath("instanceTypeId").withValue("instanceTypeIdExpression"),
-        new MappingRule().withPath("title").withValue("titleExpression"))));
+        new MappingRule().withPath("instanceTypeId").withValue("instanceTypeIdExpression").withEnabled("true"),
+        new MappingRule().withPath("title").withValue("titleExpression").withEnabled("true"))));
 
   private ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
     .withId(UUID.randomUUID().toString())
@@ -136,26 +134,22 @@ public class CreateInstanceEventHandlerTest {
     String instanceTypeId = UUID.randomUUID().toString();
     String title = "titleValue";
 
-    Mockito.when(fakeReader.read(eq("instanceTypeIdExpression"))).thenReturn(StringValue.of(instanceTypeId));
-    Mockito.when(fakeReader.read(eq("titleExpression"))).thenReturn(StringValue.of(title));
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId), StringValue.of(title));
 
-
-    Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
 
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
 
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
 
-    String instanceId = String.valueOf(UUID.randomUUID());
-    Instance instance = new Instance(instanceId, String.valueOf(UUID.randomUUID()),
-      String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
     HashMap<String, String> context = new HashMap<>();
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
-
+    context.put(MARC_BIBLIOGRAPHIC.value(), JsonObject.mapFrom(new Record().withParsedRecord(new ParsedRecord().withContent(new JsonObject()))).encode());
+    context.put("MAPPING_RULES", new JsonObject().encode());
+    context.put("MAPPING_PARAMS", new JsonObject().encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType("DI_INVENTORY_INSTANCE_CREATED")
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
@@ -163,7 +157,7 @@ public class CreateInstanceEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
 
-    Assert.assertEquals("DI_INVENTORY_INSTANCE_CREATED", actualDataImportEventPayload.getEventType());
+    Assert.assertEquals(DI_INVENTORY_INSTANCE_CREATED.value(), actualDataImportEventPayload.getEventType());
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
     Assert.assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(INSTANCE.value())).getString("id"));
     Assert.assertEquals(title, new JsonObject(actualDataImportEventPayload.getContext().get(INSTANCE.value())).getString("title"));
@@ -179,12 +173,9 @@ public class CreateInstanceEventHandlerTest {
     String instanceTypeId = UUID.randomUUID().toString();
     String title = "titleValue";
 
-    Mockito.when(fakeReader.read(eq("instanceTypeIdExpression"))).thenReturn(StringValue.of(instanceTypeId));
-    Mockito.when(fakeReader.read(eq("titleExpression"))).thenReturn(StringValue.of(title));
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId), StringValue.of(title));
 
-    Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-
-    Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
 
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
 
@@ -192,7 +183,7 @@ public class CreateInstanceEventHandlerTest {
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType("DI_INVENTORY_INSTANCE_CREATED")
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(null)
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
@@ -208,12 +199,9 @@ public class CreateInstanceEventHandlerTest {
     String instanceTypeId = UUID.randomUUID().toString();
     String title = "titleValue";
 
-    Mockito.when(fakeReader.read(eq("instanceTypeIdExpression"))).thenReturn(StringValue.of(instanceTypeId));
-    Mockito.when(fakeReader.read(eq("titleExpression"))).thenReturn(StringValue.of(title));
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId), StringValue.of(title));
 
-    Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-
-    Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
 
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
 
@@ -221,7 +209,7 @@ public class CreateInstanceEventHandlerTest {
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType("DI_INVENTORY_INSTANCE_CREATED")
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
@@ -237,12 +225,9 @@ public class CreateInstanceEventHandlerTest {
     String instanceTypeId = UUID.randomUUID().toString();
     String title = "titleValue";
 
-    Mockito.when(fakeReader.read(eq("instanceTypeIdExpression"))).thenReturn(StringValue.of(instanceTypeId));
-    Mockito.when(fakeReader.read(eq("titleExpression"))).thenReturn(StringValue.of(title));
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId), StringValue.of(title));
 
-    Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-
-    Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
 
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
 
@@ -253,7 +238,7 @@ public class CreateInstanceEventHandlerTest {
     context.put("InvalidField", Json.encode(new Record()));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType("DI_INVENTORY_INSTANCE_CREATED")
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
@@ -269,12 +254,9 @@ public class CreateInstanceEventHandlerTest {
     String instanceTypeId = UUID.randomUUID().toString();
     String title = "titleValue";
 
-    Mockito.when(fakeReader.read(eq("instanceTypeIdExpression"))).thenReturn(StringValue.of(instanceTypeId));
-    Mockito.when(fakeReader.read(eq("titleExpression"))).thenReturn(StringValue.of(title));
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId), StringValue.of(title));
 
-    Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-
-    Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
 
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
 
@@ -285,7 +267,7 @@ public class CreateInstanceEventHandlerTest {
     context.put(MARC_BIBLIOGRAPHIC.value(), "");
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType("DI_INVENTORY_INSTANCE_CREATED")
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
@@ -300,11 +282,9 @@ public class CreateInstanceEventHandlerTest {
 
     String instanceTypeId = UUID.randomUUID().toString();
 
-    Mockito.when(fakeReader.read(eq("instanceTypeIdExpression"))).thenReturn(StringValue.of(instanceTypeId));
-    Mockito.when(fakeReader.read(eq("titleExpression"))).thenReturn(StringValue.of(null));
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId), MissingValue.getInstance());
 
-
-    Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
 
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
 
@@ -312,23 +292,24 @@ public class CreateInstanceEventHandlerTest {
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
 
     HashMap<String, String> context = new HashMap<>();
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
-
+    context.put(MARC_BIBLIOGRAPHIC.value(), JsonObject.mapFrom(new Record().withParsedRecord(new ParsedRecord().withContent(new JsonObject()))).encode());
+    context.put("MAPPING_RULES", new JsonObject().encode());
+    context.put("MAPPING_PARAMS", new JsonObject().encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_INSTANCE_CREATED)
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
-    DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
+    future.get(5, TimeUnit.MILLISECONDS);
   }
 
   @Test
   public void isEligibleShouldReturnTrue() {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType("DI_INVENTORY_INSTANCE_CREATED")
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
@@ -337,9 +318,8 @@ public class CreateInstanceEventHandlerTest {
 
   @Test
   public void isEligibleShouldReturnFalseIfCurrentNodeIsEmpty() {
-
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_INSTANCE_CREATED)
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper);
     assertFalse(createInstanceEventHandler.isEligible(dataImportEventPayload));
@@ -347,14 +327,13 @@ public class CreateInstanceEventHandlerTest {
 
   @Test
   public void isEligibleShouldReturnFalseIfCurrentNodeIsNotActionProfile() {
-
     ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
       .withId(UUID.randomUUID().toString())
       .withProfileId(jobProfile.getId())
       .withContentType(JOB_PROFILE)
       .withContent(jobProfile);
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_INSTANCE_CREATED)
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper);
     assertFalse(createInstanceEventHandler.isEligible(dataImportEventPayload));
@@ -373,7 +352,7 @@ public class CreateInstanceEventHandlerTest {
       .withContentType(JOB_PROFILE)
       .withContent(actionProfile);
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_INSTANCE_CREATED)
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper);
     assertFalse(createInstanceEventHandler.isEligible(dataImportEventPayload));
@@ -392,7 +371,7 @@ public class CreateInstanceEventHandlerTest {
       .withContentType(JOB_PROFILE)
       .withContent(actionProfile);
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_INSTANCE_CREATED)
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper);
     assertFalse(createInstanceEventHandler.isEligible(dataImportEventPayload));

@@ -5,7 +5,7 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.folio.DataImportEventPayload;
-import org.folio.Holdingsrecord;
+import org.folio.HoldingsRecord;
 import org.folio.MatchDetail;
 import org.folio.MatchProfile;
 import org.folio.inventory.common.Context;
@@ -42,6 +42,9 @@ import java.util.function.Consumer;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_MATCHED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_NOT_MATCHED;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
 import static org.folio.MatchDetail.MatchCriterion.EXACTLY_MATCHES;
 import static org.folio.rest.jaxrs.model.EntityType.HOLDINGS;
 import static org.folio.rest.jaxrs.model.EntityType.ITEM;
@@ -89,9 +92,9 @@ public class MatchHoldingEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Holdingsrecord>>> callback =
-        (Consumer<Success<MultipleRecords<Holdingsrecord>>>) ans.getArguments()[2];
-      Success<MultipleRecords<Holdingsrecord>> result =
+      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback =
+        (Consumer<Success<MultipleRecords<HoldingsRecord>>>) ans.getArguments()[2];
+      Success<MultipleRecords<HoldingsRecord>> result =
         new Success<>(new MultipleRecords<>(singletonList(createHolding()), 1));
       callback.accept(result);
       return null;
@@ -106,9 +109,9 @@ public class MatchHoldingEventHandlerUnitTest {
       testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
       testContext.assertEquals(
         updatedEventPayload.getEventsChain(),
-        singletonList("DI_SRS_MARC_BIB_RECORD_CREATED")
+        singletonList(DI_SRS_MARC_BIB_RECORD_CREATED.value())
       );
-      testContext.assertEquals("DI_INVENTORY_HOLDING_MATCHED", updatedEventPayload.getEventType());
+      testContext.assertEquals(DI_INVENTORY_HOLDING_MATCHED.value(), updatedEventPayload.getEventType());
       async.complete();
     });
   }
@@ -118,9 +121,9 @@ public class MatchHoldingEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Holdingsrecord>>> callback =
-        (Consumer<Success<MultipleRecords<Holdingsrecord>>>) ans.getArguments()[2];
-      Success<MultipleRecords<Holdingsrecord>> result =
+      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback =
+        (Consumer<Success<MultipleRecords<HoldingsRecord>>>) ans.getArguments()[2];
+      Success<MultipleRecords<HoldingsRecord>> result =
         new Success<>(new MultipleRecords<>(new ArrayList<>(), 0));
       callback.accept(result);
       return null;
@@ -135,9 +138,9 @@ public class MatchHoldingEventHandlerUnitTest {
       testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
       testContext.assertEquals(
         updatedEventPayload.getEventsChain(),
-        singletonList("DI_SRS_MARC_BIB_RECORD_CREATED")
+        singletonList(DI_SRS_MARC_BIB_RECORD_CREATED.value())
       );
-      testContext.assertEquals("DI_INVENTORY_HOLDING_NOT_MATCHED", updatedEventPayload.getEventType());
+      testContext.assertEquals(DI_INVENTORY_HOLDING_NOT_MATCHED.value(), updatedEventPayload.getEventType());
       async.complete();
     });
   }
@@ -147,9 +150,9 @@ public class MatchHoldingEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Holdingsrecord>>> callback =
-        (Consumer<Success<MultipleRecords<Holdingsrecord>>>) ans.getArguments()[2];
-      Success<MultipleRecords<Holdingsrecord>> result =
+      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback =
+        (Consumer<Success<MultipleRecords<HoldingsRecord>>>) ans.getArguments()[2];
+      Success<MultipleRecords<HoldingsRecord>> result =
         new Success<>(new MultipleRecords<>(asList(createHolding(), createHolding()), 2));
       callback.accept(result);
       return null;
@@ -219,9 +222,9 @@ public class MatchHoldingEventHandlerUnitTest {
       testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
       testContext.assertEquals(
         updatedEventPayload.getEventsChain(),
-        singletonList("DI_SRS_MARC_BIB_RECORD_CREATED")
+        singletonList(DI_SRS_MARC_BIB_RECORD_CREATED.value())
       );
-      testContext.assertEquals("DI_INVENTORY_HOLDING_NOT_MATCHED", updatedEventPayload.getEventType());
+      testContext.assertEquals(DI_INVENTORY_HOLDING_NOT_MATCHED.value(), updatedEventPayload.getEventType());
       async.complete();
     });
   }
@@ -266,7 +269,7 @@ public class MatchHoldingEventHandlerUnitTest {
 
   private DataImportEventPayload createEventPayload() {
     return new DataImportEventPayload()
-      .withEventType("DI_SRS_MARC_BIB_RECORD_CREATED")
+      .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
       .withEventsChain(new ArrayList<>())
       .withOkapiUrl("http://localhost:9493")
       .withTenant("diku")
@@ -275,7 +278,7 @@ public class MatchHoldingEventHandlerUnitTest {
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withId(UUID.randomUUID().toString())
         .withContentType(MATCH_PROFILE)
-        .withContent(JsonObject.mapFrom(new MatchProfile()
+        .withContent(new MatchProfile()
           .withExistingRecordType(HOLDINGS)
           .withIncomingRecordType(MARC_BIBLIOGRAPHIC)
           .withMatchDetails(singletonList(new MatchDetail()
@@ -284,11 +287,11 @@ public class MatchHoldingEventHandlerUnitTest {
               .withDataValueType(VALUE_FROM_RECORD)
               .withFields(singletonList(
                 new Field().withLabel("field").withValue("item.id"))
-              ))))).getMap()));
+              ))))));
   }
 
-  private Holdingsrecord createHolding() {
-    return new Holdingsrecord().withId(HOLDING_ID);
+  private HoldingsRecord createHolding() {
+    return new HoldingsRecord().withId(HOLDING_ID);
   }
 
 }
