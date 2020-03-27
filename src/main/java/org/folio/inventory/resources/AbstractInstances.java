@@ -26,6 +26,7 @@ import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
 import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.storage.Storage;
+import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.storage.external.CollectionResourceRepository;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
@@ -66,8 +67,9 @@ public abstract class AbstractInstances {
   protected CompletableFuture<List<Response>> updateInstanceRelationships(Instance instance,
     RoutingContext routingContext, WebContext context) {
 
-    CollectionResourceRepository relatedInstancesClient = createInstanceRelationshipsClient(
+    CollectionResourceClient relatedInstancesClient = createInstanceRelationshipsClient(
       routingContext, context);
+    CollectionResourceRepository relatedInstancesRepository = new CollectionResourceRepository(relatedInstancesClient);
     List<String> instanceId = Arrays.asList(instance.getId());
     String query = createQueryForRelatedInstances(instanceId);
 
@@ -75,7 +77,7 @@ public abstract class AbstractInstances {
     relatedInstancesClient.getMany(query, future::complete);
 
     return future.thenCompose(result ->
-      updateInstanceRelationships(instance, relatedInstancesClient, result));
+      updateInstanceRelationships(instance, relatedInstancesRepository, result));
   }
 
   private CompletableFuture<List<Response>> updateInstanceRelationships(Instance instance,
@@ -126,8 +128,11 @@ public abstract class AbstractInstances {
   protected CompletableFuture<List<Response>> updatePrecedingSucceedingTitles(
     Instance instance, RoutingContext routingContext, WebContext context) {
 
-    CollectionResourceRepository precedingSucceedingTitlesClient =
-      createPrecedingSucceedingTitlesClient(routingContext, context);
+    CollectionResourceClient precedingSucceedingTitlesClient = createPrecedingSucceedingTitlesClient(
+      routingContext, context);
+    CollectionResourceRepository precedingSucceedingTitlesRepository =
+      new CollectionResourceRepository(precedingSucceedingTitlesClient);
+
     List<String> instanceId = Arrays.asList(instance.getId());
     String query = createQueryForPrecedingSucceedingInstances(instanceId);
 
@@ -135,7 +140,7 @@ public abstract class AbstractInstances {
     precedingSucceedingTitlesClient.getMany(query, future::complete);
 
     return future.thenCompose(result ->
-      updatePrecedingSucceedingTitles(instance, precedingSucceedingTitlesClient, result));
+      updatePrecedingSucceedingTitles(instance, precedingSucceedingTitlesRepository, result));
   }
 
   private CompletableFuture<List<Response>> updatePrecedingSucceedingTitles(Instance instance,
@@ -353,33 +358,33 @@ public abstract class AbstractInstances {
 
   // Utilities
 
-  protected CollectionResourceRepository createInstanceRelationshipsClient(
+  protected CollectionResourceClient createInstanceRelationshipsClient(
     RoutingContext routingContext, WebContext context) {
 
     return getCollectionResourceRepository(routingContext, context,
       "/instance-storage/instance-relationships");
   }
 
-  protected CollectionResourceRepository createPrecedingSucceedingTitlesClient(
+  protected CollectionResourceClient createPrecedingSucceedingTitlesClient(
     RoutingContext routingContext, WebContext context) {
 
     return getCollectionResourceRepository(routingContext, context,
       "/preceding-succeeding-titles");
   }
 
-  private CollectionResourceRepository getCollectionResourceRepository(
+  private CollectionResourceClient getCollectionResourceRepository(
     RoutingContext routingContext, WebContext context, String path) {
-    CollectionResourceRepository resourceRepository = null;
+    CollectionResourceClient collectionResourceClient = null;
     try {
       OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
-      resourceRepository
-        = new CollectionResourceRepository(
+      collectionResourceClient
+        = new CollectionResourceClient(
         okapiClient,
         new URL(context.getOkapiLocation() + path));
     } catch (MalformedURLException mfue) {
       log.error(mfue);
     }
-    return resourceRepository;
+    return collectionResourceClient;
   }
 
   protected String createQueryForPrecedingSucceedingInstances(List<String> instanceIds) {
