@@ -5,7 +5,7 @@ import static org.junit.Assert.assertNotNull;
 
 import java.util.UUID;
 
-import org.folio.Holdingsrecord;
+import org.folio.HoldingsRecord;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
 import org.junit.Before;
 import org.junit.Test;
@@ -31,7 +31,7 @@ public class ExternalStorageModuleHoldingsRecordCollectionTest {
       .put("instanceId", instanceId)
       .put("permanentLocationId", permanentLocationId);
 
-    Holdingsrecord holdingsrecord = storage.mapFromJson(holdingsRecord);
+    HoldingsRecord holdingsrecord = storage.mapFromJson(holdingsRecord);
     assertNotNull(holdingsRecord);
     assertEquals(holdingId, holdingsRecord.getString("id"));
     assertEquals(instanceId, holdingsRecord.getString("instanceId"));
@@ -49,7 +49,7 @@ public class ExternalStorageModuleHoldingsRecordCollectionTest {
   @Test
   public void shouldRetrieveId() {
     String holdingId = UUID.randomUUID().toString();
-    Holdingsrecord holdingsrecord = new Holdingsrecord()
+    HoldingsRecord holdingsrecord = new HoldingsRecord()
       .withId(holdingId);
     assertEquals(holdingId, storage.getId(holdingsrecord));
   }
@@ -59,7 +59,7 @@ public class ExternalStorageModuleHoldingsRecordCollectionTest {
     String holdingId = UUID.randomUUID().toString();
     String instanceId = UUID.randomUUID().toString();
     String permanentLocationId = UUID.randomUUID().toString();
-    Holdingsrecord holdingsrecord = new Holdingsrecord()
+    HoldingsRecord holdingsrecord = new HoldingsRecord()
       .withId(holdingId)
       .withInstanceId(instanceId)
       .withPermanentLocationId(permanentLocationId);

@@ -1,12 +1,12 @@
 package org.folio.inventory.dataimport.handlers.matching.loaders;
 
-import org.folio.Holdingsrecord;
+import org.folio.HoldingsRecord;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.domain.SearchableCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.rest.jaxrs.model.EntityType;
 
-public class HoldingLoader extends AbstractLoader<Holdingsrecord> {
+public class HoldingLoader extends AbstractLoader<HoldingsRecord> {
 
   private Storage storage;
 
@@ -20,7 +20,7 @@ public class HoldingLoader extends AbstractLoader<Holdingsrecord> {
   }
 
   @Override
-  protected SearchableCollection<Holdingsrecord> getSearchableCollection(Context context) {
+  protected SearchableCollection<HoldingsRecord> getSearchableCollection(Context context) {
     return storage.getHoldingsRecordCollection(context);
   }
 }

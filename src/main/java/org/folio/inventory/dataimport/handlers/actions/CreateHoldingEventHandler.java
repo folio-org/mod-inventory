@@ -1,22 +1,12 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.apache.logging.log4j.util.Strings.isNotEmpty;
-import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
-import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
-
-import java.io.IOException;
-import java.util.LinkedHashMap;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
-import org.folio.Holdingsrecord;
-import org.folio.MappingProfile;
+import org.folio.HoldingsRecord;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
@@ -29,10 +19,17 @@ import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Record;
 import org.folio.rest.tools.utils.ObjectMapperTool;
 
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import java.io.IOException;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+
+import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.logging.log4j.util.Strings.isNotEmpty;
+import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
+import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 public class CreateHoldingEventHandler implements EventHandler {
 
@@ -69,7 +66,7 @@ public class CreateHoldingEventHandler implements EventHandler {
 
       Context context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       HoldingsRecordCollection holdingsRecords = storage.getHoldingsRecordCollection(context);
-      Holdingsrecord holding = ObjectMapperTool.getMapper().readValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), Holdingsrecord.class);
+      HoldingsRecord holding = ObjectMapperTool.getMapper().readValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), HoldingsRecord.class);
       holdingsRecords.add(holding, holdingSuccess -> constructDataImportEventPayload(future, dataImportEventPayload, holdingSuccess),
         failure -> {
           LOGGER.error(SAVE_HOLDING_ERROR_MESSAGE);
@@ -95,8 +92,6 @@ public class CreateHoldingEventHandler implements EventHandler {
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
     dataImportEventPayload.getContext().put(HOLDINGS.value(), new JsonObject().encode());
     dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
-    dataImportEventPayload.getCurrentNode()
-      .setContent(new JsonObject((LinkedHashMap) dataImportEventPayload.getCurrentNode().getContent()).mapTo(MappingProfile.class));
   }
 
   private void fillInstanceIdIfNeeded(DataImportEventPayload dataImportEventPayload, JsonObject holdingAsJson) throws IOException {
@@ -126,8 +121,8 @@ public class CreateHoldingEventHandler implements EventHandler {
     }
   }
 
-  private void constructDataImportEventPayload(CompletableFuture<DataImportEventPayload> future, DataImportEventPayload dataImportEventPayload, Success<Holdingsrecord> holdingSuccess) {
-    Holdingsrecord createdHolding = holdingSuccess.getResult();
+  private void constructDataImportEventPayload(CompletableFuture<DataImportEventPayload> future, DataImportEventPayload dataImportEventPayload, Success<HoldingsRecord> holdingSuccess) {
+    HoldingsRecord createdHolding = holdingSuccess.getResult();
     dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encodePrettily(createdHolding));
     dataImportEventPayload.setEventType(CREATED_HOLDINGS_RECORD_EVENT_TYPE);
     future.complete(dataImportEventPayload);

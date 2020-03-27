@@ -5,7 +5,7 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.folio.DataImportEventPayload;
-import org.folio.Holdingsrecord;
+import org.folio.HoldingsRecord;
 import org.folio.MatchDetail;
 import org.folio.MatchProfile;
 import org.folio.inventory.common.Context;
@@ -89,9 +89,9 @@ public class MatchHoldingEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Holdingsrecord>>> callback =
-        (Consumer<Success<MultipleRecords<Holdingsrecord>>>) ans.getArguments()[2];
-      Success<MultipleRecords<Holdingsrecord>> result =
+      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback =
+        (Consumer<Success<MultipleRecords<HoldingsRecord>>>) ans.getArguments()[2];
+      Success<MultipleRecords<HoldingsRecord>> result =
         new Success<>(new MultipleRecords<>(singletonList(createHolding()), 1));
       callback.accept(result);
       return null;
@@ -118,9 +118,9 @@ public class MatchHoldingEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Holdingsrecord>>> callback =
-        (Consumer<Success<MultipleRecords<Holdingsrecord>>>) ans.getArguments()[2];
-      Success<MultipleRecords<Holdingsrecord>> result =
+      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback =
+        (Consumer<Success<MultipleRecords<HoldingsRecord>>>) ans.getArguments()[2];
+      Success<MultipleRecords<HoldingsRecord>> result =
         new Success<>(new MultipleRecords<>(new ArrayList<>(), 0));
       callback.accept(result);
       return null;
@@ -147,9 +147,9 @@ public class MatchHoldingEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Holdingsrecord>>> callback =
-        (Consumer<Success<MultipleRecords<Holdingsrecord>>>) ans.getArguments()[2];
-      Success<MultipleRecords<Holdingsrecord>> result =
+      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback =
+        (Consumer<Success<MultipleRecords<HoldingsRecord>>>) ans.getArguments()[2];
+      Success<MultipleRecords<HoldingsRecord>> result =
         new Success<>(new MultipleRecords<>(asList(createHolding(), createHolding()), 2));
       callback.accept(result);
       return null;
@@ -287,8 +287,8 @@ public class MatchHoldingEventHandlerUnitTest {
               ))))).getMap()));
   }
 
-  private Holdingsrecord createHolding() {
-    return new Holdingsrecord().withId(HOLDING_ID);
+  private HoldingsRecord createHolding() {
+    return new HoldingsRecord().withId(HOLDING_ID);
   }
 
 }

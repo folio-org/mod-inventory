@@ -136,8 +136,8 @@ public class CreateInstanceEventHandlerTest {
     String instanceTypeId = UUID.randomUUID().toString();
     String title = "titleValue";
 
-    Mockito.when(fakeReader.read(eq("instanceTypeIdExpression"))).thenReturn(StringValue.of(instanceTypeId));
-    Mockito.when(fakeReader.read(eq("titleExpression"))).thenReturn(StringValue.of(title));
+    Mockito.when(fakeReader.read(new MappingRule())).thenReturn(StringValue.of(instanceTypeId));
+    Mockito.when(fakeReader.read(new MappingRule())).thenReturn(StringValue.of(title));
 
 
     Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
@@ -179,8 +179,8 @@ public class CreateInstanceEventHandlerTest {
     String instanceTypeId = UUID.randomUUID().toString();
     String title = "titleValue";
 
-    Mockito.when(fakeReader.read(eq("instanceTypeIdExpression"))).thenReturn(StringValue.of(instanceTypeId));
-    Mockito.when(fakeReader.read(eq("titleExpression"))).thenReturn(StringValue.of(title));
+    Mockito.when(fakeReader.read(new MappingRule())).thenReturn(StringValue.of(instanceTypeId));
+    Mockito.when(fakeReader.read(new MappingRule())).thenReturn(StringValue.of(title));
 
     Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
 
@@ -208,8 +208,8 @@ public class CreateInstanceEventHandlerTest {
     String instanceTypeId = UUID.randomUUID().toString();
     String title = "titleValue";
 
-    Mockito.when(fakeReader.read(eq("instanceTypeIdExpression"))).thenReturn(StringValue.of(instanceTypeId));
-    Mockito.when(fakeReader.read(eq("titleExpression"))).thenReturn(StringValue.of(title));
+    Mockito.when(fakeReader.read(new MappingRule())).thenReturn(StringValue.of(instanceTypeId));
+    Mockito.when(fakeReader.read(new MappingRule())).thenReturn(StringValue.of(title));
 
     Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
 
@@ -237,8 +237,8 @@ public class CreateInstanceEventHandlerTest {
     String instanceTypeId = UUID.randomUUID().toString();
     String title = "titleValue";
 
-    Mockito.when(fakeReader.read(eq("instanceTypeIdExpression"))).thenReturn(StringValue.of(instanceTypeId));
-    Mockito.when(fakeReader.read(eq("titleExpression"))).thenReturn(StringValue.of(title));
+    Mockito.when(fakeReader.read(new MappingRule())).thenReturn(StringValue.of(instanceTypeId));
+    Mockito.when(fakeReader.read(new MappingRule())).thenReturn(StringValue.of(title));
 
     Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
 
@@ -269,8 +269,8 @@ public class CreateInstanceEventHandlerTest {
     String instanceTypeId = UUID.randomUUID().toString();
     String title = "titleValue";
 
-    Mockito.when(fakeReader.read(eq("instanceTypeIdExpression"))).thenReturn(StringValue.of(instanceTypeId));
-    Mockito.when(fakeReader.read(eq("titleExpression"))).thenReturn(StringValue.of(title));
+    Mockito.when(fakeReader.read(new MappingRule())).thenReturn(StringValue.of(instanceTypeId));
+    Mockito.when(fakeReader.read(new MappingRule())).thenReturn(StringValue.of(title));
 
     Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
 
@@ -300,8 +300,8 @@ public class CreateInstanceEventHandlerTest {
 
     String instanceTypeId = UUID.randomUUID().toString();
 
-    Mockito.when(fakeReader.read(eq("instanceTypeIdExpression"))).thenReturn(StringValue.of(instanceTypeId));
-    Mockito.when(fakeReader.read(eq("titleExpression"))).thenReturn(StringValue.of(null));
+    Mockito.when(fakeReader.read(new MappingRule())).thenReturn(StringValue.of(instanceTypeId));
+    Mockito.when(fakeReader.read(new MappingRule())).thenReturn(StringValue.of(null));
 
 
     Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);

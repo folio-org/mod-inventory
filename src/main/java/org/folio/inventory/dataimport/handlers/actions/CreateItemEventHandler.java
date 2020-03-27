@@ -83,8 +83,6 @@ public class CreateItemEventHandler implements EventHandler {
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
       dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
-      dataImportEventPayload.getCurrentNode()
-        .setContent(new JsonObject((LinkedHashMap) dataImportEventPayload.getCurrentNode().getContent()).mapTo(MappingProfile.class));
       dataImportEventPayload.getContext().put(ITEM.value(), new JsonObject().encode());
 
       MappingManager.map(dataImportEventPayload);
