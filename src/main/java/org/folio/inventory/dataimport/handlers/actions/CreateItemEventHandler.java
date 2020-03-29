@@ -87,7 +87,7 @@ public class CreateItemEventHandler implements EventHandler {
       MappingManager.map(dataImportEventPayload);
       JsonObject itemAsJson = new JsonObject(dataImportEventPayload.getContext().get(ITEM.value()));
       if (itemAsJson.getJsonObject(ITEM_PATH_FIELD) != null) {
-        itemAsJson.getJsonObject(ITEM_PATH_FIELD);
+        itemAsJson = itemAsJson.getJsonObject(ITEM_PATH_FIELD);
       }
       fillHoldingsRecordIdIfNecessary(dataImportEventPayload, itemAsJson);
       itemAsJson.put(ITEM_ID_FIELD, UUID.randomUUID().toString());
@@ -96,10 +96,11 @@ public class CreateItemEventHandler implements EventHandler {
       List<String> errors = validateItem(itemAsJson, requiredFields);
       if (errors.isEmpty()) {
         Item mappedItem = ItemUtil.jsonToItem(itemAsJson);
+        JsonObject finalItemAsJson = itemAsJson;
         isItemBarcodeUnique(itemAsJson.getString("barcode"), itemCollection)
           .compose(isUnique -> isUnique
             ? addItem(mappedItem, itemCollection)
-            : Future.failedFuture(String.format("Barcode must be unique, %s is already assigned to another item", itemAsJson.getString("barcode"))))
+            : Future.failedFuture(String.format("Barcode must be unique, %s is already assigned to another item", finalItemAsJson.getString("barcode"))))
           .setHandler(ar -> {
             if (ar.succeeded()) {
               dataImportEventPayload.getContext().put(ITEM.value(), Json.encode(ar.result()));

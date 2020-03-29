@@ -86,8 +86,8 @@ public class CreateInstanceEventHandlerTest {
     .withExistingRecordType(EntityType.INSTANCE)
     .withMappingDetails(new MappingDetail()
       .withMappingFields(Lists.newArrayList(
-        new MappingRule().withPath("instanceTypeId").withValue("instanceTypeIdExpression").withEnabled("true"),
-        new MappingRule().withPath("title").withValue("titleExpression").withEnabled("true"))));
+        new MappingRule().withPath("instance.instanceTypeId").withValue("\"instanceTypeIdExpression\"").withEnabled("true"),
+        new MappingRule().withPath("instance.title").withValue("\"titleExpression\"").withEnabled("true"))));
 
   private ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
     .withId(UUID.randomUUID().toString())
