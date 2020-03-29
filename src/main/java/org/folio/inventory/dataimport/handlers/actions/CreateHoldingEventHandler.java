@@ -36,6 +36,7 @@ public class CreateHoldingEventHandler implements EventHandler {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CreateHoldingEventHandler.class);
   private static final String INSTANCE_ID_FIELD = "instanceId";
+  private static final String HOLDINGS_PATH_FIELD = "instanceId";
   private static final String PERMANENT_LOCATION_ID_FIELD = "permanentLocationId";
   private static final String PERMANENT_LOCATION_ID_ERROR_MESSAGE = "Can`t create Holding entity: 'permanentLocationId' is empty";
   private static final String SAVE_HOLDING_ERROR_MESSAGE = "Can`t save new holding";
@@ -60,6 +61,9 @@ public class CreateHoldingEventHandler implements EventHandler {
       prepareEvent(dataImportEventPayload);
       MappingManager.map(dataImportEventPayload);
       JsonObject holdingAsJson = new JsonObject(dataImportEventPayload.getContext().get(HOLDINGS.value()));
+      if (holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD) != null) {
+        holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD);
+      }
       holdingAsJson.put("id", UUID.randomUUID().toString());
       fillInstanceIdIfNeeded(dataImportEventPayload, holdingAsJson);
       checkIfPermanentLocationIdExists(holdingAsJson);

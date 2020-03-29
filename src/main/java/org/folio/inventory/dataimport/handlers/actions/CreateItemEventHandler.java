@@ -1,6 +1,7 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.Future;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -49,6 +50,7 @@ public class CreateItemEventHandler implements EventHandler {
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
   private static final String PAYLOAD_DATA_HAS_NO_HOLDING_ID_MSG = "Failed to extract holdingsRecordId from holdingsRecord entity or parsed record";
   public static final String HOLDINGS_RECORD_ID_FIELD = "holdingsRecordId";
+  public static final String ITEM_PATH_FIELD = "item";
   public static final String HOLDING_ID_FIELD = "id";
   public static final String ITEM_ID_FIELD = "id";
 
@@ -84,6 +86,9 @@ public class CreateItemEventHandler implements EventHandler {
 
       MappingManager.map(dataImportEventPayload);
       JsonObject itemAsJson = new JsonObject(dataImportEventPayload.getContext().get(ITEM.value()));
+      if (itemAsJson.getJsonObject(ITEM_PATH_FIELD) != null) {
+        itemAsJson.getJsonObject(ITEM_PATH_FIELD);
+      }
       fillHoldingsRecordIdIfNecessary(dataImportEventPayload, itemAsJson);
       itemAsJson.put(ITEM_ID_FIELD, UUID.randomUUID().toString());
 
@@ -97,7 +102,7 @@ public class CreateItemEventHandler implements EventHandler {
             : Future.failedFuture(String.format("Barcode must be unique, %s is already assigned to another item", itemAsJson.getString("barcode"))))
           .setHandler(ar -> {
             if (ar.succeeded()) {
-              dataImportEventPayload.getContext().put(ITEM.value(), itemAsJson.encode());
+              dataImportEventPayload.getContext().put(ITEM.value(), Json.encode(ar.result()));
               dataImportEventPayload.setEventType(DI_INVENTORY_ITEM_CREATED.value());
               future.complete(dataImportEventPayload);
             } else {
