@@ -2,6 +2,9 @@ package org.folio.inventory.dataimport.handlers.matching;
 
 import org.folio.rest.jaxrs.model.EntityType;
 
+import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_MATCHED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_NOT_MATCHED;
+
 public class MatchItemEventHandler extends AbstractMatchEventHandler {
 
   @Override
@@ -11,11 +14,11 @@ public class MatchItemEventHandler extends AbstractMatchEventHandler {
 
   @Override
   protected String getMatchedEventType() {
-    return "DI_INVENTORY_ITEM_MATCHED";
+    return DI_INVENTORY_ITEM_MATCHED.value();
   }
 
   @Override
   protected String getNotMatchedEventType() {
-    return "DI_INVENTORY_ITEM_NOT_MATCHED";
+    return DI_INVENTORY_ITEM_NOT_MATCHED.value();
   }
 }

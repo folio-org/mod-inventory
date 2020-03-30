@@ -1,27 +1,13 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.folio.ActionProfile.Action.CREATE;
-import static org.folio.ActionProfile.FolioRecord.ITEM;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
-
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
-
+import io.vertx.core.Future;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
-import org.folio.MappingProfile;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
@@ -41,17 +27,30 @@ import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Record;
 import org.folio.rest.tools.utils.ObjectMapperTool;
 
-import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+
+import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.folio.ActionProfile.Action.CREATE;
+import static org.folio.ActionProfile.FolioRecord.ITEM;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_CREATED;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 public class CreateItemEventHandler implements EventHandler {
 
-  public static final String ITEM_CREATED_EVENT_TYPE = "DI_INVENTORY_ITEM_CREATED";
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
   private static final String PAYLOAD_DATA_HAS_NO_HOLDING_ID_MSG = "Failed to extract holdingsRecordId from holdingsRecord entity or parsed record";
   public static final String HOLDINGS_RECORD_ID_FIELD = "holdingsRecordId";
+  public static final String ITEM_PATH_FIELD = "item";
   public static final String HOLDING_ID_FIELD = "id";
   public static final String ITEM_ID_FIELD = "id";
 
@@ -83,12 +82,13 @@ public class CreateItemEventHandler implements EventHandler {
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
       dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
-      dataImportEventPayload.getCurrentNode()
-        .setContent(new JsonObject((LinkedHashMap) dataImportEventPayload.getCurrentNode().getContent()).mapTo(MappingProfile.class));
       dataImportEventPayload.getContext().put(ITEM.value(), new JsonObject().encode());
 
       MappingManager.map(dataImportEventPayload);
       JsonObject itemAsJson = new JsonObject(dataImportEventPayload.getContext().get(ITEM.value()));
+      if (itemAsJson.getJsonObject(ITEM_PATH_FIELD) != null) {
+        itemAsJson = itemAsJson.getJsonObject(ITEM_PATH_FIELD);
+      }
       fillHoldingsRecordIdIfNecessary(dataImportEventPayload, itemAsJson);
       itemAsJson.put(ITEM_ID_FIELD, UUID.randomUUID().toString());
 
@@ -96,14 +96,15 @@ public class CreateItemEventHandler implements EventHandler {
       List<String> errors = validateItem(itemAsJson, requiredFields);
       if (errors.isEmpty()) {
         Item mappedItem = ItemUtil.jsonToItem(itemAsJson);
+        JsonObject finalItemAsJson = itemAsJson;
         isItemBarcodeUnique(itemAsJson.getString("barcode"), itemCollection)
           .compose(isUnique -> isUnique
             ? addItem(mappedItem, itemCollection)
-            : Future.failedFuture(String.format("Barcode must be unique, %s is already assigned to another item", itemAsJson.getString("barcode"))))
+            : Future.failedFuture(String.format("Barcode must be unique, %s is already assigned to another item", finalItemAsJson.getString("barcode"))))
           .setHandler(ar -> {
             if (ar.succeeded()) {
-              dataImportEventPayload.getContext().put(ITEM.value(), itemAsJson.encode());
-              dataImportEventPayload.setEventType(ITEM_CREATED_EVENT_TYPE);
+              dataImportEventPayload.getContext().put(ITEM.value(), Json.encode(ar.result()));
+              dataImportEventPayload.setEventType(DI_INVENTORY_ITEM_CREATED.value());
               future.complete(dataImportEventPayload);
             } else {
               LOG.error("Error creating inventory Item", ar.cause());
