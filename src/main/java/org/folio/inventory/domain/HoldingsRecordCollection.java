@@ -1,6 +1,6 @@
 package org.folio.inventory.domain;
 
-import org.folio.Holdingsrecord;
+import org.folio.HoldingsRecord;
 
-public interface HoldingsRecordCollection extends AsynchronousCollection<Holdingsrecord>, SearchableCollection<Holdingsrecord> {
+public interface HoldingsRecordCollection extends AsynchronousCollection<HoldingsRecord>, SearchableCollection<HoldingsRecord> {
 }
