@@ -87,12 +87,11 @@ public class CollectionResourceClient {
     client.get(url, responseConversationHandler(responseHandler));
   }
 
-  public CompletableFuture<Response> getMany(
-    CqlQuery cqlQuery, Integer limit, Integer offset) {
+  public CompletableFuture<Response> getSingle(CqlQuery cqlQuery) {
 
     final CompletableFuture<Response> future = new CompletableFuture<>();
 
-    getMany(StringUtil.urlEncode(cqlQuery.toString()), limit, offset, future::complete);
+    getMany(StringUtil.urlEncode(cqlQuery.toString()), 1, 0, future::complete);
 
     return future;
   }

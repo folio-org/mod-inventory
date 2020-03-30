@@ -31,7 +31,7 @@ public class StoredRequestView {
     return RequestStatus.of(rawProperties.get("status").toString());
   }
 
-  public void changeStatus(RequestStatus newStatus) {
+  public void setStatus(RequestStatus newStatus) {
     rawProperties.put("status", newStatus.getValue());
   }
 

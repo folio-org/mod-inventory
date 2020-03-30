@@ -25,6 +25,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.folio.HttpStatus;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
@@ -102,7 +103,8 @@ public class Items extends AbstractInventoryResource {
 
     return itemService.processMarkItemWithdrawn(webContext)
       .thenAccept(item ->
-        respondWithItemRepresentation(item, 201, routingContext, webContext));
+        respondWithItemRepresentation(item,  HttpStatus.HTTP_CREATED.toInt(),
+          routingContext, webContext));
   }
 
   private void getAll(RoutingContext routingContext) {
