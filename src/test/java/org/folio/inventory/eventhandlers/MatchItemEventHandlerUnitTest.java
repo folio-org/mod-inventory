@@ -43,6 +43,9 @@ import java.util.function.Consumer;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_MATCHED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_NOT_MATCHED;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
 import static org.folio.MatchDetail.MatchCriterion.EXACTLY_MATCHES;
 import static org.folio.rest.jaxrs.model.EntityType.ITEM;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
@@ -106,9 +109,9 @@ public class MatchItemEventHandlerUnitTest {
       testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
       testContext.assertEquals(
         updatedEventPayload.getEventsChain(),
-        singletonList("DI_SRS_MARC_BIB_RECORD_CREATED")
+        singletonList(DI_SRS_MARC_BIB_RECORD_CREATED.value())
       );
-      testContext.assertEquals("DI_INVENTORY_ITEM_MATCHED", updatedEventPayload.getEventType());
+      testContext.assertEquals(DI_INVENTORY_ITEM_MATCHED.value(), updatedEventPayload.getEventType());
       async.complete();
     });
   }
@@ -135,9 +138,9 @@ public class MatchItemEventHandlerUnitTest {
       testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
       testContext.assertEquals(
         updatedEventPayload.getEventsChain(),
-        singletonList("DI_SRS_MARC_BIB_RECORD_CREATED")
+        singletonList(DI_SRS_MARC_BIB_RECORD_CREATED.value())
       );
-      testContext.assertEquals("DI_INVENTORY_ITEM_NOT_MATCHED", updatedEventPayload.getEventType());
+      testContext.assertEquals(DI_INVENTORY_ITEM_NOT_MATCHED.value(), updatedEventPayload.getEventType());
       async.complete();
     });
   }
@@ -219,9 +222,9 @@ public class MatchItemEventHandlerUnitTest {
       testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
       testContext.assertEquals(
         updatedEventPayload.getEventsChain(),
-        singletonList("DI_SRS_MARC_BIB_RECORD_CREATED")
+        singletonList(DI_SRS_MARC_BIB_RECORD_CREATED.value())
       );
-      testContext.assertEquals("DI_INVENTORY_ITEM_NOT_MATCHED", updatedEventPayload.getEventType());
+      testContext.assertEquals(DI_INVENTORY_ITEM_NOT_MATCHED.value(), updatedEventPayload.getEventType());
       async.complete();
     });
   }
@@ -266,7 +269,7 @@ public class MatchItemEventHandlerUnitTest {
 
   private DataImportEventPayload createEventPayload() {
     return new DataImportEventPayload()
-      .withEventType("DI_SRS_MARC_BIB_RECORD_CREATED")
+      .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
       .withEventsChain(new ArrayList<>())
       .withOkapiUrl("http://localhost:9493")
       .withTenant("diku")
@@ -275,7 +278,7 @@ public class MatchItemEventHandlerUnitTest {
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withId(UUID.randomUUID().toString())
         .withContentType(MATCH_PROFILE)
-        .withContent(JsonObject.mapFrom(new MatchProfile()
+        .withContent(new MatchProfile()
           .withExistingRecordType(ITEM)
           .withIncomingRecordType(MARC_BIBLIOGRAPHIC)
           .withMatchDetails(singletonList(new MatchDetail()
@@ -284,7 +287,7 @@ public class MatchItemEventHandlerUnitTest {
               .withDataValueType(VALUE_FROM_RECORD)
               .withFields(singletonList(
                 new Field().withLabel("field").withValue("item.id"))
-              ))))).getMap()));
+              ))))));
   }
 
   private Item createItem() {

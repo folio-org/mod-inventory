@@ -1,3 +1,8 @@
+## 14.1.0 2020-03-28
+
+* Processes data import events to create or update inventory records (MODINV-182, MODINV-182, MODINV-183, MODINV-184, MODINV-201, MODINV-204)
+* Fetches preceding and succeeding titles in batches partitioned by `id` (MODINV-212)
+
 ## 14.0.0 2020-03-09
 
 * Makes item status required (MODINV-189)

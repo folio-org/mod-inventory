@@ -7,7 +7,6 @@ import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.matching.MatchingManager;
 import org.folio.rest.jaxrs.model.EntityType;
 
-import java.util.LinkedHashMap;
 import java.util.concurrent.CompletableFuture;
 
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MATCH_PROFILE;
@@ -19,8 +18,6 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
       dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
-      dataImportEventPayload.getCurrentNode()
-        .setContent(new JsonObject((LinkedHashMap) dataImportEventPayload.getCurrentNode().getContent()).mapTo(MatchProfile.class));
       boolean matched = MatchingManager.match(dataImportEventPayload);
       if (matched) {
         dataImportEventPayload.setEventType(getMatchedEventType());
