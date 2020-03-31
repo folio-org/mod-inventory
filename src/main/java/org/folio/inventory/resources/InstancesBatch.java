@@ -209,7 +209,7 @@ public class InstancesBatch extends AbstractInstances {
             });
         }
       }
-      resultFuture.handle(CompositeFuture.join(updateRelationshipsFutures));
+      CompositeFuture.join(updateRelationshipsFutures).setHandler(resultFuture);
     } catch (IllegalStateException e) {
       log.error("Can not update instances relationships cause: " + e);
       resultFuture.fail(e);

@@ -2,6 +2,7 @@ package support.fakes.processors;
 
 import static api.ApiTestSuite.createOkapiHttpClient;
 import static api.support.http.StorageInterfaceUrls.instanceRelationshipTypeUrl;
+import static api.support.http.StorageInterfaceUrls.instancesStorageUrl;
 import static java.util.function.Function.identity;
 import static org.folio.inventory.support.JsonArrayHelper.toList;
 
@@ -21,7 +22,6 @@ import org.folio.inventory.support.http.server.ValidationError;
 import org.folio.inventory.validation.exceptions.UnprocessableEntityException;
 import org.folio.util.StringUtil;
 
-import api.support.http.BusinessLogicInterfaceUrls;
 import io.vertx.core.json.JsonObject;
 
 public final class StorageConstraintsProcessors {
@@ -101,7 +101,7 @@ public final class StorageConstraintsProcessors {
         .collect(Collectors.joining(" or "))),
       ids.length);
 
-    return get(BusinessLogicInterfaceUrls.instances(fullQuery))
+    return get(instancesStorageUrl(fullQuery))
       .thenApply(response -> toList(response.getJson().getJsonArray("instances")))
       .thenApply(instances -> instances.stream()
         .collect(Collectors.toMap(instance -> instance.getString("id"), identity())));

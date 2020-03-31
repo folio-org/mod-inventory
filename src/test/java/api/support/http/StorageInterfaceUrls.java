@@ -14,6 +14,10 @@ public class StorageInterfaceUrls {
     return viaOkapiURL(String.format("/item-storage/items%s", subPath));
   }
 
+  public static URL instancesStorageUrl(String subPath) {
+    return viaOkapiURL(String.format("/instance-storage/instances%s", subPath));
+  }
+
   public static URL institutionsStorageUrl(String subPath) {
     return viaOkapiURL("/location-units/institutions" + subPath);
   }
