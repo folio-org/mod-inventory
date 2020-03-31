@@ -1,15 +1,17 @@
 package api.support;
 
-import api.ApiTestSuite;
-import api.support.http.ResourceClient;
+import java.net.MalformedURLException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 
-import java.net.MalformedURLException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
+import api.ApiTestSuite;
+import api.support.fixtures.InstanceRelationshipTypeFixture;
+import api.support.http.ResourceClient;
 
 public abstract class ApiTests {
   private static boolean runningOnOwn;
@@ -25,6 +27,8 @@ public abstract class ApiTests {
   protected final ResourceClient precedingSucceedingTitlesClient;
   protected final ResourceClient instanceRelationshipClient;
 
+  protected final InstanceRelationshipTypeFixture instanceRelationshipTypeFixture;
+
   public ApiTests() {
     holdingsStorageClient = ResourceClient.forHoldingsStorage(okapiClient);
     itemsStorageClient = ResourceClient.forItemsStorage(okapiClient);
@@ -35,6 +39,7 @@ public abstract class ApiTests {
     instancesBatchClient = ResourceClient.forInstancesBatch(okapiClient);
     precedingSucceedingTitlesClient = ResourceClient.forPrecedingSucceedingTitles(okapiClient);
     instanceRelationshipClient = ResourceClient.forInstanceRelationship(okapiClient);
+    instanceRelationshipTypeFixture = new InstanceRelationshipTypeFixture(okapiClient);
   }
 
   @BeforeClass

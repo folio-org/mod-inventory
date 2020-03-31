@@ -45,6 +45,10 @@ public class StorageInterfaceUrls {
     return viaOkapiURL("/instance-storage/instance-relationships" + subPath);
   }
 
+  public static URL instanceRelationshipTypeUrl(String subPath) {
+    return viaOkapiURL("/instance-relationship-types" + subPath);
+  }
+
   private static URL viaOkapiURL(String path) {
     try {
       return URLHelper.joinPath(new URL(storageOkapiUrl()), path);
