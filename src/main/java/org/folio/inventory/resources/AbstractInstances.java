@@ -6,14 +6,12 @@ import static org.folio.inventory.common.FutureAssistance.allOf;
 import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import org.folio.inventory.common.WebContext;
@@ -183,8 +181,9 @@ public abstract class AbstractInstances {
    Map<String, T> existingObjects, Map<String, T> updatingObjects) {
 
     return existingObjects.keySet().stream()
-      .filter(key -> !updatingObjects.containsKey(key)).map(existingKey ->
-        resourceClient.delete(existingKey)).collect(Collectors.toList());
+      .filter(key -> !updatingObjects.containsKey(key))
+      .map(resourceClient::delete)
+      .collect(Collectors.toList());
   }
 
   private <T> List<CompletableFuture<Response>> createOrEdit(
