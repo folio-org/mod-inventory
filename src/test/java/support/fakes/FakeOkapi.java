@@ -4,6 +4,7 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.Router;
+import support.fakes.processors.StorageConstraintsProcessors;
 import support.fakes.processors.StorageRecordPreProcessors;
 
 public class FakeOkapi extends AbstractVerticle {
@@ -82,12 +83,23 @@ public class FakeOkapi extends AbstractVerticle {
       .withRootPath("/instance-storage/instance-relationships")
       .withCollectionPropertyName("instanceRelationships")
       .withRequiredProperties("superInstanceId", "subInstanceId", "instanceRelationshipTypeId")
+      .withRecordPreProcessors(
+        StorageConstraintsProcessors::instanceRelationshipsConstraints)
       .create().register(router);
 
     new FakeStorageModuleBuilder()
       .withRecordName("preceding succeeding titles")
       .withRootPath("/preceding-succeeding-titles")
       .withCollectionPropertyName("precedingSucceedingTitles")
+      .withRecordPreProcessors(
+        StorageConstraintsProcessors::instancePrecedingSucceedingTitleConstraints)
+      .create().register(router);
+
+    new FakeStorageModuleBuilder()
+      .withRecordName("Instance relationship types")
+      .withRootPath("/instance-relationship-types")
+      .withCollectionPropertyName("instanceRelationshipTypes")
+      .withRequiredProperties("name")
       .create().register(router);
   }
 

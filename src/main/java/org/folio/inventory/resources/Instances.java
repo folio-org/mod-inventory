@@ -174,16 +174,22 @@ public class Instances extends AbstractInstances {
         response.setPrecedingTitles(newInstance.getPrecedingTitles());
         response.setSucceedingTitles(newInstance.getSucceedingTitles());
 
-        updateRelatedRecords(routingContext, context, response, r -> {
-          try {
-            URL url = context.absoluteUrl(format("%s/%s",
-              INSTANCES_PATH, response.getId()));
-            RedirectResponse.created(routingContext.response(), url.toString());
-          } catch (MalformedURLException e) {
-            log.warn(
-              format("Failed to create self link for instance: %s", e.toString()));
-          }
-        });
+        updateRelatedRecords(routingContext, context, response)
+          .whenComplete((r, ex) -> {
+            if (ex != null) {
+              log.warn("Exception occurred", ex);
+              handleFailure(getKnownException(ex), routingContext);
+            } else {
+              try {
+                URL url = context.absoluteUrl(format("%s/%s",
+                  INSTANCES_PATH, response.getId()));
+                RedirectResponse.created(routingContext.response(), url.toString());
+              } catch (MalformedURLException e) {
+                log.warn(
+                  format("Failed to create self link for instance: %s", e.toString()));
+              }
+            }
+          });
       }, FailureResponseConsumer.serverError(routingContext.response()));
   }
 
@@ -268,7 +274,15 @@ public class Instances extends AbstractInstances {
     instanceCollection.update(
       instance,
       v -> {
-        updateRelatedRecords(rContext, wContext, instance, x -> noContent(rContext.response()));
+        updateRelatedRecords(rContext, wContext, instance)
+          .whenComplete((result, ex) -> {
+            if (ex != null) {
+              log.warn("Exception occurred", ex);
+              handleFailure(getKnownException(ex), rContext);
+            } else {
+              noContent(rContext.response());
+            }
+          });
         if (isInstanceControlledByRecord(instance)) {
           updateSuppressFromDiscoveryFlag(wContext, instance);
         }
