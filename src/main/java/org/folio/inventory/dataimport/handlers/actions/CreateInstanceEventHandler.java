@@ -18,6 +18,7 @@ import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.RecordToInstanceMapperBuilder;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
+import org.folio.rest.jaxrs.model.Record;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -105,7 +106,8 @@ public class CreateInstanceEventHandler implements EventHandler {
     try {
       HashMap<String, String> context = dataImportEventPayload.getContext();
       JsonObject mappingRules = new JsonObject(context.get(MAPPING_RULES_KEY));
-      JsonObject parsedRecord = new JsonObject(context.get(MARC_BIBLIOGRAPHIC.value())).getJsonObject("parsedRecord").getJsonObject("content");
+      JsonObject parsedRecord = new JsonObject((String)new JsonObject(context.get(MARC_BIBLIOGRAPHIC.value()))
+        .mapTo(Record.class).getParsedRecord().getContent());
       MappingParameters mappingParameters = new JsonObject(context.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
       org.folio.Instance instance = RecordToInstanceMapperBuilder.buildMapper(MARC_FORMAT).mapRecord(parsedRecord, mappingParameters, mappingRules);
       dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(new JsonObject().put(INSTANCE_PATH, JsonObject.mapFrom(instance))));
