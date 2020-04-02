@@ -406,7 +406,7 @@ public class Instances extends AbstractInstances {
     Instance instance) {
 
     JsonResponse.success(routingContext.response(), toRepresentation(instance,
-      new ArrayList<>(), new ArrayList<>(),
+      instance.getParentInstances(), instance.getChildInstances(),
       instance.getPrecedingTitles(), instance.getSucceedingTitles(), context));
   }
 
