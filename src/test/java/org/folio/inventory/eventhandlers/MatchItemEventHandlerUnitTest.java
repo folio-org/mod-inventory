@@ -68,7 +68,7 @@ public class MatchItemEventHandlerUnitTest {
 
   private static final String ITEM_ID = "001234";
 
-  private static WorkerExecutor executor = Vertx.vertx().createSharedWorkerExecutor("test-pool");
+  private static WorkerExecutor executor = Vertx.vertx().createSharedWorkerExecutor("value-loader-thread-pool");
 
   @Mock
   private Storage storage;
