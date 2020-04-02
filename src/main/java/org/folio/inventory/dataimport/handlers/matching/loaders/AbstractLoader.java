@@ -1,6 +1,6 @@
 package org.folio.inventory.dataimport.handlers.matching.loaders;
 
-import io.vertx.core.Vertx;
+import io.vertx.core.WorkerExecutor;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -24,6 +24,12 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
 
   private static final Logger LOG = LoggerFactory.getLogger(AbstractLoader.class);
 
+  protected WorkerExecutor workerExecutor;
+
+  public AbstractLoader(WorkerExecutor workerExecutor) {
+    this.workerExecutor = workerExecutor;
+  }
+
   @Override
   public LoadResult loadEntity(LoadQuery loadQuery, DataImportEventPayload eventPayload) {
     if (loadQuery == null){
@@ -34,7 +40,7 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
     loadResult.setEntityType(getEntityType().value());
     Context context = constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl());
 
-    Vertx.vertx().executeBlocking(blockingFuture -> {
+    workerExecutor.executeBlocking(blockingFuture -> {
       try {
         getSearchableCollection(context).findByCql(loadQuery.getCql(), PagingParameters.defaults(),
           success -> {
