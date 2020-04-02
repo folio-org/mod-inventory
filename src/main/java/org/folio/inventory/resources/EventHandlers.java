@@ -21,6 +21,7 @@ import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
 import org.folio.inventory.support.http.server.SuccessResponse;
 import org.folio.processing.events.EventManager;
+import org.folio.processing.events.utils.ZIPArchiver;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.mapper.reader.record.MarcBibReaderFactory;
 import org.folio.processing.matching.loader.MatchValueLoaderFactory;
@@ -60,8 +61,9 @@ public class EventHandlers {
 
   private void handleEvent(RoutingContext routingContext) {
     try {
-      JsonObject requestBody = routingContext.getBodyAsJson();
-      DataImportEventPayload eventPayload = requestBody.mapTo(DataImportEventPayload.class);
+      String zippedPayload = routingContext.getBodyAsString();
+      String unzippedPayload = ZIPArchiver.unzip(zippedPayload);
+      DataImportEventPayload eventPayload = new JsonObject(unzippedPayload).mapTo(DataImportEventPayload.class);
       routingContext.vertx().executeBlocking(blockingFuture -> EventManager.handleEvent(eventPayload), null);
       SuccessResponse.noContent(routingContext.response());
     } catch (Exception e) {
