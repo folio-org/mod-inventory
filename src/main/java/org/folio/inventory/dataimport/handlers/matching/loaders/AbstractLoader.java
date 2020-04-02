@@ -1,5 +1,6 @@
 package org.folio.inventory.dataimport.handlers.matching.loaders;
 
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -32,29 +33,32 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
     LoadResult loadResult = new LoadResult();
     loadResult.setEntityType(getEntityType().value());
     Context context = constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl());
-    try {
-      getSearchableCollection(context).findByCql(loadQuery.getCql(), PagingParameters.defaults(),
-        success -> {
-          MultipleRecords<T> collection = success.getResult();
-          if (collection.totalRecords == 1) {
-            loadResult.setValue(JsonObject.mapFrom(collection.records.get(0)).encode());
-          } else if (collection.totalRecords > 1) {
-            String errorMessage = "Found multiple records matching specified conditions";
-            LOG.error(errorMessage);
-            future.completeExceptionally(new MatchingException(errorMessage));
-          }
-          future.complete(loadResult);
-        },
-        failure -> {
-          LOG.error(failure.getReason());
-          future.completeExceptionally(new MatchingException(failure.getReason()));
-        });
-    } catch (UnsupportedEncodingException e) {
-      LOG.error("Failed to retrieve records");
-      future.completeExceptionally(e);
-    }
-    return future.join();
 
+    Vertx.vertx().executeBlocking(blockingFuture -> {
+      try {
+        getSearchableCollection(context).findByCql(loadQuery.getCql(), PagingParameters.defaults(),
+          success -> {
+            MultipleRecords<T> collection = success.getResult();
+            if (collection.totalRecords == 1) {
+              loadResult.setValue(JsonObject.mapFrom(collection.records.get(0)).encode());
+            } else if (collection.totalRecords > 1) {
+              String errorMessage = "Found multiple records matching specified conditions";
+              LOG.error(errorMessage);
+              future.completeExceptionally(new MatchingException(errorMessage));
+            }
+            future.complete(loadResult);
+          },
+          failure -> {
+            LOG.error(failure.getReason());
+            future.completeExceptionally(new MatchingException(failure.getReason()));
+          });
+      } catch (UnsupportedEncodingException e) {
+        LOG.error("Failed to retrieve records");
+        future.completeExceptionally(e);
+      }
+    }, null);
+
+    return future.join();
   }
 
   @Override
