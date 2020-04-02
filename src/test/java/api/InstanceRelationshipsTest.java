@@ -1,6 +1,7 @@
 package api;
 
 import static api.support.InstanceSamples.nod;
+import static io.vertx.core.json.JsonObject.mapFrom;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.junit.Assert.assertThat;
@@ -15,6 +16,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
+import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
 import org.joda.time.DateTime;
 import org.junit.After;
@@ -26,6 +29,7 @@ import io.vertx.core.json.JsonObject;
 import support.fakes.EndpointFailureDescriptor;
 
 public class InstanceRelationshipsTest extends ApiTests {
+  private static final String PARENT_INSTANCES = "parentInstances";
 
   @After
   public void expireFailureEmulation() throws Exception {
@@ -134,6 +138,28 @@ public class InstanceRelationshipsTest extends ApiTests {
       verifyInstancesInPrecedingSucceedingRelationship(precedingInstance, succeedingInstance);
       verifyInstancesInRelationship(precedingInstance, succeedingInstance);
     });
+  }
+
+  @Test
+  public void parentChildInstancesReturnedWhenFetchSingleInstance() throws Exception {
+    final IndividualResource parentInstance = instancesClient.create(nod(UUID.randomUUID()));
+
+    final JsonObject parentRelationship = createParentRelationship(parentInstance.getId().toString(),
+      UUID.randomUUID().toString());
+
+    final IndividualResource childInstance = instancesClient.create(nod(UUID.randomUUID())
+      .put(PARENT_INSTANCES, new JsonArray().add(parentRelationship)));
+
+    assertThat(childInstance.getJson().getJsonArray(PARENT_INSTANCES).getJsonObject(0),
+      is(parentRelationship));
+
+    verifyInstancesInRelationship(instancesClient.getById(parentInstance.getId()).getJson(),
+      instancesClient.getById(childInstance.getId()).getJson());
+  }
+
+  private JsonObject createParentRelationship(String superInstanceId, String relationshipType) {
+    return mapFrom(new InstanceRelationshipToParent(UUID.randomUUID().toString(),
+      superInstanceId, relationshipType));
   }
 
   private Map<String, String> createPrecedingSucceedingTitlesAndRelationshipsInstances(
