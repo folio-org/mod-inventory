@@ -1,6 +1,6 @@
 package org.folio.inventory.storage.external;
 
-import org.folio.inventory.storage.external.exceptions.ExternalResourceFetchException;
+import org.folio.inventory.exceptions.ExternalResourceFetchException;
 import org.folio.inventory.support.http.client.Response;
 
 import java.util.concurrent.CompletableFuture;
