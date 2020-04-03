@@ -1,6 +1,5 @@
 package org.folio.inventory.exceptions;
 
-import org.folio.inventory.exceptions.AbstractInventoryException;
 import org.folio.inventory.support.http.server.ValidationError;
 
 public class UnprocessableEntityException extends AbstractInventoryException {

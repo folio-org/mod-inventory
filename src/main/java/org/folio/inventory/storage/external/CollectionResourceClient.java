@@ -1,12 +1,10 @@
 package org.folio.inventory.storage.external;
 
 import java.net.URL;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
-import org.folio.util.StringUtil;
 
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpClientResponse;
