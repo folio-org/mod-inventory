@@ -1,3 +1,7 @@
+## 14.1.1 2020-04-03
+
+* Fetch related instances when fetching an individual instance (MODINV-272)
+
 ## 14.1.0 2020-03-28
 
 * Processes data import events to create or update inventory records (MODINV-182, MODINV-182, MODINV-183, MODINV-184, MODINV-201, MODINV-204)
