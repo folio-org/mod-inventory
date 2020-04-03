@@ -19,6 +19,8 @@ import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
+import api.events.EventHandlersApiTest;
+import api.holdings.HoldingApiExample;
 import api.isbns.IsbnUtilsApiExamples;
 import api.items.ItemAllowedStatusesSchemaTest;
 import api.items.ItemApiExamples;
@@ -43,6 +45,8 @@ import support.fakes.FakeOkapi;
   TenantApiExamples.class,
   PrecedingSucceedingTitlesApiExamples.class,
   InstanceRelationshipsTest.class,
+  EventHandlersApiTest.class,
+  HoldingApiExample.class,
   ItemMarkWithdrawnApiTest.class
 })
 public class ApiTestSuite {

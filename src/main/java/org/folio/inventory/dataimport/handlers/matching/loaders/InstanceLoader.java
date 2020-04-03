@@ -1,5 +1,6 @@
 package org.folio.inventory.dataimport.handlers.matching.loaders;
 
+import io.vertx.core.WorkerExecutor;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.domain.SearchableCollection;
 import org.folio.inventory.domain.instances.Instance;
@@ -10,7 +11,8 @@ public class InstanceLoader extends AbstractLoader<Instance> {
 
   private Storage storage;
 
-  public InstanceLoader(Storage storage) {
+  public InstanceLoader(Storage storage, WorkerExecutor executor) {
+    super(executor);
     this.storage = storage;
   }
 

@@ -148,7 +148,7 @@ public final class StorageRecordPreProcessors {
     );
   }
 
-  public static BiFunction<JsonObject, JsonObject, CompletableFuture<JsonObject>> setHridProcessor(
+  public static RecordPreProcessor setHridProcessor(
     String hridPrefix) {
 
     return (oldEntity, newEntity) -> {
