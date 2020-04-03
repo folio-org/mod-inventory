@@ -1,9 +1,12 @@
 package api;
 
 import static api.support.InstanceSamples.nod;
+import static api.support.InstanceSamples.smallAngryPlanet;
+import static io.vertx.core.json.JsonObject.mapFrom;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.junit.Assert.assertThat;
+import static support.matchers.ResponseMatchers.hasValidationError;
 
 import java.net.MalformedURLException;
 import java.util.HashMap;
@@ -15,17 +18,21 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
+import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
 import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Test;
 
 import api.support.ApiTests;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import support.fakes.EndpointFailureDescriptor;
 
 public class InstanceRelationshipsTest extends ApiTests {
+  private static final String PARENT_INSTANCES = "parentInstances";
 
   @After
   public void expireFailureEmulation() throws Exception {
@@ -64,7 +71,8 @@ public class InstanceRelationshipsTest extends ApiTests {
         .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
         .setStatusCode(500)
         .setContentType("application/json")
-        .setBody(expectedErrorResponse.toString()));
+        .setBody(expectedErrorResponse.toString())
+        .setMethod(HttpMethod.GET));
 
     Response response = instancesClient
       .attemptGetMany("title=(\"super\" or \"sub\"", expectedCount);
@@ -105,7 +113,8 @@ public class InstanceRelationshipsTest extends ApiTests {
         .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
         .setStatusCode(500)
         .setContentType("application/json")
-        .setBody(expectedErrorResponse.toString()));
+        .setBody(expectedErrorResponse.toString())
+        .setMethod(HttpMethod.GET));
 
     Response response = instancesClient
       .attemptGetMany("title=(\"preceding\" or \"succeeding\"", expectedCount);
@@ -134,6 +143,301 @@ public class InstanceRelationshipsTest extends ApiTests {
       verifyInstancesInPrecedingSucceedingRelationship(precedingInstance, succeedingInstance);
       verifyInstancesInRelationship(precedingInstance, succeedingInstance);
     });
+  }
+
+  @Test
+  public void cannotCreateAnInstanceWithNonExistedPrecedingTitleId()
+    throws InterruptedException, MalformedURLException, TimeoutException,
+    ExecutionException {
+
+    final String precedingTitleId = UUID.randomUUID().toString();
+    JsonObject precedingTitle = new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("precedingInstanceId", precedingTitleId);
+
+    JsonArray precedingTitles = new JsonArray().add(precedingTitle);
+
+    JsonObject smallAngryPlanetJson = smallAngryPlanet(UUID.randomUUID());
+    smallAngryPlanetJson.put("precedingTitles", precedingTitles);
+
+    Response response = instancesClient.attemptToCreate(smallAngryPlanetJson);
+
+    assertThat(response, hasValidationError("Preceding instance does not exist",
+      "precedingInstanceId", precedingTitleId));
+  }
+
+  @Test
+  public void cannotCreateAnInstanceWithNonExistedSucceedingTitleId()
+    throws InterruptedException, MalformedURLException, TimeoutException,
+    ExecutionException {
+
+    final String succeedingTitleId = UUID.randomUUID().toString();
+    JsonObject succeedingTitle = new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("succeedingInstanceId", succeedingTitleId);
+
+    JsonArray succeedingTitles = new JsonArray().add(succeedingTitle);
+
+    JsonObject smallAngryPlanetJson = smallAngryPlanet(UUID.randomUUID());
+    smallAngryPlanetJson.put("succeedingTitles", succeedingTitles);
+
+    Response response = instancesClient.attemptToCreate(smallAngryPlanetJson);
+
+    assertThat(response, hasValidationError("Succeeding instance does not exist",
+      "succeedingInstanceId", succeedingTitleId));
+  }
+
+  @Test
+  public void cannotCreateAnInstanceWithNonExistedParentInstanceId()
+    throws InterruptedException, MalformedURLException, TimeoutException,
+    ExecutionException {
+
+    final String superInstanceId = UUID.randomUUID().toString();
+    final JsonObject parentInstance = createParentRelationship(superInstanceId,
+      instanceRelationshipTypeFixture.monographicSeries().getId());
+
+    JsonArray parentInstances = new JsonArray().add(parentInstance);
+
+    JsonObject smallAngryPlanetJson = smallAngryPlanet(UUID.randomUUID());
+    smallAngryPlanetJson.put(PARENT_INSTANCES, parentInstances);
+
+    Response response = instancesClient.attemptToCreate(smallAngryPlanetJson);
+
+    assertThat(response, hasValidationError("Super instance does not exist",
+      "superInstanceId", superInstanceId));
+  }
+
+  @Test
+  public void cannotCreateAnInstanceWithNonExistedChildInstanceId()
+    throws InterruptedException, MalformedURLException, TimeoutException,
+    ExecutionException {
+
+    final String subInstanceId = UUID.randomUUID().toString();
+    JsonObject childInstance = new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("instanceRelationshipTypeId", instanceRelationshipTypeFixture.boundWith().getId())
+      .put("subInstanceId", subInstanceId);
+
+    JsonArray childInstances = new JsonArray().add(childInstance);
+
+    JsonObject smallAngryPlanetJson = smallAngryPlanet(UUID.randomUUID());
+    smallAngryPlanetJson.put("childInstances", childInstances);
+
+    Response response = instancesClient.attemptToCreate(smallAngryPlanetJson);
+
+    assertThat(response, hasValidationError("Sub instance does not exist",
+      "subInstanceId", subInstanceId));
+  }
+
+  @Test
+  public void cannotCreateAnInstanceWithNonExistedRelationshipType()
+    throws InterruptedException, MalformedURLException, TimeoutException,
+    ExecutionException {
+
+    final String relationshipTypeId = UUID.randomUUID().toString();
+
+    final IndividualResource subInstance = instancesClient
+      .create(smallAngryPlanet(UUID.randomUUID()));
+
+    JsonObject childInstance = new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("instanceRelationshipTypeId", relationshipTypeId)
+      .put("subInstanceId", subInstance.getId().toString());
+
+    JsonArray childInstances = new JsonArray().add(childInstance);
+
+    JsonObject smallAngryPlanetJson = smallAngryPlanet(UUID.randomUUID());
+    smallAngryPlanetJson.put("childInstances", childInstances);
+
+    Response response = instancesClient.attemptToCreate(smallAngryPlanetJson);
+
+    assertThat(response, hasValidationError("Relationship type does not exist",
+      "instanceRelationshipTypeId", relationshipTypeId));
+  }
+
+  @Test
+  public void canForwardInstancePrecedingSucceedingTitlesUpdateFailure()
+    throws InterruptedException, MalformedURLException, TimeoutException,
+    ExecutionException {
+    UUID nodId = UUID.randomUUID();
+    String titleId = UUID.randomUUID().toString();
+
+    JsonObject succeedingTitle = new JsonObject()
+      .put("id", titleId)
+      .put("title", "A web semantic");
+    JsonObject nod = nod(nodId)
+      .put("hrid", "inst0006320")
+      .put("succeedingTitles", new JsonArray().add(succeedingTitle));
+
+    instancesClient.create(nod);
+
+    final JsonObject expectedErrorResponse = new JsonObject()
+      .put("message", "Server error");
+    precedingSucceedingTitlesClient.emulateFailure(
+      new EndpointFailureDescriptor()
+        .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
+        .setStatusCode(500)
+        .setContentType("application/json")
+        .setBody(expectedErrorResponse.toString())
+        .setMethod(HttpMethod.PUT));
+
+    JsonObject newSucceedingTitle = new JsonObject()
+      .put("id", titleId)
+      .put("succeedingInstanceId", UUID.randomUUID().toString());
+
+    JsonArray succeedingTitles = new JsonArray().add(newSucceedingTitle);
+
+    JsonObject newNod = nod.copy();
+    newNod.put("succeedingTitles", succeedingTitles);
+
+    Response response = instancesClient.attemptToReplace(nodId, newNod);
+
+    assertThat(response.getStatusCode(), is(500));
+    assertThat(response.getContentType(), is("application/json"));
+    assertThat(response.getJson(), is(expectedErrorResponse));
+  }
+
+  @Test
+  public void canForwardInstancePrecedingSucceedingTitlesDeleteFailure()
+    throws InterruptedException, MalformedURLException, TimeoutException,
+    ExecutionException {
+    UUID nodId = UUID.randomUUID();
+
+    JsonObject succeedingTitle = new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("title", "A web semantic");
+    JsonObject nod = nod(nodId)
+      .put("hrid", "inst0006320")
+      .put("succeedingTitles", new JsonArray().add(succeedingTitle));
+
+    instancesClient.create(nod);
+
+    final JsonObject expectedErrorResponse = new JsonObject()
+      .put("message", "Server error");
+    precedingSucceedingTitlesClient.emulateFailure(
+      new EndpointFailureDescriptor()
+        .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
+        .setStatusCode(500)
+        .setContentType("application/json")
+        .setBody(expectedErrorResponse.toString())
+        .setMethod(HttpMethod.DELETE));
+
+    JsonObject newNod = nod.copy();
+    newNod.put("succeedingTitles", new JsonArray());
+
+    Response response = instancesClient.attemptToReplace(nodId, newNod);
+
+    assertThat(response.getStatusCode(), is(500));
+    assertThat(response.getContentType(), is("application/json"));
+    assertThat(response.getJson(), is(expectedErrorResponse));
+  }
+
+  @Test
+  public void canForwardInstanceRelationshipUpdateFailure()
+    throws InterruptedException, MalformedURLException, TimeoutException,
+    ExecutionException {
+
+    UUID nodId = UUID.randomUUID();
+    String parentInstanceId = UUID.randomUUID().toString();
+    String boundWithInstanceRelationshipTypeId = instanceRelationshipTypeFixture.boundWith().getId();
+
+    IndividualResource smallAngryPlanet = instancesClient.create(smallAngryPlanet(UUID.randomUUID()));
+    JsonObject parentInstance = new JsonObject()
+      .put("id", parentInstanceId)
+      .put("superInstanceId", smallAngryPlanet.getId().toString())
+      .put("instanceRelationshipTypeId", boundWithInstanceRelationshipTypeId);
+    JsonObject nod = nod(nodId)
+      .put("hrid", "inst0006320")
+      .put(PARENT_INSTANCES, new JsonArray().add(parentInstance));
+
+    instancesClient.create(nod);
+
+    final JsonObject expectedErrorResponse = new JsonObject()
+      .put("message", "Server error");
+    instanceRelationshipClient.emulateFailure(
+      new EndpointFailureDescriptor()
+        .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
+        .setStatusCode(500)
+        .setContentType("application/json")
+        .setBody(expectedErrorResponse.toString())
+        .setMethod(HttpMethod.PUT));
+
+    JsonObject newParentInstances = new JsonObject()
+      .put("id", parentInstanceId)
+      .put("superInstanceId", UUID.randomUUID().toString())
+      .put("instanceRelationshipTypeId", boundWithInstanceRelationshipTypeId);
+
+    JsonArray parentInstances = new JsonArray().add(newParentInstances);
+
+    JsonObject newNod = nod.copy();
+    newNod.put(PARENT_INSTANCES, parentInstances);
+
+    Response response = instancesClient.attemptToReplace(nodId, newNod);
+
+    assertThat(response.getStatusCode(), is(500));
+    assertThat(response.getContentType(), is("application/json"));
+    assertThat(response.getJson(), is(expectedErrorResponse));
+  }
+
+  @Test
+  public void canForwardInstanceRelationshipDeleteFailure()
+    throws InterruptedException, MalformedURLException, TimeoutException,
+    ExecutionException {
+
+    UUID nodId = UUID.randomUUID();
+    String boundWithInstanceRelationshipTypeId = instanceRelationshipTypeFixture.boundWith().getId();
+
+    IndividualResource smallAngryPlanet = instancesClient.create(smallAngryPlanet(UUID.randomUUID()));
+
+    JsonObject parentInstance = createParentRelationship(smallAngryPlanet.getId().toString(),
+      boundWithInstanceRelationshipTypeId);
+
+    JsonObject nod = nod(nodId)
+      .put("hrid", "inst0006320")
+      .put(PARENT_INSTANCES, new JsonArray().add(parentInstance));
+
+    instancesClient.create(nod);
+
+    final JsonObject expectedErrorResponse = new JsonObject()
+      .put("message", "Server error");
+    instanceRelationshipClient.emulateFailure(
+      new EndpointFailureDescriptor()
+        .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
+        .setStatusCode(500)
+        .setContentType("application/json")
+        .setBody(expectedErrorResponse.toString())
+        .setMethod(HttpMethod.DELETE));
+
+    JsonObject newNod = nod.copy();
+    newNod.put(PARENT_INSTANCES, new JsonArray());
+
+    Response response = instancesClient.attemptToReplace(nodId, newNod);
+
+    assertThat(response.getStatusCode(), is(500));
+    assertThat(response.getContentType(), is("application/json"));
+    assertThat(response.getJson(), is(expectedErrorResponse));
+  }
+
+  @Test
+  public void parentChildInstancesReturnedWhenFetchSingleInstance() throws Exception {
+    final IndividualResource parentInstance = instancesClient.create(nod(UUID.randomUUID()));
+
+    final JsonObject parentRelationship = createParentRelationship(parentInstance.getId().toString(),
+      instanceRelationshipTypeFixture.boundWith().getId());
+
+    final IndividualResource childInstance = instancesClient.create(nod(UUID.randomUUID())
+      .put(PARENT_INSTANCES, new JsonArray().add(parentRelationship)));
+
+    assertThat(childInstance.getJson().getJsonArray(PARENT_INSTANCES).getJsonObject(0),
+      is(parentRelationship));
+
+    verifyInstancesInRelationship(instancesClient.getById(parentInstance.getId()).getJson(),
+      instancesClient.getById(childInstance.getId()).getJson());
+  }
+
+  private JsonObject createParentRelationship(String superInstanceId, String relationshipType) {
+    return mapFrom(new InstanceRelationshipToParent(UUID.randomUUID().toString(),
+      superInstanceId, relationshipType));
   }
 
   private Map<String, String> createPrecedingSucceedingTitlesAndRelationshipsInstances(
@@ -219,7 +523,7 @@ public class InstanceRelationshipsTest extends ApiTests {
   private JsonObject createInstanceRelationships(UUID precedingId, UUID succeedingId) {
     return new JsonObject()
       .put("id", UUID.randomUUID().toString())
-      .put("instanceRelationshipTypeId", UUID.randomUUID().toString())
+      .put("instanceRelationshipTypeId", instanceRelationshipTypeFixture.boundWith().getId())
       .put("superInstanceId", precedingId.toString())
       .put("subInstanceId", succeedingId.toString());
   }
@@ -231,7 +535,7 @@ public class InstanceRelationshipsTest extends ApiTests {
     assertThat(subInstance, notNullValue());
 
     final JsonObject childInstances = superInstance.getJsonArray("childInstances").getJsonObject(0);
-    final JsonObject parentInstances = subInstance.getJsonArray("parentInstances").getJsonObject(0);
+    final JsonObject parentInstances = subInstance.getJsonArray(PARENT_INSTANCES).getJsonObject(0);
 
     assertThat(childInstances, notNullValue());
     assertThat(parentInstances, notNullValue());

@@ -1,12 +1,16 @@
 package support.fakes;
 
-import api.ApiTestSuite;
-import io.vertx.core.json.JsonObject;
-
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.BiFunction;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
+
+import api.ApiTestSuite;
+import support.fakes.processors.RecordPreProcessor;
 
 public class FakeStorageModuleBuilder {
   private final String rootPath;
@@ -17,7 +21,7 @@ public class FakeStorageModuleBuilder {
   private final Map<String, Supplier<Object>> defaultProperties;
   private final Boolean hasCollectionDelete;
   private final String recordName;
-  private final List<BiFunction<JsonObject, JsonObject, CompletableFuture<JsonObject>>> recordPreProcessors;
+  private final List<RecordPreProcessor> recordPreProcessors;
 
   FakeStorageModuleBuilder() {
     this(null, null, ApiTestSuite.TENANT_ID, new ArrayList<>(), true, "",
@@ -33,7 +37,7 @@ public class FakeStorageModuleBuilder {
     String recordName,
     Collection<String> uniqueProperties,
     Map<String, Supplier<Object>> defaultProperties,
-    List<BiFunction<JsonObject, JsonObject, CompletableFuture<JsonObject>>> recordPreProcessors) {
+    List<RecordPreProcessor> recordPreProcessors) {
 
     this.rootPath = rootPath;
     this.collectionPropertyName = collectionPropertyName;
@@ -131,10 +135,7 @@ public class FakeStorageModuleBuilder {
       this.recordPreProcessors);
   }
 
-  @SafeVarargs
-  final FakeStorageModuleBuilder withRecordPreProcessors(
-    BiFunction<JsonObject, JsonObject, CompletableFuture<JsonObject>> ... preProcessors) {
-
+  final FakeStorageModuleBuilder withRecordPreProcessors(RecordPreProcessor... preProcessors) {
     return new FakeStorageModuleBuilder(
       this.rootPath,
       this.collectionPropertyName,

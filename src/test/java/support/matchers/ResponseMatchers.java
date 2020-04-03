@@ -53,6 +53,18 @@ public class ResponseMatchers {
           .appendText(", 'key' - ").appendValue(expectedKey)
           .appendText(" and 'value' - ").appendValue(expectedValue);
       }
+
+      @Override
+      protected void describeMismatchSafely(Response response, Description mismatchDescription) {
+        mismatchDescription.appendText("Status: ").appendValue(response.getStatusCode())
+          .appendText(", body: ");
+
+        if (response.getContentType().startsWith("application/json")) {
+          mismatchDescription.appendValue(response.getJson());
+        } else {
+          mismatchDescription.appendValue(response.getBody());
+        }
+      }
     };
   }
 }

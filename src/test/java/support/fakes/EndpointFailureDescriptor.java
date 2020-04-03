@@ -1,5 +1,7 @@
 package support.fakes;
 
+import io.vertx.core.http.HttpMethod;
+
 import java.util.Date;
 
 public class EndpointFailureDescriptor {
@@ -7,6 +9,7 @@ public class EndpointFailureDescriptor {
   private int statusCode;
   private String contentType;
   private String body;
+  private HttpMethod method;
 
   public Date getFailureExpireDate() {
     return failureExpireDate;
@@ -41,6 +44,15 @@ public class EndpointFailureDescriptor {
 
   public EndpointFailureDescriptor setBody(String body) {
     this.body = body;
+    return this;
+  }
+
+  public HttpMethod getMethod() {
+    return method;
+  }
+
+  public EndpointFailureDescriptor setMethod(HttpMethod method) {
+    this.method = method;
     return this;
   }
 }
