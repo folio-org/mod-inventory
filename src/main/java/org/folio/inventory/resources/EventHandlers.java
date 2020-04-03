@@ -1,5 +1,7 @@
 package org.folio.inventory.resources;
 
+import io.vertx.core.Vertx;
+import io.vertx.core.WorkerExecutor;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -33,9 +35,11 @@ public class EventHandlers {
   private static final String DATA_IMPORT_EVENT_HANDLER_PATH = "/inventory/handlers/data-import";
 
   public EventHandlers(final Storage storage) {
-    MatchValueLoaderFactory.register(new InstanceLoader(storage));
-    MatchValueLoaderFactory.register(new ItemLoader(storage));
-    MatchValueLoaderFactory.register(new HoldingLoader(storage));
+    Vertx vertx = Vertx.vertx();
+    WorkerExecutor executor = vertx.createSharedWorkerExecutor("value-loader-thread-pool");
+    MatchValueLoaderFactory.register(new InstanceLoader(storage, executor));
+    MatchValueLoaderFactory.register(new ItemLoader(storage, executor));
+    MatchValueLoaderFactory.register(new HoldingLoader(storage, executor));
 
     MatchValueReaderFactory.register(new MarcValueReaderImpl());
 

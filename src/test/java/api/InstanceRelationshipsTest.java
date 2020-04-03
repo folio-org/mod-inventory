@@ -2,6 +2,7 @@ package api;
 
 import static api.support.InstanceSamples.nod;
 import static api.support.InstanceSamples.smallAngryPlanet;
+import static io.vertx.core.json.JsonObject.mapFrom;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.junit.Assert.assertThat;
@@ -17,6 +18,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
 import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
 import org.joda.time.DateTime;
@@ -30,6 +32,7 @@ import io.vertx.core.json.JsonObject;
 import support.fakes.EndpointFailureDescriptor;
 
 public class InstanceRelationshipsTest extends ApiTests {
+  private static final String PARENT_INSTANCES = "parentInstances";
 
   @After
   public void expireFailureEmulation() throws Exception {
@@ -190,15 +193,13 @@ public class InstanceRelationshipsTest extends ApiTests {
     ExecutionException {
 
     final String superInstanceId = UUID.randomUUID().toString();
-    JsonObject parentInstance = new JsonObject()
-      .put("id", UUID.randomUUID().toString())
-      .put("instanceRelationshipTypeId", instanceRelationshipTypeFixture.monographicSeries().getId())
-      .put("superInstanceId", superInstanceId);
+    final JsonObject parentInstance = createParentRelationship(superInstanceId,
+      instanceRelationshipTypeFixture.monographicSeries().getId());
 
     JsonArray parentInstances = new JsonArray().add(parentInstance);
 
     JsonObject smallAngryPlanetJson = smallAngryPlanet(UUID.randomUUID());
-    smallAngryPlanetJson.put("parentInstances", parentInstances);
+    smallAngryPlanetJson.put(PARENT_INSTANCES, parentInstances);
 
     Response response = instancesClient.attemptToCreate(smallAngryPlanetJson);
 
@@ -335,6 +336,7 @@ public class InstanceRelationshipsTest extends ApiTests {
   public void canForwardInstanceRelationshipUpdateFailure()
     throws InterruptedException, MalformedURLException, TimeoutException,
     ExecutionException {
+
     UUID nodId = UUID.randomUUID();
     String parentInstanceId = UUID.randomUUID().toString();
     String boundWithInstanceRelationshipTypeId = instanceRelationshipTypeFixture.boundWith().getId();
@@ -346,7 +348,7 @@ public class InstanceRelationshipsTest extends ApiTests {
       .put("instanceRelationshipTypeId", boundWithInstanceRelationshipTypeId);
     JsonObject nod = nod(nodId)
       .put("hrid", "inst0006320")
-      .put("parentInstances", new JsonArray().add(parentInstance));
+      .put(PARENT_INSTANCES, new JsonArray().add(parentInstance));
 
     instancesClient.create(nod);
 
@@ -368,7 +370,7 @@ public class InstanceRelationshipsTest extends ApiTests {
     JsonArray parentInstances = new JsonArray().add(newParentInstances);
 
     JsonObject newNod = nod.copy();
-    newNod.put("parentInstances", parentInstances);
+    newNod.put(PARENT_INSTANCES, parentInstances);
 
     Response response = instancesClient.attemptToReplace(nodId, newNod);
 
@@ -381,17 +383,18 @@ public class InstanceRelationshipsTest extends ApiTests {
   public void canForwardInstanceRelationshipDeleteFailure()
     throws InterruptedException, MalformedURLException, TimeoutException,
     ExecutionException {
+
     UUID nodId = UUID.randomUUID();
     String boundWithInstanceRelationshipTypeId = instanceRelationshipTypeFixture.boundWith().getId();
 
     IndividualResource smallAngryPlanet = instancesClient.create(smallAngryPlanet(UUID.randomUUID()));
-    JsonObject parentInstance = new JsonObject()
-      .put("id", UUID.randomUUID().toString())
-      .put("superInstanceId", smallAngryPlanet.getId().toString())
-      .put("instanceRelationshipTypeId", boundWithInstanceRelationshipTypeId);
+
+    JsonObject parentInstance = createParentRelationship(smallAngryPlanet.getId().toString(),
+      boundWithInstanceRelationshipTypeId);
+
     JsonObject nod = nod(nodId)
       .put("hrid", "inst0006320")
-      .put("parentInstances", new JsonArray().add(parentInstance));
+      .put(PARENT_INSTANCES, new JsonArray().add(parentInstance));
 
     instancesClient.create(nod);
 
@@ -406,13 +409,35 @@ public class InstanceRelationshipsTest extends ApiTests {
         .setMethod(HttpMethod.DELETE));
 
     JsonObject newNod = nod.copy();
-    newNod.put("parentInstances", new JsonArray());
+    newNod.put(PARENT_INSTANCES, new JsonArray());
 
     Response response = instancesClient.attemptToReplace(nodId, newNod);
 
     assertThat(response.getStatusCode(), is(500));
     assertThat(response.getContentType(), is("application/json"));
     assertThat(response.getJson(), is(expectedErrorResponse));
+  }
+
+  @Test
+  public void parentChildInstancesReturnedWhenFetchSingleInstance() throws Exception {
+    final IndividualResource parentInstance = instancesClient.create(nod(UUID.randomUUID()));
+
+    final JsonObject parentRelationship = createParentRelationship(parentInstance.getId().toString(),
+      instanceRelationshipTypeFixture.boundWith().getId());
+
+    final IndividualResource childInstance = instancesClient.create(nod(UUID.randomUUID())
+      .put(PARENT_INSTANCES, new JsonArray().add(parentRelationship)));
+
+    assertThat(childInstance.getJson().getJsonArray(PARENT_INSTANCES).getJsonObject(0),
+      is(parentRelationship));
+
+    verifyInstancesInRelationship(instancesClient.getById(parentInstance.getId()).getJson(),
+      instancesClient.getById(childInstance.getId()).getJson());
+  }
+
+  private JsonObject createParentRelationship(String superInstanceId, String relationshipType) {
+    return mapFrom(new InstanceRelationshipToParent(UUID.randomUUID().toString(),
+      superInstanceId, relationshipType));
   }
 
   private Map<String, String> createPrecedingSucceedingTitlesAndRelationshipsInstances(
@@ -510,7 +535,7 @@ public class InstanceRelationshipsTest extends ApiTests {
     assertThat(subInstance, notNullValue());
 
     final JsonObject childInstances = superInstance.getJsonArray("childInstances").getJsonObject(0);
-    final JsonObject parentInstances = subInstance.getJsonArray("parentInstances").getJsonObject(0);
+    final JsonObject parentInstances = subInstance.getJsonArray(PARENT_INSTANCES).getJsonObject(0);
 
     assertThat(childInstances, notNullValue());
     assertThat(parentInstances, notNullValue());
