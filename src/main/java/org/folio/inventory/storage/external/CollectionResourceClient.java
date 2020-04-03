@@ -39,14 +39,6 @@ public class CollectionResourceClient {
       responseConversationHandler(responseHandler));
   }
 
-  public CompletableFuture<Response> put(String id, Object resourceRepresentation) {
-    final CompletableFuture<Response> future = new CompletableFuture<>();
-
-    put(id, resourceRepresentation, future::complete);
-
-    return future;
-  }
-
   public void get(String id, Consumer<Response> responseHandler) {
     client.get(String.format(collectionRoot + "/%s", id),
       responseConversationHandler(responseHandler));
@@ -85,15 +77,6 @@ public class CollectionResourceClient {
       : collectionRoot.toString();
 
     client.get(url, responseConversationHandler(responseHandler));
-  }
-
-  public CompletableFuture<Response> getSingle(CqlQuery cqlQuery) {
-
-    final CompletableFuture<Response> future = new CompletableFuture<>();
-
-    getMany(StringUtil.urlEncode(cqlQuery.toString()), 1, 0, future::complete);
-
-    return future;
   }
 
   private boolean isProvided(String query) {

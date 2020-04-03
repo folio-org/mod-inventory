@@ -2,7 +2,8 @@ package org.folio.inventory.services;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.inventory.storage.external.CqlQuery.exactMatch;
-import static org.folio.inventory.support.CompletableFutures.failedFuture;
+import static org.folio.inventory.storage.external.Limit.limit;
+import static org.folio.inventory.storage.external.Offset.noOffset;
 import static org.folio.inventory.support.JsonArrayHelper.toList;
 
 import java.util.concurrent.CompletableFuture;
@@ -13,9 +14,8 @@ import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.domain.view.request.RequestStatus;
 import org.folio.inventory.domain.view.request.StoredRequestView;
-import org.folio.inventory.exceptions.ExternalResourceFetchException;
 import org.folio.inventory.storage.external.Clients;
-import org.folio.inventory.storage.external.CollectionResourceClient;
+import org.folio.inventory.storage.external.CollectionResourceRepository;
 import org.folio.inventory.storage.external.CqlQuery;
 import org.folio.inventory.validation.ItemMarkAsWithdrawnValidators;
 import org.joda.time.DateTime;
@@ -23,11 +23,11 @@ import org.joda.time.DateTimeZone;
 
 public class ItemService {
   private final ItemCollection itemCollection;
-  private final CollectionResourceClient requestStorageClient;
+  private final CollectionResourceRepository requestStorageRepository;
 
   public ItemService(ItemCollection itemCollection, Clients clients) {
     this.itemCollection = itemCollection;
-    this.requestStorageClient = clients.getRequestStorageClient();
+    this.requestStorageRepository = clients.getRequestStorageRepository();
   }
 
   public CompletableFuture<Item> processMarkItemWithdrawn(WebContext context) {
@@ -45,18 +45,16 @@ public class ItemService {
     final CqlQuery query = exactMatch("itemId", item.id)
       .and(exactMatch("status", RequestStatus.OPEN_AWAITING_PICKUP.getValue()));
 
-    return requestStorageClient.getSingle(query)
-      .thenCompose(response -> response.getStatusCode() == 200
-        ? completedFuture(response)
-        : failedFuture(new ExternalResourceFetchException(response)))
+    return requestStorageRepository.getMany(query, limit(1), noOffset())
       .thenApply(response -> response.getJson().getJsonArray("requests"))
       .thenApply(requests -> toList(requests, json -> new StoredRequestView(json.getMap())))
-      .thenCompose(requests -> {
-        if (requests.size() == 0 || requestIsExpiredOnHoldShelf(requests.get(0))) {
+      .thenApply(requests -> requests.stream().findFirst())
+      .thenCompose(requestOptional -> {
+        if (!requestOptional.isPresent() || requestIsExpiredOnHoldShelf(requestOptional.get())) {
           return completedFuture(item);
         }
 
-        return moveRequestIntoNotYetFilledStatus(requests.get(0))
+        return moveRequestIntoNotYetFilledStatus(requestOptional.get())
           .thenApply(notUsed -> item);
       });
   }
@@ -70,7 +68,7 @@ public class ItemService {
     StoredRequestView request) {
 
     request.setStatus(RequestStatus.OPEN_NOT_YET_FILLED);
-    return requestStorageClient.put(request.getId(), request.getMap())
+    return requestStorageRepository.put(request.getId(), request.getMap())
       .thenApply(notUsed -> request);
   }
 

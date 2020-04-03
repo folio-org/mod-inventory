@@ -12,7 +12,7 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.ext.web.RoutingContext;
 
 public final class Clients {
-  private final CollectionResourceClient requestStorageClient;
+  private final CollectionResourceRepository requestStorageRepository;
 
   /**
    * @param routingContext - Routing context.
@@ -24,15 +24,15 @@ public final class Clients {
       final WebContext context = new WebContext(routingContext);
       final OkapiHttpClient httpClient = createHttpClient(client, routingContext, context);
 
-      requestStorageClient = createCollectionResourceClient(httpClient, context,
+      requestStorageRepository = createCollectionResourceRepository(httpClient, context,
         "/request-storage/requests");
     } catch (MalformedURLException ex) {
       throw new InternalServerErrorException(ex);
     }
   }
 
-  public CollectionResourceClient getRequestStorageClient() {
-    return requestStorageClient;
+  public CollectionResourceRepository getRequestStorageRepository() {
+    return requestStorageRepository;
   }
 
   private OkapiHttpClient createHttpClient(
@@ -42,6 +42,12 @@ public final class Clients {
     return new OkapiHttpClient(client, context,
       exception -> ServerErrorResponse.internalError(routingContext.response(),
         String.format("Failed to contact storage module: %s", exception.toString())));
+  }
+
+  private CollectionResourceRepository createCollectionResourceRepository(
+    OkapiHttpClient client, WebContext context, String rootPath) throws MalformedURLException {
+
+    return new CollectionResourceRepository(createCollectionResourceClient(client, context, rootPath));
   }
 
   private CollectionResourceClient createCollectionResourceClient(
