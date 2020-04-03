@@ -11,6 +11,7 @@ import org.folio.MappingProfile;
 import org.folio.UserInfo;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
+import org.folio.processing.events.utils.ZIPArchiver;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.MappingDetail;
 import org.folio.rest.jaxrs.model.MappingRule;
@@ -20,6 +21,7 @@ import org.folio.rest.jaxrs.model.Record;
 import org.junit.Test;
 import support.fakes.FakeOkapi;
 
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -44,17 +46,17 @@ public class EventHandlersApiTest extends ApiTests {
   }
 
   @Test
-  public void shouldReturnNoContentOnValidBody() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+  public void shouldReturnNoContentOnValidBody() throws IOException, InterruptedException, ExecutionException, TimeoutException {
     CompletableFuture<Response> conversionCompleted = new CompletableFuture<>();
-    okapiClient.post(ApiRoot.dataImportEventHandler(), new JsonObject(), ResponseHandler.any(conversionCompleted));
+    okapiClient.post(ApiRoot.dataImportEventHandler(), ZIPArchiver.zip(new JsonObject().toString()), ResponseHandler.any(conversionCompleted));
     Response response = conversionCompleted.get(5, TimeUnit.SECONDS);
     assertThat(response.getStatusCode(), is(204));
   }
 
   @Test
-  public void shouldReturnNoContentOnValidData() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+  public void shouldReturnNoContentOnValidData() throws IOException, InterruptedException, ExecutionException, TimeoutException {
     CompletableFuture<Response> conversionCompleted = new CompletableFuture<>();
-    okapiClient.post(ApiRoot.dataImportEventHandler(), JsonObject.mapFrom(prepareSnapshot()), ResponseHandler.any(conversionCompleted));
+    okapiClient.post(ApiRoot.dataImportEventHandler(), ZIPArchiver.zip(JsonObject.mapFrom(prepareSnapshot()).toString()), ResponseHandler.any(conversionCompleted));
     Response response = conversionCompleted.get(5, TimeUnit.SECONDS);
     assertThat(response.getStatusCode(), is(204));
   }
