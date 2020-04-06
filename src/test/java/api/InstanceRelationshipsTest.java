@@ -18,6 +18,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
 import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
 import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
@@ -435,9 +436,43 @@ public class InstanceRelationshipsTest extends ApiTests {
       instancesClient.getById(childInstance.getId()).getJson());
   }
 
+  @Test
+  public void canUpdateInstanceWithChildInstancesWhenParentInstancesAlreadySet() throws Exception {
+    final IndividualResource parentInstance = instancesClient.create(nod(UUID.randomUUID()));
+    final IndividualResource childInstance = instancesClient.create(nod(UUID.randomUUID()));
+
+    final JsonObject parentRelationship = createParentRelationship(parentInstance.getId().toString(),
+      instanceRelationshipTypeFixture.boundWith().getId());
+
+    final IndividualResource createdInstance = instancesClient.create(nod(UUID.randomUUID())
+      .put(PARENT_INSTANCES, new JsonArray().add(parentRelationship)));
+
+    assertThat(createdInstance.getJson().getJsonArray(PARENT_INSTANCES).getJsonObject(0),
+      is(parentRelationship));
+
+    final JsonObject childRelationships = createChildRelationship(childInstance.getId().toString(),
+      instanceRelationshipTypeFixture.monographicSeries().getId());
+
+    instancesClient.replace(createdInstance.getId(), createdInstance.copyJson()
+      .put("childInstances", new JsonArray().add(childRelationships)));
+
+    final JsonObject updatedInstance = instancesClient.getById(createdInstance.getId())
+      .getJson();
+
+    verifyInstancesInRelationship(instancesClient.getById(parentInstance.getId()).getJson(),
+      updatedInstance);
+    verifyInstancesInRelationship(updatedInstance,
+      instancesClient.getById(childInstance.getId()).getJson());
+  }
+
   private JsonObject createParentRelationship(String superInstanceId, String relationshipType) {
     return mapFrom(new InstanceRelationshipToParent(UUID.randomUUID().toString(),
       superInstanceId, relationshipType));
+  }
+
+  private JsonObject createChildRelationship(String subInstanceId, String relationshipType) {
+    return mapFrom(new InstanceRelationshipToChild(UUID.randomUUID().toString(),
+      subInstanceId, relationshipType));
   }
 
   private Map<String, String> createPrecedingSucceedingTitlesAndRelationshipsInstances(
