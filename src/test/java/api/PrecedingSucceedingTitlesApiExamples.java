@@ -317,6 +317,32 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
   }
 
   @Test
+  public void canUpdateAnInstanceWithConnectedSucceedingTitleIfPrecedingAlreadySet()
+    throws InterruptedException, MalformedURLException, TimeoutException,
+    ExecutionException {
+
+    final IndividualResource nod = instancesClient.create(nod(UUID.randomUUID()));
+    final IndividualResource uprooted = instancesClient.create(uprooted(UUID.randomUUID()));
+    final String nodPrecedingTitleId = UUID.randomUUID().toString();
+    final String uprootedPrecedingTitleId = UUID.randomUUID().toString();
+
+    JsonObject nodSucceedingTitle = createConnectedSucceedingTitle(nodPrecedingTitleId,
+      nod.getId().toString());
+    JsonObject uprootedPrecedingTitle = createConnectedPrecedingTitle(uprootedPrecedingTitleId,
+      uprooted.getId().toString());
+
+    IndividualResource createdInstance = instancesClient.create(smallAngryPlanet(UUID.randomUUID())
+      .put("precedingTitles", new JsonArray().add(uprootedPrecedingTitle)));
+
+    instancesClient.replace(createdInstance.getId(), createdInstance.copyJson()
+      .put("succeedingTitles", new JsonArray()
+        .add(nodSucceedingTitle)));
+
+    verifyRelatedInstancePrecedingTitle(createdInstance, uprooted);
+    verifyRelatedInstanceSucceedingTitle(createdInstance, nod);
+  }
+
+  @Test
   public void canCreateAnInstanceWithConnectedSucceedingAndPrecedingTitles()
     throws InterruptedException, MalformedURLException, TimeoutException,
     ExecutionException {
@@ -414,24 +440,24 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
       uprootedId.toString(), angryPlanetId.toString());
   }
 
-  private void verifyRelatedInstancePrecedingTitle(IndividualResource relatedInstance,
-    IndividualResource createdInstance) throws MalformedURLException,
+  private void verifyRelatedInstancePrecedingTitle(IndividualResource precedingInstance,
+    IndividualResource succeedingInstance) throws MalformedURLException,
     InterruptedException, ExecutionException, TimeoutException {
 
-    Response response = instancesClient.getById(relatedInstance.getId());
-    JsonArray succeedingTitles = response.getJson().getJsonArray("precedingTitles");
-    assertPrecedingSucceedingTitles(succeedingTitles.getJsonObject(0), createdInstance.getJson(),
-      createdInstance.getId().toString(), relatedInstance.getId().toString());
+    Response response = instancesClient.getById(precedingInstance.getId());
+    JsonArray precedingTitles = response.getJson().getJsonArray("precedingTitles");
+    assertPrecedingSucceedingTitles(precedingTitles.getJsonObject(0), succeedingInstance.getJson(),
+      succeedingInstance.getId().toString(), precedingInstance.getId().toString());
   }
 
-  private void verifyRelatedInstanceSucceedingTitle(IndividualResource relatedInstance,
-    IndividualResource createdInstance) throws MalformedURLException,
+  private void verifyRelatedInstanceSucceedingTitle(IndividualResource succeedingInstance,
+    IndividualResource precedingInstance) throws MalformedURLException,
     InterruptedException, ExecutionException, TimeoutException {
 
-    Response response = instancesClient.getById(relatedInstance.getId());
+    Response response = instancesClient.getById(succeedingInstance.getId());
     JsonArray succeedingTitles = response.getJson().getJsonArray("succeedingTitles");
-    assertPrecedingSucceedingTitles(succeedingTitles.getJsonObject(0), createdInstance.getJson(),
-      relatedInstance.getId().toString(), createdInstance.getId().toString());
+    assertPrecedingSucceedingTitles(succeedingTitles.getJsonObject(0), precedingInstance.getJson(),
+      succeedingInstance.getId().toString(), precedingInstance.getId().toString());
   }
 
   private JsonObject createConnectedPrecedingTitle(String id, String precedingInstanceId) {
