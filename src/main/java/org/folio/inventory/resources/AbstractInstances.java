@@ -6,10 +6,12 @@ import static org.folio.inventory.common.FutureAssistance.allOf;
 import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -190,17 +192,17 @@ public abstract class AbstractInstances {
     CollectionResourceRepository resourceClient, Map<String, T> existingObjects,
     Map<String, T> updatingObjects) {
 
-    return updatingObjects.keySet().stream().map(updatingKey -> {
-      T object = updatingObjects.get(updatingKey);
-      if (existingObjects.containsKey(updatingKey)) {
-        if (!updatingObjects.get(updatingKey).equals(existingObjects.get(updatingKey))) {
-          return resourceClient.put(updatingKey, object);
-        }
-        return new CompletableFuture<Response>();
-      } else {
-        return resourceClient.post(object);
+    final List<CompletableFuture<Response>> allFutures = new ArrayList<>();
+
+    updatingObjects.forEach((updatingKey, updatedObject) -> {
+      if (!existingObjects.containsKey(updatingKey)) {
+        allFutures.add(resourceClient.post(updatedObject));
+      } else if (!Objects.equals(updatedObject, existingObjects.get(updatingKey))) {
+        allFutures.add(resourceClient.put(updatingKey, updatedObject));
       }
-    }).collect(Collectors.toList());
+    });
+
+    return allFutures;
   }
 
   private Map<String, PrecedingSucceedingTitle> getUpdatingPrecedingSucceedingTitles(Instance instance) {
