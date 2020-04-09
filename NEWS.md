@@ -3,7 +3,7 @@
 * Fix processing of job profiles in json format by MatchEngine when trying to match on existing inventory Instances (MODINV-271)
 * Fix matching on Instance fields (in particular, Instance title) (MODINV-275)
 * Failure to create Ite upon receiving an event due to encoding issue for EffectiveCallNumberComponent (MODINV-278)
-* Increase memory allocation (MODINV-279, in addition to changes in mod-pubsub MODPUBSUB-73)
+* Increase memory allocation - default value set to 715827883 bytes (MODINV-279, in addition to changes in mod-pubsub MODPUBSUB-73)
 
 ## 14.1.1 2020-04-03
 
