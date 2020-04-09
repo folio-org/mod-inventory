@@ -2,8 +2,8 @@
 
 * Fix processing of job profiles in json format by MatchEngine (MODINV-271)
 * Fix matching on Instance fields (MODINV-275)
-* Enable jackson serialization for EffectiveCallNumberComponent (MODINV-278)
-* Increased memory allocation (in addition to changes in mod-pubsub MODPUBSUB-73)
+* Fix Items creation upon receiving an event (MODINV-278)
+* Increase memory allocation (MODINV-279, in addition to changes in mod-pubsub MODPUBSUB-73)
 
 ## 14.1.1 2020-04-03
 
