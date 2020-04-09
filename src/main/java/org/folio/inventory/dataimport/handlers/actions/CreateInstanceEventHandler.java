@@ -18,6 +18,7 @@ import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.RecordToInstanceMapperBuilder;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
+import org.folio.rest.jaxrs.model.Record;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -30,6 +31,8 @@ import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
+import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
+import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 public class CreateInstanceEventHandler implements EventHandler {
@@ -40,6 +43,7 @@ public class CreateInstanceEventHandler implements EventHandler {
   private static final String MARC_FORMAT = "MARC";
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
+  private static final String INSTANCE_PATH = "instance";
   private final List<String> requiredFields = Arrays.asList("source", "title", "instanceTypeId");
 
   private Storage storage;
@@ -62,14 +66,17 @@ public class CreateInstanceEventHandler implements EventHandler {
         future.completeExceptionally(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
         return future;
       }
-
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       prepareEvent(dataImportEventPayload);
       defaultMapRecordToInstance(dataImportEventPayload);
       MappingManager.map(dataImportEventPayload);
       JsonObject instanceAsJson = new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value()));
+      if (instanceAsJson.getJsonObject(INSTANCE_PATH) != null) {
+        instanceAsJson = instanceAsJson.getJsonObject(INSTANCE_PATH);
+      }
       instanceAsJson.put("id", UUID.randomUUID().toString());
-      instanceAsJson.put("source", MARC_FORMAT);
+      instanceAsJson.put(SOURCE_KEY, MARC_FORMAT);
+      instanceAsJson.remove(HRID_KEY);
 
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
       List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
@@ -78,7 +85,7 @@ public class CreateInstanceEventHandler implements EventHandler {
         addInstance(mappedInstance, instanceCollection)
           .setHandler(ar -> {
             if (ar.succeeded()) {
-              dataImportEventPayload.getContext().put(INSTANCE.value(), instanceAsJson.encode());
+              dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(ar.result()));
               dataImportEventPayload.setEventType(DI_INVENTORY_INSTANCE_CREATED.value());
               future.complete(dataImportEventPayload);
             } else {
@@ -99,13 +106,16 @@ public class CreateInstanceEventHandler implements EventHandler {
   }
 
   private void defaultMapRecordToInstance(DataImportEventPayload dataImportEventPayload) {
-    HashMap<String, String> context = dataImportEventPayload.getContext();
-    JsonObject mappingRules = new JsonObject(context.get(MAPPING_RULES_KEY));
-    JsonObject parsedRecord = new JsonObject(context.get(MARC_BIBLIOGRAPHIC.value())).getJsonObject("parsedRecord").getJsonObject("content");
-    MappingParameters mappingParameters = new JsonObject(context.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
-    org.folio.Instance instance = RecordToInstanceMapperBuilder.buildMapper(MARC_FORMAT).mapRecord(parsedRecord, mappingParameters, mappingRules);
-    if (instance != null) {
-      context.put(INSTANCE.value(), Json.encode(instance));
+    try {
+      HashMap<String, String> context = dataImportEventPayload.getContext();
+      JsonObject mappingRules = new JsonObject(context.get(MAPPING_RULES_KEY));
+      JsonObject parsedRecord = new JsonObject((String) new JsonObject(context.get(MARC_BIBLIOGRAPHIC.value()))
+        .mapTo(Record.class).getParsedRecord().getContent());
+      MappingParameters mappingParameters = new JsonObject(context.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
+      org.folio.Instance instance = RecordToInstanceMapperBuilder.buildMapper(MARC_FORMAT).mapRecord(parsedRecord, mappingParameters, mappingRules);
+      dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(new JsonObject().put(INSTANCE_PATH, JsonObject.mapFrom(instance))));
+    } catch (Exception e) {
+      LOGGER.error("Error in default mapper.", e);
     }
 
   }

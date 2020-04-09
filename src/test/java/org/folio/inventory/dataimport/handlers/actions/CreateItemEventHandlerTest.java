@@ -88,9 +88,9 @@ public class CreateItemEventHandlerTest {
     .withExistingRecordType(ITEM)
     .withMappingDetails(new MappingDetail()
       .withMappingFields(Arrays.asList(
-        new MappingRule().withPath("status.name").withValue("statusExpression").withEnabled("true"),
-        new MappingRule().withPath("permanentLoanType.id").withValue("permanentLoanTypeExpression").withEnabled("true"),
-        new MappingRule().withPath("materialType.id").withValue("materialTypeExpression").withEnabled("true"))));
+        new MappingRule().withPath("item.status.name").withValue("\"statusExpression\"").withEnabled("true"),
+        new MappingRule().withPath("item.permanentLoanType.id").withValue("\"permanentLoanTypeExpression\"").withEnabled("true"),
+        new MappingRule().withPath("item.materialType.id").withValue("\"materialTypeExpression\"").withEnabled("true"))));
 
   private ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
     .withId(UUID.randomUUID().toString())
@@ -167,9 +167,9 @@ public class CreateItemEventHandlerTest {
 
     JsonObject createdItem = new JsonObject(eventPayload.getContext().get(ITEM.value()));
     Assert.assertNotNull(createdItem.getJsonObject("status").getString("name"));
-    Assert.assertNotNull(createdItem.getJsonObject("permanentLoanType").getString("id"));
-    Assert.assertNotNull(createdItem.getJsonObject("materialType").getString("id"));
-    Assert.assertEquals(expectedHoldingId, createdItem.getString("holdingsRecordId"));
+    Assert.assertNotNull(createdItem.getString("permanentLoanTypeId"));
+    Assert.assertNotNull(createdItem.getString("materialTypeId"));
+    Assert.assertEquals(expectedHoldingId, createdItem.getString("holdingId"));
   }
 
   @Test
@@ -217,9 +217,9 @@ public class CreateItemEventHandlerTest {
 
     JsonObject createdItem = new JsonObject(eventPayload.getContext().get(ITEM.value()));
     Assert.assertNotNull(createdItem.getJsonObject("status").getString("name"));
-    Assert.assertNotNull(createdItem.getJsonObject("permanentLoanType").getString("id"));
-    Assert.assertNotNull(createdItem.getJsonObject("materialType").getString("id"));
-    Assert.assertNotNull(createdItem.getString("holdingsRecordId"));
+    Assert.assertNotNull(createdItem.getString("permanentLoanTypeId"));
+    Assert.assertNotNull(createdItem.getString("materialTypeId"));
+    Assert.assertNotNull(createdItem.getString("holdingId"));
   }
 
   @Test(expected = ExecutionException.class)
