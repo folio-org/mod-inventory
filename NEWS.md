@@ -1,8 +1,8 @@
 ## 14.1.2 2020-04-09
 
-* Fix processing of job profiles in json format by MatchEngine (MODINV-271)
-* Fix matching on Instance fields (MODINV-275)
-* Fix Items creation upon receiving an event (MODINV-278)
+* Fix processing of job profiles in json format by MatchEngine when trying to match on existing inventory Instances (MODINV-271)
+* Fix matching on Instance fields (in particular, Instance title) (MODINV-275)
+* Failure to create Ite upon receiving an event due to encoding issue for EffectiveCallNumberComponent (MODINV-278)
 * Increase memory allocation (MODINV-279, in addition to changes in mod-pubsub MODPUBSUB-73)
 
 ## 14.1.1 2020-04-03
