@@ -16,7 +16,23 @@ public class EffectiveCallNumberComponents {
       this.typeId = typeId;
     }
 
-    public static EffectiveCallNumberComponents from(JsonObject representation) {
+  public String getCallNumber() {
+    return callNumber;
+  }
+
+  public String getPrefix() {
+    return prefix;
+  }
+
+  public String getSuffix() {
+    return suffix;
+  }
+
+  public String getTypeId() {
+    return typeId;
+  }
+
+  public static EffectiveCallNumberComponents from(JsonObject representation) {
       if (representation == null) {
         return null;
       }
