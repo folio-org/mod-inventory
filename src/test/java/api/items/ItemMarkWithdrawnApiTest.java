@@ -92,7 +92,12 @@ public class ItemMarkWithdrawnApiTest extends ApiTests {
   }
 
   @Test
-  public void canChangeAwaitingPickupRequestToOpen() throws Exception {
+  @Parameters({
+    "Open - Awaiting delivery",
+    "Open - Awaiting pickup",
+    "Open - In transit"
+  })
+  public void canChangeRequestInFulfillmentToOpen(String requestStatus) throws Exception {
     IndividualResource instance = instancesClient.create(smallAngryPlanet(UUID.randomUUID()));
     UUID holdingId = holdingsStorageClient.create(
       new HoldingRequestBuilder()
@@ -101,11 +106,11 @@ public class ItemMarkWithdrawnApiTest extends ApiTests {
 
     IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)
-      .withStatus("Awaiting pickup")
+      .withStatus(requestStatus.replace("Open - ", ""))
       .canCirculate());
 
     final IndividualResource request = createRequest(createdItem.getId(),
-      "Open - Awaiting pickup", DateTime.now(DateTimeZone.UTC).plusHours(1));
+      requestStatus, DateTime.now(DateTimeZone.UTC).plusHours(1));
 
     final JsonObject withdrawnItem = markItemWithdrawn(createdItem.getId()).getJson();
     assertThat(withdrawnItem.getJsonObject("status").getString("name"),
@@ -119,7 +124,12 @@ public class ItemMarkWithdrawnApiTest extends ApiTests {
   }
 
   @Test
-  public void shouldNotChangeExpiredAwaitingPickupRequestToOpen() throws Exception {
+  @Parameters({
+    "Open - Awaiting delivery",
+    "Open - Awaiting pickup",
+    "Open - In transit"
+  })
+  public void shouldNotChangeExpiredRequestInFulfillmentToOpen(String requestStatus) throws Exception {
     IndividualResource instance = instancesClient.create(smallAngryPlanet(UUID.randomUUID()));
     UUID holdingId = holdingsStorageClient.create(
       new HoldingRequestBuilder()
@@ -128,11 +138,11 @@ public class ItemMarkWithdrawnApiTest extends ApiTests {
 
     IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)
-      .withStatus("Awaiting pickup")
+      .withStatus(requestStatus.replace("Open - ", ""))
       .canCirculate());
 
     final IndividualResource request = createRequest(createdItem.getId(),
-      "Open - Awaiting pickup", DateTime.now(DateTimeZone.UTC).minusHours(1));
+      requestStatus, DateTime.now(DateTimeZone.UTC).minusHours(1));
 
     final JsonObject withdrawnItem = markItemWithdrawn(createdItem.getId()).getJson();
     assertThat(withdrawnItem.getJsonObject("status").getString("name"),
@@ -142,11 +152,17 @@ public class ItemMarkWithdrawnApiTest extends ApiTests {
       .getJsonObject("status").getString("name"), is("Withdrawn"));
 
     assertThat(requestStorageClient.getById(request.getId()).getJson()
-      .getString("status"), is("Open - Awaiting pickup"));
+      .getString("status"), is(requestStatus));
   }
 
   @Test
-  public void shouldNotChangeInTransitRequestToOpen() throws Exception {
+  @Parameters({
+    "Closed - Cancelled",
+    "Closed - Filled",
+    "Closed - Pickup expired",
+    "Closed - Unfilled"
+  })
+  public void shouldNotChangeClosedRequestToOpen(String requestStatus) throws Exception {
     IndividualResource instance = instancesClient.create(smallAngryPlanet(UUID.randomUUID()));
     UUID holdingId = holdingsStorageClient.create(
       new HoldingRequestBuilder()
@@ -159,7 +175,7 @@ public class ItemMarkWithdrawnApiTest extends ApiTests {
       .canCirculate());
 
     final IndividualResource request = createRequest(createdItem.getId(),
-      "Open - In transit", DateTime.now(DateTimeZone.UTC).plusHours(1));
+      requestStatus, DateTime.now(DateTimeZone.UTC).plusHours(1));
 
     final JsonObject withdrawnItem = markItemWithdrawn(createdItem.getId()).getJson();
     assertThat(withdrawnItem.getJsonObject("status").getString("name"),
@@ -169,7 +185,7 @@ public class ItemMarkWithdrawnApiTest extends ApiTests {
       .getJsonObject("status").getString("name"), is("Withdrawn"));
 
     assertThat(requestStorageClient.getById(request.getId()).getJson()
-      .getString("status"), is("Open - In transit"));
+      .getString("status"), is(requestStatus));
   }
 
   private Response markItemWithdrawn(UUID itemId) throws InterruptedException,

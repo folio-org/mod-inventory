@@ -2,7 +2,9 @@ package org.folio.inventory.services;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.inventory.storage.external.CqlQuery.exactMatch;
-import static org.folio.inventory.storage.external.Limit.limit;
+import static org.folio.inventory.storage.external.CqlQuery.match;
+import static org.folio.inventory.storage.external.CqlQuery.notEqual;
+import static org.folio.inventory.storage.external.Limit.one;
 import static org.folio.inventory.storage.external.Offset.noOffset;
 import static org.folio.inventory.support.JsonArrayHelper.toList;
 
@@ -20,8 +22,12 @@ import org.folio.inventory.storage.external.CqlQuery;
 import org.folio.inventory.validation.ItemMarkAsWithdrawnValidators;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ItemService {
+  private static final Logger log = LoggerFactory.getLogger(ItemService.class);
+
   private final ItemCollection itemCollection;
   private final CollectionResourceRepository requestStorageRepository;
 
@@ -43,17 +49,21 @@ public class ItemService {
 
   private CompletableFuture<Item> updateRequestStatusIfRequired(Item item) {
     final CqlQuery query = exactMatch("itemId", item.id)
-      .and(exactMatch("status", RequestStatus.OPEN_AWAITING_PICKUP.getValue()));
+      .and(match("status", "Open"))
+      .and(notEqual("status", RequestStatus.OPEN_NOT_YET_FILLED.getValue()));
 
-    return requestStorageRepository.getMany(query, limit(1), noOffset())
+    // Only one request in fulfilment is possible
+    return requestStorageRepository.getMany(query, one(), noOffset())
       .thenApply(response -> response.getJson().getJsonArray("requests"))
       .thenApply(requests -> toList(requests, json -> new StoredRequestView(json.getMap())))
       .thenApply(requests -> requests.stream().findFirst())
       .thenCompose(requestOptional -> {
         if (!requestOptional.isPresent() || requestIsExpiredOnHoldShelf(requestOptional.get())) {
+          log.debug("No request in fulfillment or it is expired");
           return completedFuture(item);
         }
 
+        log.debug("Fount request in fulfillment {}", requestOptional.get().getId());
         return moveRequestIntoNotYetFilledStatus(requestOptional.get())
           .thenApply(notUsed -> item);
       });

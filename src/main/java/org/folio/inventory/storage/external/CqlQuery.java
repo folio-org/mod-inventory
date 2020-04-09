@@ -34,6 +34,14 @@ public final class CqlQuery {
     return new CqlQuery(format("%s==\"%s\"", indexName, value));
   }
 
+  public static CqlQuery match(String indexName, String value) {
+    return new CqlQuery(format("%s=\"%s\"", indexName, value));
+  }
+
+  public static CqlQuery notEqual(String indexName, String value) {
+    return new CqlQuery(format("%s<>\"%s\"", indexName, value));
+  }
+
   @Override
   public String toString() {
     return query;
