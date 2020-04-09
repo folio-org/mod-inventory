@@ -1,3 +1,10 @@
+## 14.1.2 2020-04-09
+
+* Fix processing of job profiles in json format by MatchEngine (MODINV-271)
+* Fix matching on Instance fields (MODINV-275)
+* Enable jackson serialization for EffectiveCallNumberComponent (MODINV-278)
+* Increased memory allocation (in addition to changes in mod-pubsub MODPUBSUB-73)
+
 ## 14.1.1 2020-04-03
 
 * Fetch related instances when fetching an individual instance (MODINV-272)
