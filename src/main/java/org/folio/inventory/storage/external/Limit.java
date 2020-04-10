@@ -3,10 +3,10 @@ package org.folio.inventory.storage.external;
 public final class Limit {
   private static final Limit ONE = limit(1);
 
-  private final int limit;
+  private final int limitValue;
 
   private Limit(int limit) {
-    this.limit = limit;
+    this.limitValue = limit;
   }
 
   public static Limit limit(int limit) {
@@ -18,6 +18,6 @@ public final class Limit {
   }
 
   public int getLimit() {
-    return limit;
+    return limitValue;
   }
 }

@@ -3,14 +3,26 @@ package org.folio.inventory.exceptions;
 import org.folio.inventory.support.http.server.ValidationError;
 
 public class UnprocessableEntityException extends AbstractInventoryException {
-  private final ValidationError validationError;
+  private final String message;
+  private final String propertyName;
+  private final String propertyValue;
 
   public UnprocessableEntityException(ValidationError validationError) {
-    super(validationError.message);
-    this.validationError = validationError;
+    this(validationError.message, validationError.propertyName, validationError.value);
   }
 
-  public ValidationError getValidationError() {
-    return validationError;
+  public UnprocessableEntityException(String message, String propertyName, String propertyValue) {
+    super(message);
+    this.message = message;
+    this.propertyName = propertyName;
+    this.propertyValue = propertyValue;
+  }
+
+  public String getPropertyName() {
+    return propertyName;
+  }
+
+  public String getPropertyValue() {
+    return propertyValue;
   }
 }

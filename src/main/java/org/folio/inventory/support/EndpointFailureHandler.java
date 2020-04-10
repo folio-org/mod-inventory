@@ -1,14 +1,14 @@
 package org.folio.inventory.support;
 
+import static org.folio.inventory.support.http.server.ForwardResponse.forward;
 import static org.folio.inventory.support.http.server.JsonResponse.unprocessableEntity;
 
 import org.folio.inventory.exceptions.AbstractInventoryException;
 import org.folio.inventory.exceptions.ExternalResourceFetchException;
-import org.folio.inventory.support.http.server.ClientErrorResponse;
-import org.folio.inventory.support.http.server.ForwardResponse;
-import org.folio.inventory.support.http.server.ServerErrorResponse;
 import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.exceptions.UnprocessableEntityException;
+import org.folio.inventory.support.http.server.ClientErrorResponse;
+import org.folio.inventory.support.http.server.ServerErrorResponse;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.ext.web.RoutingContext;
@@ -30,14 +30,16 @@ public final class EndpointFailureHandler {
       UnprocessableEntityException validationFailure =
         (UnprocessableEntityException) failureToHandle;
 
-      unprocessableEntity(context.response(), validationFailure.getValidationError());
+      unprocessableEntity(context.response(), validationFailure.getMessage(),
+        validationFailure.getPropertyName(), validationFailure.getPropertyValue());
     } else if (failureToHandle instanceof NotFoundException) {
       ClientErrorResponse.notFound(context.response(), failureToHandle.getMessage());
     } else if (failureToHandle instanceof ExternalResourceFetchException) {
       final ExternalResourceFetchException externalException =
         (ExternalResourceFetchException) failureToHandle;
 
-      ForwardResponse.forward(context.response(), externalException.getFailedResponse());
+      forward(context.response(), externalException.getBody(), externalException.getStatusCode(),
+        externalException.getContentType());
     } else {
       ServerErrorResponse.internalError(context.response(), failureToHandle);
     }

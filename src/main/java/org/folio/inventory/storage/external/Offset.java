@@ -1,10 +1,10 @@
 package org.folio.inventory.storage.external;
 
 public final class Offset {
-  private final int offset;
+  private final int offsetValue;
 
   private Offset(int offset) {
-    this.offset = offset;
+    this.offsetValue = offset;
   }
 
   public static Offset offset(int offset) {
@@ -16,6 +16,6 @@ public final class Offset {
   }
 
   public int getOffset() {
-    return offset;
+    return offsetValue;
   }
 }
