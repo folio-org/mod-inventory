@@ -18,6 +18,11 @@ public class UnprocessableEntityException extends AbstractInventoryException {
     this.propertyValue = propertyValue;
   }
 
+  @Override
+  public String getMessage() {
+    return message;
+  }
+
   public String getPropertyName() {
     return propertyName;
   }
