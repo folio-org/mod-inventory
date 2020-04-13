@@ -3,9 +3,12 @@ package org.folio.inventory.resources;
 import static io.netty.util.internal.StringUtil.COMMA;
 import static java.lang.String.format;
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.folio.inventory.support.CompletableFutures.failedFuture;
+import static org.folio.inventory.support.EndpointFailureHandler.doExceptionally;
 import static org.folio.inventory.support.EndpointFailureHandler.getKnownException;
 import static org.folio.inventory.support.EndpointFailureHandler.handleFailure;
 import static org.folio.inventory.support.http.server.SuccessResponse.noContent;
+import static org.folio.inventory.validation.InstancesValidators.refuseWhenHridChanged;
 
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
@@ -44,6 +47,8 @@ import org.folio.inventory.support.http.server.FailureResponseConsumer;
 import org.folio.inventory.support.http.server.JsonResponse;
 import org.folio.inventory.support.http.server.RedirectResponse;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
+import org.folio.inventory.validation.InstancesValidators;
+import org.folio.inventory.validation.exceptions.UnprocessableEntityException;
 import org.folio.rest.client.SourceStorageClient;
 import org.folio.rest.jaxrs.model.SuppressFromDiscoveryDto;
 
@@ -166,31 +171,26 @@ public class Instances extends AbstractInstances {
 
     Instance newInstance = InstanceUtil.jsonToInstance(instanceRequest);
 
-    storage.getInstanceCollection(context).add(newInstance,
-      success -> {
-        Instance response = success.getResult();
+    completedFuture(newInstance)
+      .thenCompose(InstancesValidators::refuseWhenNoTitleForPrecedingSucceedingUnconnectedTitle)
+      .thenCompose(instance -> storage.getInstanceCollection(context).add(instance))
+      .thenCompose(response -> {
         response.setParentInstances(newInstance.getParentInstances());
         response.setChildInstances(newInstance.getChildInstances());
         response.setPrecedingTitles(newInstance.getPrecedingTitles());
         response.setSucceedingTitles(newInstance.getSucceedingTitles());
 
-        updateRelatedRecords(routingContext, context, response)
-          .whenComplete((r, ex) -> {
-            if (ex != null) {
-              log.warn("Exception occurred", ex);
-              handleFailure(getKnownException(ex), routingContext);
-            } else {
-              try {
-                URL url = context.absoluteUrl(format("%s/%s",
-                  INSTANCES_PATH, response.getId()));
-                RedirectResponse.created(routingContext.response(), url.toString());
-              } catch (MalformedURLException e) {
-                log.warn(
-                  format("Failed to create self link for instance: %s", e.toString()));
-              }
-            }
-          });
-      }, FailureResponseConsumer.serverError(routingContext.response()));
+        return updateRelatedRecords(routingContext, context, response).thenApply(notUsed -> response);
+      }).thenAccept(response -> {
+        try {
+          URL url = context.absoluteUrl(format("%s/%s",
+            INSTANCES_PATH, response.getId()));
+          RedirectResponse.created(routingContext.response(), url.toString());
+        } catch (MalformedURLException e) {
+          log.warn(
+            format("Failed to create self link for instance: %s", e.toString()));
+        }
+      }).exceptionally(doExceptionally(routingContext));
   }
 
   private void update(RoutingContext rContext) {
@@ -199,29 +199,14 @@ public class Instances extends AbstractInstances {
     Instance updatedInstance = InstanceUtil.jsonToInstance(instanceRequest);
     InstanceCollection instanceCollection = storage.getInstanceCollection(wContext);
 
-    instanceCollection.findById(rContext.request().getParam("id"), it -> {
-        Instance existingInstance = it.getResult();
-        if (existingInstance != null) {
-          if (isInstanceControlledByRecord(existingInstance) && areInstanceBlockedFieldsChanged(existingInstance, updatedInstance)) {
-            String errorMessage = BLOCKED_FIELDS_UPDATE_ERROR_MESSAGE + StringUtils.join(config.getInstanceBlockedFields(), COMMA);
-            log.error(errorMessage);
-            JsonResponse.unprocessableEntity(rContext.response(), errorMessage);
-          } else if (!Objects.equals(existingInstance.getHrid(), updatedInstance.getHrid())) {
-            log.warn("The HRID property can not be updated, old value is '{}' but new is '{}'",
-              existingInstance.getHrid(), updatedInstance.getHrid()
-            );
-
-            JsonResponse.unprocessableEntity(rContext.response(),
-              "HRID can not be updated", "hrid", updatedInstance.getHrid()
-            );
-          } else {
-            updateInstance(updatedInstance, rContext, wContext);
-          }
-        } else {
-          ClientErrorResponse.notFound(rContext.response());
-        }
-      },
-      FailureResponseConsumer.serverError(rContext.response()));
+    completedFuture(updatedInstance)
+      .thenCompose(InstancesValidators::refuseWhenNoTitleForPrecedingSucceedingUnconnectedTitle)
+      .thenCompose(instance -> instanceCollection.findById(rContext.request().getParam("id")))
+      .thenCompose(InstancesValidators::refuseWhenInstanceNotFound)
+      .thenCompose(existingInstance -> refuseWhenBlockedFieldsChanged(existingInstance, updatedInstance))
+      .thenCompose(existingInstance -> refuseWhenHridChanged(existingInstance, updatedInstance))
+      .thenAccept(existingInstance -> updateInstance(updatedInstance, rContext, wContext))
+      .exceptionally(doExceptionally(rContext));
   }
 
   /**
@@ -635,5 +620,21 @@ public class Instances extends AbstractInstances {
     return new InstanceRelationshipsService(
       createInstanceRelationshipsClient(routingContext, webContext),
       createPrecedingSucceedingTitlesClient(routingContext, webContext));
+  }
+
+  private CompletionStage<Instance> refuseWhenBlockedFieldsChanged(
+    Instance existingInstance, Instance updatedInstance) {
+
+    if (isInstanceControlledByRecord(existingInstance)
+      && areInstanceBlockedFieldsChanged(existingInstance, updatedInstance)) {
+
+      String errorMessage = BLOCKED_FIELDS_UPDATE_ERROR_MESSAGE + StringUtils
+        .join(config.getInstanceBlockedFields(), COMMA);
+
+      log.error(errorMessage);
+      return failedFuture(new UnprocessableEntityException(errorMessage, null, null));
+    }
+
+    return completedFuture(existingInstance);
   }
 }

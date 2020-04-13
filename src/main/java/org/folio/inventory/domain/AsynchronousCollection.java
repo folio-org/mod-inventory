@@ -1,12 +1,14 @@
 package org.folio.inventory.domain;
 
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
+
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
-
-import java.util.List;
-import java.util.function.Consumer;
+import org.folio.inventory.exceptions.InternalServerErrorException;
 
 public interface AsynchronousCollection<T> {
   void empty(Consumer<Success<Void>> completionCallback,
@@ -16,9 +18,29 @@ public interface AsynchronousCollection<T> {
            Consumer<Success<T>> resultCallback,
            Consumer<Failure> failureCallback);
 
+  default CompletableFuture<T> add(T item) {
+    final CompletableFuture<T> future = new CompletableFuture<>();
+
+    add(item, success -> future.complete(success.getResult()),
+      failure -> future.completeExceptionally(
+        new InternalServerErrorException(failure.getReason())));
+
+    return future;
+  }
+
   void findById(String id,
                 Consumer<Success<T>> resultCallback,
                 Consumer<Failure> failureCallback);
+
+  default CompletableFuture<T> findById(String id) {
+    final CompletableFuture<T> future = new CompletableFuture<>();
+
+    findById(id, success -> future.complete(success.getResult()),
+      failure -> future.completeExceptionally(
+        new InternalServerErrorException(failure.getReason())));
+
+    return future;
+  }
 
   void findAll(PagingParameters pagingParameters,
                Consumer<Success<MultipleRecords<T>>> resultsCallback,

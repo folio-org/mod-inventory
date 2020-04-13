@@ -63,10 +63,6 @@ public class InstancesApiExamples extends ApiTests {
   private final String tagNameOne = "important";
   private final String tagNameTwo = "very important";
 
-  public InstancesApiExamples() throws MalformedURLException {
-    super();
-  }
-
   @Test
   public void canCreateInstanceWithoutAnIDAndHRID()
     throws InterruptedException,
@@ -557,7 +553,7 @@ public class InstancesApiExamples extends ApiTests {
     assertNotNull(putResponse.getJson().getJsonArray("errors"));
     JsonArray errors = putResponse.getJson().getJsonArray("errors");
     assertThat(errors.size(), is(1));
-    assertThat(errors.getString(0), is(
+    assertThat(errors.getJsonObject(0).getString("message"), is(
       "Instance is controlled by MARC record, these fields are blocked and can not be updated: " +
         "physicalDescriptions,notes,languages,identifiers,instanceTypeId,modeOfIssuanceId,subjects," +
         "source,title,indexTitle,publicationFrequency,electronicAccess,publicationRange," +
