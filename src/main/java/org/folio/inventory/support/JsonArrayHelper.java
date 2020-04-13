@@ -3,7 +3,6 @@ package org.folio.inventory.support;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -39,12 +38,6 @@ public class JsonArrayHelper {
       }
     }
     return list;
-  }
-
-  public static List<Map<String, Object>> toListOfMaps(JsonArray array) {
-    return JsonArrayHelper.toList(array).stream()
-      .map(JsonObject::getMap)
-      .collect(Collectors.toList());
   }
 
   public static <T> List<T> toList(JsonArray array, Function<JsonObject, T> mapper) {

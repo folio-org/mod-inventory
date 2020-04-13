@@ -40,8 +40,12 @@ import org.apache.http.message.BasicHeader;
 import org.folio.inventory.config.InventoryConfiguration;
 import org.folio.inventory.config.InventoryConfigurationImpl;
 import org.folio.inventory.support.JsonArrayHelper;
+import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -54,14 +58,21 @@ import api.support.ApiRoot;
 import api.support.ApiTests;
 import api.support.InstanceApiClient;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import support.fakes.EndpointFailureDescriptor;
 
 public class InstancesApiExamples extends ApiTests {
 
   private static final InventoryConfiguration config = new InventoryConfigurationImpl();
   private final String tagNameOne = "important";
   private final String tagNameTwo = "very important";
+
+  @After
+  public void expireFailureEmulation() throws Exception {
+    instancesStorageClient.expireFailureEmulation();
+  }
 
   @Test
   public void canCreateInstanceWithoutAnIDAndHRID()
@@ -865,6 +876,45 @@ public class InstancesApiExamples extends ApiTests {
 
     JsonObject existingInstance = instancesClient.getById(instanceId).getJson();
     assertThat(existingInstance, is(createdInstance));
+  }
+
+  @Test
+  public void canFrowardInstanceCreateFailureFromStorage() throws Exception {
+    final String expectedErrorMessage = "Instance-storage is temporary unavailable for create";
+
+    instancesStorageClient.emulateFailure(new EndpointFailureDescriptor()
+      .setFailureExpireDate(DateTime.now(DateTimeZone.UTC).plusSeconds(2).toDate())
+      .setBody(expectedErrorMessage)
+      .setContentType("plain/text")
+      .setStatusCode(500)
+      .setMethod(HttpMethod.POST));
+
+    final Response response = instancesClient.attemptToCreate(smallAngryPlanet(UUID.randomUUID()));
+
+    assertThat(response.getStatusCode(), is(500));
+    assertThat(response.getBody(), is(expectedErrorMessage));
+  }
+
+  @Test
+  public void canFrowardInstanceUpdateFailureFromStorage() throws Exception {
+    final String expectedErrorMessage = "Instance-storage is temporary unavailable for updates";
+
+    final IndividualResource instance = instancesClient
+      .create(smallAngryPlanet(UUID.randomUUID()));
+
+    instancesStorageClient.emulateFailure(new EndpointFailureDescriptor()
+      .setFailureExpireDate(DateTime.now(DateTimeZone.UTC).plusSeconds(2).toDate())
+      .setBody(expectedErrorMessage)
+      .setContentType("plain/text")
+      .setStatusCode(500)
+      .setMethod(HttpMethod.GET));
+
+    final Response updateResponse = instancesClient
+      .attemptToReplace(instance.getId(), instance.getJson().copy()
+        .put("subjects", new JsonArray().add("Small angry planet subject")));
+
+    assertThat(updateResponse.getStatusCode(), is(500));
+    assertThat(updateResponse.getBody(), is(expectedErrorMessage));
   }
 
   private void hasCollectionProperties(List<JsonObject> instances) {

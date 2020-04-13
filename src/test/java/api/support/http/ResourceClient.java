@@ -60,6 +60,11 @@ public class ResourceClient {
       "instances");
   }
 
+  public static ResourceClient forInstancesStorage(OkapiHttpClient okapiClient) {
+    return new ResourceClient(okapiClient, StorageInterfaceUrls::instancesStorageUrl,
+      "instances");
+  }
+
   public static ResourceClient forInstancesBatch(OkapiHttpClient client) {
     return new ResourceClient(client, BusinessLogicInterfaceUrls::instancesBatch,
       "instances");
