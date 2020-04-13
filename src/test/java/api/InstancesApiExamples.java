@@ -479,6 +479,7 @@ public class InstancesApiExamples extends ApiTests {
     Response putResponse = putCompleted.get(5, TimeUnit.SECONDS);
 
     assertThat(putResponse.getStatusCode(), is(404));
+    assertThat(putResponse.getBody(), is("Instance not found"));
   }
 
   @Test
