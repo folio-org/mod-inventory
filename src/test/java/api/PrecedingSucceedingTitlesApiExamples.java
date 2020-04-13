@@ -614,7 +614,8 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
     return collection.stream()
       .map(index -> (JsonObject) index)
       .filter(request -> StringUtils.equals(request.getString("id"), id))
-      .findFirst().get();
+      .findFirst()
+      .orElse(null);
   }
 
   private JsonArray getUnconnectedPrecedingSucceedingTitle(

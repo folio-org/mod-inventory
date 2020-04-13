@@ -14,7 +14,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -415,8 +415,8 @@ public class Instances extends AbstractInstances {
   private CompletableFuture<Instance> withInstanceRelationships(Instance instance,
     Response result) {
 
-    List<InstanceRelationshipToParent> parentInstanceList = new ArrayList();
-    List<InstanceRelationshipToChild> childInstanceList = new ArrayList();
+    List<InstanceRelationshipToParent> parentInstanceList = new ArrayList<>();
+    List<InstanceRelationshipToChild> childInstanceList = new ArrayList<>();
     if (result.getStatusCode() == 200) {
       JsonObject json = result.getJson();
       List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("instanceRelationships"));
@@ -454,12 +454,12 @@ public class Instances extends AbstractInstances {
   // Utilities
 
   private List<String> getInstanceIdsFromInstanceResult(Success success) {
-    List<String> instanceIds = new ArrayList();
+    List<String> instanceIds = new ArrayList<>();
     if (success.getResult() instanceof Instance) {
-      instanceIds = Arrays.asList(((Instance) success.getResult()).getId());
+      instanceIds = Collections.singletonList(((Instance) success.getResult()).getId());
     } else if (success.getResult() instanceof MultipleRecords) {
       instanceIds = (((MultipleRecords<Instance>) success.getResult()).records.stream()
-        .map(instance -> instance.getId())
+        .map(Instance::getId)
         .filter(Objects::nonNull)
         .distinct()
         .collect(Collectors.toList()));
@@ -474,7 +474,7 @@ public class Instances extends AbstractInstances {
 
     // if list does not exist create it
     if (itemsList == null) {
-      itemsList = new ArrayList();
+      itemsList = new ArrayList<>();
       itemsList.add(myItem);
       items.put(mapKey, itemsList);
     } else {
@@ -549,14 +549,14 @@ public class Instances extends AbstractInstances {
     List<CompletableFuture<PrecedingSucceedingTitle>> succeedingTitleCompletableFutures) {
 
     return allResultsOf(succeedingTitleCompletableFutures)
-      .thenApply(resultItem -> instance.setSucceedingTitles(resultItem));
+      .thenApply(instance::setSucceedingTitles);
   }
 
   private CompletableFuture<Instance> withPrecedingTitles(Instance instance,
     List<CompletableFuture<PrecedingSucceedingTitle>> precedingTitleCompletableFutures) {
 
     return allResultsOf(precedingTitleCompletableFutures)
-      .thenApply(resultItem -> instance.setPrecedingTitles(resultItem));
+      .thenApply(instance::setPrecedingTitles);
   }
 
   private CompletableFuture<InstancesResponse> withPrecedingTitles(
@@ -564,7 +564,7 @@ public class Instances extends AbstractInstances {
     Map<String, List<CompletableFuture<PrecedingSucceedingTitle>>> precedingTitles) {
 
     return mapToCompletableFutureMap(precedingTitles)
-      .thenApply(res -> instance.setPrecedingTitlesMap(res));
+      .thenApply(instance::setPrecedingTitlesMap);
   }
 
   private CompletableFuture<InstancesResponse> withSucceedingTitles(
@@ -572,7 +572,7 @@ public class Instances extends AbstractInstances {
     Map<String, List<CompletableFuture<PrecedingSucceedingTitle>>> precedingTitles) {
 
     return mapToCompletableFutureMap(precedingTitles)
-      .thenApply(res -> instance.setSucceedingTitlesMap(res));
+      .thenApply(instance::setSucceedingTitlesMap);
   }
 
   private CompletableFuture<Map<String, List<PrecedingSucceedingTitle>>> mapToCompletableFutureMap(

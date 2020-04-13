@@ -136,12 +136,12 @@ public class InstancesApiExamples extends ApiTests {
     final JsonObject tags = createdInstance.getJsonObject(TAGS_KEY);
     assertTrue(tags.containsKey(TAG_LIST_KEY));
     final JsonArray tagList = tags.getJsonArray(TAG_LIST_KEY);
-    assertThat((ArrayList<String>)tagList.getList(), hasItem(tagNameOne));
+    assertThat(tagList, hasItem(tagNameOne));
 
     JsonArray natureOfContentTermIds = createdInstance.getJsonArray("natureOfContentTermIds");
     assertThat(natureOfContentTermIds.size(), is(2));
-    assertThat((ArrayList<String>)natureOfContentTermIds.getList(), hasItem(ApiTestSuite.getAudiobookNatureOfContentTermId()));
-    assertThat((ArrayList<String>)natureOfContentTermIds.getList(), hasItem(ApiTestSuite.getBibliographyNatureOfContentTermId()));
+    assertThat(natureOfContentTermIds, hasItem(ApiTestSuite.getAudiobookNatureOfContentTermId()));
+    assertThat(natureOfContentTermIds, hasItem(ApiTestSuite.getBibliographyNatureOfContentTermId()));
 
     expressesDublinCoreMetadata(createdInstance);
     dublinCoreContextLinkRespectsWayResourceWasReached(createdInstance);
@@ -274,7 +274,7 @@ public class InstancesApiExamples extends ApiTests {
     final JsonObject tags = createdAngryPlanetInstance.getJsonObject(TAGS_KEY);
     assertTrue(tags.containsKey(TAG_LIST_KEY));
     final JsonArray tagList = tags.getJsonArray(TAG_LIST_KEY);
-    assertThat((ArrayList<String>)tagList.getList(), hasItems(tagNameOne, tagNameTwo));
+    assertThat(tagList, hasItems(tagNameOne, tagNameTwo));
 
     // Get and assert treasureIslandInstance
     CompletableFuture<Response> getTreasureIslandInstanceCompleted = new CompletableFuture<>();
@@ -398,8 +398,7 @@ public class InstancesApiExamples extends ApiTests {
 
     JsonObject smallAngryPlanet = smallAngryPlanet(id);
     smallAngryPlanet.put("natureOfContentTermIds",
-      new JsonArray(asList(ApiTestSuite.getBibliographyNatureOfContentTermId()))
-    );
+      new JsonArray().add(ApiTestSuite.getBibliographyNatureOfContentTermId()));
 
     JsonObject newInstance = createInstance(smallAngryPlanet);
 
@@ -407,8 +406,7 @@ public class InstancesApiExamples extends ApiTests {
       .put("title", "The Long Way to a Small, Angry Planet")
       .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameTwo)))
       .put("natureOfContentTermIds",
-        new JsonArray(asList(ApiTestSuite.getAudiobookNatureOfContentTermId()))
-      );
+        new JsonArray().add(ApiTestSuite.getAudiobookNatureOfContentTermId()));
 
     URL instanceLocation = new URL(String.format("%s/%s", ApiRoot.instances(),
       newInstance.getString("id")));
@@ -440,7 +438,7 @@ public class InstancesApiExamples extends ApiTests {
     final JsonObject tags = updatedInstance.getJsonObject(TAGS_KEY);
     assertTrue(tags.containsKey(TAG_LIST_KEY));
     final JsonArray tagList = tags.getJsonArray(TAG_LIST_KEY);
-    assertThat((ArrayList<String>)tagList.getList(), hasItem(tagNameTwo));
+    assertThat(tagList, hasItem(tagNameTwo));
 
     JsonArray natureOfContentTermIds = updatedInstance.getJsonArray("natureOfContentTermIds");
     assertThat(natureOfContentTermIds.size(), is(1));
@@ -627,7 +625,7 @@ public class InstancesApiExamples extends ApiTests {
     createInstance(nod(UUID.randomUUID()));
     createInstance(leviathanWakes(UUID.randomUUID()));
 
-    CompletableFuture<Response> deleteCompleted = new CompletableFuture<Response>();
+    CompletableFuture<Response> deleteCompleted = new CompletableFuture<>();
 
     okapiClient.delete(ApiRoot.instances(), ResponseHandler.any(deleteCompleted));
 
@@ -870,7 +868,7 @@ public class InstancesApiExamples extends ApiTests {
   }
 
   private void hasCollectionProperties(List<JsonObject> instances) {
-    instances.stream().forEach(instance -> {
+    instances.forEach(instance -> {
       try {
         expressesDublinCoreMetadata(instance);
       } catch (JsonLdError jsonLdError) {
@@ -878,13 +876,11 @@ public class InstancesApiExamples extends ApiTests {
       }
     });
 
-    instances.stream().forEach(instance ->
-      dublinCoreContextLinkRespectsWayResourceWasReached(instance));
+    instances.forEach(InstancesApiExamples::dublinCoreContextLinkRespectsWayResourceWasReached);
 
-    instances.stream().forEach(instance ->
-      selfLinkRespectsWayResourceWasReached(instance));
+    instances.forEach(InstancesApiExamples::selfLinkRespectsWayResourceWasReached);
 
-    instances.stream().forEach(instance -> {
+    instances.forEach(instance -> {
       try {
         selfLinkShouldBeReachable(instance);
       } catch (Exception e) {
