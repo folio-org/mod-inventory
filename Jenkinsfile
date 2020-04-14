@@ -5,11 +5,11 @@ buildMvn {
   mvnDeploy = 'yes'
   runLintRamlCop = 'yes'
   doKubeDeploy = true
-  publishPreview = true
+  publishPreview = false
 
   doDocker = {
     buildJavaDocker {
-      publishPreview = true
+      publishPreview = false
       overrideConfig  = 'no'
       publishMaster = 'yes'
     }
