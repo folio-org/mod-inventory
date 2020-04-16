@@ -59,7 +59,10 @@ public final class EndpointFailureHandler {
       return throwable;
     }
 
-    return throwable.getCause() instanceof AbstractInventoryException
-      ? throwable.getCause() : throwable;
+    if (throwable.getCause() instanceof AbstractInventoryException) {
+      return throwable.getCause();
+    }
+
+    return throwable;
   }
 }
