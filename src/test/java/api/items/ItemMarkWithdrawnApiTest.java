@@ -40,7 +40,7 @@ public class ItemMarkWithdrawnApiTest extends ApiTests {
     "Paged"
   })
   @Test
-  public void canMakeItemWithdrawn(String initialStatus) throws Exception {
+  public void canWithdrawItemWhenInAllowedStatus(String initialStatus) throws Exception {
     IndividualResource instance = instancesClient.create(smallAngryPlanet(UUID.randomUUID()));
     UUID holdingId = holdingsStorageClient.create(
       new HoldingRequestBuilder()
@@ -67,7 +67,7 @@ public class ItemMarkWithdrawnApiTest extends ApiTests {
     "Claimed returned"
   })
   @Test
-  public void cannotMakeItemWithdrawnIfStatusIsNotAllowed(String initialStatus) throws Exception {
+  public void cannotWithdrawIItemWhenNotInAllowedStatus(String initialStatus) throws Exception {
     IndividualResource instance = instancesClient.create(smallAngryPlanet(UUID.randomUUID()));
     UUID holdingId = holdingsStorageClient.create(
       new HoldingRequestBuilder()
@@ -86,7 +86,7 @@ public class ItemMarkWithdrawnApiTest extends ApiTests {
   }
 
   @Test
-  public void shouldReturnNotFoundWhenSpecifiedWrongItemId() throws Exception {
+  public void shouldWithdrawItemThatCannotBeFound() throws Exception {
     assertThat(markItemWithdrawn(UUID.randomUUID()).getStatusCode(),
       is(404));
   }
@@ -97,7 +97,7 @@ public class ItemMarkWithdrawnApiTest extends ApiTests {
     "Open - Awaiting pickup",
     "Open - In transit"
   })
-  public void canChangeRequestInFulfillmentToOpen(String requestStatus) throws Exception {
+  public void shouldChangeRequestBeingFulfillmentBackToNotYetFilled(String requestStatus) throws Exception {
     IndividualResource instance = instancesClient.create(smallAngryPlanet(UUID.randomUUID()));
     UUID holdingId = holdingsStorageClient.create(
       new HoldingRequestBuilder()
@@ -129,7 +129,7 @@ public class ItemMarkWithdrawnApiTest extends ApiTests {
     "Open - Awaiting pickup",
     "Open - In transit"
   })
-  public void shouldNotChangeExpiredRequestInFulfillmentToOpen(String requestStatus) throws Exception {
+  public void shouldNotReopenExpiredRequests(String requestStatus) throws Exception {
     IndividualResource instance = instancesClient.create(smallAngryPlanet(UUID.randomUUID()));
     UUID holdingId = holdingsStorageClient.create(
       new HoldingRequestBuilder()
@@ -162,7 +162,7 @@ public class ItemMarkWithdrawnApiTest extends ApiTests {
     "Closed - Pickup expired",
     "Closed - Unfilled"
   })
-  public void shouldNotChangeClosedRequestToOpen(String requestStatus) throws Exception {
+  public void shouldNotReopenClosedRequests(String requestStatus) throws Exception {
     IndividualResource instance = instancesClient.create(smallAngryPlanet(UUID.randomUUID()));
     UUID holdingId = holdingsStorageClient.create(
       new HoldingRequestBuilder()

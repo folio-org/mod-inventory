@@ -1,11 +1,13 @@
 package org.folio.inventory.support.http.server;
 
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.HttpHeaders;
-import io.vertx.core.http.HttpServerResponse;
+import static io.vertx.core.http.HttpHeaders.CONTENT_LENGTH;
+import static io.vertx.core.http.HttpHeaders.CONTENT_TYPE;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.support.http.client.Response;
+
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpServerResponse;
 
 public class ForwardResponse {
   private ForwardResponse() { }
@@ -23,8 +25,8 @@ public class ForwardResponse {
     if (StringUtils.isNotBlank(body)) {
       Buffer buffer = Buffer.buffer(body, "UTF-8");
 
-      forwardTo.putHeader(HttpHeaders.CONTENT_TYPE, contentType);
-      forwardTo.putHeader(HttpHeaders.CONTENT_LENGTH, Integer.toString(buffer.length()));
+      forwardTo.putHeader(CONTENT_TYPE, contentType);
+      forwardTo.putHeader(CONTENT_LENGTH, Integer.toString(buffer.length()));
 
       forwardTo.write(buffer);
     }

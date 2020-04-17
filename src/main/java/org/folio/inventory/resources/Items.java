@@ -35,7 +35,7 @@ import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.user.User;
 import org.folio.inventory.domain.user.UserCollection;
-import org.folio.inventory.services.ItemService;
+import org.folio.inventory.services.WithdrawItemService;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.Clients;
 import org.folio.inventory.storage.external.CollectionResourceClient;
@@ -98,10 +98,10 @@ public class Items extends AbstractInventoryResource {
   private CompletableFuture<Void> markAsWithdrawn(
     RoutingContext routingContext, WebContext webContext, Clients clients) {
 
-    final ItemService itemService = new ItemService(storage
+    final WithdrawItemService withdrawItemService = new WithdrawItemService(storage
       .getItemCollection(webContext), clients);
 
-    return itemService.processMarkItemWithdrawn(webContext)
+    return withdrawItemService.processMarkItemWithdrawn(webContext)
       .thenAccept(item ->
         respondWithItemRepresentation(item,  HttpStatus.HTTP_CREATED.toInt(),
           routingContext, webContext));
@@ -306,7 +306,7 @@ public class Items extends AbstractInventoryResource {
     ArrayList<CompletableFuture<Response>> allFutures = new ArrayList<>();
 
     List<String> holdingsIds = wrappedItems.records.stream()
-      .map(item -> item.getHoldingId())
+      .map(Item::getHoldingId)
       .filter(Objects::nonNull)
       .distinct()
       .collect(Collectors.toList());
@@ -356,12 +356,12 @@ public class Items extends AbstractInventoryResource {
           instancesResponse.getJson().getJsonArray("instances"));
 
         List<String> materialTypeIds = wrappedItems.records.stream()
-          .map(item -> item.getMaterialTypeId())
+          .map(Item::getMaterialTypeId)
           .filter(Objects::nonNull)
           .distinct()
           .collect(Collectors.toList());
 
-        materialTypeIds.stream().forEach(id -> {
+        materialTypeIds.forEach(id -> {
           CompletableFuture<Response> newFuture = new CompletableFuture<>();
 
           allFutures.add(newFuture);
@@ -371,13 +371,13 @@ public class Items extends AbstractInventoryResource {
         });
 
         List<String> permanentLoanTypeIds = wrappedItems.records.stream()
-          .map(item -> item.getPermanentLoanTypeId())
+          .map(Item::getPermanentLoanTypeId)
           .filter(Objects::nonNull)
           .distinct()
           .collect(Collectors.toList());
 
         List<String> temporaryLoanTypeIds = wrappedItems.records.stream()
-          .map(item -> item.getTemporaryLoanTypeId())
+          .map(Item::getTemporaryLoanTypeId)
           .filter(Objects::nonNull)
           .distinct()
           .collect(Collectors.toList());
@@ -401,13 +401,13 @@ public class Items extends AbstractInventoryResource {
           .collect(Collectors.toList());
 
         List<String> permanentLocationIds = wrappedItems.records.stream()
-          .map(item -> item.getPermanentLocationId())
+          .map(Item::getPermanentLocationId)
           .filter(Objects::nonNull)
           .distinct()
           .collect(Collectors.toList());
 
         List<String> temporaryLocationIds = wrappedItems.records.stream()
-          .map(item -> item.getTemporaryLocationId())
+          .map(Item::getTemporaryLocationId)
           .filter(Objects::nonNull)
           .distinct()
           .collect(Collectors.toList());
