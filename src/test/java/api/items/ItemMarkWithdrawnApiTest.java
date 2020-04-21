@@ -97,7 +97,7 @@ public class ItemMarkWithdrawnApiTest extends ApiTests {
     "Open - Awaiting pickup",
     "Open - In transit"
   })
-  public void shouldChangeRequestBeingFulfillmentBackToNotYetFilled(String requestStatus) throws Exception {
+  public void shouldChangeRequestBeingFulfilledBackToNotYetFilled(String requestStatus) throws Exception {
     IndividualResource instance = instancesClient.create(smallAngryPlanet(UUID.randomUUID()));
     UUID holdingId = holdingsStorageClient.create(
       new HoldingRequestBuilder()

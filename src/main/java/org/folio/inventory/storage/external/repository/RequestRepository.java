@@ -21,8 +21,6 @@ import org.folio.inventory.storage.external.CollectionResourceRepository;
 import org.folio.inventory.storage.external.CqlQuery;
 
 public class RequestRepository {
-  private static final List<String> REQUEST_IN_FULFILLMENT_STATUSES =
-    getRequestInFulfillmentStatuses();
   private final CollectionResourceRepository requestStorageClient;
 
   public RequestRepository(Clients clients) {
@@ -31,7 +29,7 @@ public class RequestRepository {
 
   public CompletableFuture<Optional<Request>> getRequestInFulfilmentForItem(String itemId) {
     final CqlQuery query = exactMatch("itemId", itemId)
-      .and(exactMatchAny("status", REQUEST_IN_FULFILLMENT_STATUSES));
+      .and(exactMatchAny("status", getRequestInFulfillmentStatuses()));
 
     // Only one request in fulfilment is possible
     return requestStorageClient.getMany(query, one(), noOffset())
@@ -45,7 +43,7 @@ public class RequestRepository {
       .thenApply(response -> request);
   }
 
-  private static List<String> getRequestInFulfillmentStatuses() {
+  private List<String> getRequestInFulfillmentStatuses() {
     final List<String> statuses = asList(OPEN_AWAITING_PICKUP.getValue(),
       OPEN_AWAITING_DELIVERY.getValue(), OPEN_IN_TRANSIT.getValue());
 
