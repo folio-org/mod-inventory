@@ -47,9 +47,7 @@ public final class EndpointFailureHandler {
     }
   }
 
-  public static <T> Function<Throwable, T> doExceptionally(
-    RoutingContext context) {
-
+  public static <T> Function<Throwable, T> doExceptionally(RoutingContext context) {
     return failure -> {
       handleFailure(failure, context);
       return null;

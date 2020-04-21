@@ -8,6 +8,8 @@ import static api.support.InstanceSamples.taoOfPooh;
 import static api.support.InstanceSamples.temeraire;
 import static api.support.InstanceSamples.treasureIslandInstance;
 import static api.support.InstanceSamples.uprooted;
+import static io.vertx.core.http.HttpMethod.POST;
+import static io.vertx.core.http.HttpMethod.PUT;
 import static java.util.Arrays.asList;
 import static org.folio.inventory.domain.instances.Instance.TAGS_KEY;
 import static org.folio.inventory.domain.instances.Instance.TAG_LIST_KEY;
@@ -16,6 +18,7 @@ import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
+import static org.joda.time.DateTimeZone.UTC;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
@@ -44,7 +47,6 @@ import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
 import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -58,7 +60,6 @@ import api.support.ApiRoot;
 import api.support.ApiTests;
 import api.support.InstanceApiClient;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import support.fakes.EndpointFailureDescriptor;
@@ -884,11 +885,11 @@ public class InstancesApiExamples extends ApiTests {
     final String expectedErrorMessage = "Instance-storage is temporary unavailable for create";
 
     instancesStorageClient.emulateFailure(new EndpointFailureDescriptor()
-      .setFailureExpireDate(DateTime.now(DateTimeZone.UTC).plusSeconds(2).toDate())
+      .setFailureExpireDate(DateTime.now(UTC).plusSeconds(2).toDate())
       .setBody(expectedErrorMessage)
       .setContentType("plain/text")
       .setStatusCode(500)
-      .setMethod(HttpMethod.POST));
+      .setMethod(POST));
 
     final Response response = instancesClient.attemptToCreate(smallAngryPlanet(UUID.randomUUID()));
 
@@ -904,11 +905,11 @@ public class InstancesApiExamples extends ApiTests {
       .create(smallAngryPlanet(UUID.randomUUID()));
 
     instancesStorageClient.emulateFailure(new EndpointFailureDescriptor()
-      .setFailureExpireDate(DateTime.now(DateTimeZone.UTC).plusSeconds(2).toDate())
+      .setFailureExpireDate(DateTime.now(UTC).plusSeconds(2).toDate())
       .setBody(expectedErrorMessage)
       .setContentType("plain/text")
       .setStatusCode(500)
-      .setMethod(HttpMethod.GET));
+      .setMethod(PUT));
 
     final Response updateResponse = instancesClient
       .attemptToReplace(instance.getId(), instance.getJson().copy()

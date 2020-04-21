@@ -6,14 +6,13 @@ import static org.folio.inventory.support.CompletableFutures.failedFuture;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
-import org.folio.inventory.support.http.server.ValidationError;
 import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.exceptions.UnprocessableEntityException;
+import org.folio.inventory.support.http.server.ValidationError;
 
 public final class InstancesValidators {
 
@@ -54,13 +53,13 @@ public final class InstancesValidators {
     return title.precedingInstanceId == null && title.succeedingInstanceId == null;
   }
 
-  public static CompletionStage<Instance> refuseWhenInstanceNotFound(Instance instance) {
+  public static CompletableFuture<Instance> refuseWhenInstanceNotFound(Instance instance) {
     return instance == null
       ? failedFuture(new NotFoundException("Instance not found"))
       : completedFuture(instance);
   }
 
-  public static CompletionStage<Instance> refuseWhenHridChanged(
+  public static CompletableFuture<Instance> refuseWhenHridChanged(
     Instance existingInstance, Instance updatedInstance) {
 
     return Objects.equals(existingInstance.getHrid(), updatedInstance.getHrid())

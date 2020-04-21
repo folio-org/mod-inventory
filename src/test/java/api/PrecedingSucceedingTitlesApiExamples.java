@@ -142,7 +142,7 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
   }
 
   @Test
-  public void titleIsRequiredToCreateAnInstanceWithUnconnectedSucceedingTitles()
+  public void titleIsRequiredToCreateAnInstanceWithUnconnectedSucceedingTitle()
     throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
 
     final JsonObject succeedingTitle = createSemanticWebUnconnectedTitle(UUID.randomUUID().toString());
@@ -160,7 +160,7 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
   }
 
   @Test
-  public void titleIsRequiredToUpdateAnInstanceWithUnconnectedSucceedingTitles()
+  public void titleIsRequiredToUpdateAnInstanceWithUnconnectedSucceedingTitle()
     throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
 
     final JsonObject succeedingTitle = createSemanticWebUnconnectedTitle(UUID.randomUUID().toString());
