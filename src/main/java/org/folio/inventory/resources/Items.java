@@ -25,6 +25,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.folio.HttpStatus;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
@@ -34,7 +35,9 @@ import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.user.User;
 import org.folio.inventory.domain.user.UserCollection;
+import org.folio.inventory.services.WithdrawItemService;
 import org.folio.inventory.storage.Storage;
+import org.folio.inventory.storage.external.Clients;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.support.CqlHelper;
 import org.folio.inventory.support.EndpointFailureHandler;
@@ -60,25 +63,22 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 
-public class Items {
+public class Items extends AbstractInventoryResource {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private static final String RELATIVE_ITEMS_PATH = "/inventory/items";
 
-  private final Storage storage;
   private static final int STATUS_CREATED = 201;
   private static final int STATUS_SUCCESS = 200;
-
-  private final HttpClient client;
 
   private final DateTimeFormatter dateTimeFormatter =
     DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").withZone(ZoneOffset.UTC);
 
   public Items(final Storage storage, final HttpClient client) {
-    this.storage = storage;
-    this.client = client;
+    super(storage, client);
   }
 
+  @Override
   public void register(Router router) {
     router.post(RELATIVE_ITEMS_PATH + "*").handler(BodyHandler.create());
     router.put(RELATIVE_ITEMS_PATH + "*").handler(BodyHandler.create());
@@ -90,6 +90,21 @@ public class Items {
     router.get(RELATIVE_ITEMS_PATH + "/:id").handler(this::getById);
     router.put(RELATIVE_ITEMS_PATH + "/:id").handler(this::update);
     router.delete(RELATIVE_ITEMS_PATH + "/:id").handler(this::deleteById);
+
+    router.post(RELATIVE_ITEMS_PATH + "/:id/mark-withdrawn")
+      .handler(handle(this::markAsWithdrawn));
+  }
+
+  private CompletableFuture<Void> markAsWithdrawn(
+    RoutingContext routingContext, WebContext webContext, Clients clients) {
+
+    final WithdrawItemService withdrawItemService = new WithdrawItemService(storage
+      .getItemCollection(webContext), clients);
+
+    return withdrawItemService.processMarkItemWithdrawn(webContext)
+      .thenAccept(item ->
+        respondWithItemRepresentation(item,  HttpStatus.HTTP_CREATED.toInt(),
+          routingContext, webContext));
   }
 
   private void getAll(RoutingContext routingContext) {
@@ -291,7 +306,7 @@ public class Items {
     ArrayList<CompletableFuture<Response>> allFutures = new ArrayList<>();
 
     List<String> holdingsIds = wrappedItems.records.stream()
-      .map(item -> item.getHoldingId())
+      .map(Item::getHoldingId)
       .filter(Objects::nonNull)
       .distinct()
       .collect(Collectors.toList());
@@ -341,12 +356,12 @@ public class Items {
           instancesResponse.getJson().getJsonArray("instances"));
 
         List<String> materialTypeIds = wrappedItems.records.stream()
-          .map(item -> item.getMaterialTypeId())
+          .map(Item::getMaterialTypeId)
           .filter(Objects::nonNull)
           .distinct()
           .collect(Collectors.toList());
 
-        materialTypeIds.stream().forEach(id -> {
+        materialTypeIds.forEach(id -> {
           CompletableFuture<Response> newFuture = new CompletableFuture<>();
 
           allFutures.add(newFuture);
@@ -356,13 +371,13 @@ public class Items {
         });
 
         List<String> permanentLoanTypeIds = wrappedItems.records.stream()
-          .map(item -> item.getPermanentLoanTypeId())
+          .map(Item::getPermanentLoanTypeId)
           .filter(Objects::nonNull)
           .distinct()
           .collect(Collectors.toList());
 
         List<String> temporaryLoanTypeIds = wrappedItems.records.stream()
-          .map(item -> item.getTemporaryLoanTypeId())
+          .map(Item::getTemporaryLoanTypeId)
           .filter(Objects::nonNull)
           .distinct()
           .collect(Collectors.toList());
@@ -386,13 +401,13 @@ public class Items {
           .collect(Collectors.toList());
 
         List<String> permanentLocationIds = wrappedItems.records.stream()
-          .map(item -> item.getPermanentLocationId())
+          .map(Item::getPermanentLocationId)
           .filter(Objects::nonNull)
           .distinct()
           .collect(Collectors.toList());
 
         List<String> temporaryLocationIds = wrappedItems.records.stream()
-          .map(item -> item.getTemporaryLocationId())
+          .map(Item::getTemporaryLocationId)
           .filter(Objects::nonNull)
           .distinct()
           .collect(Collectors.toList());

@@ -10,6 +10,10 @@ public class BusinessLogicInterfaceUrls {
     return getUrl("/inventory/items", subPath);
   }
 
+  public static URL markWithdrawn(String subPath) {
+    return items("/" + subPath + "/mark-withdrawn");
+  }
+
   public static URL instances(String subPath) {
     return getUrl("/inventory/instances", subPath);
   }

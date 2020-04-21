@@ -16,10 +16,10 @@ import java.util.stream.Collectors;
 
 import org.folio.inventory.domain.instances.InstanceRelationship;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
+import org.folio.inventory.exceptions.UnprocessableEntityException;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
 import org.folio.inventory.support.http.server.ValidationError;
-import org.folio.inventory.validation.exceptions.UnprocessableEntityException;
 import org.folio.util.StringUtil;
 
 import io.vertx.core.json.JsonObject;

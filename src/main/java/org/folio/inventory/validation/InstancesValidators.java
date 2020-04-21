@@ -12,8 +12,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.support.http.server.ValidationError;
-import org.folio.inventory.validation.exceptions.NotFoundException;
-import org.folio.inventory.validation.exceptions.UnprocessableEntityException;
+import org.folio.inventory.exceptions.NotFoundException;
+import org.folio.inventory.exceptions.UnprocessableEntityException;
 
 public final class InstancesValidators {
 

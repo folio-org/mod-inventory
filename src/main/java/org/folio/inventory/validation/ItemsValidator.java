@@ -8,8 +8,8 @@ import java.util.Objects;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.support.http.server.ValidationError;
-import org.folio.inventory.validation.exceptions.NotFoundException;
-import org.folio.inventory.validation.exceptions.UnprocessableEntityException;
+import org.folio.inventory.exceptions.NotFoundException;
+import org.folio.inventory.exceptions.UnprocessableEntityException;
 
 import io.vertx.core.Future;
 

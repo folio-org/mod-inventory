@@ -48,7 +48,7 @@ import org.folio.inventory.support.http.server.JsonResponse;
 import org.folio.inventory.support.http.server.RedirectResponse;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
 import org.folio.inventory.validation.InstancesValidators;
-import org.folio.inventory.validation.exceptions.UnprocessableEntityException;
+import org.folio.inventory.exceptions.UnprocessableEntityException;
 import org.folio.rest.client.SourceStorageClient;
 import org.folio.rest.jaxrs.model.SuppressFromDiscoveryDto;
 

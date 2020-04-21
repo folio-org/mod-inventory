@@ -36,8 +36,7 @@ public interface AsynchronousCollection<T> {
     final CompletableFuture<T> future = new CompletableFuture<>();
 
     findById(id, success -> future.complete(success.getResult()),
-      failure -> future.completeExceptionally(
-        new InternalServerErrorException(failure.getReason())));
+      failure -> future.completeExceptionally(new InternalServerErrorException(failure.getReason())));
 
     return future;
   }
@@ -53,6 +52,15 @@ public interface AsynchronousCollection<T> {
   void update(T item,
               Consumer<Success<Void>> completionCallback,
               Consumer<Failure> failureCallback);
+
+  default CompletableFuture<T> update(final T item) {
+    final CompletableFuture<T> future = new CompletableFuture<>();
+
+    update(item, success -> future.complete(item),
+      failure -> future.completeExceptionally(new InternalServerErrorException(failure.getReason())));
+
+    return future;
+  }
 
   default void addBatch(List<T> items,
                         Consumer<Success<BatchResult<T>>> resultCallback,
