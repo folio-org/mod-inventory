@@ -3,22 +3,15 @@ package org.folio.inventory.services;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.inventory.domain.items.ItemStatusName.WITHDRAWN;
 import static org.folio.inventory.domain.view.request.RequestStatus.OPEN_NOT_YET_FILLED;
-import static org.folio.inventory.storage.external.CqlQuery.exactMatch;
-import static org.folio.inventory.storage.external.CqlQuery.match;
-import static org.folio.inventory.storage.external.CqlQuery.notEqual;
-import static org.folio.inventory.storage.external.Limit.one;
-import static org.folio.inventory.storage.external.Offset.noOffset;
-import static org.folio.inventory.support.JsonArrayHelper.toList;
 
 import java.util.concurrent.CompletableFuture;
 
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
-import org.folio.inventory.domain.view.request.StoredRequestView;
+import org.folio.inventory.domain.view.request.Request;
 import org.folio.inventory.storage.external.Clients;
-import org.folio.inventory.storage.external.CollectionResourceRepository;
-import org.folio.inventory.storage.external.CqlQuery;
+import org.folio.inventory.storage.external.repository.RequestRepository;
 import org.folio.inventory.validation.ItemMarkAsWithdrawnValidators;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -29,11 +22,11 @@ public class WithdrawItemService {
   private static final Logger log = LoggerFactory.getLogger(WithdrawItemService.class);
 
   private final ItemCollection itemCollection;
-  private final CollectionResourceRepository requestStorageRepository;
+  private final RequestRepository requestRepository;
 
   public WithdrawItemService(ItemCollection itemCollection, Clients clients) {
     this.itemCollection = itemCollection;
-    this.requestStorageRepository = clients.getRequestStorageRepository();
+    this.requestRepository = new RequestRepository(clients);
   }
 
   public CompletableFuture<Item> processMarkItemWithdrawn(WebContext context) {
@@ -48,15 +41,7 @@ public class WithdrawItemService {
   }
 
   private CompletableFuture<Item> updateRequestStatusIfRequired(Item item) {
-    final CqlQuery query = exactMatch("itemId", item.id)
-      .and(match("status", "Open"))
-      .and(notEqual("status", OPEN_NOT_YET_FILLED.getValue()));
-
-    // Only one request in fulfilment is possible
-    return requestStorageRepository.getMany(query, one(), noOffset())
-      .thenApply(response -> response.getJson().getJsonArray("requests"))
-      .thenApply(requests -> toList(requests, json -> new StoredRequestView(json.getMap())))
-      .thenApply(requests -> requests.stream().findFirst())
+    return requestRepository.getRequestInFulfilmentForItem(item.id)
       .thenCompose(requestOptional -> {
         if (!requestOptional.isPresent() || requestIsExpiredOnHoldShelf(requestOptional.get())) {
           log.debug("No request in fulfillment or it is expired");
@@ -69,17 +54,15 @@ public class WithdrawItemService {
       });
   }
 
-  private boolean requestIsExpiredOnHoldShelf(StoredRequestView request) {
+  private boolean requestIsExpiredOnHoldShelf(Request request) {
     return request.getHoldShelfExpirationDate() != null
       && currentDateTime().isAfter(request.getHoldShelfExpirationDate());
   }
 
-  private CompletableFuture<StoredRequestView> moveRequestIntoNotYetFilledStatus(
-    StoredRequestView request) {
-
+  private CompletableFuture<Request> moveRequestIntoNotYetFilledStatus(Request request) {
     request.setStatus(OPEN_NOT_YET_FILLED);
-    return requestStorageRepository.put(request.getId(), request.getMap())
-      .thenApply(notUsed -> request);
+
+    return requestRepository.update(request);
   }
 
   private DateTime currentDateTime() {

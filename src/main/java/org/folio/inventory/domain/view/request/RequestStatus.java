@@ -4,7 +4,9 @@ import java.util.Arrays;
 
 public enum RequestStatus {
   OPEN_NOT_YET_FILLED("Open - Not yet filled"),
-  OPEN_AWAITING_PICKUP("Open - Awaiting pickup");
+  OPEN_AWAITING_PICKUP("Open - Awaiting pickup"),
+  OPEN_AWAITING_DELIVERY("Open - Awaiting delivery"),
+  OPEN_IN_TRANSIT("Open - In transit");
 
   private final String value;
 
