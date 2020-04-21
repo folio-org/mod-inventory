@@ -21,7 +21,7 @@ import org.folio.inventory.storage.external.CollectionResourceRepository;
 import org.folio.inventory.storage.external.CqlQuery;
 
 public class RequestRepository {
-  private final static List<String> REQUEST_IN_FULFILLMENT_STATUSES =
+  private static final List<String> REQUEST_IN_FULFILLMENT_STATUSES =
     getRequestInFulfillmentStatuses();
   private final CollectionResourceRepository requestStorageClient;
 
