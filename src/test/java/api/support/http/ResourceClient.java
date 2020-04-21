@@ -114,6 +114,11 @@ public class ResourceClient {
       "Instance relationship types", "instanceRelationshipTypes");
   }
 
+  public static ResourceClient forRequestStorage(OkapiHttpClient okapiClient) {
+    return new ResourceClient(okapiClient, StorageInterfaceUrls::requestStorageUrl,
+      "request storage", "requests");
+  }
+
   private ResourceClient(
     OkapiHttpClient client,
     UrlMaker urlMaker, String resourceName,

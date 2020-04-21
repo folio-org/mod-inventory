@@ -1,12 +1,13 @@
 package org.folio.inventory.support;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import java.util.ArrayList;
-
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 public class JsonArrayHelper {
   public static List<JsonObject> toList(JsonArray array) {
@@ -20,7 +21,7 @@ public class JsonArrayHelper {
           return null;
         }
       })
-      .filter(it -> it != null)
+      .filter(Objects::nonNull)
       .collect(Collectors.toList());
   }
 
@@ -34,9 +35,9 @@ public class JsonArrayHelper {
     return list;
   }
 
-  public static List<Map> toListOfMaps(JsonArray array) {
-    return JsonArrayHelper.toList(array).stream()
-      .map(it -> it.getMap())
+  public static <T> List<T> toList(JsonArray array, Function<JsonObject, T> mapper) {
+    return toList(array).stream()
+      .map(mapper)
       .collect(Collectors.toList());
   }
 }

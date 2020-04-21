@@ -1,12 +1,13 @@
 package org.folio.inventory.storage.external;
 
-import io.vertx.core.Handler;
-import io.vertx.core.http.HttpClientResponse;
+import java.net.URL;
+import java.util.function.Consumer;
+
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
 
-import java.net.URL;
-import java.util.function.Consumer;
+import io.vertx.core.Handler;
+import io.vertx.core.http.HttpClientResponse;
 
 public class CollectionResourceClient {
 

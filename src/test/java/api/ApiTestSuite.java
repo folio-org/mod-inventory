@@ -25,6 +25,7 @@ import api.isbns.IsbnUtilsApiExamples;
 import api.items.ItemAllowedStatusesSchemaTest;
 import api.items.ItemApiExamples;
 import api.items.ItemApiTitleExamples;
+import api.items.ItemMarkWithdrawnApiTest;
 import api.support.ControlledVocabularyPreparation;
 import api.support.http.ResourceClient;
 import api.tenant.TenantApiExamples;
@@ -45,7 +46,8 @@ import support.fakes.FakeOkapi;
   PrecedingSucceedingTitlesApiExamples.class,
   InstanceRelationshipsTest.class,
   EventHandlersApiTest.class,
-  HoldingApiExample.class
+  HoldingApiExample.class,
+  ItemMarkWithdrawnApiTest.class
 })
 public class ApiTestSuite {
   public static final int INVENTORY_VERTICLE_TEST_PORT = 9603;

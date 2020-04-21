@@ -1,14 +1,14 @@
 package org.folio.inventory.support;
 
+import static org.folio.inventory.support.http.server.ForwardResponse.forward;
 import static org.folio.inventory.support.http.server.JsonResponse.unprocessableEntity;
 
 import org.folio.inventory.exceptions.AbstractInventoryException;
-import org.folio.inventory.storage.external.exceptions.ExternalResourceFetchException;
+import org.folio.inventory.exceptions.ExternalResourceFetchException;
+import org.folio.inventory.exceptions.NotFoundException;
+import org.folio.inventory.exceptions.UnprocessableEntityException;
 import org.folio.inventory.support.http.server.ClientErrorResponse;
-import org.folio.inventory.support.http.server.ForwardResponse;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
-import org.folio.inventory.validation.exceptions.NotFoundException;
-import org.folio.inventory.validation.exceptions.UnprocessableEntityException;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.ext.web.RoutingContext;
@@ -24,25 +24,36 @@ public final class EndpointFailureHandler {
   }
 
   public static void handleFailure(Throwable failure, RoutingContext context) {
-    if (failure instanceof UnprocessableEntityException) {
+    final Throwable failureToHandle = getKnownException(failure);
+
+    if (failureToHandle instanceof UnprocessableEntityException) {
       UnprocessableEntityException validationFailure =
-        (UnprocessableEntityException) failure;
+        (UnprocessableEntityException) failureToHandle;
 
-      unprocessableEntity(context.response(), validationFailure.getValidationError());
-    } else if (failure instanceof NotFoundException) {
-      ClientErrorResponse.notFound(context.response(), failure.getMessage());
-    } else if (failure instanceof ExternalResourceFetchException) {
+      unprocessableEntity(context.response(), validationFailure.getMessage(),
+        validationFailure.getPropertyName(), validationFailure.getPropertyValue());
+    } else if (failureToHandle instanceof NotFoundException) {
+      ClientErrorResponse.notFound(context.response(), failureToHandle.getMessage());
+    } else if (failureToHandle instanceof ExternalResourceFetchException) {
       final ExternalResourceFetchException externalException =
-        (ExternalResourceFetchException) failure;
+        (ExternalResourceFetchException) failureToHandle;
 
-      ForwardResponse.forward(context.response(), externalException.getFailedResponse());
+      forward(context.response(), externalException.getBody(), externalException.getStatusCode(),
+        externalException.getContentType());
     } else {
-      ServerErrorResponse.internalError(context.response(), failure);
+      ServerErrorResponse.internalError(context.response(), failureToHandle);
     }
   }
 
   public static Throwable getKnownException(Throwable throwable) {
-    return throwable.getCause() instanceof AbstractInventoryException
-      ? throwable.getCause() : throwable;
+    if (throwable instanceof AbstractInventoryException) {
+      return throwable;
+    }
+
+    if (throwable.getCause() instanceof AbstractInventoryException) {
+      return throwable.getCause();
+    }
+
+    return throwable;
   }
 }
