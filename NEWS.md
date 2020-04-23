@@ -1,3 +1,7 @@
+## 14.1.3 2020-04-23
+
+* Update data-import-processing-core dependency to v1.1.2, mod-pubsub-client dependency to v1.1.4, mod-source-record-storage-client to v3.1.4 (MODINV-281)
+
 ## 14.1.2 2020-04-09
 
 * Fix processing of job profiles in json format by MatchEngine when trying to match on existing inventory Instances (MODINV-271)
