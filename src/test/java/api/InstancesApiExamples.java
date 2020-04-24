@@ -71,8 +71,8 @@ public class InstancesApiExamples extends ApiTests {
   private final String tagNameTwo = "very important";
 
   @After
-  public void expireFailureEmulation() throws Exception {
-    instancesStorageClient.expireFailureEmulation();
+  public void disableFailureEmulation() throws Exception {
+    instancesStorageClient.disableFailureEmulation();
   }
 
   @Test

@@ -362,7 +362,7 @@ public class ResourceClient {
     assertThat(future.get(5, TimeUnit.SECONDS).getStatusCode(), is(201));
   }
 
-  public void expireFailureEmulation()
+  public void disableFailureEmulation()
     throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
 
     emulateFailure(new EndpointFailureDescriptor()
