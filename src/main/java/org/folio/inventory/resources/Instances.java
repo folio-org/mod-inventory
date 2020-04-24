@@ -47,6 +47,7 @@ import org.folio.inventory.support.http.server.FailureResponseConsumer;
 import org.folio.inventory.support.http.server.JsonResponse;
 import org.folio.inventory.support.http.server.RedirectResponse;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
+import org.folio.inventory.validation.InstancePrecedingSucceedingTitleValidators;
 import org.folio.inventory.validation.InstancesValidators;
 import org.folio.inventory.exceptions.UnprocessableEntityException;
 import org.folio.rest.client.SourceStorageClient;
@@ -172,7 +173,7 @@ public class Instances extends AbstractInstances {
     Instance newInstance = InstanceUtil.jsonToInstance(instanceRequest);
 
     completedFuture(newInstance)
-      .thenCompose(InstancesValidators::refuseWhenNoTitleForPrecedingSucceedingUnconnectedTitle)
+      .thenCompose(InstancePrecedingSucceedingTitleValidators::refuseWhenUnconnectedHasNoTitle)
       .thenCompose(instance -> storage.getInstanceCollection(context).add(instance))
       .thenCompose(response -> {
         response.setParentInstances(newInstance.getParentInstances());
@@ -200,7 +201,7 @@ public class Instances extends AbstractInstances {
     InstanceCollection instanceCollection = storage.getInstanceCollection(wContext);
 
     completedFuture(updatedInstance)
-      .thenCompose(InstancesValidators::refuseWhenNoTitleForPrecedingSucceedingUnconnectedTitle)
+      .thenCompose(InstancePrecedingSucceedingTitleValidators::refuseWhenUnconnectedHasNoTitle)
       .thenCompose(instance -> instanceCollection.findById(rContext.request().getParam("id")))
       .thenCompose(InstancesValidators::refuseWhenInstanceNotFound)
       .thenCompose(existingInstance -> refuseWhenBlockedFieldsChanged(existingInstance, updatedInstance))

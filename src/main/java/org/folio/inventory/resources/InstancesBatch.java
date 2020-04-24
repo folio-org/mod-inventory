@@ -5,7 +5,7 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.inventory.support.EndpointFailureHandler.getKnownException;
 import static org.folio.inventory.support.EndpointFailureHandler.handleFailure;
 import static org.folio.inventory.support.JsonArrayHelper.toList;
-import static org.folio.inventory.validation.InstancesValidators.isTitleMissingForUnconnectedPrecedingSucceeding;
+import static org.folio.inventory.validation.InstancePrecedingSucceedingTitleValidators.isTitleMissingForUnconnectedPrecedingSucceeding;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
