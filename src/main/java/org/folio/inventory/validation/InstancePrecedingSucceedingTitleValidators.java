@@ -20,12 +20,16 @@ public final class InstancePrecedingSucceedingTitleValidators {
     Instance instance) {
 
     final ValidationError succeedingError = new ValidationError(
-      "Title is required for unconnected succeeding title", "succeedingTitles.title", null);
+      "Title is required for unconnected succeeding title",
+      "succeedingTitles.title", null);
     final ValidationError precedingError = new ValidationError(
-      "Title is required for unconnected preceding title", "precedingTitles.title", null);
+      "Title is required for unconnected preceding title",
+      "precedingTitles.title", null);
 
-    return refuseWhenUnconnectedHasNoTitle(instance, instance.getSucceedingTitles(), succeedingError)
-      .thenCompose(prev -> refuseWhenUnconnectedHasNoTitle(instance, instance.getPrecedingTitles(), precedingError));
+    return refuseWhenUnconnectedHasNoTitle(instance, instance.getSucceedingTitles(),
+      succeedingError)
+      .thenCompose(prev -> refuseWhenUnconnectedHasNoTitle(instance, instance
+        .getPrecedingTitles(), precedingError));
 
   }
 
@@ -37,7 +41,9 @@ public final class InstancePrecedingSucceedingTitleValidators {
       : completedFuture(instance);
   }
 
-  public static boolean isTitleMissingForUnconnectedPrecedingSucceeding(List<PrecedingSucceedingTitle> titles) {
+  public static boolean isTitleMissingForUnconnectedPrecedingSucceeding(
+    List<PrecedingSucceedingTitle> titles) {
+
     if (titles == null || titles.isEmpty()) {
       return false;
     }
