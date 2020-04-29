@@ -33,12 +33,14 @@ public class EventHandlers {
 
   private static final String DATA_IMPORT_EVENT_HANDLER_PATH = "/inventory/handlers/data-import";
 
+  private WorkerExecutor executor;
+
   public EventHandlers(final Storage storage) {
     Vertx vertx = Vertx.vertx();
-    WorkerExecutor executor = vertx.createSharedWorkerExecutor("value-loader-thread-pool");
-    MatchValueLoaderFactory.register(new InstanceLoader(storage, executor));
-    MatchValueLoaderFactory.register(new ItemLoader(storage, executor));
-    MatchValueLoaderFactory.register(new HoldingLoader(storage, executor));
+    this.executor = vertx.createSharedWorkerExecutor("di-event-handling-thread-pool");
+    MatchValueLoaderFactory.register(new InstanceLoader(storage, vertx));
+    MatchValueLoaderFactory.register(new ItemLoader(storage, vertx));
+    MatchValueLoaderFactory.register(new HoldingLoader(storage, vertx));
 
     MatchValueReaderFactory.register(new MarcValueReaderImpl());
 
@@ -66,7 +68,7 @@ public class EventHandlers {
     try {
       JsonObject requestBody = routingContext.getBodyAsJson();
       DataImportEventPayload eventPayload = requestBody.mapTo(DataImportEventPayload.class);
-      routingContext.vertx().executeBlocking(blockingFuture -> EventManager.handleEvent(eventPayload), null);
+      executor.executeBlocking(blockingFuture -> EventManager.handleEvent(eventPayload), null);
       SuccessResponse.noContent(routingContext.response());
     } catch (Exception e) {
       ServerErrorResponse.internalError(routingContext.response(), e);
