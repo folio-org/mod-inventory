@@ -1,6 +1,6 @@
 #%RAML 1.0
 title: Inventory API
-version: v10.3
+version: v10.4
 protocols: [ HTTP, HTTPS ]
 baseUri: http://localhost
 
@@ -21,6 +21,7 @@ traits:
   language: !include raml-util/traits/language.raml
   pageable: !include raml-util/traits/pageable.raml
   searchable: !include raml-util/traits/searchable.raml
+  validate: !include raml-util/traits/validation.raml
 
 resourceTypes:
   collection: !include raml-util/rtypes/collection.raml
@@ -90,6 +91,7 @@ resourceTypes:
             example: "title=\"uproot*\""}
           ]
     post:
+      is: [validate]
     delete:
       responses:
         204:
@@ -100,6 +102,8 @@ resourceTypes:
           exampleItem: !include examples/instance_get.json
           schema: instance
       get:
+      put:
+        is: [validate]
     /context:
       get:
         description: "Provides Dublin Core context for instances"
