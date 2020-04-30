@@ -3,6 +3,8 @@ package org.folio.inventory.support;
 import static org.folio.inventory.support.http.server.ForwardResponse.forward;
 import static org.folio.inventory.support.http.server.JsonResponse.unprocessableEntity;
 
+import java.util.function.Function;
+
 import org.folio.inventory.exceptions.AbstractInventoryException;
 import org.folio.inventory.exceptions.ExternalResourceFetchException;
 import org.folio.inventory.exceptions.NotFoundException;
@@ -43,6 +45,13 @@ public final class EndpointFailureHandler {
     } else {
       ServerErrorResponse.internalError(context.response(), failureToHandle);
     }
+  }
+
+  public static <T> Function<Throwable, T> doExceptionally(RoutingContext context) {
+    return failure -> {
+      handleFailure(failure, context);
+      return null;
+    };
   }
 
   public static Throwable getKnownException(Throwable throwable) {

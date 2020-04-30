@@ -21,6 +21,7 @@ public abstract class ApiTests {
   protected final ResourceClient itemsStorageClient;
   protected final ResourceClient itemsClient;
   protected final ResourceClient instancesClient;
+  protected final ResourceClient instancesStorageClient;
   protected final ResourceClient isbnClient;
   protected final ResourceClient usersClient;
   protected final ResourceClient instancesBatchClient;
@@ -35,6 +36,7 @@ public abstract class ApiTests {
     itemsStorageClient = ResourceClient.forItemsStorage(okapiClient);
     itemsClient = ResourceClient.forItems(okapiClient);
     instancesClient = ResourceClient.forInstances(okapiClient);
+    instancesStorageClient = ResourceClient.forInstancesStorage(okapiClient);
     isbnClient = ResourceClient.forIsbns(okapiClient);
     usersClient = ResourceClient.forUsers(okapiClient);
     instancesBatchClient = ResourceClient.forInstancesBatch(okapiClient);

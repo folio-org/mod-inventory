@@ -8,6 +8,8 @@ import static api.support.InstanceSamples.taoOfPooh;
 import static api.support.InstanceSamples.temeraire;
 import static api.support.InstanceSamples.treasureIslandInstance;
 import static api.support.InstanceSamples.uprooted;
+import static io.vertx.core.http.HttpMethod.POST;
+import static io.vertx.core.http.HttpMethod.PUT;
 import static java.util.Arrays.asList;
 import static org.folio.inventory.domain.instances.Instance.TAGS_KEY;
 import static org.folio.inventory.domain.instances.Instance.TAG_LIST_KEY;
@@ -16,6 +18,7 @@ import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
+import static org.joda.time.DateTimeZone.UTC;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
@@ -40,8 +43,11 @@ import org.apache.http.message.BasicHeader;
 import org.folio.inventory.config.InventoryConfiguration;
 import org.folio.inventory.config.InventoryConfigurationImpl;
 import org.folio.inventory.support.JsonArrayHelper;
+import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
+import org.joda.time.DateTime;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -56,6 +62,7 @@ import api.support.InstanceApiClient;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import support.fakes.EndpointFailureDescriptor;
 
 public class InstancesApiExamples extends ApiTests {
 
@@ -63,8 +70,9 @@ public class InstancesApiExamples extends ApiTests {
   private final String tagNameOne = "important";
   private final String tagNameTwo = "very important";
 
-  public InstancesApiExamples() throws MalformedURLException {
-    super();
+  @After
+  public void disableFailureEmulation() throws Exception {
+    instancesStorageClient.disableFailureEmulation();
   }
 
   @Test
@@ -140,12 +148,12 @@ public class InstancesApiExamples extends ApiTests {
     final JsonObject tags = createdInstance.getJsonObject(TAGS_KEY);
     assertTrue(tags.containsKey(TAG_LIST_KEY));
     final JsonArray tagList = tags.getJsonArray(TAG_LIST_KEY);
-    assertThat((ArrayList<String>)tagList.getList(), hasItem(tagNameOne));
+    assertThat(tagList, hasItem(tagNameOne));
 
     JsonArray natureOfContentTermIds = createdInstance.getJsonArray("natureOfContentTermIds");
     assertThat(natureOfContentTermIds.size(), is(2));
-    assertThat((ArrayList<String>)natureOfContentTermIds.getList(), hasItem(ApiTestSuite.getAudiobookNatureOfContentTermId()));
-    assertThat((ArrayList<String>)natureOfContentTermIds.getList(), hasItem(ApiTestSuite.getBibliographyNatureOfContentTermId()));
+    assertThat(natureOfContentTermIds, hasItem(ApiTestSuite.getAudiobookNatureOfContentTermId()));
+    assertThat(natureOfContentTermIds, hasItem(ApiTestSuite.getBibliographyNatureOfContentTermId()));
 
     expressesDublinCoreMetadata(createdInstance);
     dublinCoreContextLinkRespectsWayResourceWasReached(createdInstance);
@@ -278,7 +286,7 @@ public class InstancesApiExamples extends ApiTests {
     final JsonObject tags = createdAngryPlanetInstance.getJsonObject(TAGS_KEY);
     assertTrue(tags.containsKey(TAG_LIST_KEY));
     final JsonArray tagList = tags.getJsonArray(TAG_LIST_KEY);
-    assertThat((ArrayList<String>)tagList.getList(), hasItems(tagNameOne, tagNameTwo));
+    assertThat(tagList, hasItems(tagNameOne, tagNameTwo));
 
     // Get and assert treasureIslandInstance
     CompletableFuture<Response> getTreasureIslandInstanceCompleted = new CompletableFuture<>();
@@ -402,8 +410,7 @@ public class InstancesApiExamples extends ApiTests {
 
     JsonObject smallAngryPlanet = smallAngryPlanet(id);
     smallAngryPlanet.put("natureOfContentTermIds",
-      new JsonArray(asList(ApiTestSuite.getBibliographyNatureOfContentTermId()))
-    );
+      new JsonArray().add(ApiTestSuite.getBibliographyNatureOfContentTermId()));
 
     JsonObject newInstance = createInstance(smallAngryPlanet);
 
@@ -411,8 +418,7 @@ public class InstancesApiExamples extends ApiTests {
       .put("title", "The Long Way to a Small, Angry Planet")
       .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameTwo)))
       .put("natureOfContentTermIds",
-        new JsonArray(asList(ApiTestSuite.getAudiobookNatureOfContentTermId()))
-      );
+        new JsonArray().add(ApiTestSuite.getAudiobookNatureOfContentTermId()));
 
     URL instanceLocation = new URL(String.format("%s/%s", ApiRoot.instances(),
       newInstance.getString("id")));
@@ -444,7 +450,7 @@ public class InstancesApiExamples extends ApiTests {
     final JsonObject tags = updatedInstance.getJsonObject(TAGS_KEY);
     assertTrue(tags.containsKey(TAG_LIST_KEY));
     final JsonArray tagList = tags.getJsonArray(TAG_LIST_KEY);
-    assertThat((ArrayList<String>)tagList.getList(), hasItem(tagNameTwo));
+    assertThat(tagList, hasItem(tagNameTwo));
 
     JsonArray natureOfContentTermIds = updatedInstance.getJsonArray("natureOfContentTermIds");
     assertThat(natureOfContentTermIds.size(), is(1));
@@ -474,6 +480,7 @@ public class InstancesApiExamples extends ApiTests {
     Response putResponse = putCompleted.get(5, TimeUnit.SECONDS);
 
     assertThat(putResponse.getStatusCode(), is(404));
+    assertThat(putResponse.getBody(), is("Instance not found"));
   }
 
   @Test
@@ -557,7 +564,7 @@ public class InstancesApiExamples extends ApiTests {
     assertNotNull(putResponse.getJson().getJsonArray("errors"));
     JsonArray errors = putResponse.getJson().getJsonArray("errors");
     assertThat(errors.size(), is(1));
-    assertThat(errors.getString(0), is(
+    assertThat(errors.getJsonObject(0).getString("message"), is(
       "Instance is controlled by MARC record, these fields are blocked and can not be updated: " +
         "physicalDescriptions,notes,languages,identifiers,instanceTypeId,modeOfIssuanceId,subjects," +
         "source,title,indexTitle,publicationFrequency,electronicAccess,publicationRange," +
@@ -631,7 +638,7 @@ public class InstancesApiExamples extends ApiTests {
     createInstance(nod(UUID.randomUUID()));
     createInstance(leviathanWakes(UUID.randomUUID()));
 
-    CompletableFuture<Response> deleteCompleted = new CompletableFuture<Response>();
+    CompletableFuture<Response> deleteCompleted = new CompletableFuture<>();
 
     okapiClient.delete(ApiRoot.instances(), ResponseHandler.any(deleteCompleted));
 
@@ -873,8 +880,47 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(existingInstance, is(createdInstance));
   }
 
+  @Test
+  public void canFrowardInstanceCreateFailureFromStorage() throws Exception {
+    final String expectedErrorMessage = "Instance-storage is temporary unavailable for create";
+
+    instancesStorageClient.emulateFailure(new EndpointFailureDescriptor()
+      .setFailureExpireDate(DateTime.now(UTC).plusSeconds(2).toDate())
+      .setBody(expectedErrorMessage)
+      .setContentType("plain/text")
+      .setStatusCode(500)
+      .setMethod(POST));
+
+    final Response response = instancesClient.attemptToCreate(smallAngryPlanet(UUID.randomUUID()));
+
+    assertThat(response.getStatusCode(), is(500));
+    assertThat(response.getBody(), is(expectedErrorMessage));
+  }
+
+  @Test
+  public void canFrowardInstanceUpdateFailureFromStorage() throws Exception {
+    final String expectedErrorMessage = "Instance-storage is temporary unavailable for updates";
+
+    final IndividualResource instance = instancesClient
+      .create(smallAngryPlanet(UUID.randomUUID()));
+
+    instancesStorageClient.emulateFailure(new EndpointFailureDescriptor()
+      .setFailureExpireDate(DateTime.now(UTC).plusSeconds(2).toDate())
+      .setBody(expectedErrorMessage)
+      .setContentType("plain/text")
+      .setStatusCode(500)
+      .setMethod(PUT));
+
+    final Response updateResponse = instancesClient
+      .attemptToReplace(instance.getId(), instance.getJson().copy()
+        .put("subjects", new JsonArray().add("Small angry planet subject")));
+
+    assertThat(updateResponse.getStatusCode(), is(500));
+    assertThat(updateResponse.getBody(), is(expectedErrorMessage));
+  }
+
   private void hasCollectionProperties(List<JsonObject> instances) {
-    instances.stream().forEach(instance -> {
+    instances.forEach(instance -> {
       try {
         expressesDublinCoreMetadata(instance);
       } catch (JsonLdError jsonLdError) {
@@ -882,13 +928,11 @@ public class InstancesApiExamples extends ApiTests {
       }
     });
 
-    instances.stream().forEach(instance ->
-      dublinCoreContextLinkRespectsWayResourceWasReached(instance));
+    instances.forEach(InstancesApiExamples::dublinCoreContextLinkRespectsWayResourceWasReached);
 
-    instances.stream().forEach(instance ->
-      selfLinkRespectsWayResourceWasReached(instance));
+    instances.forEach(InstancesApiExamples::selfLinkRespectsWayResourceWasReached);
 
-    instances.stream().forEach(instance -> {
+    instances.forEach(instance -> {
       try {
         selfLinkShouldBeReachable(instance);
       } catch (Exception e) {

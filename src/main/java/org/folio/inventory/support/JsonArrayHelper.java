@@ -1,6 +1,7 @@
 package org.folio.inventory.support;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
@@ -11,6 +12,10 @@ import io.vertx.core.json.JsonObject;
 
 public class JsonArrayHelper {
   public static List<JsonObject> toList(JsonArray array) {
+    if (array == null) {
+      return Collections.emptyList();
+    }
+
     return array
       .stream()
       .map(it -> {

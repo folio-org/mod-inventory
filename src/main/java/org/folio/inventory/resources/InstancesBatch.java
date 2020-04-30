@@ -4,6 +4,8 @@ import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.inventory.support.EndpointFailureHandler.getKnownException;
 import static org.folio.inventory.support.EndpointFailureHandler.handleFailure;
+import static org.folio.inventory.support.JsonArrayHelper.toList;
+import static org.folio.inventory.validation.InstancePrecedingSucceedingTitleValidators.isTitleMissingForUnconnectedPrecedingSucceeding;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -19,6 +21,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.domain.BatchResult;
 import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.InstanceUtil;
 import org.folio.inventory.support.http.server.RedirectResponse;
@@ -131,6 +134,20 @@ public class InstancesBatch extends AbstractInstances {
       log.error(errorMessage);
       errorMessages.add(errorMessage);
     }
+
+    final List<PrecedingSucceedingTitle> precedingTitles = toList(jsonInstance
+      .getJsonArray(Instance.PRECEDING_TITLES_KEY), PrecedingSucceedingTitle::from);
+    final List<PrecedingSucceedingTitle> succeedingTitles = toList(jsonInstance
+      .getJsonArray(Instance.SUCCEEDING_TITLES_KEY), PrecedingSucceedingTitle::from);
+
+    if (isTitleMissingForUnconnectedPrecedingSucceeding(precedingTitles)) {
+      errorMessages.add("Title is required for unconnected preceding title");
+    }
+
+    if (isTitleMissingForUnconnectedPrecedingSucceeding(succeedingTitles)) {
+      errorMessages.add("Title is required for unconnected succeeding title");
+    }
+
     return errorMessages;
   }
 

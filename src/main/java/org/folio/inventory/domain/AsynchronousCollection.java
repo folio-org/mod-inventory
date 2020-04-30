@@ -18,6 +18,16 @@ public interface AsynchronousCollection<T> {
            Consumer<Success<T>> resultCallback,
            Consumer<Failure> failureCallback);
 
+  default CompletableFuture<T> add(T item) {
+    final CompletableFuture<T> future = new CompletableFuture<>();
+
+    add(item, success -> future.complete(success.getResult()),
+      failure -> future.completeExceptionally(
+        new InternalServerErrorException(failure.getReason())));
+
+    return future;
+  }
+
   void findById(String id,
                 Consumer<Success<T>> resultCallback,
                 Consumer<Failure> failureCallback);

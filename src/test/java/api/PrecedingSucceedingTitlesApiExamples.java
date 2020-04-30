@@ -4,15 +4,24 @@ import static api.support.InstanceSamples.nod;
 import static api.support.InstanceSamples.smallAngryPlanet;
 import static api.support.InstanceSamples.taoOfPooh;
 import static api.support.InstanceSamples.uprooted;
+import static org.folio.inventory.domain.instances.Instance.PRECEDING_TITLES_KEY;
+import static org.folio.inventory.domain.instances.Instance.SUCCEEDING_TITLES_KEY;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.junit.Assert.assertThat;
+import static support.matchers.ResponseMatchers.hasValidationError;
 
 import java.net.MalformedURLException;
+import java.util.Arrays;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
+import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
 import org.junit.Test;
@@ -130,6 +139,135 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
     assertPrecedingSucceedingTitles(instanceResponse.getJson().getJsonArray("succeedingTitles")
         .getJsonObject(0), newSucceedingTitle, createdInstance.getId().toString(),
       null);
+  }
+
+  @Test
+  public void titleIsRequiredToCreateAnInstanceWithUnconnectedSucceedingTitle()
+    throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+
+    final JsonObject succeedingTitle = createSemanticWebUnconnectedTitle(UUID.randomUUID().toString());
+    succeedingTitle.remove("title");
+
+    final JsonObject smallAngryPlanetJson = smallAngryPlanet(UUID.randomUUID())
+      .put(SUCCEEDING_TITLES_KEY, new JsonArray()
+        .add(createSemanticWebUnconnectedTitle(UUID.randomUUID().toString()))
+        .add(succeedingTitle));
+
+    final Response response = instancesClient.attemptToCreate(smallAngryPlanetJson);
+
+    assertThat(response, hasValidationError("Title is required for unconnected succeeding title",
+      SUCCEEDING_TITLES_KEY + ".title", null));
+  }
+
+  @Test
+  public void titleIsRequiredToUpdateAnInstanceWithUnconnectedSucceedingTitle()
+    throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+
+    final JsonObject succeedingTitle = createSemanticWebUnconnectedTitle(UUID.randomUUID().toString());
+    final JsonObject smallAngryPlanetJson = smallAngryPlanet(UUID.randomUUID())
+      .put(SUCCEEDING_TITLES_KEY, new JsonArray()
+        .add(succeedingTitle));
+
+    final IndividualResource createdInstance = instancesClient.create(smallAngryPlanetJson);
+
+    final JsonObject newSucceedingTitle = succeedingTitle.copy();
+    newSucceedingTitle.remove("title");
+
+    final Response response = instancesClient.attemptToReplace(createdInstance.getId(),
+      createdInstance.getJson().copy().put(SUCCEEDING_TITLES_KEY, new JsonArray()
+        .add(succeedingTitle)
+        .add(newSucceedingTitle)));
+
+    assertThat(response, hasValidationError("Title is required for unconnected succeeding title",
+      SUCCEEDING_TITLES_KEY + ".title", null));
+  }
+
+  @Test
+  public void titleIsRequiredToCreateAnInstanceWithUnconnectedPrecedingTitles()
+    throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+
+    final JsonObject precedingTitle = createSemanticWebUnconnectedTitle(UUID.randomUUID().toString());
+    precedingTitle.remove("title");
+
+    final JsonObject smallAngryPlanetJson = smallAngryPlanet(UUID.randomUUID())
+      .put(PRECEDING_TITLES_KEY, new JsonArray()
+        .add(createSemanticWebUnconnectedTitle(UUID.randomUUID().toString()))
+        .add(precedingTitle));
+
+    final Response response = instancesClient.attemptToCreate(smallAngryPlanetJson);
+
+    assertThat(response, hasValidationError("Title is required for unconnected preceding title",
+      PRECEDING_TITLES_KEY + ".title", null));
+  }
+
+  @Test
+  public void titleIsRequiredToUpdateAnInstanceWithUnconnectedPrecedingTitles()
+    throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+
+    final JsonObject precedingTitle = createSemanticWebUnconnectedTitle(UUID.randomUUID().toString());
+    final JsonObject smallAngryPlanetJson = smallAngryPlanet(UUID.randomUUID())
+      .put(PRECEDING_TITLES_KEY, new JsonArray().add(precedingTitle));
+
+    final IndividualResource createdInstance = instancesClient.create(smallAngryPlanetJson);
+
+    final JsonObject newPrecedingTitle = precedingTitle.copy();
+    newPrecedingTitle.remove("title");
+
+    final Response response = instancesClient.attemptToReplace(createdInstance.getId(),
+      createdInstance.getJson().copy().put(PRECEDING_TITLES_KEY, new JsonArray()
+        .add(precedingTitle)
+        .add(newPrecedingTitle)));
+
+    assertThat(response, hasValidationError("Title is required for unconnected preceding title",
+      PRECEDING_TITLES_KEY + ".title", null));
+  }
+
+  @Test
+  public void titleIsRequiredToCreateInstancesUsingBatch()
+    throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+
+    final JsonObject instanceWithValidPrecedingTitle = smallAngryPlanet(UUID.randomUUID())
+      .put(PRECEDING_TITLES_KEY, new JsonArray()
+        .add(createOpenBibliographyUnconnectedTitle(UUID.randomUUID().toString())));
+
+    final JsonObject unconnectedTitleNoTitle = createOpenBibliographyUnconnectedTitle(
+      UUID.randomUUID().toString());
+    unconnectedTitleNoTitle.remove("title");
+
+    final JsonObject instanceWithInvalidPrecedingTitle = smallAngryPlanet(UUID.randomUUID())
+      .put(PRECEDING_TITLES_KEY, new JsonArray().add(unconnectedTitleNoTitle));
+
+    final JsonObject instanceWithValidSucceedingTitle = smallAngryPlanet(UUID.randomUUID())
+      .put(SUCCEEDING_TITLES_KEY, new JsonArray()
+        .add(createSemanticWebUnconnectedTitle(UUID.randomUUID().toString())));
+
+    final JsonObject semanticWebUnconnectedTitleNoTitle = createSemanticWebUnconnectedTitle(
+      UUID.randomUUID().toString());
+    semanticWebUnconnectedTitleNoTitle.remove("title");
+
+    final JsonObject instanceWithInvalidSucceedingTitle = smallAngryPlanet(UUID.randomUUID())
+      .put(SUCCEEDING_TITLES_KEY, new JsonArray().add(semanticWebUnconnectedTitleNoTitle));
+
+
+    final JsonObject request = new JsonObject()
+      .put("instances", new JsonArray().add(instanceWithInvalidPrecedingTitle)
+        .add(instanceWithValidPrecedingTitle)
+        .add(instanceWithValidSucceedingTitle)
+        .add(instanceWithInvalidSucceedingTitle))
+      .put("totalRecords", 4);
+
+    final JsonObject response = instancesBatchClient.create(request)
+      .getJson();
+
+    assertThat(response.getJsonArray("errorMessages").size(), is(2));
+
+    final Map<String, JsonObject> createdValidInstances = JsonArrayHelper
+      .toList(response.getJsonArray("instances")).stream()
+      .collect(Collectors.toMap(json -> json.getString("id"), Function.identity()));
+
+    Arrays.asList(instanceWithValidPrecedingTitle, instanceWithValidSucceedingTitle)
+      .forEach(validInstance -> assertThat(createdValidInstances
+        .get(validInstance.getString("id")), notNullValue()));
   }
 
   @Test
@@ -476,7 +614,8 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
     return collection.stream()
       .map(index -> (JsonObject) index)
       .filter(request -> StringUtils.equals(request.getString("id"), id))
-      .findFirst().get();
+      .findFirst()
+      .orElse(null);
   }
 
   private JsonArray getUnconnectedPrecedingSucceedingTitle(

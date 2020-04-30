@@ -36,9 +36,9 @@ public class InstanceRelationshipsTest extends ApiTests {
   private static final String PARENT_INSTANCES = "parentInstances";
 
   @After
-  public void expireFailureEmulation() throws Exception {
-    precedingSucceedingTitlesClient.expireFailureEmulation();
-    instanceRelationshipClient.expireFailureEmulation();
+  public void disableFailureEmulation() throws Exception {
+    precedingSucceedingTitlesClient.disableFailureEmulation();
+    instanceRelationshipClient.disableFailureEmulation();
   }
 
   @Test
