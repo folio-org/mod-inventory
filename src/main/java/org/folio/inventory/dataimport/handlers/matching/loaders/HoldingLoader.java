@@ -1,6 +1,6 @@
 package org.folio.inventory.dataimport.handlers.matching.loaders;
 
-import io.vertx.core.WorkerExecutor;
+import io.vertx.core.Vertx;
 import org.folio.HoldingsRecord;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.domain.SearchableCollection;
@@ -11,8 +11,8 @@ public class HoldingLoader extends AbstractLoader<HoldingsRecord> {
 
   private Storage storage;
 
-  public HoldingLoader(Storage storage, WorkerExecutor executor) {
-    super(executor);
+  public HoldingLoader(Storage storage, Vertx vertx) {
+    super(vertx);
     this.storage = storage;
   }
 

@@ -1,7 +1,6 @@
 package org.folio.inventory.eventhandlers;
 
 import io.vertx.core.Vertx;
-import io.vertx.core.WorkerExecutor;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -28,7 +27,6 @@ import org.folio.processing.value.StringValue;
 import org.folio.rest.jaxrs.model.Field;
 import org.folio.rest.jaxrs.model.MatchExpression;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
-import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -66,8 +64,6 @@ public class MatchInstanceEventHandlerUnitTest {
 
   private static final String INSTANCE_HRID = "in0001234";
 
-  private static WorkerExecutor executor = Vertx.vertx().createSharedWorkerExecutor("value-loader-thread-pool");
-
   @Mock
   private Storage storage;
   @Mock
@@ -75,7 +71,7 @@ public class MatchInstanceEventHandlerUnitTest {
   @Mock
   private MarcValueReaderImpl marcValueReader;
   @InjectMocks
-  private InstanceLoader instanceLoader = new InstanceLoader(storage, executor);
+  private InstanceLoader instanceLoader = new InstanceLoader(storage, Vertx.vertx());
 
   @Before
   public void setUp() {
@@ -88,11 +84,6 @@ public class MatchInstanceEventHandlerUnitTest {
       .thenReturn(StringValue.of(INSTANCE_HRID));
     MatchValueReaderFactory.register(marcValueReader);
     MatchValueLoaderFactory.register(instanceLoader);
-  }
-
-  @AfterClass
-  public static void tearDown() {
-    executor.close();
   }
 
   @Test
