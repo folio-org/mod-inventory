@@ -32,6 +32,7 @@ import junitparams.Parameters;
 public class ItemMarkWithdrawnApiTest extends ApiTests {
 
   @Parameters({
+    "In process",
     "Available",
     "In transit",
     "Awaiting pickup",
@@ -64,7 +65,8 @@ public class ItemMarkWithdrawnApiTest extends ApiTests {
     "On order",
     "Checked out",
     "Withdrawn",
-    "Claimed returned"
+    "Claimed returned",
+    "Declared lost"
   })
   @Test
   public void cannotWithdrawIItemWhenNotInAllowedStatus(String initialStatus) throws Exception {

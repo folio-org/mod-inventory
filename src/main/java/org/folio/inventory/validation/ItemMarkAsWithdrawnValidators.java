@@ -15,6 +15,7 @@ public final class ItemMarkAsWithdrawnValidators {
     EnumSet.of(
       ItemStatusName.AVAILABLE,
       ItemStatusName.IN_TRANSIT,
+      ItemStatusName.IN_PROCESS,
       ItemStatusName.AWAITING_PICKUP,
       ItemStatusName.AWAITING_DELIVERY,
       ItemStatusName.MISSING,
