@@ -569,7 +569,7 @@ public class InstancesApiExamples extends ApiTests {
         "physicalDescriptions,notes,languages,identifiers,instanceTypeId,modeOfIssuanceId,subjects," +
         "source,title,indexTitle,publicationFrequency,electronicAccess,publicationRange," +
         "classifications,editions,hrid,series,instanceFormatIds,publication,contributors," +
-        "alternativeTitles"));
+        "alternativeTitles,precedingTitles,succeedingTitles"));
 
     // Get existing Instance
     CompletableFuture<Response> getCompleted = new CompletableFuture<>();

@@ -30,7 +30,9 @@ public class InventoryConfigurationImpl implements InventoryConfiguration {
     Instance.TITLE_KEY,
     Instance.INDEX_TITLE_KEY,
     Instance.INSTANCE_TYPE_ID_KEY,
-    Instance.MODE_OF_ISSUANCE_ID_KEY
+    Instance.MODE_OF_ISSUANCE_ID_KEY,
+    Instance.PRECEDING_TITLES_KEY,
+    Instance.SUCCEEDING_TITLES_KEY
     );
 
   public InventoryConfigurationImpl() {
