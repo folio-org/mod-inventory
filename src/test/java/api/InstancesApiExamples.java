@@ -566,9 +566,9 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(errors.size(), is(1));
     assertThat(errors.getJsonObject(0).getString("message"), is(
       "Instance is controlled by MARC record, these fields are blocked and can not be updated: " +
-        "physicalDescriptions,notes,languages,identifiers,instanceTypeId,modeOfIssuanceId,subjects," +
+        "physicalDescriptions,notes,languages,precedingTitles,identifiers,instanceTypeId,modeOfIssuanceId,subjects," +
         "source,title,indexTitle,publicationFrequency,electronicAccess,publicationRange," +
-        "classifications,editions,hrid,series,instanceFormatIds,publication,contributors," +
+        "classifications,succeedingTitles,editions,hrid,series,instanceFormatIds,publication,contributors," +
         "alternativeTitles"));
 
     // Get existing Instance
