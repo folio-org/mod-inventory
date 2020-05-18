@@ -4,7 +4,7 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.domain.instances.Instance;
@@ -34,13 +34,14 @@ public class UpdateInstanceEventHandler {
     this.context = context;
   }
 
-  public CompletableFuture<Instance> handle(HashMap<String, String> eventPayload) {
+  public CompletableFuture<Instance> handle(Map<String, String> eventPayload) {
     CompletableFuture<Instance> future = new CompletableFuture<>();
     try {
       if (eventPayload == null || isEmpty(eventPayload.get(MARC_KEY)) || isEmpty(eventPayload.get(MAPPING_RULES_KEY)) || isEmpty(eventPayload.get(MAPPING_PARAMS_KEY))) {
         String message = "Event does not contain required data to update Instance";
         LOGGER.error(message);
         future.completeExceptionally(new EventProcessingException(message));
+        return future;
       }
       JsonObject mappingRules = new JsonObject(eventPayload.get(MAPPING_RULES_KEY));
       MappingParameters mappingParameters = new JsonObject(eventPayload.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
