@@ -134,10 +134,13 @@ public class InstanceUtil {
   }
 
   private static List<String> getTags(JsonObject instanceRequest) {
-
-    final JsonObject tags = instanceRequest.getJsonObject(Instance.TAGS_KEY);
-    return tags.containsKey(Instance.TAG_LIST_KEY) ?
-      JsonArrayHelper.toListOfStrings(tags.getJsonArray(Instance.TAG_LIST_KEY)) : new ArrayList<>();
+    try {
+      final JsonObject tags = instanceRequest.getJsonObject(Instance.TAGS_KEY);
+      return tags.containsKey(Instance.TAG_LIST_KEY) ?
+        JsonArrayHelper.toListOfStrings(tags.getJsonArray(Instance.TAG_LIST_KEY)) : new ArrayList<>();
+    } catch (ClassCastException e) {
+      return JsonArrayHelper.toListOfStrings(instanceRequest.getJsonArray(Instance.TAGS_KEY));
+    }
   }
 
   private static List<String> toListOfStrings(JsonObject source, String propertyName) {

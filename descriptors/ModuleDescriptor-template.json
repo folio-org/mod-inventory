@@ -264,6 +264,19 @@
             "inventory-storage.instances.item.get",
             "inventory-storage.instances.item.post"
           ]
+        },
+        {
+          "methods": [
+            "POST"
+          ],
+          "pathPattern": "/inventory/handlers/instances",
+          "permissionsRequired": [
+            "inventory.events.post"
+          ],
+          "modulePermissions": [
+            "inventory-storage.instances.item.get",
+            "inventory-storage.instances.item.put"
+          ]
         }
       ]
     },

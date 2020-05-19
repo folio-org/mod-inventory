@@ -8,17 +8,32 @@ documentation:
   - title: "Inventory Event Handlers API"
     content: <b>API for handling events</b>
 
-/inventory/handlers/data-import:
-  displayName: API for handling all data-import events
-  post:
-    description: "Handler for data-import events"
-    body:
-      application/json:
-    responses:
-      204:
-        description: "Received data-import event"
-      500:
-        description: "Internal server error"
-        body:
-          text/plain:
-            example: "Internal server error"
+/inventory/handlers:
+  /data-import:
+    displayName: API for handling all data-import events
+    post:
+      description: "Handler for data-import events"
+      body:
+        application/json:
+      responses:
+        204:
+          description: "Received data-import event"
+        500:
+          description: "Internal server error"
+          body:
+            text/plain:
+              example: "Internal server error"
+  /instances:
+    displayName: API for handling Instance update events
+    post:
+      description: "Handler for Instance update events"
+      body:
+        application/json:
+      responses:
+        204:
+          description: "Received event"
+        500:
+          description: "Internal server error"
+          body:
+            text/plain:
+              example: "Internal server error"
