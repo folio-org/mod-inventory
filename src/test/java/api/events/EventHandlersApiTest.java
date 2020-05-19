@@ -9,6 +9,7 @@ import org.folio.DataImportEventPayload;
 import org.folio.JobProfile;
 import org.folio.MappingProfile;
 import org.folio.UserInfo;
+import org.folio.inventory.TestUtil;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
 import org.folio.processing.events.utils.ZIPArchiver;
@@ -37,6 +38,9 @@ import static org.junit.Assert.assertThat;
 
 public class EventHandlersApiTest extends ApiTests {
 
+  private static final String PARSED_RECORD = "{ \"leader\":\"01314nam  22003851a 4500\", \"fields\":[ {\"001\":\"009221\"},   { \"042\": { \"ind1\": \" \", \"ind2\": \" \", \"subfields\": [ { \"a\": \"pcc\" } ] } }, { \"042\": { \"ind1\": \" \", \"ind2\": \" \", \"subfields\": [ { \"a\": \"pcc\" } ] } }, { \"245\":\"American Bar Association journal\" } ] }";
+  private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/rules.json";
+
   @Test
   public void shouldReturnBadRequestOnEmptyBody() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
     CompletableFuture<Response> conversionCompleted = new CompletableFuture<>();
@@ -61,6 +65,30 @@ public class EventHandlersApiTest extends ApiTests {
     assertThat(response.getStatusCode(), is(204));
   }
 
+  @Test
+  public void handleInstancesShouldReturnBadRequestOnEmptyBody() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+    CompletableFuture<Response> conversionCompleted = new CompletableFuture<>();
+    okapiClient.post(ApiRoot.instancesEventHandler(), null, ResponseHandler.text(conversionCompleted));
+    Response response = conversionCompleted.get(1, TimeUnit.SECONDS);
+    assertThat(response.getStatusCode(), is(500));
+  }
+
+  @Test
+  public void handleInstancesShouldReturnNoContentOnValidBody() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    CompletableFuture<Response> conversionCompleted = new CompletableFuture<>();
+    okapiClient.post(ApiRoot.instancesEventHandler(), ZIPArchiver.zip(new JsonObject().toString()), ResponseHandler.any(conversionCompleted));
+    Response response = conversionCompleted.get(5, TimeUnit.SECONDS);
+    assertThat(response.getStatusCode(), is(204));
+  }
+
+  @Test
+  public void handleInstancesShouldReturnNoContentOnValidData() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    CompletableFuture<Response> conversionCompleted = new CompletableFuture<>();
+    okapiClient.post(ApiRoot.instancesEventHandler(), ZIPArchiver.zip(JsonObject.mapFrom(prepareEventPayload()).toString()), ResponseHandler.any(conversionCompleted));
+    Response response = conversionCompleted.get(5, TimeUnit.SECONDS);
+    assertThat(response.getStatusCode(), is(204));
+  }
+
   private DataImportEventPayload prepareSnapshot() {
 
     DataImportEventPayload payload = new DataImportEventPayload();
@@ -74,7 +102,7 @@ public class EventHandlersApiTest extends ApiTests {
       .withId(UUID.randomUUID().toString())
       .withParsedRecord(new ParsedRecord()
         .withId(UUID.randomUUID().toString())
-        .withContent("{ \"leader\":\"01314nam  22003851a 4500\", \"fields\":[ {\"001\":\"009221\"},   { \"042\": { \"ind1\": \" \", \"ind2\": \" \", \"subfields\": [ { \"a\": \"pcc\" } ] } }, { \"042\": { \"ind1\": \" \", \"ind2\": \" \", \"subfields\": [ { \"a\": \"pcc\" } ] } }, { \"245\":\"American Bar Association journal\" } ] }"))));
+        .withContent(PARSED_RECORD))));
     payload.getContext().put("MAPPING_RULES", "{}");
     payload.getContext().put("MAPPING_PARAMS", "{}");
 
@@ -135,6 +163,14 @@ public class EventHandlersApiTest extends ApiTests {
           ))))));
     payload.setProfileSnapshot(root);
     return payload;
+  }
+
+  private HashMap<String, String> prepareEventPayload() throws IOException {
+    HashMap<String, String> eventPayload = new HashMap<>();
+    eventPayload.put("MARC", PARSED_RECORD);
+    eventPayload.put("MAPPING_RULES", TestUtil.readFileFromPath(MAPPING_RULES_PATH));
+    eventPayload.put("MAPPING_PARAMS", "{}");
+    return eventPayload;
   }
 
 }
