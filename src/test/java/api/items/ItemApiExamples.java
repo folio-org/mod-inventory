@@ -50,11 +50,13 @@ import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.Matchers;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Seconds;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import api.ApiTestSuite;
 import api.support.ApiRoot;
@@ -64,7 +66,10 @@ import api.support.builders.HoldingRequestBuilder;
 import api.support.builders.ItemRequestBuilder;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
 
+@RunWith(JUnitParamsRunner.class)
 public class ItemApiExamples extends ApiTests {
 
   private static final String LAST_CHECK_IN_FIELD = "lastCheckIn";
@@ -1640,6 +1645,36 @@ public class ItemApiExamples extends ApiTests {
 
     Response updateResponse = updateItem(updatedItem);
     assertThat(updateResponse.getStatusCode(), is(204));
+  }
+
+  @Test
+  @Parameters({
+    "Available",
+    "Awaiting pickup",
+    "Awaiting delivery",
+    "Checked out",
+    "In process",
+    "In transit",
+    "Missing",
+    "On order",
+    "Paged",
+    "Declared lost",
+    "Order closed",
+    "Claimed returned",
+    "Withdrawn",
+    "Lost and paid"
+  })
+  public void canCreateItemsWithAllStatuses(String itemStatus) throws Exception {
+    final UUID holdingsId = createInstanceAndHolding();
+
+    final IndividualResource createResponse = itemsClient.create(
+      new ItemRequestBuilder()
+        .forHolding(holdingsId)
+        .canCirculate()
+        .withStatus(itemStatus));
+
+    assertThat(createResponse.getJson().getJsonObject("status").getString("name"),
+      is(itemStatus));
   }
 
   private Response updateItem(JsonObject item) throws MalformedURLException,
