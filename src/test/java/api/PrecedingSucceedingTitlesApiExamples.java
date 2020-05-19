@@ -51,10 +51,8 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
     JsonObject actualPrecedingTitle1 = getRecordById(actualPrecedingTitles, precedingSucceedingTitleId1);
     JsonObject actualPrecedingTitle2 = getRecordById(actualPrecedingTitles, precedingSucceedingTitleId2);
 
-    assertPrecedingSucceedingTitles(actualPrecedingTitle1, precedingTitles.getJsonObject(0), null,
-      createdInstance.getId().toString());
-    assertPrecedingSucceedingTitles(actualPrecedingTitle2, precedingTitles.getJsonObject(1), null,
-      createdInstance.getId().toString());
+    assertPrecedingTitles(actualPrecedingTitle1, precedingTitles.getJsonObject(0), null);
+    assertPrecedingTitles(actualPrecedingTitle2, precedingTitles.getJsonObject(1), null);
   }
 
   @Test
@@ -75,10 +73,8 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
     JsonObject actualSucceedingTitle1 = getRecordById(actualSucceedingTitles, precedingSucceedingTitleId1);
     JsonObject actualSucceedingTitle2 = getRecordById(actualSucceedingTitles, precedingSucceedingTitleId2);
 
-    assertPrecedingSucceedingTitles(actualSucceedingTitle1, succeedingTitles.getJsonObject(0),
-      createdInstance.getId().toString(), null);
-    assertPrecedingSucceedingTitles(actualSucceedingTitle2, succeedingTitles.getJsonObject(1),
-      createdInstance.getId().toString(), null);
+    assertSucceedingTitles(actualSucceedingTitle1, succeedingTitles.getJsonObject(0), null);
+    assertSucceedingTitles(actualSucceedingTitle2, succeedingTitles.getJsonObject(1), null);
   }
 
   @Test
@@ -106,9 +102,8 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
     instancesClient.replace(createdInstance.getId(), newInstance);
 
     Response instanceResponse = instancesClient.getById(createdInstance.getId());
-    assertPrecedingSucceedingTitles(instanceResponse.getJson().getJsonArray("precedingTitles")
-        .getJsonObject(0), newPrecedingTitle, null,
-      createdInstance.getId().toString());
+    assertPrecedingTitles(instanceResponse.getJson().getJsonArray("precedingTitles")
+      .getJsonObject(0), newPrecedingTitle, null);
   }
 
   @Test
@@ -136,9 +131,8 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
     instancesClient.replace(createdInstance.getId(), newInstance);
 
     Response instanceResponse = instancesClient.getById(createdInstance.getId());
-    assertPrecedingSucceedingTitles(instanceResponse.getJson().getJsonArray("succeedingTitles")
-        .getJsonObject(0), newSucceedingTitle, createdInstance.getId().toString(),
-      null);
+    assertSucceedingTitles(instanceResponse.getJson().getJsonArray("succeedingTitles")
+      .getJsonObject(0), newSucceedingTitle, null);
   }
 
   @Test
@@ -337,10 +331,8 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
     JsonObject actualPrecedingTitle1 = getRecordById(actualPrecedingTitles, nodPrecedingTitleId);
     JsonObject actualPrecedingTitle2 = getRecordById(actualPrecedingTitles, uprootedPrecedingTitleId);
 
-    assertPrecedingSucceedingTitles(actualPrecedingTitle1, nod.getJson(), nod.getId().toString(),
-      createdInstance.getId().toString());
-    assertPrecedingSucceedingTitles(actualPrecedingTitle2, uprooted.getJson(), uprooted.getId().toString(),
-      createdInstance.getId().toString());
+    assertPrecedingTitles(actualPrecedingTitle1, nod.getJson(), nod.getId().toString());
+    assertPrecedingTitles(actualPrecedingTitle2, uprooted.getJson(), uprooted.getId().toString());
 
     verifyRelatedInstanceSucceedingTitle(nod, createdInstance);
     verifyRelatedInstanceSucceedingTitle(uprooted, createdInstance);
@@ -373,10 +365,8 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
     JsonObject actualSucceedingTitle1 = getRecordById(actualSucceedingTitles, nodPrecedingTitleId);
     JsonObject actualSucceedingTitle2 = getRecordById(actualSucceedingTitles, uprootedPrecedingTitleId);
 
-    assertPrecedingSucceedingTitles(actualSucceedingTitle1, nod.getJson(),
-      createdInstance.getId().toString(), nod.getId().toString());
-    assertPrecedingSucceedingTitles(actualSucceedingTitle2, uprooted.getJson(),
-      createdInstance.getId().toString(), uprooted.getId().toString());
+    assertSucceedingTitles(actualSucceedingTitle1, nod.getJson(), nod.getId().toString());
+    assertSucceedingTitles(actualSucceedingTitle2, uprooted.getJson(), uprooted.getId().toString());
 
     verifyRelatedInstancePrecedingTitle(nod, createdInstance);
     verifyRelatedInstancePrecedingTitle(uprooted, createdInstance);
@@ -516,19 +506,15 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
     JsonObject actualPrecedingTitle1 = getRecordById(actualPrecedingTitles, nodPrecedingTitleId);
     JsonObject actualPrecedingTitle2 = getRecordById(actualPrecedingTitles, unconnectedPrecedingTitleId);
 
-    assertPrecedingSucceedingTitles(actualPrecedingTitle1, nod.getJson(), nod.getId().toString(),
-      createdInstance.getId().toString());
-    assertPrecedingSucceedingTitles(actualPrecedingTitle2, unconnectedPrecedingTitle,
-      null, createdInstance.getId().toString());
+    assertPrecedingTitles(actualPrecedingTitle1, nod.getJson(), nod.getId().toString());
+    assertPrecedingTitles(actualPrecedingTitle2, unconnectedPrecedingTitle, null);
 
     JsonArray actualSucceedingTitles = createdInstance.getJson().getJsonArray("succeedingTitles");
     JsonObject actualSucceedingTitle1 = getRecordById(actualSucceedingTitles, uprootedSucceedingTitleId);
     JsonObject actualSucceedingTitle2 = getRecordById(actualSucceedingTitles, unconnectedSucceedingTitleId);
 
-    assertPrecedingSucceedingTitles(actualSucceedingTitle1, uprooted.getJson(),
-      createdInstance.getId().toString(), uprooted.getId().toString());
-    assertPrecedingSucceedingTitles(actualSucceedingTitle2, unconnectedSucceedingTitle,
-      createdInstance.getId().toString(), null);
+    assertSucceedingTitles(actualSucceedingTitle1, uprooted.getJson(), uprooted.getId().toString());
+    assertSucceedingTitles(actualSucceedingTitle2, unconnectedSucceedingTitle, null);
 
     verifyRelatedInstancePrecedingTitle(uprooted, createdInstance);
     verifyRelatedInstanceSucceedingTitle(nod, createdInstance);
@@ -566,16 +552,12 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
     JsonObject actualPrecedingTitle2 = getRecordById(actualPrecedingTitles, precedingSucceedingTitleId2);
     JsonObject actualPrecedingTitle3 = getRecordById(actualPrecedingTitles, succeedingConnectedTitleId);
 
-    assertPrecedingSucceedingTitles(actualPrecedingTitle1, precedingTitles.getJsonObject(0), null,
-      angryPlanetId.toString());
-    assertPrecedingSucceedingTitles(actualPrecedingTitle2, precedingTitles.getJsonObject(1), null,
-      angryPlanetId.toString());
-    assertPrecedingSucceedingTitles(actualPrecedingTitle3, createdUprooted.getJson(), uprootedId.toString(),
-      angryPlanetId.toString());
+    assertPrecedingTitles(actualPrecedingTitle1,  precedingTitles.getJsonObject(0), null);
+    assertPrecedingTitles(actualPrecedingTitle2, precedingTitles.getJsonObject(1), null);
+    assertPrecedingTitles(actualPrecedingTitle3, createdUprooted.getJson(), uprootedId.toString());
 
     JsonArray succeedingTitles = createdUprooted.getJson().getJsonArray("succeedingTitles");
-    assertPrecedingSucceedingTitles(succeedingTitles.getJsonObject(0), createdAngryPlanet.getJson(),
-      uprootedId.toString(), angryPlanetId.toString());
+    assertSucceedingTitles(succeedingTitles.getJsonObject(0), createdAngryPlanet.getJson(), angryPlanetId.toString());
   }
 
   private void verifyRelatedInstancePrecedingTitle(IndividualResource precedingInstance,
@@ -584,8 +566,8 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
 
     Response response = instancesClient.getById(precedingInstance.getId());
     JsonArray precedingTitles = response.getJson().getJsonArray("precedingTitles");
-    assertPrecedingSucceedingTitles(precedingTitles.getJsonObject(0), succeedingInstance.getJson(),
-      succeedingInstance.getId().toString(), precedingInstance.getId().toString());
+    assertPrecedingTitles(precedingTitles.getJsonObject(0), succeedingInstance.getJson(),
+      succeedingInstance.getId().toString());
   }
 
   private void verifyRelatedInstanceSucceedingTitle(IndividualResource succeedingInstance,
@@ -594,8 +576,8 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
 
     Response response = instancesClient.getById(succeedingInstance.getId());
     JsonArray succeedingTitles = response.getJson().getJsonArray("succeedingTitles");
-    assertPrecedingSucceedingTitles(succeedingTitles.getJsonObject(0), precedingInstance.getJson(),
-      succeedingInstance.getId().toString(), precedingInstance.getId().toString());
+    assertSucceedingTitles(succeedingTitles.getJsonObject(0), precedingInstance.getJson(),
+      precedingInstance.getId().toString());
   }
 
   private JsonObject createConnectedPrecedingTitle(String id, String precedingInstanceId) {
@@ -652,13 +634,21 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
           .put("value", "0262012103")));
   }
 
-  private void assertPrecedingSucceedingTitles(JsonObject actualPrecedingTitle,
-    JsonObject expected, String precedingInstanceId, String succeedingInstanceId) {
+  private void assertPrecedingTitles(JsonObject actualPrecedingTitle,
+                                     JsonObject expected, String precedingInstanceId) {
 
     assertThat(actualPrecedingTitle.getString("title"), is(expected.getString("title")));
     assertThat(actualPrecedingTitle.getString("hrid"), is(expected.getString("hrid")));
     assertThat(actualPrecedingTitle.getJsonArray("identifiers"), is(expected.getJsonArray("identifiers")));
     assertThat(actualPrecedingTitle.getString("precedingInstanceId"), is(precedingInstanceId));
-    assertThat(actualPrecedingTitle.getString("succeedingInstanceId"), is(succeedingInstanceId));
+  }
+
+  private void assertSucceedingTitles(JsonObject actualSucceedingTitle,
+                                      JsonObject expected, String succeedingInstanceId) {
+
+    assertThat(actualSucceedingTitle.getString("title"), is(expected.getString("title")));
+    assertThat(actualSucceedingTitle.getString("hrid"), is(expected.getString("hrid")));
+    assertThat(actualSucceedingTitle.getJsonArray("identifiers"), is(expected.getJsonArray("identifiers")));
+    assertThat(actualSucceedingTitle.getString("succeedingInstanceId"), is(succeedingInstanceId));
   }
 }

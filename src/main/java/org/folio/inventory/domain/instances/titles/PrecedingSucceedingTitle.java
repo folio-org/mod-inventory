@@ -44,4 +44,30 @@ public class PrecedingSucceedingTitle {
       rel.getString(SUCCEEDING_INSTANCE_ID_KEY),
       title, hrid, identifiers);
   }
+
+  public JsonObject toPrecedingTitleJson() {
+    return toJson(PRECEDING_INSTANCE_ID_KEY, precedingInstanceId);
+  }
+
+  public JsonObject toSucceedingTitleJson() {
+    return toJson(SUCCEEDING_INSTANCE_ID_KEY, succeedingInstanceId);
+  }
+
+  private JsonObject toJson(String succeedingInstanceIdKey, String succeedingInstanceId) {
+    JsonObject json = new JsonObject();
+    putIfNotNull(json, "id", id);
+    putIfNotNull(json, TITLE_KEY, title);
+    putIfNotNull(json, HRID_KEY, hrid);
+    putIfNotNull(json, succeedingInstanceIdKey, succeedingInstanceId);
+    if (identifiers != null) {
+      json.put(IDENTIFIERS_KEY, identifiers);
+    }
+    return json;
+  }
+
+  private void putIfNotNull(JsonObject instanceToSend, String propertyName, String propertyValue) {
+    if (propertyValue != null) {
+      instanceToSend.put(propertyName, propertyValue);
+    }
+  }
 }
