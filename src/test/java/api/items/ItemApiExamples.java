@@ -22,6 +22,7 @@ import static org.folio.inventory.domain.user.User.ID_KEY;
 import static org.folio.inventory.domain.user.User.PERSONAL_KEY;
 import static org.folio.util.StringUtil.urlEncode;
 import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
@@ -35,13 +36,13 @@ import static support.matchers.TextDateTimeMatcher.withinSecondsAfter;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.domain.items.Item;
@@ -55,6 +56,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Seconds;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import api.ApiTestSuite;
 import api.support.ApiRoot;
@@ -64,7 +66,10 @@ import api.support.builders.HoldingRequestBuilder;
 import api.support.builders.ItemRequestBuilder;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
 
+@RunWith(JUnitParamsRunner.class)
 public class ItemApiExamples extends ApiTests {
 
   private static final String LAST_CHECK_IN_FIELD = "lastCheckIn";
@@ -113,11 +118,7 @@ public class ItemApiExamples extends ApiTests {
 
     assertThat(createdItem.containsKey(Item.TAGS_KEY), is(true));
 
-    final JsonObject tags = createdItem.getJsonObject(Item.TAGS_KEY);
-    assertThat(tags.containsKey(Item.TAG_LIST_KEY), is(true));
-
-    final JsonArray tagList = tags.getJsonArray(Item.TAG_LIST_KEY);
-    assertThat((ArrayList<String>)tagList.getList(), hasItem("test-tag"));
+    assertThat(getTags(createdItem), hasItem("test-tag"));
 
     assertThat(createdItem.getString("title"), is("Long Way to a Small Angry Planet"));
     assertThat(createdItem.getString("barcode"), is("645398607547"));
@@ -188,15 +189,7 @@ public class ItemApiExamples extends ApiTests {
 
     JsonObject materialType = createdItem.getJsonObject("materialType");
 
-    assertThat(createdItem.containsKey(Item.TAGS_KEY), is(true));
-
-    final JsonObject tags = createdItem.getJsonObject(Item.TAGS_KEY);
-    assertThat(tags.containsKey(Item.TAG_LIST_KEY), is(true));
-
-    final JsonArray tagList = tags.getJsonArray(Item.TAG_LIST_KEY);
-    assertThat(tagList.size(), is(2));
-    assertThat((ArrayList<String>)tagList.getList(), hasItem("test-tag"));
-    assertThat((ArrayList<String>)tagList.getList(), hasItem("test-tag2"));
+    assertThat(getTags(createdItem), hasItems("test-tag", "test-tag2"));
 
     assertThat(materialType.getString("id"), is(ApiTestSuite.getBookMaterialType()));
     assertThat(materialType.getString("name"), is("Book"));
@@ -482,14 +475,7 @@ public class ItemApiExamples extends ApiTests {
     assertThat(getResponse.getStatusCode(), is(200));
     JsonObject updatedItem = getResponse.getJson();
 
-    assertThat(updatedItem.containsKey(Item.TAGS_KEY), is(true));
-    final JsonObject tags = updatedItem.getJsonObject(Item.TAGS_KEY);
-
-    assertThat(tags.containsKey(Item.TAG_LIST_KEY), is(true));
-
-    final JsonArray tagList = tags.getJsonArray(Item.TAG_LIST_KEY);
-    assertThat((ArrayList<String>)tagList.getList(), hasItem(""));
-
+    assertThat(getTags(updatedItem), hasItem(""));
     assertThat(updatedItem.containsKey("id"), is(true));
     assertThat(updatedItem.getString("title"), is("Long Way to a Small Angry Planet"));
     assertThat(updatedItem.getString("barcode"), is("645398607547"));
@@ -796,21 +782,21 @@ public class ItemApiExamples extends ApiTests {
 
     assertThat(items.stream()
       .filter(item -> StringUtils.equals(item.getString("barcode"), "645398607547"))
-      .findFirst().get().getJsonObject("permanentLoanType").getString("id"),
+      .findFirst().orElse(new JsonObject()).getJsonObject("permanentLoanType").getString("id"),
       is(ApiTestSuite.getCanCirculateLoanType()));
 
     assertThat(items.stream()
       .filter(item -> StringUtils.equals(item.getString("barcode"), "645398607547"))
-      .findFirst().get().containsKey("temporaryLoanType"), is(false));
+      .findFirst().orElse(new JsonObject()).containsKey("temporaryLoanType"), is(false));
 
     assertThat(items.stream()
       .filter(item -> StringUtils.equals(item.getString("barcode"), "175848607547"))
-      .findFirst().get().getJsonObject("permanentLoanType").getString("id"),
+      .findFirst().orElse(new JsonObject()).getJsonObject("permanentLoanType").getString("id"),
       is(ApiTestSuite.getCanCirculateLoanType()));
 
     assertThat(items.stream()
       .filter(item -> StringUtils.equals(item.getString("barcode"), "175848607547"))
-      .findFirst().get().getJsonObject("temporaryLoanType").getString("id"),
+      .findFirst().orElse(new JsonObject()).getJsonObject("temporaryLoanType").getString("id"),
       is(ApiTestSuite.getCourseReserveLoanType()));
 
     items.forEach(ItemApiExamples::hasConsistentPermanentLoanType);
@@ -1642,6 +1628,36 @@ public class ItemApiExamples extends ApiTests {
     assertThat(updateResponse.getStatusCode(), is(204));
   }
 
+  @Test
+  @Parameters({
+    "Available",
+    "Awaiting pickup",
+    "Awaiting delivery",
+    "Checked out",
+    "In process",
+    "In transit",
+    "Missing",
+    "On order",
+    "Paged",
+    "Declared lost",
+    "Order closed",
+    "Claimed returned",
+    "Withdrawn",
+    "Lost and paid"
+  })
+  public void canCreateItemsWithAllStatuses(String itemStatus) throws Exception {
+    final UUID holdingsId = createInstanceAndHolding();
+
+    final IndividualResource createResponse = itemsClient.create(
+      new ItemRequestBuilder()
+        .forHolding(holdingsId)
+        .canCirculate()
+        .withStatus(itemStatus));
+
+    assertThat(createResponse.getJson().getJsonObject("status").getString("name"),
+      is(itemStatus));
+  }
+
   private Response updateItem(JsonObject item) throws MalformedURLException,
     InterruptedException, ExecutionException, TimeoutException {
 
@@ -1797,5 +1813,11 @@ public class ItemApiExamples extends ApiTests {
     assertThat(callNumberComponents.getString("suffix"), is(CALL_NUMBER_SUFFIX));
     assertThat(callNumberComponents.getString("prefix"), is(CALL_NUMBER_PREFIX));
     assertThat(callNumberComponents.getString("typeId"), is(CALL_NUMBER_TYPE_ID));
+  }
+
+  private List<String> getTags(JsonObject item) {
+    return item.getJsonObject(Item.TAGS_KEY).getJsonArray(Item.TAG_LIST_KEY).stream()
+      .map(Object::toString)
+      .collect(Collectors.toList());
   }
 }
