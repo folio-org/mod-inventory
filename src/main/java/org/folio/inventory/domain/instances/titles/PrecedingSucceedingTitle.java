@@ -2,6 +2,9 @@ package org.folio.inventory.domain.instances.titles;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import org.folio.inventory.support.JsonHelper;
+
+import static org.folio.inventory.support.JsonHelper.includeIfPresent;
 
 public class PrecedingSucceedingTitle {
   public static final String PRECEDING_INSTANCE_ID_KEY = "precedingInstanceId";
@@ -53,21 +56,15 @@ public class PrecedingSucceedingTitle {
     return toJson(SUCCEEDING_INSTANCE_ID_KEY, succeedingInstanceId);
   }
 
-  private JsonObject toJson(String succeedingInstanceIdKey, String succeedingInstanceId) {
+  private JsonObject toJson(String relatedInstanceIdKey, String relatedInstanceId) {
     JsonObject json = new JsonObject();
-    putIfNotNull(json, "id", id);
-    putIfNotNull(json, TITLE_KEY, title);
-    putIfNotNull(json, HRID_KEY, hrid);
-    putIfNotNull(json, succeedingInstanceIdKey, succeedingInstanceId);
+    includeIfPresent(json, "id", id);
+    includeIfPresent(json, TITLE_KEY, title);
+    includeIfPresent(json, HRID_KEY, hrid);
+    includeIfPresent(json, relatedInstanceIdKey, relatedInstanceId);
     if (identifiers != null) {
       json.put(IDENTIFIERS_KEY, identifiers);
     }
     return json;
-  }
-
-  private void putIfNotNull(JsonObject instanceToSend, String propertyName, String propertyValue) {
-    if (propertyValue != null) {
-      instanceToSend.put(propertyName, propertyValue);
-    }
   }
 }

@@ -8,6 +8,7 @@ import static org.folio.inventory.domain.instances.Instance.PRECEDING_TITLES_KEY
 import static org.folio.inventory.domain.instances.Instance.SUCCEEDING_TITLES_KEY;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static support.matchers.ResponseMatchers.hasValidationError;
 
@@ -635,20 +636,22 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
   }
 
   private void assertPrecedingTitles(JsonObject actualPrecedingTitle,
-                                     JsonObject expected, String precedingInstanceId) {
+    JsonObject expected, String precedingInstanceId) {
 
     assertThat(actualPrecedingTitle.getString("title"), is(expected.getString("title")));
     assertThat(actualPrecedingTitle.getString("hrid"), is(expected.getString("hrid")));
     assertThat(actualPrecedingTitle.getJsonArray("identifiers"), is(expected.getJsonArray("identifiers")));
     assertThat(actualPrecedingTitle.getString("precedingInstanceId"), is(precedingInstanceId));
+    assertNull(actualPrecedingTitle.getString("succeedingInstanceId"));
   }
 
   private void assertSucceedingTitles(JsonObject actualSucceedingTitle,
-                                      JsonObject expected, String succeedingInstanceId) {
+    JsonObject expected, String succeedingInstanceId) {
 
     assertThat(actualSucceedingTitle.getString("title"), is(expected.getString("title")));
     assertThat(actualSucceedingTitle.getString("hrid"), is(expected.getString("hrid")));
     assertThat(actualSucceedingTitle.getJsonArray("identifiers"), is(expected.getJsonArray("identifiers")));
     assertThat(actualSucceedingTitle.getString("succeedingInstanceId"), is(succeedingInstanceId));
+    assertNull(actualSucceedingTitle.getString("precedingInstanceId"));
   }
 }

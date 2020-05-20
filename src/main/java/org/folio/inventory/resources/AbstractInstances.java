@@ -341,15 +341,17 @@ public abstract class AbstractInstances {
     putIfNotNull(resp, Instance.METADATA_KEY, instance.getMetadata());
     putIfNotNull(resp, Instance.TAGS_KEY, new JsonObject().put(Instance.TAG_LIST_KEY, new JsonArray(instance.getTags())));
     putIfNotNull(resp, Instance.NATURE_OF_CONTENT_TERM_IDS_KEY, instance.getNatureOfContentIds());
+
     if (precedingTitles != null) {
-      JsonArray precedingTitlesJsons = new JsonArray();
-      precedingTitles.forEach(title -> precedingTitlesJsons.add(title.toPrecedingTitleJson()));
-      resp.put(Instance.PRECEDING_TITLES_KEY, precedingTitlesJsons);
+      JsonArray precedingTitlesJsonArray = new JsonArray();
+      precedingTitles.forEach(title -> precedingTitlesJsonArray .add(title.toPrecedingTitleJson()));
+      resp.put(Instance.PRECEDING_TITLES_KEY, precedingTitlesJsonArray );
     }
+
     if (succeedingTitles != null) {
-      JsonArray succeedingTitlesJsons = new JsonArray();
-      succeedingTitles.forEach(title -> succeedingTitlesJsons.add(title.toSucceedingTitleJson()));
-      resp.put(Instance.SUCCEEDING_TITLES_KEY, succeedingTitlesJsons);
+      JsonArray succeedingTitlesJsonArray = new JsonArray();
+      succeedingTitles.forEach(title -> succeedingTitlesJsonArray .add(title.toSucceedingTitleJson()));
+      resp.put(Instance.SUCCEEDING_TITLES_KEY, succeedingTitlesJsonArray );
     }
 
     try {
