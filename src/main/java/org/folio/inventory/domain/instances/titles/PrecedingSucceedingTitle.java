@@ -2,7 +2,6 @@ package org.folio.inventory.domain.instances.titles;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import org.folio.inventory.support.JsonHelper;
 
 import static org.folio.inventory.support.JsonHelper.includeIfPresent;
 
