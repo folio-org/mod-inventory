@@ -57,13 +57,16 @@ public class PrecedingSucceedingTitle {
 
   private JsonObject toJson(String relatedInstanceIdKey, String relatedInstanceId) {
     JsonObject json = new JsonObject();
+
     includeIfPresent(json, "id", id);
     includeIfPresent(json, TITLE_KEY, title);
     includeIfPresent(json, HRID_KEY, hrid);
     includeIfPresent(json, relatedInstanceIdKey, relatedInstanceId);
+
     if (identifiers != null) {
       json.put(IDENTIFIERS_KEY, identifiers);
     }
+
     return json;
   }
 }
