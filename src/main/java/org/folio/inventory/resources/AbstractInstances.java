@@ -313,8 +313,6 @@ public abstract class AbstractInstances {
     putIfNotNull(resp, Instance.INDEX_TITLE_KEY, instance.getIndexTitle());
     putIfNotNull(resp, Instance.PARENT_INSTANCES_KEY, parentInstances);
     putIfNotNull(resp, Instance.CHILD_INSTANCES_KEY, childInstances);
-    putIfNotNull(resp, Instance.PRECEDING_TITLES_KEY, precedingTitles);
-    putIfNotNull(resp, Instance.SUCCEEDING_TITLES_KEY, succeedingTitles);
     putIfNotNull(resp, Instance.ALTERNATIVE_TITLES_KEY, instance.getAlternativeTitles());
     putIfNotNull(resp, Instance.EDITIONS_KEY, instance.getEditions());
     putIfNotNull(resp, Instance.SERIES_KEY, instance.getSeries());
@@ -343,6 +341,18 @@ public abstract class AbstractInstances {
     putIfNotNull(resp, Instance.METADATA_KEY, instance.getMetadata());
     putIfNotNull(resp, Instance.TAGS_KEY, new JsonObject().put(Instance.TAG_LIST_KEY, new JsonArray(instance.getTags())));
     putIfNotNull(resp, Instance.NATURE_OF_CONTENT_TERM_IDS_KEY, instance.getNatureOfContentIds());
+
+    if (precedingTitles != null) {
+      JsonArray precedingTitlesJsonArray = new JsonArray();
+      precedingTitles.forEach(title -> precedingTitlesJsonArray .add(title.toPrecedingTitleJson()));
+      resp.put(Instance.PRECEDING_TITLES_KEY, precedingTitlesJsonArray );
+    }
+
+    if (succeedingTitles != null) {
+      JsonArray succeedingTitlesJsonArray = new JsonArray();
+      succeedingTitles.forEach(title -> succeedingTitlesJsonArray .add(title.toSucceedingTitleJson()));
+      resp.put(Instance.SUCCEEDING_TITLES_KEY, succeedingTitlesJsonArray );
+    }
 
     try {
       URL selfUrl = context.absoluteUrl(format("%s/%s",
