@@ -13,6 +13,7 @@ import org.folio.inventory.dataimport.ItemWriterFactory;
 import org.folio.inventory.dataimport.handlers.actions.CreateHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler;
+import org.folio.inventory.dataimport.handlers.actions.ReplaceHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchItemEventHandler;
@@ -56,6 +57,7 @@ public class EventHandlers {
     EventManager.registerEventHandler(new CreateItemEventHandler(storage));
     EventManager.registerEventHandler(new CreateHoldingEventHandler(storage));
     EventManager.registerEventHandler(new CreateInstanceEventHandler(storage));
+    EventManager.registerEventHandler(new ReplaceHoldingEventHandler(storage));
   }
 
   public void register(Router router) {
