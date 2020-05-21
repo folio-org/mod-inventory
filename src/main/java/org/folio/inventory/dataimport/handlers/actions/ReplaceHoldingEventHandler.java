@@ -2,7 +2,7 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import static org.folio.ActionProfile.Action.REPLACE;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_REPLACED;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
@@ -98,7 +98,7 @@ public class ReplaceHoldingEventHandler implements EventHandler {
 
   private void constructDataImportEventPayload(CompletableFuture<DataImportEventPayload> future, DataImportEventPayload dataImportEventPayload, HoldingsRecord holding) {
     dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encodePrettily(holding));
-    dataImportEventPayload.setEventType(DI_INVENTORY_HOLDING_CREATED.value()); //TODO: change on REPLACED
+    dataImportEventPayload.setEventType(DI_INVENTORY_HOLDING_REPLACED.value());
     future.complete(dataImportEventPayload);
   }
 }
