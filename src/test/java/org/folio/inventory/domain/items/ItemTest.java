@@ -1,12 +1,15 @@
 package org.folio.inventory.domain.items;
 
 import static org.hamcrest.Matchers.instanceOf;
+import static org.junit.Assert.assertEquals;
 
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import io.vertx.core.json.JsonObject;
+
+import org.folio.inventory.domain.items.ItemStatusName;
 
 public class ItemTest {
 
@@ -21,4 +24,14 @@ public class ItemTest {
     new Item("id", "holding-id", null, "material-type-id",
       "permanent-loan-type-id", new JsonObject());
   }
+
+  @Test
+  public void canMarkWithdrawnItemAsMissing() {
+    Status widthdrawnStatus = new Status(ItemStatusName.WITHDRAWN);
+    Item item = new Item("id", "holding-id", widthdrawnStatus, "material-type-id",
+      "permanent-loan-type-id", new JsonObject());
+    item = item.changeStatus(ItemStatusName.MISSING);
+    assertEquals(ItemStatusName.MISSING, item.getStatus().getName());
+  }
+
 }
