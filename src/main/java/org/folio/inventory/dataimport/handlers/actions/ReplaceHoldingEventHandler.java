@@ -29,9 +29,9 @@ public class ReplaceHoldingEventHandler implements EventHandler {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ReplaceHoldingEventHandler.class);
 
-  private static final String UPDATE_HOLDING_ERROR_MESSAGE = "Can`t update  holding";
-  private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t update Holding entity: context is empty or doesn`t exist or Holding-entity doesn`t exist!";
-  private static final String EMPTY_REQUIRED_FIELDS_ERROR_MESSAGE = "Can`t update Holding entity: one of required fields(hrid, permanentLocationId, instanceId) are empty!";
+  private static final String REPLACE_HOLDING_ERROR_MESSAGE = "Can`t replace  holding";
+  private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t replace Holding entity: context is empty or doesn`t exist or Holding-entity doesn`t exist!";
+  private static final String EMPTY_REQUIRED_FIELDS_ERROR_MESSAGE = "Can`t replace Holding entity: one of required fields(hrid, permanentLocationId, instanceId) are empty!";
 
   private final Storage storage;
 
@@ -71,8 +71,8 @@ public class ReplaceHoldingEventHandler implements EventHandler {
 
       holdingsRecords.update(holding, holdingSuccess -> constructDataImportEventPayload(future, dataImportEventPayload, holding),
         failure -> {
-          LOGGER.error(UPDATE_HOLDING_ERROR_MESSAGE);
-          future.completeExceptionally(new EventProcessingException(UPDATE_HOLDING_ERROR_MESSAGE));
+          LOGGER.error(REPLACE_HOLDING_ERROR_MESSAGE);
+          future.completeExceptionally(new EventProcessingException(REPLACE_HOLDING_ERROR_MESSAGE));
         });
     } catch (Exception e) {
       LOGGER.error(e);
