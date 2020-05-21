@@ -38,7 +38,7 @@ public class ReplaceHoldingEventHandler implements EventHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(ReplaceHoldingEventHandler.class);
 
   private static final String UPDATE_HOLDING_ERROR_MESSAGE = "Can`t update  holding";
-  private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t update Holding entity: context is empty or doesn`t exists";
+  private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t update Holding entity: context is empty or doesn`t exist or Holding-entity doesn`t exist!";
   private static final String EMPTY_REQUIRED_FIELDS_ERROR_MESSAGE = "Can`t update Holding entity: one of required fields(hrid, permanentLocationId, instanceId) are empty!";
 
   private final Storage storage;
@@ -52,17 +52,17 @@ public class ReplaceHoldingEventHandler implements EventHandler {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
       if (dataImportEventPayload.getContext() == null || dataImportEventPayload.getContext().isEmpty()
-        || !dataImportEventPayload.getContext().containsKey(MARC_BIBLIOGRAPHIC.value())
         || !dataImportEventPayload.getContext().containsKey(HOLDINGS.value())) {
         throw new EventProcessingException(CONTEXT_EMPTY_ERROR_MESSAGE);
       }
       HoldingsRecord tmpHoldingsRecord = ObjectMapperTool.getMapper()
         .readValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), HoldingsRecord.class);
 
+      String holdingId = tmpHoldingsRecord.getId();
       String hrid = tmpHoldingsRecord.getHrid();
       String instanceId = tmpHoldingsRecord.getInstanceId();
       String permanentLocationId = tmpHoldingsRecord.getPermanentLocationId();
-      if (StringUtils.isAnyBlank(hrid, instanceId, permanentLocationId)) {
+      if (StringUtils.isAnyBlank(hrid, instanceId, permanentLocationId, holdingId)) {
         throw new EventProcessingException(EMPTY_REQUIRED_FIELDS_ERROR_MESSAGE);
       }
       prepareEvent(dataImportEventPayload);
@@ -72,6 +72,7 @@ public class ReplaceHoldingEventHandler implements EventHandler {
       Context context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       HoldingsRecordCollection holdingsRecords = storage.getHoldingsRecordCollection(context);
       HoldingsRecord holding = ObjectMapperTool.getMapper().readValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), HoldingsRecord.class);
+      holding.setId(holdingId);
       holding.setHrid(hrid);
       holding.setInstanceId(instanceId);
       holding.setPermanentLocationId(permanentLocationId);
@@ -105,7 +106,7 @@ public class ReplaceHoldingEventHandler implements EventHandler {
 
   private void constructDataImportEventPayload(CompletableFuture<DataImportEventPayload> future, DataImportEventPayload dataImportEventPayload, HoldingsRecord holding) {
     dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encodePrettily(holding));
-    dataImportEventPayload.setEventType(DI_INVENTORY_HOLDING_CREATED.value());
+    dataImportEventPayload.setEventType(DI_INVENTORY_HOLDING_CREATED.value()); //TODO: change on REPLACED
     future.complete(dataImportEventPayload);
   }
 }
