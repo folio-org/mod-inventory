@@ -75,4 +75,9 @@ public class ApiRoot {
     throws MalformedURLException {
     return new URL(String.format("%s/data-import", handlers()));
   }
+
+  public static URL instancesEventHandler()
+    throws MalformedURLException {
+    return new URL(String.format("%s/instances", handlers()));
+  }
 }
