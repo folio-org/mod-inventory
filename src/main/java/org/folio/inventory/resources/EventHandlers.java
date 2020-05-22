@@ -31,6 +31,7 @@ import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.mapper.reader.record.MarcBibReaderFactory;
 import org.folio.processing.matching.loader.MatchValueLoaderFactory;
 import org.folio.processing.matching.reader.MarcValueReaderImpl;
+import org.folio.processing.matching.reader.StaticValueReaderImpl;
 import org.folio.processing.matching.reader.MatchValueReaderFactory;
 import org.folio.rest.tools.utils.ObjectMapperTool;
 
@@ -51,6 +52,7 @@ public class EventHandlers {
     MatchValueLoaderFactory.register(new HoldingLoader(storage, vertx));
 
     MatchValueReaderFactory.register(new MarcValueReaderImpl());
+    MatchValueReaderFactory.register(new StaticValueReaderImpl());
 
     MappingManager.registerReaderFactory(new MarcBibReaderFactory());
     MappingManager.registerWriterFactory(new ItemWriterFactory());
