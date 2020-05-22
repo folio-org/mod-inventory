@@ -42,12 +42,9 @@ import org.folio.processing.mapping.mapper.reader.Reader;
 import org.folio.processing.mapping.mapper.reader.record.MarcBibReaderFactory;
 import org.folio.processing.value.StringValue;
 import org.folio.rest.jaxrs.model.EntityType;
-import org.folio.rest.jaxrs.model.ExternalIdsHolder;
 import org.folio.rest.jaxrs.model.MappingDetail;
 import org.folio.rest.jaxrs.model.MappingRule;
-import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
-import org.folio.rest.jaxrs.model.Record;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -56,12 +53,10 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 
-import com.google.common.collect.Lists;
-
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
-public class ReplaceHoldingEventHandlerTest {
+public class UpdateHoldingEventHandlerTest {
 
   private static final String PARSED_CONTENT_WITH_INSTANCE_ID = "{ \"leader\": \"01314nam  22003851a 4500\", \"fields\":[ {\"001\":\"ybp7406411\"}, {\"999\": {\"ind1\":\"f\", \"ind2\":\"f\", \"subfields\":[ { \"i\": \"957985c6-97e3-4038-b0e7-343ecd0b8120\"} ] } } ] }";
   private static final String PARSED_CONTENT_WITHOUT_INSTANCE_ID = "{ \"leader\":\"01314nam  22003851a 4500\", \"fields\":[ { \"001\":\"ybp7406411\" } ] }";
@@ -109,13 +104,13 @@ public class ReplaceHoldingEventHandlerTest {
             .withContentType(MAPPING_PROFILE)
             .withContent(JsonObject.mapFrom(mappingProfile).getMap())))));
 
-  private ReplaceHoldingEventHandler replaceHoldingEventHandler;
+  private UpdateHoldingEventHandler updateHoldingEventHandler;
 
   @Before
   public void setUp() throws UnsupportedEncodingException {
     MockitoAnnotations.initMocks(this);
     MappingManager.clearReaderFactories();
-    replaceHoldingEventHandler = new ReplaceHoldingEventHandler(storage);
+    updateHoldingEventHandler = new UpdateHoldingEventHandler(storage);
     doAnswer(invocationOnMock -> {
       MultipleRecords result = new MultipleRecords<>(new ArrayList<>(), 0);
       Consumer<Success<MultipleRecords>> successHandler = invocationOnMock.getArgument(2);
@@ -165,7 +160,7 @@ public class ReplaceHoldingEventHandlerTest {
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
-    CompletableFuture<DataImportEventPayload> future = replaceHoldingEventHandler.handle(dataImportEventPayload);
+    CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
 
     Assert.assertEquals(DI_INVENTORY_HOLDING_REPLACED.value(), actualDataImportEventPayload.getEventType());
@@ -209,7 +204,7 @@ public class ReplaceHoldingEventHandlerTest {
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
-    CompletableFuture<DataImportEventPayload> future = replaceHoldingEventHandler.handle(dataImportEventPayload);
+    CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
   }
 
@@ -246,7 +241,7 @@ public class ReplaceHoldingEventHandlerTest {
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
-    CompletableFuture<DataImportEventPayload> future = replaceHoldingEventHandler.handle(dataImportEventPayload);
+    CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
   }
 
@@ -283,7 +278,7 @@ public class ReplaceHoldingEventHandlerTest {
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
-    CompletableFuture<DataImportEventPayload> future = replaceHoldingEventHandler.handle(dataImportEventPayload);
+    CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
   }
 
@@ -314,7 +309,7 @@ public class ReplaceHoldingEventHandlerTest {
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
-    CompletableFuture<DataImportEventPayload> future = replaceHoldingEventHandler.handle(dataImportEventPayload);
+    CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
   }
 
@@ -339,7 +334,7 @@ public class ReplaceHoldingEventHandlerTest {
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
-    CompletableFuture<DataImportEventPayload> future = replaceHoldingEventHandler.handle(dataImportEventPayload);
+    CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
   }
 
@@ -364,7 +359,7 @@ public class ReplaceHoldingEventHandlerTest {
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
-    CompletableFuture<DataImportEventPayload> future = replaceHoldingEventHandler.handle(dataImportEventPayload);
+    CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
   }
 
@@ -375,7 +370,7 @@ public class ReplaceHoldingEventHandlerTest {
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
-    assertTrue(replaceHoldingEventHandler.isEligible(dataImportEventPayload));
+    assertTrue(updateHoldingEventHandler.isEligible(dataImportEventPayload));
   }
 
   @Test
@@ -385,7 +380,7 @@ public class ReplaceHoldingEventHandlerTest {
       .withEventType(DI_INVENTORY_HOLDING_REPLACED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper);
-    assertFalse(replaceHoldingEventHandler.isEligible(dataImportEventPayload));
+    assertFalse(updateHoldingEventHandler.isEligible(dataImportEventPayload));
   }
 
   @Test
@@ -399,7 +394,7 @@ public class ReplaceHoldingEventHandlerTest {
       .withEventType(DI_INVENTORY_HOLDING_REPLACED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper);
-    assertFalse(replaceHoldingEventHandler.isEligible(dataImportEventPayload));
+    assertFalse(updateHoldingEventHandler.isEligible(dataImportEventPayload));
   }
 
   @Test
@@ -418,7 +413,7 @@ public class ReplaceHoldingEventHandlerTest {
       .withEventType(DI_INVENTORY_HOLDING_REPLACED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper);
-    assertFalse(replaceHoldingEventHandler.isEligible(dataImportEventPayload));
+    assertFalse(updateHoldingEventHandler.isEligible(dataImportEventPayload));
   }
 
   @Test
@@ -437,6 +432,6 @@ public class ReplaceHoldingEventHandlerTest {
       .withEventType(DI_INVENTORY_HOLDING_REPLACED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper);
-    assertFalse(replaceHoldingEventHandler.isEligible(dataImportEventPayload));
+    assertFalse(updateHoldingEventHandler.isEligible(dataImportEventPayload));
   }
 }

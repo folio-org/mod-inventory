@@ -25,17 +25,17 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
-public class ReplaceHoldingEventHandler implements EventHandler {
+public class UpdateHoldingEventHandler implements EventHandler {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(ReplaceHoldingEventHandler.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(UpdateHoldingEventHandler.class);
 
-  private static final String REPLACE_HOLDING_ERROR_MESSAGE = "Can`t replace  holding";
-  private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t replace Holding entity: context is empty or doesn`t exist or Holding-entity doesn`t exist!";
-  private static final String EMPTY_REQUIRED_FIELDS_ERROR_MESSAGE = "Can`t replace Holding entity: one of required fields(hrid, permanentLocationId, instanceId) are empty!";
+  private static final String REPLACE_HOLDING_ERROR_MESSAGE = "Can`t update  holding";
+  private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t update Holding entity: context is empty or doesn`t exist or Holding-entity doesn`t exist!";
+  private static final String EMPTY_REQUIRED_FIELDS_ERROR_MESSAGE = "Can`t udpate Holding entity: one of required fields(hrid, permanentLocationId, instanceId) are empty!";
 
   private final Storage storage;
 
-  public ReplaceHoldingEventHandler(Storage storage) {
+  public UpdateHoldingEventHandler(Storage storage) {
     this.storage = storage;
   }
 

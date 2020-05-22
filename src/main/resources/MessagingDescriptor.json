@@ -55,7 +55,7 @@
       "signed": false
     },
     {
-      "eventType": "DI_INVENTORY_HOLDING_REPLACED",
+      "eventType": "DI_INVENTORY_HOLDING_UPDATED",
       "description": "Replaced holding record",
       "eventTTL": 1,
       "signed": false
