@@ -30,7 +30,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(UpdateHoldingEventHandler.class);
 
   private static final String UPDATE_HOLDING_ERROR_MESSAGE = "Can`t update  holding";
-  private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t update Holding entity: context is empty or doesn`t exist or Holding-entity doesn`t exist!";
+  private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t update Holding entity: context or Holding-entity are empty or doesn`t exist!";
   private static final String EMPTY_REQUIRED_FIELDS_ERROR_MESSAGE = "Can`t udpate Holding entity: one of required fields(hrid, permanentLocationId, instanceId) are empty!";
 
   private final Storage storage;
@@ -44,7 +44,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
       if (dataImportEventPayload.getContext() == null || dataImportEventPayload.getContext().isEmpty()
-        || !dataImportEventPayload.getContext().containsKey(HOLDINGS.value())) {
+        || StringUtils.isEmpty(dataImportEventPayload.getContext().get(HOLDINGS.value()))) {
         throw new EventProcessingException(CONTEXT_EMPTY_ERROR_MESSAGE);
       }
       HoldingsRecord tmpHoldingsRecord = ObjectMapperTool.getMapper()
