@@ -1,7 +1,9 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.ActionProfile.Action.REPLACE;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
+import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_REPLACED;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
@@ -44,7 +46,8 @@ public class UpdateHoldingEventHandler implements EventHandler {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
       if (dataImportEventPayload.getContext().isEmpty()
-        || StringUtils.isEmpty(dataImportEventPayload.getContext().get(HOLDINGS.value()))) {
+        || isEmpty(dataImportEventPayload.getContext().get(HOLDINGS.value()))
+        || isEmpty(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()))) {
         throw new EventProcessingException(CONTEXT_EMPTY_ERROR_MESSAGE);
       }
       HoldingsRecord tmpHoldingsRecord = ObjectMapperTool.getMapper()
