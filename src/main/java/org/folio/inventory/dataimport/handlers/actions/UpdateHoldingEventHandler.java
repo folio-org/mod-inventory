@@ -43,7 +43,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
-      if (dataImportEventPayload.getContext() == null || dataImportEventPayload.getContext().isEmpty()
+      if (dataImportEventPayload.getContext().isEmpty()
         || StringUtils.isEmpty(dataImportEventPayload.getContext().get(HOLDINGS.value()))) {
         throw new EventProcessingException(CONTEXT_EMPTY_ERROR_MESSAGE);
       }
