@@ -1,6 +1,7 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
+import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_REPLACED;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
@@ -44,7 +45,9 @@ import org.folio.processing.value.StringValue;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.MappingDetail;
 import org.folio.rest.jaxrs.model.MappingRule;
+import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.folio.rest.jaxrs.model.Record;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -151,8 +154,10 @@ public class UpdateHoldingEventHandlerTest {
       .withHrid(hrid)
       .withPermanentLocationId(permanentLocationId);
 
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();
     context.put(HOLDINGS.value(), Json.encode(holdingsRecord));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_REPLACED.value())
@@ -196,6 +201,8 @@ public class UpdateHoldingEventHandlerTest {
       .withPermanentLocationId(permanentLocationId);
 
     HashMap<String, String> context = new HashMap<>();
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
     context.put(HOLDINGS.value(), Json.encode(holdingsRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
@@ -233,6 +240,8 @@ public class UpdateHoldingEventHandlerTest {
       .withPermanentLocationId(permanentLocationId);
 
     HashMap<String, String> context = new HashMap<>();
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
     context.put(HOLDINGS.value(), Json.encode(holdingsRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
@@ -270,6 +279,8 @@ public class UpdateHoldingEventHandlerTest {
       .withInstanceId(instanceId);
 
     HashMap<String, String> context = new HashMap<>();
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
     context.put(HOLDINGS.value(), Json.encode(holdingsRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
@@ -301,6 +312,8 @@ public class UpdateHoldingEventHandlerTest {
     Instance instance = new Instance(instanceId, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
     HashMap<String, String> context = new HashMap<>();
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
     context.put("InvalidField", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
