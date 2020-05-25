@@ -2,7 +2,7 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_REPLACED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_UPDATED;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
@@ -160,7 +160,7 @@ public class UpdateHoldingEventHandlerTest {
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_HOLDING_REPLACED.value())
+      .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
@@ -168,7 +168,7 @@ public class UpdateHoldingEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
 
-    Assert.assertEquals(DI_INVENTORY_HOLDING_REPLACED.value(), actualDataImportEventPayload.getEventType());
+    Assert.assertEquals(DI_INVENTORY_HOLDING_UPDATED.value(), actualDataImportEventPayload.getEventType());
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
     Assert.assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("id"));
     Assert.assertEquals(instanceId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("instanceId"));
@@ -206,7 +206,7 @@ public class UpdateHoldingEventHandlerTest {
     context.put(HOLDINGS.value(), Json.encode(holdingsRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_HOLDING_REPLACED.value())
+      .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
@@ -245,7 +245,7 @@ public class UpdateHoldingEventHandlerTest {
     context.put(HOLDINGS.value(), Json.encode(holdingsRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_HOLDING_REPLACED.value())
+      .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
@@ -284,7 +284,7 @@ public class UpdateHoldingEventHandlerTest {
     context.put(HOLDINGS.value(), Json.encode(holdingsRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_HOLDING_REPLACED.value())
+      .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
@@ -317,7 +317,7 @@ public class UpdateHoldingEventHandlerTest {
     context.put("InvalidField", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_HOLDING_REPLACED.value())
+      .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
@@ -342,7 +342,7 @@ public class UpdateHoldingEventHandlerTest {
     MappingManager.registerWriterFactory(new HoldingWriterFactory());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_HOLDING_REPLACED.value())
+      .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
       .withContext(null)
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
@@ -367,7 +367,7 @@ public class UpdateHoldingEventHandlerTest {
     MappingManager.registerWriterFactory(new HoldingWriterFactory());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_HOLDING_REPLACED.value())
+      .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
@@ -379,7 +379,7 @@ public class UpdateHoldingEventHandlerTest {
   @Test
   public void isEligibleShouldReturnTrue() {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_HOLDING_REPLACED.value())
+      .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
@@ -390,7 +390,7 @@ public class UpdateHoldingEventHandlerTest {
   public void isEligibleShouldReturnFalseIfCurrentNodeIsEmpty() {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_HOLDING_REPLACED.value())
+      .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper);
     assertFalse(updateHoldingEventHandler.isEligible(dataImportEventPayload));
@@ -404,7 +404,7 @@ public class UpdateHoldingEventHandlerTest {
       .withContentType(JOB_PROFILE)
       .withContent(jobProfile);
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_HOLDING_REPLACED.value())
+      .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper);
     assertFalse(updateHoldingEventHandler.isEligible(dataImportEventPayload));
@@ -423,7 +423,7 @@ public class UpdateHoldingEventHandlerTest {
       .withContentType(JOB_PROFILE)
       .withContent(actionProfile);
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_HOLDING_REPLACED.value())
+      .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper);
     assertFalse(updateHoldingEventHandler.isEligible(dataImportEventPayload));
@@ -442,7 +442,7 @@ public class UpdateHoldingEventHandlerTest {
       .withContentType(JOB_PROFILE)
       .withContent(actionProfile);
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_HOLDING_REPLACED.value())
+      .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper);
     assertFalse(updateHoldingEventHandler.isEligible(dataImportEventPayload));
