@@ -314,7 +314,7 @@ public class UpdateHoldingEventHandlerTest {
     HashMap<String, String> context = new HashMap<>();
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
-    context.put("InvalidField", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
+    context.put("InvalidField", Json.encode(instance));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
