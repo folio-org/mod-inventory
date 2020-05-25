@@ -25,7 +25,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
-import org.codehaus.jackson.map.ObjectMapper;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
@@ -62,7 +61,6 @@ import io.vertx.core.json.JsonObject;
 public class UpdateHoldingEventHandlerTest {
 
   private static final String PARSED_CONTENT_WITH_INSTANCE_ID = "{ \"leader\": \"01314nam  22003851a 4500\", \"fields\":[ {\"001\":\"ybp7406411\"}, {\"999\": {\"ind1\":\"f\", \"ind2\":\"f\", \"subfields\":[ { \"i\": \"957985c6-97e3-4038-b0e7-343ecd0b8120\"} ] } } ] }";
-  private static final String PARSED_CONTENT_WITHOUT_INSTANCE_ID = "{ \"leader\":\"01314nam  22003851a 4500\", \"fields\":[ { \"001\":\"ybp7406411\" } ] }";
 
   @Mock
   private Storage storage;
@@ -110,16 +108,10 @@ public class UpdateHoldingEventHandlerTest {
   private UpdateHoldingEventHandler updateHoldingEventHandler;
 
   @Before
-  public void setUp() throws UnsupportedEncodingException {
+  public void setUp() {
     MockitoAnnotations.initMocks(this);
     MappingManager.clearReaderFactories();
     updateHoldingEventHandler = new UpdateHoldingEventHandler(storage);
-    doAnswer(invocationOnMock -> {
-      MultipleRecords result = new MultipleRecords<>(new ArrayList<>(), 0);
-      Consumer<Success<MultipleRecords>> successHandler = invocationOnMock.getArgument(2);
-      successHandler.accept(new Success<>(result));
-      return null;
-    }).when(holdingsRecordsCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
     doAnswer(invocationOnMock -> {
       HoldingsRecord holdingsRecord = invocationOnMock.getArgument(0);
