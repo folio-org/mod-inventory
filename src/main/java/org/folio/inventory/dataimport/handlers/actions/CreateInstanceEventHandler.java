@@ -1,6 +1,7 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.Future;
+import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -11,8 +12,13 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
+import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.storage.Storage;
+import org.folio.inventory.storage.external.CollectionResourceClient;
+import org.folio.inventory.storage.external.CollectionResourceRepository;
 import org.folio.inventory.support.InstanceUtil;
+import org.folio.inventory.support.http.client.OkapiHttpClient;
+import org.folio.inventory.support.http.client.Response;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
@@ -20,6 +26,9 @@ import org.folio.processing.mapping.defaultmapper.RecordToInstanceMapperBuilder;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.Record;
 
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -47,9 +56,11 @@ public class CreateInstanceEventHandler implements EventHandler {
   private final List<String> requiredFields = Arrays.asList("source", "title", "instanceTypeId");
 
   private Storage storage;
+  private HttpClient client;
 
-  public CreateInstanceEventHandler(Storage storage) {
+  public CreateInstanceEventHandler(Storage storage, HttpClient client) {
     this.storage = storage;
+    this.client = client;
   }
 
   @Override
@@ -83,6 +94,7 @@ public class CreateInstanceEventHandler implements EventHandler {
       if (errors.isEmpty()) {
         Instance mappedInstance = InstanceUtil.jsonToInstance(instanceAsJson);
         addInstance(mappedInstance, instanceCollection)
+          .compose(createdInstance -> createPrecedingSucceedingTitles(mappedInstance, context).map(createdInstance))
           .setHandler(ar -> {
             if (ar.succeeded()) {
               dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(ar.result()));
@@ -143,5 +155,70 @@ public class CreateInstanceEventHandler implements EventHandler {
         future.fail(failure.getReason());
       });
     return future;
+  }
+
+  private Future<Void> createPrecedingSucceedingTitles(Instance instance, Context context) {
+    Future<Void> future = Future.future();
+    List<PrecedingSucceedingTitle> precedingSucceedingTitles = new ArrayList<>();
+    preparePrecedingTitles(instance, precedingSucceedingTitles);
+    prepareSucceedingTitles(instance, precedingSucceedingTitles);
+    CollectionResourceClient precedingSucceedingTitlesClient = createPrecedingSucceedingTitlesClient(context);
+    CollectionResourceRepository precedingSucceedingTitlesRepository = new CollectionResourceRepository(precedingSucceedingTitlesClient);
+    List<CompletableFuture<Response>> postFutures = new ArrayList<>();
+
+    precedingSucceedingTitles.forEach(title -> postFutures.add(precedingSucceedingTitlesRepository.post(title)));
+    CompletableFuture.allOf(postFutures.toArray(new CompletableFuture<?>[] {}))
+      .whenComplete((v, e) -> {
+        if (e != null) {
+          future.fail(e);
+          return;
+        }
+        future.complete();
+      });
+    return future;
+  }
+
+  private void preparePrecedingTitles(Instance instance, List<PrecedingSucceedingTitle> preparedTitles) {
+    if (instance.getPrecedingTitles() != null) {
+      for (PrecedingSucceedingTitle parent : instance.getPrecedingTitles()) {
+        PrecedingSucceedingTitle precedingSucceedingTitle = new PrecedingSucceedingTitle(
+          UUID.randomUUID().toString(),
+          parent.precedingInstanceId,
+          instance.getId(),
+          parent.title,
+          parent.hrid,
+          parent.identifiers);
+        preparedTitles.add(precedingSucceedingTitle);
+      }
+    }
+  }
+
+  private void prepareSucceedingTitles(Instance instance, List<PrecedingSucceedingTitle> preparedTitles) {
+    if (instance.getSucceedingTitles() != null) {
+      for (PrecedingSucceedingTitle child : instance.getSucceedingTitles()) {
+        PrecedingSucceedingTitle precedingSucceedingTitle = new PrecedingSucceedingTitle(
+          UUID.randomUUID().toString(),
+          instance.getId(),
+          child.succeedingInstanceId,
+          child.title,
+          child.hrid,
+          child.identifiers);
+        preparedTitles.add(precedingSucceedingTitle);
+      }
+    }
+  }
+
+  private CollectionResourceClient createPrecedingSucceedingTitlesClient(Context context) {
+    try {
+      OkapiHttpClient okapiClient = createHttpClient(context);
+     return  new CollectionResourceClient(okapiClient, new URL(context.getOkapiLocation() + "/preceding-succeeding-titles"));
+    } catch (MalformedURLException e) {
+      throw new EventProcessingException("Error creation of precedingSucceedingClient", e);
+    }
+  }
+
+  private OkapiHttpClient createHttpClient(Context context) throws MalformedURLException {
+    return new OkapiHttpClient(client, new URL(context.getOkapiLocation()), context.getTenantId(),
+      context.getToken(), null, null, null);
   }
 }
