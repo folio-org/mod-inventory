@@ -12,6 +12,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
@@ -188,6 +189,32 @@ public class ItemMarkWithdrawnApiTest extends ApiTests {
 
     assertThat(requestStorageClient.getById(request.getId()).getJson()
       .getString("status"), is(requestStatus));
+  }
+
+  @Test
+  public void canMarkWithdrawnItemAsMissing() throws Exception {
+
+    IndividualResource instance = instancesClient.create(smallAngryPlanet(UUID.randomUUID()));
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(instance.getId()))
+      .getId();
+
+    IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withStatus("Available")
+      .canCirculate());
+
+    final IndividualResource request = createRequest(createdItem.getId(),
+      "Available", DateTime.now(DateTimeZone.UTC).plusHours(1));
+    
+    final JsonObject withdrawnItemJson = markItemWithdrawn(createdItem.getId()).getJson();
+
+    itemsClient.replace(createdItem.getId(), withdrawnItemJson.put("status", new JsonObject().put("name", "Missing")));
+    
+    Response response = itemsClient.getById(createdItem.getId());
+    
+    assertThat(response.getJson().getJsonObject("status").getString("name"), is("Missing"));
   }
 
   private Response markItemWithdrawn(UUID itemId) throws InterruptedException,
