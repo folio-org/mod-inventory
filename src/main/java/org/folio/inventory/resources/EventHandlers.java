@@ -2,6 +2,7 @@ package org.folio.inventory.resources;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.WorkerExecutor;
+import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -16,6 +17,7 @@ import org.folio.inventory.dataimport.handlers.actions.CreateHoldingEventHandler
 import org.folio.inventory.dataimport.handlers.actions.CreateInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler;
+import org.folio.inventory.dataimport.handlers.actions.UpdateHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchItemEventHandler;
@@ -43,10 +45,12 @@ public class EventHandlers {
 
   private WorkerExecutor executor;
   private Storage storage;
+  private HttpClient client;
 
-  public EventHandlers(final Storage storage) {
+  public EventHandlers(final Storage storage, final HttpClient client) {
     Vertx vertx = Vertx.vertx();
     this.storage = storage;
+    this.client = client;
     this.executor = vertx.createSharedWorkerExecutor("di-event-handling-thread-pool");
     MatchValueLoaderFactory.register(new InstanceLoader(storage, vertx));
     MatchValueLoaderFactory.register(new ItemLoader(storage, vertx));
@@ -65,8 +69,9 @@ public class EventHandlers {
     EventManager.registerEventHandler(new MatchHoldingEventHandler());
     EventManager.registerEventHandler(new CreateItemEventHandler(storage));
     EventManager.registerEventHandler(new CreateHoldingEventHandler(storage));
-    EventManager.registerEventHandler(new CreateInstanceEventHandler(storage));
+    EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, client));
     EventManager.registerEventHandler(new UpdateItemEventHandler(storage));
+    EventManager.registerEventHandler(new UpdateHoldingEventHandler(storage));
   }
 
   public void register(Router router) {

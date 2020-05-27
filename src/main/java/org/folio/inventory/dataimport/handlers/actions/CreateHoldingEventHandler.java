@@ -4,6 +4,8 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+
+import org.apache.commons.lang3.StringUtils;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
@@ -54,8 +56,8 @@ public class CreateHoldingEventHandler implements EventHandler {
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
-      if (dataImportEventPayload.getContext() == null || dataImportEventPayload.getContext().isEmpty()
-        || !dataImportEventPayload.getContext().containsKey(MARC_BIBLIOGRAPHIC.value())) {
+      if (dataImportEventPayload.getContext() == null
+        || StringUtils.isEmpty(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()))) {
         throw new EventProcessingException(CONTEXT_EMPTY_ERROR_MESSAGE);
       }
       prepareEvent(dataImportEventPayload);
