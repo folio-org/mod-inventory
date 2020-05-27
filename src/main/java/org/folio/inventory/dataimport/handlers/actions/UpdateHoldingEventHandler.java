@@ -1,5 +1,6 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import static java.util.Objects.isNull;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.ActionProfile.Action.REPLACE;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
@@ -8,6 +9,8 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_UPDATED;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.commons.lang3.StringUtils;
@@ -34,6 +37,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
   private static final String UPDATE_HOLDING_ERROR_MESSAGE = "Can`t update  holding";
   private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t update Holding entity: context or Holding-entity are empty or doesn`t exist!";
   private static final String EMPTY_REQUIRED_FIELDS_ERROR_MESSAGE = "Can`t udpate Holding entity: one of required fields(hrid, permanentLocationId, instanceId) are empty!";
+  private static final String HOLDINGS_PATH_FIELD = "holdings";
 
   private final Storage storage;
 
@@ -50,8 +54,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
         || isEmpty(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()))) {
         throw new EventProcessingException(CONTEXT_EMPTY_ERROR_MESSAGE);
       }
-      HoldingsRecord tmpHoldingsRecord = ObjectMapperTool.getMapper()
-        .readValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), HoldingsRecord.class);
+      HoldingsRecord tmpHoldingsRecord = retrieveHolding(dataImportEventPayload.getContext());
 
       String holdingId = tmpHoldingsRecord.getId();
       String hrid = tmpHoldingsRecord.getHrid();
@@ -66,8 +69,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
 
       Context context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       HoldingsRecordCollection holdingsRecords = storage.getHoldingsRecordCollection(context);
-      HoldingsRecord holding = ObjectMapperTool.getMapper().readValue(String.valueOf(new JsonObject(dataImportEventPayload.getContext()
-        .get(HOLDINGS.value())).getJsonObject(HOLDINGS.value().toLowerCase())), HoldingsRecord.class);
+      HoldingsRecord holding = retrieveHolding(dataImportEventPayload.getContext());
       holding.setId(holdingId);
       holding.setHrid(hrid);
       holding.setInstanceId(instanceId);
@@ -92,6 +94,12 @@ public class UpdateHoldingEventHandler implements EventHandler {
       return actionProfile.getAction() == REPLACE && actionProfile.getFolioRecord() == HOLDINGS;
     }
     return false;
+  }
+
+  private HoldingsRecord retrieveHolding(HashMap<String, String> context) throws IOException {
+    return (isNull(new JsonObject(context.get(HOLDINGS.value())).getJsonObject(HOLDINGS_PATH_FIELD))) ?
+      ObjectMapperTool.getMapper().readValue(context.get(HOLDINGS.value()), HoldingsRecord.class) :
+      ObjectMapperTool.getMapper().readValue(String.valueOf(new JsonObject(context.get(HOLDINGS.value())).getJsonObject(HOLDINGS_PATH_FIELD)), HoldingsRecord.class);
   }
 
   private void prepareEvent(DataImportEventPayload dataImportEventPayload) {
