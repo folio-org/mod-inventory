@@ -25,13 +25,4 @@ public class ItemTest {
       "permanent-loan-type-id", new JsonObject());
   }
 
-  @Test
-  public void canMarkWithdrawnItemAsMissing() {
-    Status widthdrawnStatus = new Status(ItemStatusName.WITHDRAWN);
-    Item item = new Item("id", "holding-id", widthdrawnStatus, "material-type-id",
-      "permanent-loan-type-id", new JsonObject());
-    item = item.changeStatus(ItemStatusName.MISSING);
-    assertEquals(ItemStatusName.MISSING, item.getStatus().getName());
-  }
-
 }
