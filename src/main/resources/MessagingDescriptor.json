@@ -83,6 +83,12 @@
       "description": "Updated SRS Marc Bibliographic Record",
       "eventTTL": 1,
       "signed": false
+    },
+    {
+      "eventType": "DI_INVENTORY_ITEM_UPDATED",
+      "description": "Updated inventory item",
+      "eventTTL": 1,
+      "signed": false
     }
   ],
   "subscriptions": [
