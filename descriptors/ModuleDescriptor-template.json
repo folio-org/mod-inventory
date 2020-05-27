@@ -262,7 +262,11 @@
             "inventory-storage.holdings.item.post",
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
-            "inventory-storage.instances.item.post"
+            "inventory-storage.instances.item.post",
+            "inventory-storage.instances.item.put",
+            "inventory-storage.holdings.item.put",
+            "inventory-storage.items.item.put",
+            "inventory-storage.preceding-succeeding-titles.item.post"
           ]
         },
         {

@@ -57,7 +57,7 @@ public class InventoryVerticle extends AbstractVerticle {
     new InstancesBatch(storage, client).register(router);
     new IsbnUtilsApi().register(router);
     new TenantApi().register(router);
-    new EventHandlers(storage).register(router);
+    new EventHandlers(storage, client).register(router);
 
     Handler<AsyncResult<HttpServer>> onHttpServerStart = result -> {
       if (result.succeeded()) {

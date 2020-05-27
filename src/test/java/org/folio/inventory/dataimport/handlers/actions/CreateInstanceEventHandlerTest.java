@@ -1,14 +1,20 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
 import com.google.common.collect.Lists;
+import io.vertx.core.Handler;
+import io.vertx.core.MultiMap;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpClientRequest;
+import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import org.apache.http.HttpStatus;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.JobProfile;
 import org.folio.MappingProfile;
-import org.folio.inventory.common.api.request.PagingParameters;
-import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.InstanceWriterFactory;
 import org.folio.inventory.domain.instances.Instance;
@@ -34,8 +40,6 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.UUID;
@@ -52,19 +56,28 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class CreateInstanceEventHandlerTest {
+
+  private static final String PARSED_CONTENT_WITH_PRECEDING_SUCCEEDING_TITLES = "{\"leader\": \"01314nam  22003851a 4500\", \"fields\":[ {\"001\":\"ybp7406411\"},{\"780\": {\"ind1\":\"0\",\"ind2\":\"0\", \"subfields\":[{\"t\":\"Houston oil directory\"}]}},{ \"785\": { \"ind1\": \"0\", \"ind2\": \"0\", \"subfields\": [ { \"t\": \"SAIS review of international affairs\" }, {\"x\": \"1945-4724\" }]}}]}";
+  private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/rules.json";
+  public static final String OKAPI_URL = "http://localhost";
 
   @Mock
   private Storage storage;
   @Mock
   InstanceCollection instanceRecordCollection;
+  @Mock
+  HttpClient mockedClient;
   @Spy
   private MarcBibReaderFactory fakeReaderFactory = new MarcBibReaderFactory();
 
@@ -106,18 +119,14 @@ public class CreateInstanceEventHandlerTest {
             .withContent(JsonObject.mapFrom(mappingProfile).getMap())))));
 
   private CreateInstanceEventHandler createInstanceEventHandler;
+  private JsonObject mappingRules;
 
   @Before
-  public void setUp() throws UnsupportedEncodingException {
+  public void setUp() throws IOException {
     MockitoAnnotations.initMocks(this);
     MappingManager.clearReaderFactories();
-    createInstanceEventHandler = new CreateInstanceEventHandler(storage);
-    doAnswer(invocationOnMock -> {
-      MultipleRecords result = new MultipleRecords<>(new ArrayList<>(), 0);
-      Consumer<Success<MultipleRecords>> successHandler = invocationOnMock.getArgument(2);
-      successHandler.accept(new Success<>(result));
-      return null;
-    }).when(instanceRecordCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+    createInstanceEventHandler = new CreateInstanceEventHandler(storage, mockedClient);
+    mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
 
     doAnswer(invocationOnMock -> {
       Instance instanceRecord = invocationOnMock.getArgument(0);
@@ -125,10 +134,28 @@ public class CreateInstanceEventHandlerTest {
       successHandler.accept(new Success<>(instanceRecord));
       return null;
     }).when(instanceRecordCollection).add(any(), any(Consumer.class), any(Consumer.class));
+
+    HttpClientRequest mockedRequest = Mockito.mock(HttpClientRequest.class);
+    when(mockedRequest.headers()).thenReturn(MultiMap.caseInsensitiveMultiMap());
+
+    HttpClientResponse mockedPostResponse = Mockito.mock(HttpClientResponse.class);
+    when(mockedPostResponse.statusCode()).thenReturn(HttpStatus.SC_CREATED);
+
+    doAnswer(invocationOnMock -> {
+      Handler<Buffer> responseHandler = invocationOnMock.getArgument(0);
+      responseHandler.handle(Buffer.buffer());
+      return null;
+    }).when(mockedPostResponse).bodyHandler(any(Handler.class));
+
+    doAnswer(invocationOnMock -> {
+      Handler<HttpClientResponse> responseHandler = invocationOnMock.getArgument(1);
+      responseHandler.handle(mockedPostResponse);
+      return mockedRequest;
+    }).when(mockedClient).postAbs(anyString(), any(Handler.class));
   }
 
   @Test
-  public void shouldProcessEvent() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+  public void shouldProcessEvent() throws InterruptedException, ExecutionException, TimeoutException {
     Reader fakeReader = Mockito.mock(Reader.class);
 
     String instanceTypeId = UUID.randomUUID().toString();
@@ -144,25 +171,31 @@ public class CreateInstanceEventHandlerTest {
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
 
     HashMap<String, String> context = new HashMap<>();
-    context.put(MARC_BIBLIOGRAPHIC.value(), JsonObject.mapFrom(new Record().withParsedRecord(new ParsedRecord().withContent(new JsonObject()))).encode());
-    context.put("MAPPING_RULES", new JsonObject().encode());
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_PRECEDING_SUCCEEDING_TITLES));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put("MAPPING_RULES", mappingRules.encode());
     context.put("MAPPING_PARAMS", new JsonObject().encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withOkapiUrl(OKAPI_URL);
 
     CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
 
     Assert.assertEquals(DI_INVENTORY_INSTANCE_CREATED.value(), actualDataImportEventPayload.getEventType());
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
-    Assert.assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(INSTANCE.value())).getString("id"));
-    Assert.assertEquals(title, new JsonObject(actualDataImportEventPayload.getContext().get(INSTANCE.value())).getString("title"));
-    Assert.assertEquals(instanceTypeId, new JsonObject(actualDataImportEventPayload.getContext().get(INSTANCE.value())).getString("instanceTypeId"));
-    Assert.assertEquals("MARC", new JsonObject(actualDataImportEventPayload.getContext().get(INSTANCE.value())).getString("source"));
+    JsonObject createdInstance = new JsonObject(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
+    Assert.assertNotNull(createdInstance.getString("id"));
+    Assert.assertEquals(title, createdInstance.getString("title"));
+    Assert.assertEquals(instanceTypeId, createdInstance.getString("instanceTypeId"));
+    Assert.assertEquals("MARC", createdInstance.getString("source"));
+    Assert.assertThat(createdInstance.getJsonArray("precedingTitles").size(), is(1));
+    Assert.assertThat(createdInstance.getJsonArray("succeedingTitles").size(), is(1));
+    verify(mockedClient, times(2)).postAbs(anyString(), any(Handler.class));
   }
 
 
