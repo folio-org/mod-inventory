@@ -7,7 +7,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
-import java.util.HashMap;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.dataimport.HoldingWriterFactory;
@@ -16,15 +15,16 @@ import org.folio.inventory.dataimport.ItemWriterFactory;
 import org.folio.inventory.dataimport.handlers.actions.CreateHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler;
-import org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler;
+import org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.UpdateHoldingEventHandler;
+import org.folio.inventory.dataimport.handlers.actions.UpdateInstanceEventHandler;
+import org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchItemEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.loaders.HoldingLoader;
 import org.folio.inventory.dataimport.handlers.matching.loaders.InstanceLoader;
 import org.folio.inventory.dataimport.handlers.matching.loaders.ItemLoader;
-import org.folio.inventory.dataimport.handlers.actions.UpdateInstanceEventHandler;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
 import org.folio.inventory.support.http.server.SuccessResponse;
@@ -34,9 +34,11 @@ import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.mapper.reader.record.MarcBibReaderFactory;
 import org.folio.processing.matching.loader.MatchValueLoaderFactory;
 import org.folio.processing.matching.reader.MarcValueReaderImpl;
-import org.folio.processing.matching.reader.StaticValueReaderImpl;
 import org.folio.processing.matching.reader.MatchValueReaderFactory;
+import org.folio.processing.matching.reader.StaticValueReaderImpl;
 import org.folio.rest.tools.utils.ObjectMapperTool;
+
+import java.util.HashMap;
 
 public class EventHandlers {
 
@@ -72,6 +74,7 @@ public class EventHandlers {
     EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, client));
     EventManager.registerEventHandler(new UpdateItemEventHandler(storage));
     EventManager.registerEventHandler(new UpdateHoldingEventHandler(storage));
+    EventManager.registerEventHandler(new ReplaceInstanceEventHandler(storage, client));
   }
 
   public void register(Router router) {
