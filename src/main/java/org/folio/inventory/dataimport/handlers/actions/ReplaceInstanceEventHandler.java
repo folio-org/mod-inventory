@@ -31,11 +31,15 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.ActionProfile.Action.REPLACE;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
@@ -82,7 +86,7 @@ public class ReplaceInstanceEventHandler implements EventHandler {
       }
 
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
-      JsonObject instanceToUpdate = new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value()));
+      Instance instanceToUpdate = InstanceUtil.jsonToInstance(new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value())));
 
       prepareEvent(dataImportEventPayload);
       defaultMapRecordToInstance(dataImportEventPayload);
@@ -92,18 +96,32 @@ public class ReplaceInstanceEventHandler implements EventHandler {
         instanceAsJson = instanceAsJson.getJsonObject(INSTANCE_PATH);
       }
 
-      instanceAsJson.put("id", instanceToUpdate.getString("id"));
-      instanceAsJson.put(HRID_KEY, instanceToUpdate.getString(HRID_KEY));
+      Set<String> precedingSucceedingIds = new HashSet<>();
+      precedingSucceedingIds.addAll(instanceToUpdate.getPrecedingTitles()
+        .stream()
+        .filter(pr -> isNotEmpty(pr.id))
+        .map(pr -> pr.id)
+        .collect(Collectors.toList()));
+      precedingSucceedingIds.addAll(instanceToUpdate.getSucceedingTitles()
+        .stream()
+        .filter(pr -> isNotEmpty(pr.id))
+        .map(pr -> pr.id)
+        .collect(Collectors.toList()));
+      instanceAsJson.put("id", instanceToUpdate.getId());
+      instanceAsJson.put(HRID_KEY, instanceToUpdate.getHrid());
       instanceAsJson.put(SOURCE_KEY, MARC_FORMAT);
-      instanceAsJson.put(METADATA_KEY, instanceToUpdate.getJsonObject(METADATA_KEY));
+      instanceAsJson.put(METADATA_KEY, instanceToUpdate.getMetadata());
 
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
+      CollectionResourceClient precedingSucceedingTitlesClient = createPrecedingSucceedingTitlesClient(context);
+      CollectionResourceRepository precedingSucceedingTitlesRepository = new CollectionResourceRepository(precedingSucceedingTitlesClient);
       List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
       if (errors.isEmpty()) {
         Instance mappedInstance = InstanceUtil.jsonToInstance(instanceAsJson);
         JsonObject finalInstanceAsJson = instanceAsJson;
         updateInstance(mappedInstance, instanceCollection)
-          .compose(updatedInstance -> updatePrecedingSucceedingTitles(mappedInstance, context).map(updatedInstance))
+          .compose(ar -> deletePrecedingSucceedingTitles(precedingSucceedingIds, precedingSucceedingTitlesRepository))
+          .compose(ar -> createPrecedingSucceedingTitles(mappedInstance, precedingSucceedingTitlesRepository))
           .setHandler(ar -> {
             if (ar.succeeded()) {
               dataImportEventPayload.getContext().put(INSTANCE.value(), finalInstanceAsJson.encode());
@@ -158,7 +176,7 @@ public class ReplaceInstanceEventHandler implements EventHandler {
 
   private Future<Void> updateInstance(Instance instance, InstanceCollection instanceCollection) {
     Future<Void> future = Future.future();
-    instanceCollection.update(instance, success -> future.complete(success.getResult()),
+    instanceCollection.update(instance, success -> future.complete(),
       failure -> {
         LOGGER.error("Error updating Instance cause %s, status code %s", failure.getReason(), failure.getStatusCode());
         future.fail(failure.getReason());
@@ -166,17 +184,31 @@ public class ReplaceInstanceEventHandler implements EventHandler {
     return future;
   }
 
-  private Future<Void> updatePrecedingSucceedingTitles(Instance instance, Context context) {
+  private Future<Void> deletePrecedingSucceedingTitles(Set<String> ids, CollectionResourceRepository precedingSucceedingTitlesRepository) {
+    Future<Void> future = Future.future();
+    List<CompletableFuture<Response>> deleteFutures = new ArrayList<>();
+
+    ids.forEach(id -> deleteFutures.add(precedingSucceedingTitlesRepository.delete(id)));
+    CompletableFuture.allOf(deleteFutures.toArray(new CompletableFuture<?>[]{}))
+      .whenComplete((v, e) -> {
+        if (e != null) {
+          future.fail(e);
+          return;
+        }
+        future.complete();
+      });
+    return future;
+  }
+
+  private Future<Void> createPrecedingSucceedingTitles(Instance instance, CollectionResourceRepository precedingSucceedingTitlesRepository) {
     Future<Void> future = Future.future();
     List<PrecedingSucceedingTitle> precedingSucceedingTitles = new ArrayList<>();
     preparePrecedingTitles(instance, precedingSucceedingTitles);
     prepareSucceedingTitles(instance, precedingSucceedingTitles);
-    CollectionResourceClient precedingSucceedingTitlesClient = createPrecedingSucceedingTitlesClient(context);
-    CollectionResourceRepository precedingSucceedingTitlesRepository = new CollectionResourceRepository(precedingSucceedingTitlesClient);
     List<CompletableFuture<Response>> postFutures = new ArrayList<>();
 
     precedingSucceedingTitles.forEach(title -> postFutures.add(precedingSucceedingTitlesRepository.post(title)));
-    CompletableFuture.allOf(postFutures.toArray(new CompletableFuture<?>[]{}))
+    CompletableFuture.allOf(postFutures.toArray(new CompletableFuture<?>[] {}))
       .whenComplete((v, e) -> {
         if (e != null) {
           future.fail(e);
