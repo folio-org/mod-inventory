@@ -49,19 +49,9 @@ import static org.folio.inventory.domain.instances.Instance.METADATA_KEY;
 import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
-public class ReplaceInstanceEventHandler implements EventHandler {
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(ReplaceInstanceEventHandler.class);
+public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler {
 
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC or INSTANCE data";
-  private static final String MARC_FORMAT = "MARC";
-  private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
-  private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
-  private static final String INSTANCE_PATH = "instance";
-  private final List<String> requiredFields = Arrays.asList("source", "title", "instanceTypeId");
-
-  private Storage storage;
-  private HttpClient client;
 
   public ReplaceInstanceEventHandler(Storage storage, HttpClient client) {
     this.storage = storage;
@@ -144,21 +134,6 @@ public class ReplaceInstanceEventHandler implements EventHandler {
     return future;
   }
 
-  private void defaultMapRecordToInstance(DataImportEventPayload dataImportEventPayload) {
-    try {
-      HashMap<String, String> context = dataImportEventPayload.getContext();
-      JsonObject mappingRules = new JsonObject(context.get(MAPPING_RULES_KEY));
-      JsonObject parsedRecord = new JsonObject((String) new JsonObject(context.get(MARC_BIBLIOGRAPHIC.value()))
-        .mapTo(Record.class).getParsedRecord().getContent());
-      MappingParameters mappingParameters = new JsonObject(context.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
-      org.folio.Instance instance = RecordToInstanceMapperBuilder.buildMapper(MARC_FORMAT).mapRecord(parsedRecord, mappingParameters, mappingRules);
-      dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(new JsonObject().put(INSTANCE_PATH, JsonObject.mapFrom(instance))));
-    } catch (Exception e) {
-      LOGGER.error("Error in default mapper.", e);
-    }
-
-  }
-
   @Override
   public boolean isEligible(DataImportEventPayload dataImportEventPayload) {
     if (dataImportEventPayload.getCurrentNode() != null && ACTION_PROFILE == dataImportEventPayload.getCurrentNode().getContentType()) {
@@ -166,100 +141,5 @@ public class ReplaceInstanceEventHandler implements EventHandler {
       return actionProfile.getAction() == REPLACE && actionProfile.getFolioRecord() == INSTANCE;
     }
     return false;
-  }
-
-  private void prepareEvent(DataImportEventPayload dataImportEventPayload) {
-    dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
-    dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
-    dataImportEventPayload.getContext().put(INSTANCE.value(), new JsonObject().encode());
-  }
-
-  private Future<Void> updateInstance(Instance instance, InstanceCollection instanceCollection) {
-    Future<Void> future = Future.future();
-    instanceCollection.update(instance, success -> future.complete(),
-      failure -> {
-        LOGGER.error("Error updating Instance cause %s, status code %s", failure.getReason(), failure.getStatusCode());
-        future.fail(failure.getReason());
-      });
-    return future;
-  }
-
-  private Future<Void> deletePrecedingSucceedingTitles(Set<String> ids, CollectionResourceRepository precedingSucceedingTitlesRepository) {
-    Future<Void> future = Future.future();
-    List<CompletableFuture<Response>> deleteFutures = new ArrayList<>();
-
-    ids.forEach(id -> deleteFutures.add(precedingSucceedingTitlesRepository.delete(id)));
-    CompletableFuture.allOf(deleteFutures.toArray(new CompletableFuture<?>[]{}))
-      .whenComplete((v, e) -> {
-        if (e != null) {
-          future.fail(e);
-          return;
-        }
-        future.complete();
-      });
-    return future;
-  }
-
-  private Future<Void> createPrecedingSucceedingTitles(Instance instance, CollectionResourceRepository precedingSucceedingTitlesRepository) {
-    Future<Void> future = Future.future();
-    List<PrecedingSucceedingTitle> precedingSucceedingTitles = new ArrayList<>();
-    preparePrecedingTitles(instance, precedingSucceedingTitles);
-    prepareSucceedingTitles(instance, precedingSucceedingTitles);
-    List<CompletableFuture<Response>> postFutures = new ArrayList<>();
-
-    precedingSucceedingTitles.forEach(title -> postFutures.add(precedingSucceedingTitlesRepository.post(title)));
-    CompletableFuture.allOf(postFutures.toArray(new CompletableFuture<?>[] {}))
-      .whenComplete((v, e) -> {
-        if (e != null) {
-          future.fail(e);
-          return;
-        }
-        future.complete();
-      });
-    return future;
-  }
-
-  private void preparePrecedingTitles(Instance instance, List<PrecedingSucceedingTitle> preparedTitles) {
-    if (instance.getPrecedingTitles() != null) {
-      for (PrecedingSucceedingTitle parent : instance.getPrecedingTitles()) {
-        PrecedingSucceedingTitle precedingSucceedingTitle = new PrecedingSucceedingTitle(
-          UUID.randomUUID().toString(),
-          parent.precedingInstanceId,
-          instance.getId(),
-          parent.title,
-          parent.hrid,
-          parent.identifiers);
-        preparedTitles.add(precedingSucceedingTitle);
-      }
-    }
-  }
-
-  private void prepareSucceedingTitles(Instance instance, List<PrecedingSucceedingTitle> preparedTitles) {
-    if (instance.getSucceedingTitles() != null) {
-      for (PrecedingSucceedingTitle child : instance.getSucceedingTitles()) {
-        PrecedingSucceedingTitle precedingSucceedingTitle = new PrecedingSucceedingTitle(
-          UUID.randomUUID().toString(),
-          instance.getId(),
-          child.succeedingInstanceId,
-          child.title,
-          child.hrid,
-          child.identifiers);
-        preparedTitles.add(precedingSucceedingTitle);
-      }
-    }
-  }
-
-  private CollectionResourceClient createPrecedingSucceedingTitlesClient(Context context) {
-    try {
-      OkapiHttpClient okapiClient = createHttpClient(context);
-      return new CollectionResourceClient(okapiClient, new URL(context.getOkapiLocation() + "/preceding-succeeding-titles"));
-    } catch (MalformedURLException e) {
-      throw new EventProcessingException("Error creation of precedingSucceedingClient", e);
-    }
-  }
-
-  private OkapiHttpClient createHttpClient(Context context) throws MalformedURLException {
-    return new OkapiHttpClient(client, new URL(context.getOkapiLocation()), context.getTenantId(),
-      context.getToken(), null, null, null);
   }
 }
