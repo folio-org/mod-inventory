@@ -42,7 +42,8 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
 
     vertx.runOnContext(blockingFuture -> {
       try {
-        getSearchableCollection(context).findByCql(loadQuery.getCql() + addCqlSubMatchCondition(eventPayload), PagingParameters.defaults(),
+        String cql = loadQuery.getCql() + addCqlSubMatchCondition(eventPayload);
+        getSearchableCollection(context).findByCql(cql, PagingParameters.defaults(),
           success -> {
             MultipleRecords<T> collection = success.getResult();
             if (collection.totalRecords == 1) {
