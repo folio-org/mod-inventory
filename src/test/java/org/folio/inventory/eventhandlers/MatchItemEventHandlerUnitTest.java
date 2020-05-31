@@ -6,6 +6,7 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.folio.DataImportEventPayload;
+import org.folio.HoldingsRecord;
 import org.folio.MatchDetail;
 import org.folio.MatchProfile;
 import org.folio.inventory.common.Context;
@@ -26,6 +27,7 @@ import org.folio.processing.matching.reader.MarcValueReaderImpl;
 import org.folio.processing.matching.reader.MatchValueReaderFactory;
 import org.folio.processing.value.MissingValue;
 import org.folio.processing.value.StringValue;
+import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Field;
 import org.folio.rest.jaxrs.model.MatchExpression;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
@@ -42,6 +44,7 @@ import java.util.HashMap;
 import java.util.UUID;
 import java.util.function.Consumer;
 
+import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_MATCHED;
@@ -57,6 +60,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
@@ -64,7 +68,9 @@ import static org.mockito.Mockito.when;
 @RunWith(VertxUnitRunner.class)
 public class MatchItemEventHandlerUnitTest {
 
-  private static final String ITEM_ID = "001234";
+  private static final String ITEM_HRID = "001234";
+  private static final String ITEM_ID = "ddd266ef-07ac-4117-be13-d418b8cd6902";
+  private static final String HOLDING_ID = "9634a5ab-9228-4703-baf2-4d12ebc77d56";
 
   @Mock
   private Storage storage;
@@ -83,7 +89,7 @@ public class MatchItemEventHandlerUnitTest {
     when(marcValueReader.isEligibleForEntityType(MARC_BIBLIOGRAPHIC)).thenReturn(true);
     when(storage.getItemCollection(any(Context.class))).thenReturn(itemCollection);
     when(marcValueReader.read(any(DataImportEventPayload.class), any(MatchDetail.class)))
-      .thenReturn(StringValue.of(ITEM_ID));
+      .thenReturn(StringValue.of(ITEM_HRID));
     MatchValueReaderFactory.register(marcValueReader);
     MatchValueLoaderFactory.register(itemLoader);
   }
@@ -100,7 +106,7 @@ public class MatchItemEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(itemCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(eq(format("hrid == \"%s\"", ITEM_HRID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
     EventHandler eventHandler = new MatchItemEventHandler();
     DataImportEventPayload eventPayload = createEventPayload();
@@ -268,6 +274,70 @@ public class MatchItemEventHandlerUnitTest {
     assertTrue(eventHandler.isEligible(eventPayload));
   }
 
+  @Test
+  public void shouldMatchWithSubMatchByItemOnHandleEventPayload(TestContext testContext) throws UnsupportedEncodingException {
+    Async async = testContext.async();
+
+    doAnswer(ans -> {
+      Consumer<Success<MultipleRecords<Item>>> callback =
+        (Consumer<Success<MultipleRecords<Item>>>) ans.getArguments()[2];
+      Success<MultipleRecords<Item>> result =
+        new Success<>(new MultipleRecords<>(singletonList(createItem()), 1));
+      callback.accept(result);
+      return null;
+    }).when(itemCollection)
+      .findByCql(eq(format("hrid == \"%s\" AND id == \"%s\"", ITEM_HRID, ITEM_ID)),
+        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    EventHandler eventHandler = new MatchItemEventHandler();
+    HashMap<String, String> context = new HashMap<>();
+    context.put(EntityType.ITEM.value(), JsonObject.mapFrom(createItem()).encode());
+    DataImportEventPayload eventPayload = createEventPayload().withContext(context);
+
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
+      testContext.assertNull(throwable);
+      testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
+      testContext.assertEquals(
+        updatedEventPayload.getEventsChain(),
+        singletonList(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      );
+      testContext.assertEquals(DI_INVENTORY_ITEM_MATCHED.value(), updatedEventPayload.getEventType());
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldMatchWithSubMatchByHoldingOnHandleEventPayload(TestContext testContext) throws UnsupportedEncodingException {
+    Async async = testContext.async();
+
+    doAnswer(ans -> {
+      Consumer<Success<MultipleRecords<Item>>> callback =
+        (Consumer<Success<MultipleRecords<Item>>>) ans.getArguments()[2];
+      Success<MultipleRecords<Item>> result =
+        new Success<>(new MultipleRecords<>(singletonList(createItem()), 1));
+      callback.accept(result);
+      return null;
+    }).when(itemCollection)
+      .findByCql(eq(format("hrid == \"%s\" AND holdingsRecordId == \"%s\"", ITEM_HRID, HOLDING_ID)),
+        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    EventHandler eventHandler = new MatchItemEventHandler();
+    HashMap<String, String> context = new HashMap<>();
+    context.put(EntityType.HOLDINGS.value(), JsonObject.mapFrom(new HoldingsRecord().withId(HOLDING_ID)).encode());
+    DataImportEventPayload eventPayload = createEventPayload().withContext(context);
+
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
+      testContext.assertNull(throwable);
+      testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
+      testContext.assertEquals(
+        updatedEventPayload.getEventsChain(),
+        singletonList(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      );
+      testContext.assertEquals(DI_INVENTORY_ITEM_MATCHED.value(), updatedEventPayload.getEventType());
+      async.complete();
+    });
+  }
+
   private DataImportEventPayload createEventPayload() {
     return new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
@@ -287,12 +357,12 @@ public class MatchItemEventHandlerUnitTest {
             .withExistingMatchExpression(new MatchExpression()
               .withDataValueType(VALUE_FROM_RECORD)
               .withFields(singletonList(
-                new Field().withLabel("field").withValue("item.id"))
+                new Field().withLabel("field").withValue("item.hrid"))
               ))))));
   }
 
   private Item createItem() {
-    return new Item(UUID.randomUUID().toString(), UUID.randomUUID().toString(),
+    return new Item(ITEM_ID, HOLDING_ID,
       new Status(ItemStatusName.AVAILABLE), UUID.randomUUID().toString(), UUID.randomUUID().toString(), new JsonObject());
   }
 
