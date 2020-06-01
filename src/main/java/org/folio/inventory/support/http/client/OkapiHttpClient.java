@@ -82,7 +82,9 @@ public class OkapiHttpClient {
 
     request.setTimeout(5000);
 
-    request.exceptionHandler(this.exceptionHandler::accept);
+    if (exceptionHandler != null) {
+      request.exceptionHandler(this.exceptionHandler::accept);
+    }
 
     if(body != null) {
       String encodedBody = Json.encodePrettily(body);
@@ -179,7 +181,10 @@ public class OkapiHttpClient {
     }
 
     request.headers().add(OKAPI_URL_HEADER, okapiUrl.toString());
-    request.headers().add(OKAPI_USER_ID_HEADER, userId);
+
+    if (this.userId != null) {
+      request.headers().add(OKAPI_USER_ID_HEADER, userId);
+    }
   }
 
   private static void accept(

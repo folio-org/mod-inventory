@@ -55,6 +55,12 @@
       "signed": false
     },
     {
+      "eventType": "DI_INVENTORY_HOLDING_UPDATED",
+      "description": "Replaced holding record",
+      "eventTTL": 1,
+      "signed": false
+    },
+    {
       "eventType": "DI_INVENTORY_ITEM_MATCHED",
       "description": "Found match for Inventory Item",
       "eventTTL": 1,
@@ -81,6 +87,12 @@
     {
       "eventType": "QM_SRS_MARC_BIB_RECORD_UPDATED",
       "description": "Updated SRS Marc Bibliographic Record",
+      "eventTTL": 1,
+      "signed": false
+    },
+    {
+      "eventType": "DI_INVENTORY_ITEM_UPDATED",
+      "description": "Updated inventory item",
       "eventTTL": 1,
       "signed": false
     }
@@ -116,6 +128,14 @@
     },
     {
       "eventType": "DI_INVENTORY_INSTANCE_CREATED",
+      "callbackAddress": "/inventory/handlers/data-import"
+    },
+    {
+      "eventType": "DI_INVENTORY_INSTANCE_UPDATED",
+      "callbackAddress": "/inventory/handlers/instances"
+    },
+    {
+      "eventType": "DI_INVENTORY_HOLDING_UPDATED",
       "callbackAddress": "/inventory/handlers/data-import"
     },
     {

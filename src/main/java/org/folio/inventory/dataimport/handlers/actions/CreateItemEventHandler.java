@@ -186,7 +186,7 @@ public class CreateItemEventHandler implements EventHandler {
 
     itemCollection.add(item.withCirculationNotes(notes), success -> future.complete(success.getResult()),
       failure -> {
-        LOG.error("Error posting Item cause %s, status code %s", failure.getReason(), failure.getStatusCode());
+        LOG.error("Error posting Item cause {0}, status code {1}", failure.getReason(), failure.getStatusCode());
         future.fail(failure.getReason());
       });
     return future;

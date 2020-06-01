@@ -53,6 +53,7 @@ import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
@@ -66,7 +67,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-public class CreateInstanceEventHandlerTest {
+public class ReplaceInstanceEventHandlerTest {
 
   private static final String PARSED_CONTENT_WITH_PRECEDING_SUCCEEDING_TITLES = "{\"leader\": \"01314nam  22003851a 4500\", \"fields\":[ {\"001\":\"ybp7406411\"},{\"780\": {\"ind1\":\"0\",\"ind2\":\"0\", \"subfields\":[{\"t\":\"Houston oil directory\"}]}},{ \"785\": { \"ind1\": \"0\", \"ind2\": \"0\", \"subfields\": [ { \"t\": \"SAIS review of international affairs\" }, {\"x\": \"1945-4724\" }]}}]}";
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/rules.json";
@@ -88,8 +89,8 @@ public class CreateInstanceEventHandlerTest {
 
   private ActionProfile actionProfile = new ActionProfile()
     .withId(UUID.randomUUID().toString())
-    .withName("Create preliminary Item")
-    .withAction(ActionProfile.Action.CREATE)
+    .withName("Replace preliminary Item")
+    .withAction(ActionProfile.Action.REPLACE)
     .withFolioRecord(INSTANCE);
 
   private MappingProfile mappingProfile = new MappingProfile()
@@ -118,14 +119,14 @@ public class CreateInstanceEventHandlerTest {
             .withContentType(MAPPING_PROFILE)
             .withContent(JsonObject.mapFrom(mappingProfile).getMap())))));
 
-  private CreateInstanceEventHandler createInstanceEventHandler;
+  private ReplaceInstanceEventHandler replaceInstanceEventHandler;
   private JsonObject mappingRules;
 
   @Before
   public void setUp() throws IOException {
     MockitoAnnotations.initMocks(this);
     MappingManager.clearReaderFactories();
-    createInstanceEventHandler = new CreateInstanceEventHandler(storage, mockedClient);
+    replaceInstanceEventHandler = new ReplaceInstanceEventHandler(storage, mockedClient);
     mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
 
     doAnswer(invocationOnMock -> {
@@ -133,7 +134,7 @@ public class CreateInstanceEventHandlerTest {
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(instanceRecord));
       return null;
-    }).when(instanceRecordCollection).add(any(), any(Consumer.class), any(Consumer.class));
+    }).when(instanceRecordCollection).update(any(), any(Consumer.class), any(Consumer.class));
 
     HttpClientRequest mockedRequest = Mockito.mock(HttpClientRequest.class);
     when(mockedRequest.headers()).thenReturn(MultiMap.caseInsensitiveMultiMap());
@@ -175,6 +176,10 @@ public class CreateInstanceEventHandlerTest {
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
     context.put("MAPPING_RULES", mappingRules.encode());
     context.put("MAPPING_PARAMS", new JsonObject().encode());
+    context.put(INSTANCE.value(), new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("hrid", UUID.randomUUID().toString())
+      .encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
@@ -183,10 +188,10 @@ public class CreateInstanceEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
       .withOkapiUrl(OKAPI_URL);
 
-    CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
-    DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
+    CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload actualDataImportEventPayload = future.get(10, TimeUnit.MILLISECONDS);
 
-    Assert.assertEquals(DI_INVENTORY_INSTANCE_CREATED.value(), actualDataImportEventPayload.getEventType());
+    Assert.assertEquals(DI_INVENTORY_INSTANCE_UPDATED.value(), actualDataImportEventPayload.getEventType());
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
     JsonObject createdInstance = new JsonObject(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
     Assert.assertNotNull(createdInstance.getString("id"));
@@ -221,7 +226,7 @@ public class CreateInstanceEventHandlerTest {
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
-    CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
+    CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
   }
 
@@ -247,7 +252,7 @@ public class CreateInstanceEventHandlerTest {
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
-    CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
+    CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
   }
 
@@ -276,7 +281,7 @@ public class CreateInstanceEventHandlerTest {
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
-    CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
+    CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
   }
 
@@ -305,7 +310,7 @@ public class CreateInstanceEventHandlerTest {
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
-    CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
+    CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
   }
 
@@ -335,18 +340,18 @@ public class CreateInstanceEventHandlerTest {
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
-    CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
+    CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
   }
 
   @Test
   public void isEligibleShouldReturnTrue() {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
+      .withEventType(DI_INVENTORY_INSTANCE_UPDATED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
-    assertTrue(createInstanceEventHandler.isEligible(dataImportEventPayload));
+    assertTrue(replaceInstanceEventHandler.isEligible(dataImportEventPayload));
   }
 
   @Test
@@ -355,7 +360,7 @@ public class CreateInstanceEventHandlerTest {
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper);
-    assertFalse(createInstanceEventHandler.isEligible(dataImportEventPayload));
+    assertFalse(replaceInstanceEventHandler.isEligible(dataImportEventPayload));
   }
 
   @Test
@@ -369,7 +374,7 @@ public class CreateInstanceEventHandlerTest {
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper);
-    assertFalse(createInstanceEventHandler.isEligible(dataImportEventPayload));
+    assertFalse(replaceInstanceEventHandler.isEligible(dataImportEventPayload));
   }
 
   @Test
@@ -388,7 +393,7 @@ public class CreateInstanceEventHandlerTest {
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper);
-    assertFalse(createInstanceEventHandler.isEligible(dataImportEventPayload));
+    assertFalse(replaceInstanceEventHandler.isEligible(dataImportEventPayload));
   }
 
   @Test
@@ -407,6 +412,6 @@ public class CreateInstanceEventHandlerTest {
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper);
-    assertFalse(createInstanceEventHandler.isEligible(dataImportEventPayload));
+    assertFalse(replaceInstanceEventHandler.isEligible(dataImportEventPayload));
   }
 }
