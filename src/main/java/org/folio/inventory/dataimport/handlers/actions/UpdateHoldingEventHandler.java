@@ -73,9 +73,6 @@ public class UpdateHoldingEventHandler implements EventHandler {
       holding.setId(holdingId);
       holding.setHrid(hrid);
       holding.setInstanceId(instanceId);
-      if (isEmpty(holding.getPermanentLocationId())) {
-        holding.setPermanentLocationId(permanentLocationId);
-      }
 
       holdingsRecords.update(holding, holdingSuccess -> constructDataImportEventPayload(future, dataImportEventPayload, holding),
         failure -> {
