@@ -131,6 +131,14 @@
       "callbackAddress": "/inventory/handlers/data-import"
     },
     {
+      "eventType": "DI_INVENTORY_INSTANCE_UPDATED",
+      "callbackAddress": "/inventory/handlers/instances"
+    },
+    {
+      "eventType": "DI_INVENTORY_HOLDING_UPDATED",
+      "callbackAddress": "/inventory/handlers/data-import"
+    },
+    {
       "eventType": "DI_INVENTORY_HOLDING_CREATED",
       "callbackAddress": "/inventory/handlers/data-import"
     },
