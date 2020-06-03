@@ -101,11 +101,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
   private void prepareEvent(DataImportEventPayload dataImportEventPayload) {
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
     JsonObject jsonHoldings = new JsonObject(dataImportEventPayload.getContext().get(HOLDINGS.value()));
-    if ((isNull(new JsonObject(dataImportEventPayload.getContext().get(HOLDINGS.value())).getJsonObject(HOLDINGS_PATH_FIELD)))) {
-      dataImportEventPayload.getContext().put(HOLDINGS.value(), new JsonObject().put(HOLDINGS_PATH_FIELD, jsonHoldings).encode());
-    } else {
-      dataImportEventPayload.getContext().put(HOLDINGS.value(), jsonHoldings.encode());
-    }
+    dataImportEventPayload.getContext().put(HOLDINGS.value(), new JsonObject().put(HOLDINGS_PATH_FIELD, jsonHoldings).encode());
     dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
   }
 

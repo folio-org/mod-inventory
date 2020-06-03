@@ -164,57 +164,6 @@ public class UpdateHoldingEventHandlerTest {
     Assert.assertEquals(holdingId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("id"));
   }
 
-  @Test
-  public void shouldProcessEventIfHoldingsPathSpecified() throws InterruptedException, ExecutionException, TimeoutException {
-    Reader fakeReader = Mockito.mock(Reader.class);
-
-    String permanentLocationId = UUID.randomUUID().toString();
-
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
-
-    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-
-    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
-
-    MappingManager.registerReaderFactory(fakeReaderFactory);
-    MappingManager.registerWriterFactory(new HoldingWriterFactory());
-
-    String instanceId = String.valueOf(UUID.randomUUID());
-    String holdingId = UUID.randomUUID().toString();
-    String hrid = UUID.randomUUID().toString();
-
-
-
-    JsonObject holdingsRecord = new JsonObject()
-      .put("holdings", new JsonObject()
-      .put("id", holdingId)
-      .put("instanceId", instanceId)
-      .put("hrid", hrid)
-      .put("permanentLocationId", permanentLocationId));
-
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
-    HashMap<String, String> context = new HashMap<>();
-    context.put(HOLDINGS.value(), Json.encode(holdingsRecord));
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
-
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
-      .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
-
-    CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
-      DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
-
-    Assert.assertEquals(DI_INVENTORY_HOLDING_UPDATED.value(), actualDataImportEventPayload.getEventType());
-    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
-    Assert.assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("id"));
-    Assert.assertEquals(instanceId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("instanceId"));
-    Assert.assertEquals(permanentLocationId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("permanentLocationId"));
-    Assert.assertEquals(hrid, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("hrid"));
-    Assert.assertEquals(holdingId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("id"));
-  }
-
   @Test(expected = ExecutionException.class)
   public void shouldNotProcessEventIfHoldingIdIsNotExistsInContext() throws InterruptedException, ExecutionException, TimeoutException {
     Reader fakeReader = Mockito.mock(Reader.class);
