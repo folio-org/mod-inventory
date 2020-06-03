@@ -70,9 +70,6 @@ public class UpdateHoldingEventHandler implements EventHandler {
       Context context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       HoldingsRecordCollection holdingsRecords = storage.getHoldingsRecordCollection(context);
       HoldingsRecord holding = retrieveHolding(dataImportEventPayload.getContext());
-      holding.setId(holdingId);
-      holding.setHrid(hrid);
-      holding.setInstanceId(instanceId);
 
       dataImportEventPayload.getContext().put(HOLDINGS.value(), JsonObject.mapFrom(holding).encode());
 
@@ -105,6 +102,8 @@ public class UpdateHoldingEventHandler implements EventHandler {
 
   private void prepareEvent(DataImportEventPayload dataImportEventPayload) {
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
+    JsonObject jsonHoldings = new JsonObject(dataImportEventPayload.getContext().get(HOLDINGS.value()));
+    dataImportEventPayload.getContext().put(HOLDINGS.value(), new JsonObject().put(HOLDINGS_PATH_FIELD, jsonHoldings).encode());
     dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
   }
 
