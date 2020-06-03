@@ -74,6 +74,8 @@ public class UpdateHoldingEventHandler implements EventHandler {
       holding.setHrid(hrid);
       holding.setInstanceId(instanceId);
 
+      dataImportEventPayload.getContext().put(HOLDINGS.value(), JsonObject.mapFrom(holding).encode());
+
       holdingsRecords.update(holding, holdingSuccess -> constructDataImportEventPayload(future, dataImportEventPayload, holding),
         failure -> {
           LOGGER.error(UPDATE_HOLDING_ERROR_MESSAGE);
@@ -103,7 +105,6 @@ public class UpdateHoldingEventHandler implements EventHandler {
 
   private void prepareEvent(DataImportEventPayload dataImportEventPayload) {
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
-    dataImportEventPayload.getContext().put(HOLDINGS.value(), new JsonObject().encode());
     dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
   }
 
