@@ -71,8 +71,6 @@ public class UpdateHoldingEventHandler implements EventHandler {
       HoldingsRecordCollection holdingsRecords = storage.getHoldingsRecordCollection(context);
       HoldingsRecord holding = retrieveHolding(dataImportEventPayload.getContext());
 
-      dataImportEventPayload.getContext().put(HOLDINGS.value(), JsonObject.mapFrom(holding).encode());
-
       holdingsRecords.update(holding, holdingSuccess -> constructDataImportEventPayload(future, dataImportEventPayload, holding),
         failure -> {
           LOGGER.error(UPDATE_HOLDING_ERROR_MESSAGE);

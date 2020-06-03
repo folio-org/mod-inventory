@@ -9,13 +9,10 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPP
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.UUID;
@@ -30,8 +27,6 @@ import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
 import org.folio.JobProfile;
 import org.folio.MappingProfile;
-import org.folio.inventory.common.api.request.PagingParameters;
-import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.HoldingWriterFactory;
 import org.folio.inventory.domain.HoldingsRecordCollection;
