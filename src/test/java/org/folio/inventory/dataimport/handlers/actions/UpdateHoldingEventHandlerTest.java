@@ -9,13 +9,10 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPP
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.UUID;
@@ -30,8 +27,6 @@ import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
 import org.folio.JobProfile;
 import org.folio.MappingProfile;
-import org.folio.inventory.common.api.request.PagingParameters;
-import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.HoldingWriterFactory;
 import org.folio.inventory.domain.HoldingsRecordCollection;
@@ -145,57 +140,6 @@ public class UpdateHoldingEventHandlerTest {
       .withInstanceId(instanceId)
       .withHrid(hrid)
       .withPermanentLocationId(permanentLocationId);
-
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
-    HashMap<String, String> context = new HashMap<>();
-    context.put(HOLDINGS.value(), Json.encode(holdingsRecord));
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
-
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
-      .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
-
-    CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
-    DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
-
-    Assert.assertEquals(DI_INVENTORY_HOLDING_UPDATED.value(), actualDataImportEventPayload.getEventType());
-    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
-    Assert.assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("id"));
-    Assert.assertEquals(instanceId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("instanceId"));
-    Assert.assertEquals(permanentLocationId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("permanentLocationId"));
-    Assert.assertEquals(hrid, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("hrid"));
-    Assert.assertEquals(holdingId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("id"));
-  }
-
-  @Test
-  public void shouldProcessEventIfHoldingsPathSpecified() throws InterruptedException, ExecutionException, TimeoutException {
-    Reader fakeReader = Mockito.mock(Reader.class);
-
-    String permanentLocationId = UUID.randomUUID().toString();
-
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
-
-    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-
-    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
-
-    MappingManager.registerReaderFactory(fakeReaderFactory);
-    MappingManager.registerWriterFactory(new HoldingWriterFactory());
-
-    String instanceId = String.valueOf(UUID.randomUUID());
-    String holdingId = UUID.randomUUID().toString();
-    String hrid = UUID.randomUUID().toString();
-
-
-
-    JsonObject holdingsRecord = new JsonObject()
-      .put("holdings", new JsonObject()
-      .put("id", holdingId)
-      .put("instanceId", instanceId)
-      .put("hrid", hrid)
-      .put("permanentLocationId", permanentLocationId));
 
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();
