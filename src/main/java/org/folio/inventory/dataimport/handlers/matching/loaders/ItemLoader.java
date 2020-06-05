@@ -7,6 +7,7 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.domain.SearchableCollection;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.storage.Storage;
+import org.folio.inventory.support.ItemUtil;
 import org.folio.rest.jaxrs.model.EntityType;
 
 import static java.lang.String.format;
@@ -50,5 +51,10 @@ public class ItemLoader extends AbstractLoader<Item> {
       }
     }
     return cqlSubMatch;
+  }
+
+  @Override
+  protected String mapEntityToJsonString(Item item) {
+    return ItemUtil.mapToMappingResultRepresentation(item);
   }
 }

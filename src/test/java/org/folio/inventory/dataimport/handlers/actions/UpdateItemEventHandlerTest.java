@@ -36,7 +36,6 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.UUID;
@@ -53,6 +52,7 @@ import static org.folio.inventory.domain.items.Item.HRID_KEY;
 import static org.folio.inventory.domain.items.Item.STATUS_KEY;
 import static org.folio.inventory.domain.items.ItemStatusName.AVAILABLE;
 import static org.folio.inventory.domain.items.ItemStatusName.IN_PROCESS;
+import static org.folio.inventory.support.JsonHelper.getNestedProperty;
 import static org.folio.rest.jaxrs.model.EntityType.ITEM;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
@@ -91,10 +91,8 @@ public class UpdateItemEventHandlerTest {
     .withIncomingRecordType(MARC_BIBLIOGRAPHIC)
     .withExistingRecordType(ITEM)
     .withMappingDetails(new MappingDetail()
-      .withMappingFields(Arrays.asList(
-        new MappingRule().withPath("item.status.name").withValue("\"statusExpression\"").withEnabled("true"),
-        new MappingRule().withPath("item.permanentLoanType.id").withValue("\"permanentLoanTypeExpression\"").withEnabled("true"),
-        new MappingRule().withPath("item.materialType.id").withValue("\"materialTypeExpression\"").withEnabled("true"))));
+      .withMappingFields(Collections.singletonList(
+        new MappingRule().withPath("item.status.name").withValue("\"statusExpression\"").withEnabled("true"))));
 
   private ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
     .withId(UUID.randomUUID().toString())
@@ -112,7 +110,12 @@ public class UpdateItemEventHandlerTest {
             .withContentType(MAPPING_PROFILE)
             .withContent(JsonObject.mapFrom(mappingProfile).getMap())))));
 
-  private Item oldItem;
+  private JsonObject oldItemJson = new JsonObject()
+    .put("id", UUID.randomUUID().toString())
+    .put("status", new JsonObject().put("name", AVAILABLE.value()))
+    .put("materialType", new JsonObject().put("id", UUID.randomUUID().toString()))
+    .put("permanentLoanType", new JsonObject().put("id", UUID.randomUUID().toString()))
+    .put("holdingsRecordId", UUID.randomUUID().toString());
 
   private UpdateItemEventHandler updateItemHandler;
 
@@ -124,14 +127,13 @@ public class UpdateItemEventHandlerTest {
     }).when(mockedItemCollection).update(any(Item.class));
 
     Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-    Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(IN_PROCESS.value()), StringValue.of(UUID.randomUUID().toString()), StringValue.of(UUID.randomUUID().toString()));
+    Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(IN_PROCESS.value()));
     Mockito.when(mockedStorage.getItemCollection(ArgumentMatchers.any(Context.class))).thenReturn(mockedItemCollection);
 
     MappingManager.clearReaderFactories();
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new ItemWriterFactory());
     updateItemHandler = new UpdateItemEventHandler(mockedStorage);
-    oldItem = new Item(UUID.randomUUID().toString(), UUID.randomUUID().toString(), new Status(AVAILABLE), UUID.randomUUID().toString(), UUID.randomUUID().toString(), null);
   }
 
   @Test
@@ -147,7 +149,7 @@ public class UpdateItemEventHandlerTest {
 
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
-    payloadContext.put(ITEM.value(), Json.encode(oldItem));
+    payloadContext.put(ITEM.value(), oldItemJson.encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_ITEM_MATCHED.value())
@@ -164,36 +166,12 @@ public class UpdateItemEventHandlerTest {
     Assert.assertNotNull(eventPayload.getContext().get(ITEM.value()));
 
     JsonObject updatedItem = new JsonObject(eventPayload.getContext().get(ITEM.value()));
-    Assert.assertNotNull(updatedItem.getString("permanentLoanTypeId"));
-    Assert.assertNotNull(updatedItem.getString("materialTypeId"));
-    Assert.assertEquals(oldItem.id, updatedItem.getString("id"));
-    Assert.assertEquals(oldItem.getHrid(), updatedItem.getString(HRID_KEY));
-    Assert.assertEquals(oldItem.getHoldingId(), updatedItem.getString("holdingsRecordId"));
+    Assert.assertEquals(oldItemJson.getString("id"), updatedItem.getString("id"));
+    Assert.assertEquals(oldItemJson.getString(HRID_KEY), updatedItem.getString(HRID_KEY));
+    Assert.assertEquals(getNestedProperty(oldItemJson, "permanentLoanType", "id"), updatedItem.getString("permanentLoanTypeId"));
+    Assert.assertEquals(getNestedProperty(oldItemJson, "materialType", "id"), updatedItem.getString("materialTypeId"));
+    Assert.assertEquals(oldItemJson.getString("holdingsRecordId"), updatedItem.getString("holdingsRecordId"));
     Assert.assertEquals(IN_PROCESS.value(), updatedItem.getJsonObject(STATUS_KEY).getString("name"));
-  }
-
-  @Test(expected = ExecutionException.class)
-  public void shouldReturnFailedFutureWhenMappedItemWithoutStatus()
-    throws InterruptedException, ExecutionException, TimeoutException {
-    // given
-    MappingRule statusMappingRule = new MappingRule().withPath("item.status.name").withValue("\"statusExpression\"").withEnabled("true");
-    Mockito.when(fakeReader.read(eq(statusMappingRule))).thenReturn(StringValue.of(""));
-
-    HashMap<String, String> payloadContext = new HashMap<>();
-    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
-    payloadContext.put(ITEM.value(), Json.encode(oldItem));
-
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_ITEM_MATCHED.value())
-      .withContext(payloadContext)
-      .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
-
-    // when
-    CompletableFuture<DataImportEventPayload> future = updateItemHandler.handle(dataImportEventPayload);
-
-    // then
-    future.get(5, TimeUnit.SECONDS);
   }
 
   @Test(expected = ExecutionException.class)
@@ -205,7 +183,7 @@ public class UpdateItemEventHandlerTest {
 
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
-    payloadContext.put(ITEM.value(), Json.encode(oldItem));
+    payloadContext.put(ITEM.value(), oldItemJson.encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_ITEM_MATCHED.value())
@@ -234,7 +212,7 @@ public class UpdateItemEventHandlerTest {
 
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
-    payloadContext.put(ITEM.value(), Json.encode(oldItem));
+    payloadContext.put(ITEM.value(), oldItemJson.encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_ITEM_MATCHED.value())

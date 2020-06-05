@@ -1,6 +1,7 @@
 package org.folio.inventory.dataimport.handlers.matching.loaders;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
@@ -50,5 +51,10 @@ public class HoldingLoader extends AbstractLoader<HoldingsRecord> {
       }
     }
     return cqlSubMatch;
+  }
+
+  @Override
+  protected String mapEntityToJsonString(HoldingsRecord holdingsRecord) {
+    return Json.encode(holdingsRecord);
   }
 }

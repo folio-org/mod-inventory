@@ -20,7 +20,6 @@ import org.folio.inventory.support.JsonHelper;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
-import org.jetbrains.annotations.NotNull;
 
 import java.io.UnsupportedEncodingException;
 import java.time.ZoneOffset;
@@ -37,7 +36,6 @@ import static java.util.Objects.isNull;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.ActionProfile.Action.REPLACE;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_UPDATED;
-import static org.folio.inventory.domain.items.Item.HRID_KEY;
 import static org.folio.rest.jaxrs.model.EntityType.ITEM;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
@@ -48,7 +46,6 @@ public class UpdateItemEventHandler implements EventHandler {
 
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data or ITEM to update";
   private static final String ITEM_PATH_FIELD = "item";
-  private static final String ID_KEY = "id";
 
   private final List<String> requiredFields = Arrays.asList("status.name", "materialType.id", "permanentLoanType.id", "holdingsRecordId");
   private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").withZone(ZoneOffset.UTC);
@@ -71,14 +68,10 @@ public class UpdateItemEventHandler implements EventHandler {
         return future;
       }
 
-      JsonObject oldItemJson = new JsonObject(payloadContext.get(ITEM.value()));
       preparePayloadForMappingManager(dataImportEventPayload);
       MappingManager.map(dataImportEventPayload);
       JsonObject itemAsJson = new JsonObject(payloadContext.get(ITEM.value()));
       itemAsJson = itemAsJson.containsKey(ITEM_PATH_FIELD) ? itemAsJson.getJsonObject(ITEM_PATH_FIELD) : itemAsJson;
-      itemAsJson.put(ID_KEY, oldItemJson.getString(ID_KEY));
-      itemAsJson.put(HRID_KEY, oldItemJson.getString(HRID_KEY));
-      itemAsJson.put("holdingsRecordId", oldItemJson.getString("holdingId"));
 
       List<String> errors = validateItem(itemAsJson, requiredFields);
       if (!errors.isEmpty()) {
@@ -119,11 +112,11 @@ public class UpdateItemEventHandler implements EventHandler {
     return false;
   }
 
-  @NotNull
   private void preparePayloadForMappingManager(DataImportEventPayload dataImportEventPayload) {
+    JsonObject oldItemJson = new JsonObject(dataImportEventPayload.getContext().get(ITEM.value()));
+    dataImportEventPayload.getContext().put(ActionProfile.FolioRecord.ITEM.value(), new JsonObject().put(ITEM_PATH_FIELD, oldItemJson).encode());
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
     dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
-    dataImportEventPayload.getContext().put(ActionProfile.FolioRecord.ITEM.value(), new JsonObject().encode());
   }
 
   private List<String> validateItem(JsonObject itemAsJson, List<String> requiredFields) {
