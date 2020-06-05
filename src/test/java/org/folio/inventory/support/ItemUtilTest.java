@@ -25,7 +25,6 @@ public class ItemUtilTest {
       .withPermanentLocationId(UUID.randomUUID().toString())
       .withTemporaryLocationId(UUID.randomUUID().toString());
 
-
     // when
     String mappedResult = ItemUtil.mapToMappingResultRepresentation(item);
     JsonObject actualItemJson = new JsonObject(mappedResult);
