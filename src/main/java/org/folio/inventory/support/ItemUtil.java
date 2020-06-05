@@ -161,4 +161,26 @@ public final class ItemUtil {
 
     return itemJson;
   }
+
+  public static String mapToMappingResultRepresentation(Item item) {
+    JsonObject itemJson = mapToJson(item);
+
+    if (itemJson.getString("materialTypeId") != null) {
+      itemJson.put("materialType", new JsonObject().put("id", itemJson.remove("materialTypeId")));
+    }
+    if (itemJson.getString("permanentLoanTypeId") != null) {
+      itemJson.put("permanentLoanType", new JsonObject().put("id", itemJson.remove("permanentLoanTypeId")));
+    }
+    if (itemJson.getString("temporaryLoanTypeId") != null) {
+      itemJson.put("temporaryLoanType", new JsonObject().put("id", itemJson.remove("temporaryLoanTypeId")));
+    }
+    if (itemJson.getString("permanentLocationId") != null) {
+      itemJson.put("permanentLocation", new JsonObject().put("id", itemJson.remove("permanentLocationId")));
+    }
+    if (itemJson.getString("temporaryLocationId") != null) {
+      itemJson.put("temporaryLocation", new JsonObject().put("id", itemJson.remove("temporaryLocationId")));
+    }
+
+    return itemJson.encode();
+  }
 }

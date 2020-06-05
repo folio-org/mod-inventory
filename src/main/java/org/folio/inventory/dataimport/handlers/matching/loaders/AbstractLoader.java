@@ -1,7 +1,6 @@
 package org.folio.inventory.dataimport.handlers.matching.loaders;
 
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import org.folio.DataImportEventPayload;
@@ -32,7 +31,7 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
 
   @Override
   public LoadResult loadEntity(LoadQuery loadQuery, DataImportEventPayload eventPayload) {
-    if (loadQuery == null){
+    if (loadQuery == null) {
       return new LoadResult();
     }
     CompletableFuture<LoadResult> future = new CompletableFuture<>();
