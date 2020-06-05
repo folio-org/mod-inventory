@@ -21,6 +21,12 @@ import static org.folio.inventory.support.JsonHelper.includeIfPresent;
 
 public final class ItemUtil {
 
+  private static final String MATERIAL_TYPE_ID_KEY = "materialTypeId";
+  private static final String PERMANENT_LOAN_TYPE_ID_KEY = "permanentLoanTypeId";
+  private static final String TEMPORARY_LOAN_TYPE_ID_KEY = "temporaryLoanTypeId";
+  private static final String PERMANENT_LOCATION_ID_KEY = "permanentLocationId";
+  private static final String TEMPORARY_LOCATION_ID_KEY = "temporaryLocationId";
+
   private ItemUtil() {
   }
 
@@ -146,11 +152,11 @@ public final class ItemUtil {
     includeIfPresent(itemJson, Item.ITEM_DAMAGED_STATUS_ID_KEY, item.getItemDamagedStatusId());
     includeIfPresent(itemJson, Item.ITEM_DAMAGED_STATUS_DATE_KEY, item.getItemDamagedStatusDate());
     includeIfPresent(itemJson, "holdingsRecordId", item.getHoldingId());
-    includeIfPresent(itemJson, "materialTypeId", item.getMaterialTypeId());
-    includeIfPresent(itemJson, "permanentLoanTypeId", item.getPermanentLoanTypeId());
-    includeIfPresent(itemJson, "temporaryLoanTypeId", item.getTemporaryLoanTypeId());
-    includeIfPresent(itemJson, "permanentLocationId", item.getPermanentLocationId());
-    includeIfPresent(itemJson, "temporaryLocationId", item.getTemporaryLocationId());
+    includeIfPresent(itemJson, MATERIAL_TYPE_ID_KEY, item.getMaterialTypeId());
+    includeIfPresent(itemJson, PERMANENT_LOAN_TYPE_ID_KEY, item.getPermanentLoanTypeId());
+    includeIfPresent(itemJson, TEMPORARY_LOAN_TYPE_ID_KEY, item.getTemporaryLoanTypeId());
+    includeIfPresent(itemJson, PERMANENT_LOCATION_ID_KEY, item.getPermanentLocationId());
+    includeIfPresent(itemJson, TEMPORARY_LOCATION_ID_KEY, item.getTemporaryLocationId());
     includeIfPresent(itemJson, Item.ACCESSION_NUMBER_KEY, item.getAccessionNumber());
     includeIfPresent(itemJson, Item.ITEM_IDENTIFIER_KEY, item.getItemIdentifier());
     itemJson.put(Item.YEAR_CAPTION_KEY, item.getYearCaption());
@@ -165,20 +171,20 @@ public final class ItemUtil {
   public static String mapToMappingResultRepresentation(Item item) {
     JsonObject itemJson = mapToJson(item);
 
-    if (itemJson.getString("materialTypeId") != null) {
-      itemJson.put("materialType", new JsonObject().put("id", itemJson.remove("materialTypeId")));
+    if (itemJson.getString(MATERIAL_TYPE_ID_KEY) != null) {
+      itemJson.put("materialType", new JsonObject().put("id", itemJson.remove(MATERIAL_TYPE_ID_KEY)));
     }
-    if (itemJson.getString("permanentLoanTypeId") != null) {
-      itemJson.put("permanentLoanType", new JsonObject().put("id", itemJson.remove("permanentLoanTypeId")));
+    if (itemJson.getString(PERMANENT_LOAN_TYPE_ID_KEY) != null) {
+      itemJson.put("permanentLoanType", new JsonObject().put("id", itemJson.remove(PERMANENT_LOAN_TYPE_ID_KEY)));
     }
-    if (itemJson.getString("temporaryLoanTypeId") != null) {
-      itemJson.put("temporaryLoanType", new JsonObject().put("id", itemJson.remove("temporaryLoanTypeId")));
+    if (itemJson.getString(TEMPORARY_LOAN_TYPE_ID_KEY) != null) {
+      itemJson.put("temporaryLoanType", new JsonObject().put("id", itemJson.remove(TEMPORARY_LOAN_TYPE_ID_KEY)));
     }
-    if (itemJson.getString("permanentLocationId") != null) {
-      itemJson.put("permanentLocation", new JsonObject().put("id", itemJson.remove("permanentLocationId")));
+    if (itemJson.getString(PERMANENT_LOCATION_ID_KEY) != null) {
+      itemJson.put("permanentLocation", new JsonObject().put("id", itemJson.remove(PERMANENT_LOCATION_ID_KEY)));
     }
-    if (itemJson.getString("temporaryLocationId") != null) {
-      itemJson.put("temporaryLocation", new JsonObject().put("id", itemJson.remove("temporaryLocationId")));
+    if (itemJson.getString(TEMPORARY_LOCATION_ID_KEY) != null) {
+      itemJson.put("temporaryLocation", new JsonObject().put("id", itemJson.remove(TEMPORARY_LOCATION_ID_KEY)));
     }
 
     return itemJson.encode();

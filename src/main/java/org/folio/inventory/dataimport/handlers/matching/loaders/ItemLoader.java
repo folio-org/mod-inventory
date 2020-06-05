@@ -1,25 +1,18 @@
 package org.folio.inventory.dataimport.handlers.matching.loaders;
 
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.domain.SearchableCollection;
 import org.folio.inventory.domain.items.Item;
-import org.folio.inventory.domain.items.Status;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.ItemUtil;
-import org.folio.inventory.support.JsonHelper;
 import org.folio.rest.jaxrs.model.EntityType;
-
-import java.util.UUID;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.folio.inventory.domain.converters.EntityConverters.converterForClass;
-import static org.folio.inventory.support.JsonHelper.includeIfPresent;
 
 public class ItemLoader extends AbstractLoader<Item> {
 
