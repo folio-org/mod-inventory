@@ -40,14 +40,14 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
     loadResult.setEntityType(getEntityType().value());
     Context context = constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl());
 
-    vertx.runOnContext(blockingFuture -> {
+    vertx.runOnContext(v -> {
       try {
         String cql = loadQuery.getCql() + addCqlSubMatchCondition(eventPayload);
         getSearchableCollection(context).findByCql(cql, PagingParameters.defaults(),
           success -> {
             MultipleRecords<T> collection = success.getResult();
             if (collection.totalRecords == 1) {
-              loadResult.setValue(JsonObject.mapFrom(collection.records.get(0)).encode());
+              loadResult.setValue(mapEntityToJsonString(collection.records.get(0)));
             } else if (collection.totalRecords > 1) {
               String errorMessage = "Found multiple records matching specified conditions";
               LOG.error(errorMessage);
@@ -78,4 +78,6 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
   protected abstract SearchableCollection<T> getSearchableCollection(Context context);
 
   protected abstract String addCqlSubMatchCondition(DataImportEventPayload eventPayload);
+
+  protected abstract String mapEntityToJsonString(T entity);
 }
