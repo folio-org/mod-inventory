@@ -371,6 +371,10 @@
     {
       "id": "request-storage",
       "version": "3.3"
+    },
+    {
+      "id": "source-storage-suppress-discovery",
+      "version": "1.0"
     }
   ],
   "permissionSets": [
