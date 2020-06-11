@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "Ids holder for moving items between holdings",
+  "type": "object",
+  "properties": {
+    "to": {
+      "type": "string",
+      "description": "Unique identifier of instance/holding to which holdings/items to be moved",
+      "$ref": "uuid.json"
+    },
+    "ids": {
+      "description": "Array of holding/item unique identifiers which will be moved to the new instance/holding",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "$ref": "uuid.json"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "to", "ids"
+  ]
+}
