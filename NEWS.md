@@ -1,3 +1,18 @@
+## 15.0.0 2020-06-11
+
+* Updates instances based upon imported MARC records (MODINV-207, MODINV-243 
+* Updates holdings based upon imported MARC records (MODINV-232, 
+* Updates items based upon imported MARC records (MODINV-259,
+* Can add preceding / succeeding titles during MARC record import (MODINV-302, MODINV-294)  
+* Can mark items withdrawn (MODINV-216, MODINV-286, MODINV-287)
+* Introduces `Lost and paid` item status (MODINV-291)
+* Title is required for unconnected preceding / succeeding titles (MODINV-218)
+* Doubled recommended memory usage to support receiving pub-sub messages (MODINV-279) 
+* Provides `inventory 10.5`
+* Requires `item-storage 8.4`
+* Requires `request-storage 3.3`
+* Requires `source-storage-suppress-discovery 1.0`
+
 ## 14.1.0 2020-03-28
 
 * Processes data import events to create or update inventory records (MODINV-182, MODINV-182, MODINV-183, MODINV-184, MODINV-201, MODINV-204)
