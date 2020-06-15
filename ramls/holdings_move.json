@@ -17,6 +17,7 @@
   },
   "additionalProperties": false,
   "required": [
-    "toInstanceId", "holdingsRecordIds"
+    "toInstanceId",
+    "holdingsRecordIds"
   ]
 }

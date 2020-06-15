@@ -17,6 +17,7 @@
   },
   "additionalProperties": false,
   "required": [
-    "toHoldingsRecordId", "itemIds"
+    "toHoldingsRecordId",
+    "itemIds"
   ]
 }
