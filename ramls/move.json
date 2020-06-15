@@ -8,7 +8,7 @@
       "$ref": "uuid.json"
     },
     "ids": {
-      "description": "Array of holding/item unique identifiers which will be moved to the new instance/holding",
+      "description": "Ids of the holdings to move, or ids of the items to move.",
       "type": "array",
       "items": {
         "$ref": "uuid.json"
