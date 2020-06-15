@@ -3,12 +3,12 @@
   "description": "Ids holder for moving items between holdings",
   "type": "object",
   "properties": {
-    "to": {
-      "description": "Id of the instance to which the holdings are moved, or id of the holding to which the items are moved.",
+    "toHoldingsRecordId": {
+      "description": "Id of the holding to which the items are moved.",
       "$ref": "uuid.json"
     },
-    "ids": {
-      "description": "Ids of the holdings to move, or ids of the items to move.",
+    "itemIds": {
+      "description": "Ids of the items to move.",
       "type": "array",
       "items": {
         "$ref": "uuid.json"
@@ -17,6 +17,6 @@
   },
   "additionalProperties": false,
   "required": [
-    "to", "ids"
+    "toHoldingsRecordId", "itemIds"
   ]
 }
