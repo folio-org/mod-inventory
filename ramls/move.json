@@ -4,7 +4,7 @@
   "type": "object",
   "properties": {
     "to": {
-      "description": "Id of the instance to which the holdings are moved, or id of the holding to which the items are moved.,
+      "description": "Id of the instance to which the holdings are moved, or id of the holding to which the items are moved.",
       "$ref": "uuid.json"
     },
     "ids": {
