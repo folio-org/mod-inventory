@@ -107,7 +107,7 @@
       "description": "Receipt status (e.g. pending, awaiting receipt, partially received, fully received, receipt not required, and cancelled)"
     },
     "notes": {
-      "description": "Notes for holdings",
+      "description": "Notes about action, copy, binding etc.",
       "type": "array",
       "items": {
         "type": "object",
