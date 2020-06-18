@@ -159,7 +159,7 @@
       "type": "string"
     },
     "notes": {
-      "description": "Notes for item",
+      "description": "Notes about action, copy, binding etc.",
       "type": "array",
       "items": {
         "$ref": "item-notes.json"
