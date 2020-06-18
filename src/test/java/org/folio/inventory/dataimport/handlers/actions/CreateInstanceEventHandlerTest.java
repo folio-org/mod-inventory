@@ -57,6 +57,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTI
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -68,7 +69,7 @@ import static org.mockito.Mockito.when;
 
 public class CreateInstanceEventHandlerTest {
 
-  private static final String PARSED_CONTENT_WITH_PRECEDING_SUCCEEDING_TITLES = "{\"leader\": \"01314nam  22003851a 4500\", \"fields\":[ {\"001\":\"ybp7406411\"},{\"780\": {\"ind1\":\"0\",\"ind2\":\"0\", \"subfields\":[{\"t\":\"Houston oil directory\"}]}},{ \"785\": { \"ind1\": \"0\", \"ind2\": \"0\", \"subfields\": [ { \"t\": \"SAIS review of international affairs\" }, {\"x\": \"1945-4724\" }]}}]}";
+  private static final String PARSED_CONTENT = "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"780\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"Houston oil directory\"}]}},{\"785\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"SAIS review of international affairs\"},{\"x\":\"1945-4724\"}]}},{\"500\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Adaptation of Xi xiang ji by Wang Shifu.\"}]}},{\"520\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\"}]}}]}\n";
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/rules.json";
   public static final String OKAPI_URL = "http://localhost";
 
@@ -171,7 +172,7 @@ public class CreateInstanceEventHandlerTest {
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
 
     HashMap<String, String> context = new HashMap<>();
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_PRECEDING_SUCCEEDING_TITLES));
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
     context.put("MAPPING_RULES", mappingRules.encode());
     context.put("MAPPING_PARAMS", new JsonObject().encode());
@@ -195,6 +196,9 @@ public class CreateInstanceEventHandlerTest {
     Assert.assertEquals("MARC", createdInstance.getString("source"));
     Assert.assertThat(createdInstance.getJsonArray("precedingTitles").size(), is(1));
     Assert.assertThat(createdInstance.getJsonArray("succeedingTitles").size(), is(1));
+    Assert.assertThat(createdInstance.getJsonArray("notes").size(), is(2));
+    Assert.assertThat(createdInstance.getJsonArray("notes").getJsonObject(0).getString("instanceNoteTypeId"), notNullValue());
+    Assert.assertThat(createdInstance.getJsonArray("notes").getJsonObject(1).getString("instanceNoteTypeId"), notNullValue());
     verify(mockedClient, times(2)).postAbs(anyString(), any(Handler.class));
   }
 
