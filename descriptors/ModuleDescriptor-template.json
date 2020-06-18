@@ -373,8 +373,8 @@
       "version": "3.3"
     },
     {
-      "id": "source-storage-suppress-discovery",
-      "version": "1.0"
+      "id": "source-storage-records",
+      "version": "2.0"
     }
   ],
   "permissionSets": [
