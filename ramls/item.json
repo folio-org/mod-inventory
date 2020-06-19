@@ -162,22 +162,7 @@
       "description": "notes",
       "type": "array",
       "items": {
-        "type": "object",
-        "properties": {
-          "itemNoteTypeId": {
-            "description": "Item note type, refers to a item-note-type reference record",
-            "type": "string"
-          },
-          "note": {
-            "description": "Text to display (e.g. action note, binding, use and reproduction)",
-            "type": "string"
-          },
-          "staffOnly": {
-            "description": "Records the fact that the record should only be displayed for staff",
-            "type": "boolean",
-            "default": false
-          }
-        }
+        "$ref": "item-notes.json"
       }
     },
     "circulationNotes": {

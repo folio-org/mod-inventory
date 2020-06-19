@@ -107,26 +107,11 @@
       "description": "Receipt status (e.g. pending, awaiting receipt, partially received, fully received, receipt not required, and cancelled)"
     },
     "notes": {
-      "type": "array",
       "description": "Notes about action, copy, binding etc.",
+      "type": "array",
       "items": {
         "type": "object",
-        "properties": {
-          "holdingsNoteTypeId": {
-            "type": "string",
-            "description": "ID of the type of note",
-            "$ref": "./uuid.json"
-          },
-          "note": {
-            "type": "string",
-            "description": "Text content of the note"
-          },
-          "staffOnly": {
-            "type": "boolean",
-            "description": "If true, determines that the note should not be visible for others than staff",
-            "default": false
-          }
-        }
+        "$ref": "holdings-notes.json"
       }
     },
     "illPolicyId": {
