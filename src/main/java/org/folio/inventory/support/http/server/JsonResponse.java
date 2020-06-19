@@ -23,6 +23,10 @@ public class JsonResponse {
     response(response, body, 201);
   }
 
+  public static void createdWithEmptyResponse(HttpServerResponse response) {
+    response(response, new JsonObject(), 201);
+  }
+
   public static void success(HttpServerResponse response,
                              JsonObject body) {
 
@@ -65,6 +69,12 @@ public class JsonResponse {
     JsonArray error = new JsonArray();
     error.add(errorMessage);
     response(response, new JsonObject().put("errors", error), 422);
+  }
+
+  public static void someOfEntitiesNotFound(HttpServerResponse response, List<String> ids) {
+    JsonObject errors = new JsonObject();
+    errors.put("ids", ids);
+    response(response, new JsonObject().put("errors", errors), 404);
   }
 
   private static void response(HttpServerResponse response,

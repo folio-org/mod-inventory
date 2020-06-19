@@ -16,6 +16,7 @@ types:
   instances: !include instances.json
   context: !include instance-context.json
   ingest-status: !include ingest-status.json
+  move: !include items_move.json
 
 traits:
   language: !include raml-util/traits/language.raml
@@ -76,7 +77,30 @@ resourceTypes:
               body:
                 text/plain:
                   example: "Internal server error"
-
+    /move:
+      type:
+        collection-item:
+          exampleItem: !include examples/items_move.json
+          schema: move
+      post:
+        responses:
+          201:
+            description: "Items moved to another holdings record"
+          404:
+            description: "Some of items not moved"
+            body:
+              application/json:
+                schema: errors
+          422:
+            description: "Validation error"
+            body:
+              application/json:
+                schema: errors
+          500:
+            description: "Internal server error"
+            body:
+              text/plain:
+                example: "Internal server error"
   /instances:
     displayName: Instances
     type:

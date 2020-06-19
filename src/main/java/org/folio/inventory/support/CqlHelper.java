@@ -24,11 +24,7 @@ public class CqlHelper {
       return null;
     }
     else {
-      String query = String.format("id==(%s)", recordIds.stream()
-        .map(String::toString)
-        .distinct()
-        .collect(Collectors.joining(" or ")));
-
+      String query = buildQueryByIds(recordIds);
       try {
         return URLEncoder.encode(query, "UTF-8");
 
@@ -37,6 +33,18 @@ public class CqlHelper {
         return null;
       }
     }
+  }
+
+  /**
+   * Returns non-encoded CQL query with ids of records
+   * @param recordIds record's ids
+   * @return CQL expression
+   */
+  public static String buildQueryByIds(List<String> recordIds) {
+    return String.format("id==(%s)", recordIds.stream()
+        .map(String::toString)
+        .distinct()
+        .collect(Collectors.joining(" or ")));
   }
 
   /**
