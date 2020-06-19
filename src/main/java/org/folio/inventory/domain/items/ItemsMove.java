@@ -12,6 +12,7 @@ public class ItemsMove {
   private List<String> itemIds = new ArrayList<>();
 
   public ItemsMove() {
+    super();
   }
 
   public String getToHoldingsRecordId() {

@@ -15,6 +15,9 @@ import io.vertx.core.json.JsonObject;
 
 public class ItemsMoveValidator {
 
+  private ItemsMoveValidator() {
+  }
+
   public static Optional<ValidationError> itemsMoveHasRequiredFields(JsonObject itemsMoveRequest) {
 
     final String toHoldingsRecordId = JsonHelper.getString(itemsMoveRequest, TO_HOLDINGS_RECORD_ID);
