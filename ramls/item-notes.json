@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "Note for item record",
+  "type": "object",
+  "javaType": "org.folio.rest.jaxrs.model.ItemNotes",
+  "additionalProperties": false,
+  "properties": {
+    "itemNoteTypeId": {
+      "description": "Item note type, refers to a item-note-type reference record",
+      "type": "string"
+    },
+    "note": {
+      "description": "Text to display (e.g. action note, binding, use and reproduction)",
+      "type": "string"
+    },
+    "staffOnly": {
+      "description": "Records the fact that the record should only be displayed for staff",
+      "type": "boolean",
+      "default": false
+    }
+  }
+}
