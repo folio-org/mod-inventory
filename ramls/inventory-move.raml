@@ -21,24 +21,24 @@ resourceTypes:
 
 /inventory/items/move:
   displayName: Items
-    type:
-      collection-item:
-        exampleItem: !include examples/items_move.json
-        schema: move
-    post:
-      is: [validate]
-      responses:
-        201:
-          description: "Items moved to another holdings record"
-            body:
-              application/json:
-        422:
-          description: "Validation error"
-          body:
-            application/json:
-              schema: errors
-        500:
-          description: "Internal server error"
-          body:
-            text/plain:
-              example: "Internal server error"
+  type:
+    collection-item:
+      exampleItem: !include examples/items_move.json
+      schema: move
+  post:
+    is: [validate]
+    responses:
+      201:
+        description: "Items moved to another holdings record"
+        body:
+          application/json:
+      422:
+        description: "Validation error"
+        body:
+          application/json:
+            type: errors
+      500:
+        description: "Internal server error"
+        body:
+          text/plain:
+            example: "Internal server error"
