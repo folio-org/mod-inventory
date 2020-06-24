@@ -37,7 +37,7 @@ public class ApiRoot {
     return new URL(String.format("%s/items", inventory()));
   }
 
-  public static URL move()
+  public static URL moveItems()
     throws MalformedURLException {
 
     return new URL(String.format("%s/items/move", inventory()));

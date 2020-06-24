@@ -1,11 +1,9 @@
 package org.folio.inventory.resources;
 
 import static org.folio.inventory.common.FutureAssistance.allOf;
-import static org.folio.inventory.support.CqlHelper.buildQueryByIds;
 import static org.folio.inventory.support.CqlHelper.multipleRecordsCqlQuery;
 import static org.folio.inventory.support.http.server.JsonResponse.unprocessableEntity;
 import static org.folio.inventory.validation.ItemStatusValidator.itemHasCorrectStatus;
-import static org.folio.inventory.validation.ItemsMoveValidator.itemsMoveHasRequiredFields;
 import static org.folio.inventory.validation.ItemsValidator.claimedReturnedMarkedAsMissing;
 import static org.folio.inventory.validation.ItemsValidator.hridChanged;
 
@@ -27,8 +25,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import io.vertx.core.http.HttpServerResponse;
-import org.apache.commons.collections15.ListUtils;
 import org.folio.HttpStatus;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.api.request.PagingParameters;
@@ -37,7 +33,6 @@ import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.items.CirculationNote;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
-import org.folio.inventory.domain.items.ItemsMove;
 import org.folio.inventory.domain.user.User;
 import org.folio.inventory.domain.user.UserCollection;
 import org.folio.inventory.services.WithdrawItemService;
@@ -48,7 +43,6 @@ import org.folio.inventory.support.CqlHelper;
 import org.folio.inventory.support.EndpointFailureHandler;
 import org.folio.inventory.support.ItemUtil;
 import org.folio.inventory.support.JsonArrayHelper;
-import org.folio.inventory.support.MoveUtil;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.server.ClientErrorResponse;
@@ -99,8 +93,6 @@ public class Items extends AbstractInventoryResource {
 
     router.post(RELATIVE_ITEMS_PATH + "/:id/mark-withdrawn")
       .handler(handle(this::markAsWithdrawn));
-
-    router.post(RELATIVE_ITEMS_PATH + "/move").handler(this::move);
   }
 
   private CompletableFuture<Void> markAsWithdrawn(
@@ -113,57 +105,6 @@ public class Items extends AbstractInventoryResource {
       .thenAccept(item ->
         respondWithItemRepresentation(item,  HttpStatus.HTTP_CREATED.toInt(),
           routingContext, webContext));
-  }
-
-  private void move(RoutingContext routingContext) {
-
-    WebContext context = new WebContext(routingContext);
-    JsonObject itemsMoveJsonRequest = routingContext.getBodyAsJson();
-
-    Optional<ValidationError> validationError = itemsMoveHasRequiredFields(itemsMoveJsonRequest);
-    if (validationError.isPresent()) {
-      unprocessableEntity(routingContext.response(), validationError.get());
-    } else {
-      ItemsMove itemsMove = MoveUtil.jsonToItemsMove(itemsMoveJsonRequest);
-      List<String> itemIdsToUpdate = itemsMove.getItemIds();
-      try {
-        storage.getItemCollection(context).findByCql(
-          buildQueryByIds(itemIdsToUpdate),
-          PagingParameters.defaults(),
-          success -> updateManyItemsWithNewHoldingsRecordId(routingContext, context, success.getResult(), itemsMove.getToHoldingsRecordId(), itemIdsToUpdate),
-          FailureResponseConsumer.serverError(routingContext.response()));
-      } catch (UnsupportedEncodingException e) {
-        ServerErrorResponse.internalError(routingContext.response(), e.toString());
-      }
-    }
-  }
-
-  private void updateManyItemsWithNewHoldingsRecordId(
-    RoutingContext routingContext,
-    WebContext context,
-    MultipleRecords<Item> itemsToUpdate,
-    String toHoldingsRecordId,
-    List<String> itemIdsToUpdate) {
-
-    ItemCollection storageItemCollection = storage.getItemCollection(context);
-
-    List<CompletableFuture<Item>> updates = itemsToUpdate.records.stream()
-      .map(item -> storageItemCollection.update(
-        item.withHoldingId(toHoldingsRecordId))).collect(Collectors.toList());
-
-    CompletableFuture.allOf(updates.toArray(new CompletableFuture[0])).thenApply(v -> updates.stream()
-      .map(CompletableFuture::join)
-      .map(Item::getId)
-      .collect(Collectors.toList()))
-      .thenAccept(updatedItemIds -> {
-        List<String> nonUpdatedIds = ListUtils.subtract(itemIdsToUpdate, updatedItemIds);
-        HttpServerResponse response = routingContext.response();
-        if (nonUpdatedIds.isEmpty()) {
-          JsonResponse.createdWithEmptyResponse(response);
-        } else {
-          JsonResponse.someOfEntitiesNotFound(response, nonUpdatedIds);
-        }
-      });
   }
 
   private void getAll(RoutingContext routingContext) {

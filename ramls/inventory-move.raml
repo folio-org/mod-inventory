@@ -1,0 +1,43 @@
+#%RAML 1.0
+title: Inventory Move API
+version: v0.1
+protocols: [ HTTP, HTTPS ]
+baseUri: http://localhost
+
+documentation:
+  - title: "Inventory Move API"
+    content: <b>API for moving items between holdings and holdings between instances</b>
+
+types:
+  errors: !include raml-util/schemas/errors.schema
+  move: !include items_move.json
+
+traits:
+  validate: !include raml-util/traits/validation.raml
+
+resourceTypes:
+  collection-item: !include raml-util/rtypes/item-collection.raml
+
+/inventory/items/move:
+  displayName: Items
+    type:
+      collection-item:
+        exampleItem: !include examples/items_move.json
+        schema: move
+    post:
+      is: [validate]
+      responses:
+        201:
+          description: "Items moved to another holdings record"
+            body:
+              application/json:
+        422:
+          description: "Validation error"
+          body:
+            application/json:
+              schema: errors
+        500:
+          description: "Internal server error"
+          body:
+            text/plain:
+              example: "Internal server error"

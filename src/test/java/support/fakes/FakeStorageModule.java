@@ -1,5 +1,6 @@
 package support.fakes;
 
+import static api.items.ItemApiMoveExamples.ID_FOR_FAILURE;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import java.util.ArrayList;
@@ -17,6 +18,7 @@ import org.folio.inventory.common.WebContext;
 import org.folio.inventory.support.EndpointFailureHandler;
 import org.folio.inventory.support.http.server.ClientErrorResponse;
 import org.folio.inventory.support.http.server.JsonResponse;
+import org.folio.inventory.support.http.server.ServerErrorResponse;
 import org.folio.inventory.support.http.server.SuccessResponse;
 import org.folio.inventory.support.http.server.ValidationError;
 import org.joda.time.DateTime;
@@ -198,7 +200,9 @@ class FakeStorageModule extends AbstractVerticle {
     preProcessRecords(resourcesForTenant.get(id), rawBody).thenAccept(body -> {
       setDefaultProperties(body);
 
-      if (resourcesForTenant.containsKey(id)) {
+      if (ID_FOR_FAILURE.toString().equals(id)) {
+        ServerErrorResponse.internalError(routingContext.response(), "Test Internal Server Error");
+      } else if (resourcesForTenant.containsKey(id)) {
         System.out.println(
           String.format("Replaced %s resource: %s", recordTypeName, id));
 

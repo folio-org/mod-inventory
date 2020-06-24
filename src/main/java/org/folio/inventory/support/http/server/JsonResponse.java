@@ -1,15 +1,16 @@
 package org.folio.inventory.support.http.server;
 
+import java.util.Collections;
+import java.util.List;
+
+import org.folio.inventory.support.http.ContentType;
+
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import org.folio.inventory.support.http.ContentType;
-
-import java.util.Collections;
-import java.util.List;
 
 public class JsonResponse {
 
@@ -23,8 +24,14 @@ public class JsonResponse {
     response(response, body, 201);
   }
 
+  public static void created(HttpServerResponse response, List<String> ids) {
+    JsonObject nonUpdatedIds = new JsonObject();
+    nonUpdatedIds.put("nonUpdatedIds", ids);
+    response(response, nonUpdatedIds, 201);
+  }
+
   public static void createdWithEmptyResponse(HttpServerResponse response) {
-    response(response, new JsonObject(), 201);
+    emptyResponse(response,  201);
   }
 
   public static void success(HttpServerResponse response,
@@ -71,12 +78,6 @@ public class JsonResponse {
     response(response, new JsonObject().put("errors", error), 422);
   }
 
-  public static void someOfEntitiesNotFound(HttpServerResponse response, List<String> ids) {
-    JsonObject errors = new JsonObject();
-    errors.put("ids", ids);
-    response(response, new JsonObject().put("errors", errors), 404);
-  }
-
   private static void response(HttpServerResponse response,
                                JsonObject body,
                                int statusCode) {
@@ -91,6 +92,12 @@ public class JsonResponse {
     response.putHeader(HttpHeaders.CONTENT_LENGTH, Integer.toString(buffer.length()));
 
     response.write(buffer);
+    response.end();
+  }
+
+  private static void emptyResponse(HttpServerResponse response, int statusCode) {
+    response.setStatusCode(statusCode);
+    response.putHeader(HttpHeaders.CONTENT_TYPE, String.format("%s; charset=utf-8", ContentType.APPLICATION_JSON));
     response.end();
   }
 }

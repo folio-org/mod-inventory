@@ -1,7 +1,7 @@
 package org.folio.inventory.validation;
 
-import static org.folio.inventory.domain.items.ItemsMove.ITEM_IDS;
-import static org.folio.inventory.domain.items.ItemsMove.TO_HOLDINGS_RECORD_ID;
+import static org.folio.inventory.resources.MoveApi.ITEM_IDS;
+import static org.folio.inventory.resources.MoveApi.TO_HOLDINGS_RECORD_ID;
 
 import java.util.List;
 import java.util.Optional;
@@ -15,8 +15,7 @@ import io.vertx.core.json.JsonObject;
 
 public class ItemsMoveValidator {
 
-  private ItemsMoveValidator() {
-  }
+  private ItemsMoveValidator() { }
 
   public static Optional<ValidationError> itemsMoveHasRequiredFields(JsonObject itemsMoveRequest) {
 

@@ -68,15 +68,6 @@
         },
         {
           "methods": ["POST"],
-          "pathPattern": "/inventory/items/move",
-          "permissionsRequired": ["inventory.items.move.item.post"],
-          "modulePermissions": [
-            "inventory-storage.items.item.put",
-            "inventory-storage.items.collection.get"
-          ]
-        },
-        {
-          "methods": ["POST"],
           "pathPattern": "/inventory/items",
           "permissionsRequired": ["inventory.items.item.post"],
           "modulePermissions": [
@@ -241,6 +232,21 @@
           "pathPattern": "/isbn/validator",
           "permissionsRequired": ["isbn-utils.validator.get"],
           "modulePermissions": []
+        }
+      ]
+    },
+    {
+      "id": "inventory-move",
+      "version": "0.1",
+      "handlers": [
+        {
+          "methods": ["POST"],
+          "pathPattern": "/inventory/items/move",
+          "permissionsRequired": ["inventory.items.move.item.post"],
+          "modulePermissions": [
+            "inventory-storage.items.item.put",
+            "inventory-storage.items.collection.get"
+          ]
         }
       ]
     },

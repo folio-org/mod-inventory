@@ -6,7 +6,7 @@ import io.vertx.core.json.JsonObject;
 
 import java.util.UUID;
 
-public class InstanceRequestBuilder implements Builder {
+public class InstanceRequestBuilder extends AbstractBuilder {
   private final String title;
   private final String contributor;
   private final UUID id;
