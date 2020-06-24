@@ -47,7 +47,7 @@ public final class ItemUtil {
   private ItemUtil() {
   }
 
-  public static Item jsonToServerItem(JsonObject itemFromServer) {
+  public static Item fromStoredItemRepresentation(JsonObject itemFromServer) {
     List<String> formerIds = JsonArrayHelper
       .toListOfStrings(itemFromServer.getJsonArray(Item.FORMER_IDS_KEY));
     List<String> statisticalCodeIds = JsonArrayHelper
@@ -126,7 +126,7 @@ public final class ItemUtil {
 
   }
 
-  public static final JsonObject serverItemToJson(Item item) {
+  public static final JsonObject toStoredItemRepresentation(Item item) {
     JsonObject itemToSend = new JsonObject();
 
     //TODO: Review if this shouldn't be defaulting here

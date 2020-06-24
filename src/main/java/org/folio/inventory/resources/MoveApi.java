@@ -8,6 +8,7 @@ import static org.folio.inventory.validation.ItemsMoveValidator.itemsMoveHasRequ
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -58,32 +59,40 @@ public class MoveApi extends AbstractInventoryResource {
     } else {
       String toHoldingsRecordId = itemsMoveJsonRequest.getString(TO_HOLDINGS_RECORD_ID);
       List<String> itemIdsToUpdate = toListOfStrings(itemsMoveJsonRequest.getJsonArray(ITEM_IDS));
-      try {
+      storage.getHoldingsRecordCollection(context)
+        .findById(toHoldingsRecordId)
+        .thenAccept(holding -> {
+          if (Objects.nonNull(holding)) {
+            try {
+              OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
+              CollectionResourceClient itemsStorageClient = createItemsStorageClient(okapiClient, context);
+              MultipleRecordsFetchClient multipleRecordsFetchClient = createItemsFetchClient(itemsStorageClient);
 
-        OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
-        CollectionResourceClient itemsStorageClient = createItemsStorageClient(okapiClient, context);
-        MultipleRecordsFetchClient multipleRecordsFetchClient = createItemsFetchClient(itemsStorageClient);
+              multipleRecordsFetchClient.find(itemIdsToUpdate, this::fetchItemsCql)
+                .thenAccept(jsons -> {
+                  List<Item> itemsToUpdate = jsons.stream()
+                    .map(ItemUtil::fromStoredItemRepresentation)
+                    .map(item -> item.withHoldingId(toHoldingsRecordId))
+                    .collect(toList());
+                  updateItems(routingContext, context, itemIdsToUpdate, itemsToUpdate);
+                });
 
-        multipleRecordsFetchClient.find(itemIdsToUpdate, this::fetchItemsCql)
-          .thenAccept(jsons -> {
-            List<Item> itemsToUpdate = jsons.stream()
-              .map(ItemUtil::jsonToServerItem)
-              .map(item -> item.withHoldingId(toHoldingsRecordId))
-              .collect(toList());
-            updateItems(routingContext, context, toHoldingsRecordId, itemIdsToUpdate, itemsToUpdate);
-          });
-      } catch (Exception e) {
-        ServerErrorResponse.internalError(routingContext.response(), e);
-      }
+            } catch (Exception e) {
+              ServerErrorResponse.internalError(routingContext.response(), e);
+            }
+          } else {
+            JsonResponse.unprocessableEntity(routingContext.response(), "Holding with id=" + toHoldingsRecordId + " not found");
+          }
+        });
     }
   }
 
-  private void updateItems(RoutingContext routingContext, WebContext context, String toHoldingsRecordId,
-      List<String> itemIdsToUpdate, List<Item> itemsToUpdate) {
+  private void updateItems(RoutingContext routingContext, WebContext context, List<String> itemIdsToUpdate,
+      List<Item> itemsToUpdate) {
     ItemCollection storageItemCollection = storage.getItemCollection(context);
 
     List<CompletableFuture<Item>> updates = itemsToUpdate.stream()
-      .map(item -> storageItemCollection.update(item.withHoldingId(toHoldingsRecordId)))
+      .map(storageItemCollection::update)
       .collect(Collectors.toList());
 
     CompletableFuture.allOf(updates.toArray(new CompletableFuture[0]))

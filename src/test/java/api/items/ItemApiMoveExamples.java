@@ -162,6 +162,37 @@ public class ItemApiMoveExamples extends ApiTests {
   }
 
   @Test
+  public void cannotMoveToNonExistedHoldingsRecord()
+    throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+
+    UUID instanceId = UUID.randomUUID();
+    InstanceApiClient.createInstance(okapiClient, smallAngryPlanet(instanceId));
+
+    final UUID existedHoldingId = createHoldingForInstance(instanceId);
+    final UUID newHoldingId = UUID.randomUUID();
+
+    Assert.assertNotEquals(existedHoldingId, newHoldingId);
+
+    final IndividualResource createItem = itemsClient.create(new ItemRequestBuilder().forHolding(existedHoldingId)
+      .withBarcode("645398607547")
+      .withStatus(ItemStatusName.AVAILABLE.value()));
+
+    JsonObject itemsMoveRequestBody = new ItemsMoveRequestBuilder(newHoldingId,
+      new JsonArray(Collections.singletonList(createItem.getId()))).create();
+
+    CompletableFuture<Response> postItemsMoveCompleted = new CompletableFuture<>();
+    okapiClient.post(ApiRoot.moveItems(), itemsMoveRequestBody, ResponseHandler.any(postItemsMoveCompleted));
+
+    Response postMoveItemsResponse = postItemsMoveCompleted.get(5, TimeUnit.SECONDS);
+
+    assertThat(postMoveItemsResponse.getStatusCode(), is(422));
+    assertThat(postMoveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
+
+    assertThat(postMoveItemsResponse.getBody(), containsString("errors"));
+    assertThat(postMoveItemsResponse.getBody(), containsString(newHoldingId.toString()));
+  }
+
+  @Test
   public void canMoveItemsDueToItemUpdateError() throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
 
     UUID instanceId = UUID.randomUUID();

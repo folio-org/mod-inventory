@@ -17,7 +17,7 @@ class ExternalStorageModuleItemCollection extends ExternalStorageModuleCollectio
 
   @Override
   protected Item mapFromJson(JsonObject itemFromServer) {
-    return ItemUtil.jsonToServerItem(itemFromServer);
+    return ItemUtil.fromStoredItemRepresentation(itemFromServer);
   }
 
   @Override
@@ -27,6 +27,6 @@ class ExternalStorageModuleItemCollection extends ExternalStorageModuleCollectio
 
   @Override
   protected JsonObject mapToRequest(Item item) {
-    return ItemUtil.serverItemToJson(item);
+    return ItemUtil.toStoredItemRepresentation(item);
   }
 }
