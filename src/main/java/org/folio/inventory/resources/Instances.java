@@ -50,8 +50,7 @@ import org.folio.inventory.support.http.server.ServerErrorResponse;
 import org.folio.inventory.validation.InstancePrecedingSucceedingTitleValidators;
 import org.folio.inventory.validation.InstancesValidators;
 import org.folio.inventory.exceptions.UnprocessableEntityException;
-import org.folio.rest.client.SourceStorageClient;
-import org.folio.rest.jaxrs.model.SuppressFromDiscoveryDto;
+import org.folio.rest.client.SourceStorageRecordsClient;
 
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
@@ -218,13 +217,9 @@ public class Instances extends AbstractInstances {
    */
   private void updateSuppressFromDiscoveryFlag(WebContext wContext, Instance updatedInstance) {
     try {
-      SourceStorageClient client = new SourceStorageClient(wContext.getOkapiLocation(),
+      SourceStorageRecordsClient client = new SourceStorageRecordsClient(wContext.getOkapiLocation(),
         wContext.getTenantId(), wContext.getToken());
-      SuppressFromDiscoveryDto dto = new SuppressFromDiscoveryDto()
-        .withId(updatedInstance.getId())
-        .withIncomingIdType(SuppressFromDiscoveryDto.IncomingIdType.INSTANCE)
-        .withSuppressFromDiscovery(updatedInstance.getDiscoverySuppress());
-      client.putSourceStorageRecordSuppressFromDiscovery(dto, httpClientResponse -> {
+      client.putSourceStorageRecordsSuppressFromDiscoveryById(updatedInstance.getId(), "INSTANCE", updatedInstance.getDiscoverySuppress(), httpClientResponse -> {
         if (httpClientResponse.statusCode() == HttpStatus.HTTP_OK.toInt()) {
           log.info(format("Suppress from discovery flag was successfully updated for record in SRS. InstanceID: %s",
             updatedInstance.getId()));
