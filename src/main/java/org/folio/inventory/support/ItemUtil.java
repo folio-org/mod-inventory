@@ -85,8 +85,8 @@ public final class ItemUtil {
       itemFromServer.getString(ID),
       itemFromServer.getString(HOLDINGS_RECORD_ID),
       converterForClass(Status.class).fromJson(itemFromServer.getJsonObject(STATUS)),
-      itemFromServer.getString("materialTypeId"),
-      itemFromServer.getString("permanentLoanTypeId"),
+      itemFromServer.getString(MATERIAL_TYPE_ID_KEY),
+      itemFromServer.getString(PERMANENT_LOAN_TYPE_ID_KEY),
       itemFromServer.getJsonObject("metadata"))
       .withHrid(itemFromServer.getString(Item.HRID_KEY))
       .withFormerIds(formerIds)
