@@ -109,7 +109,11 @@ public class MoveApi extends AbstractInventoryResource {
         } else {
           JsonResponse.successWithIds(response, nonUpdatedIds);
         }
-      });
+      })
+      .exceptionally(e -> {
+      ServerErrorResponse.internalError(routingContext.response(), e);
+      return null;
+    });
   }
 
   private OkapiHttpClient createHttpClient(RoutingContext routingContext, WebContext context) throws MalformedURLException {
