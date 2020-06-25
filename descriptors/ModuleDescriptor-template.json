@@ -245,7 +245,8 @@
           "permissionsRequired": ["inventory.items.move.item.post"],
           "modulePermissions": [
             "inventory-storage.items.item.put",
-            "inventory-storage.items.collection.get"
+            "inventory-storage.items.collection.get",
+            "inventory-storage.holdings.item.get"
           ]
         }
       ]
