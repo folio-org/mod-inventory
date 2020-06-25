@@ -24,20 +24,20 @@ public class JsonResponse {
     response(response, body, 201);
   }
 
-  public static void created(HttpServerResponse response, List<String> ids) {
-    JsonObject nonUpdatedIds = new JsonObject();
-    nonUpdatedIds.put("nonUpdatedIds", ids);
-    response(response, nonUpdatedIds, 201);
-  }
-
-  public static void createdWithEmptyResponse(HttpServerResponse response) {
-    emptyResponse(response,  201);
-  }
-
   public static void success(HttpServerResponse response,
                              JsonObject body) {
 
     response(response, body, 200);
+  }
+
+  public static void successWithEmptyBody(HttpServerResponse response) {
+    emptyResponse(response, 200);
+  }
+
+  public static void successWithIds(HttpServerResponse response, List<String> ids) {
+    JsonObject nonUpdatedIds = new JsonObject();
+    nonUpdatedIds.put("nonUpdatedIds", ids);
+    response(response, nonUpdatedIds, 200);
   }
 
   public static void unprocessableEntity(
