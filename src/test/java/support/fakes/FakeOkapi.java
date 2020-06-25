@@ -242,6 +242,10 @@ public class FakeOkapi extends AbstractVerticle {
       .create().register(router);
 
     new FakeStorageModuleBuilder()
+      .withRootPath("/pubsub/publish")
+      .create().register(router);
+
+    new FakeStorageModuleBuilder()
       .withRootPath("/pubsub/event-types/declare/publisher")
       .withRequiredProperties("moduleId", "eventDescriptors")
       .create().register(router);

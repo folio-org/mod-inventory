@@ -91,8 +91,12 @@ public class EventHandlers {
   private void handleDataImportEvent(RoutingContext routingContext) {
     try {
       DataImportEventPayload eventPayload = new JsonObject(ZIPArchiver.unzip(routingContext.getBodyAsString())).mapTo(DataImportEventPayload.class);
-      executor.executeBlocking(blockingFuture -> EventManager.handleEvent(eventPayload), v ->
-        SuccessResponse.noContent(routingContext.response()));
+      executor.executeBlocking(blockingFuture -> EventManager.handleEvent(eventPayload)
+          .handle((s, t) -> {
+            SuccessResponse.noContent(routingContext.response());
+            return null;
+          }),
+        null);
     } catch (Exception e) {
       ServerErrorResponse.internalError(routingContext.response(), e);
     }
