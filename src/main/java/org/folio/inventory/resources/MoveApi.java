@@ -75,8 +75,10 @@ public class MoveApi extends AbstractInventoryResource {
                     .map(item -> item.withHoldingId(toHoldingsRecordId))
                     .collect(toList());
                   updateItems(routingContext, context, itemIdsToUpdate, itemsToUpdate);
+                }).exceptionally(e -> {
+                  ServerErrorResponse.internalError(routingContext.response(), e);
+                  return null;
                 });
-
             } catch (Exception e) {
               ServerErrorResponse.internalError(routingContext.response(), e);
             }
@@ -109,11 +111,7 @@ public class MoveApi extends AbstractInventoryResource {
         } else {
           JsonResponse.successWithIds(response, nonUpdatedIds);
         }
-      })
-      .exceptionally(e -> {
-      ServerErrorResponse.internalError(routingContext.response(), e);
-      return null;
-    });
+      });
   }
 
   private OkapiHttpClient createHttpClient(RoutingContext routingContext, WebContext context) throws MalformedURLException {
