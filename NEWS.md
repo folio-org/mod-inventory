@@ -1,13 +1,18 @@
+## 16.0.0 2020-06-25
+
+* Update SRS client requests for v4.0.0, change dependency on interface (from source-storage-suppress-discovery 1.0 to source-storage-records 2.0) (MODINV-316)
+* Fix adding/changing Instance notes triggered by quickMarc updates (MODINV-311)
+
 ## 15.0.0 2020-06-11
 
-* Updates instances based upon imported MARC records (MODINV-207, MODINV-243 
-* Updates holdings based upon imported MARC records (MODINV-232, 
+* Updates instances based upon imported MARC records (MODINV-207, MODINV-243
+* Updates holdings based upon imported MARC records (MODINV-232,
 * Updates items based upon imported MARC records (MODINV-259,
-* Can add preceding / succeeding titles during MARC record import (MODINV-302, MODINV-294)  
+* Can add preceding / succeeding titles during MARC record import (MODINV-302, MODINV-294)
 * Can mark items withdrawn (MODINV-216, MODINV-286, MODINV-287)
 * Introduces `Lost and paid` item status (MODINV-291)
 * Title is required for unconnected preceding / succeeding titles (MODINV-218)
-* Doubled recommended memory usage to support receiving pub-sub messages (MODINV-279) 
+* Doubled recommended memory usage to support receiving pub-sub messages (MODINV-279)
 * Provides `inventory 10.5`
 * Requires `item-storage 8.4`
 * Requires `request-storage 3.3`
