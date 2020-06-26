@@ -1,29 +1,29 @@
 package org.folio.inventory.validation;
 
-import static io.vertx.core.Future.failedFuture;
-import static io.vertx.core.Future.succeededFuture;
+
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.folio.inventory.support.CompletableFutures.failedFuture;
 
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemStatusName;
-import org.folio.inventory.support.http.server.ValidationError;
 import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.exceptions.UnprocessableEntityException;
-
-import io.vertx.core.Future;
+import org.folio.inventory.support.http.server.ValidationError;
 
 public final class ItemsValidator {
 
   private ItemsValidator() {}
 
-  public static Future<Item> itemNotFound(Item oldItem) {
+  public static CompletableFuture<Item> refuseWhenItemNotFound(Item oldItem) {
     return oldItem == null
       ? failedFuture(new NotFoundException("No item found"))
-      : succeededFuture(oldItem);
+      : completedFuture(oldItem);
   }
 
-  public static Future<Item> claimedReturnedMarkedAsMissing(Item oldItem, Item newItem) {
+  public static CompletableFuture<Item> claimedReturnedMarkedAsMissing(Item oldItem, Item newItem) {
     if (isClaimedReturnedItemMarkedMissing(oldItem, newItem)) {
       final ValidationError validationError = new ValidationError(
         "Claimed returned item cannot be marked as missing",
@@ -32,10 +32,10 @@ public final class ItemsValidator {
       return failedFuture(new UnprocessableEntityException(validationError));
     }
 
-    return succeededFuture(oldItem);
+    return completedFuture(oldItem);
   }
 
-  public static Future<Item> hridChanged(Item oldItem, Item newItem) {
+  public static CompletableFuture<Item> hridChanged(Item oldItem, Item newItem) {
     if (!Objects.equals(newItem.getHrid(), oldItem.getHrid())) {
       final ValidationError validationError = new ValidationError(
         "HRID can not be updated", "hrid", newItem.getHrid());
@@ -43,7 +43,7 @@ public final class ItemsValidator {
       return failedFuture(new UnprocessableEntityException(validationError));
     }
 
-    return succeededFuture(oldItem);
+    return completedFuture(oldItem);
   }
 
   private static boolean isClaimedReturnedItemMarkedMissing(Item oldItem, Item newItem) {

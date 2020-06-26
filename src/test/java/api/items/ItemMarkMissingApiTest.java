@@ -4,7 +4,6 @@ import static api.support.InstanceSamples.smallAngryPlanet;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static support.matchers.ItemMatchers.isMissing;
-import static support.matchers.ItemMatchers.isWithdrawn;
 import static support.matchers.RequestMatchers.hasStatus;
 import static support.matchers.RequestMatchers.isOpenNotYetFilled;
 import static support.matchers.ResponseMatchers.hasValidationError;
@@ -30,7 +29,7 @@ import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 
 @RunWith(JUnitParamsRunner.class)
-public class ItemMarkWithdrawnApiTest extends ApiTests {
+public class ItemMarkMissingApiTest extends ApiTests {
   private IndividualResource holdingsRecord;
 
   @Before
@@ -48,41 +47,41 @@ public class ItemMarkWithdrawnApiTest extends ApiTests {
     "In transit",
     "Awaiting pickup",
     "Awaiting delivery",
-    "Missing",
+    "Withdrawn",
     "Paged"
   })
   @Test
-  public void canWithdrawItemWhenInAllowedStatus(String initialStatus) throws Exception {
+  public void canMarkItemMissingWhenInAllowedStatus(String initialStatus) throws Exception {
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
       .withStatus(initialStatus)
       .canCirculate());
 
-    assertThat(markItemWithdrawn(createdItem).getJson(), isWithdrawn());
-    assertThat(itemsClient.getById(createdItem.getId()).getJson(), isWithdrawn());
+    assertThat(markItemMissing(createdItem).getJson(), isMissing());
+    assertThat(itemsClient.getById(createdItem.getId()).getJson(), isMissing());
   }
 
   @Parameters({
     "On order",
     "Checked out",
-    "Withdrawn",
+    "Missing",
     "Claimed returned",
     "Declared lost"
   })
   @Test
-  public void cannotWithdrawIItemWhenNotInAllowedStatus(String initialStatus) throws Exception {
+  public void cannotMarkIItemMissingWhenNotInAllowedStatus(String initialStatus) throws Exception {
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
       .withStatus(initialStatus)
       .canCirculate());
 
-    assertThat(markItemWithdrawn(createdItem), hasValidationError(
-      "Item is not allowed to be marked as Withdrawn", "status.name", initialStatus));
+    assertThat(markItemMissing(createdItem), hasValidationError(
+      "Item is not allowed to be marked as Missing", "status.name", initialStatus));
   }
 
   @Test
-  public void shouldWithdrawItemThatCannotBeFound() {
-    assertThat(markWithdrawnFixture.markWithdrawn(UUID.randomUUID()).getStatusCode(),
+  public void shouldNotMarkItemMissingThatCannotBeFound() {
+    assertThat(markMissingFixture.markMissing(UUID.randomUUID()).getStatusCode(),
       is(404));
   }
 
@@ -101,8 +100,8 @@ public class ItemMarkWithdrawnApiTest extends ApiTests {
     final IndividualResource request = createRequest(createdItem.getId(),
       requestStatus, DateTime.now(DateTimeZone.UTC).plusHours(1));
 
-    assertThat(markItemWithdrawn(createdItem).getJson(), isWithdrawn());
-    assertThat(itemsClient.getById(createdItem.getId()).getJson(), isWithdrawn());
+    assertThat(markItemMissing(createdItem).getJson(), isMissing());
+    assertThat(itemsClient.getById(createdItem.getId()).getJson(), isMissing());
 
     assertThat(requestStorageClient.getById(request.getId()).getJson(),
       isOpenNotYetFilled());
@@ -123,8 +122,8 @@ public class ItemMarkWithdrawnApiTest extends ApiTests {
     final IndividualResource request = createRequest(createdItem.getId(),
       requestStatus, DateTime.now(DateTimeZone.UTC).minusHours(1));
 
-    assertThat(markItemWithdrawn(createdItem).getJson(), isWithdrawn());
-    assertThat(itemsClient.getById(createdItem.getId()).getJson(), isWithdrawn());
+    assertThat(markItemMissing(createdItem).getJson(), isMissing());
+    assertThat(itemsClient.getById(createdItem.getId()).getJson(), isMissing());
 
     assertThat(requestStorageClient.getById(request.getId()).getJson(),
       hasStatus(requestStatus));
@@ -146,31 +145,15 @@ public class ItemMarkWithdrawnApiTest extends ApiTests {
     final IndividualResource request = createRequest(createdItem.getId(),
       requestStatus, DateTime.now(DateTimeZone.UTC).plusHours(1));
 
-    assertThat(markItemWithdrawn(createdItem).getJson(), isWithdrawn());
-    assertThat(itemsClient.getById(createdItem.getId()).getJson(), isWithdrawn());
+    assertThat(markItemMissing(createdItem).getJson(), isMissing());
+    assertThat(itemsClient.getById(createdItem.getId()).getJson(), isMissing());
 
     assertThat(requestStorageClient.getById(request.getId()).getJson(),
       hasStatus(requestStatus));
   }
 
-  @Test
-  public void canMarkWithdrawnItemAsMissing() throws Exception {
-    final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
-      .forHolding(holdingsRecord.getId())
-      .withStatus("Available")
-      .canCirculate());
-
-    createRequest(createdItem.getId(),
-      "Available", DateTime.now(DateTimeZone.UTC).plusHours(1));
-
-    markItemWithdrawn(createdItem);
-    markMissingFixture.markMissing(createdItem);
-
-    assertThat(itemsClient.getById(createdItem.getId()).getJson(), isMissing());
-  }
-
-  private Response markItemWithdrawn(IndividualResource item) {
-    return markWithdrawnFixture.markWithdrawn(item);
+  private Response markItemMissing(IndividualResource item) {
+    return markMissingFixture.markMissing(item);
   }
 
   private IndividualResource createRequest(UUID itemId, String status, DateTime expireDateTime)

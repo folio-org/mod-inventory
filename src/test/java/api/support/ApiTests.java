@@ -11,6 +11,8 @@ import org.junit.BeforeClass;
 
 import api.ApiTestSuite;
 import api.support.fixtures.InstanceRelationshipTypeFixture;
+import api.support.fixtures.ItemMarkMissingFixture;
+import api.support.fixtures.ItemMarkWithdrawnFixture;
 import api.support.http.ResourceClient;
 
 public abstract class ApiTests {
@@ -30,6 +32,8 @@ public abstract class ApiTests {
   protected final ResourceClient requestStorageClient;
 
   protected final InstanceRelationshipTypeFixture instanceRelationshipTypeFixture;
+  protected final ItemMarkWithdrawnFixture markWithdrawnFixture;
+  protected final ItemMarkMissingFixture markMissingFixture;
 
   public ApiTests() {
     holdingsStorageClient = ResourceClient.forHoldingsStorage(okapiClient);
@@ -44,6 +48,8 @@ public abstract class ApiTests {
     instanceRelationshipClient = ResourceClient.forInstanceRelationship(okapiClient);
     requestStorageClient = ResourceClient.forRequestStorage(okapiClient);
     instanceRelationshipTypeFixture = new InstanceRelationshipTypeFixture(okapiClient);
+    markWithdrawnFixture = new ItemMarkWithdrawnFixture(okapiClient);
+    markMissingFixture = new ItemMarkMissingFixture(okapiClient);
   }
 
   @BeforeClass
