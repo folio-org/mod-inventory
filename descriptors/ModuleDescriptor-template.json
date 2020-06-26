@@ -236,6 +236,22 @@
       ]
     },
     {
+      "id": "inventory-move",
+      "version": "0.1",
+      "handlers": [
+        {
+          "methods": ["POST"],
+          "pathPattern": "/inventory/items/move",
+          "permissionsRequired": ["inventory.items.move.item.post"],
+          "modulePermissions": [
+            "inventory-storage.items.item.put",
+            "inventory-storage.items.collection.get",
+            "inventory-storage.holdings.item.get"
+          ]
+        }
+      ]
+    },
+    {
       "id": "inventory-event-handlers",
       "version": "0.1",
       "handlers": [
@@ -399,6 +415,11 @@
       "description": "Mark an item as withdrawn"
     },
     {
+      "permissionName": "inventory.items.move.item.post",
+      "displayName": "Inventory - move items to another holdings record",
+      "description": "Move items to another holdings record"
+    },
+    {
       "permissionName": "inventory.items.item.post",
       "displayName": "Inventory - create individual item",
       "description": "Create individual item"
@@ -489,7 +510,8 @@
         "inventory.ingest.mods.post",
         "inventory.ingest.mods.status.get",
         "inventory.config.instances.blocked-fields.get",
-        "inventory.items.item.mark-withdrawn.post"
+        "inventory.items.item.mark-withdrawn.post",
+        "inventory.items.move.item.post"
       ]
     },
     {

@@ -1,15 +1,16 @@
 package org.folio.inventory.support.http.server;
 
+import java.util.Collections;
+import java.util.List;
+
+import org.folio.inventory.support.http.ContentType;
+
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import org.folio.inventory.support.http.ContentType;
-
-import java.util.Collections;
-import java.util.List;
 
 public class JsonResponse {
 
@@ -27,6 +28,16 @@ public class JsonResponse {
                              JsonObject body) {
 
     response(response, body, 200);
+  }
+
+  public static void successWithEmptyBody(HttpServerResponse response) {
+    emptyResponse(response, 200);
+  }
+
+  public static void successWithIds(HttpServerResponse response, List<String> ids) {
+    JsonObject nonUpdatedIds = new JsonObject();
+    nonUpdatedIds.put("nonUpdatedIds", ids);
+    response(response, nonUpdatedIds, 200);
   }
 
   public static void unprocessableEntity(
@@ -81,6 +92,12 @@ public class JsonResponse {
     response.putHeader(HttpHeaders.CONTENT_LENGTH, Integer.toString(buffer.length()));
 
     response.write(buffer);
+    response.end();
+  }
+
+  private static void emptyResponse(HttpServerResponse response, int statusCode) {
+    response.setStatusCode(statusCode);
+    response.putHeader(HttpHeaders.CONTENT_TYPE, String.format("%s; charset=utf-8", ContentType.APPLICATION_JSON));
     response.end();
   }
 }
