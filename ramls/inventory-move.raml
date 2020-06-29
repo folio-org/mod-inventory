@@ -16,17 +16,13 @@ traits:
   language: !include raml-util/traits/language.raml
   validate: !include raml-util/traits/validation.raml
 
-resourceTypes:
-  collection-item: !include raml-util/rtypes/item-collection.raml
-
 /inventory/items/move:
-  displayName: Items
-  type:
-    collection-item:
-      exampleItem: !include examples/items_move.json
-      schema: move
+  displayName: Items Move
   post:
     is: [validate]
+    body:
+      application/json:
+        type: move
     responses:
       201:
         description: "Items moved to another holdings record"
