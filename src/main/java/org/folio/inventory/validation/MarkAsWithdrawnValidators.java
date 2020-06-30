@@ -9,7 +9,6 @@ import java.util.concurrent.CompletableFuture;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.exceptions.UnprocessableEntityException;
-import org.folio.inventory.support.CompletableFutures;
 import org.folio.inventory.support.http.server.ValidationError;
 
 public final class MarkAsWithdrawnValidators {
