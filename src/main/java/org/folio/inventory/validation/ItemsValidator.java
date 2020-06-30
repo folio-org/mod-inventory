@@ -14,7 +14,6 @@ import org.folio.inventory.exceptions.UnprocessableEntityException;
 import org.folio.inventory.support.http.server.ValidationError;
 
 public final class ItemsValidator {
-
   private ItemsValidator() {}
 
   public static CompletableFuture<Item> refuseWhenItemNotFound(Item oldItem) {

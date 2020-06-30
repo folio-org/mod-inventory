@@ -7,8 +7,7 @@ import org.hamcrest.Matcher;
 import io.vertx.core.json.JsonObject;
 
 public final class RequestMatchers {
-
-  private RequestMatchers(){}
+  private RequestMatchers() {}
 
   public static Matcher<JsonObject> isOpenNotYetFilled() {
     return hasStatus("Open - Not yet filled");

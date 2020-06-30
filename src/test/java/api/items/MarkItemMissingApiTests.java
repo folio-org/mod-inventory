@@ -29,7 +29,7 @@ import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 
 @RunWith(JUnitParamsRunner.class)
-public class ItemMarkMissingApiTest extends ApiTests {
+public class MarkItemMissingApiTests extends ApiTests {
   private IndividualResource holdingsRecord;
 
   @Before
@@ -69,7 +69,7 @@ public class ItemMarkMissingApiTest extends ApiTests {
     "Declared lost"
   })
   @Test
-  public void cannotMarkIItemMissingWhenNotInAllowedStatus(String initialStatus) throws Exception {
+  public void cannotMarkItemMissingWhenNotInAllowedStatus(String initialStatus) throws Exception {
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
       .withStatus(initialStatus)

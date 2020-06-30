@@ -13,8 +13,8 @@ import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.view.request.Request;
 import org.folio.inventory.storage.external.Clients;
 import org.folio.inventory.storage.external.repository.RequestRepository;
-import org.folio.inventory.validation.ItemMarkAsMissingValidators;
-import org.folio.inventory.validation.ItemMarkAsWithdrawnValidators;
+import org.folio.inventory.validation.MarkAsMissingValidators;
+import org.folio.inventory.validation.MarkAsWithdrawnValidators;
 import org.folio.inventory.validation.ItemsValidator;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -37,7 +37,7 @@ public class MoveItemIntoStatusService {
 
     return itemCollection.findById(itemId)
       .thenCompose(ItemsValidator::refuseWhenItemNotFound)
-      .thenCompose(ItemMarkAsWithdrawnValidators::itemHasAllowedStatusToMarkAsWithdrawn)
+      .thenCompose(MarkAsWithdrawnValidators::itemHasAllowedStatusToMarkAsWithdrawn)
       .thenCompose(this::updateRequestStatusIfRequired)
       .thenApply(item -> item.changeStatus(WITHDRAWN))
       .thenCompose(itemCollection::update);
@@ -48,7 +48,7 @@ public class MoveItemIntoStatusService {
 
     return itemCollection.findById(itemId)
       .thenCompose(ItemsValidator::refuseWhenItemNotFound)
-      .thenCompose(ItemMarkAsMissingValidators::itemHasAllowedStatusToMarkAsMissing)
+      .thenCompose(MarkAsMissingValidators::itemHasAllowedStatusToMarkAsMissing)
       .thenCompose(this::updateRequestStatusIfRequired)
       .thenApply(item -> item.changeStatus(MISSING))
       .thenCompose(itemCollection::update);
@@ -62,7 +62,7 @@ public class MoveItemIntoStatusService {
           return completedFuture(item);
         }
 
-        log.debug("Found a request that is in fulfillment {}", requestOptional.get().getId());
+        log.debug("Found a request that is being fulfilled {}", requestOptional.get().getId());
         return moveRequestIntoNotYetFilledStatus(requestOptional.get())
           .thenApply(notUsed -> item);
       });

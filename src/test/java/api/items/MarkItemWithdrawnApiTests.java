@@ -9,10 +9,7 @@ import static support.matchers.RequestMatchers.hasStatus;
 import static support.matchers.RequestMatchers.isOpenNotYetFilled;
 import static support.matchers.ResponseMatchers.hasValidationError;
 
-import java.net.MalformedURLException;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 
 import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
@@ -28,9 +25,10 @@ import api.support.builders.ItemRequestBuilder;
 import api.support.dto.Request;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
+import lombok.SneakyThrows;
 
 @RunWith(JUnitParamsRunner.class)
-public class ItemMarkWithdrawnApiTest extends ApiTests {
+public class MarkItemWithdrawnApiTests extends ApiTests {
   private IndividualResource holdingsRecord;
 
   @Before
@@ -160,9 +158,6 @@ public class ItemMarkWithdrawnApiTest extends ApiTests {
       .withStatus("Available")
       .canCirculate());
 
-    createRequest(createdItem.getId(),
-      "Available", DateTime.now(DateTimeZone.UTC).plusHours(1));
-
     markItemWithdrawn(createdItem);
     markMissingFixture.markMissing(createdItem);
 
@@ -173,13 +168,12 @@ public class ItemMarkWithdrawnApiTest extends ApiTests {
     return markWithdrawnFixture.markWithdrawn(item);
   }
 
-  private IndividualResource createRequest(UUID itemId, String status, DateTime expireDateTime)
-    throws InterruptedException, ExecutionException, TimeoutException, MalformedURLException {
-
+  @SneakyThrows
+  private IndividualResource createRequest(UUID itemId, String status, DateTime expiryDateTime) {
     return requestStorageClient.create(Request.builder()
       .status(status)
       .itemId(itemId.toString())
-      .holdShelfExpirationDate(expireDateTime.toDate())
+      .holdShelfExpirationDate(expiryDateTime.toDate())
       .requesterId(UUID.randomUUID().toString())
       .requestType("Hold")
       .build());

@@ -7,8 +7,7 @@ import org.hamcrest.Matcher;
 import io.vertx.core.json.JsonObject;
 
 public final class ItemMatchers {
-
-  private ItemMatchers(){}
+  private ItemMatchers() {}
 
   public static Matcher<JsonObject> isMissing() {
     return hasStatus("Missing");
