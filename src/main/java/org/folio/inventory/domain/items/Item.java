@@ -59,7 +59,7 @@ public class Item {
   private String chronology;
   private String copyNumber;
   private String numberOfPieces;
-  private final String holdingId;
+  private String holdingId;
   private String descriptionOfPieces;
   private String numberOfMissingPieces;
   private String missingPieces;
@@ -98,6 +98,10 @@ public class Item {
     this.materialTypeId = materialTypeId;
     this.permanentLoanTypeId = permanentLoanTypeId;
     this.metadata = metadata;
+  }
+
+  public String getId() {
+    return id;
   }
 
   public String getHrid() {
@@ -417,6 +421,11 @@ public class Item {
 
   public Item withTags(List<String> tags) {
     this.tags = tags;
+    return this;
+  }
+
+  public Item withHoldingId(String holdingId) {
+    this.holdingId = holdingId;
     return this;
   }
 
