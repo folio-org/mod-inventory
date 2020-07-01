@@ -248,6 +248,16 @@
             "inventory-storage.items.collection.get",
             "inventory-storage.holdings.item.get"
           ]
+        },
+        {
+          "methods": ["POST"],
+          "pathPattern": "/inventory/holdings/move",
+          "permissionsRequired": ["inventory.holdings.move.item.post"],
+          "modulePermissions": [
+            "inventory-storage.holdings.item.put",
+            "inventory-storage.holdings.collection.get",
+            "inventory-storage.instances.item.get"
+          ]
         }
       ]
     },
@@ -420,6 +430,11 @@
       "description": "Move items to another holdings record"
     },
     {
+      "permissionName": "inventory.holdings.move.item.post",
+      "displayName": "Inventory - move holdings record to another instance",
+      "description": "Move holdings record to another holdings record"
+    },
+    {
       "permissionName": "inventory.items.item.post",
       "displayName": "Inventory - create individual item",
       "description": "Create individual item"
@@ -511,7 +526,8 @@
         "inventory.ingest.mods.status.get",
         "inventory.config.instances.blocked-fields.get",
         "inventory.items.item.mark-withdrawn.post",
-        "inventory.items.move.item.post"
+        "inventory.items.move.item.post",
+        "inventory.holdings.move.item.post"
       ]
     },
     {
