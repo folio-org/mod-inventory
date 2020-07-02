@@ -26,7 +26,8 @@ import api.isbns.IsbnUtilsApiExamples;
 import api.items.ItemAllowedStatusesSchemaTest;
 import api.items.ItemApiExamples;
 import api.items.ItemApiTitleExamples;
-import api.items.ItemMarkWithdrawnApiTest;
+import api.items.MarkItemMissingApiTests;
+import api.items.MarkItemWithdrawnApiTests;
 import api.support.ControlledVocabularyPreparation;
 import api.support.http.ResourceClient;
 import api.tenant.TenantApiExamples;
@@ -48,8 +49,9 @@ import support.fakes.FakeOkapi;
   InstanceRelationshipsTest.class,
   EventHandlersApiTest.class,
   HoldingApiExample.class,
-  ItemMarkWithdrawnApiTest.class,
-  ItemApiMoveExamples.class
+  MarkItemWithdrawnApiTests.class,
+  ItemApiMoveExamples.class,
+  MarkItemMissingApiTests.class
 })
 public class ApiTestSuite {
   public static final int INVENTORY_VERTICLE_TEST_PORT = 9603;
@@ -518,7 +520,7 @@ public class ApiTestSuite {
     return UUID.fromString(existingRecords.stream()
       .filter(record -> record.getString("name").equals(name))
       .findFirst()
-      .get()
+      .orElseThrow(() -> new IllegalArgumentException("No record with name: " + name))
       .getString("id"));
   }
 

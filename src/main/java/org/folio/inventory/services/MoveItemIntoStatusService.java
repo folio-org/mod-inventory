@@ -1,6 +1,7 @@
 package org.folio.inventory.services;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.folio.inventory.domain.items.ItemStatusName.MISSING;
 import static org.folio.inventory.domain.items.ItemStatusName.WITHDRAWN;
 import static org.folio.inventory.domain.view.request.RequestStatus.OPEN_NOT_YET_FILLED;
 
@@ -12,19 +13,21 @@ import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.view.request.Request;
 import org.folio.inventory.storage.external.Clients;
 import org.folio.inventory.storage.external.repository.RequestRepository;
-import org.folio.inventory.validation.ItemMarkAsWithdrawnValidators;
+import org.folio.inventory.validation.MarkAsMissingValidators;
+import org.folio.inventory.validation.MarkAsWithdrawnValidators;
+import org.folio.inventory.validation.ItemsValidator;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class WithdrawItemService {
-  private static final Logger log = LoggerFactory.getLogger(WithdrawItemService.class);
+public class MoveItemIntoStatusService {
+  private static final Logger log = LoggerFactory.getLogger(MoveItemIntoStatusService.class);
 
   private final ItemCollection itemCollection;
   private final RequestRepository requestRepository;
 
-  public WithdrawItemService(ItemCollection itemCollection, Clients clients) {
+  public MoveItemIntoStatusService(ItemCollection itemCollection, Clients clients) {
     this.itemCollection = itemCollection;
     this.requestRepository = new RequestRepository(clients);
   }
@@ -33,10 +36,21 @@ public class WithdrawItemService {
     final String itemId = context.getStringParameter("id", null);
 
     return itemCollection.findById(itemId)
-      .thenCompose(ItemMarkAsWithdrawnValidators::itemIsFound)
-      .thenCompose(ItemMarkAsWithdrawnValidators::itemHasAllowedStatusToMarkAsWithdrawn)
+      .thenCompose(ItemsValidator::refuseWhenItemNotFound)
+      .thenCompose(MarkAsWithdrawnValidators::itemHasAllowedStatusToMarkAsWithdrawn)
       .thenCompose(this::updateRequestStatusIfRequired)
       .thenApply(item -> item.changeStatus(WITHDRAWN))
+      .thenCompose(itemCollection::update);
+  }
+
+  public CompletableFuture<Item> processMarkItemMissing(WebContext context) {
+    final String itemId = context.getStringParameter("id", null);
+
+    return itemCollection.findById(itemId)
+      .thenCompose(ItemsValidator::refuseWhenItemNotFound)
+      .thenCompose(MarkAsMissingValidators::itemHasAllowedStatusToMarkAsMissing)
+      .thenCompose(this::updateRequestStatusIfRequired)
+      .thenApply(item -> item.changeStatus(MISSING))
       .thenCompose(itemCollection::update);
   }
 
@@ -48,7 +62,7 @@ public class WithdrawItemService {
           return completedFuture(item);
         }
 
-        log.debug("Fount request in fulfillment {}", requestOptional.get().getId());
+        log.debug("Found a request that is being fulfilled {}", requestOptional.get().getId());
         return moveRequestIntoNotYetFilledStatus(requestOptional.get())
           .thenApply(notUsed -> item);
       });

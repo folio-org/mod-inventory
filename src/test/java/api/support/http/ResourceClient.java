@@ -154,7 +154,7 @@ public class ResourceClient {
     return create(builder.create());
   }
 
-  public IndividualResource create(JsonObject request)
+  public IndividualResource create(Object request)
     throws MalformedURLException,
     InterruptedException,
     ExecutionException,
@@ -181,7 +181,7 @@ public class ResourceClient {
     }
   }
 
-  public Response attemptToCreate(JsonObject request)
+  public Response attemptToCreate(Object request)
     throws MalformedURLException, InterruptedException, ExecutionException,
     TimeoutException {
 
