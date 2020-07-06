@@ -1,13 +1,8 @@
 package org.folio.inventory.eventhandlers;
 
+import io.vertx.core.MultiMap;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.function.Consumer;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Success;
@@ -21,6 +16,14 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -76,8 +79,12 @@ public class UpdateInstanceEventHandlerUnitTest {
     eventPayload.put("MARC", record.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
+    MultiMap headers = MultiMap.caseInsensitiveMultiMap()
+      .add("x-okapi-url", "localhost")
+      .add("x-okapi-tenant", "dummy")
+      .add("x-okapi-token", "dummy");
 
-    CompletableFuture<Instance> future = updateInstanceEventHandler.handle(eventPayload);
+    CompletableFuture<Instance> future = updateInstanceEventHandler.handle(eventPayload, headers, Vertx.vertx());
     Instance updatedInstance = future.get(5, TimeUnit.MILLISECONDS);
 
     Assert.assertNotNull(updatedInstance);
