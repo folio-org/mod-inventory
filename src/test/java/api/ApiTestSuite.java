@@ -11,6 +11,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import api.holdings.HoldingsApiMoveExamples;
 import api.items.ItemApiMoveExamples;
 import org.folio.inventory.InventoryVerticle;
 import org.folio.inventory.common.VertxAssistant;
@@ -26,7 +27,8 @@ import api.isbns.IsbnUtilsApiExamples;
 import api.items.ItemAllowedStatusesSchemaTest;
 import api.items.ItemApiExamples;
 import api.items.ItemApiTitleExamples;
-import api.items.ItemMarkWithdrawnApiTest;
+import api.items.MarkItemMissingApiTests;
+import api.items.MarkItemWithdrawnApiTests;
 import api.support.ControlledVocabularyPreparation;
 import api.support.http.ResourceClient;
 import api.tenant.TenantApiExamples;
@@ -48,8 +50,10 @@ import support.fakes.FakeOkapi;
   InstanceRelationshipsTest.class,
   EventHandlersApiTest.class,
   HoldingApiExample.class,
-  ItemMarkWithdrawnApiTest.class,
-  ItemApiMoveExamples.class
+  MarkItemWithdrawnApiTests.class,
+  ItemApiMoveExamples.class,
+  MarkItemMissingApiTests.class,
+  HoldingsApiMoveExamples.class
 })
 public class ApiTestSuite {
   public static final int INVENTORY_VERTICLE_TEST_PORT = 9603;
@@ -518,7 +522,7 @@ public class ApiTestSuite {
     return UUID.fromString(existingRecords.stream()
       .filter(record -> record.getString("name").equals(name))
       .findFirst()
-      .get()
+      .orElseThrow(() -> new IllegalArgumentException("No record with name: " + name))
       .getString("id"));
   }
 

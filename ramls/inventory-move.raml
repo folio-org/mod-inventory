@@ -10,7 +10,8 @@ documentation:
 
 types:
   errors: !include raml-util/schemas/errors.schema
-  move: !include items_move.json
+  items_move: !include items_move.json
+  holdings_move: !include holdings_move.json
 
 traits:
   language: !include raml-util/traits/language.raml
@@ -22,7 +23,7 @@ traits:
     is: [validate]
     body:
       application/json:
-        type: move
+        type: items_move
     responses:
       201:
         description: "Items moved to another holdings record"
@@ -44,7 +45,7 @@ traits:
     is: [validate]
     body:
       application/json:
-        type: move
+        type: holdings_move
     responses:
       201:
         description: "Items moved to another holdings record"
