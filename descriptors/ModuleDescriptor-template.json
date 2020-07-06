@@ -320,7 +320,8 @@
           ],
           "modulePermissions": [
             "inventory-storage.instances.item.get",
-            "inventory-storage.instances.item.put"
+            "inventory-storage.instances.item.put",
+            "pubsub.publish.post"
           ]
         }
       ]
