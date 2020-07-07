@@ -56,7 +56,7 @@ public class MoveApi extends AbstractInventoryResource {
   public void register(Router router) {
     router.post("/inventory/items/move")
       .handler(this::moveItems);
-    router.post("/inventory/holdings" + "*")
+    router.post("/inventory/holdings*")
       .handler(BodyHandler.create());
     router.post("/inventory/holdings/move")
       .handler(this::moveHoldings);
