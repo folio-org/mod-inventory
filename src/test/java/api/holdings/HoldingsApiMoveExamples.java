@@ -25,6 +25,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static api.ApiTestSuite.ID_FOR_FAILURE;
 import static api.support.InstanceSamples.nod;
 import static api.support.InstanceSamples.smallAngryPlanet;
 import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
@@ -37,7 +38,6 @@ import static org.junit.Assert.assertThat;
 public class HoldingsApiMoveExamples extends ApiTests {
 
   private static final String INSTANCE_ID = "instanceId";
-  public static final UUID ID_FOR_FAILURE = UUID.fromString("fa45a95b-38a3-430b-8f34-548ca005a176");
 
   @Test
   public void canMoveHoldingsToDifferentInstance() throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {

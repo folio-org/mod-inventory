@@ -54,10 +54,10 @@ public class MoveApi extends AbstractInventoryResource {
 
   @Override
   public void register(Router router) {
-    router.post("/inventory/items/move")
-      .handler(this::moveItems);
     router.post("/inventory/holdings*")
       .handler(BodyHandler.create());
+    router.post("/inventory/items/move")
+      .handler(this::moveItems);
     router.post("/inventory/holdings/move")
       .handler(this::moveHoldings);
   }
@@ -85,7 +85,7 @@ public class MoveApi extends AbstractInventoryResource {
 
             itemsFetchClient.find(itemIdsToUpdate, this::fetchByIdCql)
               .thenAccept(jsons -> {
-                List<Item> itemsToUpdate = prepareItemsForUpdate(toHoldingsRecordId, jsons);
+                List<Item> itemsToUpdate = updateHoldingsRecordIdForItems(toHoldingsRecordId, jsons);
                 updateItems(routingContext, context, itemIdsToUpdate, itemsToUpdate);
               })
               .exceptionally(e -> {
@@ -163,14 +163,10 @@ public class MoveApi extends AbstractInventoryResource {
           } catch (Exception e) {
             ServerErrorResponse.internalError(routingContext.response(), e);
           }
-        } else {
-          JsonResponse.unprocessableEntity(routingContext.response(), String.format("Instance with id=%s not found", toInstanceId));
-        }
       });
-
   }
 
-  private List<HoldingsRecord> updateInstanceIdForHoldingsRecords(String toInstanceId, List<JsonObject> jsons) {
+  private List<HoldingsRecord> prepareHoldingsRecordsForUpdate(String toInstanceId, List<JsonObject> jsons) {
     return jsons.stream()
       .map(json -> json.mapTo(HoldingsRecord.class))
       .map(holding -> holding.withInstanceId(toInstanceId))
@@ -185,8 +181,8 @@ public class MoveApi extends AbstractInventoryResource {
       .map(storageHoldingsRecordsCollection::update)
       .collect(Collectors.toList());
 
-    CompletableFuture.allOf(updates.toArray(new CompletableFuture[0]))
-      .handle((vVoid, throwable) -> updates.stream()
+    CompletableFuture.allOf(updateFutures.toArray(new CompletableFuture[0]))
+      .handle((vVoid, throwable) -> updateFutures.stream()
         .filter(future -> !future.isCompletedExceptionally())
         .map(CompletableFuture::join)
         .map(HoldingsRecord::getId)
