@@ -15,9 +15,9 @@ import org.folio.inventory.support.http.server.ValidationError;
 
 import io.vertx.core.json.JsonObject;
 
-public class ItemsMoveValidator {
+public class MoveValidator {
 
-  private ItemsMoveValidator() { }
+  private MoveValidator() { }
 
   public static Optional<ValidationError> itemsMoveHasRequiredFields(JsonObject itemsMoveRequest) {
 
@@ -38,9 +38,9 @@ public class ItemsMoveValidator {
 
   public static Optional<ValidationError> holdingsMoveHasRequiredFields(JsonObject holdingsMoveRequest) {
 
-    final String toInstanceIdId = JsonHelper.getString(holdingsMoveRequest, TO_INSTANCE_ID);
+    final String toInstanceId = JsonHelper.getString(holdingsMoveRequest, TO_INSTANCE_ID);
 
-    if (StringUtils.isBlank(toInstanceIdId)) {
+    if (StringUtils.isBlank(toInstanceId)) {
       return Optional.of(new ValidationError("toInstanceId is a required field", TO_INSTANCE_ID, null));
     }
 

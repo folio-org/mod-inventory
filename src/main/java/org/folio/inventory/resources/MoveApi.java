@@ -3,8 +3,8 @@ package org.folio.inventory.resources;
 import static java.util.stream.Collectors.toList;
 import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
 import static org.folio.inventory.support.http.server.JsonResponse.unprocessableEntity;
-import static org.folio.inventory.validation.ItemsMoveValidator.holdingsMoveHasRequiredFields;
-import static org.folio.inventory.validation.ItemsMoveValidator.itemsMoveHasRequiredFields;
+import static org.folio.inventory.validation.MoveValidator.holdingsMoveHasRequiredFields;
+import static org.folio.inventory.validation.MoveValidator.itemsMoveHasRequiredFields;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -70,38 +70,44 @@ public class MoveApi extends AbstractInventoryResource {
     Optional<ValidationError> validationError = itemsMoveHasRequiredFields(itemsMoveJsonRequest);
     if (validationError.isPresent()) {
       unprocessableEntity(routingContext.response(), validationError.get());
-    } else {
-      String toHoldingsRecordId = itemsMoveJsonRequest.getString(TO_HOLDINGS_RECORD_ID);
-      List<String> itemIdsToUpdate = toListOfStrings(itemsMoveJsonRequest.getJsonArray(ITEM_IDS));
-      storage.getHoldingsRecordCollection(context)
-        .findById(toHoldingsRecordId)
-        .thenAccept(holding -> {
-          if (Objects.nonNull(holding)) {
-            try {
-              OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
-              CollectionResourceClient itemsStorageClient = createStorageClient(okapiClient, context, ITEM_STORAGE);
-              MultipleRecordsFetchClient multipleRecordsFetchClient = createFetchClient(itemsStorageClient, ITEMS_PROPERTY);
-
-              multipleRecordsFetchClient.find(itemIdsToUpdate, this::fetchByIdCql)
-                .thenAccept(jsons -> {
-                  List<Item> itemsToUpdate = jsons.stream()
-                    .map(ItemUtil::fromStoredItemRepresentation)
-                    .map(item -> item.withHoldingId(toHoldingsRecordId))
-                    .collect(toList());
-                  updateItems(routingContext, context, itemIdsToUpdate, itemsToUpdate);
-                })
-                .exceptionally(e -> {
-                  ServerErrorResponse.internalError(routingContext.response(), e);
-                  return null;
-                });
-            } catch (Exception e) {
-              ServerErrorResponse.internalError(routingContext.response(), e);
-            }
-          } else {
-            JsonResponse.unprocessableEntity(routingContext.response(), "Holding with id=" + toHoldingsRecordId + " not found");
-          }
-        });
+      return;
     }
+    String toHoldingsRecordId = itemsMoveJsonRequest.getString(TO_HOLDINGS_RECORD_ID);
+    List<String> itemIdsToUpdate = toListOfStrings(itemsMoveJsonRequest.getJsonArray(ITEM_IDS));
+    storage.getHoldingsRecordCollection(context)
+      .findById(toHoldingsRecordId)
+      .thenAccept(holding -> {
+        if (Objects.nonNull(holding)) {
+          try {
+            OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
+            CollectionResourceClient itemsStorageClient = createStorageClient(okapiClient, context, ITEM_STORAGE);
+            MultipleRecordsFetchClient itemsFetchClient = createFetchClient(itemsStorageClient, ITEMS_PROPERTY);
+
+            itemsFetchClient.find(itemIdsToUpdate, this::fetchByIdCql)
+              .thenAccept(jsons -> {
+                List<Item> itemsToUpdate = prepareItemsForUpdate(toHoldingsRecordId, jsons);
+                updateItems(routingContext, context, itemIdsToUpdate, itemsToUpdate);
+              })
+              .exceptionally(e -> {
+                ServerErrorResponse.internalError(routingContext.response(), e);
+                return null;
+              });
+          } catch (Exception e) {
+            ServerErrorResponse.internalError(routingContext.response(), e);
+          }
+        } else {
+          JsonResponse.unprocessableEntity(routingContext.response(),
+              String.format("Holding with id=%s not found", toHoldingsRecordId));
+        }
+      });
+
+  }
+
+  private List<Item> prepareItemsForUpdate(String toHoldingsRecordId, List<JsonObject> jsons) {
+    return jsons.stream()
+      .map(ItemUtil::fromStoredItemRepresentation)
+      .map(item -> item.withHoldingId(toHoldingsRecordId))
+      .collect(toList());
   }
 
   private void updateItems(RoutingContext routingContext, WebContext context, List<String> idsToUpdate, List<Item> itemsToUpdate) {
@@ -128,39 +134,44 @@ public class MoveApi extends AbstractInventoryResource {
     Optional<ValidationError> validationError = holdingsMoveHasRequiredFields(holdingsMoveJsonRequest);
     if (validationError.isPresent()) {
       unprocessableEntity(routingContext.response(), validationError.get());
-    } else {
-      String toInstanceId = holdingsMoveJsonRequest.getString(TO_INSTANCE_ID);
-      List<String> holdingsRecordsIdsToUpdate = toListOfStrings(holdingsMoveJsonRequest.getJsonArray(HOLDINGS_RECORD_IDS));
-      storage.getInstanceCollection(context)
-        .findById(toInstanceId)
-        .thenAccept(instance -> {
-          if (Objects.nonNull(instance)) {
-            try {
-              OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
-              CollectionResourceClient holdingsStorageClient = createStorageClient(okapiClient, context, HOLDINGS_STORAGE);
-              MultipleRecordsFetchClient multipleRecordsFetchClient = createFetchClient(holdingsStorageClient,
-                  HOLDINGS_RECORDS_PROPERTY);
-
-              multipleRecordsFetchClient.find(holdingsRecordsIdsToUpdate, this::fetchByIdCql)
-                .thenAccept(jsons -> {
-                  List<HoldingsRecord> holdingsRecordsToUpdate = jsons.stream()
-                    .map(json -> json.mapTo(HoldingsRecord.class))
-                    .map(holding -> holding.withInstanceId(toInstanceId))
-                    .collect(toList());
-                  updateHoldings(routingContext, context, holdingsRecordsIdsToUpdate, holdingsRecordsToUpdate);
-                })
-                .exceptionally(e -> {
-                  ServerErrorResponse.internalError(routingContext.response(), e);
-                  return null;
-                });
-            } catch (Exception e) {
-              ServerErrorResponse.internalError(routingContext.response(), e);
-            }
-          } else {
-            JsonResponse.unprocessableEntity(routingContext.response(), "Instance with id=" + toInstanceId + " not found");
-          }
-        });
+      return;
     }
+    String toInstanceId = holdingsMoveJsonRequest.getString(TO_INSTANCE_ID);
+    List<String> holdingsRecordsIdsToUpdate = toListOfStrings(holdingsMoveJsonRequest.getJsonArray(HOLDINGS_RECORD_IDS));
+    storage.getInstanceCollection(context)
+      .findById(toInstanceId)
+      .thenAccept(instance -> {
+        if (Objects.nonNull(instance)) {
+          try {
+            OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
+            CollectionResourceClient holdingsStorageClient = createStorageClient(okapiClient, context, HOLDINGS_STORAGE);
+            MultipleRecordsFetchClient holdingsRecordFetchClient = createFetchClient(holdingsStorageClient,
+                HOLDINGS_RECORDS_PROPERTY);
+
+            holdingsRecordFetchClient.find(holdingsRecordsIdsToUpdate, this::fetchByIdCql)
+              .thenAccept(jsons -> {
+                List<HoldingsRecord> holdingsRecordsToUpdate = prepareHoldingsRecordsForUpdate(toInstanceId, jsons);
+                updateHoldings(routingContext, context, holdingsRecordsIdsToUpdate, holdingsRecordsToUpdate);
+              })
+              .exceptionally(e -> {
+                ServerErrorResponse.internalError(routingContext.response(), e);
+                return null;
+              });
+          } catch (Exception e) {
+            ServerErrorResponse.internalError(routingContext.response(), e);
+          }
+        } else {
+          JsonResponse.unprocessableEntity(routingContext.response(), String.format("Instance with id=%s not found", toInstanceId));
+        }
+      });
+
+  }
+
+  private List<HoldingsRecord> prepareHoldingsRecordsForUpdate(String toInstanceId, List<JsonObject> jsons) {
+    return jsons.stream()
+      .map(json -> json.mapTo(HoldingsRecord.class))
+      .map(holding -> holding.withInstanceId(toInstanceId))
+      .collect(toList());
   }
 
   private void updateHoldings(RoutingContext routingContext, WebContext context, List<String> idsToUpdate,
