@@ -141,7 +141,10 @@ public class MoveApi extends AbstractInventoryResource {
     storage.getInstanceCollection(context)
       .findById(toInstanceId)
       .thenAccept(instance -> {
-        if (Objects.nonNull(instance)) {
+        if (instance == null) {
+        JsonResponse.unprocessableEntity(routingContext.response(), String.format("Instance with id=%s not found", toInstanceId));
+        return;
+        }
           try {
             OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
             CollectionResourceClient holdingsStorageClient = createStorageClient(okapiClient, context, HOLDINGS_STORAGE);
