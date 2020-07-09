@@ -153,7 +153,7 @@ public class MoveApi extends AbstractInventoryResource {
 
             holdingsRecordFetchClient.find(holdingsRecordsIdsToUpdate, this::fetchByIdCql)
               .thenAccept(jsons -> {
-                List<HoldingsRecord> holdingsRecordsToUpdate = prepareHoldingsRecordsForUpdate(toInstanceId, jsons);
+                List<HoldingsRecord> holdingsRecordsToUpdate = updateInstanceIdForHoldings(toInstanceId, jsons);
                 updateHoldings(routingContext, context, holdingsRecordsIdsToUpdate, holdingsRecordsToUpdate);
               })
               .exceptionally(e -> {
@@ -166,7 +166,7 @@ public class MoveApi extends AbstractInventoryResource {
       });
   }
 
-  private List<HoldingsRecord> prepareHoldingsRecordsForUpdate(String toInstanceId, List<JsonObject> jsons) {
+  private List<HoldingsRecord> updateInstanceIdForHoldings(String toInstanceId, List<JsonObject> jsons) {
     return jsons.stream()
       .map(json -> json.mapTo(HoldingsRecord.class))
       .map(holding -> holding.withInstanceId(toInstanceId))
