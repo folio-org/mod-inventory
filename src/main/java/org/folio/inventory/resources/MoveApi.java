@@ -167,7 +167,7 @@ public class MoveApi extends AbstractInventoryResource {
 
   }
 
-  private List<HoldingsRecord> prepareHoldingsRecordsForUpdate(String toInstanceId, List<JsonObject> jsons) {
+  private List<HoldingsRecord> updateInstanceIdForHoldingsRecords(String toInstanceId, List<JsonObject> jsons) {
     return jsons.stream()
       .map(json -> json.mapTo(HoldingsRecord.class))
       .map(holding -> holding.withInstanceId(toInstanceId))
