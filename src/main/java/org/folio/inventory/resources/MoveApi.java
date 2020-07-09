@@ -178,7 +178,7 @@ public class MoveApi extends AbstractInventoryResource {
       List<HoldingsRecord> holdingsToUpdate) {
     HoldingsRecordCollection storageHoldingsRecordsCollection = storage.getHoldingsRecordCollection(context);
 
-    List<CompletableFuture<HoldingsRecord>> updates = holdingsToUpdate.stream()
+    List<CompletableFuture<HoldingsRecord>> updateFutures = holdingsToUpdate.stream()
       .map(storageHoldingsRecordsCollection::update)
       .collect(Collectors.toList());
 
