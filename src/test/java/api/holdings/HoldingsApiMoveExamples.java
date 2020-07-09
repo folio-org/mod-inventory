@@ -33,6 +33,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThat;
+import static support.matchers.ResponseMatchers.hasValidationError;
 
 @RunWith(JUnitParamsRunner.class)
 public class HoldingsApiMoveExamples extends ApiTests {
@@ -124,9 +125,9 @@ public class HoldingsApiMoveExamples extends ApiTests {
     assertThat(postMoveHoldingsRecordResponse.getStatusCode(), is(422));
     assertThat(postMoveHoldingsRecordResponse.getContentType(), containsString(APPLICATION_JSON));
 
-    assertThat(postMoveHoldingsRecordResponse.getBody(), containsString("errors"));
-    assertThat(postMoveHoldingsRecordResponse.getBody(), containsString("toInstanceId"));
-    assertThat(postMoveHoldingsRecordResponse.getBody(), containsString("toInstanceId is a required field"));
+    assertThat(postMoveHoldingsRecordResponse, hasValidationError(
+      "toInstanceId is a required field", "toInstanceId", null
+    ));
   }
 
   @Test
@@ -144,9 +145,9 @@ public class HoldingsApiMoveExamples extends ApiTests {
     assertThat(postMoveHoldingsRecordResponse.getStatusCode(), is(422));
     assertThat(postMoveHoldingsRecordResponse.getContentType(), containsString(APPLICATION_JSON));
 
-    assertThat(postMoveHoldingsRecordResponse.getBody(), containsString("errors"));
-    assertThat(postMoveHoldingsRecordResponse.getBody(), containsString("holdingsRecordIds"));
-    assertThat(postMoveHoldingsRecordResponse.getBody(), containsString("Holdings record ids aren't specified"));
+    assertThat(postMoveHoldingsRecordResponse, hasValidationError(
+      "Holdings record ids aren't specified", "holdingsRecordIds", null
+    ));
   }
 
   @Test
