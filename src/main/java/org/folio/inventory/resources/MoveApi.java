@@ -103,7 +103,7 @@ public class MoveApi extends AbstractInventoryResource {
 
   }
 
-  private List<Item> prepareItemsForUpdate(String toHoldingsRecordId, List<JsonObject> jsons) {
+  private List<Item> updateHoldingsRecordIdForItems(String toHoldingsRecordId, List<JsonObject> jsons) {
     return jsons.stream()
       .map(ItemUtil::fromStoredItemRepresentation)
       .map(item -> item.withHoldingId(toHoldingsRecordId))
