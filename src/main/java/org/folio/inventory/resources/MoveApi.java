@@ -79,9 +79,9 @@ public class MoveApi extends AbstractInventoryResource {
       .thenAccept(holding -> {
         if (Objects.nonNull(holding)) {
           try {
-            OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
-            CollectionResourceClient itemsStorageClient = createStorageClient(okapiClient, context, ITEM_STORAGE);
-            MultipleRecordsFetchClient itemsFetchClient = createFetchClient(itemsStorageClient, ITEMS_PROPERTY);
+            CollectionResourceClient itemsStorageClient = createItemStorageClient(createHttpClient(routingContext, context),
+                context);
+            MultipleRecordsFetchClient itemsFetchClient = createItemsFetchClient(itemsStorageClient);
 
             itemsFetchClient.find(itemIdsToUpdate, this::fetchByIdCql)
               .thenAccept(jsons -> {
@@ -100,7 +100,45 @@ public class MoveApi extends AbstractInventoryResource {
               String.format("Holding with id=%s not found", toHoldingsRecordId));
         }
       });
+  }
 
+  private void moveHoldings(RoutingContext routingContext) {
+
+    WebContext context = new WebContext(routingContext);
+    JsonObject holdingsMoveJsonRequest = routingContext.getBodyAsJson();
+
+    Optional<ValidationError> validationError = holdingsMoveHasRequiredFields(holdingsMoveJsonRequest);
+    if (validationError.isPresent()) {
+      unprocessableEntity(routingContext.response(), validationError.get());
+      return;
+    }
+    String toInstanceId = holdingsMoveJsonRequest.getString(TO_INSTANCE_ID);
+    List<String> holdingsRecordsIdsToUpdate = toListOfStrings(holdingsMoveJsonRequest.getJsonArray(HOLDINGS_RECORD_IDS));
+    storage.getInstanceCollection(context)
+      .findById(toInstanceId)
+      .thenAccept(instance -> {
+        if (instance == null) {
+          JsonResponse.unprocessableEntity(routingContext.response(), String.format("Instance with id=%s not found", toInstanceId));
+          return;
+        }
+        try {
+          CollectionResourceClient holdingsStorageClient = createHoldingsStorageClient(createHttpClient(routingContext, context),
+              context);
+          MultipleRecordsFetchClient holdingsRecordFetchClient = createHoldingsRecordsFetchClient(holdingsStorageClient);
+
+          holdingsRecordFetchClient.find(holdingsRecordsIdsToUpdate, this::fetchByIdCql)
+            .thenAccept(jsons -> {
+              List<HoldingsRecord> holdingsRecordsToUpdate = updateInstanceIdForHoldings(toInstanceId, jsons);
+              updateHoldings(routingContext, context, holdingsRecordsIdsToUpdate, holdingsRecordsToUpdate);
+            })
+            .exceptionally(e -> {
+              ServerErrorResponse.internalError(routingContext.response(), e);
+              return null;
+            });
+        } catch (Exception e) {
+          ServerErrorResponse.internalError(routingContext.response(), e);
+        }
+      });
   }
 
   private List<Item> updateHoldingsRecordIdForItems(String toHoldingsRecordId, List<JsonObject> jsons) {
@@ -124,46 +162,6 @@ public class MoveApi extends AbstractInventoryResource {
         .map(Item::getId)
         .collect(toList()))
       .thenAccept(updatedIds -> respond(routingContext, idsToUpdate, updatedIds));
-  }
-
-  private void moveHoldings(RoutingContext routingContext) {
-
-    WebContext context = new WebContext(routingContext);
-    JsonObject holdingsMoveJsonRequest = routingContext.getBodyAsJson();
-
-    Optional<ValidationError> validationError = holdingsMoveHasRequiredFields(holdingsMoveJsonRequest);
-    if (validationError.isPresent()) {
-      unprocessableEntity(routingContext.response(), validationError.get());
-      return;
-    }
-    String toInstanceId = holdingsMoveJsonRequest.getString(TO_INSTANCE_ID);
-    List<String> holdingsRecordsIdsToUpdate = toListOfStrings(holdingsMoveJsonRequest.getJsonArray(HOLDINGS_RECORD_IDS));
-    storage.getInstanceCollection(context)
-      .findById(toInstanceId)
-      .thenAccept(instance -> {
-        if (instance == null) {
-        JsonResponse.unprocessableEntity(routingContext.response(), String.format("Instance with id=%s not found", toInstanceId));
-        return;
-        }
-          try {
-            OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
-            CollectionResourceClient holdingsStorageClient = createStorageClient(okapiClient, context, HOLDINGS_STORAGE);
-            MultipleRecordsFetchClient holdingsRecordFetchClient = createFetchClient(holdingsStorageClient,
-                HOLDINGS_RECORDS_PROPERTY);
-
-            holdingsRecordFetchClient.find(holdingsRecordsIdsToUpdate, this::fetchByIdCql)
-              .thenAccept(jsons -> {
-                List<HoldingsRecord> holdingsRecordsToUpdate = updateInstanceIdForHoldings(toInstanceId, jsons);
-                updateHoldings(routingContext, context, holdingsRecordsIdsToUpdate, holdingsRecordsToUpdate);
-              })
-              .exceptionally(e -> {
-                ServerErrorResponse.internalError(routingContext.response(), e);
-                return null;
-              });
-          } catch (Exception e) {
-            ServerErrorResponse.internalError(routingContext.response(), e);
-          }
-      });
   }
 
   private List<HoldingsRecord> updateInstanceIdForHoldings(String toInstanceId, List<JsonObject> jsons) {
@@ -211,6 +209,16 @@ public class MoveApi extends AbstractInventoryResource {
     return new CollectionResourceClient(client, new URL(context.getOkapiLocation() + storageUrl));
   }
 
+  private CollectionResourceClient createItemStorageClient(OkapiHttpClient client, WebContext context)
+      throws MalformedURLException {
+    return createStorageClient(client, context, ITEM_STORAGE);
+  }
+
+  private CollectionResourceClient createHoldingsStorageClient(OkapiHttpClient client, WebContext context)
+      throws MalformedURLException {
+    return createStorageClient(client, context, HOLDINGS_STORAGE);
+  }
+
   private CqlQuery fetchByIdCql(List<String> ids) {
     return CqlQuery.exactMatchAny("id", ids);
   }
@@ -221,5 +229,13 @@ public class MoveApi extends AbstractInventoryResource {
       .withExpectedStatus(200)
       .withCollectionResourceClient(client)
       .build();
+  }
+
+  private MultipleRecordsFetchClient createItemsFetchClient(CollectionResourceClient client) {
+    return createFetchClient(client, ITEMS_PROPERTY);
+  }
+
+  private MultipleRecordsFetchClient createHoldingsRecordsFetchClient(CollectionResourceClient client) {
+    return createFetchClient(client, HOLDINGS_RECORDS_PROPERTY);
   }
 }

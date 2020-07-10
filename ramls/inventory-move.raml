@@ -12,6 +12,7 @@ types:
   errors: !include raml-util/schemas/errors.schema
   items_move: !include items_move.json
   holdings_move: !include holdings_move.json
+  move_response: !include move_response.json
 
 traits:
   language: !include raml-util/traits/language.raml
@@ -29,6 +30,7 @@ traits:
         description: "Items moved to another holdings record"
         body:
           application/json:
+            type: move_response
       422:
         description: "Validation error"
         body:
@@ -51,6 +53,7 @@ traits:
         description: "Items moved to another holdings record"
         body:
           application/json:
+            type: move_response
       422:
         description: "Validation error"
         body:

@@ -56,9 +56,7 @@ public class HoldingsApiMoveExamples extends ApiTests {
     JsonObject holdingsRecordMoveRequestBody = new HoldingsRecordMoveRequestBuilder(newInstanceId,
         new JsonArray(Arrays.asList(createHoldingsRecord1.toString(), createHoldingsRecord2.toString()))).create();
 
-    CompletableFuture<Response> postHoldingRecordsMoveCompleted = new CompletableFuture<>();
-    okapiClient.post(ApiRoot.moveHoldingsRecords(), holdingsRecordMoveRequestBody, ResponseHandler.any(postHoldingRecordsMoveCompleted));
-    Response postHoldingsMoveResponse = postHoldingRecordsMoveCompleted.get(5, TimeUnit.SECONDS);
+    Response postHoldingsMoveResponse = moveHoldingsRecords(holdingsRecordMoveRequestBody);
 
     assertThat(postHoldingsMoveResponse.getStatusCode(), is(200));
     assertThat(postHoldingsMoveResponse.getBody(), is(StringUtils.EMPTY));
@@ -89,10 +87,7 @@ public class HoldingsApiMoveExamples extends ApiTests {
     JsonObject holdingsRecordMoveRequestBody = new HoldingsRecordMoveRequestBuilder(newInstanceId,
       new JsonArray(Arrays.asList(createHoldingsRecord1.toString(), createHoldingsRecord2.toString()))).create();
 
-    CompletableFuture<Response> postHoldingRecordsMoveCompleted = new CompletableFuture<>();
-    okapiClient.post(ApiRoot.moveHoldingsRecords(), holdingsRecordMoveRequestBody, ResponseHandler.any(postHoldingRecordsMoveCompleted));
-
-    Response postHoldingsRecordsMoveResponse = postHoldingRecordsMoveCompleted.get(5, TimeUnit.SECONDS);
+    Response postHoldingsRecordsMoveResponse = moveHoldingsRecords(holdingsRecordMoveRequestBody);
 
     assertThat(postHoldingsRecordsMoveResponse.getStatusCode(), is(200));
     assertThat(postHoldingsRecordsMoveResponse.getContentType(), containsString(APPLICATION_JSON));
@@ -166,11 +161,7 @@ public class HoldingsApiMoveExamples extends ApiTests {
     JsonObject holdingsRecordMoveRequestBody = new HoldingsRecordMoveRequestBuilder(newInstanceId,
       new JsonArray(Arrays.asList(createHoldingsRecord1.toString(), createHoldingsRecord2.toString()))).create();
 
-    CompletableFuture<Response> postHoldingRecordsMoveCompleted = new CompletableFuture<>();
-    okapiClient.post(ApiRoot.moveHoldingsRecords(), holdingsRecordMoveRequestBody, ResponseHandler.any(postHoldingRecordsMoveCompleted));
-
-
-    Response postMoveHoldingsRecordResponse = postHoldingRecordsMoveCompleted.get(5, TimeUnit.SECONDS);
+    Response postMoveHoldingsRecordResponse = moveHoldingsRecords(holdingsRecordMoveRequestBody);
 
     assertThat(postMoveHoldingsRecordResponse.getStatusCode(), is(422));
     assertThat(postMoveHoldingsRecordResponse.getContentType(), containsString(APPLICATION_JSON));
@@ -195,9 +186,7 @@ public class HoldingsApiMoveExamples extends ApiTests {
     JsonObject holdingsRecordMoveRequestBody = new HoldingsRecordMoveRequestBuilder(newInstanceId,
       new JsonArray(Arrays.asList(createHoldingsRecord1.toString(), createHoldingsRecord2.toString()))).create();
 
-    CompletableFuture<Response> postHoldingRecordsMoveCompleted = new CompletableFuture<>();
-    okapiClient.post(ApiRoot.moveHoldingsRecords(), holdingsRecordMoveRequestBody, ResponseHandler.any(postHoldingRecordsMoveCompleted));
-    Response postHoldingsRecordsMoveResponse = postHoldingRecordsMoveCompleted.get(5, TimeUnit.SECONDS);
+    Response postHoldingsRecordsMoveResponse = moveHoldingsRecords(holdingsRecordMoveRequestBody);
 
     List nonUpdatedIdsIds = postHoldingsRecordsMoveResponse.getJson()
       .getJsonArray("nonUpdatedIds")
@@ -216,6 +205,12 @@ public class HoldingsApiMoveExamples extends ApiTests {
     JsonObject updatedHoldingsRecord2 = holdingsStorageClient.getById(createHoldingsRecord2)
       .getJson();
     assertThat(oldInstanceId.toString(), equalTo(updatedHoldingsRecord2.getString(INSTANCE_ID)));
+  }
+
+  private Response moveHoldingsRecords(JsonObject holdingsRecordMoveRequestBody) throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+    CompletableFuture<Response> postHoldingRecordsMoveCompleted = new CompletableFuture<>();
+    okapiClient.post(ApiRoot.moveHoldingsRecords(), holdingsRecordMoveRequestBody, ResponseHandler.any(postHoldingRecordsMoveCompleted));
+    return postHoldingRecordsMoveCompleted.get(5, TimeUnit.SECONDS);
   }
 
   private UUID createHoldingForInstance(UUID instanceId)

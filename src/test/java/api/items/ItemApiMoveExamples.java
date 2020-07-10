@@ -64,9 +64,7 @@ public class ItemApiMoveExamples extends ApiTests {
     JsonObject itemsMoveRequestBody = new ItemsMoveRequestBuilder(newHoldingId,
         new JsonArray(Arrays.asList(createItem1.getId(), createItem2.getId()))).create();
 
-    CompletableFuture<Response> postItemsMoveCompleted = new CompletableFuture<>();
-    okapiClient.post(ApiRoot.moveItems(), itemsMoveRequestBody, ResponseHandler.any(postItemsMoveCompleted));
-    Response postItemsMoveResponse = postItemsMoveCompleted.get(5, TimeUnit.SECONDS);
+    Response postItemsMoveResponse = moveItems(itemsMoveRequestBody);
 
     assertThat(postItemsMoveResponse.getStatusCode(), is(200));
     assertThat(postItemsMoveResponse.getBody(), is(StringUtils.EMPTY));
@@ -101,9 +99,7 @@ public class ItemApiMoveExamples extends ApiTests {
     JsonObject itemsMoveRequestBody = new ItemsMoveRequestBuilder(newHoldingId,
         new JsonArray(Arrays.asList(createItem1.getId(), nonExistedItemId))).create();
 
-    CompletableFuture<Response> postItemsMoveCompleted = new CompletableFuture<>();
-    okapiClient.post(ApiRoot.moveItems(), itemsMoveRequestBody, ResponseHandler.any(postItemsMoveCompleted));
-    Response postItemsMoveResponse = postItemsMoveCompleted.get(5, TimeUnit.SECONDS);
+    Response postItemsMoveResponse = moveItems(itemsMoveRequestBody);
 
     assertThat(postItemsMoveResponse.getStatusCode(), is(200));
     assertThat(postItemsMoveResponse.getContentType(), containsString(APPLICATION_JSON));
@@ -180,10 +176,7 @@ public class ItemApiMoveExamples extends ApiTests {
     JsonObject itemsMoveRequestBody = new ItemsMoveRequestBuilder(newHoldingId,
       new JsonArray(Collections.singletonList(createItem.getId()))).create();
 
-    CompletableFuture<Response> postItemsMoveCompleted = new CompletableFuture<>();
-    okapiClient.post(ApiRoot.moveItems(), itemsMoveRequestBody, ResponseHandler.any(postItemsMoveCompleted));
-
-    Response postMoveItemsResponse = postItemsMoveCompleted.get(5, TimeUnit.SECONDS);
+    Response postMoveItemsResponse = moveItems(itemsMoveRequestBody);
 
     assertThat(postMoveItemsResponse.getStatusCode(), is(422));
     assertThat(postMoveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
@@ -215,9 +208,7 @@ public class ItemApiMoveExamples extends ApiTests {
     JsonObject itemsMoveRequestBody = new ItemsMoveRequestBuilder(newHoldingId,
       new JsonArray(Arrays.asList(createItem1.getId(), createItem2.getId()))).create();
 
-    CompletableFuture<Response> postItemsMoveCompleted = new CompletableFuture<>();
-    okapiClient.post(ApiRoot.moveItems(), itemsMoveRequestBody, ResponseHandler.any(postItemsMoveCompleted));
-    Response postItemsMoveResponse = postItemsMoveCompleted.get(5, TimeUnit.SECONDS);
+    Response postItemsMoveResponse = moveItems(itemsMoveRequestBody);
 
     List nonUpdatedIdsIds = postItemsMoveResponse.getJson()
       .getJsonArray("nonUpdatedIds")
@@ -236,6 +227,12 @@ public class ItemApiMoveExamples extends ApiTests {
     JsonObject updatedItem2 = itemsClient.getById(createItem2.getId())
       .getJson();
     assertThat(existedHoldingId.toString(), equalTo(updatedItem2.getString(HOLDINGS_RECORD_ID)));
+  }
+
+  private Response moveItems(JsonObject itemsMoveRequestBody) throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+    CompletableFuture<Response> postItemsMoveCompleted = new CompletableFuture<>();
+    okapiClient.post(ApiRoot.moveItems(), itemsMoveRequestBody, ResponseHandler.any(postItemsMoveCompleted));
+    return postItemsMoveCompleted.get(5, TimeUnit.SECONDS);
   }
 
   private UUID createHoldingForInstance(UUID instanceId)
