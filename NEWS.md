@@ -1,3 +1,7 @@
+## 16.0.1 2020-07-10
+
+* Update dependency on data-import-processing-core v2.1.5
+
 ## 16.0.0 2020-06-25
 
 * Update SRS client requests for v4.0.0, change dependency on interface (from source-storage-suppress-discovery 1.0 to source-storage-records 2.0) (MODINV-316)
