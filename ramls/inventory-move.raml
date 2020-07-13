@@ -42,7 +42,7 @@ traits:
           text/plain:
             example: "Internal server error"
 /inventory/holdings/move:
-  displayName: Items Move
+  displayName: Holdings Record Move
   post:
     is: [validate]
     body:
@@ -50,7 +50,7 @@ traits:
         type: holdings_move
     responses:
       201:
-        description: "Items moved to another holdings record"
+        description: "Holdings record moved to another instance"
         body:
           application/json:
             type: move_response
