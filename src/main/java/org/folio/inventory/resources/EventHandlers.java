@@ -105,7 +105,7 @@ public class EventHandlers {
   private void handleInstanceUpdate(RoutingContext routingContext) {
     try {
       HashMap<String, String> eventPayload = ObjectMapperTool.getMapper().readValue(ZIPArchiver.unzip(routingContext.getBodyAsString()), HashMap.class);
-      new UpdateInstanceEventHandler(storage, new WebContext(routingContext)).handle(eventPayload);
+      new UpdateInstanceEventHandler(storage, new WebContext(routingContext)).handle(eventPayload, routingContext.request().headers(), routingContext.vertx());
       SuccessResponse.noContent(routingContext.response());
     } catch (Exception e) {
       ServerErrorResponse.internalError(routingContext.response(), e);
