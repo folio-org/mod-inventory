@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "Ids holder for not moved items or holdings",
+  "type": "object",
+  "properties": {
+    "nonUpdatedIds": {
+      "description": "Ids of the items or holdings that wasn't moved",
+      "type": "array",
+      "items": {
+        "$ref": "uuid.json"
+      }
+    }
+  },
+  "additionalProperties": false
+}

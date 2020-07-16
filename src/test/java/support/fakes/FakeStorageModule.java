@@ -1,6 +1,6 @@
 package support.fakes;
 
-import static api.items.ItemApiMoveExamples.ID_FOR_FAILURE;
+import static api.ApiTestSuite.ID_FOR_FAILURE;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import java.util.ArrayList;
