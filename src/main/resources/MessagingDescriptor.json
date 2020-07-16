@@ -91,6 +91,18 @@
       "signed": false
     },
     {
+      "eventType": "QM_ERROR",
+      "description": "Error during updating source record in QM workflow",
+      "eventTTL": 1,
+      "signed": false
+    },
+    {
+      "eventType": "QM_INVENTORY_INSTANCE_UPDATED",
+      "description": "Updated Inventory Instance Record by QM Editor",
+      "eventTTL": 1,
+      "signed": false
+    },
+    {
       "eventType": "DI_INVENTORY_ITEM_UPDATED",
       "description": "Updated inventory item",
       "eventTTL": 1,
