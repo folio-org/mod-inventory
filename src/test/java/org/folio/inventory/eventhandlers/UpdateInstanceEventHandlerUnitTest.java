@@ -5,15 +5,18 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.handlers.actions.UpdateInstanceEventHandler;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.InstanceUtil;
+import org.folio.processing.events.utils.ZIPArchiver;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.internal.runners.statements.Fail;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -28,6 +31,7 @@ import java.util.function.Consumer;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
 public class UpdateInstanceEventHandlerUnitTest {
@@ -99,4 +103,45 @@ public class UpdateInstanceEventHandlerUnitTest {
     Assert.assertNotNull(updatedInstance.getNotes());
     Assert.assertEquals("Adding a note", updatedInstance.getNotes().get(0).note);
   }
+
+  @Test
+  public void shouldCompleteExceptionally() throws IOException {
+
+    HashMap<String, String> eventPayload = new HashMap<>();
+    eventPayload.put("MARC", ZIPArchiver.zip(record.encode()));
+    eventPayload.put("MAPPING_RULES", mappingRules.encode());
+    eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
+    MultiMap headers = MultiMap.caseInsensitiveMultiMap()
+      .add("x-okapi-url", "localhost")
+      .add("x-okapi-tenant", "dummy")
+      .add("x-okapi-token", "dummy");
+
+    CompletableFuture<Instance> future = updateInstanceEventHandler.handle(eventPayload, headers, Vertx.vertx());
+
+    Assert.assertTrue(future.isCompletedExceptionally());
+  }
+
+  @Test
+  public void shouldSendError() {
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = (Consumer<Failure>) invocationOnMock.getArguments()[2];
+      failureHandler.accept(new Failure("Internal Server Error", 500));
+      return null;
+    }).when(instanceRecordCollection).update(any(), any(Consumer.class), any(Consumer.class));
+
+    HashMap<String, String> eventPayload = new HashMap<>();
+    eventPayload.put("MARC", record.encode());
+    eventPayload.put("MAPPING_RULES", mappingRules.encode());
+    eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
+    MultiMap headers = MultiMap.caseInsensitiveMultiMap()
+      .add("x-okapi-url", "localhost")
+      .add("x-okapi-tenant", "dummy")
+      .add("x-okapi-token", "dummy");
+
+    CompletableFuture<Instance> future = updateInstanceEventHandler.handle(eventPayload, headers, Vertx.vertx());
+
+    Assert.assertTrue(future.isCompletedExceptionally());
+  }
+
 }
