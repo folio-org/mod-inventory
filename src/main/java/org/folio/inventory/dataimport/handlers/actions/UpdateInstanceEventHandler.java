@@ -3,6 +3,7 @@ package org.folio.inventory.dataimport.handlers.actions;
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -11,15 +12,12 @@ import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.InstanceUtil;
-import org.folio.processing.events.utils.ZIPArchiver;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.defaultmapper.RecordToInstanceMapperBuilder;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.Record;
-import org.folio.rest.tools.utils.ObjectMapperTool;
 import org.folio.rest.util.OkapiConnectionParams;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -64,23 +62,18 @@ public class UpdateInstanceEventHandler {
         .compose(existingInstance -> updateInstance(existingInstance, mappedInstance))
         .compose(updatedInstance -> updateInstanceInStorage(updatedInstance, instanceCollection))
         .setHandler(ar -> {
-          try {
-            Map<String, String> headers = new HashMap<>();
-            requestHeaders
-              .entries()
-              .forEach(entry -> headers.put(entry.getKey(), entry.getValue()));
-            OkapiConnectionParams params = new OkapiConnectionParams(headers, vertx);
-            String payload = ZIPArchiver.zip(ObjectMapperTool.getMapper().writeValueAsString(eventPayload));
-            if (ar.succeeded()) {
-              future.complete(ar.result());
-              sendEventWithPayload(payload, "QM_INVENTORY_INSTANCE_UPDATED", params);
-            } else {
-              future.completeExceptionally(ar.cause());
-              sendEventWithPayload(payload, "QM_ERROR", params);
-            }
-          } catch (IOException e) {
-            future.completeExceptionally(e);
-            LOGGER.error("Error during even payload zipping. QM instance record update error.", e);
+          Map<String, String> headers = new HashMap<>();
+          requestHeaders
+            .entries()
+            .forEach(entry -> headers.put(entry.getKey(), entry.getValue()));
+          OkapiConnectionParams params = new OkapiConnectionParams(headers, vertx);
+          if (ar.succeeded()) {
+
+            sendEventWithPayload(Json.encode(eventPayload), "QM_INVENTORY_INSTANCE_UPDATED", params)
+              .setHandler(v -> future.complete(ar.result()));
+          } else {
+            sendEventWithPayload(Json.encode(eventPayload), "QM_ERROR", params)
+              .setHandler(v -> future.completeExceptionally(ar.cause()));
           }
         });
     } catch (Exception e) {
