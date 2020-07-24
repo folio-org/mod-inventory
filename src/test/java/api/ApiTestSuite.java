@@ -11,6 +11,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import api.holdings.HoldingsApiMoveExamples;
+import api.items.ItemApiMoveExamples;
 import org.folio.inventory.InventoryVerticle;
 import org.folio.inventory.common.VertxAssistant;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
@@ -25,7 +27,8 @@ import api.isbns.IsbnUtilsApiExamples;
 import api.items.ItemAllowedStatusesSchemaTest;
 import api.items.ItemApiExamples;
 import api.items.ItemApiTitleExamples;
-import api.items.ItemMarkWithdrawnApiTest;
+import api.items.MarkItemMissingApiTests;
+import api.items.MarkItemWithdrawnApiTests;
 import api.support.ControlledVocabularyPreparation;
 import api.support.http.ResourceClient;
 import api.tenant.TenantApiExamples;
@@ -47,11 +50,16 @@ import support.fakes.FakeOkapi;
   InstanceRelationshipsTest.class,
   EventHandlersApiTest.class,
   HoldingApiExample.class,
-  ItemMarkWithdrawnApiTest.class
+  MarkItemWithdrawnApiTests.class,
+  ItemApiMoveExamples.class,
+  MarkItemMissingApiTests.class,
+  HoldingsApiMoveExamples.class
 })
 public class ApiTestSuite {
   public static final int INVENTORY_VERTICLE_TEST_PORT = 9603;
   public static final String TENANT_ID = "test_tenant";
+
+  public static final UUID ID_FOR_FAILURE = UUID.fromString("fa45a95b-38a3-430b-8f34-548ca005a176");
 
   public static final String TOKEN = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsInRlbmFudCI6ImRlbW9fdGVuYW50In0.29VPjLI6fLJzxQW0UhQ0jsvAn8xHz501zyXAxRflXfJ9wuDzT8TDf-V75PjzD7fe2kHjSV2dzRXbstt3BTtXIQ";
   public static final String USER_ID = "7e115dfb-d1d6-46ac-b2dc-2b3e74cda694";
@@ -516,7 +524,7 @@ public class ApiTestSuite {
     return UUID.fromString(existingRecords.stream()
       .filter(record -> record.getString("name").equals(name))
       .findFirst()
-      .get()
+      .orElseThrow(() -> new IllegalArgumentException("No record with name: " + name))
       .getString("id"));
   }
 

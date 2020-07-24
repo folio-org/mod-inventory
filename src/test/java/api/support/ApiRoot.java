@@ -37,6 +37,18 @@ public class ApiRoot {
     return new URL(String.format("%s/items", inventory()));
   }
 
+  public static URL moveItems()
+    throws MalformedURLException {
+
+    return new URL(String.format("%s/items/move", inventory()));
+  }
+
+  public static URL moveHoldingsRecords()
+    throws MalformedURLException {
+
+    return new URL(String.format("%s/holdings/move", inventory()));
+  }
+
   public static URL items(String query)
     throws MalformedURLException {
 

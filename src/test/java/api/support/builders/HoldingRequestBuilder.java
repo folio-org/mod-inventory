@@ -5,7 +5,7 @@ import io.vertx.core.json.JsonObject;
 
 import java.util.UUID;
 
-public class HoldingRequestBuilder implements Builder {
+public class HoldingRequestBuilder extends AbstractBuilder {
 
   private final UUID instanceId;
   private final UUID permanentLocationId;

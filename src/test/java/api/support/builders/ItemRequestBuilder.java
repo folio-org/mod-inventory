@@ -9,7 +9,7 @@ import api.ApiTestSuite;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
-public class ItemRequestBuilder implements Builder {
+public class ItemRequestBuilder extends AbstractBuilder {
 
   private static final String AVAILABLE_STATUS = "Available";
 
@@ -572,46 +572,6 @@ public class ItemRequestBuilder implements Builder {
     return new JsonObject()
       .put("id", ApiTestSuite.getCourseReserveLoanType())
       .put("name", "Course Reserves");
-  }
-
-  private void includeWhenPresent(
-    JsonObject itemRequest,
-    String property,
-    UUID value) {
-
-    if(value != null) {
-      itemRequest.put(property, value.toString());
-    }
-  }
-
-  private void includeWhenPresent(
-    JsonObject itemRequest,
-    String property,
-    String value) {
-
-    if(value != null) {
-      itemRequest.put(property, value);
-    }
-  }
-
-  private void includeWhenPresent(
-    JsonObject itemRequest,
-    String property,
-    JsonObject value) {
-
-    if(value != null) {
-      itemRequest.put(property, value);
-    }
-  }
-
-  private void includeWhenPresent(
-    JsonObject itemRequest,
-    String property,
-    JsonArray value
-  ) {
-    if (value != null) {
-      itemRequest.put(property, value);
-    }
   }
 
   public ItemRequestBuilder withItemLevelCallNumber(String itemLevelCallNumber) {

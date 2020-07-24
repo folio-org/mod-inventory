@@ -1,7 +1,9 @@
 package org.folio.inventory.resources;
 
+import static org.folio.HttpStatus.HTTP_CREATED;
 import static org.folio.inventory.common.FutureAssistance.allOf;
 import static org.folio.inventory.support.CqlHelper.multipleRecordsCqlQuery;
+import static org.folio.inventory.support.EndpointFailureHandler.doExceptionally;
 import static org.folio.inventory.support.http.server.JsonResponse.unprocessableEntity;
 import static org.folio.inventory.validation.ItemStatusValidator.itemHasCorrectStatus;
 import static org.folio.inventory.validation.ItemsValidator.claimedReturnedMarkedAsMissing;
@@ -25,7 +27,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.folio.HttpStatus;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
@@ -35,12 +36,11 @@ import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.user.User;
 import org.folio.inventory.domain.user.UserCollection;
-import org.folio.inventory.services.WithdrawItemService;
+import org.folio.inventory.services.MoveItemIntoStatusService;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.Clients;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.support.CqlHelper;
-import org.folio.inventory.support.EndpointFailureHandler;
 import org.folio.inventory.support.ItemUtil;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
@@ -54,7 +54,6 @@ import org.folio.inventory.support.http.server.SuccessResponse;
 import org.folio.inventory.support.http.server.ValidationError;
 import org.folio.inventory.validation.ItemsValidator;
 
-import io.vertx.core.Future;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -93,17 +92,29 @@ public class Items extends AbstractInventoryResource {
 
     router.post(RELATIVE_ITEMS_PATH + "/:id/mark-withdrawn")
       .handler(handle(this::markAsWithdrawn));
+    router.post(RELATIVE_ITEMS_PATH + "/:id/mark-missing")
+      .handler(handle(this::markAsMissing));
   }
 
   private CompletableFuture<Void> markAsWithdrawn(
     RoutingContext routingContext, WebContext webContext, Clients clients) {
 
-    final WithdrawItemService withdrawItemService = new WithdrawItemService(storage
+    final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
       .getItemCollection(webContext), clients);
 
-    return withdrawItemService.processMarkItemWithdrawn(webContext)
-      .thenAccept(item ->
-        respondWithItemRepresentation(item,  HttpStatus.HTTP_CREATED.toInt(),
+    return moveItemIntoStatusService.processMarkItemWithdrawn(webContext)
+      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_CREATED.toInt(),
+          routingContext, webContext));
+  }
+
+  private CompletableFuture<Void> markAsMissing(
+    RoutingContext routingContext, WebContext webContext, Clients clients) {
+
+    final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
+      .getItemCollection(webContext), clients);
+
+    return moveItemIntoStatusService.processMarkItemMissing(webContext)
+      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_CREATED.toInt(),
           routingContext, webContext));
   }
 
@@ -203,23 +214,17 @@ public class Items extends AbstractInventoryResource {
     UserCollection userCollection = storage.getUserCollection(context);
 
     final String itemId = routingContext.request().getParam("id");
-    final Future<Success<Item>> getItemFuture = Future.future();
+    final CompletableFuture<Success<Item>> getItemFuture = new CompletableFuture<>();
 
     itemCollection.findById(itemId, getItemFuture::complete,
       FailureResponseConsumer.serverError(routingContext.response()));
 
     getItemFuture
-      .map(Success::getResult)
-      .compose(ItemsValidator::itemNotFound)
-      .compose(oldItem -> hridChanged(oldItem, newItem))
-      .compose(oldItem -> claimedReturnedMarkedAsMissing(oldItem, newItem))
-      .setHandler(result -> {
-        if (result.failed()) {
-          EndpointFailureHandler.handleFailure(result, routingContext);
-          return;
-        }
-
-        Item oldItem = result.result();
+      .thenApply(Success::getResult)
+      .thenCompose(ItemsValidator::refuseWhenItemNotFound)
+      .thenCompose(oldItem -> hridChanged(oldItem, newItem))
+      .thenCompose(oldItem -> claimedReturnedMarkedAsMissing(oldItem, newItem))
+      .thenAccept(oldItem -> {
         if (hasSameBarcode(newItem, oldItem)) {
           findUserAndUpdateItem(routingContext, newItem, oldItem, userCollection, itemCollection);
         } else {
@@ -229,7 +234,7 @@ public class Items extends AbstractInventoryResource {
             ServerErrorResponse.internalError(routingContext.response(), e.toString());
           }
         }
-      });
+      }).exceptionally(doExceptionally(routingContext));
   }
 
   private void deleteById(RoutingContext routingContext) {
