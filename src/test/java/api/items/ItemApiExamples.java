@@ -1643,7 +1643,8 @@ public class ItemApiExamples extends ApiTests {
     "Order closed",
     "Claimed returned",
     "Withdrawn",
-    "Lost and paid"
+    "Lost and paid",
+    "Aged to lost"
   })
   public void canCreateItemsWithAllStatuses(String itemStatus) throws Exception {
     final UUID holdingsId = createInstanceAndHolding();
