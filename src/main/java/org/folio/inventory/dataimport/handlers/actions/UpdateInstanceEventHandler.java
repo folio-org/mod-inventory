@@ -1,12 +1,12 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.Future;
-import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import io.vertx.ext.web.RoutingContext;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
@@ -41,7 +41,7 @@ public class UpdateInstanceEventHandler {
     this.context = context;
   }
 
-  public CompletableFuture<Instance> handle(Map<String, String> eventPayload, MultiMap requestHeaders, Vertx vertx) {
+  public CompletableFuture<Instance> handle(Map<String, String> eventPayload, Map<String, String> requestHeaders, Vertx vertx) {
     CompletableFuture<Instance> future = new CompletableFuture<>();
     try {
       if (eventPayload == null || isEmpty(eventPayload.get(MARC_KEY)) || isEmpty(eventPayload.get(MAPPING_RULES_KEY)) || isEmpty(eventPayload.get(MAPPING_PARAMS_KEY))) {
@@ -62,11 +62,7 @@ public class UpdateInstanceEventHandler {
         .compose(existingInstance -> updateInstance(existingInstance, mappedInstance))
         .compose(updatedInstance -> updateInstanceInStorage(updatedInstance, instanceCollection))
         .setHandler(ar -> {
-          Map<String, String> headers = new HashMap<>();
-          requestHeaders
-            .entries()
-            .forEach(entry -> headers.put(entry.getKey(), entry.getValue()));
-          OkapiConnectionParams params = new OkapiConnectionParams(headers, vertx);
+          OkapiConnectionParams params = new OkapiConnectionParams(requestHeaders, vertx);
           if (ar.succeeded()) {
 
             sendEventWithPayload(Json.encode(eventPayload), "QM_INVENTORY_INSTANCE_UPDATED", params)

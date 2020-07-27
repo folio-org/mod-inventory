@@ -39,6 +39,7 @@ import org.folio.processing.matching.reader.StaticValueReaderImpl;
 import org.folio.rest.tools.utils.ObjectMapperTool;
 
 import java.util.HashMap;
+import java.util.Map;
 
 public class EventHandlers {
 
@@ -105,11 +106,22 @@ public class EventHandlers {
   private void handleInstanceUpdate(RoutingContext routingContext) {
     try {
       HashMap<String, String> eventPayload = ObjectMapperTool.getMapper().readValue(ZIPArchiver.unzip(routingContext.getBodyAsString()), HashMap.class);
-      new UpdateInstanceEventHandler(storage, new WebContext(routingContext)).handle(eventPayload, routingContext.request().headers(), routingContext.vertx());
+      new UpdateInstanceEventHandler(storage, new WebContext(routingContext)).handle(eventPayload, getOkapiHeaders(routingContext), routingContext.vertx());
       SuccessResponse.noContent(routingContext.response());
     } catch (Exception e) {
       ServerErrorResponse.internalError(routingContext.response(), e);
     }
+  }
+
+  private Map<String, String> getOkapiHeaders(RoutingContext rc) {
+    Map<String, String> okapiHeaders = new HashMap<>();
+    rc.request().headers().forEach(headerEntry -> {
+      String headerKey = headerEntry.getKey().toLowerCase();
+      if (headerKey.startsWith("x-okapi")) {
+        okapiHeaders.put(headerKey, headerEntry.getValue());
+      }
+    });
+    return okapiHeaders;
   }
 
 }
