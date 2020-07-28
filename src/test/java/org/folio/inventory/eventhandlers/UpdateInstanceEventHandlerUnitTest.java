@@ -22,6 +22,7 @@ import org.mockito.MockitoAnnotations;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -52,9 +53,13 @@ public class UpdateInstanceEventHandlerUnitTest {
   private JsonObject mappingRules;
   private JsonObject record;
   private Instance existingInstance;
+  private Map<String,String> headers = new HashMap<>();
 
   @Before
   public void setUp() throws IOException {
+    headers.put("x-okapi-url", "localhost");
+    headers.put("x-okapi-tenant", "dummy");
+    headers.put("x-okapi-token", "dummy");
     MockitoAnnotations.initMocks(this);
     existingInstance = InstanceUtil.jsonToInstance(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
     updateInstanceEventHandler = new UpdateInstanceEventHandler(storage, context);
@@ -83,10 +88,6 @@ public class UpdateInstanceEventHandlerUnitTest {
     eventPayload.put("MARC", record.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
-    MultiMap headers = MultiMap.caseInsensitiveMultiMap()
-      .add("x-okapi-url", "localhost")
-      .add("x-okapi-tenant", "dummy")
-      .add("x-okapi-token", "dummy");
 
     CompletableFuture<Instance> future = updateInstanceEventHandler.handle(eventPayload, headers, Vertx.vertx());
     Instance updatedInstance = future.get(5, TimeUnit.MILLISECONDS);
@@ -111,10 +112,6 @@ public class UpdateInstanceEventHandlerUnitTest {
     eventPayload.put("MARC", ZIPArchiver.zip(record.encode()));
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
-    MultiMap headers = MultiMap.caseInsensitiveMultiMap()
-      .add("x-okapi-url", "localhost")
-      .add("x-okapi-tenant", "dummy")
-      .add("x-okapi-token", "dummy");
 
     CompletableFuture<Instance> future = updateInstanceEventHandler.handle(eventPayload, headers, Vertx.vertx());
 
@@ -134,10 +131,6 @@ public class UpdateInstanceEventHandlerUnitTest {
     eventPayload.put("MARC", record.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
-    MultiMap headers = MultiMap.caseInsensitiveMultiMap()
-      .add("x-okapi-url", "localhost")
-      .add("x-okapi-tenant", "dummy")
-      .add("x-okapi-token", "dummy");
 
     CompletableFuture<Instance> future = updateInstanceEventHandler.handle(eventPayload, headers, Vertx.vertx());
 
