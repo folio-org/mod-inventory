@@ -31,13 +31,13 @@ public class JsonResponse {
   }
 
   public static void successWithEmptyBody(HttpServerResponse response) {
-    emptyResponse(response, 200);
+    emptyResponse(response, 201);
   }
 
   public static void successWithIds(HttpServerResponse response, List<String> ids) {
     JsonObject nonUpdatedIds = new JsonObject();
     nonUpdatedIds.put("nonUpdatedIds", ids);
-    response(response, nonUpdatedIds, 200);
+    response(response, nonUpdatedIds, 201);
   }
 
   public static void unprocessableEntity(
