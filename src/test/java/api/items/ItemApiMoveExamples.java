@@ -66,7 +66,7 @@ public class ItemApiMoveExamples extends ApiTests {
 
     Response postItemsMoveResponse = moveItems(itemsMoveRequestBody);
 
-    assertThat(postItemsMoveResponse.getStatusCode(), is(200));
+    assertThat(postItemsMoveResponse.getStatusCode(), is(201));
     assertThat(postItemsMoveResponse.getBody(), is(StringUtils.EMPTY));
     assertThat(postItemsMoveResponse.getContentType(), containsString(APPLICATION_JSON));
 
@@ -101,7 +101,7 @@ public class ItemApiMoveExamples extends ApiTests {
 
     Response postItemsMoveResponse = moveItems(itemsMoveRequestBody);
 
-    assertThat(postItemsMoveResponse.getStatusCode(), is(200));
+    assertThat(postItemsMoveResponse.getStatusCode(), is(201));
     assertThat(postItemsMoveResponse.getContentType(), containsString(APPLICATION_JSON));
 
     List notFoundIds = postItemsMoveResponse.getJson()
@@ -217,7 +217,7 @@ public class ItemApiMoveExamples extends ApiTests {
     assertThat(nonUpdatedIdsIds.size(), is(1));
     assertThat(nonUpdatedIdsIds.get(0), equalTo(ID_FOR_FAILURE.toString()));
 
-    assertThat(postItemsMoveResponse.getStatusCode(), is(200));
+    assertThat(postItemsMoveResponse.getStatusCode(), is(201));
     assertThat(postItemsMoveResponse.getContentType(), containsString(APPLICATION_JSON));
 
     JsonObject updatedItem1 = itemsClient.getById(createItem1.getId())
