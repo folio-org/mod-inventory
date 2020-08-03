@@ -1,5 +1,6 @@
 package org.folio.inventory;
 
+import io.vertx.config.ConfigRetriever;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -12,6 +13,8 @@ import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.Router;
 import org.folio.inventory.common.WebRequestDiagnostics;
 import org.folio.inventory.domain.ingest.IngestMessageProcessor;
+import org.folio.inventory.kafka.KafkaConfig;
+import org.folio.inventory.kafka.KafkaProducerManager;
 import org.folio.inventory.resources.EventHandlers;
 import org.folio.inventory.resources.Instances;
 import org.folio.inventory.resources.InstancesBatch;
@@ -52,13 +55,17 @@ public class InventoryVerticle extends AbstractVerticle {
 
     router.route().handler(WebRequestDiagnostics::outputDiagnostics);
 
+    ConfigRetriever retriever = ConfigRetriever.create(vertx);
+
+    KafkaProducerManager.init(vertx, getConfig(retriever).result());
+
     new ModsIngestion(storage, client).register(router);
     new Items(storage, client).register(router);
     new MoveApi(storage, client).register(router);
     new Instances(storage, client).register(router);
     new InstancesBatch(storage, client).register(router);
     new IsbnUtilsApi().register(router);
-    new TenantApi().register(router);
+    new TenantApi().register(router, retriever, storage, client);
     new EventHandlers(storage, client).register(router);
 
     Handler<AsyncResult<HttpServer>> onHttpServerStart = result -> {
@@ -87,5 +94,13 @@ public class InventoryVerticle extends AbstractVerticle {
         stopped.fail(result.cause());
       }
     });
+  }
+
+  private Future<KafkaConfig> getConfig(ConfigRetriever configRetriever) {
+    Future<KafkaConfig> config = Future.future();
+    configRetriever.getConfig(ar -> {
+      config.complete(new KafkaConfig(ar.result()));
+    });
+    return config;
   }
 }

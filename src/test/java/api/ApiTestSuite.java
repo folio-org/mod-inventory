@@ -37,24 +37,6 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import support.fakes.FakeOkapi;
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-  InstancesApiExamples.class,
-  ItemApiExamples.class,
-  ItemApiTitleExamples.class,
-  ModsIngestExamples.class,
-  IsbnUtilsApiExamples.class,
-  ItemAllowedStatusesSchemaTest.class,
-  TenantApiExamples.class,
-  PrecedingSucceedingTitlesApiExamples.class,
-  InstanceRelationshipsTest.class,
-  EventHandlersApiTest.class,
-  HoldingApiExample.class,
-  MarkItemWithdrawnApiTests.class,
-  ItemApiMoveExamples.class,
-  MarkItemMissingApiTests.class,
-  HoldingsApiMoveExamples.class
-})
 public class ApiTestSuite {
   public static final int INVENTORY_VERTICLE_TEST_PORT = 9603;
   public static final String TENANT_ID = "test_tenant";
