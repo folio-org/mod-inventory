@@ -192,7 +192,7 @@ public class MoveApi extends AbstractInventoryResource {
     List<String> nonUpdatedIds = ListUtils.subtract(itemIdsToUpdate, updatedItemIds);
     HttpServerResponse response = routingContext.response();
     if (nonUpdatedIds.isEmpty()) {
-      JsonResponse.successWithEmptyBody(response);
+      JsonResponse.successWithEmptyIds(response);
     } else {
       JsonResponse.successWithIds(response, nonUpdatedIds);
     }
