@@ -18,7 +18,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
@@ -67,7 +66,7 @@ public class ItemApiMoveExamples extends ApiTests {
     Response postItemsMoveResponse = moveItems(itemsMoveRequestBody);
 
     assertThat(postItemsMoveResponse.getStatusCode(), is(201));
-    assertThat(postItemsMoveResponse.getBody(), is(StringUtils.EMPTY));
+    assertThat(postItemsMoveResponse.getBody(), is(new JsonObject().toString()));
     assertThat(postItemsMoveResponse.getContentType(), containsString(APPLICATION_JSON));
 
     JsonObject updatedItem1 = itemsClient.getById(createItem1.getId())

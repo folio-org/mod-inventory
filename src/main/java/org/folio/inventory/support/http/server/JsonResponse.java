@@ -98,6 +98,6 @@ public class JsonResponse {
   private static void emptyResponse(HttpServerResponse response, int statusCode) {
     response.setStatusCode(statusCode);
     response.putHeader(HttpHeaders.CONTENT_TYPE, String.format("%s; charset=utf-8", ContentType.APPLICATION_JSON));
-    response.end();
+    response.end(new JsonObject().toBuffer());
   }
 }
