@@ -1,6 +1,5 @@
 package org.folio.inventory.support.http.server;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -29,16 +28,6 @@ public class JsonResponse {
                              JsonObject body) {
 
     response(response, body, 200);
-  }
-
-  public static void successWithEmptyIds(HttpServerResponse response) {
-    successWithIds(response, new ArrayList<>());
-  }
-
-  public static void successWithIds(HttpServerResponse response, List<String> ids) {
-    JsonObject nonUpdatedIds = new JsonObject();
-    nonUpdatedIds.put("nonUpdatedIds", ids);
-    response(response, nonUpdatedIds, 200);
   }
 
   public static void unprocessableEntity(
@@ -95,5 +84,4 @@ public class JsonResponse {
     response.write(buffer);
     response.end();
   }
-
 }
