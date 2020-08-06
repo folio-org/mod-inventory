@@ -30,7 +30,7 @@ public class ExternalStorageSuite {
   static final String TENANT_ID = "test_tenant";
   static final String TENANT_TOKEN = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsInRlbmFudCI6ImRlbW9fdGVuYW50In0.29VPjLI6fLJzxQW0UhQ0jsvAn8xHz501zyXAxRflXfJ9wuDzT8TDf-V75PjzD7fe2kHjSV2dzRXbstt3BTtXIQ";
 
-  private static final VertxAssistant vertxAssistant = new VertxAssistant();
+  private static final VertxAssistant vertxAssistant = new VertxAssistant(Vertx.vertx());
 
   private static String storageModuleDeploymentId;
 

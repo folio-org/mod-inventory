@@ -1,18 +1,24 @@
 package org.folio.inventory;
 
+import io.vertx.config.ConfigRetriever;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
+import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpServer;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.Router;
 import org.folio.inventory.common.WebRequestDiagnostics;
+import org.folio.inventory.dataimport.handlers.actions.CreateInstanceEventHandler;
 import org.folio.inventory.domain.ingest.IngestMessageProcessor;
-import org.folio.inventory.resources.EventHandlers;
+import org.folio.inventory.kafka.AsyncRecordHandler;
+import org.folio.inventory.kafka.KafkaConfig;
 import org.folio.inventory.resources.Instances;
 import org.folio.inventory.resources.InstancesBatch;
 import org.folio.inventory.resources.IsbnUtilsApi;
@@ -38,7 +44,7 @@ public class InventoryVerticle extends AbstractVerticle {
     server = vertx.createHttpServer();
 
     JsonObject config = vertx.getOrCreateContext().config();
-
+    ConfigRetriever retriever = ConfigRetriever.create(vertx);
     log.info("Received Config");
 
     config.fieldNames().stream().forEach(key ->
@@ -59,8 +65,11 @@ public class InventoryVerticle extends AbstractVerticle {
     new InstancesBatch(storage, client).register(router);
     new IsbnUtilsApi().register(router);
     new TenantApi().register(router);
-    new EventHandlers(storage, client).register(router);
-
+    CreateInstanceEventHandler createInstanceEventHandler = new CreateInstanceEventHandler(storage, client);
+//    new EventHandlers(storage, client).register(router);
+    getKafkaConfig(retriever, log)
+      .compose(kafkaConfig -> deploySourceRecordsCreatedConsumersVerticles(vertx, kafkaConfig, new InstanceCreateKafkaHandler(createInstanceEventHandler, kafkaConfig, vertx, 100)))
+      .result();
     Handler<AsyncResult<HttpServer>> onHttpServerStart = result -> {
       if (result.succeeded()) {
         log.info(String.format("Listening on %s", server.actualPort()));
@@ -72,6 +81,21 @@ public class InventoryVerticle extends AbstractVerticle {
 
     server.requestHandler(router::accept)
       .listen(config.getInteger("port"), onHttpServerStart);
+  }
+
+  private Future<String> deploySourceRecordsCreatedConsumersVerticles(Vertx vertx, KafkaConfig config, AsyncRecordHandler<String, String> handler) {
+    Future<String> deployConsumers = Future.future();
+    vertx.deployVerticle(() -> new SourceRecordsCreatedConsumersVerticle(handler, config), new DeploymentOptions().setWorker(true).setInstances(10), deployConsumers);
+    return deployConsumers;
+  }
+
+  private Future<KafkaConfig> getKafkaConfig(ConfigRetriever configRetriever, Logger log) {
+    Future<KafkaConfig> config = Future.future();
+    configRetriever.getConfig(ar -> config.complete(new KafkaConfig(ar.result())));
+    return config.compose(kafkaConfig -> {
+      log.debug(Json.encode(kafkaConfig));
+      return Future.succeededFuture(kafkaConfig);
+    });
   }
 
   @Override

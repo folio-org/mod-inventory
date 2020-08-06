@@ -1,5 +1,29 @@
 package api;
 
+import api.holdings.HoldingApiExample;
+import api.holdings.HoldingsApiMoveExamples;
+import api.isbns.IsbnUtilsApiExamples;
+import api.items.ItemAllowedStatusesSchemaTest;
+import api.items.ItemApiExamples;
+import api.items.ItemApiMoveExamples;
+import api.items.ItemApiTitleExamples;
+import api.items.MarkItemMissingApiTests;
+import api.items.MarkItemWithdrawnApiTests;
+import api.support.ControlledVocabularyPreparation;
+import api.support.http.ResourceClient;
+import api.tenant.TenantApiExamples;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import org.folio.inventory.InventoryVerticle;
+import org.folio.inventory.common.VertxAssistant;
+import org.folio.inventory.support.http.client.OkapiHttpClient;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
+import support.fakes.FakeOkapi;
+
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
@@ -10,32 +34,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
-import api.holdings.HoldingsApiMoveExamples;
-import api.items.ItemApiMoveExamples;
-import org.folio.inventory.InventoryVerticle;
-import org.folio.inventory.common.VertxAssistant;
-import org.folio.inventory.support.http.client.OkapiHttpClient;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
-
-import api.events.EventHandlersApiTest;
-import api.holdings.HoldingApiExample;
-import api.isbns.IsbnUtilsApiExamples;
-import api.items.ItemAllowedStatusesSchemaTest;
-import api.items.ItemApiExamples;
-import api.items.ItemApiTitleExamples;
-import api.items.MarkItemMissingApiTests;
-import api.items.MarkItemWithdrawnApiTests;
-import api.support.ControlledVocabularyPreparation;
-import api.support.http.ResourceClient;
-import api.tenant.TenantApiExamples;
-import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import support.fakes.FakeOkapi;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
@@ -48,7 +46,6 @@ import support.fakes.FakeOkapi;
   TenantApiExamples.class,
   PrecedingSucceedingTitlesApiExamples.class,
   InstanceRelationshipsTest.class,
-  EventHandlersApiTest.class,
   HoldingApiExample.class,
   MarkItemWithdrawnApiTests.class,
   ItemApiMoveExamples.class,

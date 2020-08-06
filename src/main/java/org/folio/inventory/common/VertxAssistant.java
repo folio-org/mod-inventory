@@ -16,6 +16,13 @@ public class VertxAssistant {
 
   private Vertx vertx;
 
+  public VertxAssistant() {
+  }
+
+  public VertxAssistant(Vertx vertx) {
+    this.vertx = vertx;
+  }
+
   public <T> T createUsingVertx(Function<Vertx, T> function) {
     return function.apply(vertx);
   }
