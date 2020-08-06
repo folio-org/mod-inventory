@@ -8,7 +8,6 @@ import api.support.builders.HoldingsRecordMoveRequestBuilder;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import junitparams.JUnitParamsRunner;
-import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
 import org.junit.Assert;
@@ -58,8 +57,8 @@ public class HoldingsApiMoveExamples extends ApiTests {
 
     Response postHoldingsMoveResponse = moveHoldingsRecords(holdingsRecordMoveRequestBody);
 
-    assertThat(postHoldingsMoveResponse.getStatusCode(), is(201));
-    assertThat(postHoldingsMoveResponse.getBody(), is(StringUtils.EMPTY));
+    assertThat(postHoldingsMoveResponse.getStatusCode(), is(200));
+    assertThat(new JsonObject(postHoldingsMoveResponse.getBody()).getJsonArray("nonUpdatedIds").size(), is(0));
     assertThat(postHoldingsMoveResponse.getContentType(), containsString(APPLICATION_JSON));
 
     JsonObject holdingsRecord1 = holdingsStorageClient.getById(createHoldingsRecord1)
@@ -89,7 +88,7 @@ public class HoldingsApiMoveExamples extends ApiTests {
 
     Response postHoldingsRecordsMoveResponse = moveHoldingsRecords(holdingsRecordMoveRequestBody);
 
-    assertThat(postHoldingsRecordsMoveResponse.getStatusCode(), is(201));
+    assertThat(postHoldingsRecordsMoveResponse.getStatusCode(), is(200));
     assertThat(postHoldingsRecordsMoveResponse.getContentType(), containsString(APPLICATION_JSON));
 
     List notFoundIds = postHoldingsRecordsMoveResponse.getJson()
@@ -195,7 +194,7 @@ public class HoldingsApiMoveExamples extends ApiTests {
     assertThat(nonUpdatedIdsIds.size(), is(1));
     assertThat(nonUpdatedIdsIds.get(0), equalTo(ID_FOR_FAILURE.toString()));
 
-    assertThat(postHoldingsRecordsMoveResponse.getStatusCode(), is(201));
+    assertThat(postHoldingsRecordsMoveResponse.getStatusCode(), is(200));
     assertThat(postHoldingsRecordsMoveResponse.getContentType(), containsString(APPLICATION_JSON));
 
     JsonObject updatedHoldingsRecord1 = holdingsStorageClient.getById(createHoldingsRecord1)
