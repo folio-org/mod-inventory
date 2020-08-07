@@ -42,9 +42,9 @@ public class KafkaConfig {
   }
 
   public KafkaConfig(JsonObject jsonObject) {
-    this.kafkaHost = jsonObject.getString("FOLIO_KAFKA_HOST", "10.0.2.15");
+    this.kafkaHost = jsonObject.getString("FOLIO_KAFKA_HOST", "kafka");
     this.kafkaPort = jsonObject.getString("FOLIO_KAFKA_PORT", "9092");
-    this.okapiUrl = jsonObject.getString("OKAPI_URL", "http://10.0.2.15:9130");
+    this.okapiUrl = jsonObject.getString("OKAPI_URL", "http://okapi:9130");
     this.replicationFactor = jsonObject.getInteger("FOLIO_KAFKA_REPLICATION_FACTOR", 1);
     this.envId = jsonObject.getString("FOLIO_KAFKA_ENV", "folio");
   }
