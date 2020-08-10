@@ -1,3 +1,9 @@
+## 16.0.2 2020-08-10
+
+* Add source-record states storing mechanism for QM edit workflow (MODINV-324)
+* Fix Record state update after QM update (MODINV-327)
+* Update dependency on data-import-processing-core v2.1.6
+
 ## 16.0.1 2020-07-10
 
 * Update dependency on data-import-processing-core v2.1.5
