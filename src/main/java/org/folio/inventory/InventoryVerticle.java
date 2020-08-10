@@ -15,6 +15,9 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.Router;
 import org.folio.inventory.common.WebRequestDiagnostics;
+import org.folio.inventory.dataimport.HoldingWriterFactory;
+import org.folio.inventory.dataimport.InstanceWriterFactory;
+import org.folio.inventory.dataimport.ItemWriterFactory;
 import org.folio.inventory.dataimport.handlers.actions.CreateInstanceEventHandler;
 import org.folio.inventory.domain.ingest.IngestMessageProcessor;
 import org.folio.inventory.kafka.AsyncRecordHandler;
@@ -27,6 +30,8 @@ import org.folio.inventory.resources.MoveApi;
 import org.folio.inventory.resources.TenantApi;
 import org.folio.inventory.resources.ingest.ModsIngestion;
 import org.folio.inventory.storage.Storage;
+import org.folio.processing.mapping.MappingManager;
+import org.folio.processing.mapping.mapper.reader.record.MarcBibReaderFactory;
 
 import java.lang.invoke.MethodHandles;
 
@@ -57,6 +62,9 @@ public class InventoryVerticle extends AbstractVerticle {
     new IngestMessageProcessor(storage).register(vertx.eventBus());
 
     router.route().handler(WebRequestDiagnostics::outputDiagnostics);
+
+    MappingManager.registerReaderFactory(new MarcBibReaderFactory());
+    MappingManager.registerWriterFactory(new InstanceWriterFactory());
 
     new ModsIngestion(storage, client).register(router);
     new Items(storage, client).register(router);
