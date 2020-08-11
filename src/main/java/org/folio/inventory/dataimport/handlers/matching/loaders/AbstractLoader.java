@@ -30,9 +30,9 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
   }
 
   @Override
-  public LoadResult loadEntity(LoadQuery loadQuery, DataImportEventPayload eventPayload) {
+  public CompletableFuture<LoadResult> loadEntity(LoadQuery loadQuery, DataImportEventPayload eventPayload) {
     if (loadQuery == null) {
-      return new LoadResult();
+      return CompletableFuture.completedFuture(new LoadResult());
     }
     CompletableFuture<LoadResult> future = new CompletableFuture<>();
     LoadResult loadResult = new LoadResult();
@@ -64,7 +64,7 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
       }
     });
 
-    return future.join();
+    return future;
   }
 
   @Override
