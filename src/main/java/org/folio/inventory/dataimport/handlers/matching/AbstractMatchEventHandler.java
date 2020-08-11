@@ -22,7 +22,7 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
         if (throwable != null) {
           future.completeExceptionally(throwable);
         } else {
-          if (matched) {
+          if (Boolean.TRUE.equals(matched)) {
             dataImportEventPayload.setEventType(getMatchedEventType());
           } else {
             dataImportEventPayload.setEventType(getNotMatchedEventType());
