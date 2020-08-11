@@ -16,18 +16,20 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
-    try {
-      dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
-      boolean matched = MatchingManager.match(dataImportEventPayload);
-      if (matched) {
-        dataImportEventPayload.setEventType(getMatchedEventType());
-      } else {
-        dataImportEventPayload.setEventType(getNotMatchedEventType());
-      }
-      future.complete(dataImportEventPayload);
-    } catch (Exception e) {
-      future.completeExceptionally(e);
-    }
+    dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
+    MatchingManager.match(dataImportEventPayload)
+      .whenComplete((matched, throwable) -> {
+        if (throwable != null) {
+          future.completeExceptionally(throwable);
+        } else {
+          if (Boolean.TRUE.equals(matched)) {
+            dataImportEventPayload.setEventType(getMatchedEventType());
+          } else {
+            dataImportEventPayload.setEventType(getNotMatchedEventType());
+          }
+          future.complete(dataImportEventPayload);
+        }
+      });
     return future;
   }
 
