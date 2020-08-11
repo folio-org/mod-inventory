@@ -4,6 +4,8 @@ import io.vertx.core.Future;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
@@ -17,6 +19,7 @@ import org.folio.inventory.support.InstanceUtil;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
 
+import java.lang.invoke.MethodHandles;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
@@ -32,6 +35,7 @@ import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
+  private static final Logger LOGGER = LoggerFactory.getLogger(CreateInstanceEventHandler.class);
 
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
 
@@ -56,8 +60,28 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
       }
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       prepareEvent(dataImportEventPayload);
+
+//      LOGGER.info("before defaultMapRecordToInstance(dataImportEventPayload):\n" + dataImportEventPayload.toString());
       defaultMapRecordToInstance(dataImportEventPayload);
-      MappingManager.map(dataImportEventPayload);
+
+//      LOGGER.info("before MappingManager.map(dataImportEventPayload):\n" + dataImportEventPayload.toString());
+      try {
+        //TODO: fix this issues with
+        //Caused by: org.marc4j.util.JsonParser$Escape: Text with embedded spaces was found but not enclosed in quotes (this is often caused by a missing comma following an unquoted value); Text="leader=03774cas"; at Input Source: "MarcInput", Line: 1, Column: 18
+        //	at org.marc4j.util.JsonParser.parserError(JsonParser.java:973)
+        //	at org.marc4j.util.JsonParser.parserError(JsonParser.java:968)
+        //	at org.marc4j.util.JsonParser.parserError(JsonParser.java:964)
+        //	at org.marc4j.util.JsonParser.next(JsonParser.java:752)
+        //	at org.marc4j.MarcJsonReader.next(MarcJsonReader.java:208)
+        //	at org.folio.processing.mapping.mapper.reader.record.MarcRecordReader.initialize(MarcRecordReader.java:86)
+        //	at org.folio.processing.mapping.mapper.Mapper.map(Mapper.java:32)
+        //	at org.folio.processing.mapping.MappingManager.map(MappingManager.java:63)
+        MappingManager.map(dataImportEventPayload);
+      } catch (Throwable th) {
+        LOGGER.error("Error in MappingManager.map(dataImportEventPayload)", th);
+        th.printStackTrace();
+      }
+
       CollectionResourceClient precedingSucceedingTitlesClient = createPrecedingSucceedingTitlesClient(context);
       CollectionResourceRepository precedingSucceedingTitlesRepository = new CollectionResourceRepository(precedingSucceedingTitlesClient);
       JsonObject instanceAsJson = new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value()));
@@ -77,7 +101,8 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
           .setHandler(ar -> {
             if (ar.succeeded()) {
               dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(ar.result()));
-              dataImportEventPayload.setEventType(DI_INVENTORY_INSTANCE_CREATED.value());
+//              dataImportEventPayload.setEventType(DI_INVENTORY_INSTANCE_CREATED.value());
+              dataImportEventPayload.setEventType("DI_COMPLETED");
               future.complete(dataImportEventPayload);
             } else {
               LOGGER.error("Error creating inventory Instance", ar.cause());

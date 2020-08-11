@@ -69,46 +69,51 @@ public class KafkaConsumerWrapper<K, V> implements Handler<KafkaConsumerRecord<K
   }
 
   public Future<Void> start(AsyncRecordHandler<K, V> businessHandler) {
-    if (Objects.isNull(businessHandler)) {
-      String failureMessage = "businessHandler must be provided and can't be null.";
-      LOGGER.error(failureMessage);
-      return Future.failedFuture(failureMessage);
-    }
-
-    if (Objects.isNull(subscriptionDefinition) || Strings.isNullOrEmpty(subscriptionDefinition.getSubscriptionPattern())) {
-      String failureMessage = "subscriptionPattern can't be null nor empty. " + subscriptionDefinition;
-      LOGGER.error(failureMessage);
-      return Future.failedFuture(failureMessage);
-    }
-
-    if (loadLimit < 1) {
-      String failureMessage = "loadLimit must be greater than 0. Current value is " + loadLimit;
-      LOGGER.error(failureMessage);
-      return Future.failedFuture(failureMessage);
-    }
-
-    this.businessHandler = businessHandler;
-    Future<Void> startPromise = Future.future();
-
-    Map<String, String> consumerProps = kafkaConfig.getConsumerProps();
-    consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, KafkaTopicNameHelper.formatGroupName(subscriptionDefinition.getEventType()));
-
-    kafkaConsumer = KafkaConsumer.create(vertx, consumerProps);
-
-    kafkaConsumer.handler(this);
-
-    Pattern pattern = Pattern.compile(subscriptionDefinition.getSubscriptionPattern());
-    kafkaConsumer.subscribe(pattern, ar -> {
-      if (ar.succeeded()) {
-        LOGGER.info("Consumer created - id: " + id + " subscriptionPattern: " + subscriptionDefinition);
-        startPromise.complete();
-      } else {
-        ar.cause().printStackTrace();
-        startPromise.fail(ar.cause());
+    try {
+      if (Objects.isNull(businessHandler)) {
+        String failureMessage = "businessHandler must be provided and can't be null.";
+        LOGGER.error(failureMessage);
+        return Future.failedFuture(failureMessage);
       }
-    });
 
-    return startPromise;
+      if (Objects.isNull(subscriptionDefinition) || Strings.isNullOrEmpty(subscriptionDefinition.getSubscriptionPattern())) {
+        String failureMessage = "subscriptionPattern can't be null nor empty. " + subscriptionDefinition;
+        LOGGER.error(failureMessage);
+        return Future.failedFuture(failureMessage);
+      }
+
+      if (loadLimit < 1) {
+        String failureMessage = "loadLimit must be greater than 0. Current value is " + loadLimit;
+        LOGGER.error(failureMessage);
+        return Future.failedFuture(failureMessage);
+      }
+
+      this.businessHandler = businessHandler;
+      Future<Void> startPromise = Future.future();
+
+      Map<String, String> consumerProps = kafkaConfig.getConsumerProps();
+      consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, KafkaTopicNameHelper.formatGroupName(subscriptionDefinition.getEventType()));
+
+      kafkaConsumer = KafkaConsumer.create(vertx, consumerProps);
+
+      kafkaConsumer.handler(this);
+
+      Pattern pattern = Pattern.compile(subscriptionDefinition.getSubscriptionPattern());
+      kafkaConsumer.subscribe(pattern, ar -> {
+        if (ar.succeeded()) {
+          LOGGER.info("Consumer created - id: " + id + " subscriptionPattern: " + subscriptionDefinition);
+          startPromise.complete();
+        } else {
+          ar.cause().printStackTrace();
+          startPromise.fail(ar.cause());
+        }
+      });
+
+      return startPromise;
+    } catch (Throwable th) {
+      th.printStackTrace();
+      throw new RuntimeException(th);
+    }
   }
 
   public Future<Void> stop() {

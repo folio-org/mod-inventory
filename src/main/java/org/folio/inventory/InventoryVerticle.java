@@ -22,6 +22,7 @@ import org.folio.inventory.dataimport.handlers.actions.CreateInstanceEventHandle
 import org.folio.inventory.domain.ingest.IngestMessageProcessor;
 import org.folio.inventory.kafka.AsyncRecordHandler;
 import org.folio.inventory.kafka.KafkaConfig;
+import org.folio.inventory.resources.EventHandlers;
 import org.folio.inventory.resources.Instances;
 import org.folio.inventory.resources.InstancesBatch;
 import org.folio.inventory.resources.IsbnUtilsApi;
@@ -63,8 +64,8 @@ public class InventoryVerticle extends AbstractVerticle {
 
     router.route().handler(WebRequestDiagnostics::outputDiagnostics);
 
-    MappingManager.registerReaderFactory(new MarcBibReaderFactory());
-    MappingManager.registerWriterFactory(new InstanceWriterFactory());
+//    MappingManager.registerReaderFactory(new MarcBibReaderFactory());
+//    MappingManager.registerWriterFactory(new InstanceWriterFactory());
 
     new ModsIngestion(storage, client).register(router);
     new Items(storage, client).register(router);
@@ -74,7 +75,9 @@ public class InventoryVerticle extends AbstractVerticle {
     new IsbnUtilsApi().register(router);
     new TenantApi().register(router);
     CreateInstanceEventHandler createInstanceEventHandler = new CreateInstanceEventHandler(storage, client);
-//    new EventHandlers(storage, client).register(router);
+
+    new EventHandlers(storage, client);//.register(router);
+
     getKafkaConfig(retriever, log)
       .compose(kafkaConfig -> deploySourceRecordsCreatedConsumersVerticles(vertx, kafkaConfig, new InstanceCreateKafkaHandler(createInstanceEventHandler, kafkaConfig, vertx, 100)))
       .result();
@@ -93,7 +96,7 @@ public class InventoryVerticle extends AbstractVerticle {
 
   private Future<String> deploySourceRecordsCreatedConsumersVerticles(Vertx vertx, KafkaConfig config, AsyncRecordHandler<String, String> handler) {
     Future<String> deployConsumers = Future.future();
-    vertx.deployVerticle(() -> new SourceRecordsCreatedConsumersVerticle(handler, config), new DeploymentOptions().setWorker(true).setInstances(10), deployConsumers);
+    vertx.deployVerticle(() -> new SourceRecordsCreatedConsumersVerticle(handler, config), new DeploymentOptions().setWorker(true).setInstances(1), deployConsumers);
     return deployConsumers;
   }
 
@@ -101,7 +104,7 @@ public class InventoryVerticle extends AbstractVerticle {
     Future<KafkaConfig> config = Future.future();
     configRetriever.getConfig(ar -> config.complete(new KafkaConfig(ar.result())));
     return config.compose(kafkaConfig -> {
-      log.debug(Json.encode(kafkaConfig));
+      log.info(Json.encode(kafkaConfig));
       return Future.succeededFuture(kafkaConfig);
     });
   }

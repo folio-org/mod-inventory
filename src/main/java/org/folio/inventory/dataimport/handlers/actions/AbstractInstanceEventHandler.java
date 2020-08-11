@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -136,8 +137,12 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     try {
       HashMap<String, String> context = dataImportEventPayload.getContext();
       JsonObject mappingRules = new JsonObject(context.get(MAPPING_RULES_KEY));
-      JsonObject parsedRecord = new JsonObject((String) new JsonObject(context.get(MARC_BIBLIOGRAPHIC.value()))
-        .mapTo(Record.class).getParsedRecord().getContent());
+      Object content = new JsonObject(context.get(MARC_BIBLIOGRAPHIC.value()))
+        .mapTo(Record.class).getParsedRecord().getContent();
+System.out.println("Class of content: " + content.getClass());
+
+      JsonObject parsedRecord = (content instanceof String) ? new JsonObject((String) content) : new JsonObject((Map<String, Object>) content);
+
       MappingParameters mappingParameters = new JsonObject(context.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
       org.folio.Instance instance = RecordToInstanceMapperBuilder.buildMapper(MARC_FORMAT).mapRecord(parsedRecord, mappingParameters, mappingRules);
       dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(new JsonObject().put(INSTANCE_PATH, JsonObject.mapFrom(instance))));

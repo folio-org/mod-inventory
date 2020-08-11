@@ -63,15 +63,24 @@ public class InstanceCreateKafkaHandler implements AsyncRecordHandler<String, St
       LOGGER.debug("Payload with marc record has been received, starting creating instances... ");
       createInstanceEventHandler.handle(payload)
         .whenComplete((result, throwable) -> {
-          if (result != null && throwable == null) {
-            String topicName = KafkaTopicNameHelper.formatTopicName(kafkaConfig.getEnvId(), KafkaTopicNameHelper.getDefaultNameSpace(), okapiConnectionParams.getTenantId(), DI_COMPLETED);
-            KafkaProducer.createShared(vertx, DI_COMPLETED + "_Producer", kafkaConfig.getProducerProps())
-              .write(createKafkaProducerRecord(result, DI_COMPLETED, topicName, okapiConnectionParams)).close();
-          } else {
-            String topicName = KafkaTopicNameHelper.formatTopicName(kafkaConfig.getEnvId(), KafkaTopicNameHelper.getDefaultNameSpace(), okapiConnectionParams.getTenantId(), DI_ERROR);
-            KafkaProducer.createShared(vertx, DI_ERROR + "_Producer", kafkaConfig.getProducerProps())
-              .write(createKafkaProducerRecord(result, DI_ERROR, topicName, okapiConnectionParams)).close();
-          }
+          String eventType = (result != null && throwable == null) ? "DI_COMPLETED" : "DI_ERROR";
+
+          String topicName = KafkaTopicNameHelper.formatTopicName(kafkaConfig.getEnvId(), KafkaTopicNameHelper.getDefaultNameSpace(), okapiConnectionParams.getTenantId(), eventType);
+          KafkaProducer<String, String> kafkaProducer = KafkaProducer.createShared(vertx, eventType + "_Producer", kafkaConfig.getProducerProps());
+          kafkaProducer.write(createKafkaProducerRecord(result, eventType, topicName, kafkaHeaders, okapiConnectionParams), ar -> {
+            kafkaProducer.close();
+            LOGGER.info("A message has been written into the " + topicName);
+          });
+//          if (result != null && throwable == null) {
+////            String eventType = result.getEventType();
+//            String topicName = KafkaTopicNameHelper.formatTopicName(kafkaConfig.getEnvId(), KafkaTopicNameHelper.getDefaultNameSpace(), okapiConnectionParams.getTenantId(), DI_COMPLETED);
+//            KafkaProducer<String, String> kafkaProducer = KafkaProducer.createShared(vertx, DI_COMPLETED + "_Producer", kafkaConfig.getProducerProps());
+//            kafkaProducer.write(createKafkaProducerRecord(result, DI_COMPLETED, topicName, kafkaHeaders, okapiConnectionParams), ar -> kafkaProducer.close());
+//          } else {
+//            String topicName = KafkaTopicNameHelper.formatTopicName(kafkaConfig.getEnvId(), KafkaTopicNameHelper.getDefaultNameSpace(), okapiConnectionParams.getTenantId(), DI_ERROR);
+//            KafkaProducer<String, String> kafkaProducer = KafkaProducer.createShared(vertx, DI_ERROR + "_Producer", kafkaConfig.getProducerProps());
+//            kafkaProducer.write(createKafkaProducerRecord(result, DI_ERROR, topicName, kafkaHeaders, okapiConnectionParams), ar -> kafkaProducer.close());
+//          }
           future.complete();
         });
       return future;
@@ -83,7 +92,7 @@ public class InstanceCreateKafkaHandler implements AsyncRecordHandler<String, St
     }
   }
 
-  private KafkaProducerRecord createKafkaProducerRecord(DataImportEventPayload eventPayload, String eventType, String topicName, OkapiConnectionParams okapiConnectionParams) {
+  private KafkaProducerRecord<String, String> createKafkaProducerRecord(DataImportEventPayload eventPayload, String eventType, String topicName, List<KafkaHeader> kafkaHeaders, OkapiConnectionParams okapiConnectionParams) {
     Event event = new Event()
       .withId(UUID.randomUUID().toString())
       .withEventType(eventType);
@@ -101,12 +110,7 @@ public class InstanceCreateKafkaHandler implements AsyncRecordHandler<String, St
 
     KafkaProducerRecord<String, String> record =
       KafkaProducerRecord.create(topicName, key, Json.encode(event));
-    List<KafkaHeader> kafkaHeaders = okapiConnectionParams
-      .getHeaders()
-      .entrySet()
-      .stream()
-      .map(e -> KafkaHeader.header(e.getKey(), e.getValue()))
-      .collect(Collectors.toList());
+
     record.addHeaders(kafkaHeaders);
     record.addHeader("id", eventPayload.getJobExecutionId());
     LOGGER.debug("Event payload for create instance was prepared: messageCounter " + messageCounter + " record: " + record);
