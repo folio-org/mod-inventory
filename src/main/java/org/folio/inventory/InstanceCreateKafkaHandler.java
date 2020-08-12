@@ -60,7 +60,7 @@ public class InstanceCreateKafkaHandler implements AsyncRecordHandler<String, St
       DataImportEventPayload payload = new JsonObject(ZIPArchiver.unzip(event.getEventPayload())).mapTo(DataImportEventPayload.class);
       List<KafkaHeader> kafkaHeaders = record.headers();
       OkapiConnectionParams okapiConnectionParams = fromKafkaHeaders(kafkaHeaders);
-      LOGGER.debug("Payload with marc record has been received, starting creating instances... ");
+      LOGGER.info("Payload with marc record has been received, starting creating instances... ");
       createInstanceEventHandler.handle(payload)
         .whenComplete((result, throwable) -> {
           String eventType = (result != null && throwable == null) ? "DI_COMPLETED" : "DI_ERROR";
@@ -112,7 +112,9 @@ public class InstanceCreateKafkaHandler implements AsyncRecordHandler<String, St
       KafkaProducerRecord.create(topicName, key, Json.encode(event));
 
     record.addHeaders(kafkaHeaders);
-    record.addHeader("id", eventPayload.getJobExecutionId());
+    if (Objects.nonNull(eventPayload)) {
+      record.addHeader("id", eventPayload.getJobExecutionId());
+    }
     LOGGER.debug("Event payload for create instance was prepared: messageCounter " + messageCounter + " record: " + record);
     return record;
   }

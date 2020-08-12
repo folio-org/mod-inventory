@@ -19,7 +19,6 @@ import org.folio.inventory.support.InstanceUtil;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
 
-import java.lang.invoke.MethodHandles;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
@@ -29,7 +28,6 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
 import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
 import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
@@ -105,7 +103,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
               dataImportEventPayload.setEventType("DI_COMPLETED");
               future.complete(dataImportEventPayload);
             } else {
-              LOGGER.error("Error creating inventory Instance", ar.cause());
+              LOGGER.error("Error creating inventory Instance #1", ar.cause());
               future.completeExceptionally(ar.cause());
             }
           });
@@ -115,7 +113,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
         future.completeExceptionally(new EventProcessingException(msg));
       }
     } catch (Exception e) {
-      LOGGER.error("Error creating inventory Instance", e);
+      LOGGER.error("Error creating inventory Instance #2", e);
       future.completeExceptionally(e);
     }
     return future;
