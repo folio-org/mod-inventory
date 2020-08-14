@@ -30,16 +30,6 @@ public class JsonResponse {
     response(response, body, 200);
   }
 
-  public static void successWithEmptyBody(HttpServerResponse response) {
-    emptyResponse(response, 200);
-  }
-
-  public static void successWithIds(HttpServerResponse response, List<String> ids) {
-    JsonObject nonUpdatedIds = new JsonObject();
-    nonUpdatedIds.put("nonUpdatedIds", ids);
-    response(response, nonUpdatedIds, 200);
-  }
-
   public static void unprocessableEntity(
     HttpServerResponse response,
     String message,
@@ -92,12 +82,6 @@ public class JsonResponse {
     response.putHeader(HttpHeaders.CONTENT_LENGTH, Integer.toString(buffer.length()));
 
     response.write(buffer);
-    response.end();
-  }
-
-  private static void emptyResponse(HttpServerResponse response, int statusCode) {
-    response.setStatusCode(statusCode);
-    response.putHeader(HttpHeaders.CONTENT_TYPE, String.format("%s; charset=utf-8", ContentType.APPLICATION_JSON));
     response.end();
   }
 }

@@ -2,12 +2,14 @@ package org.folio.inventory.resources;
 
 import static java.util.stream.Collectors.toList;
 import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
+import static org.folio.inventory.support.http.server.JsonResponse.success;
 import static org.folio.inventory.support.http.server.JsonResponse.unprocessableEntity;
 import static org.folio.inventory.validation.MoveValidator.holdingsMoveHasRequiredFields;
 import static org.folio.inventory.validation.MoveValidator.itemsMoveHasRequiredFields;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -192,9 +194,9 @@ public class MoveApi extends AbstractInventoryResource {
     List<String> nonUpdatedIds = ListUtils.subtract(itemIdsToUpdate, updatedItemIds);
     HttpServerResponse response = routingContext.response();
     if (nonUpdatedIds.isEmpty()) {
-      JsonResponse.successWithEmptyBody(response);
+      successWithEmptyIds(response);
     } else {
-      JsonResponse.successWithIds(response, nonUpdatedIds);
+      successWithIds(response, nonUpdatedIds);
     }
   }
 
@@ -237,5 +239,13 @@ public class MoveApi extends AbstractInventoryResource {
 
   private MultipleRecordsFetchClient createHoldingsRecordsFetchClient(CollectionResourceClient client) {
     return createFetchClient(client, HOLDINGS_RECORDS_PROPERTY);
+  }
+
+  private void successWithIds(HttpServerResponse response, List<String> ids) {
+    success(response, new JsonObject().put("nonUpdatedIds", ids));
+  }
+
+  private void successWithEmptyIds(HttpServerResponse response) {
+    successWithIds(response, new ArrayList<>());
   }
 }

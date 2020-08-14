@@ -1,7 +1,6 @@
 package org.folio.inventory.resources;
 
 import io.vertx.core.Vertx;
-import io.vertx.core.WorkerExecutor;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
@@ -46,7 +45,6 @@ public class EventHandlers {
   private static final String DATA_IMPORT_EVENT_HANDLER_PATH = "/inventory/handlers/data-import";
   private static final String INSTANCES_EVENT_HANDLER_PATH = "/inventory/handlers/instances";
 
-  private WorkerExecutor executor;
   private Storage storage;
   private HttpClient client;
 
@@ -54,7 +52,6 @@ public class EventHandlers {
     Vertx vertx = Vertx.vertx();
     this.storage = storage;
     this.client = client;
-    this.executor = vertx.createSharedWorkerExecutor("di-event-handling-thread-pool");
     MatchValueLoaderFactory.register(new InstanceLoader(storage, vertx));
     MatchValueLoaderFactory.register(new ItemLoader(storage, vertx));
     MatchValueLoaderFactory.register(new HoldingLoader(storage, vertx));
@@ -92,12 +89,8 @@ public class EventHandlers {
   private void handleDataImportEvent(RoutingContext routingContext) {
     try {
       DataImportEventPayload eventPayload = new JsonObject(ZIPArchiver.unzip(routingContext.getBodyAsString())).mapTo(DataImportEventPayload.class);
-      executor.executeBlocking(blockingFuture -> EventManager.handleEvent(eventPayload)
-          .handle((s, t) -> {
-            SuccessResponse.noContent(routingContext.response());
-            return null;
-          }),
-        null);
+      EventManager.handleEvent(eventPayload);
+      SuccessResponse.noContent(routingContext.response());
     } catch (Exception e) {
       ServerErrorResponse.internalError(routingContext.response(), e);
     }
