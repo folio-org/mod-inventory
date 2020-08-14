@@ -1,8 +1,10 @@
 package org.folio.inventory.dataimport.handlers.matching;
 
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.folio.DataImportEventPayload;
 import org.folio.MatchProfile;
+import org.folio.inventory.dataimport.handlers.matching.util.MatchingParametersRelations;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.matching.MatchingManager;
 import org.folio.rest.jaxrs.model.EntityType;
