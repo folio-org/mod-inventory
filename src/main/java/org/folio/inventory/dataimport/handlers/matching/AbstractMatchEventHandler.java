@@ -19,6 +19,8 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
+    dataImportEventPayload.getContext().put("MATCHING_PARAMETERS_RELATIONS", Json.encode(new MatchingParametersRelations()));
+
     MatchingManager.match(dataImportEventPayload)
       .whenComplete((matched, throwable) -> {
         if (throwable != null) {
