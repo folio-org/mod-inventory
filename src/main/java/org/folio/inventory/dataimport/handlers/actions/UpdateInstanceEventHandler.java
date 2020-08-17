@@ -32,6 +32,7 @@ public class UpdateInstanceEventHandler {
   private static final String MARC_KEY = "MARC";
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
+  private static final String DI_INDICATOR = "DI";
 
   private Storage storage;
   private Context context;
@@ -62,14 +63,15 @@ public class UpdateInstanceEventHandler {
         .compose(existingInstance -> updateInstance(existingInstance, mappedInstance))
         .compose(updatedInstance -> updateInstanceInStorage(updatedInstance, instanceCollection))
         .setHandler(ar -> {
-          OkapiConnectionParams params = new OkapiConnectionParams(requestHeaders, vertx);
-          if (ar.succeeded()) {
-
-            sendEventWithPayload(Json.encode(eventPayload), "QM_INVENTORY_INSTANCE_UPDATED", params)
-              .setHandler(v -> future.complete(ar.result()));
-          } else {
-            sendEventWithPayload(Json.encode(eventPayload), "QM_ERROR", params)
-              .setHandler(v -> future.completeExceptionally(ar.cause()));
+          if (isEmpty(eventPayload.get((DI_INDICATOR)))) {
+            OkapiConnectionParams params = new OkapiConnectionParams(requestHeaders, vertx);
+            if (ar.succeeded()) {
+              sendEventWithPayload(Json.encode(eventPayload), "QM_INVENTORY_INSTANCE_UPDATED", params)
+                .setHandler(v -> future.complete(ar.result()));
+            } else {
+              sendEventWithPayload(Json.encode(eventPayload), "QM_ERROR", params)
+                .setHandler(v -> future.completeExceptionally(ar.cause()));
+            }
           }
         });
     } catch (Exception e) {
