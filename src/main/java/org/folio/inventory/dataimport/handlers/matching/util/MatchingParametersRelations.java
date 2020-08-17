@@ -34,12 +34,11 @@ public class MatchingParametersRelations {
     matchingRelations.put("instance.statisticalCodeIds[]", "statisticalCode");
     matchingRelations.put("holdingsrecord.statisticalCodeIds[]", "statisticalCode");
     matchingRelations.put("item.statisticalCodeIds[]", "statisticalCode");
-    matchingRelations.put("", "statisticalCodeTypes"); // TODO: find this field in match profiles
     matchingRelations.put("item.permanentLocationId", "locations");
     matchingRelations.put("item.temporaryLocationId", "locations");
     matchingRelations.put("holdingsrecord.temporaryLocationId", "locations");
     matchingRelations.put("holdingsrecord.permanentLocationId", "locations");
-    matchingRelations.put("item.materialTypeId", "mtypes"); // TODO: check correct one: "mtypes" or "materialTypes"
+    matchingRelations.put("item.materialTypeId", "materialTypes");
     matchingRelations.put("item.itemDamagedStatusId", "itemDamageStatuses");
     matchingRelations.put("item.permanentLoanTypeId", "loantypes");
     matchingRelations.put("item.temporaryLoanTypeId", "loantypes");
