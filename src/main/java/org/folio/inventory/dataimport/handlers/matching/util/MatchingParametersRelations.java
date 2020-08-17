@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Class for storing matching parameters relation between UI matching profile and BE side.
+ * Class for storing matching parameters(field for retrieving data) relation between matching profile and inventory-storage.
  */
 public class MatchingParametersRelations {
 
