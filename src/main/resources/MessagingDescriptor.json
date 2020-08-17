@@ -163,7 +163,7 @@
       "callbackAddress": "/inventory/handlers/instances"
     },
     {
-      "eventType": "DI_SRS_MARC_BIB_SET_INSTANCE_HRID",
+      "eventType": "DI_SRS_MARC_BIB_INSTANCE_HRID_SET",
       "callbackAddress": "/inventory/handlers/instances"
     }
   ]
