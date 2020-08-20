@@ -45,7 +45,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
-import static org.folio.ActionProfile.Action.REPLACE;
+import static org.folio.ActionProfile.Action.UPDATE;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_MATCHED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_UPDATED;
 import static org.folio.inventory.domain.items.Item.HRID_KEY;
@@ -82,7 +82,7 @@ public class UpdateItemEventHandlerTest {
   private ActionProfile actionProfile = new ActionProfile()
     .withId(UUID.randomUUID().toString())
     .withName("Update item-SR")
-    .withAction(REPLACE)
+    .withAction(UPDATE)
     .withFolioRecord(ActionProfile.FolioRecord.ITEM);
 
   private MappingProfile mappingProfile = new MappingProfile()
