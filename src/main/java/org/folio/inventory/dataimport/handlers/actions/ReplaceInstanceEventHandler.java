@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.folio.ActionProfile.Action.REPLACE;
+import static org.folio.ActionProfile.Action.UPDATE;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED;
@@ -122,7 +122,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   public boolean isEligible(DataImportEventPayload dataImportEventPayload) {
     if (dataImportEventPayload.getCurrentNode() != null && ACTION_PROFILE == dataImportEventPayload.getCurrentNode().getContentType()) {
       ActionProfile actionProfile = JsonObject.mapFrom(dataImportEventPayload.getCurrentNode().getContent()).mapTo(ActionProfile.class);
-      return actionProfile.getAction() == REPLACE && actionProfile.getFolioRecord() == INSTANCE;
+      return actionProfile.getAction() == UPDATE && actionProfile.getFolioRecord() == INSTANCE;
     }
     return false;
   }
