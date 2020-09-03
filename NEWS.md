@@ -1,3 +1,9 @@
+## 16.0.3 2020-09-03
+
+* Fix updating of an Instance and creating of a Holding (MODINV-332)
+* Handle DI originated Instance update (MODSOURCE-178)
+* Update data-import-processing-core to v2.1.7
+
 ## 16.0.2 2020-08-10
 
 * Add source-record states storing mechanism for QM edit workflow (MODINV-324)
