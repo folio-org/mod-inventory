@@ -59,6 +59,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -417,5 +418,15 @@ public class ReplaceInstanceEventHandlerTest {
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper);
     assertFalse(replaceInstanceEventHandler.isEligible(dataImportEventPayload));
+  }
+
+  @Test
+  public void isPostProcessingNeededShouldReturnTrue() {
+    assertTrue(replaceInstanceEventHandler.isPostProcessingNeeded());
+  }
+
+  @Test
+  public void shouldReturnPostProcessingInitializationEventType() {
+    assertEquals("DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING", replaceInstanceEventHandler.getPostProcessingInitializationEventType());
   }
 }

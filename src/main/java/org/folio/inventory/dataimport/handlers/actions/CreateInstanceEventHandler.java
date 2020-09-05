@@ -105,6 +105,16 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
     return false;
   }
 
+  @Override
+  public boolean isPostProcessingNeeded() {
+    return true;
+  }
+
+  @Override
+  public String getPostProcessingInitializationEventType() {
+    return "DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING";
+  }
+
   private Future<Instance> addInstance(Instance instance, InstanceCollection instanceCollection) {
     Future<Instance> future = Future.future();
     instanceCollection.add(instance, success -> future.complete(success.getResult()),

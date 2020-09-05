@@ -1,12 +1,12 @@
 package org.folio.inventory.eventhandlers;
 
-import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.actions.UpdateInstanceEventHandler;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
@@ -16,7 +16,6 @@ import org.folio.processing.events.utils.ZIPArchiver;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.internal.runners.statements.Fail;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -62,7 +61,7 @@ public class UpdateInstanceEventHandlerUnitTest {
     headers.put("x-okapi-token", "dummy");
     MockitoAnnotations.initMocks(this);
     existingInstance = InstanceUtil.jsonToInstance(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
-    updateInstanceEventHandler = new UpdateInstanceEventHandler(storage, context);
+    updateInstanceEventHandler = new UpdateInstanceEventHandler(new InstanceUpdateDelegate(storage), context);
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
     doAnswer(invocationOnMock -> {
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);

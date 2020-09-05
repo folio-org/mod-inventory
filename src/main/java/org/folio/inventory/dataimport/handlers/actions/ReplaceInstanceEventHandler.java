@@ -126,4 +126,14 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
     }
     return false;
   }
+
+  @Override
+  public boolean isPostProcessingNeeded() {
+    return true;
+  }
+
+  @Override
+  public String getPostProcessingInitializationEventType() {
+    return "DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING";
+  }
 }
