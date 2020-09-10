@@ -91,7 +91,7 @@ public class ReplaceInstanceEventHandlerTest {
   private ActionProfile actionProfile = new ActionProfile()
     .withId(UUID.randomUUID().toString())
     .withName("Replace preliminary Item")
-    .withAction(ActionProfile.Action.REPLACE)
+    .withAction(ActionProfile.Action.UPDATE)
     .withFolioRecord(INSTANCE);
 
   private MappingProfile mappingProfile = new MappingProfile()

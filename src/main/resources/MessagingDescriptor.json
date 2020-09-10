@@ -144,7 +144,7 @@
     },
     {
       "eventType": "DI_INVENTORY_INSTANCE_UPDATED",
-      "callbackAddress": "/inventory/handlers/instances"
+      "callbackAddress": "/inventory/handlers/data-import"
     },
     {
       "eventType": "DI_INVENTORY_HOLDING_UPDATED",
@@ -160,6 +160,10 @@
     },
     {
       "eventType": "QM_SRS_MARC_BIB_RECORD_UPDATED",
+      "callbackAddress": "/inventory/handlers/instances"
+    },
+    {
+      "eventType": "DI_SRS_MARC_BIB_INSTANCE_HRID_SET",
       "callbackAddress": "/inventory/handlers/instances"
     }
   ]
