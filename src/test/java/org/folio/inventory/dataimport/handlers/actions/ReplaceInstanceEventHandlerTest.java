@@ -54,6 +54,7 @@ import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
@@ -427,6 +428,6 @@ public class ReplaceInstanceEventHandlerTest {
 
   @Test
   public void shouldReturnPostProcessingInitializationEventType() {
-    assertEquals("DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING", replaceInstanceEventHandler.getPostProcessingInitializationEventType());
+    assertEquals(DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING.value(), replaceInstanceEventHandler.getPostProcessingInitializationEventType());
   }
 }

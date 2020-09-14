@@ -28,6 +28,7 @@ import static org.folio.ActionProfile.Action.UPDATE;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING;
 import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
 import static org.folio.inventory.domain.instances.Instance.METADATA_KEY;
 import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
@@ -134,6 +135,6 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
   @Override
   public String getPostProcessingInitializationEventType() {
-    return "DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING";
+    return DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING.value();
   }
 }

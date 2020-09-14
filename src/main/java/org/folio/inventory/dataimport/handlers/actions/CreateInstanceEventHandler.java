@@ -6,6 +6,7 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
+import org.folio.DataImportEventTypes;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.instances.Instance;
@@ -27,6 +28,7 @@ import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
 import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
@@ -112,7 +114,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
   @Override
   public String getPostProcessingInitializationEventType() {
-    return "DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING";
+    return DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING.value();
   }
 
   private Future<Instance> addInstance(Instance instance, InstanceCollection instanceCollection) {
