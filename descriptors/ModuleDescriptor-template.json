@@ -135,14 +135,18 @@
           "modulePermissions": [
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
-            "inventory-storage.preceding-succeeding-titles.collection.get"]
+            "inventory-storage.preceding-succeeding-titles.collection.get",
+            "inventory-storage.instance-relationships.collection.get"
+          ]
         }, {
           "methods": ["GET"],
           "pathPattern": "/inventory/instances/{id}",
           "permissionsRequired": ["inventory.instances.item.get"],
           "modulePermissions": [
             "inventory-storage.instances.item.get",
-            "inventory-storage.preceding-succeeding-titles.collection.get"]
+            "inventory-storage.preceding-succeeding-titles.collection.get",
+            "inventory-storage.instance-relationships.collection.get"
+          ]
         }, {
           "methods": ["POST"],
           "pathPattern": "/inventory/instances",
@@ -153,7 +157,11 @@
             "inventory-storage.preceding-succeeding-titles.collection.get",
             "inventory-storage.preceding-succeeding-titles.item.post",
             "inventory-storage.preceding-succeeding-titles.item.put",
-            "inventory-storage.preceding-succeeding-titles.item.delete"
+            "inventory-storage.preceding-succeeding-titles.item.delete",
+            "inventory-storage.instance-relationships.collection.get",
+            "inventory-storage.instance-relationships.item.post",
+            "inventory-storage.instance-relationships.item.put",
+            "inventory-storage.instance-relationships.item.delete"
           ]
         }, {
           "methods": ["PUT"],
@@ -168,7 +176,12 @@
             "inventory-storage.preceding-succeeding-titles.collection.get",
             "inventory-storage.preceding-succeeding-titles.item.post",
             "inventory-storage.preceding-succeeding-titles.item.put",
-            "inventory-storage.preceding-succeeding-titles.item.delete"]
+            "inventory-storage.preceding-succeeding-titles.item.delete",
+            "inventory-storage.instance-relationships.collection.get",
+            "inventory-storage.instance-relationships.item.post",
+            "inventory-storage.instance-relationships.item.put",
+            "inventory-storage.instance-relationships.item.delete"
+          ]
         }, {
           "methods": ["DELETE"],
           "pathPattern": "/inventory/instances/{id}",
@@ -219,7 +232,11 @@
             "inventory-storage.preceding-succeeding-titles.collection.get",
             "inventory-storage.preceding-succeeding-titles.item.post",
             "inventory-storage.preceding-succeeding-titles.item.put",
-            "inventory-storage.preceding-succeeding-titles.item.delete"
+            "inventory-storage.preceding-succeeding-titles.item.delete",
+            "inventory-storage.instance-relationships.collection.get",
+            "inventory-storage.instance-relationships.item.post",
+            "inventory-storage.instance-relationships.item.put",
+            "inventory-storage.instance-relationships.item.delete"
           ]
         }
       ]
