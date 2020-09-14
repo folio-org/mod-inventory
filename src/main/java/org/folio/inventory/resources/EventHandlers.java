@@ -14,8 +14,10 @@ import org.folio.inventory.dataimport.ItemWriterFactory;
 import org.folio.inventory.dataimport.handlers.actions.CreateHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler;
+import org.folio.inventory.dataimport.handlers.actions.MarcBibModifiedPostProcessingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.UpdateHoldingEventHandler;
+import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.actions.UpdateInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchHoldingEventHandler;
@@ -73,6 +75,7 @@ public class EventHandlers {
     EventManager.registerEventHandler(new UpdateItemEventHandler(storage));
     EventManager.registerEventHandler(new UpdateHoldingEventHandler(storage));
     EventManager.registerEventHandler(new ReplaceInstanceEventHandler(storage, client));
+    EventManager.registerEventHandler(new MarcBibModifiedPostProcessingEventHandler(new InstanceUpdateDelegate(storage)));
   }
 
   public void register(Router router) {
@@ -99,7 +102,8 @@ public class EventHandlers {
   private void handleInstanceUpdate(RoutingContext routingContext) {
     try {
       HashMap<String, String> eventPayload = ObjectMapperTool.getMapper().readValue(ZIPArchiver.unzip(routingContext.getBodyAsString()), HashMap.class);
-      new UpdateInstanceEventHandler(storage, new WebContext(routingContext)).handle(eventPayload, getOkapiHeaders(routingContext), routingContext.vertx());
+      InstanceUpdateDelegate updateInstanceDelegate = new InstanceUpdateDelegate(storage);
+      new UpdateInstanceEventHandler(updateInstanceDelegate, new WebContext(routingContext)).handle(eventPayload, getOkapiHeaders(routingContext), routingContext.vertx());
       SuccessResponse.noContent(routingContext.response());
     } catch (Exception e) {
       ServerErrorResponse.internalError(routingContext.response(), e);
