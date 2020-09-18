@@ -144,8 +144,8 @@
           <artifactId>util</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>org.folio.rest.jaxrs.model.EntityType</groupId>
-          <artifactId>EntityType</artifactId>
+          <groupId>org.folio.rest.jaxrs.model</groupId>
+          <artifactId>model</artifactId>
         </exclusion>
       </exclusions>
       <type>jar</type>
