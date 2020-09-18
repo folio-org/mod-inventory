@@ -1,14 +1,14 @@
 {
   "publications": [
     {
-      "eventType": "DI_INVENTORY_INSTANCE_CREATED",
-      "description": "Created inventory instance",
+      "eventType": "DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING",
+      "description": "Payload for DI_INVENTORY_INSTANCE_CREATED event ready for post processing",
       "eventTTL": 1,
       "signed": false
     },
     {
-      "eventType": "DI_INVENTORY_INSTANCE_UPDATED",
-      "description": "Updated inventory instance",
+      "eventType": "DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING",
+      "description": "Payload for DI_INVENTORY_INSTANCE_UPDATED event ready for post processing",
       "eventTTL": 1,
       "signed": false
     },
@@ -107,6 +107,12 @@
       "description": "Updated inventory item",
       "eventTTL": 1,
       "signed": false
+    },
+    {
+      "eventType": "DI_SRS_MARC_BIB_RECORD_MODIFIED",
+      "description": "Modified SRS Marc Bibliographic Record",
+      "eventTTL": 1,
+      "signed": false
     }
   ],
   "subscriptions": [
@@ -156,6 +162,14 @@
     },
     {
       "eventType": "DI_INVENTORY_ITEM_CREATED",
+      "callbackAddress": "/inventory/handlers/data-import"
+    },
+    {
+      "eventType": "DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING",
+      "callbackAddress": "/inventory/handlers/data-import"
+    },
+    {
+      "eventType": "DI_SRS_MARC_BIB_RECORD_MODIFIED",
       "callbackAddress": "/inventory/handlers/data-import"
     },
     {
