@@ -138,6 +138,12 @@
       <groupId>org.folio</groupId>
       <artifactId>mod-source-record-storage-client</artifactId>
       <version>4.1.0-SNAPSHOT</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.folio.util</groupId>
+          <artifactId>util</artifactId>
+        </exclusion>
+      </exclusions>
       <type>jar</type>
     </dependency>
     <dependency>
