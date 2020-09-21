@@ -1,5 +1,6 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
@@ -25,7 +26,6 @@ import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Record;
-import org.folio.rest.tools.utils.ObjectMapperTool;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -143,7 +143,7 @@ public class CreateItemEventHandler implements EventHandler {
       }
       if (isBlank(holdingsId)) {
         String recordAsString = dataImportEventPayload.getContext().get(EntityType.MARC_BIBLIOGRAPHIC.value());
-        Record record = ObjectMapperTool.getMapper().readValue(recordAsString, Record.class);
+        Record record = new ObjectMapper().readValue(recordAsString, Record.class);
         holdingsId = ParsedRecordUtil.getAdditionalSubfieldValue(record.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.H);
       }
       if (isBlank(holdingsId)) {

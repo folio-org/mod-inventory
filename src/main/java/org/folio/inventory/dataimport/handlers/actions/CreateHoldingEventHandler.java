@@ -1,5 +1,6 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -19,7 +20,6 @@ import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Record;
-import org.folio.rest.tools.utils.ObjectMapperTool;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -72,7 +72,7 @@ public class CreateHoldingEventHandler implements EventHandler {
 
       Context context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       HoldingsRecordCollection holdingsRecords = storage.getHoldingsRecordCollection(context);
-      HoldingsRecord holding = ObjectMapperTool.getMapper().readValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), HoldingsRecord.class);
+      HoldingsRecord holding = new ObjectMapper().readValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), HoldingsRecord.class);
       holdingsRecords.add(holding, holdingSuccess -> constructDataImportEventPayload(future, dataImportEventPayload, holdingSuccess),
         failure -> {
           LOGGER.error(SAVE_HOLDING_ERROR_MESSAGE);
@@ -111,7 +111,7 @@ public class CreateHoldingEventHandler implements EventHandler {
       }
       if (isBlank(instanceId)) {
         String recordAsString = dataImportEventPayload.getContext().get(EntityType.MARC_BIBLIOGRAPHIC.value());
-        Record record = ObjectMapperTool.getMapper().readValue(recordAsString, Record.class);
+        Record record = new ObjectMapper().readValue(recordAsString, Record.class);
         instanceId = ParsedRecordUtil.getAdditionalSubfieldValue(record.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.I);
       }
       if (isBlank(instanceId)) {
