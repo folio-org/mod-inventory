@@ -148,10 +148,6 @@
           <groupId>org.folio</groupId>
           <artifactId>domain-models-api-interfaces</artifactId>
         </exclusion>
-        <exclusion>
-          <groupId>org.folio</groupId>
-          <artifactId>mod-source-record-storage-server</artifactId>
-        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
