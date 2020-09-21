@@ -138,7 +138,7 @@ public class MarcBibModifiedPostProcessingEventHandlerTest {
     Assert.assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
     Assert.assertNotNull(updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value)).findFirst().get());
     Assert.assertNotNull(updatedInstance.getContributors().stream().filter(c -> "Mazzeno, Laurence W., 1234566".equals(c.name)).findFirst().get());
-    Assert.assertNotNull(updatedInstance.getStatisticalCodeIds().stream().filter("b5968c9e-cddc-4576-99e3-8e60aed8b0dd"::equals).findFirst().get());
+    Assert.assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0dd", updatedInstance.getStatisticalCodeIds().get(0));
     Assert.assertNotNull(updatedInstance.getSubjects());
     Assert.assertEquals(1, updatedInstance.getSubjects().size());
     Assert.assertTrue(updatedInstance.getSubjects().get(0).contains("additional subfield"));
