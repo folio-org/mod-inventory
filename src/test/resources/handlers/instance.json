@@ -92,7 +92,9 @@
   "instanceFormatIds": [
     "8d511d33-5e85-4c5d-9bce-6e3c9cd0c324"
   ],
-  "statisticalCodeIds": [],
+  "statisticalCodeIds": [
+    "b5968c9e-cddc-4576-99e3-8e60aed8b0dd"
+  ],
   "physicalDescriptions": [
     "xii, 273 pages : illustrations (black and white) ; 21 cm"
   ],

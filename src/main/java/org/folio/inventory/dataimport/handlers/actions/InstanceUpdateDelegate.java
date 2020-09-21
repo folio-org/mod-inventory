@@ -1,6 +1,7 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.Future;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -25,6 +26,7 @@ public class InstanceUpdateDelegate {
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
   private static final String MARC_FORMAT = "MARC";
+  private static final String STATISTICAL_CODE_IDS_PROPERTY = "statisticalCodeIds";
 
   private Storage storage;
 
@@ -76,7 +78,10 @@ public class InstanceUpdateDelegate {
       mappedInstance.setId(existingInstance.getId());
       JsonObject existing = JsonObject.mapFrom(existingInstance);
       JsonObject mapped = JsonObject.mapFrom(mappedInstance);
-      Instance mergedInstance = InstanceUtil.jsonToInstance(existing.mergeIn(mapped));
+      JsonArray statisticalCodeIds = existing.getJsonArray(STATISTICAL_CODE_IDS_PROPERTY);
+      JsonObject mergedInstanceAsJson = existing.mergeIn(mapped, true);
+      mergedInstanceAsJson.put(STATISTICAL_CODE_IDS_PROPERTY, statisticalCodeIds);
+      Instance mergedInstance = InstanceUtil.jsonToInstance(mergedInstanceAsJson);
       future.complete(mergedInstance);
     } catch (Exception e) {
       LOGGER.error("Error updating instance", e);
