@@ -140,12 +140,16 @@
       <version>4.1.0-SNAPSHOT</version>
       <exclusions>
         <exclusion>
-          <groupId>org.folio.util</groupId>
-          <artifactId>util</artifactId>
+          <groupId>org.folio</groupId>
+          <artifactId>domain-models-runtime</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>org.folio.rest.jaxrs.model</groupId>
-          <artifactId>model</artifactId>
+          <groupId>org.folio</groupId>
+          <artifactId>domain-models-api-interfaces</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.folio</groupId>
+          <artifactId>mod-source-record-storage-server</artifactId>
         </exclusion>
       </exclusions>
       <type>jar</type>
