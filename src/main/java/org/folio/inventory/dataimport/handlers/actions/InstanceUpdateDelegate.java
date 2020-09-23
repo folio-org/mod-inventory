@@ -78,8 +78,9 @@ public class InstanceUpdateDelegate {
       mappedInstance.setId(existingInstance.getId());
       JsonObject existing = JsonObject.mapFrom(existingInstance);
       JsonObject mapped = JsonObject.mapFrom(mappedInstance);
+      //Statistical code doesn't revealed via mergeIn().
       JsonArray statisticalCodeIds = existing.getJsonArray(STATISTICAL_CODE_IDS_PROPERTY);
-      JsonObject mergedInstanceAsJson = existing.mergeIn(mapped, true);
+      JsonObject mergedInstanceAsJson = existing.mergeIn(mapped);
       mergedInstanceAsJson.put(STATISTICAL_CODE_IDS_PROPERTY, statisticalCodeIds);
       Instance mergedInstance = InstanceUtil.jsonToInstance(mergedInstanceAsJson);
       future.complete(mergedInstance);
