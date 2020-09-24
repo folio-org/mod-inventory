@@ -130,7 +130,7 @@ public class InstanceUtil {
       .setStatusId(instanceRequest.getString(Instance.STATUS_ID_KEY))
       .setStatusUpdatedDate(instanceRequest.getString(Instance.STATUS_UPDATED_DATE_KEY))
       .setTags(tags)
-      .setNatureOfContentIds(toListOfStrings(instanceRequest, Instance.NATURE_OF_CONTENT_TERM_IDS_KEY));
+      .setNatureOfContentTermIds(toListOfStrings(instanceRequest, Instance.NATURE_OF_CONTENT_TERM_IDS_KEY));
   }
 
   private static List<String> getTags(JsonObject instanceRequest) {

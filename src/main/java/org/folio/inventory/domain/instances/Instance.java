@@ -86,7 +86,7 @@ public class Instance {
   private String statusUpdatedDate;
   private Metadata metadata = null;
   private List<String> tags;
-  private List<String> natureOfContentIds = new ArrayList<>();
+  private List<String> natureOfContentTermIds = new ArrayList<>();
 
   public Instance(
     String id,
@@ -257,8 +257,8 @@ public class Instance {
     return this;
   }
 
-  public Instance setNatureOfContentIds(List<String> natureOfContentIds) {
-    this.natureOfContentIds = natureOfContentIds;
+  public Instance setNatureOfContentTermIds(List<String> natureOfContentTermIds) {
+    this.natureOfContentTermIds = natureOfContentTermIds;
     return this;
   }
 
@@ -411,8 +411,8 @@ public class Instance {
     return tags;
   }
 
-  public List<String> getNatureOfContentIds() {
-    return natureOfContentIds;
+  public List<String> getNatureOfContentTermIds() {
+    return natureOfContentTermIds;
   }
 
   public Instance copyWithNewId(String newId) {
@@ -444,7 +444,7 @@ public class Instance {
             .setStatusUpdatedDate(statusUpdatedDate)
             .setMetadata(metadata)
             .setTags(tags)
-            .setNatureOfContentIds(natureOfContentIds);
+            .setNatureOfContentTermIds(natureOfContentTermIds);
   }
 
   public Instance copyInstance() {
@@ -476,7 +476,7 @@ public class Instance {
             .setStatusUpdatedDate(statusUpdatedDate)
             .setMetadata(metadata)
             .setTags(tags)
-            .setNatureOfContentIds(natureOfContentIds);
+            .setNatureOfContentTermIds(natureOfContentTermIds);
   }
 
   public Instance addIdentifier(Identifier identifier) {
