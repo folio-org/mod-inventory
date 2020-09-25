@@ -340,7 +340,7 @@ public abstract class AbstractInstances {
     putIfNotNull(resp, Instance.STATUS_UPDATED_DATE_KEY, instance.getStatusUpdatedDate());
     putIfNotNull(resp, Instance.METADATA_KEY, instance.getMetadata());
     putIfNotNull(resp, Instance.TAGS_KEY, new JsonObject().put(Instance.TAG_LIST_KEY, new JsonArray(instance.getTags())));
-    putIfNotNull(resp, Instance.NATURE_OF_CONTENT_TERM_IDS_KEY, instance.getNatureOfContentIds());
+    putIfNotNull(resp, Instance.NATURE_OF_CONTENT_TERM_IDS_KEY, instance.getNatureOfContentTermIds());
 
     if (precedingTitles != null) {
       JsonArray precedingTitlesJsonArray = new JsonArray();
