@@ -18,6 +18,7 @@ public enum ItemStatusName {
   DECLARED_LOST("Declared lost"),
   ORDER_CLOSED("Order closed"),
   CLAIMED_RETURNED("Claimed returned"),
+  UNKNOWN("Unknown"),
   WITHDRAWN("Withdrawn"),
   LOST_AND_PAID("Lost and paid"),
   AGED_TO_LOST("Aged to lost");
