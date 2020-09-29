@@ -91,7 +91,7 @@ class ExternalStorageModuleInstanceCollection
     instanceToSend.put(Instance.STATUS_ID_KEY, instance.getStatusId());
     instanceToSend.put(Instance.STATUS_UPDATED_DATE_KEY, instance.getStatusUpdatedDate());
     instanceToSend.put(Instance.TAGS_KEY, new JsonObject().put(Instance.TAG_LIST_KEY, new JsonArray(instance.getTags())));
-    instanceToSend.put(Instance.NATURE_OF_CONTENT_TERM_IDS_KEY,instance.getNatureOfContentIds());
+    instanceToSend.put(Instance.NATURE_OF_CONTENT_TERM_IDS_KEY,instance.getNatureOfContentTermIds());
 
     return instanceToSend;
   }
@@ -186,7 +186,7 @@ class ExternalStorageModuleInstanceCollection
       .setStatusUpdatedDate(instanceFromServer.getString(Instance.STATUS_UPDATED_DATE_KEY))
       .setMetadata(new Metadata(metadataJson))
       .setTags(tags)
-      .setNatureOfContentIds(jsonArrayAsListOfStrings(instanceFromServer, Instance.NATURE_OF_CONTENT_TERM_IDS_KEY));
+      .setNatureOfContentTermIds(jsonArrayAsListOfStrings(instanceFromServer, Instance.NATURE_OF_CONTENT_TERM_IDS_KEY));
   }
 
   @Override
