@@ -28,7 +28,9 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -51,7 +53,7 @@ public class UpdateItemEventHandler implements EventHandler {
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data or ITEM to update";
   private static final String STATUS_UPDATE_ERROR_MSG = "Could not change item status '%s' to '%s'";
   private static final String ITEM_PATH_FIELD = "item";
-  private static final String[] protectedStatusesFromUpdate = new String[]{"Aged to lost", "Awaiting delivery", "Awaiting pickup", "Checked out", "Claimed returned", "Declared lost", "Paged", "Recently returned"};
+  private static final Set<String> PROTECTED_STATUSES_FROM_UPDATE = new HashSet<>(Arrays.asList("Aged to lost", "Awaiting delivery", "Awaiting pickup", "Checked out", "Claimed returned", "Declared lost", "Paged", "Recently returned"));
 
   private final List<String> requiredFields = Arrays.asList("status.name", "materialType.id", "permanentLoanType.id", "holdingsRecordId");
   private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").withZone(ZoneOffset.UTC);
@@ -90,7 +92,7 @@ public class UpdateItemEventHandler implements EventHandler {
 
       String newItemStatus = itemAsJson.getJsonObject(STATUS_KEY).getString("name");
       boolean statusWasUpdated = !oldItemStatus.equals(newItemStatus);
-      boolean isOldStatusProtected = isStatusProtectedForUpdate(oldItemStatus);
+      boolean isOldStatusProtected = PROTECTED_STATUSES_FROM_UPDATE.contains(oldItemStatus);
       if(statusWasUpdated && isOldStatusProtected) {
         itemAsJson.getJsonObject(STATUS_KEY).put("name", oldItemStatus);
       }
@@ -128,10 +130,6 @@ public class UpdateItemEventHandler implements EventHandler {
     dataImportEventPayload.getContext().put(ITEM.value(), ItemUtil.mapToJson(updatedItem).encode());
     dataImportEventPayload.getContext().put(FAILED_EVENT_KEY, DI_INVENTORY_ITEM_UPDATED.value());
     dataImportEventPayload.getContext().put(ERROR_MSG_KEY, msg);
-  }
-
-  private boolean isStatusProtectedForUpdate(String oldItemStatus) {
-    return ArrayUtils.contains(protectedStatusesFromUpdate, oldItemStatus);
   }
 
   @Override
