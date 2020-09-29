@@ -4,7 +4,6 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
@@ -76,13 +75,14 @@ public class UpdateItemEventHandler implements EventHandler {
         return future;
       }
 
-      String oldItemStatus = new JsonObject(payloadContext.get(ITEM.value())).getJsonObject(STATUS_KEY).getString("name");
+      JsonObject itemAsJson = new JsonObject(payloadContext.get(ITEM.value()));
+      String oldItemStatus = itemAsJson.getJsonObject(STATUS_KEY).getString("name");
       preparePayloadForMappingManager(dataImportEventPayload);
       MappingManager.map(dataImportEventPayload);
-      JsonObject itemAsJson = new JsonObject(payloadContext.get(ITEM.value()));
-      itemAsJson = itemAsJson.containsKey(ITEM_PATH_FIELD) ? itemAsJson.getJsonObject(ITEM_PATH_FIELD) : itemAsJson;
+      JsonObject mappedItemAsJson = new JsonObject(payloadContext.get(ITEM.value()));
+      mappedItemAsJson = mappedItemAsJson.containsKey(ITEM_PATH_FIELD) ? mappedItemAsJson.getJsonObject(ITEM_PATH_FIELD) : mappedItemAsJson;
 
-      List<String> errors = validateItem(itemAsJson, requiredFields);
+      List<String> errors = validateItem(mappedItemAsJson, requiredFields);
       if (!errors.isEmpty()) {
         String msg = format("Mapped Item is invalid: %s", errors.toString());
         LOG.error(msg);
@@ -90,16 +90,16 @@ public class UpdateItemEventHandler implements EventHandler {
         return future;
       }
 
-      String newItemStatus = itemAsJson.getJsonObject(STATUS_KEY).getString("name");
+      String newItemStatus = mappedItemAsJson.getJsonObject(STATUS_KEY).getString("name");
       boolean statusWasUpdated = !oldItemStatus.equals(newItemStatus);
       boolean isOldStatusProtected = PROTECTED_STATUSES_FROM_UPDATE.contains(oldItemStatus);
       if(statusWasUpdated && isOldStatusProtected) {
-        itemAsJson.getJsonObject(STATUS_KEY).put("name", oldItemStatus);
+        mappedItemAsJson.getJsonObject(STATUS_KEY).put("name", oldItemStatus);
       }
 
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       ItemCollection itemCollection = storage.getItemCollection(context);
-      Item itemToUpdate = ItemUtil.jsonToItem(itemAsJson);
+      Item itemToUpdate = ItemUtil.jsonToItem(mappedItemAsJson);
       verifyItemBarcodeUniqueness(itemToUpdate, itemCollection)
         .compose(v -> updateItem(itemToUpdate, itemCollection))
         .setHandler(updateAr -> {
