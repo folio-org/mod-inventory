@@ -37,6 +37,7 @@ import static java.util.Objects.isNull;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.ActionProfile.Action.UPDATE;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_UPDATED;
+import static org.folio.inventory.domain.items.Item.STATUS_KEY;
 import static org.folio.rest.jaxrs.model.EntityType.ITEM;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
@@ -73,7 +74,7 @@ public class UpdateItemEventHandler implements EventHandler {
         return future;
       }
 
-      String oldItemStatus = new JsonObject(payloadContext.get(ITEM.value())).getJsonObject("status").getString("name");
+      String oldItemStatus = new JsonObject(payloadContext.get(ITEM.value())).getJsonObject(STATUS_KEY).getString("name");
       preparePayloadForMappingManager(dataImportEventPayload);
       MappingManager.map(dataImportEventPayload);
       JsonObject itemAsJson = new JsonObject(payloadContext.get(ITEM.value()));
@@ -87,11 +88,11 @@ public class UpdateItemEventHandler implements EventHandler {
         return future;
       }
 
-      String newItemStatus = itemAsJson.getJsonObject("status").getString("name");
+      String newItemStatus = itemAsJson.getJsonObject(STATUS_KEY).getString("name");
       boolean statusWasUpdated = !oldItemStatus.equals(newItemStatus);
       boolean isOldStatusProtected = isStatusProtectedForUpdate(oldItemStatus);
       if(statusWasUpdated && isOldStatusProtected) {
-        itemAsJson.getJsonObject("status").put("name", oldItemStatus);
+        itemAsJson.getJsonObject(STATUS_KEY).put("name", oldItemStatus);
       }
 
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
@@ -156,7 +157,7 @@ public class UpdateItemEventHandler implements EventHandler {
   }
 
   private void validateStatusName(JsonObject itemAsJson, List<String> errors) {
-    String statusName = JsonHelper.getNestedProperty(itemAsJson, "status", "name");
+    String statusName = JsonHelper.getNestedProperty(itemAsJson, STATUS_KEY, "name");
     if (StringUtils.isNotBlank(statusName) && !ItemStatusName.isStatusCorrect(statusName)) {
       errors.add(format("Invalid status specified '%s'", statusName));
     }

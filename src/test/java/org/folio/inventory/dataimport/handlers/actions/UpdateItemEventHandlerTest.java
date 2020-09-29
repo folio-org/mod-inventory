@@ -292,7 +292,7 @@ public class UpdateItemEventHandlerTest {
     MappingRule barcodeMappingRule = mappingProfile.getMappingDetails().getMappingFields().get(1);
     Mockito.when(fakeReader.read(eq(barcodeMappingRule))).thenReturn(StringValue.of(expectedItemBarcode));
 
-    existingItemJson.put("status", new JsonObject().put("name", protectedItemStatus));
+    existingItemJson.put(STATUS_KEY, new JsonObject().put("name", protectedItemStatus));
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
     payloadContext.put(ITEM.value(), existingItemJson.encode());
