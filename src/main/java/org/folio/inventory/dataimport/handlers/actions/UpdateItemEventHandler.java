@@ -91,9 +91,8 @@ public class UpdateItemEventHandler implements EventHandler {
       }
 
       String newItemStatus = mappedItemAsJson.getJsonObject(STATUS_KEY).getString("name");
-      boolean statusWasUpdated = !oldItemStatus.equals(newItemStatus);
-      boolean isOldStatusProtected = PROTECTED_STATUSES_FROM_UPDATE.contains(oldItemStatus);
-      if(statusWasUpdated && isOldStatusProtected) {
+      boolean protectedStatusChanged = isProtectedStatusChanged(oldItemStatus, newItemStatus);
+      if(protectedStatusChanged) {
         mappedItemAsJson.getJsonObject(STATUS_KEY).put("name", oldItemStatus);
       }
 
@@ -104,7 +103,7 @@ public class UpdateItemEventHandler implements EventHandler {
         .compose(v -> updateItem(itemToUpdate, itemCollection))
         .setHandler(updateAr -> {
           if (updateAr.succeeded()) {
-            if(statusWasUpdated && isOldStatusProtected) {
+            if(protectedStatusChanged) {
               String msg = String.format(STATUS_UPDATE_ERROR_MSG, oldItemStatus, newItemStatus);
               preparePayloadWithStatusUpdateError(dataImportEventPayload, updateAr.result(), msg);
               future.completeExceptionally(new EventProcessingException(msg));
@@ -123,6 +122,10 @@ public class UpdateItemEventHandler implements EventHandler {
       future.completeExceptionally(e);
     }
     return future;
+  }
+
+  private boolean isProtectedStatusChanged(String oldItemStatus, String newItemStatus){
+    return PROTECTED_STATUSES_FROM_UPDATE.contains(oldItemStatus) && !oldItemStatus.equals(newItemStatus);
   }
 
   private void preparePayloadWithStatusUpdateError(DataImportEventPayload dataImportEventPayload, Item updatedItem, String msg) {
