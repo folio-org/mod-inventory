@@ -2,6 +2,8 @@
 
 * Update SRS client requests for v4.0.0, change dependency on interface (from source-storage-suppress-discovery 1.0 to source-storage-records 2.0) (MODINV-316)
 * Fix adding/changing Instance notes triggered by quickMarc updates (MODINV-311)
+* Problem with the repeatable check in/out notes field mapping actions (MODINV-346)
+
 
 ## 15.0.0 2020-06-11
 
