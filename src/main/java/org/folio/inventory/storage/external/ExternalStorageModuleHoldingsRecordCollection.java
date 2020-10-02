@@ -5,9 +5,9 @@ import java.io.IOException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.ObjectWriter;
 import org.folio.HoldingsRecord;
+import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
-import org.folio.rest.tools.utils.ObjectMapperTool;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;

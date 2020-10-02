@@ -7,6 +7,7 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import org.folio.DataImportEventPayload;
+import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.dataimport.HoldingWriterFactory;
 import org.folio.inventory.dataimport.InstanceWriterFactory;
@@ -37,7 +38,6 @@ import org.folio.processing.matching.loader.MatchValueLoaderFactory;
 import org.folio.processing.matching.reader.MarcValueReaderImpl;
 import org.folio.processing.matching.reader.MatchValueReaderFactory;
 import org.folio.processing.matching.reader.StaticValueReaderImpl;
-import org.folio.rest.tools.utils.ObjectMapperTool;
 
 import java.util.HashMap;
 import java.util.Map;
