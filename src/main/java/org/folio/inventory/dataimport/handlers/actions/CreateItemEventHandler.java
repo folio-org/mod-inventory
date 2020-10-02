@@ -8,6 +8,7 @@ import io.vertx.core.logging.LoggerFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
+import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
@@ -25,7 +26,6 @@ import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Record;
-import org.folio.rest.tools.utils.ObjectMapperTool;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
