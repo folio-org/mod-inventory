@@ -1152,6 +1152,79 @@ public class ItemApiExamples extends ApiTests {
   }
 
   @Test
+  public void canCreateAnItemWithACirculationNoteWithoutSourceField()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
+
+    UUID holdingId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(UUID.fromString(createdInstance.getString("id"))))
+      .getId();
+
+    JsonObject user = new JsonObject()
+      .put(ID_KEY, USER_ID)
+      .put(PERSONAL_KEY, new JsonObject()
+        .put(LAST_NAME_KEY, "Smith")
+        .put(FIRST_NAME_KEY, "John"));
+
+    JsonObject createdUser = usersClient.create(user).getJson();
+
+    DateTime requestMade = DateTime.now();
+
+    IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withBarcode("645398607547")
+      .temporarilyInReadingRoom()
+      .canCirculate()
+      .temporarilyCourseReserves()
+      .withCheckInNote());
+
+    JsonObject createdItem = itemsClient.getById(postResponse.getId()).getJson();
+
+    assertThat(createdItem.containsKey("id"), is(true));
+    assertThat(createdItem.getString("title"), is("Long Way to a Small Angry Planet"));
+    assertThat(createdItem.getString("barcode"), is("645398607547"));
+    assertThat(createdItem.getJsonObject("status").getString("name"), is("Available"));
+
+    JsonObject materialType = createdItem.getJsonObject("materialType");
+
+    assertThat(materialType.getString("id"), CoreMatchers.is(ApiTestSuite.getBookMaterialType()));
+    assertThat(materialType.getString("name"), is("Book"));
+
+    JsonObject permanentLoanType = createdItem.getJsonObject("permanentLoanType");
+
+    JsonObject temporaryLoanType = createdItem.getJsonObject("temporaryLoanType");
+
+    assertThat(permanentLoanType.getString("id"), is(ApiTestSuite.getCanCirculateLoanType()));
+    assertThat(permanentLoanType.getString("name"), is("Can Circulate"));
+
+    assertThat(temporaryLoanType.getString("id"), is(ApiTestSuite.getCourseReserveLoanType()));
+    assertThat(temporaryLoanType.getString("name"), is("Course Reserves"));
+
+    assertThat("Item should not have permanent location",
+      createdItem.containsKey("permanentLocation"), is(false));
+
+    assertThat(createdItem.getJsonObject("temporaryLocation").getString("name"), is("Reading Room"));
+
+    JsonObject checkInNote = createdItem.getJsonArray(CIRCULATION_NOTES_KEY).getJsonObject(0);
+    checkInNote.remove("source");
+
+    JsonObject source = checkInNote.getJsonObject(SOURCE_KEY);
+
+    assertThat(checkInNote.getString(NOTE_TYPE_KEY), is("Check in"));
+    assertThat(checkInNote.getString(NOTE_KEY), is("Please read this note before checking in the item"));
+    assertThat(checkInNote.getBoolean(STAFF_ONLY_KEY), is(false));
+    assertThat(checkInNote.getString(DATE_KEY), withinSecondsAfter(Seconds.seconds(2), requestMade));
+
+    selfLinkRespectsWayResourceWasReached(createdItem);
+    selfLinkShouldBeReachable(createdItem);
+  }
+
+  @Test
   public void canUpdateAnItemWithExistingCirculationNote()
     throws InterruptedException,
     MalformedURLException,
