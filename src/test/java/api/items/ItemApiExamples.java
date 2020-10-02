@@ -1152,7 +1152,7 @@ public class ItemApiExamples extends ApiTests {
   }
 
   @Test
-  public void canCreateAnItemWithACirculationNoteButWithoutSourceFieldInIt()
+  public void canCreateAnItemWithACirculationNoteWithoutSourceField()
     throws InterruptedException,
     MalformedURLException,
     TimeoutException,
