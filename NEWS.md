@@ -2,6 +2,7 @@
 
 * Update SRS client requests for v4.0.0, change dependency on interface (from source-storage-suppress-discovery 1.0 to source-storage-records 2.0) (MODINV-316)
 * Fix adding/changing Instance notes triggered by quickMarc updates (MODINV-311)
+* Field mapping profile: Holdings: Change Holdings Statement Notes as public and staff. (MODINV-343)
 
 ## 15.0.0 2020-06-11
 
