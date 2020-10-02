@@ -16,11 +16,10 @@ public class User {
   }
 
   public User(JsonObject json) {
-    this(json != null ? json.getString(ID_KEY) : null,
-      json != null ? new Personal(json.getJsonObject(PERSONAL_KEY)) : null);
-
-/*    this(json != null && json.getString(ID_KEY) != null ? json.getString(ID_KEY) : null,
-      json != null && json.getString(PERSONAL_KEY) != null ? new Personal(json.getJsonObject(PERSONAL_KEY)) : null);*/
+/*    this(json != null ? json.getString(ID_KEY) : null,
+      json != null ? new Personal(json.getJsonObject(PERSONAL_KEY)) : null);*/
+    this(json != null && json.getString(ID_KEY) != null ? json.getString(ID_KEY) : null,
+      json != null && json.getJsonObject(PERSONAL_KEY) != null ? new Personal(json.getJsonObject(PERSONAL_KEY)) : null);
   }
 
   public String getId() {

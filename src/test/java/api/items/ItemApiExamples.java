@@ -1220,12 +1220,6 @@ public class ItemApiExamples extends ApiTests {
     assertThat(checkInNote.getBoolean(STAFF_ONLY_KEY), is(false));
     assertThat(checkInNote.getString(DATE_KEY), withinSecondsAfter(Seconds.seconds(2), requestMade));
 
-    assertThat(source.getString(ID_KEY), is(createdUser.getString(ID_KEY)));
-    assertThat(source.getJsonObject(PERSONAL_KEY).getString(LAST_NAME_KEY),
-      is(source.getJsonObject(PERSONAL_KEY).getString(LAST_NAME_KEY)));
-    assertThat(source.getJsonObject(PERSONAL_KEY).getString(FIRST_NAME_KEY),
-      is(source.getJsonObject(PERSONAL_KEY).getString(FIRST_NAME_KEY)));
-
     selfLinkRespectsWayResourceWasReached(createdItem);
     selfLinkShouldBeReachable(createdItem);
   }
