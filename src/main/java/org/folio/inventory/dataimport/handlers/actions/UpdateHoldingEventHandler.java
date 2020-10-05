@@ -1,6 +1,5 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -94,8 +93,8 @@ public class UpdateHoldingEventHandler implements EventHandler {
 
   private HoldingsRecord retrieveHolding(HashMap<String, String> context) throws IOException {
     return (isNull(new JsonObject(context.get(HOLDINGS.value())).getJsonObject(HOLDINGS_PATH_FIELD))) ?
-      new ObjectMapper().readValue(context.get(HOLDINGS.value()), HoldingsRecord.class) :
-      new ObjectMapper().readValue(String.valueOf(new JsonObject(context.get(HOLDINGS.value())).getJsonObject(HOLDINGS_PATH_FIELD)), HoldingsRecord.class);
+      ObjectMapperTool.getMapper().readValue(context.get(HOLDINGS.value()), HoldingsRecord.class) :
+      ObjectMapperTool.getMapper().readValue(String.valueOf(new JsonObject(context.get(HOLDINGS.value())).getJsonObject(HOLDINGS_PATH_FIELD)), HoldingsRecord.class);
   }
 
   private void prepareEvent(DataImportEventPayload dataImportEventPayload) {

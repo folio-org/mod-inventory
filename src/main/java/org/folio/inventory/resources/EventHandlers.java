@@ -1,6 +1,5 @@
 package org.folio.inventory.resources;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
@@ -102,7 +101,7 @@ public class EventHandlers {
 
   private void handleInstanceUpdate(RoutingContext routingContext) {
     try {
-      HashMap<String, String> eventPayload = new ObjectMapper().readValue(ZIPArchiver.unzip(routingContext.getBodyAsString()), HashMap.class);
+      HashMap<String, String> eventPayload = ObjectMapperTool.getMapper().readValue(ZIPArchiver.unzip(routingContext.getBodyAsString()), HashMap.class);
       InstanceUpdateDelegate updateInstanceDelegate = new InstanceUpdateDelegate(storage);
       new UpdateInstanceEventHandler(updateInstanceDelegate, new WebContext(routingContext)).handle(eventPayload, getOkapiHeaders(routingContext), routingContext.vertx());
       SuccessResponse.noContent(routingContext.response());

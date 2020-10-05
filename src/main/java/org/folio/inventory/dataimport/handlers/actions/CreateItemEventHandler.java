@@ -1,6 +1,5 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
@@ -144,7 +143,7 @@ public class CreateItemEventHandler implements EventHandler {
       }
       if (isBlank(holdingsId)) {
         String recordAsString = dataImportEventPayload.getContext().get(EntityType.MARC_BIBLIOGRAPHIC.value());
-        Record record = new ObjectMapper().readValue(recordAsString, Record.class);
+        Record record = ObjectMapperTool.getMapper().readValue(recordAsString, Record.class);
         holdingsId = ParsedRecordUtil.getAdditionalSubfieldValue(record.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.H);
       }
       if (isBlank(holdingsId)) {
