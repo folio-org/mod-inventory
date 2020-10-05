@@ -10,6 +10,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
+import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;

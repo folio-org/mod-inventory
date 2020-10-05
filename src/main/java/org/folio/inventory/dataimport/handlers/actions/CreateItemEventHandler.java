@@ -9,6 +9,7 @@ import io.vertx.core.logging.LoggerFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
+import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;

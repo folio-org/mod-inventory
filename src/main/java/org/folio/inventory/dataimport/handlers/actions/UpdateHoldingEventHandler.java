@@ -9,6 +9,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
+import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.storage.Storage;

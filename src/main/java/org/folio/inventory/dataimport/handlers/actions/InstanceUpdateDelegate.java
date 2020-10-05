@@ -1,6 +1,7 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.Future;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -25,6 +26,8 @@ public class InstanceUpdateDelegate {
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
   private static final String MARC_FORMAT = "MARC";
+  private static final String STATISTICAL_CODE_IDS_PROPERTY = "statisticalCodeIds";
+  private static final String NATURE_OF_CONTENT_TERM_IDS_PROPERTY = "natureOfContentTermIds";
 
   private Storage storage;
 
@@ -76,13 +79,24 @@ public class InstanceUpdateDelegate {
       mappedInstance.setId(existingInstance.getId());
       JsonObject existing = JsonObject.mapFrom(existingInstance);
       JsonObject mapped = JsonObject.mapFrom(mappedInstance);
-      Instance mergedInstance = InstanceUtil.jsonToInstance(existing.mergeIn(mapped));
+      JsonObject mergedInstanceAsJson = mergeInstances(existing, mapped);
+      Instance mergedInstance = InstanceUtil.jsonToInstance(mergedInstanceAsJson);
       future.complete(mergedInstance);
     } catch (Exception e) {
       LOGGER.error("Error updating instance", e);
       future.fail(e);
     }
     return future;
+  }
+
+  private JsonObject mergeInstances(JsonObject existing, JsonObject mapped) {
+    //Statistical code and nature of content terms don`t revealed via mergeIn() because of simple array type.
+    JsonArray statisticalCodeIds = existing.getJsonArray(STATISTICAL_CODE_IDS_PROPERTY);
+    JsonArray natureOfContentTermIds = existing.getJsonArray(NATURE_OF_CONTENT_TERM_IDS_PROPERTY);
+    JsonObject mergedInstanceAsJson = existing.mergeIn(mapped);
+    mergedInstanceAsJson.put(STATISTICAL_CODE_IDS_PROPERTY, statisticalCodeIds);
+    mergedInstanceAsJson.put(NATURE_OF_CONTENT_TERM_IDS_PROPERTY, natureOfContentTermIds);
+    return mergedInstanceAsJson;
   }
 
   private Future<Instance> updateInstanceInStorage(Instance instance, InstanceCollection instanceCollection) {
