@@ -140,6 +140,10 @@
           "note": {
             "type": "string",
             "description": "Note attached to a holdings statement"
+          },
+          "staffNote": {
+            "type": "string",
+            "description": "Private note attached to a holdings statment"
           }
         }
       }
@@ -157,6 +161,10 @@
           "note": {
             "type": "string",
             "description": "Note attached to a holdings statement"
+          },
+          "staffNote": {
+            "type": "string",
+            "description": "Private note attached to a holdings statment"
           }
         }
       }
@@ -174,6 +182,10 @@
           "note": {
             "type": "string",
             "description": "note attached to a holdings statement"
+          },
+          "staffNote": {
+            "type": "string",
+            "description": "Private note attached to a holdings statment"
           }
         }
       }

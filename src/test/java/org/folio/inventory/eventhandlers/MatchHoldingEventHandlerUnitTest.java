@@ -5,7 +5,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import java.util.Map;
 import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
 import org.folio.Instance;
@@ -43,7 +42,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.UUID;
 import java.util.function.Consumer;
-import sun.security.krb5.internal.crypto.EType;
 
 import static java.lang.String.format;
 import static java.util.Arrays.asList;

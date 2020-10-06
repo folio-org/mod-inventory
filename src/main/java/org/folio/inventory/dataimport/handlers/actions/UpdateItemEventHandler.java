@@ -27,7 +27,9 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -36,6 +38,7 @@ import static java.util.Objects.isNull;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.ActionProfile.Action.UPDATE;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_UPDATED;
+import static org.folio.inventory.domain.items.Item.STATUS_KEY;
 import static org.folio.rest.jaxrs.model.EntityType.ITEM;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
@@ -44,8 +47,12 @@ public class UpdateItemEventHandler implements EventHandler {
 
   private static final Logger LOG = LoggerFactory.getLogger(UpdateItemEventHandler.class);
 
+  public static final String ERROR_MSG_KEY = "ERROR_MSG";
+  public static final String FAILED_EVENT_KEY = "FAILED_EVENT";
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data or ITEM to update";
+  private static final String STATUS_UPDATE_ERROR_MSG = "Could not change item status '%s' to '%s'";
   private static final String ITEM_PATH_FIELD = "item";
+  private static final Set<String> PROTECTED_STATUSES_FROM_UPDATE = new HashSet<>(Arrays.asList("Aged to lost", "Awaiting delivery", "Awaiting pickup", "Checked out", "Claimed returned", "Declared lost", "Paged", "Recently returned"));
 
   private final List<String> requiredFields = Arrays.asList("status.name", "materialType.id", "permanentLoanType.id", "holdingsRecordId");
   private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").withZone(ZoneOffset.UTC);
@@ -68,12 +75,14 @@ public class UpdateItemEventHandler implements EventHandler {
         return future;
       }
 
+      JsonObject itemAsJson = new JsonObject(payloadContext.get(ITEM.value()));
+      String oldItemStatus = itemAsJson.getJsonObject(STATUS_KEY).getString("name");
       preparePayloadForMappingManager(dataImportEventPayload);
       MappingManager.map(dataImportEventPayload);
-      JsonObject itemAsJson = new JsonObject(payloadContext.get(ITEM.value()));
-      itemAsJson = itemAsJson.containsKey(ITEM_PATH_FIELD) ? itemAsJson.getJsonObject(ITEM_PATH_FIELD) : itemAsJson;
+      JsonObject mappedItemAsJson = new JsonObject(payloadContext.get(ITEM.value()));
+      mappedItemAsJson = mappedItemAsJson.containsKey(ITEM_PATH_FIELD) ? mappedItemAsJson.getJsonObject(ITEM_PATH_FIELD) : mappedItemAsJson;
 
-      List<String> errors = validateItem(itemAsJson, requiredFields);
+      List<String> errors = validateItem(mappedItemAsJson, requiredFields);
       if (!errors.isEmpty()) {
         String msg = format("Mapped Item is invalid: %s", errors.toString());
         LOG.error(msg);
@@ -81,16 +90,28 @@ public class UpdateItemEventHandler implements EventHandler {
         return future;
       }
 
+      String newItemStatus = mappedItemAsJson.getJsonObject(STATUS_KEY).getString("name");
+      boolean protectedStatusChanged = isProtectedStatusChanged(oldItemStatus, newItemStatus);
+      if(protectedStatusChanged) {
+        mappedItemAsJson.getJsonObject(STATUS_KEY).put("name", oldItemStatus);
+      }
+
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       ItemCollection itemCollection = storage.getItemCollection(context);
-      Item itemToUpdate = ItemUtil.jsonToItem(itemAsJson);
+      Item itemToUpdate = ItemUtil.jsonToItem(mappedItemAsJson);
       verifyItemBarcodeUniqueness(itemToUpdate, itemCollection)
         .compose(v -> updateItem(itemToUpdate, itemCollection))
         .setHandler(updateAr -> {
           if (updateAr.succeeded()) {
-            dataImportEventPayload.getContext().put(ITEM.value(), ItemUtil.mapToJson(updateAr.result()).encode());
-            dataImportEventPayload.setEventType(DI_INVENTORY_ITEM_UPDATED.value());
-            future.complete(dataImportEventPayload);
+            if(protectedStatusChanged) {
+              String msg = String.format(STATUS_UPDATE_ERROR_MSG, oldItemStatus, newItemStatus);
+              preparePayloadWithStatusUpdateError(dataImportEventPayload, updateAr.result(), msg);
+              future.completeExceptionally(new EventProcessingException(msg));
+            } else {
+              dataImportEventPayload.getContext().put(ITEM.value(), ItemUtil.mapToJson(updateAr.result()).encode());
+              dataImportEventPayload.setEventType(DI_INVENTORY_ITEM_UPDATED.value());
+              future.complete(dataImportEventPayload);
+            }
           } else {
             LOG.error("Error updating inventory Item", updateAr.cause());
             future.completeExceptionally(updateAr.cause());
@@ -101,6 +122,17 @@ public class UpdateItemEventHandler implements EventHandler {
       future.completeExceptionally(e);
     }
     return future;
+  }
+
+  private boolean isProtectedStatusChanged(String oldItemStatus, String newItemStatus){
+    return PROTECTED_STATUSES_FROM_UPDATE.contains(oldItemStatus) && !oldItemStatus.equals(newItemStatus);
+  }
+
+  private void preparePayloadWithStatusUpdateError(DataImportEventPayload dataImportEventPayload, Item updatedItem, String msg) {
+    LOG.warn(msg);
+    dataImportEventPayload.getContext().put(ITEM.value(), ItemUtil.mapToJson(updatedItem).encode());
+    dataImportEventPayload.getContext().put(FAILED_EVENT_KEY, DI_INVENTORY_ITEM_UPDATED.value());
+    dataImportEventPayload.getContext().put(ERROR_MSG_KEY, msg);
   }
 
   @Override
@@ -126,7 +158,7 @@ public class UpdateItemEventHandler implements EventHandler {
   }
 
   private void validateStatusName(JsonObject itemAsJson, List<String> errors) {
-    String statusName = JsonHelper.getNestedProperty(itemAsJson, "status", "name");
+    String statusName = JsonHelper.getNestedProperty(itemAsJson, STATUS_KEY, "name");
     if (StringUtils.isNotBlank(statusName) && !ItemStatusName.isStatusCorrect(statusName)) {
       errors.add(format("Invalid status specified '%s'", statusName));
     }
