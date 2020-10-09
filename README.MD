@@ -21,7 +21,7 @@ This readme is intended to get these modules up and running. For further informa
 
 ## Required
 
-- Java 8 JDK
+- Java 11 JDK
 - Maven 3.5.0
 
 ## Optional
