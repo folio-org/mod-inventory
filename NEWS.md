@@ -1,3 +1,20 @@
+## 16.1.0 2020-10-12
+
+* Provides the ability to move items between holdings (MODINV-309)
+* Provides the ability to move holdings between instances (MODINV-309)
+* Marking an item as missing changes request status (MODINV-312)
+* Introduces `match key` property for instances
+* Introduces `Unknown` and `Aged to lost` item statuses (MODINV-299)
+* Can map public and staff holdings holdings statement notes during import (MODINV-343)
+* Restricts item status transitions during import (MODINV-296)
+* Fixes instance statistical code and nature of content import issues (MODINV-336)
+* Fixes problem with the repeatable check in/out notes field mapping actions (MODINV-346)
+* Saves source record state during quick MARC edit (MODINV-324) 
+* Requires JDK 11 (MODINV-335)
+* Provides `inventory 10.7`
+* Requires `item-storage 8.6`
+* Requires `instance-storage 7.5`
+
 ## 16.0.0 2020-06-25
 
 * Update SRS client requests for v4.0.0, change dependency on interface (from source-storage-suppress-discovery 1.0 to source-storage-records 2.0) (MODINV-316)
