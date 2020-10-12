@@ -1,4 +1,4 @@
-## 16.1.0 2020-10-09
+## 16.1.0 2020-10-12
 
 * Provides the ability to move items between holdings (MODINV-309)
 * Provides the ability to move holdings between instances (MODINV-309)
