@@ -13,6 +13,7 @@ import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 public class Instance {
   // JSON property names
   public static final String HRID_KEY = "hrid";
+  public static final String MATCH_KEY_KEY = "matchKey";
   public static final String SOURCE_KEY = "source";
   public static final String PARENT_INSTANCES_KEY = "parentInstances";
   public static final String CHILD_INSTANCES_KEY = "childInstances";
@@ -52,6 +53,7 @@ public class Instance {
 
   private final String id;
   private final String hrid;
+  private String matchKey;
   private final String source;
   private List<InstanceRelationshipToParent> parentInstances = new ArrayList();
   private List<InstanceRelationshipToChild> childInstances = new ArrayList();
@@ -100,6 +102,11 @@ public class Instance {
     this.source = source;
     this.title = title;
     this.instanceTypeId = instanceTypeId;
+  }
+
+  public Instance setMatchKey(String matchKey) {
+    this.matchKey = matchKey;
+    return this;
   }
 
   public Instance setIndexTitle(String indexTitle) {
@@ -272,6 +279,10 @@ public class Instance {
 
   public String getHrid() {
     return hrid;
+  }
+
+  public String getMatchKey() {
+    return matchKey;
   }
 
   public String getSource() {
