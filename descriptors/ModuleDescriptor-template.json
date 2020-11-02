@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "inventory",
-      "version": "10.6",
+      "version": "10.7",
       "handlers": [
         {
           "methods": ["GET"],
@@ -97,6 +97,7 @@
           "permissionsRequired": ["inventory.items.item.post"],
           "modulePermissions": [
             "inventory-storage.items.item.post",
+            "inventory-storage.items.collection.get",
             "inventory-storage.material-types.item.get",
             "inventory-storage.material-types.collection.get",
             "inventory-storage.loan-types.item.get",
@@ -114,6 +115,8 @@
           "pathPattern": "/inventory/items/{id}",
           "permissionsRequired": ["inventory.items.item.put"],
           "modulePermissions": [
+            "inventory-storage.items.item.get",
+            "inventory-storage.items.collection.get",
             "inventory-storage.items.item.put",
             "users.item.get"
           ]
@@ -375,11 +378,11 @@
   "requires": [
     {
       "id": "item-storage",
-      "version": "8.5"
+      "version": "8.6"
     },
     {
       "id": "instance-storage",
-      "version": "7.2"
+      "version": "7.5"
     },
     {
       "id": "instance-storage-batch",

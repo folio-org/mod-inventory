@@ -63,6 +63,7 @@ class ExternalStorageModuleInstanceCollection
       : UUID.randomUUID().toString());
     instanceToSend.put(Instance.HRID_KEY, instance.getHrid());
     includeIfPresent(instanceToSend, Instance.SOURCE_KEY, instance.getSource());
+    instanceToSend.put(Instance.MATCH_KEY_KEY, instance.getMatchKey());
     instanceToSend.put(Instance.TITLE_KEY, instance.getTitle());
     instanceToSend.put(Instance.INDEX_TITLE_KEY, instance.getIndexTitle());
     instanceToSend.put(Instance.ALTERNATIVE_TITLES_KEY, instance.getAlternativeTitles());
@@ -159,6 +160,7 @@ class ExternalStorageModuleInstanceCollection
       instanceFromServer.getString(Instance.SOURCE_KEY),
       instanceFromServer.getString(Instance.TITLE_KEY),
       instanceFromServer.getString(Instance.INSTANCE_TYPE_ID_KEY))
+      .setMatchKey(instanceFromServer.getString(Instance.MATCH_KEY_KEY))
       .setIndexTitle(instanceFromServer.getString(Instance.INDEX_TITLE_KEY))
       .setAlternativeTitles(mappedAlternativeTitles)
       .setEditions(jsonArrayAsListOfStrings(instanceFromServer, Instance.EDITIONS_KEY))
