@@ -1,6 +1,10 @@
 package api.items;
 
 import static api.support.InstanceSamples.smallAngryPlanet;
+import static org.folio.inventory.domain.items.CirculationNote.NOTE_KEY;
+import static org.folio.inventory.domain.items.CirculationNote.NOTE_TYPE_KEY;
+import static org.folio.inventory.domain.items.CirculationNote.STAFF_ONLY_KEY;
+import static org.folio.inventory.domain.items.Item.CIRCULATION_NOTES_KEY;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static support.matchers.ItemMatchers.isMissing;
@@ -41,6 +45,21 @@ public class MarkItemMissingApiTests extends ApiTests {
       .forInstance(instance.getId()));
   }
 
+  @Test
+  public void testMarkItemMissingPreservesCirculationNotes() throws Exception {
+    final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingsRecord.getId())
+      .withCheckInNote()
+      .canCirculate());
+
+    final var itemMissing = markItemMissing(createdItem).getJson();
+    final var itemCirculationNotes = itemMissing.getJsonArray(CIRCULATION_NOTES_KEY);
+    final var checkInNote = itemCirculationNotes.getJsonObject(0);
+
+    assertThat(checkInNote.getString(NOTE_TYPE_KEY), is("Check in"));
+    assertThat(checkInNote.getString(NOTE_KEY), is("Please read this note before checking in the item"));
+    assertThat(checkInNote.getBoolean(STAFF_ONLY_KEY), is(false));
+  }
   @Parameters({
     "In process",
     "Available",
