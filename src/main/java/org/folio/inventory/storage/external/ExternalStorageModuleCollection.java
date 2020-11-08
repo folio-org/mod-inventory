@@ -61,14 +61,9 @@ abstract class ExternalStorageModuleCollection<T> {
         int statusCode = response.statusCode();
 
         if(statusCode == 201) {
+          T created = mapFromJson(new JsonObject(responseBody));
 
-          try {
-            T created = mapFromJson(new JsonObject(responseBody));
-            resultCallback.accept(new Success<>(created));
-          } catch(Exception e) {
-            failureCallback.accept(new Failure(e.getMessage(), 500));
-          }
-
+          resultCallback.accept(new Success<>(created));
         }
         else {
           failureCallback.accept(new Failure(responseBody, statusCode));
@@ -301,18 +296,14 @@ abstract class ExternalStorageModuleCollection<T> {
           List<JsonObject> records = JsonArrayHelper.toList(
             wrappedRecords.getJsonArray(collectionWrapperPropertyName));
 
-          try {
-            List<T> foundRecords = records.stream()
-              .map(this::mapFromJson)
-              .collect(Collectors.toList());
+          List<T> foundRecords = records.stream()
+            .map(this::mapFromJson)
+            .collect(Collectors.toList());
 
-            MultipleRecords<T> result = new MultipleRecords<>(
-              foundRecords, wrappedRecords.getInteger("totalRecords"));
+          MultipleRecords<T> result = new MultipleRecords<>(
+            foundRecords, wrappedRecords.getInteger("totalRecords"));
 
-            resultCallback.accept(new Success<>(result));
-          } catch(Exception e) {
-            failureCallback.accept(new Failure(e.getMessage(), 500));
-          }
+          resultCallback.accept(new Success<>(result));
         }
         else {
           failureCallback.accept(new Failure(responseBody, statusCode));
