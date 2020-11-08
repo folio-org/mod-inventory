@@ -61,9 +61,14 @@ abstract class ExternalStorageModuleCollection<T> {
         int statusCode = response.statusCode();
 
         if(statusCode == 201) {
-          T created = mapFromJson(new JsonObject(responseBody));
 
-          resultCallback.accept(new Success<>(created));
+          try {
+            T created = mapFromJson(new JsonObject(responseBody));
+            resultCallback.accept(new Success<>(created));
+          } catch(Exception e) {
+            failureCallback.accept(new Failure(e.getMessage(), 500));
+          }
+
         }
         else {
           failureCallback.accept(new Failure(responseBody, statusCode));
@@ -94,10 +99,14 @@ abstract class ExternalStorageModuleCollection<T> {
           case 200:
             JsonObject instanceFromServer = new JsonObject(responseBody);
 
-            T found = mapFromJson(instanceFromServer);
-
-            resultCallback.accept(new Success<>(found));
-            break;
+            try {
+              T found = mapFromJson(instanceFromServer);
+              resultCallback.accept(new Success<>(found));
+              break;
+            } catch(Exception e) {
+              failureCallback.accept(new Failure(e.getMessage(), 500));
+              break;
+            }
 
           case 404:
             resultCallback.accept(new Success<>(null));
@@ -292,14 +301,18 @@ abstract class ExternalStorageModuleCollection<T> {
           List<JsonObject> records = JsonArrayHelper.toList(
             wrappedRecords.getJsonArray(collectionWrapperPropertyName));
 
-          List<T> foundRecords = records.stream()
-            .map(this::mapFromJson)
-            .collect(Collectors.toList());
+          try {
+            List<T> foundRecords = records.stream()
+              .map(this::mapFromJson)
+              .collect(Collectors.toList());
 
-          MultipleRecords<T> result = new MultipleRecords<>(
-            foundRecords, wrappedRecords.getInteger("totalRecords"));
+            MultipleRecords<T> result = new MultipleRecords<>(
+              foundRecords, wrappedRecords.getInteger("totalRecords"));
 
-          resultCallback.accept(new Success<>(result));
+            resultCallback.accept(new Success<>(result));
+          } catch(Exception e) {
+            failureCallback.accept(new Failure(e.getMessage(), 500));
+          }
         }
         else {
           failureCallback.accept(new Failure(responseBody, statusCode));
