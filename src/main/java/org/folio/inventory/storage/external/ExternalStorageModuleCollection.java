@@ -61,9 +61,12 @@ abstract class ExternalStorageModuleCollection<T> {
         int statusCode = response.statusCode();
 
         if(statusCode == 201) {
-          T created = mapFromJson(new JsonObject(responseBody));
-
-          resultCallback.accept(new Success<>(created));
+          try {
+            T created = mapFromJson(new JsonObject(responseBody));
+            resultCallback.accept(new Success<>(created));
+          } catch(Exception e) {
+            failureCallback.accept(new Failure(e.getMessage(), 500));
+          }
         }
         else {
           failureCallback.accept(new Failure(responseBody, statusCode));
@@ -291,19 +294,24 @@ abstract class ExternalStorageModuleCollection<T> {
         int statusCode = response.statusCode();
 
         if(statusCode == 200) {
-          JsonObject wrappedRecords = new JsonObject(responseBody);
 
-          List<JsonObject> records = JsonArrayHelper.toList(
-            wrappedRecords.getJsonArray(collectionWrapperPropertyName));
+          try {
+            JsonObject wrappedRecords = new JsonObject(responseBody);
 
-          List<T> foundRecords = records.stream()
-            .map(this::mapFromJson)
-            .collect(Collectors.toList());
+            List<JsonObject> records = JsonArrayHelper.toList(
+              wrappedRecords.getJsonArray(collectionWrapperPropertyName));
 
-          MultipleRecords<T> result = new MultipleRecords<>(
-            foundRecords, wrappedRecords.getInteger("totalRecords"));
+            List<T> foundRecords = records.stream()
+              .map(this::mapFromJson)
+              .collect(Collectors.toList());
 
-          resultCallback.accept(new Success<>(result));
+            MultipleRecords<T> result = new MultipleRecords<>(
+              foundRecords, wrappedRecords.getInteger("totalRecords"));
+
+            resultCallback.accept(new Success<>(result));
+          } catch(Exception e) {
+            failureCallback.accept(new Failure(e.getMessage(), 500));
+          }
         }
         else {
           failureCallback.accept(new Failure(responseBody, statusCode));
