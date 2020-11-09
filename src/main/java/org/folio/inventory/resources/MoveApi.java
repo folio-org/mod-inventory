@@ -4,7 +4,6 @@ import static java.util.stream.Collectors.toList;
 import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
 import static org.folio.inventory.support.http.server.JsonResponse.success;
 import static org.folio.inventory.support.http.server.JsonResponse.unprocessableEntity;
-import static org.folio.inventory.support.http.server.ServerErrorResponse.internalError;
 import static org.folio.inventory.validation.MoveValidator.holdingsMoveHasRequiredFields;
 import static org.folio.inventory.validation.MoveValidator.itemsMoveHasRequiredFields;
 
@@ -92,19 +91,19 @@ public class MoveApi extends AbstractInventoryResource {
                 updateItems(routingContext, context, itemIdsToUpdate, itemsToUpdate);
               })
               .exceptionally(e -> {
-                internalError(routingContext.response(), e);
+                ServerErrorResponse.internalError(routingContext.response(), e);
                 return null;
               });
           } catch (Exception e) {
-            internalError(routingContext.response(), e);
+            ServerErrorResponse.internalError(routingContext.response(), e);
           }
         } else {
-          unprocessableEntity(routingContext.response(),
+          JsonResponse.unprocessableEntity(routingContext.response(),
               String.format("Holding with id=%s not found", toHoldingsRecordId));
         }
       })
     .exceptionally(e -> {
-      internalError(routingContext.response(), e);
+      ServerErrorResponse.internalError(routingContext.response(), e);
       return null;
     });
   }
@@ -139,15 +138,15 @@ public class MoveApi extends AbstractInventoryResource {
               updateHoldings(routingContext, context, holdingsRecordsIdsToUpdate, holdingsRecordsToUpdate);
             })
             .exceptionally(e -> {
-              internalError(routingContext.response(), e);
+              ServerErrorResponse.internalError(routingContext.response(), e);
               return null;
             });
         } catch (Exception e) {
-          internalError(routingContext.response(), e);
+          ServerErrorResponse.internalError(routingContext.response(), e);
         }
       })
       .exceptionally(e -> {
-        internalError(routingContext.response(), e);
+        ServerErrorResponse.internalError(routingContext.response(), e);
         return null;
       });
   }
@@ -210,7 +209,7 @@ public class MoveApi extends AbstractInventoryResource {
   }
 
   private OkapiHttpClient createHttpClient(RoutingContext routingContext, WebContext context) throws MalformedURLException {
-    return new OkapiHttpClient(client, context, exception -> internalError(routingContext.response(),
+    return new OkapiHttpClient(client, context, exception -> ServerErrorResponse.internalError(routingContext.response(),
         String.format("Failed to contact storage module: %s", exception.toString())));
   }
 
