@@ -287,6 +287,11 @@
       "type": "object",
       "$ref": "./raml-util/schemas/tags.schema"
     },
+    "sourceId": {
+      "description": "UUID of the holdings records source",
+      "type": "string",
+      "$ref": "uuid.json"
+    },
     "metadata": {
       "type": "object",
       "$ref": "./raml-util/schemas/metadata.schema",
