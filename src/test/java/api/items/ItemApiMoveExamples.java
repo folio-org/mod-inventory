@@ -3,6 +3,7 @@ package api.items;
 import static api.ApiTestSuite.ID_FOR_FAILURE;
 import static api.support.InstanceSamples.smallAngryPlanet;
 import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
+import static org.folio.inventory.support.http.ContentType.TEXT_PLAIN;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
@@ -18,6 +19,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import api.ApiTestSuite;
+import api.support.builders.AbstractBuilder;
 import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
@@ -185,6 +188,33 @@ public class ItemApiMoveExamples extends ApiTests {
   }
 
   @Test
+  public void cannotMoveDueToHoldingsRecordSchemasMismatching()
+    throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException, IllegalAccessException {
+
+    UUID instanceId = UUID.randomUUID();
+    InstanceApiClient.createInstance(okapiClient, smallAngryPlanet(instanceId));
+
+    final UUID existedHoldingId = createHoldingForInstance(instanceId);
+    final UUID newHoldingId = createNonCompatibleHoldingForInstance(instanceId);
+
+    Assert.assertNotEquals(existedHoldingId, newHoldingId);
+
+    final IndividualResource createItem = itemsClient.create(new ItemRequestBuilder().forHolding(existedHoldingId)
+      .withBarcode("645398607547")
+      .withStatus(ItemStatusName.AVAILABLE.value()));
+
+    JsonObject itemsMoveRequestBody = new ItemsMoveRequestBuilder(newHoldingId,
+      new JsonArray(Collections.singletonList(createItem.getId()))).create();
+
+    Response postMoveItemsResponse = moveItems(itemsMoveRequestBody);
+
+    assertThat(postMoveItemsResponse.getStatusCode(), is(500));
+    assertThat(postMoveItemsResponse.getContentType(), containsString(TEXT_PLAIN));
+
+    assertThat(postMoveItemsResponse.getBody(), containsString("Can`t map json to 'Holdingsrecord' entity"));
+  }
+
+  @Test
   public void canMoveItemsDueToItemUpdateError() throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
 
     UUID instanceId = UUID.randomUUID();
@@ -238,5 +268,46 @@ public class ItemApiMoveExamples extends ApiTests {
       throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
     return holdingsStorageClient.create(new HoldingRequestBuilder().forInstance(instanceId))
       .getId();
+  }
+
+  private UUID createNonCompatibleHoldingForInstance(UUID instanceId)
+    throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+    AbstractBuilder builder = new InvalidHoldingRequestBuilder().forInstance(instanceId);
+    return holdingsStorageClient.create(builder).getId();
+  }
+
+  private static class InvalidHoldingRequestBuilder extends AbstractBuilder {
+
+    private final UUID instanceId;
+    private final UUID permanentLocationId;
+
+    InvalidHoldingRequestBuilder() {
+      this(null, UUID.fromString(ApiTestSuite.getThirdFloorLocation()));
+    }
+
+    InvalidHoldingRequestBuilder(
+      UUID instanceId,
+      UUID permanentLocationId) {
+      this.instanceId = instanceId;
+      this.permanentLocationId = permanentLocationId;
+    }
+
+    public InvalidHoldingRequestBuilder forInstance(UUID instanceId) {
+      return new InvalidHoldingRequestBuilder(
+        instanceId,
+        this.permanentLocationId);
+    }
+
+    @Override
+    public JsonObject create() {
+      JsonObject holding = new JsonObject();
+
+      holding.put("instanceId", instanceId.toString())
+        .put("permanentLocationId", permanentLocationId.toString());
+
+      holding.put("unspecified", "unspecified");
+
+      return holding;
+    }
   }
 }

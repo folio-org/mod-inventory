@@ -1,3 +1,7 @@
+## 16.1.2 2020-11-12
+
+* MODINV-357 - Can't move item between holdings on a single instance (MODINV-357)
+
 ## 16.1.1 2020-11-12
 
 * Check in and check out notes are retained when marking an item missing (MODINV-355)
@@ -13,7 +17,7 @@
 * Restricts item status transitions during import (MODINV-296)
 * Fixes instance statistical code and nature of content import issues (MODINV-336)
 * Fixes problem with the repeatable check in/out notes field mapping actions (MODINV-346)
-* Saves source record state during quick MARC edit (MODINV-324) 
+* Saves source record state during quick MARC edit (MODINV-324)
 * Requires JDK 11 (MODINV-335)
 * Provides `inventory 10.7`
 * Requires `item-storage 8.6`
