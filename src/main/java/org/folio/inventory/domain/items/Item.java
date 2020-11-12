@@ -508,7 +508,8 @@ public class Item {
       .withElectronicAccess(this.electronicAccess)
       .withStatisticalCodeIds(this.statisticalCodeIds)
       .withPurchaseOrderLineidentifier(purchaseOrderLineidentifier)
-      .withTags(tags);
+      .withTags(tags)
+      .withCirculationNotes(circulationNotes);
   }
 
   @Override
