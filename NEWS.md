@@ -1,3 +1,7 @@
+## 16.1.1 2020-11-12
+
+* Check in and check out notes are retained when marking an item missing (MODINV-355)
+
 ## 16.1.0 2020-10-09
 
 * Provides the ability to move items between holdings (MODINV-309)
