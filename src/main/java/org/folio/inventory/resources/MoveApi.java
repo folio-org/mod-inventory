@@ -101,7 +101,11 @@ public class MoveApi extends AbstractInventoryResource {
           JsonResponse.unprocessableEntity(routingContext.response(),
               String.format("Holding with id=%s not found", toHoldingsRecordId));
         }
-      });
+      })
+    .exceptionally(e -> {
+      ServerErrorResponse.internalError(routingContext.response(), e);
+      return null;
+    });
   }
 
   private void moveHoldings(RoutingContext routingContext) {
@@ -140,6 +144,10 @@ public class MoveApi extends AbstractInventoryResource {
         } catch (Exception e) {
           ServerErrorResponse.internalError(routingContext.response(), e);
         }
+      })
+      .exceptionally(e -> {
+        ServerErrorResponse.internalError(routingContext.response(), e);
+        return null;
       });
   }
 

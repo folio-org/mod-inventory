@@ -94,10 +94,14 @@ abstract class ExternalStorageModuleCollection<T> {
           case 200:
             JsonObject instanceFromServer = new JsonObject(responseBody);
 
-            T found = mapFromJson(instanceFromServer);
-
-            resultCallback.accept(new Success<>(found));
-            break;
+            try {
+              T found = mapFromJson(instanceFromServer);
+              resultCallback.accept(new Success<>(found));
+              break;
+            } catch(Exception e) {
+              failureCallback.accept(new Failure(e.getMessage(), 500));
+              break;
+            }
 
           case 404:
             resultCallback.accept(new Success<>(null));
