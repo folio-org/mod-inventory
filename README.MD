@@ -54,6 +54,15 @@ In order to build an executable Jar (e.g. for Okapi to deploy), run `mvn package
 
 # Running
 
+## Port
+
+When running the jar file the module looks for the `http.port` and `port`
+system property variables in this order, and uses the default 9403 as fallback. Example:
+
+`java -Dhttp.port=8008 -jar target/mod-inventory.jar`
+
+The Docker container exposes port 9403.
+
 ## Preparation
 
 ### Running Okapi

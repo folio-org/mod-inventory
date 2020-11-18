@@ -25,7 +25,8 @@ public class Launcher {
 
     Map<String, Object> config = new HashMap<>();
 
-    Integer port = Integer.getInteger("port", 9403);
+    String portString = System.getProperty("http.port", System.getProperty("port", "9403"));
+    Integer port = Integer.valueOf(portString);
 
     String storageType = System.getProperty(
       "org.folio.metadata.inventory.storage.type", null);
