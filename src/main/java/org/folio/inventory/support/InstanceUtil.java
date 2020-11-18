@@ -25,6 +25,10 @@ public class InstanceUtil {
 
   private static final String STATISTICAL_CODE_IDS_PROPERTY = "statisticalCodeIds";
   private static final String NATURE_OF_CONTENT_TERM_IDS_PROPERTY = "natureOfContentTermIds";
+  private static final String PARENT_INSTANCES_PROPERTY = "parentInstances";
+  private static final String CHILDREN_INSTANCES_PROPERTY = "childInstances";
+
+
 
   private InstanceUtil() {
 
@@ -213,12 +217,16 @@ public class InstanceUtil {
   }
 
   public static JsonObject mergeInstances(JsonObject existing, JsonObject mapped) {
-    //Statistical code and nature of content terms don`t revealed via mergeIn() because of simple array type.
+    //Statistical code, nature of content terms, parent/childInstances don`t revealed via mergeIn() because of simple array type.
     JsonArray statisticalCodeIds = existing.getJsonArray(STATISTICAL_CODE_IDS_PROPERTY);
     JsonArray natureOfContentTermIds = existing.getJsonArray(NATURE_OF_CONTENT_TERM_IDS_PROPERTY);
+    JsonArray parents = existing.getJsonArray(PARENT_INSTANCES_PROPERTY);
+    JsonArray children = existing.getJsonArray(CHILDREN_INSTANCES_PROPERTY);
     JsonObject mergedInstanceAsJson = existing.mergeIn(mapped);
     mergedInstanceAsJson.put(STATISTICAL_CODE_IDS_PROPERTY, statisticalCodeIds);
     mergedInstanceAsJson.put(NATURE_OF_CONTENT_TERM_IDS_PROPERTY, natureOfContentTermIds);
+    mergedInstanceAsJson.put(PARENT_INSTANCES_PROPERTY, parents);
+    mergedInstanceAsJson.put(CHILDREN_INSTANCES_PROPERTY, children);
     return mergedInstanceAsJson;
   }
 }
