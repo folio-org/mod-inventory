@@ -1,6 +1,7 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
@@ -64,7 +65,11 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       Instance instanceToUpdate = InstanceUtil.jsonToInstance(new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value())));
 
       prepareEvent(dataImportEventPayload);
-      defaultMapRecordToInstance(dataImportEventPayload);
+
+      org.folio.Instance mapped =  defaultMapRecordToInstance(dataImportEventPayload);
+      Instance mergedInstance = InstanceUtil.mergeFieldsWhichAreNotControlled(instanceToUpdate, mapped);
+      dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(new JsonObject().put(INSTANCE_PATH, JsonObject.mapFrom(mergedInstance))));
+
       MappingManager.map(dataImportEventPayload);
       JsonObject instanceAsJson = new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value()));
       if (instanceAsJson.getJsonObject(INSTANCE_PATH) != null) {

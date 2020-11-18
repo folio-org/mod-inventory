@@ -26,8 +26,6 @@ public class InstanceUpdateDelegate {
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
   private static final String MARC_FORMAT = "MARC";
-  private static final String STATISTICAL_CODE_IDS_PROPERTY = "statisticalCodeIds";
-  private static final String NATURE_OF_CONTENT_TERM_IDS_PROPERTY = "natureOfContentTermIds";
 
   private Storage storage;
 
@@ -79,7 +77,7 @@ public class InstanceUpdateDelegate {
       mappedInstance.setId(existingInstance.getId());
       JsonObject existing = JsonObject.mapFrom(existingInstance);
       JsonObject mapped = JsonObject.mapFrom(mappedInstance);
-      JsonObject mergedInstanceAsJson = mergeInstances(existing, mapped);
+      JsonObject mergedInstanceAsJson = InstanceUtil.mergeInstances(existing, mapped);
       Instance mergedInstance = InstanceUtil.jsonToInstance(mergedInstanceAsJson);
       future.complete(mergedInstance);
     } catch (Exception e) {
@@ -89,15 +87,6 @@ public class InstanceUpdateDelegate {
     return future;
   }
 
-  private JsonObject mergeInstances(JsonObject existing, JsonObject mapped) {
-    //Statistical code and nature of content terms don`t revealed via mergeIn() because of simple array type.
-    JsonArray statisticalCodeIds = existing.getJsonArray(STATISTICAL_CODE_IDS_PROPERTY);
-    JsonArray natureOfContentTermIds = existing.getJsonArray(NATURE_OF_CONTENT_TERM_IDS_PROPERTY);
-    JsonObject mergedInstanceAsJson = existing.mergeIn(mapped);
-    mergedInstanceAsJson.put(STATISTICAL_CODE_IDS_PROPERTY, statisticalCodeIds);
-    mergedInstanceAsJson.put(NATURE_OF_CONTENT_TERM_IDS_PROPERTY, natureOfContentTermIds);
-    return mergedInstanceAsJson;
-  }
 
   private Future<Instance> updateInstanceInStorage(Instance instance, InstanceCollection instanceCollection) {
     Future<Instance> future = Future.future();
