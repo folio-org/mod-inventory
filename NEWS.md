@@ -1,3 +1,7 @@
+## 16.1.3 2020-11-20
+
+* Fix repeatable field actions for Instances (MODINV-367)
+
 ## 16.1.2 2020-11-12
 
 * MODINV-357 - Can't move item between holdings on a single instance (MODINV-357)
