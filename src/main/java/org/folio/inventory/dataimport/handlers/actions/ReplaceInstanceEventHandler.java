@@ -102,7 +102,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         updateInstance(mappedInstance, instanceCollection)
           .compose(ar -> deletePrecedingSucceedingTitles(precedingSucceedingIds, precedingSucceedingTitlesRepository))
           .compose(ar -> createPrecedingSucceedingTitles(mappedInstance, precedingSucceedingTitlesRepository))
-          .setHandler(ar -> {
+          .onComplete(ar -> {
             if (ar.succeeded()) {
               dataImportEventPayload.getContext().put(INSTANCE.value(), finalInstanceAsJson.encode());
               dataImportEventPayload.setEventType(DI_INVENTORY_INSTANCE_UPDATED.value());

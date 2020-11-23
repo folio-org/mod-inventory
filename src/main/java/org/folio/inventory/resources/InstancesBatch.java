@@ -9,6 +9,7 @@ import static org.folio.inventory.validation.InstancePrecedingSucceedingTitleVal
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonArray;
@@ -83,7 +84,7 @@ public class InstancesBatch extends AbstractInstances {
 
           if (!createdInstances.isEmpty()) {
             updateRelatedRecords(validInstances, createdInstances, routingContext, webContext).
-              setHandler(ar -> {
+              onComplete(ar -> {
                 JsonObject responseBody = getBatchResponse(createdInstances, errorMessages, webContext);
                 RedirectResponse.created(routingContext.response(), Buffer.buffer(responseBody.encodePrettily()));
               });
@@ -200,7 +201,7 @@ public class InstancesBatch extends AbstractInstances {
   private Future<CompositeFuture> updateRelatedRecords(List<JsonObject> newInstances, List<Instance> createdInstances,
     RoutingContext routingContext, WebContext webContext) {
 
-    Future<CompositeFuture> resultFuture = Future.future();
+    Promise<CompositeFuture> resultFuture = Promise.promise();
     try {
       Map<String, Instance> mapInstanceById = newInstances.stream()
         .collect(Collectors.toMap(instance -> instance.getString("id"), InstanceUtil::jsonToInstance));
@@ -213,8 +214,8 @@ public class InstancesBatch extends AbstractInstances {
           createdInstance.setChildInstances(newInstance.getChildInstances());
           createdInstance.setPrecedingTitles(newInstance.getPrecedingTitles());
           createdInstance.setSucceedingTitles(newInstance.getSucceedingTitles());
-          Future updateFuture = Future.future();
-          updateRelationshipsFutures.add(updateFuture);
+          Promise updateFuture = Promise.promise();
+          updateRelationshipsFutures.add(updateFuture.future());
           updateRelatedRecords(routingContext, webContext, createdInstance)
             .whenComplete((result, ex) -> {
               if (ex == null) {
@@ -226,11 +227,11 @@ public class InstancesBatch extends AbstractInstances {
             });
         }
       }
-      CompositeFuture.join(updateRelationshipsFutures).setHandler(resultFuture);
+      CompositeFuture.join(updateRelationshipsFutures).onComplete(resultFuture);
     } catch (IllegalStateException e) {
       log.error("Can not update instances relationships cause: " + e);
       resultFuture.fail(e);
     }
-    return resultFuture;
+    return resultFuture.future();
   }
 }

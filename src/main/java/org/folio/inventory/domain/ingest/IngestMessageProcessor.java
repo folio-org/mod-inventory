@@ -124,18 +124,14 @@ public class IngestMessageProcessor {
                 StringUtils.equals(instance.getTitle(), record.getString(TITLE_PROPERTY)))
               .findFirst();
 
-            String instanceId = possibleInstance.isPresent()
-              ? possibleInstance.get().getId()
-              : null;
+            String instanceId = possibleInstance.map(Instance::getId).orElse(null);
 
             Optional<Holding> possibleHolding = holdings.stream()
               .filter(holding ->
                 StringUtils.equals(instanceId, holding.instanceId))
               .findFirst();
 
-            String holdingId = possibleHolding.isPresent()
-              ? possibleHolding.get().id
-              : null;
+            String holdingId = possibleHolding.map(holding -> holding.id).orElse(null);
 
             return new Item(null,
               holdingId,

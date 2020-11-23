@@ -1,3 +1,6 @@
+## 6.2.0-SNAPSHOT 2020-11-23
+* [MODINV-331](https://issues.folio.org/browse/MODINV-331) Upgrade to Vertx v3.9.4 (CVE-2019-17640)
+
 ## 16.1.0 2020-10-12
 
 * Provides the ability to move items between holdings (MODINV-309)
@@ -9,7 +12,7 @@
 * Restricts item status transitions during import (MODINV-296)
 * Fixes instance statistical code and nature of content import issues (MODINV-336)
 * Fixes problem with the repeatable check in/out notes field mapping actions (MODINV-346)
-* Saves source record state during quick MARC edit (MODINV-324) 
+* Saves source record state during quick MARC edit (MODINV-324)
 * Requires JDK 11 (MODINV-335)
 * Provides `inventory 10.7`
 * Requires `item-storage 8.6`

@@ -2,6 +2,7 @@ package support.fakes;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.Router;
 import support.fakes.processors.StorageConstraintsProcessors;
@@ -18,7 +19,7 @@ public class FakeOkapi extends AbstractVerticle {
     return address;
   }
 
-  public void start(Future<Void> startFuture) {
+  public void start(Promise<Void> startFuture) {
     System.out.println("Starting fake modules");
 
     Router router = Router.router(vertx);
@@ -39,11 +40,10 @@ public class FakeOkapi extends AbstractVerticle {
     registerFakePubSubModule(router);
     registerFakeRequestsModule(router);
 
-    server.requestHandler(router::accept)
+    server.requestHandler(router)
       .listen(PORT_TO_USE, result -> {
         if (result.succeeded()) {
-          System.out.println(
-            String.format("Fake Okapi listening on %s", server.actualPort()));
+          System.out.printf("Fake Okapi listening on %s%n", server.actualPort());
           startFuture.complete();
         } else {
           startFuture.fail(result.cause());
@@ -51,14 +51,13 @@ public class FakeOkapi extends AbstractVerticle {
       });
   }
 
-  public void stop(Future<Void> stopFuture) {
+  public void stop(Promise<Void> stopFuture) {
     System.out.println("Stopping fake modules");
 
-    if(server != null) {
+    if (server != null) {
       server.close(result -> {
         if (result.succeeded()) {
-          System.out.println(
-            String.format("Stopped listening on %s", server.actualPort()));
+          System.out.printf("Stopped listening on %s%n", server.actualPort());
           stopFuture.complete();
         } else {
           stopFuture.fail(result.cause());

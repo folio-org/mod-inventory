@@ -78,7 +78,7 @@ public class CollectionResourceClient {
   }
 
   private boolean isProvided(String query) {
-    return query != null && query.trim() != "";
+    return query != null && !query.trim().equals("");
   }
 
   private Handler<HttpClientResponse> responseConversationHandler(

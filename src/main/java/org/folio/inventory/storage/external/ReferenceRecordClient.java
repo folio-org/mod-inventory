@@ -4,8 +4,8 @@ import io.vertx.core.json.JsonObject;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.Response;
 
-import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -21,8 +21,7 @@ public class ReferenceRecordClient {
     this.collectionWrappingProperty = collectionWrappingProperty;
   }
 
-  public CompletableFuture<ReferenceRecord> getRecord(String name)
-    throws UnsupportedEncodingException {
+  public CompletableFuture<ReferenceRecord> getRecord(String name) {
 
     String query = getReferenceRecordQuery(name);
 
@@ -43,7 +42,7 @@ public class ReferenceRecordClient {
         List<JsonObject> records = JsonArrayHelper.toList(
           response.getJson().getJsonArray(collectionWrappingProperty));
 
-        if(!records.isEmpty() && records.stream().findFirst().isPresent()) {
+        if(!records.isEmpty()) {
           JsonObject referenceRecord = records.stream().findFirst().get();
 
           overallFuture.complete(new ReferenceRecord(
@@ -68,13 +67,12 @@ public class ReferenceRecordClient {
     return overallFuture;
   }
 
-  private static String getReferenceRecordQuery(String name)
-    throws UnsupportedEncodingException {
+  private static String getReferenceRecordQuery(String name) {
 
-    return "query=" + URLEncoder.encode(String.format("name==\"%s\"", name), "UTF-8");
+    return "query=" + URLEncoder.encode(String.format("name==\"%s\"", name), StandardCharsets.UTF_8);
   }
 
-  public class ReferenceRecordClientException extends Exception {
+  public static class ReferenceRecordClientException extends Exception {
     private ReferenceRecordClientException(String message) {
       super(message);
     }

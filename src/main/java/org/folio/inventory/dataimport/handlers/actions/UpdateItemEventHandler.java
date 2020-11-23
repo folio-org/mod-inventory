@@ -1,6 +1,7 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -57,7 +58,7 @@ public class UpdateItemEventHandler implements EventHandler {
   private final List<String> requiredFields = Arrays.asList("status.name", "materialType.id", "permanentLoanType.id", "holdingsRecordId");
   private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").withZone(ZoneOffset.UTC);
 
-  private Storage storage;
+  private final Storage storage;
 
   public UpdateItemEventHandler(Storage storage) {
     this.storage = storage;
@@ -101,7 +102,7 @@ public class UpdateItemEventHandler implements EventHandler {
       Item itemToUpdate = ItemUtil.jsonToItem(mappedItemAsJson);
       verifyItemBarcodeUniqueness(itemToUpdate, itemCollection)
         .compose(v -> updateItem(itemToUpdate, itemCollection))
-        .setHandler(updateAr -> {
+        .onComplete(updateAr -> {
           if (updateAr.succeeded()) {
             if(protectedStatusChanged) {
               String msg = String.format(STATUS_UPDATE_ERROR_MSG, oldItemStatus, newItemStatus);
@@ -165,7 +166,7 @@ public class UpdateItemEventHandler implements EventHandler {
   }
 
   private Future<Boolean> verifyItemBarcodeUniqueness(Item item, ItemCollection itemCollection) throws UnsupportedEncodingException {
-    Future<Boolean> future = Future.future();
+    Promise<Boolean> future = Promise.promise();
     itemCollection.findByCql(CqlHelper.barcodeIs(item.getBarcode()) + " AND id <> " + item.id, PagingParameters.defaults(),
       findResult -> {
         if (findResult.getResult().records.isEmpty()) {
@@ -175,11 +176,11 @@ public class UpdateItemEventHandler implements EventHandler {
         }
       },
       failure -> future.fail(failure.getReason()));
-    return future;
+    return future.future();
   }
 
   private Future<Item> updateItem(Item item, ItemCollection itemCollection) {
-    Future<Item> future = Future.future();
+    Promise<Item> future = Promise.promise();
     item.getCirculationNotes().forEach(note -> note
       .withId(UUID.randomUUID().toString())
       .withSource(null)
@@ -192,6 +193,6 @@ public class UpdateItemEventHandler implements EventHandler {
       }
       future.complete(updatedItem);
     });
-    return future;
+    return future.future();
   }
 }

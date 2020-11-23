@@ -81,7 +81,7 @@ public class MatchInstanceEventHandlerUnitTest {
   @Mock
   private MarcValueReaderImpl marcValueReader;
   @InjectMocks
-  private InstanceLoader instanceLoader = new InstanceLoader(storage, Vertx.vertx());
+  private final InstanceLoader instanceLoader = new InstanceLoader(storage, Vertx.vertx());
 
   @Before
   public void setUp() {

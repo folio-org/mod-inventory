@@ -1,6 +1,7 @@
 package org.folio.inventory.dataimport.util;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import org.folio.processing.events.utils.ZIPArchiver;
@@ -27,7 +28,7 @@ public final class EventHandlingUtil {
    * @return completed future with true if event was sent successfully
    */
   public static Future<Boolean> sendEventWithPayload(String eventPayload, String eventType, OkapiConnectionParams params) {
-    Future<Boolean> promise = Future.future();
+    Promise<Boolean> promise = Promise.promise();
     try {
       Event event = new Event()
         .withId(UUID.randomUUID().toString())
@@ -51,6 +52,6 @@ public final class EventHandlingUtil {
       LOGGER.error("Failed to send {} event to mod-pubsub", e, eventType);
       promise.fail(e);
     }
-    return promise;
+    return promise.future();
   }
 }

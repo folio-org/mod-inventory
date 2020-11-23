@@ -25,8 +25,8 @@ public class UpdateInstanceEventHandler {
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
   private static final String DI_INDICATOR = "DI";
 
-  private Context context;
-  private InstanceUpdateDelegate instanceUpdateDelegate;
+  private final Context context;
+  private final InstanceUpdateDelegate instanceUpdateDelegate;
 
   public UpdateInstanceEventHandler(InstanceUpdateDelegate updateInstanceDelegate, Context context) {
     this.context = context;
@@ -45,15 +45,15 @@ public class UpdateInstanceEventHandler {
 
       Record marcRecord = new JsonObject(eventPayload.get(MARC_KEY)).mapTo(Record.class);
       instanceUpdateDelegate.handle(eventPayload, marcRecord, context)
-        .setHandler(ar -> {
+        .onComplete(ar -> {
           if (isEmpty(eventPayload.get((DI_INDICATOR)))) {
             OkapiConnectionParams params = new OkapiConnectionParams(requestHeaders, vertx);
             if (ar.succeeded()) {
               sendEventWithPayload(Json.encode(eventPayload), "QM_INVENTORY_INSTANCE_UPDATED", params)
-                .setHandler(v -> future.complete(ar.result()));
+                .onComplete(v -> future.complete(ar.result()));
             } else {
               sendEventWithPayload(Json.encode(eventPayload), "QM_ERROR", params)
-                .setHandler(v -> future.completeExceptionally(ar.cause()));
+                .onComplete(v -> future.completeExceptionally(ar.cause()));
             }
           }
         });
