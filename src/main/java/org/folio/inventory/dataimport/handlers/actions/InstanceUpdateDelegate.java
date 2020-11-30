@@ -34,7 +34,6 @@ public class InstanceUpdateDelegate {
   }
 
   public Future<Instance> handle(Map<String, String> eventPayload, Record marcRecord, Context context) {
-    Promise<Instance> promise = Promise.promise();
     try {
       JsonObject mappingRules = new JsonObject(eventPayload.get(MAPPING_RULES_KEY));
       MappingParameters mappingParameters = new JsonObject(eventPayload.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
@@ -44,15 +43,13 @@ public class InstanceUpdateDelegate {
       org.folio.Instance mappedInstance = RecordToInstanceMapperBuilder.buildMapper(MARC_FORMAT).mapRecord(parsedRecord, mappingParameters, mappingRules);
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
 
-      getInstanceById(instanceId, instanceCollection)
+      return getInstanceById(instanceId, instanceCollection)
         .compose(existingInstance -> updateInstance(existingInstance, mappedInstance))
-        .compose(updatedInstance -> updateInstanceInStorage(updatedInstance, instanceCollection))
-        .onComplete(promise);
+        .compose(updatedInstance -> updateInstanceInStorage(updatedInstance, instanceCollection));
     } catch (Exception e) {
       LOGGER.error("Error updating inventory instance", e);
-      promise.fail(e);
+      return Future.failedFuture(e);
     }
-    return promise.future();
   }
 
   private JsonObject retrieveParsedContent(ParsedRecord parsedRecord) {

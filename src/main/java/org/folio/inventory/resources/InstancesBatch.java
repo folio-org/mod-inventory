@@ -193,15 +193,14 @@ public class InstancesBatch extends AbstractInstances {
 
   /**
    * Updates relationships for specified created instances.
-   * @param newInstances the new instances containing relationship arrays to persist.
+   *
+   * @param newInstances     the new instances containing relationship arrays to persist.
    * @param createdInstances instances from storage whose relationships will be updated.
-   * @param routingContext routingContext
-   * @param webContext webContext
+   * @param routingContext   routingContext
+   * @param webContext       webContext
    */
   private Future<CompositeFuture> updateRelatedRecords(List<JsonObject> newInstances, List<Instance> createdInstances,
-    RoutingContext routingContext, WebContext webContext) {
-
-    Promise<CompositeFuture> resultPromise = Promise.promise();
+                                                       RoutingContext routingContext, WebContext webContext) {
     try {
       Map<String, Instance> mapInstanceById = newInstances.stream()
         .collect(Collectors.toMap(instance -> instance.getString("id"), InstanceUtil::jsonToInstance));
@@ -214,7 +213,7 @@ public class InstancesBatch extends AbstractInstances {
           createdInstance.setChildInstances(newInstance.getChildInstances());
           createdInstance.setPrecedingTitles(newInstance.getPrecedingTitles());
           createdInstance.setSucceedingTitles(newInstance.getSucceedingTitles());
-          Promise updatePromise = Promise.promise();
+          Promise<Void> updatePromise = Promise.promise();
           updateRelationshipsFutures.add(updatePromise.future());
           updateRelatedRecords(routingContext, webContext, createdInstance)
             .whenComplete((result, ex) -> {
@@ -227,11 +226,10 @@ public class InstancesBatch extends AbstractInstances {
             });
         }
       }
-      CompositeFuture.join(updateRelationshipsFutures).onComplete(resultPromise);
+      return CompositeFuture.join(updateRelationshipsFutures);
     } catch (IllegalStateException e) {
       log.error("Can not update instances relationships cause: " + e);
-      resultPromise.fail(e);
+      return Future.failedFuture(e);
     }
-    return resultPromise.future();
   }
 }
