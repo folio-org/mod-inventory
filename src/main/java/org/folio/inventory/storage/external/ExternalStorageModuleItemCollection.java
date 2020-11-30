@@ -12,7 +12,7 @@ class ExternalStorageModuleItemCollection extends ExternalStorageModuleCollectio
 
   ExternalStorageModuleItemCollection(Vertx vertx, String baseAddress, String tenant, String token, HttpClient client) {
 
-    super(vertx, String.format("%s/%s", baseAddress, "item-storage/items"), tenant, token, "items", client);
+    super(String.format("%s/%s", baseAddress, "item-storage/items"), tenant, token, "items", client);
   }
 
   @Override

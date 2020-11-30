@@ -1,6 +1,7 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
@@ -48,7 +49,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   protected HttpClient client;
 
   protected Future<Void> createPrecedingSucceedingTitles(Instance instance, CollectionResourceRepository precedingSucceedingTitlesRepository) {
-    Future<Void> future = Future.future();
+    Promise<Void> promise = Promise.promise();
     List<PrecedingSucceedingTitle> precedingSucceedingTitles = new ArrayList<>();
     preparePrecedingTitles(instance, precedingSucceedingTitles);
     prepareSucceedingTitles(instance, precedingSucceedingTitles);
@@ -58,28 +59,28 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     CompletableFuture.allOf(postFutures.toArray(new CompletableFuture<?>[]{}))
       .whenComplete((v, e) -> {
         if (e != null) {
-          future.fail(e);
+          promise.fail(e);
           return;
         }
-        future.complete();
+        promise.complete();
       });
-    return future;
+    return promise.future();
   }
 
   protected Future<Void> deletePrecedingSucceedingTitles(Set<String> ids, CollectionResourceRepository precedingSucceedingTitlesRepository) {
-    Future<Void> future = Future.future();
+    Promise<Void> promise = Promise.promise();
     List<CompletableFuture<Response>> deleteFutures = new ArrayList<>();
 
     ids.forEach(id -> deleteFutures.add(precedingSucceedingTitlesRepository.delete(id)));
     CompletableFuture.allOf(deleteFutures.toArray(new CompletableFuture<?>[]{}))
       .whenComplete((v, e) -> {
         if (e != null) {
-          future.fail(e);
+          promise.fail(e);
           return;
         }
-        future.complete();
+        promise.complete();
       });
-    return future;
+    return promise.future();
   }
 
   private void preparePrecedingTitles(Instance instance, List<PrecedingSucceedingTitle> preparedTitles) {
@@ -149,12 +150,12 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   }
 
   protected Future<Void> updateInstance(Instance instance, InstanceCollection instanceCollection) {
-    Future<Void> future = Future.future();
-    instanceCollection.update(instance, success -> future.complete(),
+    Promise<Void> promise = Promise.promise();
+    instanceCollection.update(instance, success -> promise.complete(),
       failure -> {
         LOGGER.error("Error updating Instance cause %s, status code %s", failure.getReason(), failure.getStatusCode());
-        future.fail(failure.getReason());
+        promise.fail(failure.getReason());
       });
-    return future;
+    return promise.future();
   }
 }

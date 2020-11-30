@@ -57,7 +57,7 @@ public class MoveItemIntoStatusService {
   private CompletableFuture<Item> updateRequestStatusIfRequired(Item item) {
     return requestRepository.getRequestInFulfilmentForItem(item.id)
       .thenCompose(requestOptional -> {
-        if (!requestOptional.isPresent() || requestIsExpiredOnHoldShelf(requestOptional.get())) {
+        if (requestOptional.isEmpty() || requestIsExpiredOnHoldShelf(requestOptional.get())) {
           log.debug("No request in fulfillment or it is expired");
           return completedFuture(item);
         }

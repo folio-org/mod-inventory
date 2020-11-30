@@ -21,9 +21,7 @@ public class JsonMessage {
   public void send(EventBus eventBus) {
     final DeliveryOptions options = new DeliveryOptions();
 
-    headers.forEach((key, value) -> {
-      options.addHeader(key.toString(), value.toString());
-    });
+    headers.forEach((key, value) -> options.addHeader(key.toString(), value.toString()));
 
     eventBus.send(address, body, options);
   }

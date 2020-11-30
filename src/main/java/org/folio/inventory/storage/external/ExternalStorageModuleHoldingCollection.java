@@ -18,7 +18,7 @@ class ExternalStorageModuleHoldingCollection
                                          String token,
                                          HttpClient client) {
 
-    super(vertx, String.format("%s/%s", baseAddress, "holdings-storage/holdings"),
+    super(String.format("%s/%s", baseAddress, "holdings-storage/holdings"),
       tenant, token, "holdingsRecords", client);
   }
 

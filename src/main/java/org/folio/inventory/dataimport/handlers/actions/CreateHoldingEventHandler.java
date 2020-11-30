@@ -46,7 +46,7 @@ public class CreateHoldingEventHandler implements EventHandler {
   private static final String PAYLOAD_DATA_HAS_NO_INSTANCE_ID_ERROR_MSG = "Failed to extract instanceId from instance entity or parsed record";
 
 
-  private Storage storage;
+  private final Storage storage;
 
   public CreateHoldingEventHandler(Storage storage) {
     this.storage = storage;

@@ -2,8 +2,8 @@ package org.folio.inventory;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
@@ -28,7 +28,7 @@ public class InventoryVerticle extends AbstractVerticle {
   private HttpServer server;
 
   @Override
-  public void start(Future<Void> started) {
+  public void start(Promise<Void> started) {
     Logging.initialiseFormat();
 
     final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
@@ -41,7 +41,7 @@ public class InventoryVerticle extends AbstractVerticle {
 
     log.info("Received Config");
 
-    config.fieldNames().stream().forEach(key ->
+    config.fieldNames().forEach(key ->
       log.info(String.format("%s:%s", key, config.getValue(key).toString())));
 
     HttpClient client = vertx.createHttpClient();
@@ -70,12 +70,12 @@ public class InventoryVerticle extends AbstractVerticle {
       }
     };
 
-    server.requestHandler(router::accept)
+    server.requestHandler(router)
       .listen(config.getInteger("port"), onHttpServerStart);
   }
 
   @Override
-  public void stop(Future<Void> stopped) {
+  public void stop(Promise<Void> stopped) {
     final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
     log.info("Stopping inventory module");

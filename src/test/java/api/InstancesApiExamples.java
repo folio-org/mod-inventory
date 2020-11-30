@@ -1,5 +1,42 @@
 package api;
 
+import api.support.ApiRoot;
+import api.support.ApiTests;
+import api.support.InstanceApiClient;
+import com.github.jsonldjava.core.DocumentLoader;
+import com.github.jsonldjava.core.JsonLdError;
+import com.github.jsonldjava.core.JsonLdOptions;
+import com.github.jsonldjava.core.JsonLdProcessor;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import org.apache.http.Header;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
+import org.apache.http.message.BasicHeader;
+import org.folio.inventory.config.InventoryConfiguration;
+import org.folio.inventory.config.InventoryConfigurationImpl;
+import org.folio.inventory.support.JsonArrayHelper;
+import org.folio.inventory.support.http.client.IndividualResource;
+import org.folio.inventory.support.http.client.Response;
+import org.folio.inventory.support.http.client.ResponseHandler;
+import org.joda.time.DateTime;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Test;
+import support.fakes.EndpointFailureDescriptor;
+
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
 import static api.support.InstanceSamples.leviathanWakes;
 import static api.support.InstanceSamples.marcInstanceWithDefaultBlockedFields;
 import static api.support.InstanceSamples.nod;
@@ -18,51 +55,12 @@ import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.joda.time.DateTimeZone.UTC;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static support.matchers.ResponseMatchers.hasValidationError;
-
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-
-import org.apache.http.Header;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
-import org.apache.http.message.BasicHeader;
-import org.folio.inventory.config.InventoryConfiguration;
-import org.folio.inventory.config.InventoryConfigurationImpl;
-import org.folio.inventory.support.JsonArrayHelper;
-import org.folio.inventory.support.http.client.IndividualResource;
-import org.folio.inventory.support.http.client.Response;
-import org.folio.inventory.support.http.client.ResponseHandler;
-import org.joda.time.DateTime;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
-
-import com.github.jsonldjava.core.DocumentLoader;
-import com.github.jsonldjava.core.JsonLdError;
-import com.github.jsonldjava.core.JsonLdOptions;
-import com.github.jsonldjava.core.JsonLdProcessor;
-
-import api.support.ApiRoot;
-import api.support.ApiTests;
-import api.support.InstanceApiClient;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import support.fakes.EndpointFailureDescriptor;
 
 public class InstancesApiExamples extends ApiTests {
 
@@ -179,11 +177,11 @@ public class InstancesApiExamples extends ApiTests {
       .put("hrid", hrid)
       .put("title", "Long Way to a Small Angry Planet")
       .put("identifiers", new JsonArray().add(new JsonObject()
-      .put("identifierTypeId", ApiTestSuite.getIsbnIdentifierType())
-      .put("value", "9781473619777")))
+        .put("identifierTypeId", ApiTestSuite.getIsbnIdentifierType())
+        .put("value", "9781473619777")))
       .put("contributors", new JsonArray().add(new JsonObject()
-      .put("contributorNameTypeId", ApiTestSuite.getPersonalContributorNameType())
-      .put("name", "Chambers, Becky")))
+        .put("contributorNameTypeId", ApiTestSuite.getPersonalContributorNameType())
+        .put("name", "Chambers, Becky")))
       .put("source", "Local")
       .put("instanceTypeId", ApiTestSuite.getTextInstanceType());
 
@@ -475,7 +473,7 @@ public class InstancesApiExamples extends ApiTests {
       updateInstanceRequest.getString("id")));
 
     okapiClient.put(instanceLocation, updateInstanceRequest,
-        ResponseHandler.any(putCompleted));
+      ResponseHandler.any(putCompleted));
 
     Response putResponse = putCompleted.get(5, TimeUnit.SECONDS);
 
@@ -969,10 +967,10 @@ public class InstancesApiExamples extends ApiTests {
 
   private static String LinkedDataValue(List<Object> expanded, String field) {
     //TODO: improve on how to traverse JSON-LD results
-    return ((Map<String, Object>)((ArrayList<Map>)
-      ((Map<String, Object>)expanded.get(0))
+    return ((Map<String, Object>) ((ArrayList<Map>)
+      ((Map<String, Object>) expanded.get(0))
         .get(field)).get(0))
-        .get("@value").toString();
+      .get("@value").toString();
   }
 
   private JsonObject createInstance(JsonObject newInstanceRequest)

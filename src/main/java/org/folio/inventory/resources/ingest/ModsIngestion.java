@@ -19,13 +19,20 @@ import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.storage.external.ReferenceRecord;
 import org.folio.inventory.storage.external.ReferenceRecordClient;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
-import org.folio.inventory.support.http.server.*;
+import org.folio.inventory.support.http.server.ClientErrorResponse;
+import org.folio.inventory.support.http.server.FailureResponseConsumer;
+import org.folio.inventory.support.http.server.JsonResponse;
+import org.folio.inventory.support.http.server.RedirectResponse;
+import org.folio.inventory.support.http.server.ServerErrorResponse;
 
-import java.io.UnsupportedEncodingException;
 import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
@@ -56,7 +63,7 @@ public class ModsIngestion {
   // isbn identifier type
   // personal contributor type
   private void ingest(RoutingContext routingContext) {
-    if(routingContext.fileUploads().size() > 1) {
+    if (routingContext.fileUploads().size() > 1) {
       ClientErrorResponse.badRequest(routingContext.response(),
         "Cannot parse multiple files in a single request");
       return;
@@ -91,8 +98,7 @@ public class ModsIngestion {
 
       contributorNameTypesClient = new ReferenceRecordClient(new CollectionResourceClient(okapiClient,
         new URL(context.getOkapiLocation() + "/contributor-name-types")), "contributorNameTypes");
-    }
-    catch (MalformedURLException e) {
+    } catch (MalformedURLException e) {
       ServerErrorResponse.internalError(routingContext.response(),
         String.format("Invalid Okapi URL: %s", context.getOkapiLocation()));
 
@@ -106,32 +112,23 @@ public class ModsIngestion {
     CompletableFuture<ReferenceRecord> identifierTypesRequestCompleted;
     CompletableFuture<ReferenceRecord> contributorNameTypesRequestCompleted;
 
-    try {
-      materialTypesRequestCompleted = wrapWithExceptionHandler(
-        routingContext, materialTypesClient.getRecord("Book"));
+    materialTypesRequestCompleted = wrapWithExceptionHandler(
+      routingContext, materialTypesClient.getRecord("Book"));
 
-      loanTypesRequestCompleted = wrapWithExceptionHandler(
-        routingContext, loanTypesClient.getRecord("Can Circulate"));
+    loanTypesRequestCompleted = wrapWithExceptionHandler(
+      routingContext, loanTypesClient.getRecord("Can Circulate"));
 
-      locationsRequestCompleted = wrapWithExceptionHandler(
-        routingContext, locationsClient.getRecord("Main Library"));
+    locationsRequestCompleted = wrapWithExceptionHandler(
+      routingContext, locationsClient.getRecord("Main Library"));
 
-      instanceTypesRequestCompleted = wrapWithExceptionHandler(
-        routingContext, instanceTypesClient.getRecord("text"));
+    instanceTypesRequestCompleted = wrapWithExceptionHandler(
+      routingContext, instanceTypesClient.getRecord("text"));
 
-      identifierTypesRequestCompleted = wrapWithExceptionHandler(
-        routingContext, identifierTypesClient.getRecord("ISBN"));
+    identifierTypesRequestCompleted = wrapWithExceptionHandler(
+      routingContext, identifierTypesClient.getRecord("ISBN"));
 
-      contributorNameTypesRequestCompleted = wrapWithExceptionHandler(
-        routingContext, contributorNameTypesClient.getRecord("Personal name"));
-
-    } catch (UnsupportedEncodingException e) {
-      String error = String.format("Failed to encode query: %s", e.toString());
-
-      log.error(error);
-      ServerErrorResponse.internalError(routingContext.response(), error);
-      return;
-    }
+    contributorNameTypesRequestCompleted = wrapWithExceptionHandler(
+      routingContext, contributorNameTypesClient.getRecord("Personal name"));
 
     CompletableFuture.allOf(materialTypesRequestCompleted,
       loanTypesRequestCompleted, locationsRequestCompleted,
@@ -145,19 +142,19 @@ public class ModsIngestion {
         ReferenceRecord isbnIdentifierType = identifierTypesRequestCompleted.join();
         ReferenceRecord personalContributorNameType = contributorNameTypesRequestCompleted.join();
 
-        if(anyNull(bookMaterialType, canCirculateLoanType, booksInstanceType,
+        if (anyNull(bookMaterialType, canCirculateLoanType, booksInstanceType,
           isbnIdentifierType, personalContributorNameType)) {
           return;
         }
 
-        if(mainLibraryLocation == null) {
+        if (mainLibraryLocation == null) {
           log.warn(
             "Location for ingested records will be null, as could not find main library location");
         }
 
         String uploadFileName = uploadFileName(routingContext);
 
-        if(StringUtils.isBlank(uploadFileName)) {
+        if (StringUtils.isBlank(uploadFileName)) {
           ServerErrorResponse.internalError(routingContext.response(),
             "Unable to get upload file name");
 
@@ -194,7 +191,7 @@ public class ModsIngestion {
                 String.format("Unable to parse MODS file:%s", e.toString()));
             }
           });
-    });
+      });
   }
 
   private void status(RoutingContext routingContext) {
@@ -227,9 +224,7 @@ public class ModsIngestion {
     Optional<FileUpload> possibleUploadedFile = routingContext.fileUploads()
       .stream().findFirst();
 
-    return possibleUploadedFile.isPresent()
-      ? possibleUploadedFile.get().uploadedFileName()
-      : null;
+    return possibleUploadedFile.map(FileUpload::uploadedFileName).orElse(null);
   }
 
   private OkapiHttpClient createHttpClient(
@@ -276,15 +271,13 @@ public class ModsIngestion {
     try {
       fileSystem.readFile(filename,
         result -> {
-          if(result.succeeded()) {
+          if (result.succeeded()) {
             future.complete(result.result().toString());
-          }
-          else {
+          } else {
             future.completeExceptionally(result.cause());
           }
-      });
-    }
-    catch (Exception e) {
+        });
+    } catch (Exception e) {
       future.completeExceptionally(e);
     }
 

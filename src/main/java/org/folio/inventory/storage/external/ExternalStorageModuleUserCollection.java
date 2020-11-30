@@ -19,7 +19,7 @@ class ExternalStorageModuleUserCollection
     String token,
     HttpClient client) {
 
-    super(vertx, String.format("%s/%s", baseAddress, "users"),
+    super(String.format("%s/%s", baseAddress, "users"),
       tenant, token, "users", client);
   }
 

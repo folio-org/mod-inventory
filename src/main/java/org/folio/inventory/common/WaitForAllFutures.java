@@ -10,7 +10,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
 public class WaitForAllFutures<T> {
-  private ArrayList<CompletableFuture<T>> allFutures = new ArrayList<CompletableFuture<T>>();
+  private final ArrayList<CompletableFuture<T>> allFutures = new ArrayList<>();
 
   public Consumer<Success<T>> notifySuccess() {
     CompletableFuture<T> newFuture = new CompletableFuture<>();

@@ -1,7 +1,7 @@
 package org.folio.inventory.storage.external.support;
 
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -24,17 +24,16 @@ public class FailureInventoryStorageModule extends AbstractVerticle {
   }
 
   @Override
-  public void start(Future deployed) {
+  public void start(Promise deployed) {
     server = vertx.createHttpServer();
 
     Router router = Router.router(vertx);
 
-    server.requestHandler(router::accept)
+    server.requestHandler(router)
       .listen(PORT_TO_USE, result -> {
         if (result.succeeded()) {
-          System.out.println(
-            String.format("Starting failing storage module listening on %s",
-              server.actualPort()));
+          System.out.printf("Starting failing storage module listening on %s%n",
+            server.actualPort());
           deployed.complete();
         } else {
           deployed.fail(result.cause());
@@ -43,14 +42,14 @@ public class FailureInventoryStorageModule extends AbstractVerticle {
 
     router.route().handler(WebRequestDiagnostics::outputDiagnostics);
 
-    router.route("/server-error/item-storage/items/*").handler(this::serverError);
-    router.route("/server-error/instance-storage/instances/*").handler(this::serverError);
-    router.route("/bad-request/item-storage/items/*").handler(this::badRequest);
-    router.route("/bad-request/instance-storage/instances/*").handler(this::badRequest);
+    router.route("/server-error/item-storage/items*").handler(this::serverError);
+    router.route("/server-error/instance-storage/instances*").handler(this::serverError);
+    router.route("/bad-request/item-storage/items*").handler(this::badRequest);
+    router.route("/bad-request/instance-storage/instances*").handler(this::badRequest);
   }
 
   @Override
-  public void stop(Future stopped) {
+  public void stop(Promise stopped) {
     System.out.println("Stopping failing storage module");
     server.close(result -> {
       if (result.succeeded()) {

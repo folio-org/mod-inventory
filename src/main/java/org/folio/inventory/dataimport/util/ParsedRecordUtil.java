@@ -37,7 +37,7 @@ public final class ParsedRecordUtil {
   public enum AdditionalSubfields {
     H("h"), I("i");
 
-    private String subfieldCode;
+    private final String subfieldCode;
 
     AdditionalSubfields(String subfieldCode) {
       this.subfieldCode = subfieldCode;

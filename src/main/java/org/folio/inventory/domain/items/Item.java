@@ -44,7 +44,7 @@ public class Item {
   public final String id;
   private String hrid;
   private Boolean discoverySuppress;
-  private List<String> formerIds = new ArrayList();
+  private List<String> formerIds = new ArrayList<>();
 
   private String barcode;
   private String itemLevelCallNumber;
@@ -54,7 +54,7 @@ public class Item {
   private String volume;
   private String accessionNumber;
   private String itemIdentifier;
-  private List<String> yearCaption = new ArrayList();
+  private List<String> yearCaption = new ArrayList<>();
   private String enumeration;
   private String chronology;
   private String copyNumber;
@@ -66,8 +66,8 @@ public class Item {
   private String missingPiecesDate;
   private String itemDamagedStatusId;
   private String itemDamagedStatusDate;
-  private List<Note> notes = new ArrayList();
-  private List<CirculationNote> circulationNotes = new ArrayList();
+  private List<Note> notes = new ArrayList<>();
+  private List<CirculationNote> circulationNotes = new ArrayList<>();
   private final Status status;
   private final String materialTypeId;
   private final String permanentLoanTypeId;
@@ -76,8 +76,8 @@ public class Item {
   private String permanentLocationId;
   private String temporaryLocationId;
   private String effectiveLocationId;
-  private List<ElectronicAccess> electronicAccess = new ArrayList();
-  private List<String> statisticalCodeIds = new ArrayList();
+  private List<ElectronicAccess> electronicAccess = new ArrayList<>();
+  private List<String> statisticalCodeIds = new ArrayList<>();
   private String purchaseOrderLineidentifier;
   private List<String> tags = new ArrayList<>();
   private LastCheckIn lastCheckIn;
@@ -278,7 +278,7 @@ public class Item {
   public Item withNotes(List<Note> notes) {
     this.notes = notes;
     return this;
-  };
+  }
 
   public List<Note> getNotes() {
     return this.notes;

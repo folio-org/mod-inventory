@@ -1,7 +1,7 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonArray;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -27,14 +27,13 @@ public class InstanceUpdateDelegate {
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
   private static final String MARC_FORMAT = "MARC";
 
-  private Storage storage;
+  private final Storage storage;
 
   public InstanceUpdateDelegate(Storage storage) {
     this.storage = storage;
   }
 
   public Future<Instance> handle(Map<String, String> eventPayload, Record marcRecord, Context context) {
-    Future<Instance> future = Future.future();
     try {
       JsonObject mappingRules = new JsonObject(eventPayload.get(MAPPING_RULES_KEY));
       MappingParameters mappingParameters = new JsonObject(eventPayload.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
@@ -44,15 +43,13 @@ public class InstanceUpdateDelegate {
       org.folio.Instance mappedInstance = RecordToInstanceMapperBuilder.buildMapper(MARC_FORMAT).mapRecord(parsedRecord, mappingParameters, mappingRules);
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
 
-      getInstanceById(instanceId, instanceCollection)
+      return getInstanceById(instanceId, instanceCollection)
         .compose(existingInstance -> updateInstance(existingInstance, mappedInstance))
-        .compose(updatedInstance -> updateInstanceInStorage(updatedInstance, instanceCollection))
-        .setHandler(future::handle);
+        .compose(updatedInstance -> updateInstanceInStorage(updatedInstance, instanceCollection));
     } catch (Exception e) {
       LOGGER.error("Error updating inventory instance", e);
-      future.fail(e);
+      return Future.failedFuture(e);
     }
-    return future;
   }
 
   private JsonObject retrieveParsedContent(ParsedRecord parsedRecord) {
@@ -62,39 +59,37 @@ public class InstanceUpdateDelegate {
   }
 
   private Future<Instance> getInstanceById(String instanceId, InstanceCollection instanceCollection) {
-    Future<Instance> future = Future.future();
-    instanceCollection.findById(instanceId, success -> future.complete(success.getResult()),
+    Promise<Instance> promise = Promise.promise();
+    instanceCollection.findById(instanceId, success -> promise.complete(success.getResult()),
       failure -> {
         LOGGER.error(format("Error retrieving Instance by id %s - %s, status code %s", instanceId, failure.getReason(), failure.getStatusCode()));
-        future.fail(failure.getReason());
+        promise.fail(failure.getReason());
       });
-    return future;
+    return promise.future();
   }
 
   private Future<Instance> updateInstance(Instance existingInstance, org.folio.Instance mappedInstance) {
-    Future<Instance> future = Future.future();
     try {
       mappedInstance.setId(existingInstance.getId());
       JsonObject existing = JsonObject.mapFrom(existingInstance);
       JsonObject mapped = JsonObject.mapFrom(mappedInstance);
       JsonObject mergedInstanceAsJson = InstanceUtil.mergeInstances(existing, mapped);
       Instance mergedInstance = InstanceUtil.jsonToInstance(mergedInstanceAsJson);
-      future.complete(mergedInstance);
+      return Future.succeededFuture(mergedInstance);
     } catch (Exception e) {
       LOGGER.error("Error updating instance", e);
-      future.fail(e);
+      return Future.failedFuture(e);
     }
-    return future;
   }
 
 
   private Future<Instance> updateInstanceInStorage(Instance instance, InstanceCollection instanceCollection) {
-    Future<Instance> future = Future.future();
-    instanceCollection.update(instance, success -> future.complete(instance),
+    Promise<Instance> promise = Promise.promise();
+    instanceCollection.update(instance, success -> promise.complete(instance),
       failure -> {
         LOGGER.error(format("Error updating Instance - %s, status code %s", failure.getReason(), failure.getStatusCode()));
-        future.fail(failure.getReason());
+        promise.fail(failure.getReason());
       });
-    return future;
+    return promise.future();
   }
 }
