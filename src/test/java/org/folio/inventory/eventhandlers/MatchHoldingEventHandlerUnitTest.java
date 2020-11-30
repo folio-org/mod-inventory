@@ -5,7 +5,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import java.util.Map;
 import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
 import org.folio.Instance;
@@ -43,7 +42,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.UUID;
 import java.util.function.Consumer;
-import sun.security.krb5.internal.crypto.EType;
 
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
@@ -73,6 +71,11 @@ public class MatchHoldingEventHandlerUnitTest {
   private static final String HOLDING_ID = "9634a5ab-9228-4703-baf2-4d12ebc77d56";
   private static final String INSTANCE_ID = "ddd266ef-07ac-4117-be13-d418b8cd6902";
   private static final String HOLDING_HRID = "1234";
+
+  private static final String MAPPING_PARAMS = "MAPPING_PARAMS";
+  private static final String RELATIONS = "MATCHING_PARAMETERS_RELATIONS";
+  private static final String MATCHING_RELATIONS = "{\"item.statisticalCodeIds[]\":\"statisticalCode\",\"instance.classifications[].classificationTypeId\":\"classificationTypes\",\"instance.electronicAccess[].relationshipId\":\"electronicAccessRelationships\",\"item.permanentLoanTypeId\":\"loantypes\",\"holdingsrecord.temporaryLocationId\":\"locations\",\"holdingsrecord.statisticalCodeIds[]\":\"statisticalCode\",\"instance.statusId\":\"instanceStatuses\",\"instance.natureOfContentTermIds\":\"natureOfContentTerms\",\"item.notes[].itemNoteTypeId\":\"itemNoteTypes\",\"holdingsrecord.permanentLocationId\":\"locations\",\"instance.alternativeTitles[].alternativeTitleTypeId\":\"alternativeTitleTypes\",\"holdingsrecord.illPolicyId\":\"illPolicies\",\"item.electronicAccess[].relationshipId\":\"electronicAccessRelationships\",\"instance.identifiers[].identifierTypeId\":\"identifierTypes\",\"holdingsrecord.holdingsTypeId\":\"holdingsTypes\",\"item.permanentLocationId\":\"locations\",\"instance.modeOfIssuanceId\":\"issuanceModes\",\"item.itemLevelCallNumberTypeId\":\"callNumberTypes\",\"instance.notes[].instanceNoteTypeId\":\"instanceNoteTypes\",\"instance.instanceFormatIds\":\"instanceFormats\",\"holdingsrecord.callNumberTypeId\":\"callNumberTypes\",\"holdingsrecord.electronicAccess[].relationshipId\":\"electronicAccessRelationships\",\"instance.instanceTypeId\":\"instanceTypes\",\"instance.statisticalCodeIds[]\":\"statisticalCode\",\"instancerelationship.instanceRelationshipTypeId\":\"instanceRelationshipTypes\",\"item.temporaryLoanTypeId\":\"loantypes\",\"item.temporaryLocationId\":\"locations\",\"item.materialTypeId\":\"materialTypes\",\"holdingsrecord.notes[].holdingsNoteTypeId\":\"holdingsNoteTypes\",\"instance.contributors[].contributorNameTypeId\":\"contributorNameTypes\",\"item.itemDamagedStatusId\":\"itemDamageStatuses\",\"instance.contributors[].contributorTypeId\":\"contributorTypes\"}";
+  private static final String LOCATIONS_PARAMS = "{\"initialized\":true,\"locations\":[{\"id\":\"53cf956f-c1df-410b-8bea-27f712cca7c0\",\"name\":\"Annex\",\"code\":\"KU/CC/DI/A\",\"isActive\":true,\"institutionId\":\"40ee00ca-a518-4b49-be01-0638d0a4ac57\",\"campusId\":\"62cf76b7-cca5-4d33-9217-edf42ce1a848\",\"libraryId\":\"5d78803e-ca04-4b4a-aeae-2c63b924518b\",\"primaryServicePoint\":\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\",\"servicePointIds\":[\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\"],\"servicePoints\":[],\"metadata\":{\"createdDate\":1592219257690,\"updatedDate\":1592219257690}},{\"id\":\"b241764c-1466-4e1d-a028-1a3684a5da87\",\"name\":\"Popular Reading Collection\",\"code\":\"KU/CC/DI/P\",\"isActive\":true,\"institutionId\":\"40ee00ca-a518-4b49-be01-0638d0a4ac57\",\"campusId\":\"62cf76b7-cca5-4d33-9217-edf42ce1a848\",\"libraryId\":\"5d78803e-ca04-4b4a-aeae-2c63b924518b\",\"primaryServicePoint\":\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\",\"servicePointIds\":[\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\"],\"servicePoints\":[],\"metadata\":{\"createdDate\":1592219257711,\"updatedDate\":1592219257711}}]}";
 
   @Mock
   private Storage storage;
@@ -293,6 +296,8 @@ public class MatchHoldingEventHandlerUnitTest {
     EventHandler eventHandler = new MatchHoldingEventHandler();
     HashMap<String, String> context = new HashMap<>();
     context.put(EntityType.HOLDINGS.value(), JsonObject.mapFrom(new HoldingsRecord().withId(HOLDING_ID)).encode());
+    context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
+    context.put(RELATIONS, MATCHING_RELATIONS);
     DataImportEventPayload eventPayload = createEventPayload().withContext(context);
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -324,6 +329,8 @@ public class MatchHoldingEventHandlerUnitTest {
     EventHandler eventHandler = new MatchHoldingEventHandler();
     HashMap<String, String> context = new HashMap<>();
     context.put(EntityType.INSTANCE.value(), JsonObject.mapFrom(new Instance().withId(INSTANCE_ID)).encode());
+    context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
+    context.put(RELATIONS, MATCHING_RELATIONS);
     DataImportEventPayload eventPayload = createEventPayload().withContext(context);
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -339,13 +346,17 @@ public class MatchHoldingEventHandlerUnitTest {
   }
 
   private DataImportEventPayload createEventPayload() {
+    HashMap<String, String> context = new HashMap<>();
+    context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
+    context.put(RELATIONS, MATCHING_RELATIONS);
+
     return new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
       .withEventsChain(new ArrayList<>())
       .withOkapiUrl("http://localhost:9493")
       .withTenant("diku")
       .withToken("token")
-      .withContext(new HashMap<>())
+      .withContext(context)
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withId(UUID.randomUUID().toString())
         .withContentType(MATCH_PROFILE)

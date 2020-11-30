@@ -1,6 +1,6 @@
 # mod-inventory
 
-Copyright (C) 2016-2019 The Open Library Foundation
+Copyright (C) 2016-2020 The Open Library Foundation
 
 This software is distributed under the terms of the Apache License,
 Version 2.0. See the file "[LICENSE](LICENSE)" for more information.
@@ -21,7 +21,7 @@ This readme is intended to get these modules up and running. For further informa
 
 ## Required
 
-- Java 8 JDK
+- Java 11 JDK
 - Maven 3.5.0
 
 ## Optional
@@ -53,6 +53,15 @@ run `mvn compile` from the root directory.
 In order to build an executable Jar (e.g. for Okapi to deploy), run `mvn package`.
 
 # Running
+
+## Port
+
+When running the jar file the module looks for the `http.port` and `port`
+system property variables in this order, and uses the default 9403 as fallback. Example:
+
+`java -Dhttp.port=8008 -jar target/mod-inventory.jar`
+
+The Docker container exposes port 9403.
 
 ## Preparation
 

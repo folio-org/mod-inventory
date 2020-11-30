@@ -310,6 +310,7 @@ public abstract class AbstractInstances {
     resp.put("hrid", instance.getHrid());
     resp.put(Instance.SOURCE_KEY, instance.getSource());
     resp.put(Instance.TITLE_KEY, instance.getTitle());
+    putIfNotNull(resp, Instance.MATCH_KEY_KEY, instance.getMatchKey());
     putIfNotNull(resp, Instance.INDEX_TITLE_KEY, instance.getIndexTitle());
     putIfNotNull(resp, Instance.PARENT_INSTANCES_KEY, parentInstances);
     putIfNotNull(resp, Instance.CHILD_INSTANCES_KEY, childInstances);
@@ -340,7 +341,7 @@ public abstract class AbstractInstances {
     putIfNotNull(resp, Instance.STATUS_UPDATED_DATE_KEY, instance.getStatusUpdatedDate());
     putIfNotNull(resp, Instance.METADATA_KEY, instance.getMetadata());
     putIfNotNull(resp, Instance.TAGS_KEY, new JsonObject().put(Instance.TAG_LIST_KEY, new JsonArray(instance.getTags())));
-    putIfNotNull(resp, Instance.NATURE_OF_CONTENT_TERM_IDS_KEY, instance.getNatureOfContentIds());
+    putIfNotNull(resp, Instance.NATURE_OF_CONTENT_TERM_IDS_KEY, instance.getNatureOfContentTermIds());
 
     if (precedingTitles != null) {
       JsonArray precedingTitlesJsonArray = new JsonArray();

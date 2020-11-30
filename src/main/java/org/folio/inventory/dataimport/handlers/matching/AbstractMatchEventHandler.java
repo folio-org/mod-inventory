@@ -1,8 +1,10 @@
 package org.folio.inventory.dataimport.handlers.matching;
 
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.folio.DataImportEventPayload;
 import org.folio.MatchProfile;
+import org.folio.inventory.dataimport.handlers.matching.util.MatchingParametersRelations;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.matching.MatchingManager;
 import org.folio.rest.jaxrs.model.EntityType;
@@ -13,21 +15,28 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MATC
 
 public abstract class AbstractMatchEventHandler implements EventHandler {
 
+  private static final String MATCHING_RELATIONS = "MATCHING_PARAMETERS_RELATIONS";
+
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
-    try {
-      dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
-      boolean matched = MatchingManager.match(dataImportEventPayload);
-      if (matched) {
-        dataImportEventPayload.setEventType(getMatchedEventType());
-      } else {
-        dataImportEventPayload.setEventType(getNotMatchedEventType());
-      }
-      future.complete(dataImportEventPayload);
-    } catch (Exception e) {
-      future.completeExceptionally(e);
-    }
+    dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
+    dataImportEventPayload.getContext().put(MATCHING_RELATIONS,
+      Json.encode(new MatchingParametersRelations().getMatchingRelations()));
+
+    MatchingManager.match(dataImportEventPayload)
+      .whenComplete((matched, throwable) -> {
+        if (throwable != null) {
+          future.completeExceptionally(throwable);
+        } else {
+          if (Boolean.TRUE.equals(matched)) {
+            dataImportEventPayload.setEventType(getMatchedEventType());
+          } else {
+            dataImportEventPayload.setEventType(getNotMatchedEventType());
+          }
+          future.complete(dataImportEventPayload);
+        }
+      });
     return future;
   }
 

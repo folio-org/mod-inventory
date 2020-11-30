@@ -1,6 +1,7 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
@@ -24,10 +25,11 @@ import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.folio.ActionProfile.Action.REPLACE;
+import static org.folio.ActionProfile.Action.UPDATE;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING;
 import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
 import static org.folio.inventory.domain.instances.Instance.METADATA_KEY;
 import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
@@ -63,7 +65,11 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       Instance instanceToUpdate = InstanceUtil.jsonToInstance(new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value())));
 
       prepareEvent(dataImportEventPayload);
-      defaultMapRecordToInstance(dataImportEventPayload);
+
+      org.folio.Instance mapped =  defaultMapRecordToInstance(dataImportEventPayload);
+      Instance mergedInstance = InstanceUtil.mergeFieldsWhichAreNotControlled(instanceToUpdate, mapped);
+      dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(new JsonObject().put(INSTANCE_PATH, JsonObject.mapFrom(mergedInstance))));
+
       MappingManager.map(dataImportEventPayload);
       JsonObject instanceAsJson = new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value()));
       if (instanceAsJson.getJsonObject(INSTANCE_PATH) != null) {
@@ -122,8 +128,18 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   public boolean isEligible(DataImportEventPayload dataImportEventPayload) {
     if (dataImportEventPayload.getCurrentNode() != null && ACTION_PROFILE == dataImportEventPayload.getCurrentNode().getContentType()) {
       ActionProfile actionProfile = JsonObject.mapFrom(dataImportEventPayload.getCurrentNode().getContent()).mapTo(ActionProfile.class);
-      return actionProfile.getAction() == REPLACE && actionProfile.getFolioRecord() == INSTANCE;
+      return actionProfile.getAction() == UPDATE && actionProfile.getFolioRecord() == INSTANCE;
     }
     return false;
+  }
+
+  @Override
+  public boolean isPostProcessingNeeded() {
+    return true;
+  }
+
+  @Override
+  public String getPostProcessingInitializationEventType() {
+    return DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING.value();
   }
 }

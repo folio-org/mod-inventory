@@ -8,7 +8,6 @@ import api.support.builders.HoldingsRecordMoveRequestBuilder;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import junitparams.JUnitParamsRunner;
-import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.ResponseHandler;
 import org.junit.Assert;
@@ -59,7 +58,7 @@ public class HoldingsApiMoveExamples extends ApiTests {
     Response postHoldingsMoveResponse = moveHoldingsRecords(holdingsRecordMoveRequestBody);
 
     assertThat(postHoldingsMoveResponse.getStatusCode(), is(200));
-    assertThat(postHoldingsMoveResponse.getBody(), is(StringUtils.EMPTY));
+    assertThat(new JsonObject(postHoldingsMoveResponse.getBody()).getJsonArray("nonUpdatedIds").size(), is(0));
     assertThat(postHoldingsMoveResponse.getContentType(), containsString(APPLICATION_JSON));
 
     JsonObject holdingsRecord1 = holdingsStorageClient.getById(createHoldingsRecord1)

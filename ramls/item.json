@@ -243,8 +243,10 @@
             "Declared lost",
             "Order closed",
             "Claimed returned",
+            "Unknown",
             "Withdrawn",
-            "Lost and paid"
+            "Lost and paid",
+            "Aged to lost"
           ]
         },
         "date": {

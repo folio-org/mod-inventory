@@ -72,7 +72,7 @@ public class UpdateHoldingEventHandlerTest {
   private ActionProfile actionProfile = new ActionProfile()
     .withId(UUID.randomUUID().toString())
     .withName("Create preliminary Item")
-    .withAction(ActionProfile.Action.REPLACE)
+    .withAction(ActionProfile.Action.UPDATE)
     .withFolioRecord(HOLDINGS);
 
   private MappingProfile mappingProfile = new MappingProfile()
@@ -421,7 +421,7 @@ public class UpdateHoldingEventHandlerTest {
     ActionProfile actionProfile = new ActionProfile()
       .withId(UUID.randomUUID().toString())
       .withName("Update preliminary Item")
-      .withAction(ActionProfile.Action.REPLACE)
+      .withAction(ActionProfile.Action.UPDATE)
       .withFolioRecord(ActionProfile.FolioRecord.INSTANCE);
     ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
       .withId(UUID.randomUUID().toString())

@@ -16,6 +16,7 @@ import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.storage.external.CollectionResourceRepository;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
+import org.folio.inventory.validation.exceptions.JsonMappingException;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.defaultmapper.RecordToInstanceMapperBuilder;
@@ -132,7 +133,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     dataImportEventPayload.getContext().put(INSTANCE.value(), new JsonObject().encode());
   }
 
-  protected void defaultMapRecordToInstance(DataImportEventPayload dataImportEventPayload) {
+  protected org.folio.Instance defaultMapRecordToInstance(DataImportEventPayload dataImportEventPayload) {
     try {
       HashMap<String, String> context = dataImportEventPayload.getContext();
       JsonObject mappingRules = new JsonObject(context.get(MAPPING_RULES_KEY));
@@ -141,8 +142,9 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
       MappingParameters mappingParameters = new JsonObject(context.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
       org.folio.Instance instance = RecordToInstanceMapperBuilder.buildMapper(MARC_FORMAT).mapRecord(parsedRecord, mappingParameters, mappingRules);
       dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(new JsonObject().put(INSTANCE_PATH, JsonObject.mapFrom(instance))));
+      return instance;
     } catch (Exception e) {
-      LOGGER.error("Error in default mapper.", e);
+      throw new JsonMappingException("Error in default mapper.", e);
     }
   }
 

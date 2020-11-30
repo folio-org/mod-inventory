@@ -13,6 +13,7 @@ import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 public class Instance {
   // JSON property names
   public static final String HRID_KEY = "hrid";
+  public static final String MATCH_KEY_KEY = "matchKey";
   public static final String SOURCE_KEY = "source";
   public static final String PARENT_INSTANCES_KEY = "parentInstances";
   public static final String CHILD_INSTANCES_KEY = "childInstances";
@@ -52,6 +53,7 @@ public class Instance {
 
   private final String id;
   private final String hrid;
+  private String matchKey;
   private final String source;
   private List<InstanceRelationshipToParent> parentInstances = new ArrayList();
   private List<InstanceRelationshipToChild> childInstances = new ArrayList();
@@ -86,7 +88,7 @@ public class Instance {
   private String statusUpdatedDate;
   private Metadata metadata = null;
   private List<String> tags;
-  private List<String> natureOfContentIds = new ArrayList<>();
+  private List<String> natureOfContentTermIds = new ArrayList<>();
 
   public Instance(
     String id,
@@ -100,6 +102,11 @@ public class Instance {
     this.source = source;
     this.title = title;
     this.instanceTypeId = instanceTypeId;
+  }
+
+  public Instance setMatchKey(String matchKey) {
+    this.matchKey = matchKey;
+    return this;
   }
 
   public Instance setIndexTitle(String indexTitle) {
@@ -257,8 +264,8 @@ public class Instance {
     return this;
   }
 
-  public Instance setNatureOfContentIds(List<String> natureOfContentIds) {
-    this.natureOfContentIds = natureOfContentIds;
+  public Instance setNatureOfContentTermIds(List<String> natureOfContentTermIds) {
+    this.natureOfContentTermIds = natureOfContentTermIds;
     return this;
   }
 
@@ -272,6 +279,10 @@ public class Instance {
 
   public String getHrid() {
     return hrid;
+  }
+
+  public String getMatchKey() {
+    return matchKey;
   }
 
   public String getSource() {
@@ -411,8 +422,8 @@ public class Instance {
     return tags;
   }
 
-  public List<String> getNatureOfContentIds() {
-    return natureOfContentIds;
+  public List<String> getNatureOfContentTermIds() {
+    return natureOfContentTermIds;
   }
 
   public Instance copyWithNewId(String newId) {
@@ -444,7 +455,7 @@ public class Instance {
             .setStatusUpdatedDate(statusUpdatedDate)
             .setMetadata(metadata)
             .setTags(tags)
-            .setNatureOfContentIds(natureOfContentIds);
+            .setNatureOfContentTermIds(natureOfContentTermIds);
   }
 
   public Instance copyInstance() {
@@ -476,7 +487,7 @@ public class Instance {
             .setStatusUpdatedDate(statusUpdatedDate)
             .setMetadata(metadata)
             .setTags(tags)
-            .setNatureOfContentIds(natureOfContentIds);
+            .setNatureOfContentTermIds(natureOfContentTermIds);
   }
 
   public Instance addIdentifier(Identifier identifier) {
