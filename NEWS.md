@@ -1,6 +1,3 @@
-## 6.2.0-SNAPSHOT 2020-11-23
-* [MODINV-331](https://issues.folio.org/browse/MODINV-331) Upgrade to Vertx v3.9.4 (CVE-2019-17640)
-
 ## 16.1.0 2020-10-12
 
 * Provides the ability to move items between holdings (MODINV-309)

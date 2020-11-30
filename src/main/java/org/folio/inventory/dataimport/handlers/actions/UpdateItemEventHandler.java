@@ -166,21 +166,21 @@ public class UpdateItemEventHandler implements EventHandler {
   }
 
   private Future<Boolean> verifyItemBarcodeUniqueness(Item item, ItemCollection itemCollection) throws UnsupportedEncodingException {
-    Promise<Boolean> future = Promise.promise();
+    Promise<Boolean> promise = Promise.promise();
     itemCollection.findByCql(CqlHelper.barcodeIs(item.getBarcode()) + " AND id <> " + item.id, PagingParameters.defaults(),
       findResult -> {
         if (findResult.getResult().records.isEmpty()) {
-          future.complete(findResult.getResult().records.isEmpty());
+          promise.complete(findResult.getResult().records.isEmpty());
         } else {
-          future.fail(format("Barcode must be unique, %s is already assigned to another item", item.getBarcode()));
+          promise.fail(format("Barcode must be unique, %s is already assigned to another item", item.getBarcode()));
         }
       },
-      failure -> future.fail(failure.getReason()));
-    return future.future();
+      failure -> promise.fail(failure.getReason()));
+    return promise.future();
   }
 
   private Future<Item> updateItem(Item item, ItemCollection itemCollection) {
-    Promise<Item> future = Promise.promise();
+    Promise<Item> promise = Promise.promise();
     item.getCirculationNotes().forEach(note -> note
       .withId(UUID.randomUUID().toString())
       .withSource(null)
@@ -188,11 +188,11 @@ public class UpdateItemEventHandler implements EventHandler {
 
     itemCollection.update(item).whenComplete((updatedItem, e) -> {
       if (e != null) {
-        future.fail(e);
+        promise.fail(e);
         return;
       }
-      future.complete(updatedItem);
+      promise.complete(updatedItem);
     });
-    return future.future();
+    return promise.future();
   }
 }

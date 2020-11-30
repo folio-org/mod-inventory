@@ -201,7 +201,7 @@ public class InstancesBatch extends AbstractInstances {
   private Future<CompositeFuture> updateRelatedRecords(List<JsonObject> newInstances, List<Instance> createdInstances,
     RoutingContext routingContext, WebContext webContext) {
 
-    Promise<CompositeFuture> resultFuture = Promise.promise();
+    Promise<CompositeFuture> resultPromise = Promise.promise();
     try {
       Map<String, Instance> mapInstanceById = newInstances.stream()
         .collect(Collectors.toMap(instance -> instance.getString("id"), InstanceUtil::jsonToInstance));
@@ -214,12 +214,12 @@ public class InstancesBatch extends AbstractInstances {
           createdInstance.setChildInstances(newInstance.getChildInstances());
           createdInstance.setPrecedingTitles(newInstance.getPrecedingTitles());
           createdInstance.setSucceedingTitles(newInstance.getSucceedingTitles());
-          Promise updateFuture = Promise.promise();
-          updateRelationshipsFutures.add(updateFuture.future());
+          Promise updatePromise = Promise.promise();
+          updateRelationshipsFutures.add(updatePromise.future());
           updateRelatedRecords(routingContext, webContext, createdInstance)
             .whenComplete((result, ex) -> {
               if (ex == null) {
-                updateFuture.complete();
+                updatePromise.complete();
               } else {
                 log.warn("Exception occurred", ex);
                 handleFailure(getKnownException(ex), routingContext);
@@ -227,11 +227,11 @@ public class InstancesBatch extends AbstractInstances {
             });
         }
       }
-      CompositeFuture.join(updateRelationshipsFutures).onComplete(resultFuture);
+      CompositeFuture.join(updateRelationshipsFutures).onComplete(resultPromise);
     } catch (IllegalStateException e) {
       log.error("Can not update instances relationships cause: " + e);
-      resultFuture.fail(e);
+      resultPromise.fail(e);
     }
-    return resultFuture.future();
+    return resultPromise.future();
   }
 }

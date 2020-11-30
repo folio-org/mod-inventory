@@ -51,18 +51,18 @@ public class TenantApi {
   }
 
   private Future<Void> registerModuleToPubsub(Map<String, String> headers, Vertx vertx) {
-    Promise<Void> future = Promise.promise();
+    Promise<Void> promise = Promise.promise();
     PubSubClientUtils.registerModule(new OkapiConnectionParams(headers, vertx))
       .whenComplete((registrationAr, throwable) -> {
         if (throwable == null) {
           LOG.info("Module was successfully registered as publisher/subscriber in mod-pubsub");
-          future.complete();
+          promise.complete();
         } else {
           LOG.error("Error during module registration in mod-pubsub", throwable);
-          future.fail(throwable);
+          promise.fail(throwable);
         }
       });
-    return future.future();
+    return promise.future();
   }
 
 }
