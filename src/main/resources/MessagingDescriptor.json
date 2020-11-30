@@ -149,6 +149,14 @@
     {
       "eventType": "QM_SRS_MARC_BIB_RECORD_UPDATED",
       "callbackAddress": "/inventory/handlers/instances"
+    },
+    {
+      "eventType": "DI_SRS_MARC_BIB_RECORD_MATCHED",
+      "callbackAddress": "/inventory/handlers/data-import"
+    },
+    {
+      "eventType": "DI_SRS_MARC_BIB_RECORD_NOT_MATCHED",
+      "callbackAddress": "/inventory/handlers/data-import"
     }
   ]
 }
