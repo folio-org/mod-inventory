@@ -47,13 +47,11 @@ public class EventHandlers {
   private static final String DATA_IMPORT_EVENT_HANDLER_PATH = "/inventory/handlers/data-import";
   private static final String INSTANCES_EVENT_HANDLER_PATH = "/inventory/handlers/instances";
 
-  private Storage storage;
-  private HttpClient client;
+  private final Storage storage;
 
   public EventHandlers(final Storage storage, final HttpClient client) {
     Vertx vertx = Vertx.vertx();
     this.storage = storage;
-    this.client = client;
     MatchValueLoaderFactory.register(new InstanceLoader(storage, vertx));
     MatchValueLoaderFactory.register(new ItemLoader(storage, vertx));
     MatchValueLoaderFactory.register(new HoldingLoader(storage, vertx));

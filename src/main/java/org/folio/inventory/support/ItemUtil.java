@@ -126,7 +126,7 @@ public final class ItemUtil {
 
   }
 
-  public static final JsonObject toStoredItemRepresentation(Item item) {
+  public static JsonObject toStoredItemRepresentation(Item item) {
     JsonObject itemToSend = new JsonObject();
 
     //TODO: Review if this shouldn't be defaulting here
@@ -193,19 +193,19 @@ public final class ItemUtil {
 
     List<Note> notes = itemRequest.containsKey(Item.NOTES_KEY)
       ? JsonArrayHelper.toList(itemRequest.getJsonArray(Item.NOTES_KEY)).stream()
-      .map(json -> new Note(json))
+      .map(Note::new)
       .collect(Collectors.toList())
       : new ArrayList<>();
 
     List<CirculationNote> circulationNotes = itemRequest.containsKey(Item.CIRCULATION_NOTES_KEY)
       ? JsonArrayHelper.toList(itemRequest.getJsonArray(Item.CIRCULATION_NOTES_KEY)).stream()
-      .map(json -> new CirculationNote(json))
+      .map(CirculationNote::new)
       .collect(Collectors.toList())
       : new ArrayList<>();
 
     List<ElectronicAccess> electronicAccess = itemRequest.containsKey(Item.ELECTRONIC_ACCESS_KEY)
       ? JsonArrayHelper.toList(itemRequest.getJsonArray(Item.ELECTRONIC_ACCESS_KEY)).stream()
-      .map(json -> new ElectronicAccess(json))
+      .map(ElectronicAccess::new)
       .collect(Collectors.toList())
       : new ArrayList<>();
 

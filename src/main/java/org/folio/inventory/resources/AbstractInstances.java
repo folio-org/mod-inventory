@@ -86,7 +86,7 @@ public abstract class AbstractInstances {
     JsonObject json = result.getJson();
     List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("instanceRelationships"));
     Map<String, InstanceRelationship> existingRelationships = new HashMap();
-    relationsList.stream().map(rel -> new InstanceRelationship(rel)).forEachOrdered(relObj ->
+    relationsList.stream().map(InstanceRelationship::new).forEachOrdered(relObj ->
       existingRelationships.put(relObj.id, relObj));
     Map<String, InstanceRelationship> updatingRelationships = new HashMap();
     if (instance.getParentInstances() != null) {
@@ -268,7 +268,7 @@ public abstract class AbstractInstances {
     MultipleRecords<Instance> wrappedInstances = instancesResponse.getSuccess().getResult();
     List<Instance> instances = wrappedInstances.records;
 
-    instances.stream().forEach(instance -> {
+    instances.forEach(instance -> {
       List<InstanceRelationshipToParent> parentInstances = instancesResponse.getParentInstanceMap().get(instance.getId());
       List<InstanceRelationshipToChild> childInstances = instancesResponse.getChildInstanceMap().get(instance.getId());
       List<PrecedingSucceedingTitle> precedingTitles = instancesResponse.getPrecedingTitlesMap().get(instance.getId());
@@ -414,8 +414,7 @@ public abstract class AbstractInstances {
 
   protected String createQueryForRelatedInstances(List<String> instanceIds) {
     String idList = instanceIds.stream().distinct().collect(Collectors.joining(" or "));
-    String query = format("query=subInstanceId==(%s)+or+superInstanceId==(%s)", idList, idList);
-    return query;
+    return format("query=subInstanceId==(%s)+or+superInstanceId==(%s)", idList, idList);
   }
 
   private void putIfNotNull(JsonObject target, String propertyName, String value) {
@@ -448,9 +447,7 @@ public abstract class AbstractInstances {
     throws MalformedURLException {
 
     return new OkapiHttpClient(client, context,
-      exception -> {
-        ServerErrorResponse.internalError(routingContext.response(), format("Failed to contact storage module: %s",
-          exception.toString()));
-      });
+      exception -> ServerErrorResponse.internalError(routingContext.response(), format("Failed to contact storage module: %s",
+        exception.toString())));
   }
 }

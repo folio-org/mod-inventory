@@ -1,7 +1,22 @@
 package support.fakes;
 
-import static api.ApiTestSuite.ID_FOR_FAILURE;
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import io.vertx.core.AbstractVerticle;
+import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.inventory.common.WebContext;
+import org.folio.inventory.support.EndpointFailureHandler;
+import org.folio.inventory.support.http.server.ClientErrorResponse;
+import org.folio.inventory.support.http.server.JsonResponse;
+import org.folio.inventory.support.http.server.ServerErrorResponse;
+import org.folio.inventory.support.http.server.SuccessResponse;
+import org.folio.inventory.support.http.server.ValidationError;
+import org.joda.time.DateTime;
+import support.fakes.processors.RecordPreProcessor;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -13,24 +28,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.StringUtils;
-import org.folio.inventory.common.WebContext;
-import org.folio.inventory.support.EndpointFailureHandler;
-import org.folio.inventory.support.http.server.ClientErrorResponse;
-import org.folio.inventory.support.http.server.JsonResponse;
-import org.folio.inventory.support.http.server.ServerErrorResponse;
-import org.folio.inventory.support.http.server.SuccessResponse;
-import org.folio.inventory.support.http.server.ValidationError;
-import org.joda.time.DateTime;
-
-import io.vertx.core.AbstractVerticle;
-import io.vertx.core.http.HttpHeaders;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.BodyHandler;
-import support.fakes.processors.RecordPreProcessor;
+import static api.ApiTestSuite.ID_FOR_FAILURE;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 
 class FakeStorageModule extends AbstractVerticle {
   private final String rootPath;
@@ -74,16 +73,17 @@ class FakeStorageModule extends AbstractVerticle {
   }
 
   void register(Router router) {
-    String pathTree = rootPath + "/*";
-
-    router.route(pathTree).handler(this::emulateFailureIfNeeded);
-    router.route(pathTree).handler(this::checkTokenHeader);
+    String pathTree = rootPath + "*";
 
     router.post(pathTree).handler(BodyHandler.create());
     router.put(pathTree).handler(BodyHandler.create());
 
+    router.route(pathTree).handler(this::emulateFailureIfNeeded);
+    router.route(pathTree).handler(this::checkTokenHeader);
+
     router.post(rootPath).handler(this::checkRequiredProperties);
     router.post(rootPath).handler(this::checkUniqueProperties);
+    router.post(rootPath + "/emulate-failure").handler(this::emulateFailure);
     router.post(rootPath).handler(this::create);
 
     router.get(rootPath).handler(this::getMany);
@@ -94,7 +94,6 @@ class FakeStorageModule extends AbstractVerticle {
 
     router.get(rootPath + "/:id").handler(this::get);
     router.delete(rootPath + "/:id").handler(this::delete);
-    router.post(rootPath + "/emulate-failure").handler(this::emulateFailure);
   }
 
   private void emulateFailureIfNeeded(RoutingContext routingContext) {
@@ -127,6 +126,7 @@ class FakeStorageModule extends AbstractVerticle {
     String pathTree = batchPath + "/*";
 
     router.post(pathTree).handler(BodyHandler.create());
+    router.post(batchPath).handler(BodyHandler.create());
     router.route(batchPath).handler(this::checkTokenHeader);
     router.post(batchPath).handler(this::createBatch);
   }
@@ -145,8 +145,7 @@ class FakeStorageModule extends AbstractVerticle {
 
       lastCreate = lastCreate.thenCompose(prev -> createElement(context, element));
 
-      System.out.println(
-        String.format("Created %s resource: %s", recordTypeName, id));
+      System.out.printf("Created %s resource: %s%n", recordTypeName, id);
     }
 
     lastCreate.thenAccept(notUsed -> {
@@ -169,8 +168,7 @@ class FakeStorageModule extends AbstractVerticle {
     String id = body.getString("id");
 
     createElement(context, body).thenAccept(notUsed -> {
-      System.out.println(
-        String.format("Created %s resource: %s", recordTypeName, id));
+      System.out.printf("Created %s resource: %s%n", recordTypeName, id);
 
       JsonResponse.created(routingContext.response(), body);
     }).exceptionally(error -> {
@@ -184,9 +182,7 @@ class FakeStorageModule extends AbstractVerticle {
   private CompletableFuture<Void> createElement(WebContext context, JsonObject rawBody) {
     String id = rawBody.getString("id");
 
-    return preProcessRecords(null, rawBody).thenAccept(body -> {
-      getResourcesForTenant(context).put(id, body);
-    });
+    return preProcessRecords(null, rawBody).thenAccept(body -> getResourcesForTenant(context).put(id, body));
   }
 
   private void replace(RoutingContext routingContext) {
@@ -203,14 +199,12 @@ class FakeStorageModule extends AbstractVerticle {
       if (ID_FOR_FAILURE.toString().equals(id)) {
         ServerErrorResponse.internalError(routingContext.response(), "Test Internal Server Error");
       } else if (resourcesForTenant.containsKey(id)) {
-        System.out.println(
-          String.format("Replaced %s resource: %s", recordTypeName, id));
+        System.out.printf("Replaced %s resource: %s%n", recordTypeName, id);
 
         resourcesForTenant.replace(id, body);
         SuccessResponse.noContent(routingContext.response());
       } else {
-        System.out.println(
-          String.format("Created %s resource: %s", recordTypeName, id));
+        System.out.printf("Created %s resource: %s%n", recordTypeName, id);
 
         resourcesForTenant.put(id, body);
         SuccessResponse.noContent(routingContext.response());
@@ -225,18 +219,15 @@ class FakeStorageModule extends AbstractVerticle {
 
     Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
 
-    if(resourcesForTenant.containsKey(id)) {
+    if (resourcesForTenant.containsKey(id)) {
       final JsonObject resourceRepresentation = resourcesForTenant.get(id);
 
-      System.out.println(
-        String.format("Found %s resource: %s", recordTypeName,
-          resourceRepresentation.encodePrettily()));
+      System.out.printf("Found %s resource: %s%n", recordTypeName,
+        resourceRepresentation.encodePrettily());
 
       JsonResponse.success(routingContext.response(), resourceRepresentation);
-    }
-    else {
-      System.out.println(
-        String.format("Failed to find %s resource: %s", recordTypeName, id));
+    } else {
+      System.out.printf("Failed to find %s resource: %s%n", recordTypeName, id);
 
       ClientErrorResponse.notFound(routingContext.response());
     }
@@ -249,7 +240,7 @@ class FakeStorageModule extends AbstractVerticle {
     Integer offset = context.getIntegerParameter("offset", 0);
     String query = context.getStringParameter("query", null);
 
-    System.out.println(String.format("Handling %s", routingContext.request().uri()));
+    System.out.printf("Handling %s%n", routingContext.request().uri());
 
     Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
 
@@ -266,9 +257,8 @@ class FakeStorageModule extends AbstractVerticle {
     result.put(collectionPropertyName, new JsonArray(pagedItems));
     result.put("totalRecords", filteredItems.size());
 
-    System.out.println(
-      String.format("Found %s resources: %s", recordTypeName,
-        result.encodePrettily()));
+    System.out.printf("Found %s resources: %s%n", recordTypeName,
+      result.encodePrettily());
 
     JsonResponse.success(routingContext.response(), result);
   }
@@ -276,12 +266,12 @@ class FakeStorageModule extends AbstractVerticle {
   private void empty(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
 
-    if(!hasCollectionDelete) {
+    if (!hasCollectionDelete) {
       ClientErrorResponse.notFound(routingContext.response());
       return;
     }
 
-    Map <String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
+    Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
 
     resourcesForTenant.clear();
 
@@ -295,12 +285,11 @@ class FakeStorageModule extends AbstractVerticle {
 
     Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
 
-    if(resourcesForTenant.containsKey(id)) {
+    if (resourcesForTenant.containsKey(id)) {
       resourcesForTenant.remove(id);
 
       SuccessResponse.noContent(routingContext.response());
-    }
-    else {
+    } else {
       ClientErrorResponse.notFound(routingContext.response());
     }
   }
@@ -324,10 +313,9 @@ class FakeStorageModule extends AbstractVerticle {
   private void checkTokenHeader(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
 
-    if(StringUtils.isBlank(context.getToken())) {
+    if (StringUtils.isBlank(context.getToken())) {
       ClientErrorResponse.forbidden(routingContext.response());
-    }
-    else {
+    } else {
       routingContext.next();
     }
   }
@@ -364,7 +352,7 @@ class FakeStorageModule extends AbstractVerticle {
   }
 
   private void checkUniqueProperties(RoutingContext routingContext) {
-    if(uniqueProperties.isEmpty()) {
+    if (uniqueProperties.isEmpty()) {
       routingContext.next();
       return;
     }
@@ -373,12 +361,12 @@ class FakeStorageModule extends AbstractVerticle {
 
     ArrayList<ValidationError> errors = new ArrayList<>();
 
-    uniqueProperties.stream().forEach(uniqueProperty -> {
+    uniqueProperties.forEach(uniqueProperty -> {
       String proposedValue = body.getString(uniqueProperty);
 
       Map<String, JsonObject> records = getResourcesForTenant(new WebContext(routingContext));
 
-      if(records.values().stream()
+      if (records.values().stream()
         .map(record -> record.getString(uniqueProperty))
         .anyMatch(usedValue -> usedValue.equals(proposedValue))) {
 
@@ -391,14 +379,14 @@ class FakeStorageModule extends AbstractVerticle {
       }
     });
 
-    if(errors.isEmpty()) {
+    if (errors.isEmpty()) {
       routingContext.next();
     }
   }
 
   private void setDefaultProperties(JsonObject representation) {
     defaultProperties.forEach((property, valueSupplier) -> {
-      if(!representation.containsKey(property)) {
+      if (!representation.containsKey(property)) {
         representation.put(property, valueSupplier.get());
       }
     });

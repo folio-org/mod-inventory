@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 public class Launcher {
-  private static VertxAssistant vertxAssistant = new VertxAssistant();
+  private static final VertxAssistant vertxAssistant = new VertxAssistant();
   private static String inventoryModuleDeploymentId;
 
   public static void main(String[] args)

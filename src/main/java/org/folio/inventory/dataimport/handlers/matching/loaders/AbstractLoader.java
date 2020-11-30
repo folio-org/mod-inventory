@@ -23,7 +23,7 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
 
   private static final Logger LOG = LoggerFactory.getLogger(AbstractLoader.class);
 
-  private Vertx vertx;
+  private final Vertx vertx;
 
   public AbstractLoader(Vertx vertx) {
     this.vertx = vertx;

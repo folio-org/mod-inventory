@@ -7,8 +7,8 @@ public class User {
   public static final String ID_KEY = "id";
   public static final String PERSONAL_KEY = "personal";
 
-  private String id;
-  private Personal personal;
+  private final String id;
+  private final Personal personal;
 
   public User(String id, Personal personal) {
     this.id = id;

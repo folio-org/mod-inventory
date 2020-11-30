@@ -3,10 +3,10 @@ package org.folio.inventory.domain.items;
 import io.vertx.core.json.JsonObject;
 
 public class EffectiveCallNumberComponents {
-    private String callNumber;
-    private String prefix;
-    private String suffix;
-    private String typeId;
+    private final String callNumber;
+    private final String prefix;
+    private final String suffix;
+    private final String typeId;
 
     public EffectiveCallNumberComponents(String callNumber, String prefix,
                                          String suffix, String typeId) {

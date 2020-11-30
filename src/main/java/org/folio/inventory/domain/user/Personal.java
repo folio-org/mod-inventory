@@ -7,8 +7,8 @@ public class Personal {
   public static final String LAST_NAME_KEY = "lastName";
   public static final String FIRST_NAME_KEY = "firstName";
 
-  private String lastName;
-  private String firstName;
+  private final String lastName;
+  private final String firstName;
 
   public Personal(String lastName, String firstName) {
     this.lastName = lastName;

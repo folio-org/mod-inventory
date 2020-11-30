@@ -118,9 +118,7 @@ public class Instances extends AbstractInstances {
     if (search == null) {
       storage.getInstanceCollection(context).findAll(
         pagingParameters,
-        (Success<MultipleRecords<Instance>> success) -> {
-          makeInstancesResponse(success, routingContext, context);
-        },
+        (Success<MultipleRecords<Instance>> success) -> makeInstancesResponse(success, routingContext, context),
         FailureResponseConsumer.serverError(routingContext.response())
       );
     } else {
@@ -128,9 +126,7 @@ public class Instances extends AbstractInstances {
         storage.getInstanceCollection(context).findByCql(
           search,
           pagingParameters,
-          success -> {
-            makeInstancesResponse(success, routingContext, context);
-          },
+          success -> makeInstancesResponse(success, routingContext, context),
           FailureResponseConsumer.serverError(routingContext.response()));
       } catch (UnsupportedEncodingException e) {
         ServerErrorResponse.internalError(routingContext.response(), e.toString());

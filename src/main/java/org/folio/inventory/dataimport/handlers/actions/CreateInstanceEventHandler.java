@@ -1,6 +1,7 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
@@ -75,15 +76,14 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
         Instance mappedInstance = InstanceUtil.jsonToInstance(instanceAsJson);
         addInstance(mappedInstance, instanceCollection)
           .compose(createdInstance -> createPrecedingSucceedingTitles(mappedInstance, precedingSucceedingTitlesRepository).map(createdInstance))
-          .setHandler(ar -> {
-            if (ar.succeeded()) {
-              dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(ar.result()));
-              dataImportEventPayload.setEventType(DI_INVENTORY_INSTANCE_CREATED.value());
-              future.complete(dataImportEventPayload);
-            } else {
-              LOGGER.error("Error creating inventory Instance", ar.cause());
-              future.completeExceptionally(ar.cause());
-            }
+          .onSuccess(ar -> {
+            dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(ar));
+            dataImportEventPayload.setEventType(DI_INVENTORY_INSTANCE_CREATED.value());
+            future.complete(dataImportEventPayload);
+          })
+          .onFailure(ar -> {
+            LOGGER.error("Error creating inventory Instance", ar);
+            future.completeExceptionally(ar);
           });
       } else {
         String msg = String.format("Mapped Instance is invalid: %s", errors.toString());
@@ -117,12 +117,12 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
   }
 
   private Future<Instance> addInstance(Instance instance, InstanceCollection instanceCollection) {
-    Future<Instance> future = Future.future();
-    instanceCollection.add(instance, success -> future.complete(success.getResult()),
+    Promise<Instance> promise = Promise.promise();
+    instanceCollection.add(instance, success -> promise.complete(success.getResult()),
       failure -> {
         LOGGER.error("Error posting Instance cause %s, status code %s", failure.getReason(), failure.getStatusCode());
-        future.fail(failure.getReason());
+        promise.fail(failure.getReason());
       });
-    return future;
+    return promise.future();
   }
 }

@@ -1,6 +1,7 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -62,7 +63,7 @@ public class CreateItemEventHandler implements EventHandler {
 
   private final List<String> requiredFields = Arrays.asList("status.name", "materialType.id", "permanentLoanType.id", "holdingsRecordId");
 
-  private Storage storage;
+  private final Storage storage;
 
   public CreateItemEventHandler(Storage storage) {
     this.storage = storage;
@@ -101,7 +102,7 @@ public class CreateItemEventHandler implements EventHandler {
           .compose(isUnique -> isUnique
             ? addItem(mappedItem, itemCollection)
             : Future.failedFuture(String.format("Barcode must be unique, %s is already assigned to another item", finalItemAsJson.getString("barcode"))))
-          .setHandler(ar -> {
+          .onComplete(ar -> {
             if (ar.succeeded()) {
               dataImportEventPayload.getContext().put(ITEM.value(), Json.encode(ar.result()));
               dataImportEventPayload.setEventType(DI_INVENTORY_ITEM_CREATED.value());
@@ -168,15 +169,15 @@ public class CreateItemEventHandler implements EventHandler {
   }
 
   private Future<Boolean> isItemBarcodeUnique(String barcode, ItemCollection itemCollection) throws UnsupportedEncodingException {
-    Future<Boolean> future = Future.future();
+    Promise<Boolean> promise = Promise.promise();
     itemCollection.findByCql(CqlHelper.barcodeIs(barcode), PagingParameters.defaults(),
-      findResult -> future.complete(findResult.getResult().records.isEmpty()),
-      failure -> future.fail(failure.getReason()));
-    return future;
+      findResult -> promise.complete(findResult.getResult().records.isEmpty()),
+      failure -> promise.fail(failure.getReason()));
+    return promise.future();
   }
 
   private Future<Item> addItem(Item item, ItemCollection itemCollection) {
-    Future<Item> future = Future.future();
+    Promise<Item> promise = Promise.promise();
     List<CirculationNote> notes = item.getCirculationNotes()
       .stream()
       .map(note -> note.withId(UUID.randomUUID().toString()))
@@ -184,11 +185,11 @@ public class CreateItemEventHandler implements EventHandler {
       .map(note -> note.withDate(dateTimeFormatter.format(ZonedDateTime.now())))
       .collect(Collectors.toList());
 
-    itemCollection.add(item.withCirculationNotes(notes), success -> future.complete(success.getResult()),
+    itemCollection.add(item.withCirculationNotes(notes), success -> promise.complete(success.getResult()),
       failure -> {
         LOG.error("Error posting Item cause {0}, status code {1}", failure.getReason(), failure.getStatusCode());
-        future.fail(failure.getReason());
+        promise.fail(failure.getReason());
       });
-    return future;
+    return promise.future();
   }
 }
