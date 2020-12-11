@@ -89,9 +89,10 @@ public class Items extends AbstractInventoryResource {
     router.get(RELATIVE_ITEMS_PATH + "/:id").handler(this::getById);
     router.put(RELATIVE_ITEMS_PATH + "/:id").handler(this::update);
     router.delete(RELATIVE_ITEMS_PATH + "/:id").handler(this::deleteById);
-
     router.post(RELATIVE_ITEMS_PATH + "/:id/mark-withdrawn")
       .handler(handle(this::markAsWithdrawn));
+    router.post(RELATIVE_ITEMS_PATH + "/:id/mark-inprocess")
+      .handler(handle(this::markAsInProcess));
     router.post(RELATIVE_ITEMS_PATH + "/:id/mark-missing")
       .handler(handle(this::markAsMissing));
   }
@@ -105,6 +106,17 @@ public class Items extends AbstractInventoryResource {
     return moveItemIntoStatusService.processMarkItemWithdrawn(webContext)
       .thenAccept(item -> respondWithItemRepresentation(item, HTTP_CREATED.toInt(),
           routingContext, webContext));
+  }
+
+  private CompletableFuture<Void> markAsInProcess(
+    RoutingContext routingContext, WebContext webContext, Clients clients) {
+
+    final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
+      .getItemCollection(webContext), clients);
+
+    return moveItemIntoStatusService.processMarkItemInProcess(webContext)
+      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_CREATED.toInt(),
+        routingContext, webContext));
   }
 
   private CompletableFuture<Void> markAsMissing(

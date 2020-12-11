@@ -70,6 +70,31 @@
           "methods": [
             "POST"
           ],
+          "pathPattern": "/inventory/items/{id}/mark-inprocess",
+          "permissionsRequired": [
+            "inventory.items.item.mark-inprocess.post"
+          ],
+          "modulePermissions": [
+            "circulation-storage.requests.collection.get",
+            "circulation-storage.requests.item.put",
+            "inventory-storage.items.item.put",
+            "inventory-storage.material-types.item.get",
+            "inventory-storage.material-types.collection.get",
+            "inventory-storage.loan-types.item.get",
+            "inventory-storage.loan-types.collection.get",
+            "inventory-storage.locations.item.get",
+            "inventory-storage.locations.collection.get",
+            "inventory-storage.holdings.collection.get",
+            "inventory-storage.holdings.item.get",
+            "inventory-storage.instances.collection.get",
+            "inventory-storage.instances.item.get",
+            "users.item.get"
+          ]
+        },
+        {
+          "methods": [
+            "POST"
+          ],
           "pathPattern": "/inventory/items/{id}/mark-missing",
           "permissionsRequired": [
             "inventory.items.item.mark-missing.post"
@@ -473,6 +498,11 @@
       "description": "Move items to another holdings record"
     },
     {
+      "permissionName": "inventory.items.item.mark-inprocess.post",
+      "displayName": "Inventory - mark an item as missing",
+      "description": "Mark an item as missing"
+    },
+    {
       "permissionName": "inventory.items.item.mark-missing.post",
       "displayName": "Inventory - mark an item as missing",
       "description": "Mark an item as missing"
@@ -574,6 +604,7 @@
         "inventory.ingest.mods.status.get",
         "inventory.config.instances.blocked-fields.get",
         "inventory.items.item.mark-withdrawn.post",
+        "inventory.items.item.mark-inprocess.post",
         "inventory.items.item.mark-missing.post",
         "inventory.items.move.item.post",
         "inventory.holdings.move.item.post"

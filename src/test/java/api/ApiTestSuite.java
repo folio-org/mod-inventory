@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import api.holdings.HoldingsApiMoveExamples;
-import api.items.ItemApiMoveExamples;
+import api.items.*;
 import org.folio.inventory.InventoryVerticle;
 import org.folio.inventory.common.VertxAssistant;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
@@ -24,11 +24,6 @@ import org.junit.runners.Suite;
 import api.events.EventHandlersApiTest;
 import api.holdings.HoldingApiExample;
 import api.isbns.IsbnUtilsApiExamples;
-import api.items.ItemAllowedStatusesSchemaTest;
-import api.items.ItemApiExamples;
-import api.items.ItemApiTitleExamples;
-import api.items.MarkItemMissingApiTests;
-import api.items.MarkItemWithdrawnApiTests;
 import api.support.ControlledVocabularyPreparation;
 import api.support.http.ResourceClient;
 import api.tenant.TenantApiExamples;
@@ -52,6 +47,7 @@ import support.fakes.FakeOkapi;
   HoldingApiExample.class,
   MarkItemWithdrawnApiTests.class,
   ItemApiMoveExamples.class,
+  MarkItemInProcessApiTests.class,
   MarkItemMissingApiTests.class,
   HoldingsApiMoveExamples.class
 })

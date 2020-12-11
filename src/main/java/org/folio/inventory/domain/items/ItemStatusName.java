@@ -6,22 +6,29 @@ import java.util.HashMap;
 import java.util.Map;
 
 public enum ItemStatusName {
+  AGED_TO_LOST("Aged to lost"),
   AVAILABLE("Available"),
   AWAITING_PICKUP("Awaiting pickup"),
   AWAITING_DELIVERY("Awaiting delivery"),
   CHECKED_OUT("Checked out"),
+  CLAIMED_RETURNED("Claimed returned"),
+  DECLARED_LOST("Declared lost"),
   IN_PROCESS("In process"),
+  IN_PROCESS_NON_REQUESTABLE("In process (non-requestable)"),
   IN_TRANSIT("In transit"),
+  INTELLECTUAL_ITEM("Intellectual item"),
+  LONG_MISSING("Long missing"),
+  LOST_AND_PAID("Lost and paid"),
   MISSING("Missing"),
   ON_ORDER("On order"),
-  PAGED("Paged"),
-  DECLARED_LOST("Declared lost"),
   ORDER_CLOSED("Order closed"),
-  CLAIMED_RETURNED("Claimed returned"),
+  PAGED("Paged"),
+  RESTRICTED("Restricted"),
+  UNAVAILABLE("Unavailable"),
   UNKNOWN("Unknown"),
-  WITHDRAWN("Withdrawn"),
-  LOST_AND_PAID("Lost and paid"),
-  AGED_TO_LOST("Aged to lost");
+  WITHDRAWN("Withdrawn");
+
+
 
   private static final Map<String, ItemStatusName> VALUE_TO_INSTANCE_MAP = initValueToInstanceMap();
   private final String value;

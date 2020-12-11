@@ -1,8 +1,7 @@
 package org.folio.inventory.services;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.folio.inventory.domain.items.ItemStatusName.MISSING;
-import static org.folio.inventory.domain.items.ItemStatusName.WITHDRAWN;
+import static org.folio.inventory.domain.items.ItemStatusName.*;
 import static org.folio.inventory.domain.view.request.RequestStatus.OPEN_NOT_YET_FILLED;
 
 import java.util.concurrent.CompletableFuture;
@@ -13,6 +12,7 @@ import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.view.request.Request;
 import org.folio.inventory.storage.external.Clients;
 import org.folio.inventory.storage.external.repository.RequestRepository;
+import org.folio.inventory.validation.MarkAsInProcessValidators;
 import org.folio.inventory.validation.MarkAsMissingValidators;
 import org.folio.inventory.validation.MarkAsWithdrawnValidators;
 import org.folio.inventory.validation.ItemsValidator;
@@ -42,6 +42,18 @@ public class MoveItemIntoStatusService {
       .thenApply(item -> item.changeStatus(WITHDRAWN))
       .thenCompose(itemCollection::update);
   }
+
+  public CompletableFuture<Item> processMarkItemInProcess(WebContext context) {
+    final String itemId = context.getStringParameter("id", null);
+
+    return itemCollection.findById(itemId)
+      .thenCompose(ItemsValidator::refuseWhenItemNotFound)
+      .thenCompose(MarkAsInProcessValidators::itemHasAllowedStatusToMarkAsInProcess)
+      .thenCompose(this::updateRequestStatusIfRequired)
+      .thenApply(item -> item.changeStatus(IN_PROCESS))
+      .thenCompose(itemCollection::update);
+  }
+
 
   public CompletableFuture<Item> processMarkItemMissing(WebContext context) {
     final String itemId = context.getStringParameter("id", null);
