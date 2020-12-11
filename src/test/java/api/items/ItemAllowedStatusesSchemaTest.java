@@ -7,7 +7,9 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -37,9 +39,24 @@ public class ItemAllowedStatusesSchemaTest extends ApiTests {
 
     assertTrue(enumAllowedItemStatuses.size() > 0);
     assertTrue(schemaAllowedItemStatuses.size() > 0);
-
-    assertEquals("Schema enum does not match ItemStatusName values",
+    assertEquals("Schema enum does not match ItemStatusName values"+System.lineSeparator()
+        +getDifferencesBetweenCollectionsMessage(enumAllowedItemStatuses,schemaAllowedItemStatuses),
       enumAllowedItemStatuses, schemaAllowedItemStatuses);
+  }
+
+  private String getDifferencesBetweenCollectionsMessage(Set<String> coll1, Set<String> coll2) {
+    StringBuilder result = new StringBuilder();
+    List<String> resultList = new ArrayList<>(coll1);
+    resultList.removeAll(coll2);
+    result.append("Item list 1:");
+    result.append(resultList);
+    resultList = new ArrayList<>(coll2);
+    resultList.removeAll(coll1);
+    result.append(System.lineSeparator());
+    result.append("Item List 2:");
+    result.append(resultList);
+    result.append(System.lineSeparator());
+    return result.toString();
   }
 
   private Set<String> getSchemaAllowedItemStatuses() throws IOException {

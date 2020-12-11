@@ -18,6 +18,10 @@ public class BusinessLogicInterfaceUrls {
     return items("/" + subPath + "/mark-missing");
   }
 
+  public static URL markInProcessUrl(String subPath) {
+    return items("/"+subPath+"/mark-inprocess");
+  }
+
   public static URL instances(String subPath) {
     return getUrl("/inventory/instances", subPath);
   }

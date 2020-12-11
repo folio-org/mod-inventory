@@ -76,6 +76,30 @@ resourceTypes:
               body:
                 text/plain:
                   example: "Internal server error"
+      /mark-inprocess:
+        post:
+          responses:
+            201:
+              description: "Item has marked as missing"
+              body:
+                application/json:
+                  example: !include examples/item_get.json
+                  schema: item
+            404:
+              description: "Item not found"
+              body:
+                text/plain:
+                  example: "Item with such id not found"
+            422:
+              description: "Validation error"
+              body:
+                application/json:
+                  schema: errors
+            500:
+              description: "Internal server error"
+                body:
+                  text/plain:
+                    example: "Internal server error"
       /mark-missing:
         post:
           responses:
