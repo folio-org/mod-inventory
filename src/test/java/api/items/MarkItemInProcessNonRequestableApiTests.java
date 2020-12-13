@@ -15,22 +15,26 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.net.MalformedURLException;
-import java.util.*;
+import java.util.Date;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import static api.support.InstanceSamples.smallAngryPlanet;
-import static org.folio.inventory.domain.items.CirculationNote.*;
+import static org.folio.inventory.domain.items.CirculationNote.NOTE_KEY;
+import static org.folio.inventory.domain.items.CirculationNote.NOTE_TYPE_KEY;
+import static org.folio.inventory.domain.items.CirculationNote.STAFF_ONLY_KEY;
 import static org.folio.inventory.domain.items.Item.CIRCULATION_NOTES_KEY;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
-import static support.matchers.ItemMatchers.isInProcess;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
+import static support.matchers.ItemMatchers.isInProcessNonRequestable;
 import static support.matchers.RequestMatchers.hasStatus;
 import static support.matchers.RequestMatchers.isOpenNotYetFilled;
 import static support.matchers.ResponseMatchers.hasValidationError;
 
 @RunWith(JUnitParamsRunner.class)
-public class MarkItemInProcessApiTests extends ApiTests {
+public class MarkItemInProcessNonRequestableApiTests extends ApiTests {
   private IndividualResource holdingsRecord;
 
   @Before
@@ -44,13 +48,13 @@ public class MarkItemInProcessApiTests extends ApiTests {
   }
 
   @Test
-  public void testMarkItemInProcessCirculationNotes() throws Exception {
+  public void testMarkItemInProcessNonRequestableCirculationNotes() throws Exception {
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
       .withCheckInNote()
       .canCirculate());
 
-    final var itemMarkedAsTargetStatus = markItemInProcess(createdItem).getJson();
+    final var itemMarkedAsTargetStatus = markItemInProcessNonRequestable(createdItem).getJson();
     final var itemCirculationNotes = itemMarkedAsTargetStatus.getJsonArray(CIRCULATION_NOTES_KEY);
     final var checkInNote = itemCirculationNotes.getJsonObject(0);
 
@@ -70,14 +74,14 @@ public class MarkItemInProcessApiTests extends ApiTests {
     ,"Withdrawn"
   })
   @Test
-  public void canMarkItemInProcessWhenInAllowedStatus(String initialStatus) throws Exception {
+  public void canMarkItemInProcessNonRequestableWhenInAllowedStatus(String initialStatus) throws Exception {
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
       .withStatus(initialStatus)
       .canCirculate());
 
-    assertThat(markItemInProcess(createdItem).getJson(), isInProcess());
-    assertThat(itemsClient.getById(createdItem.getId()).getJson(), isInProcess());
+    assertThat(markItemInProcessNonRequestable(createdItem).getJson(), isInProcessNonRequestable());
+    assertThat(itemsClient.getById(createdItem.getId()).getJson(), isInProcessNonRequestable());
   }
 
   @Parameters({
@@ -103,8 +107,8 @@ public class MarkItemInProcessApiTests extends ApiTests {
           .withBarcode(""+new Date().getTime())
           .canCirculate());
 
-        assertThat(markItemInProcess(createdItem), hasValidationError(
-          "Item is not allowed to be marked as:\"In process\"", "status.name", initialStatus));
+        assertThat(markItemInProcessNonRequestable(createdItem), hasValidationError(
+          "Item is not allowed to be marked as:\"In process (non-requestable)\"", "status.name", initialStatus));
   }
 
 
@@ -129,8 +133,8 @@ public class MarkItemInProcessApiTests extends ApiTests {
     final IndividualResource request = createRequest(createdItem.getId(),
       requestStatus, DateTime.now(DateTimeZone.UTC).plusHours(1));
 
-    assertThat(markItemInProcess(createdItem).getJson(), isInProcess());
-    assertThat(itemsClient.getById(createdItem.getId()).getJson(), isInProcess());
+    assertThat(markItemInProcessNonRequestable(createdItem).getJson(), isInProcessNonRequestable());
+    assertThat(itemsClient.getById(createdItem.getId()).getJson(), isInProcessNonRequestable());
 
     assertThat(requestStorageClient.getById(request.getId()).getJson(),
       isOpenNotYetFilled());
@@ -151,8 +155,8 @@ public class MarkItemInProcessApiTests extends ApiTests {
     final IndividualResource request = createRequest(createdItem.getId(),
       requestStatus, DateTime.now(DateTimeZone.UTC).minusHours(1));
 
-    assertThat(markItemInProcess(createdItem).getJson(), isInProcess());
-    assertThat(itemsClient.getById(createdItem.getId()).getJson(), isInProcess());
+    assertThat(markItemInProcessNonRequestable(createdItem).getJson(), isInProcessNonRequestable());
+    assertThat(itemsClient.getById(createdItem.getId()).getJson(), isInProcessNonRequestable());
 
     assertThat(requestStorageClient.getById(request.getId()).getJson(),
       hasStatus(requestStatus));
@@ -174,15 +178,15 @@ public class MarkItemInProcessApiTests extends ApiTests {
     final IndividualResource request = createRequest(createdItem.getId(),
       requestStatus, DateTime.now(DateTimeZone.UTC).plusHours(1));
 
-    assertThat(markItemInProcess(createdItem).getJson(), isInProcess());
-    assertThat(itemsClient.getById(createdItem.getId()).getJson(), isInProcess());
+    assertThat(markItemInProcessNonRequestable(createdItem).getJson(), isInProcessNonRequestable());
+    assertThat(itemsClient.getById(createdItem.getId()).getJson(), isInProcessNonRequestable());
 
     assertThat(requestStorageClient.getById(request.getId()).getJson(),
       hasStatus(requestStatus));
   }
 
-  private Response markItemInProcess(IndividualResource item) {
-    return markInProcessFixture.markInProcess(item.getId());
+  private Response markItemInProcessNonRequestable(IndividualResource item) {
+    return markInProcessNonRequestableFixture.markInProcessNonRequestable(item.getId());
   }
 
   private IndividualResource createRequest(UUID itemId, String status, DateTime expireDateTime)

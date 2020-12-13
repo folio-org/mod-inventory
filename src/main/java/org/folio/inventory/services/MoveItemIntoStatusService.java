@@ -1,7 +1,11 @@
 package org.folio.inventory.services;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.folio.inventory.domain.items.ItemStatusName.*;
+import static org.folio.inventory.domain.items.ItemStatusName.INTELLECTUAL_ITEM;
+import static org.folio.inventory.domain.items.ItemStatusName.IN_PROCESS;
+import static org.folio.inventory.domain.items.ItemStatusName.IN_PROCESS_NON_REQUESTABLE;
+import static org.folio.inventory.domain.items.ItemStatusName.MISSING;
+import static org.folio.inventory.domain.items.ItemStatusName.WITHDRAWN;
 import static org.folio.inventory.domain.view.request.RequestStatus.OPEN_NOT_YET_FILLED;
 
 import java.util.concurrent.CompletableFuture;
@@ -12,7 +16,9 @@ import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.view.request.Request;
 import org.folio.inventory.storage.external.Clients;
 import org.folio.inventory.storage.external.repository.RequestRepository;
+import org.folio.inventory.validation.MarkAsInProcessNonRequestableValidators;
 import org.folio.inventory.validation.MarkAsInProcessValidators;
+import org.folio.inventory.validation.MarkAsIntellectualItemValidators;
 import org.folio.inventory.validation.MarkAsMissingValidators;
 import org.folio.inventory.validation.MarkAsWithdrawnValidators;
 import org.folio.inventory.validation.ItemsValidator;
@@ -54,6 +60,27 @@ public class MoveItemIntoStatusService {
       .thenCompose(itemCollection::update);
   }
 
+  public CompletableFuture<Item> processMarkItemInProcessNonRequestable(WebContext context) {
+    final String itemId = context.getStringParameter("id", null);
+
+    return itemCollection.findById(itemId)
+      .thenCompose(ItemsValidator::refuseWhenItemNotFound)
+      .thenCompose(MarkAsInProcessNonRequestableValidators::itemHasAllowedStatusToMarkAsInProcessNonRequestable)
+      .thenCompose(this::updateRequestStatusIfRequired)
+      .thenApply(item -> item.changeStatus(IN_PROCESS_NON_REQUESTABLE))
+      .thenCompose(itemCollection::update);
+  }
+
+  public CompletableFuture<Item> processMarkItemIntellectualItem(WebContext context) {
+    final String itemId = context.getStringParameter("id", null);
+
+    return itemCollection.findById(itemId)
+      .thenCompose(ItemsValidator::refuseWhenItemNotFound)
+      .thenCompose(MarkAsIntellectualItemValidators::itemHasAllowedStatusToMarkAsIntellectualItem)
+      .thenCompose(this::updateRequestStatusIfRequired)
+      .thenApply(item -> item.changeStatus(INTELLECTUAL_ITEM))
+      .thenCompose(itemCollection::update);
+  }
 
   public CompletableFuture<Item> processMarkItemMissing(WebContext context) {
     final String itemId = context.getStringParameter("id", null);

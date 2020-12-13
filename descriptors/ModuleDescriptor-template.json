@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "inventory",
-      "version": "10.7",
+      "version": "10.7_",
       "handlers": [
         {
           "methods": ["GET"],
@@ -73,6 +73,56 @@
           "pathPattern": "/inventory/items/{id}/mark-inprocess",
           "permissionsRequired": [
             "inventory.items.item.mark-inprocess.post"
+          ],
+          "modulePermissions": [
+            "circulation-storage.requests.collection.get",
+            "circulation-storage.requests.item.put",
+            "inventory-storage.items.item.put",
+            "inventory-storage.material-types.item.get",
+            "inventory-storage.material-types.collection.get",
+            "inventory-storage.loan-types.item.get",
+            "inventory-storage.loan-types.collection.get",
+            "inventory-storage.locations.item.get",
+            "inventory-storage.locations.collection.get",
+            "inventory-storage.holdings.collection.get",
+            "inventory-storage.holdings.item.get",
+            "inventory-storage.instances.collection.get",
+            "inventory-storage.instances.item.get",
+            "users.item.get"
+          ]
+        },
+        {
+          "methods": [
+            "POST"
+          ],
+          "pathPattern": "/inventory/items/{id}/mark-inprocess-non-requestable",
+          "permissionsRequired": [
+            "inventory.items.item.mark-inprocess-non-requestable.post"
+          ],
+          "modulePermissions": [
+            "circulation-storage.requests.collection.get",
+            "circulation-storage.requests.item.put",
+            "inventory-storage.items.item.put",
+            "inventory-storage.material-types.item.get",
+            "inventory-storage.material-types.collection.get",
+            "inventory-storage.loan-types.item.get",
+            "inventory-storage.loan-types.collection.get",
+            "inventory-storage.locations.item.get",
+            "inventory-storage.locations.collection.get",
+            "inventory-storage.holdings.collection.get",
+            "inventory-storage.holdings.item.get",
+            "inventory-storage.instances.collection.get",
+            "inventory-storage.instances.item.get",
+            "users.item.get"
+          ]
+        },
+        {
+          "methods": [
+            "POST"
+          ],
+          "pathPattern": "/inventory/items/{id}/mark-intellectual-item",
+          "permissionsRequired": [
+            "inventory.items.item.mark-intellectual-item.post"
           ],
           "modulePermissions": [
             "circulation-storage.requests.collection.get",
@@ -502,8 +552,18 @@
     },
     {
       "permissionName": "inventory.items.item.mark-inprocess.post",
-      "displayName": "Inventory - mark an item as missing",
-      "description": "Mark an item as missing"
+      "displayName": "Inventory - mark an item as in process",
+      "description": "Mark an item as in process"
+    },
+    {
+      "permissionName": "inventory.items.item.mark-inprocess-non-requestable.post",
+      "displayName": "Inventory - mark an item as in process (non-requestable)",
+      "description": "Mark an item as in process (non-requestable)"
+    },
+    {
+      "permissionName": "inventory.items.item.mark-intellectual-item.post",
+      "displayName": "Inventory - mark an item as intellectual item",
+      "description": "Mark an item as intellectual item"
     },
     {
       "permissionName": "inventory.items.item.mark-missing.post",
@@ -608,6 +668,7 @@
         "inventory.config.instances.blocked-fields.get",
         "inventory.items.item.mark-withdrawn.post",
         "inventory.items.item.mark-inprocess.post",
+        "inventory.items.item.mark-inprocess-non-requestable.post",
         "inventory.items.item.mark-missing.post",
         "inventory.items.move.item.post",
         "inventory.holdings.move.item.post"

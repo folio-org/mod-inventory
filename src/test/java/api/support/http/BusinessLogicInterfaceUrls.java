@@ -10,17 +10,26 @@ public class BusinessLogicInterfaceUrls {
     return getUrl("/inventory/items", subPath);
   }
 
-  public static URL markWithdrawnUrl(String subPath) {
-    return items("/" + subPath + "/mark-withdrawn");
+  public static URL markInProcessUrl(String subPath) {
+    return items("/"+subPath+"/mark-inprocess");
+  }
+
+  public static URL markInProcessNonRequestableUrl(String subPath) {
+    return items("/"+subPath+"/mark-inprocess-non-requestable");
+  }
+
+  public static URL markIntellectualItemUrl(String subPath) {
+    return items("/" + subPath + "/mark-intellectual-item");
   }
 
   public static URL markMissingUrl(String subPath) {
     return items("/" + subPath + "/mark-missing");
   }
 
-  public static URL markInProcessUrl(String subPath) {
-    return items("/"+subPath+"/mark-inprocess");
+  public static URL markWithdrawnUrl(String subPath) {
+    return items("/" + subPath + "/mark-withdrawn");
   }
+
 
   public static URL instances(String subPath) {
     return getUrl("/inventory/instances", subPath);

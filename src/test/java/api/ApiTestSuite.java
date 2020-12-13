@@ -14,6 +14,8 @@ import java.util.concurrent.TimeoutException;
 import api.holdings.HoldingsApiMoveExamples;
 import api.items.ItemApiMoveExamples;
 import api.items.MarkItemInProcessApiTests;
+import api.items.MarkItemInProcessNonRequestableApiTests;
+import api.items.MarkItemIntellectualItemApiTests;
 import org.folio.inventory.InventoryVerticle;
 import org.folio.inventory.common.VertxAssistant;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
@@ -54,6 +56,8 @@ import support.fakes.FakeOkapi;
   MarkItemWithdrawnApiTests.class,
   ItemApiMoveExamples.class,
   MarkItemInProcessApiTests.class,
+  MarkItemInProcessNonRequestableApiTests.class,
+  MarkItemIntellectualItemApiTests.class,
   MarkItemMissingApiTests.class,
   HoldingsApiMoveExamples.class
 })

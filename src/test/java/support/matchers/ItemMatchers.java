@@ -13,14 +13,21 @@ public final class ItemMatchers {
     return hasStatus("Available");
   }
 
-  public static Matcher<JsonObject> isInprocess() {
+  public static Matcher<JsonObject> isInProcess() {
     return hasStatus("In process");
+  }
+
+  public static Matcher<JsonObject> isInProcessNonRequestable() {
+    return hasStatus("In process (non-requestable)");
+  }
+
+  public static Matcher<JsonObject> isIntellectualItem() {
+    return hasStatus("Intellectual item");
   }
 
   public static Matcher<JsonObject> isMissing() {
     return hasStatus("Missing");
   }
-
 
   public static Matcher<JsonObject> isWithdrawn() {
     return hasStatus("Withdrawn");

@@ -93,6 +93,10 @@ public class Items extends AbstractInventoryResource {
       .handler(handle(this::markAsWithdrawn));
     router.post(RELATIVE_ITEMS_PATH + "/:id/mark-inprocess")
       .handler(handle(this::markAsInProcess));
+    router.post(RELATIVE_ITEMS_PATH + "/:id/mark-inprocess-non-requestable")
+      .handler(handle(this::markAsInProcessNonRequestable));
+    router.post(RELATIVE_ITEMS_PATH + "/:id/mark-intellectual-item")
+      .handler(handle(this::markAsIntellectualItem));
     router.post(RELATIVE_ITEMS_PATH + "/:id/mark-missing")
       .handler(handle(this::markAsMissing));
   }
@@ -118,6 +122,29 @@ public class Items extends AbstractInventoryResource {
       .thenAccept(item -> respondWithItemRepresentation(item, HTTP_CREATED.toInt(),
         routingContext, webContext));
   }
+
+  private CompletableFuture<Void> markAsInProcessNonRequestable(
+    RoutingContext routingContext, WebContext webContext, Clients clients) {
+
+    final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
+      .getItemCollection(webContext), clients);
+
+    return moveItemIntoStatusService.processMarkItemInProcessNonRequestable(webContext)
+      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_CREATED.toInt(),
+        routingContext, webContext));
+  }
+
+  private CompletableFuture<Void> markAsIntellectualItem(
+    RoutingContext routingContext, WebContext webContext, Clients clients) {
+
+    final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
+      .getItemCollection(webContext), clients);
+
+    return moveItemIntoStatusService.processMarkItemIntellectualItem(webContext)
+      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_CREATED.toInt(),
+        routingContext, webContext));
+  }
+
 
   private CompletableFuture<Void> markAsMissing(
     RoutingContext routingContext, WebContext webContext, Clients clients) {

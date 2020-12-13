@@ -5,6 +5,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import api.support.fixtures.MarkItemInProcessFixture;
+import api.support.fixtures.MarkItemInProcessNonRequestableFixture;
+import api.support.fixtures.MarkItemIntellectualItemFixture;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -35,6 +37,8 @@ public abstract class ApiTests {
   protected final InstanceRelationshipTypeFixture instanceRelationshipTypeFixture;
 
   protected final MarkItemInProcessFixture markInProcessFixture;
+  protected final MarkItemInProcessNonRequestableFixture markInProcessNonRequestableFixture;
+  protected final MarkItemIntellectualItemFixture markItemIntellectualItemFixture;
   protected final MarkItemMissingFixture markMissingFixture;
   protected final MarkItemWithdrawnFixture markWithdrawnFixture;
 
@@ -52,6 +56,8 @@ public abstract class ApiTests {
     requestStorageClient = ResourceClient.forRequestStorage(okapiClient);
     instanceRelationshipTypeFixture = new InstanceRelationshipTypeFixture(okapiClient);
     markInProcessFixture = new MarkItemInProcessFixture(okapiClient);
+    markInProcessNonRequestableFixture = new MarkItemInProcessNonRequestableFixture(okapiClient);
+    markItemIntellectualItemFixture = new MarkItemIntellectualItemFixture(okapiClient);
     markMissingFixture = new MarkItemMissingFixture(okapiClient);
     markWithdrawnFixture = new MarkItemWithdrawnFixture(okapiClient);
   }

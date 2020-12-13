@@ -12,8 +12,8 @@ import java.util.concurrent.CompletableFuture;
 import static java.util.EnumSet.of;
 import static org.folio.inventory.support.CompletableFutures.failedFuture;
 
-public final class MarkAsInProcessValidators {
-  private static final Set<ItemStatusName> ALLOWED_STATUS_TO_MARK_IN_PROCESS = of(
+public final class MarkAsInProcessNonRequestableValidators {
+  private static final Set<ItemStatusName> ALLOWED_STATUS_TO_MARK_IN_PROCESS_NON_REQUESTABLE = of(
     ItemStatusName.AVAILABLE,
     ItemStatusName.AWAITING_DELIVERY,
     ItemStatusName.AWAITING_PICKUP,
@@ -25,19 +25,19 @@ public final class MarkAsInProcessValidators {
     ItemStatusName.WITHDRAWN
   );
 
-  private MarkAsInProcessValidators() {}
+  private MarkAsInProcessNonRequestableValidators() {}
 
-  public static CompletableFuture<Item> itemHasAllowedStatusToMarkAsInProcess(Item item) {
-    if (ALLOWED_STATUS_TO_MARK_IN_PROCESS.contains(item.getStatus().getName())) {
+  public static CompletableFuture<Item> itemHasAllowedStatusToMarkAsInProcessNonRequestable(Item item) {
+    if (ALLOWED_STATUS_TO_MARK_IN_PROCESS_NON_REQUESTABLE.contains(item.getStatus().getName())) {
       return CompletableFuture.completedFuture(item);
     }
 
     return failedFuture(new UnprocessableEntityException(
-      new ValidationError("Item is not allowed to be marked as:\"In process\"",
+      new ValidationError("Item is not allowed to be marked as:\"In process (non-requestable)\"",
         "status.name", item.getStatus().getName().value())));
   }
 
-  public static Set<ItemStatusName> getAllowedStatusToMarkInProcess() {
-    return ALLOWED_STATUS_TO_MARK_IN_PROCESS;
+  public static Set<ItemStatusName> getAllowedStatusToMarkInProcessNonRequestable() {
+    return ALLOWED_STATUS_TO_MARK_IN_PROCESS_NON_REQUESTABLE;
   }
 }

@@ -5,15 +5,14 @@ import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.exceptions.UnprocessableEntityException;
 import org.folio.inventory.support.http.server.ValidationError;
 
-import java.util.EnumSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import static java.util.EnumSet.of;
 import static org.folio.inventory.support.CompletableFutures.failedFuture;
 
-public final class MarkAsInProcessValidators {
-  private static final Set<ItemStatusName> ALLOWED_STATUS_TO_MARK_IN_PROCESS = of(
+public final class MarkAsIntellectualItemValidators {
+  private static final Set<ItemStatusName> ALLOWED_STATUS_TO_MARK_INTELLECTUAL_ITEM = of(
     ItemStatusName.AVAILABLE,
     ItemStatusName.AWAITING_DELIVERY,
     ItemStatusName.AWAITING_PICKUP,
@@ -22,22 +21,16 @@ public final class MarkAsInProcessValidators {
     ItemStatusName.MISSING,
     ItemStatusName.ORDER_CLOSED,
     ItemStatusName.PAGED,
-    ItemStatusName.WITHDRAWN
-  );
+    ItemStatusName.WITHDRAWN);
+  private MarkAsIntellectualItemValidators() {}
 
-  private MarkAsInProcessValidators() {}
-
-  public static CompletableFuture<Item> itemHasAllowedStatusToMarkAsInProcess(Item item) {
-    if (ALLOWED_STATUS_TO_MARK_IN_PROCESS.contains(item.getStatus().getName())) {
+  public static CompletableFuture<Item> itemHasAllowedStatusToMarkAsIntellectualItem(Item item) {
+    if (ALLOWED_STATUS_TO_MARK_INTELLECTUAL_ITEM.contains(item.getStatus().getName())) {
       return CompletableFuture.completedFuture(item);
     }
 
     return failedFuture(new UnprocessableEntityException(
-      new ValidationError("Item is not allowed to be marked as:\"In process\"",
+      new ValidationError("Item is not allowed to be marked as:\"Intellectual item\"",
         "status.name", item.getStatus().getName().value())));
-  }
-
-  public static Set<ItemStatusName> getAllowedStatusToMarkInProcess() {
-    return ALLOWED_STATUS_TO_MARK_IN_PROCESS;
   }
 }
