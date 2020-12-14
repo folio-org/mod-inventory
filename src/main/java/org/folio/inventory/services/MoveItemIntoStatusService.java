@@ -7,6 +7,7 @@ import static org.folio.inventory.domain.items.ItemStatusName.IN_PROCESS_NON_REQ
 import static org.folio.inventory.domain.items.ItemStatusName.LONG_MISSING;
 import static org.folio.inventory.domain.items.ItemStatusName.MISSING;
 import static org.folio.inventory.domain.items.ItemStatusName.RESTRICTED;
+import static org.folio.inventory.domain.items.ItemStatusName.UNKNOWN;
 import static org.folio.inventory.domain.items.ItemStatusName.WITHDRAWN;
 import static org.folio.inventory.domain.view.request.RequestStatus.OPEN_NOT_YET_FILLED;
 
@@ -24,6 +25,7 @@ import org.folio.inventory.validation.MarkAsIntellectualItemValidators;
 import org.folio.inventory.validation.MarkAsLongMissingValidators;
 import org.folio.inventory.validation.MarkAsMissingValidators;
 import org.folio.inventory.validation.MarkAsRestrictedValidators;
+import org.folio.inventory.validation.MarkAsUnknownValidators;
 import org.folio.inventory.validation.MarkAsWithdrawnValidators;
 import org.folio.inventory.validation.ItemsValidator;
 import org.joda.time.DateTime;
@@ -116,6 +118,17 @@ public class MoveItemIntoStatusService {
       .thenCompose(MarkAsRestrictedValidators::itemHasAllowedStatusToMarkAsRestricted)
       .thenCompose(this::updateRequestStatusIfRequired)
       .thenApply(item -> item.changeStatus(RESTRICTED))
+      .thenCompose(itemCollection::update);
+  }
+
+  public CompletableFuture<Item> processMarkItemUnknown(WebContext context) {
+    final String itemId = context.getStringParameter("id", null);
+
+    return itemCollection.findById(itemId)
+      .thenCompose(ItemsValidator::refuseWhenItemNotFound)
+      .thenCompose(MarkAsUnknownValidators::itemHasAllowedStatusToMarkAsUnknown)
+      .thenCompose(this::updateRequestStatusIfRequired)
+      .thenApply(item -> item.changeStatus(UNKNOWN))
       .thenCompose(itemCollection::update);
   }
 

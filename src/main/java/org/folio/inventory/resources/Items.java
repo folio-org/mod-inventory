@@ -103,6 +103,9 @@ public class Items extends AbstractInventoryResource {
       .handler(handle(this::markAsMissing));
     router.post(RELATIVE_ITEMS_PATH + "/:id/mark-restricted")
       .handler(handle(this::markAsRestricted));
+    router.post(RELATIVE_ITEMS_PATH + "/:id/mark-unknown")
+      .handler(handle(this::markAsUnknown));
+
   }
 
   private CompletableFuture<Void> markAsWithdrawn(
@@ -179,6 +182,17 @@ public class Items extends AbstractInventoryResource {
       .getItemCollection(webContext), clients);
 
     return moveItemIntoStatusService.processMarkItemRestricted(webContext)
+      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_CREATED.toInt(),
+        routingContext, webContext));
+  }
+
+  private CompletableFuture<Void> markAsUnknown(
+    RoutingContext routingContext, WebContext webContext, Clients clients) {
+
+    final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
+      .getItemCollection(webContext), clients);
+
+    return moveItemIntoStatusService.processMarkItemUnknown(webContext)
       .thenAccept(item -> respondWithItemRepresentation(item, HTTP_CREATED.toInt(),
         routingContext, webContext));
   }

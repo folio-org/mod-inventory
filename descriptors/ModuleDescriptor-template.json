@@ -217,6 +217,31 @@
           ]
         },
         {
+          "methods": [
+            "POST"
+          ],
+          "pathPattern": "/inventory/items/{id}/mark-restricted",
+          "permissionsRequired": [
+            "inventory.items.item.mark-unknown.post"
+          ],
+          "modulePermissions": [
+            "circulation-storage.requests.collection.get",
+            "circulation-storage.requests.item.put",
+            "inventory-storage.items.item.put",
+            "inventory-storage.material-types.item.get",
+            "inventory-storage.material-types.collection.get",
+            "inventory-storage.loan-types.item.get",
+            "inventory-storage.loan-types.collection.get",
+            "inventory-storage.locations.item.get",
+            "inventory-storage.locations.collection.get",
+            "inventory-storage.holdings.collection.get",
+            "inventory-storage.holdings.item.get",
+            "inventory-storage.instances.collection.get",
+            "inventory-storage.instances.item.get",
+            "users.item.get"
+          ]
+        },
+        {
           "methods": ["POST"],
           "pathPattern": "/inventory/items",
           "permissionsRequired": ["inventory.items.item.post"],
@@ -630,6 +655,12 @@
       "displayName": "Inventory - mark an item as restricted",
       "description": "Mark an item as restricted"
     },
+    {
+      "permissionName": "inventory.items.item.mark-unknown.post",
+      "displayName": "Inventory - mark an item as unknown",
+      "description": "Mark an item as unknown"
+    },
+
     {
       "permissionName": "inventory.holdings.move.item.post",
       "displayName": "Inventory - move holdings record to another instance",
