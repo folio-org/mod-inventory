@@ -18,6 +18,7 @@ import api.items.MarkItemInProcessNonRequestableApiTests;
 import api.items.MarkItemIntellectualItemApiTests;
 import api.items.MarkItemLongMissingApiTests;
 import api.items.MarkItemRestrictedApiTests;
+import api.items.MarkItemUnavailableApiTests;
 import api.items.MarkItemUnknownApiTests;
 import org.folio.inventory.InventoryVerticle;
 import org.folio.inventory.common.VertxAssistant;
@@ -64,6 +65,7 @@ import support.fakes.FakeOkapi;
   MarkItemLongMissingApiTests.class,
   MarkItemMissingApiTests.class,
   MarkItemRestrictedApiTests.class,
+  MarkItemUnavailableApiTests.class,
   MarkItemUnknownApiTests.class,
   HoldingsApiMoveExamples.class
 })

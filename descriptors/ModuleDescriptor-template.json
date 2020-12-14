@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "inventory",
-      "version": "10.7",
+      "version": "10.8",
       "handlers": [
         {
           "methods": ["GET"],
@@ -220,7 +220,32 @@
           "methods": [
             "POST"
           ],
-          "pathPattern": "/inventory/items/{id}/mark-restricted",
+          "pathPattern": "/inventory/items/{id}/mark-unavailable",
+          "permissionsRequired": [
+            "inventory.items.item.mark-unavailable.post"
+          ],
+          "modulePermissions": [
+            "circulation-storage.requests.collection.get",
+            "circulation-storage.requests.item.put",
+            "inventory-storage.items.item.put",
+            "inventory-storage.material-types.item.get",
+            "inventory-storage.material-types.collection.get",
+            "inventory-storage.loan-types.item.get",
+            "inventory-storage.loan-types.collection.get",
+            "inventory-storage.locations.item.get",
+            "inventory-storage.locations.collection.get",
+            "inventory-storage.holdings.collection.get",
+            "inventory-storage.holdings.item.get",
+            "inventory-storage.instances.collection.get",
+            "inventory-storage.instances.item.get",
+            "users.item.get"
+          ]
+        },
+        {
+          "methods": [
+            "POST"
+          ],
+          "pathPattern": "/inventory/items/{id}/mark-unknown",
           "permissionsRequired": [
             "inventory.items.item.mark-unknown.post"
           ],

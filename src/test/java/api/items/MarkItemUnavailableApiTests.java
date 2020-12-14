@@ -26,14 +26,13 @@ import static org.folio.inventory.domain.items.CirculationNote.STAFF_ONLY_KEY;
 import static org.folio.inventory.domain.items.Item.CIRCULATION_NOTES_KEY;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
-import static support.matchers.ItemMatchers.isRestricted;
-import static support.matchers.ItemMatchers.isUnknown;
+import static support.matchers.ItemMatchers.isUnavailable;
 import static support.matchers.RequestMatchers.hasStatus;
 import static support.matchers.RequestMatchers.isOpenNotYetFilled;
 import static support.matchers.ResponseMatchers.hasValidationError;
 
 @RunWith(JUnitParamsRunner.class)
-public class MarkItemUnknownApiTests extends ApiTests {
+public class MarkItemUnavailableApiTests extends ApiTests {
   private IndividualResource holdingsRecord;
 
   @Before
@@ -46,13 +45,13 @@ public class MarkItemUnknownApiTests extends ApiTests {
   }
 
   @Test
-  public void testMarkItemUnknownPreservesCirculationNotes() throws Exception {
+  public void testMarkItemUnavailablePreservesCirculationNotes() throws Exception {
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
       .withCheckInNote()
       .canCirculate());
 
-    final var item = markItemUnknown(createdItem).getJson();
+    final var item = markItemUnavailable(createdItem).getJson();
     final var itemCirculationNotes = item.getJsonArray(CIRCULATION_NOTES_KEY);
     final var checkInNote = itemCirculationNotes.getJsonObject(0);
 
@@ -71,14 +70,14 @@ public class MarkItemUnknownApiTests extends ApiTests {
     ,"Withdrawn"
   })
   @Test
-  public void canMarkItemUnknownWhenInAllowedStatus(String initialStatus) throws Exception {
+  public void canMarkItemUnavailableWhenInAllowedStatus(String initialStatus) throws Exception {
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
       .withStatus(initialStatus)
       .canCirculate());
 
-    assertThat(markItemUnknown(createdItem).getJson(), isUnknown());
-    assertThat(itemsClient.getById(createdItem.getId()).getJson(), isUnknown());
+    assertThat(markItemUnavailable(createdItem).getJson(), isUnavailable());
+    assertThat(itemsClient.getById(createdItem.getId()).getJson(), isUnavailable());
   }
 
   @Parameters({
@@ -93,22 +92,22 @@ public class MarkItemUnknownApiTests extends ApiTests {
     ,"On order"
     ,"Restricted"
     ,"Unavailable"
-    ,"Unknown"
+    ,"Unavailable"
   })
   @Test
-  public void cannotMarkItemUnknownWhenNotInAllowedStatus(String initialStatus) throws Exception {
+  public void cannotMarkItemUnavailableWhenNotInAllowedStatus(String initialStatus) throws Exception {
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
       .withStatus(initialStatus)
       .canCirculate());
 
-    assertThat(markItemUnknown(createdItem), hasValidationError(
-      "Item is not allowed to be marked as Unknown", "status.name", initialStatus));
+    assertThat(markItemUnavailable(createdItem), hasValidationError(
+      "Item is not allowed to be marked as Unavailable", "status.name", initialStatus));
   }
 
   @Test
-  public void shouldNotMarkItemUnknownThatCannotBeFound() {
-    assertThat(markItemUnknownFixture.markUnknown(UUID.randomUUID()).getStatusCode(),
+  public void shouldNotMarkItemUnavailableThatCannotBeFound() {
+    assertThat(markItemUnavailableFixture.markUnavailable(UUID.randomUUID()).getStatusCode(),
       is(404));
   }
 
@@ -127,8 +126,8 @@ public class MarkItemUnknownApiTests extends ApiTests {
     final IndividualResource request = createRequest(createdItem.getId(),
       requestStatus, DateTime.now(DateTimeZone.UTC).plusHours(1));
 
-    assertThat(markItemUnknown(createdItem).getJson(), isUnknown());
-    assertThat(itemsClient.getById(createdItem.getId()).getJson(), isUnknown());
+    assertThat(markItemUnavailable(createdItem).getJson(), isUnavailable());
+    assertThat(itemsClient.getById(createdItem.getId()).getJson(), isUnavailable());
 
     assertThat(requestStorageClient.getById(request.getId()).getJson(),
       isOpenNotYetFilled());
@@ -149,8 +148,8 @@ public class MarkItemUnknownApiTests extends ApiTests {
     final IndividualResource request = createRequest(createdItem.getId(),
       requestStatus, DateTime.now(DateTimeZone.UTC).minusHours(1));
 
-    assertThat(markItemUnknown(createdItem).getJson(), isUnknown());
-    assertThat(itemsClient.getById(createdItem.getId()).getJson(), isUnknown());
+    assertThat(markItemUnavailable(createdItem).getJson(), isUnavailable());
+    assertThat(itemsClient.getById(createdItem.getId()).getJson(), isUnavailable());
 
     assertThat(requestStorageClient.getById(request.getId()).getJson(),
       hasStatus(requestStatus));
@@ -172,16 +171,16 @@ public class MarkItemUnknownApiTests extends ApiTests {
     final IndividualResource request = createRequest(createdItem.getId(),
       requestStatus, DateTime.now(DateTimeZone.UTC).plusHours(1));
 
-    assertThat(markItemUnknown(createdItem).getJson(), isUnknown());
-    assertThat(itemsClient.getById(createdItem.getId()).getJson(), isUnknown());
+    assertThat(markItemUnavailable(createdItem).getJson(), isUnavailable());
+    assertThat(itemsClient.getById(createdItem.getId()).getJson(), isUnavailable());
 
     assertThat(requestStorageClient.getById(request.getId()).getJson(),
       hasStatus(requestStatus));
   }
 
-  private Response markItemUnknown(IndividualResource item) {
+  private Response markItemUnavailable(IndividualResource item) {
 
-    return markItemUnknownFixture.markUnknown(item.getId());
+    return markItemUnavailableFixture.markUnavailable(item.getId());
   }
 
   private IndividualResource createRequest(UUID itemId, String status, DateTime expireDateTime)

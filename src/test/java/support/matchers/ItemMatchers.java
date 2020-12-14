@@ -36,10 +36,14 @@ public final class ItemMatchers {
   public static Matcher<JsonObject> isRestricted() {
     return hasStatus("Restricted");
   }
+
+  public static Matcher<JsonObject> isUnavailable() {
+    return hasStatus("Unavailable");
+  }
+
   public static Matcher<JsonObject> isUnknown() {
     return hasStatus("Unknown");
   }
-
 
   public static Matcher<JsonObject> isWithdrawn() {
     return hasStatus("Withdrawn");
