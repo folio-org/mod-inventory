@@ -8,6 +8,7 @@ import api.support.fixtures.MarkItemInProcessFixture;
 import api.support.fixtures.MarkItemInProcessNonRequestableFixture;
 import api.support.fixtures.MarkItemIntellectualItemFixture;
 import api.support.fixtures.MarkItemLongMissingFixture;
+import api.support.fixtures.MarkItemRestrictedFixture;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -42,6 +43,7 @@ public abstract class ApiTests {
   protected final MarkItemIntellectualItemFixture markItemIntellectualItemFixture;
   protected final MarkItemLongMissingFixture markLongMissingFixture;
   protected final MarkItemMissingFixture markMissingFixture;
+  protected final MarkItemRestrictedFixture markItemRestrictedFixture;
   protected final MarkItemWithdrawnFixture markWithdrawnFixture;
 
   public ApiTests() {
@@ -62,6 +64,7 @@ public abstract class ApiTests {
     markItemIntellectualItemFixture = new MarkItemIntellectualItemFixture(okapiClient);
     markLongMissingFixture = new MarkItemLongMissingFixture(okapiClient);
     markMissingFixture = new MarkItemMissingFixture(okapiClient);
+    markItemRestrictedFixture = new MarkItemRestrictedFixture(okapiClient);
     markWithdrawnFixture = new MarkItemWithdrawnFixture(okapiClient);
   }
 

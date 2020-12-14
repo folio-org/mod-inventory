@@ -31,6 +31,10 @@ public class BusinessLogicInterfaceUrls {
     return items("/" + subPath + "/mark-missing");
   }
 
+  public static URL markRestrictedUrl(String subPath) {
+    return items("/" + subPath + "/mark-restricted");
+  }
+
   public static URL markWithdrawnUrl(String subPath) {
     return items("/" + subPath + "/mark-withdrawn");
   }

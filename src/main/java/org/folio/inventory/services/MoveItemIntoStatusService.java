@@ -6,6 +6,7 @@ import static org.folio.inventory.domain.items.ItemStatusName.IN_PROCESS;
 import static org.folio.inventory.domain.items.ItemStatusName.IN_PROCESS_NON_REQUESTABLE;
 import static org.folio.inventory.domain.items.ItemStatusName.LONG_MISSING;
 import static org.folio.inventory.domain.items.ItemStatusName.MISSING;
+import static org.folio.inventory.domain.items.ItemStatusName.RESTRICTED;
 import static org.folio.inventory.domain.items.ItemStatusName.WITHDRAWN;
 import static org.folio.inventory.domain.view.request.RequestStatus.OPEN_NOT_YET_FILLED;
 
@@ -22,6 +23,7 @@ import org.folio.inventory.validation.MarkAsInProcessValidators;
 import org.folio.inventory.validation.MarkAsIntellectualItemValidators;
 import org.folio.inventory.validation.MarkAsLongMissingValidators;
 import org.folio.inventory.validation.MarkAsMissingValidators;
+import org.folio.inventory.validation.MarkAsRestrictedValidators;
 import org.folio.inventory.validation.MarkAsWithdrawnValidators;
 import org.folio.inventory.validation.ItemsValidator;
 import org.joda.time.DateTime;
@@ -105,6 +107,18 @@ public class MoveItemIntoStatusService {
       .thenApply(item -> item.changeStatus(MISSING))
       .thenCompose(itemCollection::update);
   }
+
+  public CompletableFuture<Item> processMarkItemRestricted(WebContext context) {
+    final String itemId = context.getStringParameter("id", null);
+
+    return itemCollection.findById(itemId)
+      .thenCompose(ItemsValidator::refuseWhenItemNotFound)
+      .thenCompose(MarkAsRestrictedValidators::itemHasAllowedStatusToMarkAsRestricted)
+      .thenCompose(this::updateRequestStatusIfRequired)
+      .thenApply(item -> item.changeStatus(RESTRICTED))
+      .thenCompose(itemCollection::update);
+  }
+
 
   private CompletableFuture<Item> updateRequestStatusIfRequired(Item item) {
     return requestRepository.getRequestInFulfilmentForItem(item.id)

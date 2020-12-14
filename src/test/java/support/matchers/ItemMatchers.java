@@ -33,6 +33,11 @@ public final class ItemMatchers {
     return hasStatus("Missing");
   }
 
+  public static Matcher<JsonObject> isRestricted() {
+    return hasStatus("Restricted");
+  }
+
+
   public static Matcher<JsonObject> isWithdrawn() {
     return hasStatus("Withdrawn");
   }
