@@ -7,6 +7,7 @@ import java.util.concurrent.TimeoutException;
 import api.support.fixtures.MarkItemInProcessFixture;
 import api.support.fixtures.MarkItemInProcessNonRequestableFixture;
 import api.support.fixtures.MarkItemIntellectualItemFixture;
+import api.support.fixtures.MarkItemLongMissingFixture;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -39,6 +40,7 @@ public abstract class ApiTests {
   protected final MarkItemInProcessFixture markInProcessFixture;
   protected final MarkItemInProcessNonRequestableFixture markInProcessNonRequestableFixture;
   protected final MarkItemIntellectualItemFixture markItemIntellectualItemFixture;
+  protected final MarkItemLongMissingFixture markLongMissingFixture;
   protected final MarkItemMissingFixture markMissingFixture;
   protected final MarkItemWithdrawnFixture markWithdrawnFixture;
 
@@ -58,6 +60,7 @@ public abstract class ApiTests {
     markInProcessFixture = new MarkItemInProcessFixture(okapiClient);
     markInProcessNonRequestableFixture = new MarkItemInProcessNonRequestableFixture(okapiClient);
     markItemIntellectualItemFixture = new MarkItemIntellectualItemFixture(okapiClient);
+    markLongMissingFixture = new MarkItemLongMissingFixture(okapiClient);
     markMissingFixture = new MarkItemMissingFixture(okapiClient);
     markWithdrawnFixture = new MarkItemWithdrawnFixture(okapiClient);
   }

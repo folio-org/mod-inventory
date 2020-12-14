@@ -22,6 +22,11 @@ public class BusinessLogicInterfaceUrls {
     return items("/" + subPath + "/mark-intellectual-item");
   }
 
+  public static URL markLongMissingUrl(String subPath) {
+    return items("/" + subPath + "/mark-long-missing");
+  }
+
+
   public static URL markMissingUrl(String subPath) {
     return items("/" + subPath + "/mark-missing");
   }

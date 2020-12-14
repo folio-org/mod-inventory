@@ -16,6 +16,7 @@ import api.items.ItemApiMoveExamples;
 import api.items.MarkItemInProcessApiTests;
 import api.items.MarkItemInProcessNonRequestableApiTests;
 import api.items.MarkItemIntellectualItemApiTests;
+import api.items.MarkItemLongMissingApiTests;
 import org.folio.inventory.InventoryVerticle;
 import org.folio.inventory.common.VertxAssistant;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
@@ -58,6 +59,7 @@ import support.fakes.FakeOkapi;
   MarkItemInProcessApiTests.class,
   MarkItemInProcessNonRequestableApiTests.class,
   MarkItemIntellectualItemApiTests.class,
+  MarkItemLongMissingApiTests.class,
   MarkItemMissingApiTests.class,
   HoldingsApiMoveExamples.class
 })

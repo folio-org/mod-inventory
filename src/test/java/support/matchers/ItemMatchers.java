@@ -25,6 +25,10 @@ public final class ItemMatchers {
     return hasStatus("Intellectual item");
   }
 
+  public static Matcher<JsonObject> isLongMissing() {
+    return hasStatus("Long missing");
+  }
+
   public static Matcher<JsonObject> isMissing() {
     return hasStatus("Missing");
   }

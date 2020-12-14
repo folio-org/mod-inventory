@@ -97,6 +97,8 @@ public class Items extends AbstractInventoryResource {
       .handler(handle(this::markAsInProcessNonRequestable));
     router.post(RELATIVE_ITEMS_PATH + "/:id/mark-intellectual-item")
       .handler(handle(this::markAsIntellectualItem));
+    router.post(RELATIVE_ITEMS_PATH + "/:id/mark-long-missing")
+      .handler(handle(this::markAsLongMissing));
     router.post(RELATIVE_ITEMS_PATH + "/:id/mark-missing")
       .handler(handle(this::markAsMissing));
   }
@@ -141,6 +143,17 @@ public class Items extends AbstractInventoryResource {
       .getItemCollection(webContext), clients);
 
     return moveItemIntoStatusService.processMarkItemIntellectualItem(webContext)
+      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_CREATED.toInt(),
+        routingContext, webContext));
+  }
+
+  private CompletableFuture<Void> markAsLongMissing(
+    RoutingContext routingContext, WebContext webContext, Clients clients) {
+
+    final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
+      .getItemCollection(webContext), clients);
+
+    return moveItemIntoStatusService.processMarkItemLongMissing(webContext)
       .thenAccept(item -> respondWithItemRepresentation(item, HTTP_CREATED.toInt(),
         routingContext, webContext));
   }
