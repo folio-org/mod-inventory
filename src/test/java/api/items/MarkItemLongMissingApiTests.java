@@ -60,14 +60,14 @@ public class MarkItemLongMissingApiTests extends ApiTests {
     assertThat(checkInNote.getBoolean(STAFF_ONLY_KEY), is(false));
   }
   @Parameters({
-    "Available"
-    ,"Awaiting delivery"
-    ,"In transit"
-    ,"Lost and paid"
-    ,"Missing"
-    ,"Order closed"
-    ,"Paged"
-    ,"Withdrawn"
+    "Available",
+    "Awaiting delivery",
+    "In transit",
+    "Lost and paid",
+    "Missing",
+    "Order closed",
+    "Paged",
+    "Withdrawn"
   })
   @Test
   public void canMarkItemLongMissingWhenInAllowedStatus(String initialStatus) throws Exception {

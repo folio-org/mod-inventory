@@ -60,14 +60,14 @@ public class MarkItemUnavailableApiTests extends ApiTests {
     assertThat(checkInNote.getBoolean(STAFF_ONLY_KEY), is(false));
   }
   @Parameters({
-    "Available"
-    ,"Awaiting delivery"
-    ,"In transit"
-    ,"Lost and paid"
-    ,"Missing"
-    ,"Order closed"
-    ,"Paged"
-    ,"Withdrawn"
+    "Available",
+    "Awaiting delivery",
+    "In transit",
+    "Lost and paid",
+    "Missing",
+    "Order closed",
+    "Paged",
+    "Withdrawn"
   })
   @Test
   public void canMarkItemUnavailableWhenInAllowedStatus(String initialStatus) throws Exception {
@@ -81,18 +81,18 @@ public class MarkItemUnavailableApiTests extends ApiTests {
   }
 
   @Parameters({
-    "Aged to lost"
-    ,"Checked out"
-    ,"Claimed returned"
-    ,"Declared lost"
-    ,"In process"
-    ,"In process (non-requestable)"
-    ,"Intellectual item"
-    ,"Long missing"
-    ,"On order"
-    ,"Restricted"
-    ,"Unavailable"
-    ,"Unavailable"
+    "Aged to lost",
+    "Checked out",
+    "Claimed returned",
+    "Declared lost",
+    "In process",
+    "In process (non-requestable)",
+    "Intellectual item",
+    "Long missing",
+    "On order",
+    "Restricted",
+    "Unavailable",
+    "Unavailable",
   })
   @Test
   public void cannotMarkItemUnavailableWhenNotInAllowedStatus(String initialStatus) throws Exception {

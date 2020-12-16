@@ -70,9 +70,9 @@
           "methods": [
             "POST"
           ],
-          "pathPattern": "/inventory/items/{id}/mark-inprocess",
+          "pathPattern": "/inventory/items/{id}/mark-in-process",
           "permissionsRequired": [
-            "inventory.items.item.mark-inprocess.post"
+            "inventory.items.item.mark-in-process.post"
           ],
           "modulePermissions": [
             "circulation-storage.requests.collection.get",
@@ -95,9 +95,9 @@
           "methods": [
             "POST"
           ],
-          "pathPattern": "/inventory/items/{id}/mark-inprocess-non-requestable",
+          "pathPattern": "/inventory/items/{id}/mark-in-process-non-requestable",
           "permissionsRequired": [
-            "inventory.items.item.mark-inprocess-non-requestable.post"
+            "inventory.items.item.mark-in-process-non-requestable.post"
           ],
           "modulePermissions": [
             "circulation-storage.requests.collection.get",
@@ -291,7 +291,7 @@
           "permissionsRequired": ["inventory.items.item.put"],
           "modulePermissions": [
             "inventory-storage.items.item.get",
-            "inventory-storage.items.collections.get",
+            "inventory-storage.items.collection.get",
             "inventory-storage.items.item.put",
             "users.item.get"
           ]
@@ -553,7 +553,7 @@
   "requires": [
     {
       "id": "item-storage",
-      "version": "8.6"
+      "version": "8.7"
     },
     {
       "id": "instance-storage",
@@ -651,12 +651,12 @@
       "description": "Move items to another holdings record"
     },
     {
-      "permissionName": "inventory.items.item.mark-inprocess.post",
+      "permissionName": "inventory.items.item.mark-in-process.post",
       "displayName": "Inventory - mark an item as in process",
       "description": "Mark an item as in process"
     },
     {
-      "permissionName": "inventory.items.item.mark-inprocess-non-requestable.post",
+      "permissionName": "inventory.items.item.mark-in-process-non-requestable.post",
       "displayName": "Inventory - mark an item as in process (non-requestable)",
       "description": "Mark an item as in process (non-requestable)"
     },
@@ -783,8 +783,8 @@
         "inventory.ingest.mods.status.get",
         "inventory.config.instances.blocked-fields.get",
         "inventory.items.item.mark-withdrawn.post",
-        "inventory.items.item.mark-inprocess.post",
-        "inventory.items.item.mark-inprocess-non-requestable.post",
+        "inventory.items.item.mark-in-process.post",
+        "inventory.items.item.mark-in-process-non-requestable.post",
         "inventory.items.item.mark-missing.post",
         "inventory.items.move.item.post",
         "inventory.holdings.move.item.post"

@@ -60,6 +60,7 @@ public class MarkItemMissingApiTests extends ApiTests {
     assertThat(checkInNote.getString(NOTE_KEY), is("Please read this note before checking in the item"));
     assertThat(checkInNote.getBoolean(STAFF_ONLY_KEY), is(false));
   }
+
   @Parameters({
     "In process",
     "Available",

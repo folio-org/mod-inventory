@@ -91,9 +91,9 @@ public class Items extends AbstractInventoryResource {
     router.delete(RELATIVE_ITEMS_PATH + "/:id").handler(this::deleteById);
     router.post(RELATIVE_ITEMS_PATH + "/:id/mark-withdrawn")
       .handler(handle(this::markAsWithdrawn));
-    router.post(RELATIVE_ITEMS_PATH + "/:id/mark-inprocess")
+    router.post(RELATIVE_ITEMS_PATH + "/:id/mark-in-process")
       .handler(handle(this::markAsInProcess));
-    router.post(RELATIVE_ITEMS_PATH + "/:id/mark-inprocess-non-requestable")
+    router.post(RELATIVE_ITEMS_PATH + "/:id/mark-in-process-non-requestable")
       .handler(handle(this::markAsInProcessNonRequestable));
     router.post(RELATIVE_ITEMS_PATH + "/:id/mark-intellectual-item")
       .handler(handle(this::markAsIntellectualItem));

@@ -5,7 +5,6 @@ import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.exceptions.UnprocessableEntityException;
 import org.folio.inventory.support.http.server.ValidationError;
 
-import java.util.EnumSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 

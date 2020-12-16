@@ -59,15 +59,16 @@ public class MarkItemInProcessApiTests extends ApiTests {
     assertThat(checkInNote.getBoolean(STAFF_ONLY_KEY), is(false));
     assertFalse(false);
   }
+
   @Parameters({
-    "Available"
-    ,"Awaiting delivery"
-    ,"In transit"
-    ,"Lost and paid"
-    ,"Missing"
-    ,"Order closed"
-    ,"Paged"
-    ,"Withdrawn"
+    "Available",
+    "Awaiting delivery",
+    "In transit",
+    "Lost and paid",
+    "Missing",
+    "Order closed",
+    "Paged",
+    "Withdrawn"
   })
   @Test
   public void canMarkItemInProcessWhenInAllowedStatus(String initialStatus) throws Exception {
@@ -81,21 +82,20 @@ public class MarkItemInProcessApiTests extends ApiTests {
   }
 
   @Parameters({
-    "Aged to lost"
-    ,"Checked out"
-    ,"Claimed returned"
-    ,"Declared lost"
-    ,"In process"
-    ,"In process (non-requestable)"
-    ,"Intellectual item"
-    ,"Long missing"
-    ,"On order"
-    ,"Restricted"
-    ,"Unavailable"
-    ,"Unknown"
+    "Aged to lost",
+     "Checked out",
+     "Claimed returned",
+     "Declared lost",
+     "In process",
+     "In process (non-requestable)",
+     "Intellectual item",
+     "Long missing",
+     "On order",
+     "Restricted",
+     "Unavailable",
+     "Unknown"
   })
-
-  @Test()
+  @Test
   public void cannotMarkItemInProcessWhenNotInAllowedStatus(String initialStatus) throws Exception {
         final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
           .forHolding(holdingsRecord.getId())

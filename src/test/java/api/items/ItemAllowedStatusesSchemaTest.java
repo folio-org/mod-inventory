@@ -41,7 +41,9 @@ public class ItemAllowedStatusesSchemaTest extends ApiTests {
     assertTrue(schemaAllowedItemStatuses.size() > 0);
     assertEquals("Schema enum does not match ItemStatusName values"+System.lineSeparator()
         +getDifferencesBetweenCollectionsMessage(enumAllowedItemStatuses,schemaAllowedItemStatuses),
-      enumAllowedItemStatuses, schemaAllowedItemStatuses);
+      enumAllowedItemStatuses,
+      schemaAllowedItemStatuses);
+
   }
 
   private String getDifferencesBetweenCollectionsMessage(Set<String> coll1, Set<String> coll2) {
