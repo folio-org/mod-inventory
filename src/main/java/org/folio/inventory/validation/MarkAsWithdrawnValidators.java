@@ -14,6 +14,7 @@ import org.folio.inventory.support.http.server.ValidationError;
 public final class MarkAsWithdrawnValidators {
   private static final Set<ItemStatusName> ALLOWED_STATUS_TO_MARK_WITHDRAWN = of(
     ItemStatusName.AVAILABLE,
+    ItemStatusName.LOST_AND_PAID,
     ItemStatusName.IN_TRANSIT,
     ItemStatusName.IN_PROCESS,
     ItemStatusName.AWAITING_PICKUP,
