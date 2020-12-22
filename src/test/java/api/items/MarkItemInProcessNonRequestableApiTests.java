@@ -26,6 +26,7 @@ import static org.folio.inventory.domain.items.CirculationNote.NOTE_TYPE_KEY;
 import static org.folio.inventory.domain.items.CirculationNote.STAFF_ONLY_KEY;
 import static org.folio.inventory.domain.items.Item.CIRCULATION_NOTES_KEY;
 import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static support.matchers.ItemMatchers.isInProcessNonRequestable;
@@ -79,8 +80,10 @@ public class MarkItemInProcessNonRequestableApiTests extends ApiTests {
       .forHolding(holdingsRecord.getId())
       .withStatus(initialStatus)
       .canCirculate());
+    final Response response = markItemInProcessNonRequestable(createdItem);
 
-    assertThat(markItemInProcessNonRequestable(createdItem).getJson(), isInProcessNonRequestable());
+    assertEquals(response.getStatusCode(), 200);
+    assertThat(response.getJson(), isInProcessNonRequestable());
     assertThat(itemsClient.getById(createdItem.getId()).getJson(), isInProcessNonRequestable());
   }
 

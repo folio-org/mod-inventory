@@ -25,6 +25,7 @@ import static org.folio.inventory.domain.items.CirculationNote.NOTE_TYPE_KEY;
 import static org.folio.inventory.domain.items.CirculationNote.STAFF_ONLY_KEY;
 import static org.folio.inventory.domain.items.Item.CIRCULATION_NOTES_KEY;
 import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static support.matchers.ItemMatchers.isIntellectualItem;
 import static support.matchers.RequestMatchers.hasStatus;
@@ -75,8 +76,10 @@ public class MarkItemIntellectualItemApiTests extends ApiTests {
       .forHolding(holdingsRecord.getId())
       .withStatus(initialStatus)
       .canCirculate());
+    final Response response = markItemIntellectualItem(createdItem);
 
-    assertThat(markItemIntellectualItem(createdItem).getJson(), isIntellectualItem());
+    assertEquals(response.getStatusCode(), 200);
+    assertThat(response.getJson(), isIntellectualItem());
     assertThat(itemsClient.getById(createdItem.getId()).getJson(), isIntellectualItem());
   }
 

@@ -140,7 +140,7 @@ public class Items extends AbstractInventoryResource {
       .getItemCollection(webContext), clients);
 
     return moveItemIntoStatusService.processMarkItemInProcessNonRequestable(webContext)
-      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_CREATED.toInt(),
+      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_OK.toInt(),
         routingContext, webContext));
   }
 
@@ -151,7 +151,7 @@ public class Items extends AbstractInventoryResource {
       .getItemCollection(webContext), clients);
 
     return moveItemIntoStatusService.processMarkItemIntellectualItem(webContext)
-      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_CREATED.toInt(),
+      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_OK.toInt(),
         routingContext, webContext));
   }
 
