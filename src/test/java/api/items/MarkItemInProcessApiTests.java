@@ -76,8 +76,9 @@ public class MarkItemInProcessApiTests extends ApiTests {
       .forHolding(holdingsRecord.getId())
       .withStatus(initialStatus)
       .canCirculate());
-
-    assertThat(markItemInProcess(createdItem).getJson(), isInProcess());
+    Response response = markItemInProcess(createdItem);
+    assertEquals(response.getStatusCode(),200);
+    assertThat(response.getJson(), isInProcess());
     assertThat(itemsClient.getById(createdItem.getId()).getJson(), isInProcess());
   }
 

@@ -1,6 +1,7 @@
 package org.folio.inventory.resources;
 
 import static org.folio.HttpStatus.HTTP_CREATED;
+import static org.folio.HttpStatus.HTTP_OK;
 import static org.folio.inventory.common.FutureAssistance.allOf;
 import static org.folio.inventory.support.CqlHelper.multipleRecordsCqlQuery;
 import static org.folio.inventory.support.EndpointFailureHandler.doExceptionally;
@@ -128,7 +129,7 @@ public class Items extends AbstractInventoryResource {
       .getItemCollection(webContext), clients);
 
     return moveItemIntoStatusService.processMarkItemInProcess(webContext)
-      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_CREATED.toInt(),
+      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_OK.toInt(),
         routingContext, webContext));
   }
 
