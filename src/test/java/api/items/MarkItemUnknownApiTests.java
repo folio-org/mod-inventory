@@ -25,6 +25,7 @@ import static org.folio.inventory.domain.items.CirculationNote.NOTE_TYPE_KEY;
 import static org.folio.inventory.domain.items.CirculationNote.STAFF_ONLY_KEY;
 import static org.folio.inventory.domain.items.Item.CIRCULATION_NOTES_KEY;
 import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static support.matchers.ItemMatchers.isRestricted;
 import static support.matchers.ItemMatchers.isUnknown;
@@ -76,8 +77,10 @@ public class MarkItemUnknownApiTests extends ApiTests {
       .forHolding(holdingsRecord.getId())
       .withStatus(initialStatus)
       .canCirculate());
+    final Response response = markItemUnknown(createdItem);
 
-    assertThat(markItemUnknown(createdItem).getJson(), isUnknown());
+    assertEquals(response.getStatusCode(), 200);
+    assertThat(response.getJson(), isUnknown());
     assertThat(itemsClient.getById(createdItem.getId()).getJson(), isUnknown());
   }
 
