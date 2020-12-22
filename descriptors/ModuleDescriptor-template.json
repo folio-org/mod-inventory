@@ -620,6 +620,14 @@
     "env": [
       { "name": "JAVA_OPTIONS",
         "value": "-XX:MaxRAMPercentage=66.0 -Dorg.folio.metadata.inventory.storage.type=okapi"
+      },
+      {
+        "name": "FOLIO_KAFKA_HOST",
+        "value": "10.0.2.15"
+      },
+      {
+        "name": "FOLIO_KAFKA_PORT",
+        "value": "9092"
       }
     ]
   }
