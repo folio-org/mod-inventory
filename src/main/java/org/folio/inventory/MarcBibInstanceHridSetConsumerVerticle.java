@@ -61,7 +61,8 @@ public class MarcBibInstanceHridSetConsumerVerticle extends AbstractVerticle {
     MarcBibInstanceHridSetKafkaHandler marcBibInstanceHridSetKafkaHandler = new MarcBibInstanceHridSetKafkaHandler(instanceUpdateDelegate);
 
     consumerWrapper.start(marcBibInstanceHridSetKafkaHandler, PubSubClientUtils.constructModuleName())
-      .onComplete(ar -> startPromise.complete());
+      .onSuccess(v -> startPromise.complete())
+      .onFailure(startPromise::fail);
   }
 
   @Override

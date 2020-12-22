@@ -84,13 +84,12 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
       .map(eventType -> createKafkaConsumerWrapper(kafkaConfig, eventType, dataImportKafkaHandler))
       .collect(Collectors.toList());
 
-    CompositeFuture.all(futures).onComplete(ar -> {
-      futures.stream()
-        .filter(Future::succeeded)
-        .forEach(future -> consumerWrappers.add((KafkaConsumerWrapper<String, String>) future.result()));
-
-      startPromise.complete();
-    });
+    CompositeFuture.all(futures)
+      .onFailure(startPromise::fail)
+      .onSuccess(ar -> {
+        futures.forEach(future -> consumerWrappers.add((KafkaConsumerWrapper<String, String>) future.result()));
+        startPromise.complete();
+      });
   }
 
   @Override
@@ -104,8 +103,6 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
 
   private Future<KafkaConsumerWrapper<String, String>> createKafkaConsumerWrapper(KafkaConfig kafkaConfig, DataImportEventTypes eventType,
                                                                                   AsyncRecordHandler<String, String> recordHandler) {
-    Promise<KafkaConsumerWrapper<String, String>> promise = Promise.promise();
-
     SubscriptionDefinition subscriptionDefinition = KafkaTopicNameHelper.createSubscriptionDefinition(kafkaConfig.getEnvId(),
       KafkaTopicNameHelper.getDefaultNameSpace(), eventType.value());
 
@@ -118,9 +115,7 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
       .subscriptionDefinition(subscriptionDefinition)
       .build();
 
-    consumerWrapper.start(recordHandler, PubSubClientUtils.constructModuleName())
-      .onComplete(ar -> promise.complete(consumerWrapper));
-
-    return promise.future();
+    return consumerWrapper.start(recordHandler, PubSubClientUtils.constructModuleName())
+      .map(consumerWrapper);
   }
 }
