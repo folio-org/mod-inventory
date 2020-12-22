@@ -2,6 +2,7 @@ package org.folio.inventory;
 
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import org.folio.DataImportEventTypes;
 import org.folio.inventory.common.VertxAssistant;
 
 import java.lang.invoke.MethodHandles;
@@ -73,14 +74,15 @@ public class Launcher {
   private static void startConsumerVerticles(Map<String, Object> consumerVerticlesConfig)
     throws InterruptedException, ExecutionException, TimeoutException {
 
-    CompletableFuture<String> deployed = new CompletableFuture<>();
+    CompletableFuture<String> future1 = new CompletableFuture<>();
+    CompletableFuture<String> future2 = new CompletableFuture<>();
     vertxAssistant.deployVerticle(DataImportConsumerVerticle.class.getName(),
-      consumerVerticlesConfig, deployed);
+      consumerVerticlesConfig, future1);
     vertxAssistant.deployVerticle(MarcBibInstanceHridSetConsumerVerticle.class.getName(),
-      consumerVerticlesConfig, deployed);
+      consumerVerticlesConfig, future2);
 
-    consumerVerticleDeploymentId = deployed.get(20, TimeUnit.SECONDS);
-    marcInstHridSetConsumerVerticleDeploymentId = deployed.get(20, TimeUnit.SECONDS);
+    consumerVerticleDeploymentId = future1.get(20, TimeUnit.SECONDS);
+    marcInstHridSetConsumerVerticleDeploymentId = future2.get(20, TimeUnit.SECONDS);
   }
 
   private static void stop() {

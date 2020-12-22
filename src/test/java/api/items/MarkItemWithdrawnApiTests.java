@@ -46,6 +46,7 @@ public class MarkItemWithdrawnApiTests extends ApiTests {
     "In transit",
     "Awaiting pickup",
     "Awaiting delivery",
+    "Lost and paid",
     "Missing",
     "Paged"
   })
