@@ -272,7 +272,7 @@
           "permissionsRequired": ["inventory.items.item.post"],
           "modulePermissions": [
             "inventory-storage.items.item.post",
-            "inventory-storage.items.collections.get",
+            "inventory-storage.items.collection.get",
             "inventory-storage.material-types.item.get",
             "inventory-storage.material-types.collection.get",
             "inventory-storage.loan-types.item.get",
