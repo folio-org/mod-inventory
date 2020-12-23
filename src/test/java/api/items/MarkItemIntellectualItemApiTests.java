@@ -78,7 +78,7 @@ public class MarkItemIntellectualItemApiTests extends ApiTests {
       .canCirculate());
     final Response response = markItemIntellectualItem(createdItem);
 
-    assertEquals(response.getStatusCode(), 200);
+    assertEquals(200, response.getStatusCode());
     assertThat(response.getJson(), isIntellectualItem());
     assertThat(itemsClient.getById(createdItem.getId()).getJson(), isIntellectualItem());
   }

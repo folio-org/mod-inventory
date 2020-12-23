@@ -82,7 +82,7 @@ public class MarkItemInProcessNonRequestableApiTests extends ApiTests {
       .canCirculate());
     final Response response = markItemInProcessNonRequestable(createdItem);
 
-    assertEquals(response.getStatusCode(), 200);
+    assertEquals(200, response.getStatusCode());
     assertThat(response.getJson(), isInProcessNonRequestable());
     assertThat(itemsClient.getById(createdItem.getId()).getJson(), isInProcessNonRequestable());
   }

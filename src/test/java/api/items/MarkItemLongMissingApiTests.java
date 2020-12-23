@@ -78,7 +78,7 @@ public class MarkItemLongMissingApiTests extends ApiTests {
       .canCirculate());
     final Response response = markItemLongMissing(createdItem);
 
-    assertEquals(response.getStatusCode(), 200);
+    assertEquals(200, response.getStatusCode());
     assertThat(response.getJson(), isLongMissing());
     assertThat(itemsClient.getById(createdItem.getId()).getJson(), isLongMissing());
   }

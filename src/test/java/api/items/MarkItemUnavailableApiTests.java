@@ -78,7 +78,7 @@ public class MarkItemUnavailableApiTests extends ApiTests {
       .canCirculate());
     final Response response = markItemUnavailable(createdItem);
 
-    assertEquals(response.getStatusCode(), 200);
+    assertEquals(200, response.getStatusCode());
     assertThat(response.getJson(), isUnavailable());
     assertThat(itemsClient.getById(createdItem.getId()).getJson(), isUnavailable());
   }

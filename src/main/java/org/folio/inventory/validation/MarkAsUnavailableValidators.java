@@ -6,9 +6,9 @@ import org.folio.inventory.exceptions.UnprocessableEntityException;
 import org.folio.inventory.support.http.server.ValidationError;
 
 import java.util.Set;
+import static java.util.Set.of;
 import java.util.concurrent.CompletableFuture;
 
-import static java.util.EnumSet.of;
 import static org.folio.inventory.support.CompletableFutures.failedFuture;
 
 public final class MarkAsUnavailableValidators {

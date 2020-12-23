@@ -108,7 +108,6 @@ public class Items extends AbstractInventoryResource {
       .handler(handle(this::markAsUnavailable));
     router.post(RELATIVE_ITEMS_PATH + "/:id/mark-unknown")
       .handler(handle(this::markAsUnknown));
-
   }
 
   private CompletableFuture<Void> markAsWithdrawn(
