@@ -79,7 +79,7 @@ public class MarkItemUnknownApiTests extends ApiTests {
       .canCirculate());
     final Response response = markItemUnknown(createdItem);
 
-    assertEquals(response.getStatusCode(), 200);
+    assertEquals(200, response.getStatusCode());
     assertThat(response.getJson(), isUnknown());
     assertThat(itemsClient.getById(createdItem.getId()).getJson(), isUnknown());
   }
