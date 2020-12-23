@@ -67,6 +67,8 @@ public class Items extends AbstractInventoryResource {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private static final String RELATIVE_ITEMS_PATH = "/inventory/items";
+  private static final String RELATIVE_ITEMS_PATH_ID = RELATIVE_ITEMS_PATH+"/:id";
+
 
   private static final int STATUS_CREATED = 201;
   private static final int STATUS_SUCCESS = 200;
@@ -87,27 +89,29 @@ public class Items extends AbstractInventoryResource {
     router.post(RELATIVE_ITEMS_PATH).handler(this::create);
     router.delete(RELATIVE_ITEMS_PATH).handler(this::deleteAll);
 
-    router.get(RELATIVE_ITEMS_PATH + "/:id").handler(this::getById);
-    router.put(RELATIVE_ITEMS_PATH + "/:id").handler(this::update);
-    router.delete(RELATIVE_ITEMS_PATH + "/:id").handler(this::deleteById);
-    router.post(RELATIVE_ITEMS_PATH + "/:id/mark-withdrawn")
-      .handler(handle(this::markAsWithdrawn));
-    router.post(RELATIVE_ITEMS_PATH + "/:id/mark-in-process")
+    router.get(RELATIVE_ITEMS_PATH_ID).handler(this::getById);
+    router.put(RELATIVE_ITEMS_PATH_ID).handler(this::update);
+    router.delete(RELATIVE_ITEMS_PATH_ID).handler(this::deleteById);
+
+    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-in-process")
       .handler(handle(this::markAsInProcess));
-    router.post(RELATIVE_ITEMS_PATH + "/:id/mark-in-process-non-requestable")
+    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-in-process-non-requestable")
       .handler(handle(this::markAsInProcessNonRequestable));
-    router.post(RELATIVE_ITEMS_PATH + "/:id/mark-intellectual-item")
+    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-intellectual-item")
       .handler(handle(this::markAsIntellectualItem));
-    router.post(RELATIVE_ITEMS_PATH + "/:id/mark-long-missing")
+    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-long-missing")
       .handler(handle(this::markAsLongMissing));
-    router.post(RELATIVE_ITEMS_PATH + "/:id/mark-missing")
+    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-missing")
       .handler(handle(this::markAsMissing));
-    router.post(RELATIVE_ITEMS_PATH + "/:id/mark-restricted")
+    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-restricted")
       .handler(handle(this::markAsRestricted));
-    router.post(RELATIVE_ITEMS_PATH + "/:id/mark-unavailable")
+    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-unavailable")
       .handler(handle(this::markAsUnavailable));
-    router.post(RELATIVE_ITEMS_PATH + "/:id/mark-unknown")
+    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-unknown")
       .handler(handle(this::markAsUnknown));
+    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-withdrawn")
+      .handler(handle(this::markAsWithdrawn));
+
   }
 
   private CompletableFuture<Void> markAsWithdrawn(
