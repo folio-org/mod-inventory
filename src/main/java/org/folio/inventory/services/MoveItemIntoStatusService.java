@@ -17,6 +17,7 @@ import java.util.concurrent.CompletableFuture;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
+import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.domain.view.request.Request;
 import org.folio.inventory.storage.external.Clients;
 import org.folio.inventory.storage.external.repository.RequestRepository;
@@ -30,6 +31,8 @@ import org.folio.inventory.validation.MarkAsUnavailableValidators;
 import org.folio.inventory.validation.MarkAsUnknownValidators;
 import org.folio.inventory.validation.MarkAsWithdrawnValidators;
 import org.folio.inventory.validation.ItemsValidator;
+import org.folio.inventory.validation.experimental.TargetValidator;
+import org.folio.inventory.validation.experimental.TargetValidatorInterface;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.slf4j.Logger;
@@ -40,6 +43,8 @@ public class MoveItemIntoStatusService {
 
   private final ItemCollection itemCollection;
   private final RequestRepository requestRepository;
+
+  private static final TargetValidator validator = new TargetValidator();
 
   public MoveItemIntoStatusService(ItemCollection itemCollection, Clients clients) {
     this.itemCollection = itemCollection;
@@ -57,16 +62,44 @@ public class MoveItemIntoStatusService {
       .thenCompose(itemCollection::update);
   }
 
-  public CompletableFuture<Item> processMarkItemInProcess(WebContext context) {
+  public CompletableFuture<Item> processMarkItem(WebContext context,ItemStatusName statusName) {
     final String itemId = context.getStringParameter("id", null);
+    TargetValidatorInterface targetValidator = validator.getValidator(statusName);
 
     return itemCollection.findById(itemId)
       .thenCompose(ItemsValidator::refuseWhenItemNotFound)
-      .thenCompose(MarkAsInProcessValidators::itemHasAllowedStatusToMarkAsInProcess)
+      .thenCompose(item -> targetValidator.itemHasAllowedStatusToMark(item))
       .thenCompose(this::updateRequestStatusIfRequired)
-      .thenApply(item -> item.changeStatus(IN_PROCESS))
+      .thenApply(item -> item.changeStatus(statusName))
       .thenCompose(itemCollection::update);
   }
+
+
+
+//  public CompletableFuture<Item> processMarkItemInProcess(WebContext context) {
+//    final String itemId = context.getStringParameter("id", null);
+//
+//    return itemCollection.findById(itemId)
+//      .thenCompose(ItemsValidator::refuseWhenItemNotFound)
+//      .thenCompose(MarkAsInProcessValidators::itemHasAllowedStatusToMarkAsInProcess)
+//      .thenCompose(this::updateRequestStatusIfRequired)
+//      .thenApply(item -> item.changeStatus(IN_PROCESS))
+//      .thenCompose(itemCollection::update);
+//  }
+
+  public CompletableFuture<Item> processMarkItemInProcess(WebContext context) {
+    final String itemId = context.getStringParameter("id", null);
+    TargetValidatorInterface targetValidator = validator.getValidator(IN_PROCESS);
+
+    return itemCollection.findById(itemId)
+      .thenCompose(ItemsValidator::refuseWhenItemNotFound)
+      .thenCompose(item -> targetValidator.itemHasAllowedStatusToMark(item))
+      .thenCompose(this::updateRequestStatusIfRequired)
+      .thenApply(item -> item.changeStatus(targetValidator.getStatusName()))
+      .thenCompose(itemCollection::update);
+  }
+
+
 
   public CompletableFuture<Item> processMarkItemInProcessNonRequestable(WebContext context) {
     final String itemId = context.getStringParameter("id", null);

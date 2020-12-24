@@ -19,6 +19,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -35,6 +36,7 @@ import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.items.CirculationNote;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
+import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.domain.user.User;
 import org.folio.inventory.domain.user.UserCollection;
 import org.folio.inventory.services.MoveItemIntoStatusService;
@@ -94,9 +96,9 @@ public class Items extends AbstractInventoryResource {
     router.delete(RELATIVE_ITEMS_PATH_ID).handler(this::deleteById);
 
     router.post(RELATIVE_ITEMS_PATH_ID + "/mark-in-process")
-      .handler(handle(this::markAsInProcess));
+      .handler(handle(this::markAs));
     router.post(RELATIVE_ITEMS_PATH_ID + "/mark-in-process-non-requestable")
-      .handler(handle(this::markAsInProcessNonRequestable));
+      .handler(handle(this::markAs));
     router.post(RELATIVE_ITEMS_PATH_ID + "/mark-intellectual-item")
       .handler(handle(this::markAsIntellectualItem));
     router.post(RELATIVE_ITEMS_PATH_ID + "/mark-long-missing")
@@ -112,6 +114,21 @@ public class Items extends AbstractInventoryResource {
     router.post(RELATIVE_ITEMS_PATH_ID + "/mark-withdrawn")
       .handler(handle(this::markAsWithdrawn));
 
+  }
+
+  private CompletableFuture<Void> markAs(
+    RoutingContext routingContext, WebContext webContext, Clients clients) {
+    String statusNameString = routingContext.request().uri().toString()
+      .substring(routingContext.request().uri().toString().lastIndexOf("/")+1)
+      .replace("mark-","")
+      .toUpperCase(Locale.ROOT).replace("-","_");
+
+    final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
+      .getItemCollection(webContext), clients);
+
+    return moveItemIntoStatusService.processMarkItem(webContext, ItemStatusName.valueOf(statusNameString))
+      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_OK.toInt(),
+        routingContext, webContext));
   }
 
   private CompletableFuture<Void> markAsWithdrawn(
@@ -131,7 +148,7 @@ public class Items extends AbstractInventoryResource {
     final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
       .getItemCollection(webContext), clients);
 
-    return moveItemIntoStatusService.processMarkItemInProcess(webContext)
+    return moveItemIntoStatusService.processMarkItem(webContext, ItemStatusName.IN_PROCESS)
       .thenAccept(item -> respondWithItemRepresentation(item, HTTP_OK.toInt(),
         routingContext, webContext));
   }
