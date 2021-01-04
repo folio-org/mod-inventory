@@ -10,12 +10,40 @@ public class BusinessLogicInterfaceUrls {
     return getUrl("/inventory/items", subPath);
   }
 
-  public static URL markWithdrawnUrl(String subPath) {
-    return items("/" + subPath + "/mark-withdrawn");
+  public static URL markInProcessUrl(String subPath) {
+    return items("/"+subPath+"/mark-in-process");
+  }
+
+  public static URL markInProcessNonRequestableUrl(String subPath) {
+    return items("/"+subPath+"/mark-in-process-non-requestable");
+  }
+
+  public static URL markIntellectualItemUrl(String subPath) {
+    return items("/" + subPath + "/mark-intellectual-item");
+  }
+
+  public static URL markLongMissingUrl(String subPath) {
+    return items("/" + subPath + "/mark-long-missing");
   }
 
   public static URL markMissingUrl(String subPath) {
     return items("/" + subPath + "/mark-missing");
+  }
+
+  public static URL markRestrictedUrl(String subPath) {
+    return items("/" + subPath + "/mark-restricted");
+  }
+
+  public static URL markUnavailableUrl(String subPath) {
+    return items("/" + subPath + "/mark-unavailable");
+  }
+
+  public static URL markUnknownUrl(String subPath) {
+    return items("/" + subPath + "/mark-unknown");
+  }
+
+  public static URL markWithdrawnUrl(String subPath) {
+    return items("/" + subPath + "/mark-withdrawn");
   }
 
   public static URL instances(String subPath) {

@@ -4,6 +4,13 @@ import java.net.MalformedURLException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+import api.support.fixtures.MarkItemInProcessFixture;
+import api.support.fixtures.MarkItemInProcessNonRequestableFixture;
+import api.support.fixtures.MarkItemIntellectualItemFixture;
+import api.support.fixtures.MarkItemLongMissingFixture;
+import api.support.fixtures.MarkItemRestrictedFixture;
+import api.support.fixtures.MarkItemUnavailableFixture;
+import api.support.fixtures.MarkItemUnknownFixture;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -32,8 +39,16 @@ public abstract class ApiTests {
   protected final ResourceClient requestStorageClient;
 
   protected final InstanceRelationshipTypeFixture instanceRelationshipTypeFixture;
-  protected final MarkItemWithdrawnFixture markWithdrawnFixture;
+
+  protected final MarkItemInProcessFixture markInProcessFixture;
+  protected final MarkItemInProcessNonRequestableFixture markInProcessNonRequestableFixture;
+  protected final MarkItemIntellectualItemFixture markItemIntellectualItemFixture;
+  protected final MarkItemLongMissingFixture markLongMissingFixture;
   protected final MarkItemMissingFixture markMissingFixture;
+  protected final MarkItemRestrictedFixture markItemRestrictedFixture;
+  protected final MarkItemUnavailableFixture markItemUnavailableFixture;
+  protected final MarkItemUnknownFixture markItemUnknownFixture;
+  protected final MarkItemWithdrawnFixture markWithdrawnFixture;
 
   public ApiTests() {
     holdingsStorageClient = ResourceClient.forHoldingsStorage(okapiClient);
@@ -48,8 +63,15 @@ public abstract class ApiTests {
     instanceRelationshipClient = ResourceClient.forInstanceRelationship(okapiClient);
     requestStorageClient = ResourceClient.forRequestStorage(okapiClient);
     instanceRelationshipTypeFixture = new InstanceRelationshipTypeFixture(okapiClient);
-    markWithdrawnFixture = new MarkItemWithdrawnFixture(okapiClient);
+    markInProcessFixture = new MarkItemInProcessFixture(okapiClient);
+    markInProcessNonRequestableFixture = new MarkItemInProcessNonRequestableFixture(okapiClient);
+    markItemIntellectualItemFixture = new MarkItemIntellectualItemFixture(okapiClient);
+    markLongMissingFixture = new MarkItemLongMissingFixture(okapiClient);
     markMissingFixture = new MarkItemMissingFixture(okapiClient);
+    markItemRestrictedFixture = new MarkItemRestrictedFixture(okapiClient);
+    markItemUnavailableFixture = new MarkItemUnavailableFixture(okapiClient);
+    markItemUnknownFixture = new MarkItemUnknownFixture(okapiClient);
+    markWithdrawnFixture = new MarkItemWithdrawnFixture(okapiClient);
   }
 
   @BeforeClass
