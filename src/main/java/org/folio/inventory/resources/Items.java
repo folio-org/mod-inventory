@@ -18,6 +18,7 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -95,10 +96,22 @@ public class Items extends AbstractInventoryResource {
     router.put(RELATIVE_ITEMS_PATH_ID).handler(this::update);
     router.delete(RELATIVE_ITEMS_PATH_ID).handler(this::deleteById);
 
-    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-in-process")
-      .handler(handle(this::markAs));
-    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-in-process-non-requestable")
-      .handler(handle(this::markAs));
+    Arrays.stream(ItemStatusName.values())
+      .map(x->ItemStatusURL.getUrlForItemStatusName(x))
+      .filter(x->x.isPresent())
+      .forEach(x->router.post(RELATIVE_ITEMS_PATH_ID+x.get()).handler(handle(this::markAs)));
+
+//    for (ItemStatusName itemStatusName : ItemStatusName.values()) {
+//      Optional<String> url = ItemStatusURL.getUrlForItemStatusName(itemStatusName);
+//      if (url.isPresent()) {
+//        router.post(RELATIVE_ITEMS_PATH_ID + url.get()).handler(handle(this::markAs));
+//      }
+//    }
+
+//    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-in-process")
+//      .handler(handle(this::markAs));
+//    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-in-process-non-requestable")
+//      .handler(handle(this::markAs));
     router.post(RELATIVE_ITEMS_PATH_ID + "/mark-intellectual-item")
       .handler(handle(this::markAsIntellectualItem));
     router.post(RELATIVE_ITEMS_PATH_ID + "/mark-long-missing")

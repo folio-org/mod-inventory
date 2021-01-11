@@ -28,10 +28,10 @@ public class ItemStatusURL {
   }
 
   public static Optional<String> getUrlForItemStatusName(ItemStatusName itemStatusName) {
-    return Optional.of(itemStatusNameUrlMap.get(itemStatusName));
+    return Optional.ofNullable(itemStatusNameUrlMap.get(itemStatusName));
   }
 
   public static Optional<ItemStatusName> getItemStatusNameForUrl(String url) {
-    return Optional.of(urlItemStatusNameMap.get(url.substring(url.lastIndexOf("/"))));
+    return Optional.ofNullable(urlItemStatusNameMap.get(url.substring(url.lastIndexOf("/"))));
   }
 }
