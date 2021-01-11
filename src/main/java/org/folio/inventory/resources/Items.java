@@ -20,7 +20,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -99,14 +98,7 @@ public class Items extends AbstractInventoryResource {
     Arrays.stream(ItemStatusName.values())
       .map(x->ItemStatusURL.getUrlForItemStatusName(x))
       .filter(x->x.isPresent())
-      .forEach(x->router.post(RELATIVE_ITEMS_PATH_ID+x.get()).handler(handle(this::markAs)));
-
-//    for (ItemStatusName itemStatusName : ItemStatusName.values()) {
-//      Optional<String> url = ItemStatusURL.getUrlForItemStatusName(itemStatusName);
-//      if (url.isPresent()) {
-//        router.post(RELATIVE_ITEMS_PATH_ID + url.get()).handler(handle(this::markAs));
-//      }
-//    }
+      .forEach(x->router.post(RELATIVE_ITEMS_PATH_ID+x.get()).handler(handle(this::markItemAsTargetStatus)));
 
 //    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-in-process")
 //      .handler(handle(this::markAs));
@@ -129,17 +121,18 @@ public class Items extends AbstractInventoryResource {
 
   }
 
-  private CompletableFuture<Void> markAs(
+  private CompletableFuture<Void> markItemAsTargetStatus(
     RoutingContext routingContext, WebContext webContext, Clients clients) {
-    String statusNameString = routingContext.request().uri().toString()
-      .substring(routingContext.request().uri().toString().lastIndexOf("/")+1)
-      .replace("mark-","")
-      .toUpperCase(Locale.ROOT).replace("-","_");
+    Optional<ItemStatusName> itemStatusName = ItemStatusURL.getItemStatusNameForUrl(routingContext.request().uri());
+
+    if (itemStatusName.isEmpty())
+      log.error("Item status for url $URL$ not found.".replace("$URL$", routingContext.request().uri()),
+        new Exception());
 
     final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
       .getItemCollection(webContext), clients);
 
-    return moveItemIntoStatusService.processMarkItem(webContext, ItemStatusName.valueOf(statusNameString))
+    return moveItemIntoStatusService.processMarkItem(webContext, itemStatusName.get())
       .thenAccept(item -> respondWithItemRepresentation(item, HTTP_OK.toInt(),
         routingContext, webContext));
   }
