@@ -28,7 +28,7 @@ public class MarcBibInstanceHridSetConsumerVerticle extends AbstractVerticle {
   public static final String MARC_BIB_INSTANCE_HRID_SET_EVENT = "DI_SRS_MARC_BIB_INSTANCE_HRID_SET";
   private static final GlobalLoadSensor GLOBAL_LOAD_SENSOR = new GlobalLoadSensor();
 
-  private int loadLimit = Integer.parseInt(System.getProperty("inventory.kafka.MarcBibInstanceHridSetConsumer.loadLimit", "5"));
+  private final int loadLimit = getLoadLimit();
   private KafkaConsumerWrapper<String, String> consumerWrapper;
 
   @Override
@@ -41,7 +41,7 @@ public class MarcBibInstanceHridSetConsumerVerticle extends AbstractVerticle {
       .okapiUrl(config.getString(OKAPI_URL))
       .replicationFactor(Integer.parseInt(config.getString(KAFKA_REPLICATION_FACTOR)))
       .build();
-    LOGGER.debug("kafkaConfig: " + kafkaConfig);
+    LOGGER.info("kafkaConfig: {}", kafkaConfig);
 
     SubscriptionDefinition subscriptionDefinition = KafkaTopicNameHelper.createSubscriptionDefinition(kafkaConfig.getEnvId(),
         KafkaTopicNameHelper.getDefaultNameSpace(), MARC_BIB_INSTANCE_HRID_SET_EVENT);
@@ -68,5 +68,9 @@ public class MarcBibInstanceHridSetConsumerVerticle extends AbstractVerticle {
   @Override
   public void stop(Promise<Void> stopPromise) {
     consumerWrapper.stop().onComplete(ar -> stopPromise.complete());
+  }
+
+  private int getLoadLimit() {
+    return Integer.parseInt(System.getProperty("inventory.kafka.MarcBibInstanceHridSetConsumer.loadLimit", "5"));
   }
 }

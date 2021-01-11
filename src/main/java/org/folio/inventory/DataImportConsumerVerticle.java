@@ -59,8 +59,8 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
     DI_INVENTORY_ITEM_CREATED, DI_INVENTORY_ITEM_MATCHED,
     DI_INVENTORY_ITEM_NOT_MATCHED, DI_INVENTORY_ITEM_CREATED);
 
-  private int loadLimit = Integer.parseInt(System.getProperty("inventory.kafka.DataImportConsumer.loadLimit", "5"));
-  private int maxDistributionNumber = Integer.parseInt(System.getProperty("inventory.kafka.DataImportConsumerVerticle.maxDistributionNumber", "100"));
+  private final int loadLimit = getLoadLimit();
+  private final int maxDistributionNumber = getMaxDistributionNumber();
   private List<KafkaConsumerWrapper<String, String>> consumerWrappers = new ArrayList<>();
 
   @Override
@@ -73,7 +73,7 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
       .okapiUrl(config.getString(OKAPI_URL))
       .replicationFactor(Integer.parseInt(config.getString(KAFKA_REPLICATION_FACTOR)))
       .build();
-    LOGGER.debug("kafkaConfig: " + kafkaConfig);
+    LOGGER.info("kafkaConfig: {}", kafkaConfig);
     EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, maxDistributionNumber);
 
     HttpClient client = vertx.createHttpClient();
@@ -117,5 +117,13 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
 
     return consumerWrapper.start(recordHandler, PubSubClientUtils.constructModuleName())
       .map(consumerWrapper);
+  }
+
+  private int getLoadLimit() {
+    return Integer.parseInt(System.getProperty("inventory.kafka.DataImportConsumer.loadLimit", "5"));
+  }
+
+  private int getMaxDistributionNumber() {
+    return Integer.parseInt(System.getProperty("inventory.kafka.DataImportConsumerVerticle.maxDistributionNumber", "100"));
   }
 }
