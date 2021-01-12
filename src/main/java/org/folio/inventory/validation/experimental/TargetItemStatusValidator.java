@@ -2,11 +2,10 @@ package org.folio.inventory.validation.experimental;
 
 import org.folio.inventory.domain.items.ItemStatusName;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.EnumMap;
 
 public class TargetItemStatusValidator {
-  private static final Map<ItemStatusName, TargetItemStatusValidatorInterface> validators = new HashMap<>();
+  private static final EnumMap<ItemStatusName, TargetItemStatusValidatorInterface> validators = new EnumMap<> (ItemStatusName.class);
 
   public TargetItemStatusValidator() {
     validators.put(InProcessTargetValidator.statusName,new InProcessTargetValidator());

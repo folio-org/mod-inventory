@@ -9,6 +9,6 @@ import java.util.concurrent.CompletableFuture;
 public interface TargetItemStatusValidatorInterface {
   ItemStatusName getStatusName();
   CompletableFuture<Item> itemHasAllowedStatusToMark(Item item);
-  Boolean isItemAllowedToMark(Item item);
+  boolean isItemAllowedToMark(Item item);
   Set<ItemStatusName> getAllStatusesAllowedToMark();
 }

@@ -48,7 +48,7 @@ public class TargetItemStatusValidatorTest {
   }
 
   @Test
-  public void inProcesNonRequestableAllowMarkAs() {
+  public void inProcessNonRequestableAllowMarkAs() {
     ItemStatusName targetItemStatusName = ItemStatusName.IN_PROCESS_NON_REQUESTABLE;
     final TargetItemStatusValidatorInterface statusValidator = validator.getValidator(targetItemStatusName);
 

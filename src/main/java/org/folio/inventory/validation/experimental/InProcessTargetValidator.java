@@ -26,7 +26,7 @@ public class InProcessTargetValidator extends AbstractTargetValidator {
   }
 
   @Override
-  public Boolean isItemAllowedToMark(Item item) {
+  public boolean isItemAllowedToMark(Item item) {
     return ALLOWED_STATUS_TO_MARK.contains(item.getStatus().getName());
   }
 
