@@ -26,7 +26,7 @@ public class TargetItemStatusValidatorTest {
   @Test
   public void inProcesAllowMarkAs() {
     ItemStatusName targetItemStatusName = ItemStatusName.IN_PROCESS;
-    final TargetItemStatusValidatorInterface statusValidator = validator.getValidator(targetItemStatusName);
+    final AbstractTargetValidator statusValidator = validator.getValidator(targetItemStatusName);
 
     Set<ItemStatusName> allowedStatuses = statusValidator.getAllStatusesAllowedToMark();
     System.out.println("Allowed statuses for:"+statusValidator.getStatusName());
@@ -50,7 +50,7 @@ public class TargetItemStatusValidatorTest {
   @Test
   public void inProcessNonRequestableAllowMarkAs() {
     ItemStatusName targetItemStatusName = ItemStatusName.IN_PROCESS_NON_REQUESTABLE;
-    final TargetItemStatusValidatorInterface statusValidator = validator.getValidator(targetItemStatusName);
+    final AbstractTargetValidator statusValidator = validator.getValidator(targetItemStatusName);
 
     Set<ItemStatusName> allowedStatuses = statusValidator.getAllStatusesAllowedToMark();
     System.out.println("Allowed statuses for:"+statusValidator.getStatusName());

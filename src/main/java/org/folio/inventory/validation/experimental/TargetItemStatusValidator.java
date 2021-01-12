@@ -5,14 +5,14 @@ import org.folio.inventory.domain.items.ItemStatusName;
 import java.util.EnumMap;
 
 public class TargetItemStatusValidator {
-  private static final EnumMap<ItemStatusName, TargetItemStatusValidatorInterface> validators = new EnumMap<> (ItemStatusName.class);
+  private static final EnumMap<ItemStatusName, AbstractTargetValidator> validators = new EnumMap<>(ItemStatusName.class);
 
   public TargetItemStatusValidator() {
-    validators.put(InProcessTargetValidator.statusName,new InProcessTargetValidator());
-    validators.put(InProcessNonRequestableTargetValidator.statusName,new InProcessNonRequestableTargetValidator());
+    validators.put(ItemStatusName.IN_PROCESS, new InProcessTargetValidator());
+    validators.put(ItemStatusName.IN_PROCESS_NON_REQUESTABLE, new InProcessNonRequestableTargetValidator());
   }
 
-  public TargetItemStatusValidatorInterface getValidator(ItemStatusName itemStatusName) {
+  public AbstractTargetValidator getValidator(ItemStatusName itemStatusName) {
     return validators.get(itemStatusName);
   }
 
