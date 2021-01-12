@@ -22,7 +22,6 @@ import org.folio.inventory.domain.view.request.Request;
 import org.folio.inventory.storage.external.Clients;
 import org.folio.inventory.storage.external.repository.RequestRepository;
 import org.folio.inventory.validation.MarkAsInProcessNonRequestableValidators;
-import org.folio.inventory.validation.MarkAsInProcessValidators;
 import org.folio.inventory.validation.MarkAsIntellectualItemValidators;
 import org.folio.inventory.validation.MarkAsLongMissingValidators;
 import org.folio.inventory.validation.MarkAsMissingValidators;
@@ -31,8 +30,8 @@ import org.folio.inventory.validation.MarkAsUnavailableValidators;
 import org.folio.inventory.validation.MarkAsUnknownValidators;
 import org.folio.inventory.validation.MarkAsWithdrawnValidators;
 import org.folio.inventory.validation.ItemsValidator;
-import org.folio.inventory.validation.experimental.TargetValidator;
-import org.folio.inventory.validation.experimental.TargetValidatorInterface;
+import org.folio.inventory.validation.experimental.TargetItemStatusValidator;
+import org.folio.inventory.validation.experimental.TargetItemStatusValidatorInterface;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.slf4j.Logger;
@@ -44,7 +43,7 @@ public class MoveItemIntoStatusService {
   private final ItemCollection itemCollection;
   private final RequestRepository requestRepository;
 
-  private static final TargetValidator validator = new TargetValidator();
+  private static final TargetItemStatusValidator validator = new TargetItemStatusValidator();
 
   public MoveItemIntoStatusService(ItemCollection itemCollection, Clients clients) {
     this.itemCollection = itemCollection;
@@ -64,7 +63,7 @@ public class MoveItemIntoStatusService {
 
   public CompletableFuture<Item> processMarkItem(WebContext context,ItemStatusName statusName) {
     final String itemId = context.getStringParameter("id", null);
-    TargetValidatorInterface targetValidator = validator.getValidator(statusName);
+    TargetItemStatusValidatorInterface targetValidator = validator.getValidator(statusName);
 
     return itemCollection.findById(itemId)
       .thenCompose(ItemsValidator::refuseWhenItemNotFound)
@@ -73,8 +72,6 @@ public class MoveItemIntoStatusService {
       .thenApply(item -> item.changeStatus(statusName))
       .thenCompose(itemCollection::update);
   }
-
-
 
 //  public CompletableFuture<Item> processMarkItemInProcess(WebContext context) {
 //    final String itemId = context.getStringParameter("id", null);
@@ -89,7 +86,7 @@ public class MoveItemIntoStatusService {
 
   public CompletableFuture<Item> processMarkItemInProcess(WebContext context) {
     final String itemId = context.getStringParameter("id", null);
-    TargetValidatorInterface targetValidator = validator.getValidator(IN_PROCESS);
+    TargetItemStatusValidatorInterface targetValidator = validator.getValidator(IN_PROCESS);
 
     return itemCollection.findById(itemId)
       .thenCompose(ItemsValidator::refuseWhenItemNotFound)
@@ -98,8 +95,6 @@ public class MoveItemIntoStatusService {
       .thenApply(item -> item.changeStatus(targetValidator.getStatusName()))
       .thenCompose(itemCollection::update);
   }
-
-
 
   public CompletableFuture<Item> processMarkItemInProcessNonRequestable(WebContext context) {
     final String itemId = context.getStringParameter("id", null);

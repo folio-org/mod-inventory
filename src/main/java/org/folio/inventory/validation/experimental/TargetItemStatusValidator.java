@@ -5,15 +5,15 @@ import org.folio.inventory.domain.items.ItemStatusName;
 import java.util.HashMap;
 import java.util.Map;
 
-public class TargetValidator {
-  private static final Map<ItemStatusName,TargetValidatorInterface> validators = new HashMap<>();
+public class TargetItemStatusValidator {
+  private static final Map<ItemStatusName, TargetItemStatusValidatorInterface> validators = new HashMap<>();
 
-  public TargetValidator() {
+  public TargetItemStatusValidator() {
     validators.put(InProcessTargetValidator.statusName,new InProcessTargetValidator());
     validators.put(InProcessNonRequestableTargetValidator.statusName,new InProcessNonRequestableTargetValidator());
   }
 
-  public TargetValidatorInterface getValidator(ItemStatusName itemStatusName) {
+  public TargetItemStatusValidatorInterface getValidator(ItemStatusName itemStatusName) {
     return validators.get(itemStatusName);
   }
 
