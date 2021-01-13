@@ -32,7 +32,7 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
 
-  private InstanceUpdateDelegate instanceUpdateDelegate;
+  private final InstanceUpdateDelegate instanceUpdateDelegate;
 
   public MarcBibModifiedPostProcessingEventHandler(InstanceUpdateDelegate updateInstanceDelegate) {
     this.instanceUpdateDelegate = updateInstanceDelegate;
@@ -61,7 +61,7 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
       record.setExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId));
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       instanceUpdateDelegate.handle(dataImportEventPayload.getContext(), record, context)
-        .setHandler(updateAr -> {
+        .onComplete(updateAr -> {
           if (updateAr.succeeded()) {
             dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(updateAr.result()));
             future.complete(dataImportEventPayload);

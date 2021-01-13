@@ -9,7 +9,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public class CollectAll<T> {
-  private ArrayList<CompletableFuture<T>> allFutures = new ArrayList<>();
+  private final ArrayList<CompletableFuture<T>> allFutures = new ArrayList<>();
 
   public Consumer<Success<T>> receive() {
     CompletableFuture newFuture = new CompletableFuture();
@@ -21,10 +21,8 @@ public class CollectAll<T> {
 
   public void collect(Consumer<List<T>> action) {
     CompletableFuture.allOf(allFutures.toArray(new CompletableFuture<?>[] { }))
-      .thenAccept(v -> {
-        action.accept(allFutures.stream()
-          .map(future -> future.join())
-          .collect(Collectors.toList()));
-      });
+      .thenAccept(v -> action.accept(allFutures.stream()
+        .map(CompletableFuture::join)
+        .collect(Collectors.toList())));
   }
 }

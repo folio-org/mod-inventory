@@ -9,7 +9,7 @@
 * Restricts item status transitions during import (MODINV-296)
 * Fixes instance statistical code and nature of content import issues (MODINV-336)
 * Fixes problem with the repeatable check in/out notes field mapping actions (MODINV-346)
-* Saves source record state during quick MARC edit (MODINV-324) 
+* Saves source record state during quick MARC edit (MODINV-324)
 * Requires JDK 11 (MODINV-335)
 * Provides `inventory 10.7`
 * Requires `item-storage 8.6`

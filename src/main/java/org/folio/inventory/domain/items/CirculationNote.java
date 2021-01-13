@@ -21,12 +21,12 @@ public class CirculationNote {
   public static final String SOURCE_KEY = "source";
   public static final String DATE_KEY = "date";
 
-  private String id;
-  private String noteType;
-  private String note;
-  private Boolean staffOnly;
-  private User source;
-  private String date;
+  private final String id;
+  private final String noteType;
+  private final String note;
+  private final Boolean staffOnly;
+  private final User source;
+  private final String date;
 
   public CirculationNote (String id,
                           String noteType,

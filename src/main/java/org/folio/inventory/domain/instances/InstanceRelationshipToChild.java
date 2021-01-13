@@ -25,6 +25,18 @@ public class InstanceRelationshipToChild {
     this(relationshipJson.getString("id"), relationshipJson.getString(SUB_INSTANCE_ID_KEY), relationshipJson.getString(INSTANCE_RELATIONSHIP_TYPE_ID_KEY));
   }
 
+  public String getId() {
+    return id;
+  }
+
+  public String getSubInstanceId() {
+    return subInstanceId;
+  }
+
+  public String getInstanceRelationshipTypeId() {
+    return instanceRelationshipTypeId;
+  }
+
   @Override
   public String toString() {
     return "{ \"id\": \"" + id + "\", \"subInstanceId\": \""+ subInstanceId + "\", \"instanceRelationshipTypeId\": \"" + instanceRelationshipTypeId + "\" }";

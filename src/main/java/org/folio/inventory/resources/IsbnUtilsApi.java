@@ -104,7 +104,7 @@ public class IsbnUtilsApi {
       String hyphensValue = routingContext.queryParam(HYPHENS_PARAM).get(0);
 
       if ("true".equalsIgnoreCase(hyphensValue) || "false".equalsIgnoreCase(hyphensValue)) {
-        return Boolean.valueOf(hyphensValue);
+        return Boolean.parseBoolean(hyphensValue);
       }
       throw new IllegalArgumentException(INVALID_HYPHENS_VALUE_MSG);
     }

@@ -24,6 +24,7 @@ import org.folio.inventory.domain.instances.Publication;
 import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -40,7 +41,7 @@ class ExternalStorageModuleInstanceCollection
   extends ExternalStorageModuleCollection<Instance>
   implements InstanceCollection {
 
-  private String batchAddress;
+  private final String batchAddress;
 
   ExternalStorageModuleInstanceCollection(
     Vertx vertx,
@@ -49,7 +50,7 @@ class ExternalStorageModuleInstanceCollection
     String token,
     HttpClient client) {
 
-    super(vertx, String.format("%s/%s", baseAddress, "instance-storage/instances"),
+    super(String.format("%s/%s", baseAddress, "instance-storage/instances"),
       tenant, token, "instances", client);
     batchAddress = String.format("%s/%s", baseAddress, "instance-storage/batch/instances");
   }
@@ -91,8 +92,8 @@ class ExternalStorageModuleInstanceCollection
     includeIfPresent(instanceToSend, Instance.SOURCE_RECORD_FORMAT_KEY, instance.getSourceRecordFormat());
     instanceToSend.put(Instance.STATUS_ID_KEY, instance.getStatusId());
     instanceToSend.put(Instance.STATUS_UPDATED_DATE_KEY, instance.getStatusUpdatedDate());
-    instanceToSend.put(Instance.TAGS_KEY, new JsonObject().put(Instance.TAG_LIST_KEY, new JsonArray(instance.getTags())));
-    instanceToSend.put(Instance.NATURE_OF_CONTENT_TERM_IDS_KEY,instance.getNatureOfContentTermIds());
+    instanceToSend.put(Instance.TAGS_KEY, new JsonObject().put(Instance.TAG_LIST_KEY, new JsonArray(instance.getTags() == null ? Collections.emptyList() : instance.getTags())));
+    instanceToSend.put(Instance.NATURE_OF_CONTENT_TERM_IDS_KEY, instance.getNatureOfContentTermIds());
 
     return instanceToSend;
   }
@@ -103,49 +104,49 @@ class ExternalStorageModuleInstanceCollection
       instanceFromServer.getJsonArray(Instance.IDENTIFIERS_KEY, new JsonArray()));
 
     List<Identifier> mappedIdentifiers = identifiers.stream()
-      .map(it -> new Identifier(it))
+      .map(Identifier::new)
       .collect(Collectors.toList());
 
     List<JsonObject> alternativeTitles = toList(
       instanceFromServer.getJsonArray(Instance.ALTERNATIVE_TITLES_KEY, new JsonArray()));
 
     List<AlternativeTitle> mappedAlternativeTitles = alternativeTitles.stream()
-      .map(it -> new AlternativeTitle(it))
+      .map(AlternativeTitle::new)
       .collect(Collectors.toList());
 
     List<JsonObject> contributors = toList(
       instanceFromServer.getJsonArray(Instance.CONTRIBUTORS_KEY, new JsonArray()));
 
     List<Contributor> mappedContributors = contributors.stream()
-      .map(it -> new Contributor(it))
+      .map(Contributor::new)
       .collect(Collectors.toList());
 
     List<JsonObject> classifications = toList(
       instanceFromServer.getJsonArray(Instance.CLASSIFICATIONS_KEY, new JsonArray()));
 
     List<Classification> mappedClassifications = classifications.stream()
-      .map(it -> new Classification(it))
+      .map(Classification::new)
       .collect(Collectors.toList());
 
     List<JsonObject> publications = toList(
       instanceFromServer.getJsonArray(Instance.PUBLICATION_KEY, new JsonArray()));
 
     List<Publication> mappedPublications = publications.stream()
-      .map(it -> new Publication(it))
+      .map(Publication::new)
       .collect(Collectors.toList());
 
     List<JsonObject> electronicAccess = toList(
       instanceFromServer.getJsonArray(Instance.ELECTRONIC_ACCESS_KEY, new JsonArray()));
 
     List<ElectronicAccess> mappedElectronicAccess = electronicAccess.stream()
-      .map(it -> new ElectronicAccess(it))
+      .map(ElectronicAccess::new)
       .collect(Collectors.toList());
 
     List<JsonObject> notes = toList(
       instanceFromServer.getJsonArray(Instance.NOTES_KEY, new JsonArray()));
 
     List<Note> mappedNotes = notes.stream()
-      .map(it -> new Note(it))
+      .map(Note::new)
       .collect(Collectors.toList());
 
     List<String> tags = instanceFromServer.containsKey(Instance.TAGS_KEY)
@@ -204,7 +205,7 @@ class ExternalStorageModuleInstanceCollection
 
   @Override
   public void addBatch(List<Instance> items,
-              Consumer<Success<BatchResult<Instance>>> resultCallback, Consumer<Failure> failureCallback) {
+                       Consumer<Success<BatchResult<Instance>>> resultCallback, Consumer<Failure> failureCallback) {
 
     Handler<HttpClientResponse> onResponse = response ->
       response.bodyHandler(buffer -> {
@@ -214,7 +215,7 @@ class ExternalStorageModuleInstanceCollection
           JsonObject batchResponse = new JsonObject(responseBody);
           JsonArray createdInstances = batchResponse.getJsonArray("instances");
 
-          List<Instance> instancesList  = new ArrayList<>();
+          List<Instance> instancesList = new ArrayList<>();
           for (int i = 0; i < createdInstances.size(); i++) {
             instancesList.add(mapFromJson(createdInstances.getJsonObject(i)));
           }
@@ -223,8 +224,7 @@ class ExternalStorageModuleInstanceCollection
           batchResult.setErrorMessages(batchResponse.getJsonArray("errorMessages").getList());
 
           resultCallback.accept(new Success<>(batchResult));
-        }
-        else {
+        } else {
           failureCallback.accept(new Failure(responseBody, response.statusCode()));
         }
       });

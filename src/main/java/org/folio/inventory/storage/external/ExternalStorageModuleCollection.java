@@ -1,7 +1,6 @@
 package org.folio.inventory.storage.external;
 
 import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.http.HttpClientResponse;
@@ -17,14 +16,13 @@ import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.ContentType;
 
-import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 abstract class ExternalStorageModuleCollection<T> {
-  private final Vertx vertx;
   private final String storageAddress;
   private final String tenant;
   private final String token;
@@ -32,14 +30,12 @@ abstract class ExternalStorageModuleCollection<T> {
   private final HttpClient client;
 
   ExternalStorageModuleCollection(
-    Vertx vertx,
     String storageAddress,
     String tenant,
     String token,
     String collectionWrapperPropertyName,
     HttpClient client) {
 
-    this.vertx = vertx;
     this.storageAddress = storageAddress;
     this.tenant = tenant;
     this.token = token;
@@ -152,9 +148,9 @@ abstract class ExternalStorageModuleCollection<T> {
   public void findByCql(String cqlQuery,
     PagingParameters pagingParameters,
     Consumer<Success<MultipleRecords<T>>> resultCallback,
-    Consumer<Failure> failureCallback) throws UnsupportedEncodingException {
+    Consumer<Failure> failureCallback) {
 
-    String encodedQuery = URLEncoder.encode(cqlQuery, "UTF-8");
+    String encodedQuery = URLEncoder.encode(cqlQuery, StandardCharsets.UTF_8);
 
     String location =
       String.format("%s?query=%s", storageAddress, encodedQuery) +

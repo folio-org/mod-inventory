@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 public class Launcher {
-  private static VertxAssistant vertxAssistant = new VertxAssistant();
+  private static final VertxAssistant vertxAssistant = new VertxAssistant();
   private static String inventoryModuleDeploymentId;
 
   public static void main(String[] args)
@@ -25,7 +25,8 @@ public class Launcher {
 
     Map<String, Object> config = new HashMap<>();
 
-    Integer port = Integer.getInteger("port", 9403);
+    String portString = System.getProperty("http.port", System.getProperty("port", "9403"));
+    Integer port = Integer.valueOf(portString);
 
     String storageType = System.getProperty(
       "org.folio.metadata.inventory.storage.type", null);

@@ -3,6 +3,7 @@ package org.folio.inventory.resources;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -32,7 +33,7 @@ public class TenantApi {
 
     Map<String, String> okapiHeaders = getOkapiHeaders(routingContext);
     registerModuleToPubsub(okapiHeaders, routingContext.vertx())
-      .setHandler(ar ->
+      .onComplete(ar ->
         routingContext.response()
         .setStatusCode(HttpResponseStatus.NO_CONTENT.code())
         .end());
@@ -50,18 +51,18 @@ public class TenantApi {
   }
 
   private Future<Void> registerModuleToPubsub(Map<String, String> headers, Vertx vertx) {
-    Future<Void> future = Future.future();
+    Promise<Void> promise = Promise.promise();
     PubSubClientUtils.registerModule(new OkapiConnectionParams(headers, vertx))
       .whenComplete((registrationAr, throwable) -> {
         if (throwable == null) {
           LOG.info("Module was successfully registered as publisher/subscriber in mod-pubsub");
-          future.complete();
+          promise.complete();
         } else {
           LOG.error("Error during module registration in mod-pubsub", throwable);
-          future.fail(throwable);
+          promise.fail(throwable);
         }
       });
-    return future;
+    return promise.future();
   }
 
 }

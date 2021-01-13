@@ -1,6 +1,6 @@
 #%RAML 1.0
 title: Inventory API
-version: v10.6
+version: v10.8
 protocols: [ HTTP, HTTPS ]
 baseUri: http://localhost
 
@@ -76,11 +76,179 @@ resourceTypes:
               body:
                 text/plain:
                   example: "Internal server error"
+      /mark-in-process:
+        post:
+          responses:
+            200:
+              description: "Item has marked as in process"
+              body:
+                application/json:
+                  example: !include examples/item_get.json
+                  schema: item
+            404:
+              description: "Item not found"
+              body:
+                text/plain:
+                  example: "Item with such id not found"
+            422:
+              description: "Validation error"
+              body:
+                application/json:
+                  schema: errors
+            500:
+              description: "Internal server error"
+              body:
+                text/plain:
+                  example: "Internal server error"
+      /mark-in-process-non-requestable:
+        post:
+          responses:
+            200:
+              description: "Item has marked as in process (non requestable)"
+              body:
+                application/json:
+                  example: !include examples/item_get.json
+                  schema: item
+            404:
+              description: "Item not found"
+              body:
+                text/plain:
+                  example: "Item with such id not found"
+            422:
+              description: "Validation error"
+              body:
+                application/json:
+                  schema: errors
+            500:
+              description: "Internal server error"
+              body:
+                text/plain:
+                  example: "Internal server error"
+      /mark-intellectual-item:
+        post:
+          responses:
+            200:
+              description: "Item has marked as intellectual item"
+              body:
+                application/json:
+                  example: !include examples/item_get.json
+                  schema: item
+            404:
+              description: "Item not found"
+              body:
+                text/plain:
+                  example: "Item with such id not found"
+            422:
+              description: "Validation error"
+              body:
+                application/json:
+                  schema: errors
+            500:
+              description: "Internal server error"
+              body:
+                text/plain:
+                  example: "Internal server error"
+      /mark-long-missing:
+        post:
+          responses:
+            200:
+              description: "Item has marked as long missing"
+              body:
+                application/json:
+                  example: !include examples/item_get.json
+                  schema: item
+            404:
+              description: "Item not found"
+              body:
+                text/plain:
+                  example: "Item with such id not found"
+            422:
+              description: "Validation error"
+              body:
+                application/json:
+                  schema: errors
+            500:
+              description: "Internal server error"
+              body:
+                text/plain:
+                  example: "Internal server error"
       /mark-missing:
         post:
           responses:
             201:
               description: "Item has marked as missing"
+              body:
+                application/json:
+                  example: !include examples/item_get.json
+                  schema: item
+            404:
+              description: "Item not found"
+              body:
+                text/plain:
+                  example: "Item with such id not found"
+            422:
+              description: "Validation error"
+              body:
+                application/json:
+                  schema: errors
+            500:
+              description: "Internal server error"
+              body:
+                text/plain:
+                  example: "Internal server error"
+      /mark-restricted:
+        post:
+          responses:
+            200:
+              description: "Item has marked as restricted"
+              body:
+                application/json:
+                  example: !include examples/item_get.json
+                  schema: item
+            404:
+              description: "Item not found"
+              body:
+                text/plain:
+                  example: "Item with such id not found"
+            422:
+              description: "Validation error"
+              body:
+                application/json:
+                  schema: errors
+            500:
+              description: "Internal server error"
+              body:
+                text/plain:
+                  example: "Internal server error"
+      /mark-unavailable:
+        post:
+          responses:
+            200:
+              description: "Item has marked as unavailable"
+              body:
+                application/json:
+                  example: !include examples/item_get.json
+                  schema: item
+            404:
+              description: "Item not found"
+              body:
+                text/plain:
+                  example: "Item with such id not found"
+            422:
+              description: "Validation error"
+              body:
+                application/json:
+                  schema: errors
+            500:
+              description: "Internal server error"
+              body:
+                text/plain:
+                  example: "Internal server error"
+      /mark-unknown:
+        post:
+          responses:
+            200:
+              description: "Item has marked as unknown"
               body:
                 application/json:
                   example: !include examples/item_get.json

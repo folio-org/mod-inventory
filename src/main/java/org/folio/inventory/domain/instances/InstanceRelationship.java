@@ -39,7 +39,7 @@ public class InstanceRelationship {
   @Override
   public boolean equals (Object object) {
     if (object instanceof InstanceRelationship) {
-      return ((InstanceRelationship) object).toString().equals(this.toString());
+      return object.toString().equals(this.toString());
     } else {
       return false;
     }
