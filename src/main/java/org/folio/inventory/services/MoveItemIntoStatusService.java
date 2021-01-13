@@ -92,7 +92,7 @@ public class MoveItemIntoStatusService {
       .thenCompose(ItemsValidator::refuseWhenItemNotFound)
       .thenCompose(item -> targetValidator.itemHasAllowedStatusToMark(item))
       .thenCompose(this::updateRequestStatusIfRequired)
-      .thenApply(item -> item.changeStatus(targetValidator.getStatusName()))
+      .thenApply(item -> item.changeStatus(targetValidator.getItemStatusName()))
       .thenCompose(itemCollection::update);
   }
 

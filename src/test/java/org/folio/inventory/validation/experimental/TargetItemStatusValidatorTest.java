@@ -29,7 +29,7 @@ public class TargetItemStatusValidatorTest {
     final AbstractTargetValidator statusValidator = validator.getValidator(targetItemStatusName);
 
     Set<ItemStatusName> allowedStatuses = statusValidator.getAllStatusesAllowedToMark();
-    System.out.println("Allowed statuses for:"+statusValidator.getStatusName());
+    System.out.println("Allowed statuses for:"+statusValidator.getItemStatusName());
     allowedStatuses.stream().forEach(x -> {
       System.out.println("\t"+x);
       Item item = new Item(null, null, new Status(x), null, null, null);
@@ -39,7 +39,7 @@ public class TargetItemStatusValidatorTest {
     Set<ItemStatusName> disallowedStatuses = new HashSet<>();
     Collections.addAll(disallowedStatuses,ItemStatusName.values());
     disallowedStatuses.removeAll(allowedStatuses);
-    System.out.println("Disallowed statuses for:"+statusValidator.getStatusName());
+    System.out.println("Disallowed statuses for:"+statusValidator.getItemStatusName());
     disallowedStatuses.stream().forEach(x -> {
       System.out.println("\t"+x);
       Item item = new Item(null, null, new Status(x), null, null, null);
@@ -53,7 +53,7 @@ public class TargetItemStatusValidatorTest {
     final AbstractTargetValidator statusValidator = validator.getValidator(targetItemStatusName);
 
     Set<ItemStatusName> allowedStatuses = statusValidator.getAllStatusesAllowedToMark();
-    System.out.println("Allowed statuses for:"+statusValidator.getStatusName());
+    System.out.println("Allowed statuses for:"+statusValidator.getItemStatusName());
     allowedStatuses.stream().forEach(x -> {
       System.out.println("\t"+x);
       Item item = new Item(null, null, new Status(x), null, null, null);
@@ -63,7 +63,7 @@ public class TargetItemStatusValidatorTest {
     Set<ItemStatusName> disallowedStatuses = new HashSet<>();
     Collections.addAll(disallowedStatuses,ItemStatusName.values());
     disallowedStatuses.removeAll(allowedStatuses);
-    System.out.println("Disallowed statuses for:"+statusValidator.getStatusName());
+    System.out.println("Disallowed statuses for:"+statusValidator.getItemStatusName());
     disallowedStatuses.stream().forEach(x -> {
       System.out.println("\t"+x);
       Item item = new Item(null, null, new Status(x), null, null, null);
