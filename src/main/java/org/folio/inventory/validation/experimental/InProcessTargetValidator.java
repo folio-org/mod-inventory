@@ -1,11 +1,9 @@
 package org.folio.inventory.validation.experimental;
 
 import org.folio.inventory.domain.items.ItemStatusName;
-
 import static java.util.Set.of;
 
 public class InProcessTargetValidator extends AbstractTargetValidator {
-
   public InProcessTargetValidator() {
     super(ItemStatusName.IN_PROCESS, of(
       ItemStatusName.AVAILABLE,
@@ -19,5 +17,4 @@ public class InProcessTargetValidator extends AbstractTargetValidator {
       ItemStatusName.WITHDRAWN
     ));
   }
-
 }

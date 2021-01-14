@@ -64,6 +64,7 @@ import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+import org.mockito.internal.stubbing.answers.ThrowsException;
 
 public class Items extends AbstractInventoryResource {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
@@ -95,15 +96,10 @@ public class Items extends AbstractInventoryResource {
     router.put(RELATIVE_ITEMS_PATH_ID).handler(this::update);
     router.delete(RELATIVE_ITEMS_PATH_ID).handler(this::deleteById);
 
-    Arrays.stream(ItemStatusName.values())
-      .map(x->ItemStatusURL.getUrlForItemStatusName(x))
-      .filter(x->x.isPresent())
-      .forEach(x->router.post(RELATIVE_ITEMS_PATH_ID+x.get()).handler(handle(this::markItemAsTargetStatus)));
+    Arrays.stream(ItemStatusName.values()).
+      filter(itemStatusName -> ItemStatusURL.getUrlForItemStatusName(itemStatusName).isPresent())
+      .forEach(itemStatusName -> registerHandlerForChangingItemStatus(itemStatusName,router));
 
-//    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-in-process")
-//      .handler(handle(this::markAs));
-//    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-in-process-non-requestable")
-//      .handler(handle(this::markAs));
     router.post(RELATIVE_ITEMS_PATH_ID + "/mark-intellectual-item")
       .handler(handle(this::markAsIntellectualItem));
     router.post(RELATIVE_ITEMS_PATH_ID + "/mark-long-missing")
@@ -121,10 +117,14 @@ public class Items extends AbstractInventoryResource {
 
   }
 
+  private void registerHandlerForChangingItemStatus(ItemStatusName itemStatusName, Router router) {
+    router.post(RELATIVE_ITEMS_PATH_ID + ItemStatusURL.getUrlForItemStatusName(itemStatusName).get())
+      .handler(handle(this::markItemAsTargetStatus));
+  }
+
   private CompletableFuture<Void> markItemAsTargetStatus(
     RoutingContext routingContext, WebContext webContext, Clients clients) {
-    Optional<ItemStatusName> itemStatusName = ItemStatusURL.getItemStatusNameForUrl(routingContext.request().uri());
-
+    final var itemStatusName = ItemStatusURL.getItemStatusNameForUrl(routingContext.request().uri());
     if (itemStatusName.isEmpty())
       log.error("Item status for url $URL$ not found.".replace("$URL$", routingContext.request().uri()),
         new Exception());

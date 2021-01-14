@@ -1,14 +1,9 @@
 package org.folio.inventory.validation.experimental;
 
-import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemStatusName;
-
-import java.util.Set;
-
 import static java.util.Set.of;
 
 public class InProcessNonRequestableTargetValidator extends AbstractTargetValidator {
-
   public InProcessNonRequestableTargetValidator() {
     super(ItemStatusName.IN_PROCESS_NON_REQUESTABLE, of(
       ItemStatusName.AVAILABLE,
@@ -22,5 +17,4 @@ public class InProcessNonRequestableTargetValidator extends AbstractTargetValida
       ItemStatusName.WITHDRAWN
     ));
   }
-
 }
