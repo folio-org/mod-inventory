@@ -5,7 +5,6 @@ import junitparams.Parameters;
 import lombok.SneakyThrows;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemStatusName;
-
 import org.folio.inventory.domain.items.Status;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -22,7 +21,7 @@ import static org.folio.inventory.domain.items.ItemStatusName.IN_PROCESS;
 import static org.folio.inventory.domain.items.ItemStatusName.forName;
 
 @RunWith(JUnitParamsRunner.class)
-public class TargetItemStatusValidatorTest {
+public class InProcessItemStatusValidatorTest {
   private static TargetItemStatusValidator validator;
 
   @BeforeClass
@@ -30,54 +29,22 @@ public class TargetItemStatusValidatorTest {
     validator = new TargetItemStatusValidator();
   }
 
-  @Parameters(
-    {
-      "In process",
-      "In process (non-requestable)"
-    }
-  )
-  @Test
-  public void targetStatusAllowMarkAs(String statusName) {
-    final var targetItemStatusName = forName(statusName);
-    final var statusValidator = validator.getValidator(targetItemStatusName);
-    assertThat(statusValidator).isNotNull();
-    final var allowedStatuses = statusValidator.getAllStatusesAllowedToMark();
-    System.out.println("Allowed statuses for:"+statusValidator.getItemStatusName());
-    allowedStatuses.stream().forEach(x -> {
-      System.out.println("\t"+x);
-      Item item = new Item(null, null, new Status(x), null, null, null);
-      assertThat(statusValidator.isItemAllowedToMark(item)).isTrue();
-    });
-
-    Set<ItemStatusName> disallowedStatuses = new HashSet<>();
-    Collections.addAll(disallowedStatuses,ItemStatusName.values());
-    disallowedStatuses.removeAll(allowedStatuses);
-    System.out.println("Disallowed statuses for:"+statusValidator.getItemStatusName());
-    disallowedStatuses.stream().forEach(x -> {
-      System.out.println("\t"+x);
-      Item item = new Item(null, null, new Status(x), null, null, null);
-      assertThat(statusValidator.isItemAllowedToMark(item)).isFalse();
-    });
-  }
-
   @SneakyThrows
   @Parameters({
     "Available",
-    "In transit",
-    "Awaiting pickup",
-    "Missing",
-    "Withdrawn",
-    "Lost and paid",
-    "Paged",
     "Awaiting delivery",
-    "Order closed"
+    "Awaiting pickup",
+    "In transit",
+    "Lost and paid",
+    "Missing",
+    "Order closed",
+    "Paged",
+    "Withdrawn"
   })
   @Test
   public void itemCanBeMarkedAsInProcessWhenInAcceptableSourceStatus(String sourceStatus) {
     final var targetValidator = validator.getValidator(IN_PROCESS);
-
     final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
-
     final var validationFuture = targetValidator.itemHasAllowedStatusToMark(item);
 
     validationFuture.get(1, TimeUnit.SECONDS);

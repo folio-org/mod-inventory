@@ -64,7 +64,6 @@ import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
-import org.mockito.internal.stubbing.answers.ThrowsException;
 
 public class Items extends AbstractInventoryResource {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
@@ -96,12 +95,12 @@ public class Items extends AbstractInventoryResource {
     router.put(RELATIVE_ITEMS_PATH_ID).handler(this::update);
     router.delete(RELATIVE_ITEMS_PATH_ID).handler(this::deleteById);
 
-    Arrays.stream(ItemStatusName.values()).
-      filter(itemStatusName -> ItemStatusURL.getUrlForItemStatusName(itemStatusName).isPresent())
-      .forEach(itemStatusName -> registerHandlerForChangingItemStatus(itemStatusName,router));
+    Arrays.stream(ItemStatusName.values()).map(itemStatusName -> ItemStatusURL.getUrlForItemStatusName(itemStatusName))
+      .filter(itemStatusUrl -> itemStatusUrl.isPresent())
+      .forEach(itemStatusUrl -> registerMarkItemAsHandler(itemStatusUrl.get(),router));
 
-    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-intellectual-item")
-      .handler(handle(this::markAsIntellectualItem));
+//    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-intellectual-item")
+//      .handler(handle(this::markAsIntellectualItem));
     router.post(RELATIVE_ITEMS_PATH_ID + "/mark-long-missing")
       .handler(handle(this::markAsLongMissing));
     router.post(RELATIVE_ITEMS_PATH_ID + "/mark-missing")
@@ -114,11 +113,10 @@ public class Items extends AbstractInventoryResource {
       .handler(handle(this::markAsUnknown));
     router.post(RELATIVE_ITEMS_PATH_ID + "/mark-withdrawn")
       .handler(handle(this::markAsWithdrawn));
-
   }
 
-  private void registerHandlerForChangingItemStatus(ItemStatusName itemStatusName, Router router) {
-    router.post(RELATIVE_ITEMS_PATH_ID + ItemStatusURL.getUrlForItemStatusName(itemStatusName).get())
+  private void registerMarkItemAsHandler(String itemStatusUrl, Router router) {
+    router.post(RELATIVE_ITEMS_PATH_ID + itemStatusUrl)
       .handler(handle(this::markItemAsTargetStatus));
   }
 

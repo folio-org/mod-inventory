@@ -10,6 +10,7 @@ public class TargetItemStatusValidator {
   public TargetItemStatusValidator() {
     validators.put(ItemStatusName.IN_PROCESS, new InProcessTargetValidator());
     validators.put(ItemStatusName.IN_PROCESS_NON_REQUESTABLE, new InProcessNonRequestableTargetValidator());
+    validators.put(ItemStatusName.INTELLECTUAL_ITEM, new IntellectualItemTargetValidator());
   }
 
   public AbstractTargetValidator getValidator(ItemStatusName itemStatusName) {
