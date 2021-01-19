@@ -63,6 +63,7 @@ public class MarkItemLongMissingApiTests extends ApiTests {
   @Parameters({
     "Available",
     "Awaiting delivery",
+    "Awaiting pickup",
     "In transit",
     "Lost and paid",
     "Missing",
@@ -105,7 +106,7 @@ public class MarkItemLongMissingApiTests extends ApiTests {
       .canCirculate());
 
     assertThat(markItemLongMissing(createdItem), hasValidationError(
-      "Item is not allowed to be marked as Long missing", "status.name", initialStatus));
+      "Item is not allowed to be marked as:\"Long missing\"", "status.name", initialStatus));
   }
 
   @Test

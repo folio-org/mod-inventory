@@ -10,11 +10,11 @@ import java.util.concurrent.CompletableFuture;
 
 import static org.folio.inventory.support.CompletableFutures.failedFuture;
 
-public abstract class AbstractTargetValidator {
+public abstract class AbstractTargetItemStatusValidator {
   private ItemStatusName itemStatusName;
   private Set<ItemStatusName> allowedStatusToMark;
 
-  protected AbstractTargetValidator(ItemStatusName itemStatusName, Set<ItemStatusName> allowedStatusToMark) {
+  protected AbstractTargetItemStatusValidator(ItemStatusName itemStatusName, Set<ItemStatusName> allowedStatusToMark) {
     this.itemStatusName = itemStatusName;
     this.allowedStatusToMark = allowedStatusToMark;
   }

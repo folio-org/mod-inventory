@@ -3,8 +3,8 @@ package org.folio.inventory.validation.experimental;
 import org.folio.inventory.domain.items.ItemStatusName;
 import static java.util.Set.of;
 
-public class InProcessNonRequestableTargetValidator extends AbstractTargetValidator {
-  public InProcessNonRequestableTargetValidator() {
+public class InProcessNonRequestableTargetItemStatusValidator extends AbstractTargetItemStatusValidator {
+  public InProcessNonRequestableTargetItemStatusValidator() {
     super(ItemStatusName.IN_PROCESS_NON_REQUESTABLE, of(
       ItemStatusName.AVAILABLE,
       ItemStatusName.AWAITING_DELIVERY,

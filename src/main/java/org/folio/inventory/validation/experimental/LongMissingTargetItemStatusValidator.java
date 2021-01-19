@@ -1,11 +1,12 @@
 package org.folio.inventory.validation.experimental;
 
 import org.folio.inventory.domain.items.ItemStatusName;
+
 import static java.util.Set.of;
 
-public class InProcessTargetValidator extends AbstractTargetValidator {
-  public InProcessTargetValidator() {
-    super(ItemStatusName.IN_PROCESS, of(
+public class LongMissingTargetItemStatusValidator extends AbstractTargetItemStatusValidator {
+  public LongMissingTargetItemStatusValidator() {
+    super(ItemStatusName.LONG_MISSING, of(
       ItemStatusName.AVAILABLE,
       ItemStatusName.AWAITING_DELIVERY,
       ItemStatusName.AWAITING_PICKUP,

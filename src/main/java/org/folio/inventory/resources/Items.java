@@ -97,12 +97,8 @@ public class Items extends AbstractInventoryResource {
 
     Arrays.stream(ItemStatusName.values()).map(itemStatusName -> ItemStatusURL.getUrlForItemStatusName(itemStatusName))
       .filter(itemStatusUrl -> itemStatusUrl.isPresent())
-      .forEach(itemStatusUrl -> registerMarkItemAsHandler(itemStatusUrl.get(),router));
+      .forEach(itemStatusUrl -> registerMarkItemAsHandler(itemStatusUrl.get(), router));
 
-//    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-intellectual-item")
-//      .handler(handle(this::markAsIntellectualItem));
-    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-long-missing")
-      .handler(handle(this::markAsLongMissing));
     router.post(RELATIVE_ITEMS_PATH_ID + "/mark-missing")
       .handler(handle(this::markAsMissing));
     router.post(RELATIVE_ITEMS_PATH_ID + "/mark-restricted")
@@ -146,38 +142,6 @@ public class Items extends AbstractInventoryResource {
           routingContext, webContext));
   }
 
-  private CompletableFuture<Void> markAsInProcess(
-    RoutingContext routingContext, WebContext webContext, Clients clients) {
-
-    final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
-      .getItemCollection(webContext), clients);
-
-    return moveItemIntoStatusService.processMarkItem(webContext, ItemStatusName.IN_PROCESS)
-      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_OK.toInt(),
-        routingContext, webContext));
-  }
-
-  private CompletableFuture<Void> markAsInProcessNonRequestable(
-    RoutingContext routingContext, WebContext webContext, Clients clients) {
-
-    final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
-      .getItemCollection(webContext), clients);
-
-    return moveItemIntoStatusService.processMarkItemInProcessNonRequestable(webContext)
-      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_OK.toInt(),
-        routingContext, webContext));
-  }
-
-  private CompletableFuture<Void> markAsIntellectualItem(
-    RoutingContext routingContext, WebContext webContext, Clients clients) {
-
-    final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
-      .getItemCollection(webContext), clients);
-
-    return moveItemIntoStatusService.processMarkItemIntellectualItem(webContext)
-      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_OK.toInt(),
-        routingContext, webContext));
-  }
 
   private CompletableFuture<Void> markAsLongMissing(
     RoutingContext routingContext, WebContext webContext, Clients clients) {

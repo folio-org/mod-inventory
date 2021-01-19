@@ -12,8 +12,10 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -33,7 +35,8 @@ public class TargetItemStatusValidatorTest {
   @Parameters(
     {
       "In process",
-      "In process (non-requestable)"
+      "In process (non-requestable)",
+      "Long missing"
     }
   )
   @Test
@@ -49,12 +52,13 @@ public class TargetItemStatusValidatorTest {
       assertThat(statusValidator.isItemAllowedToMark(item)).isTrue();
     });
 
-    Set<ItemStatusName> disallowedStatuses = new HashSet<>();
+    List<ItemStatusName> disallowedStatuses = new ArrayList<>();
     Collections.addAll(disallowedStatuses,ItemStatusName.values());
     disallowedStatuses.removeAll(allowedStatuses);
+    Collections.sort(disallowedStatuses);
     System.out.println("Disallowed statuses for:"+statusValidator.getItemStatusName());
     disallowedStatuses.stream().forEach(x -> {
-      System.out.println("\t"+x);
+      System.out.println("\t\""+x+"\",");
       Item item = new Item(null, null, new Status(x), null, null, null);
       assertThat(statusValidator.isItemAllowedToMark(item)).isFalse();
     });

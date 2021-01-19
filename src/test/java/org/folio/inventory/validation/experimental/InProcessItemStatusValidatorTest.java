@@ -6,6 +6,7 @@ import lombok.SneakyThrows;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.domain.items.Status;
+import org.folio.inventory.exceptions.UnprocessableEntityException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -14,7 +15,9 @@ import org.junit.runner.RunWith;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.inventory.domain.items.ItemStatusName.IN_PROCESS;
@@ -53,8 +56,35 @@ public class InProcessItemStatusValidatorTest {
     assertThat(validationFuture.isDone()).isTrue();
   }
 
-  @AfterClass
-  public static void tearDown() {
-//    assertFalse(true);
+  @Parameters({
+    "Aged to lost",
+    "Checked out",
+    "Claimed returned",
+    "Declared lost",
+    "In process",
+    "In process (non-requestable)",
+    "Intellectual item",
+    "Long missing",
+    "On order",
+    "Restricted",
+    "Unavailable",
+    "Unknown"})
+  @Test
+  public void itemCanNotBeMarkedAsInProcessWhenInAcceptableSourceStatus(String sourceStatus) {
+    final var targetValidator = validator.getValidator(IN_PROCESS);
+    final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
+    final var validationFuture = targetValidator.itemHasAllowedStatusToMark(item);
+
+    try {
+      validationFuture.get(1, TimeUnit.SECONDS);
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    } catch (ExecutionException e) {
+      e.printStackTrace();
+    } catch (TimeoutException e) {
+      e.printStackTrace();
+    } catch (UnprocessableEntityException e) {
+      assertThat(e).hasMessage("Item is not allowed to be marked as:\"In process\"");
+    }
   }
 }

@@ -14,11 +14,11 @@ import org.junit.runner.RunWith;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.folio.inventory.domain.items.ItemStatusName.IN_PROCESS;
 import static org.folio.inventory.domain.items.ItemStatusName.IN_PROCESS_NON_REQUESTABLE;
+import static org.folio.inventory.domain.items.ItemStatusName.LONG_MISSING;
 
 @RunWith(JUnitParamsRunner.class)
-public class InProcessNonRequestablsItemStatusValidatorTest {
+public class LongMissingItemStatusValidatorTest {
   private static TargetItemStatusValidator validator;
 
   @BeforeClass
@@ -40,8 +40,8 @@ public class InProcessNonRequestablsItemStatusValidatorTest {
     "Withdrawn"
   })
   @Test
-  public void itemCanBeMarkedAsInProcessWhenInAcceptableSourceStatus(String sourceStatus) {
-    final var targetValidator = validator.getValidator(IN_PROCESS_NON_REQUESTABLE);
+  public void itemCanBeMarkedAsLongMissingWhenInAcceptableSourceStatus(String sourceStatus) {
+    final var targetValidator = validator.getValidator(LONG_MISSING);
 
     final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
 

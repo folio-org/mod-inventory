@@ -30,7 +30,7 @@ import org.folio.inventory.validation.MarkAsUnavailableValidators;
 import org.folio.inventory.validation.MarkAsUnknownValidators;
 import org.folio.inventory.validation.MarkAsWithdrawnValidators;
 import org.folio.inventory.validation.ItemsValidator;
-import org.folio.inventory.validation.experimental.AbstractTargetValidator;
+import org.folio.inventory.validation.experimental.AbstractTargetItemStatusValidator;
 import org.folio.inventory.validation.experimental.TargetItemStatusValidator;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -63,7 +63,7 @@ public class MoveItemIntoStatusService {
 
   public CompletableFuture<Item> processMarkItem(WebContext context,ItemStatusName statusName) {
     final String itemId = context.getStringParameter("id", null);
-    AbstractTargetValidator targetValidator = validator.getValidator(statusName);
+    AbstractTargetItemStatusValidator targetValidator = validator.getValidator(statusName);
 
     return itemCollection.findById(itemId)
       .thenCompose(ItemsValidator::refuseWhenItemNotFound)
@@ -86,7 +86,7 @@ public class MoveItemIntoStatusService {
 
   public CompletableFuture<Item> processMarkItemInProcess(WebContext context) {
     final String itemId = context.getStringParameter("id", null);
-    AbstractTargetValidator targetValidator = validator.getValidator(IN_PROCESS);
+    AbstractTargetItemStatusValidator targetValidator = validator.getValidator(IN_PROCESS);
 
     return itemCollection.findById(itemId)
       .thenCompose(ItemsValidator::refuseWhenItemNotFound)
