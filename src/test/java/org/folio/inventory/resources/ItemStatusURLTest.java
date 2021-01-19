@@ -12,7 +12,8 @@ public class ItemStatusURLTest {
   @Parameters(
     {
       "/mark-in-process,In process",
-      "/mark-in-process-non-requestable,In process (non-requestable)"
+      "/mark-in-process-non-requestable,In process (non-requestable)",
+      "/mark-intellectual-item,Intellectual item"
     }
   )
   @Test
@@ -22,6 +23,8 @@ public class ItemStatusURLTest {
     assertThat(itemStatus.isPresent()).isTrue();
     ItemStatusName itemStatusName = ItemStatusName.forName(statusName);
     assertThat(itemStatus.get()).isEqualTo(itemStatusName);
-    assertThat(ItemStatusURL.getUrlForItemStatusName(itemStatusName).get()).isEqualTo(url);
+    var itemStatusUrl = ItemStatusURL.getUrlForItemStatusName(itemStatusName);
+    assertThat(itemStatusUrl.isPresent()).isTrue();
+    assertThat(itemStatusUrl.get()).isEqualTo(url);
   }
 }
