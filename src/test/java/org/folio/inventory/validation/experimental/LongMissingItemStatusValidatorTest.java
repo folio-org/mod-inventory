@@ -14,16 +14,15 @@ import org.junit.runner.RunWith;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.folio.inventory.domain.items.ItemStatusName.IN_PROCESS_NON_REQUESTABLE;
 import static org.folio.inventory.domain.items.ItemStatusName.LONG_MISSING;
 
 @RunWith(JUnitParamsRunner.class)
 public class LongMissingItemStatusValidatorTest {
-  private static TargetItemStatusValidator validator;
+  private static TargetItemStatusValidators validator;
 
   @BeforeClass
   public static void setUp() throws Exception {
-    validator = new TargetItemStatusValidator();
+    validator = new TargetItemStatusValidators();
   }
 
 

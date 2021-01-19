@@ -19,11 +19,14 @@ public class ItemStatusURLTest {
   )
   @Test
   public void canGetItemStatusByFullUrlAndCanGetUrlByStatusName(String url, String statusName) {
+    // Determining the intended target status for a given URL
     String dummyUrl = "http://dummy.net/239853$URL$";
     final var itemStatus= ItemStatusURL.getItemStatusNameForUrl(dummyUrl.replace("$URL$",url));
     assertThat(itemStatus.isPresent()).isTrue();
     ItemStatusName itemStatusName = ItemStatusName.forName(statusName);
     assertThat(itemStatus.get()).isEqualTo(itemStatusName);
+
+    // Determining the URL for a given target status
     var itemStatusUrl = ItemStatusURL.getUrlForItemStatusName(itemStatusName);
     assertThat(itemStatusUrl.isPresent()).isTrue();
     assertThat(itemStatusUrl.get()).isEqualTo(url);

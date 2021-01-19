@@ -7,7 +7,6 @@ import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.domain.items.Status;
 import org.folio.inventory.exceptions.UnprocessableEntityException;
-import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -18,16 +17,14 @@ import java.util.concurrent.TimeoutException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.inventory.domain.items.ItemStatusName.INTELLECTUAL_ITEM;
-import static org.folio.inventory.domain.items.ItemStatusName.IN_PROCESS;
-import static org.folio.inventory.domain.items.ItemStatusName.IN_PROCESS_NON_REQUESTABLE;
 
 @RunWith(JUnitParamsRunner.class)
 public class IntellectualItemStatusValidatorTest {
-  private static TargetItemStatusValidator validator;
+  private static TargetItemStatusValidators validator;
 
   @BeforeClass
   public static void setUp() throws Exception {
-    validator = new TargetItemStatusValidator();
+    validator = new TargetItemStatusValidators();
   }
 
   @SneakyThrows
@@ -72,7 +69,7 @@ public class IntellectualItemStatusValidatorTest {
   })
   @Test
   public void itemCanNotBeMarkedAsAsIntellectualItemWhenInAcceptableSourceStatus(String sourceStatus) {
-    final var targetValidator = validator.getValidator(IN_PROCESS_NON_REQUESTABLE);
+    final var targetValidator = validator.getValidator(INTELLECTUAL_ITEM);
     final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
     final var validationFuture = targetValidator.itemHasAllowedStatusToMark(item);
 

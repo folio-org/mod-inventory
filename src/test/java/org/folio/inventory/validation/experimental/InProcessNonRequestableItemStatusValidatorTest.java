@@ -7,7 +7,6 @@ import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.domain.items.Status;
 import org.folio.inventory.exceptions.UnprocessableEntityException;
-import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -17,16 +16,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.folio.inventory.domain.items.ItemStatusName.IN_PROCESS;
 import static org.folio.inventory.domain.items.ItemStatusName.IN_PROCESS_NON_REQUESTABLE;
 
 @RunWith(JUnitParamsRunner.class)
 public class InProcessNonRequestableItemStatusValidatorTest {
-  private static TargetItemStatusValidator validator;
+  private static TargetItemStatusValidators validators;
 
   @BeforeClass
   public static void setUp() throws Exception {
-    validator = new TargetItemStatusValidator();
+    validators = new TargetItemStatusValidators();
   }
 
 
@@ -44,7 +42,7 @@ public class InProcessNonRequestableItemStatusValidatorTest {
   })
   @Test
   public void itemCanBeMarkedAsInProcessNonRequestableWhenInAcceptableSourceStatus(String sourceStatus) {
-    final var targetValidator = validator.getValidator(IN_PROCESS_NON_REQUESTABLE);
+    final var targetValidator = validators.getValidator(IN_PROCESS_NON_REQUESTABLE);
 
     final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
 
@@ -72,7 +70,7 @@ public class InProcessNonRequestableItemStatusValidatorTest {
   })
   @Test
   public void itemCanNotBeMarkedAsInProcessNonRequestableWhenInAcceptableSourceStatus(String sourceStatus) {
-    final var targetValidator = validator.getValidator(IN_PROCESS_NON_REQUESTABLE);
+    final var targetValidator = validators.getValidator(IN_PROCESS_NON_REQUESTABLE);
     final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
     final var validationFuture = targetValidator.itemHasAllowedStatusToMark(item);
 

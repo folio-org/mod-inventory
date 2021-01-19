@@ -31,7 +31,7 @@ import org.folio.inventory.validation.MarkAsUnknownValidators;
 import org.folio.inventory.validation.MarkAsWithdrawnValidators;
 import org.folio.inventory.validation.ItemsValidator;
 import org.folio.inventory.validation.experimental.AbstractTargetItemStatusValidator;
-import org.folio.inventory.validation.experimental.TargetItemStatusValidator;
+import org.folio.inventory.validation.experimental.TargetItemStatusValidators;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.slf4j.Logger;
@@ -43,7 +43,7 @@ public class MoveItemIntoStatusService {
   private final ItemCollection itemCollection;
   private final RequestRepository requestRepository;
 
-  private static final TargetItemStatusValidator validator = new TargetItemStatusValidator();
+  private static final TargetItemStatusValidators validator = new TargetItemStatusValidators();
 
   public MoveItemIntoStatusService(ItemCollection itemCollection, Clients clients) {
     this.itemCollection = itemCollection;

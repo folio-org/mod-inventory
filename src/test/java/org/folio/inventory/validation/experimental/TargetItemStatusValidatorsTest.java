@@ -14,9 +14,7 @@ import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -24,12 +22,12 @@ import static org.folio.inventory.domain.items.ItemStatusName.IN_PROCESS;
 import static org.folio.inventory.domain.items.ItemStatusName.forName;
 
 @RunWith(JUnitParamsRunner.class)
-public class TargetItemStatusValidatorTest {
-  private static TargetItemStatusValidator validator;
+public class TargetItemStatusValidatorsTest {
+  private static TargetItemStatusValidators validator;
 
   @BeforeClass
   public static void setUp() throws Exception {
-    validator = new TargetItemStatusValidator();
+    validator = new TargetItemStatusValidators();
   }
 
   @Parameters(
