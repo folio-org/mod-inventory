@@ -99,8 +99,6 @@ public class Items extends AbstractInventoryResource {
       .filter(itemStatusUrl -> itemStatusUrl.isPresent())
       .forEach(itemStatusUrl -> registerMarkItemAsHandler(itemStatusUrl.get(), router));
 
-//    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-missing")
-//      .handler(handle(this::markAsMissing));
     router.post(RELATIVE_ITEMS_PATH_ID + "/mark-restricted")
       .handler(handle(this::markAsRestricted));
     router.post(RELATIVE_ITEMS_PATH_ID + "/mark-unavailable")
@@ -127,7 +125,7 @@ public class Items extends AbstractInventoryResource {
     final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
       .getItemCollection(webContext), clients);
 
-    return moveItemIntoStatusService.processMarkItem(webContext, itemStatusName.get())
+    return moveItemIntoStatusService.markItemAs(itemStatusName.get(), webContext)
       .thenAccept(item -> respondWithItemRepresentation(item, HTTP_OK.toInt(),
         routingContext, webContext));
   }

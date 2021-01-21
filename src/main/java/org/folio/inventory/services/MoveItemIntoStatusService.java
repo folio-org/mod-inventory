@@ -61,7 +61,7 @@ public class MoveItemIntoStatusService {
       .thenCompose(itemCollection::update);
   }
 
-  public CompletableFuture<Item> processMarkItem(WebContext context,ItemStatusName statusName) {
+  public CompletableFuture<Item> markItemAs(ItemStatusName statusName, WebContext context) {
     final String itemId = context.getStringParameter("id", null);
     AbstractTargetItemStatusValidator targetValidator = validator.getValidator(statusName);
 
@@ -73,72 +73,7 @@ public class MoveItemIntoStatusService {
       .thenCompose(itemCollection::update);
   }
 
-//  public CompletableFuture<Item> processMarkItemInProcess(WebContext context) {
-//    final String itemId = context.getStringParameter("id", null);
-//
-//    return itemCollection.findById(itemId)
-//      .thenCompose(ItemsValidator::refuseWhenItemNotFound)
-//      .thenCompose(MarkAsInProcessValidators::itemHasAllowedStatusToMarkAsInProcess)
-//      .thenCompose(this::updateRequestStatusIfRequired)
-//      .thenApply(item -> item.changeStatus(IN_PROCESS))
-//      .thenCompose(itemCollection::update);
-//  }
 
-  public CompletableFuture<Item> processMarkItemInProcess(WebContext context) {
-    final String itemId = context.getStringParameter("id", null);
-    AbstractTargetItemStatusValidator targetValidator = validator.getValidator(IN_PROCESS);
-
-    return itemCollection.findById(itemId)
-      .thenCompose(ItemsValidator::refuseWhenItemNotFound)
-      .thenCompose(item -> targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item))
-      .thenCompose(this::updateRequestStatusIfRequired)
-      .thenApply(item -> item.changeStatus(targetValidator.getItemStatusName()))
-      .thenCompose(itemCollection::update);
-  }
-
-  public CompletableFuture<Item> processMarkItemInProcessNonRequestable(WebContext context) {
-    final String itemId = context.getStringParameter("id", null);
-
-    return itemCollection.findById(itemId)
-      .thenCompose(ItemsValidator::refuseWhenItemNotFound)
-      .thenCompose(MarkAsInProcessNonRequestableValidators::itemHasAllowedStatusToMarkAsInProcessNonRequestable)
-      .thenCompose(this::updateRequestStatusIfRequired)
-      .thenApply(item -> item.changeStatus(IN_PROCESS_NON_REQUESTABLE))
-      .thenCompose(itemCollection::update);
-  }
-
-  public CompletableFuture<Item> processMarkItemIntellectualItem(WebContext context) {
-    final String itemId = context.getStringParameter("id", null);
-
-    return itemCollection.findById(itemId)
-      .thenCompose(ItemsValidator::refuseWhenItemNotFound)
-      .thenCompose(MarkAsIntellectualItemValidators::itemHasAllowedStatusToMarkAsIntellectualItem)
-      .thenCompose(this::updateRequestStatusIfRequired)
-      .thenApply(item -> item.changeStatus(INTELLECTUAL_ITEM))
-      .thenCompose(itemCollection::update);
-  }
-
-  public CompletableFuture<Item> processMarkItemLongMissing(WebContext context) {
-    final String itemId = context.getStringParameter("id", null);
-
-    return itemCollection.findById(itemId)
-      .thenCompose(ItemsValidator::refuseWhenItemNotFound)
-      .thenCompose(MarkAsLongMissingValidators::itemHasAllowedStatusToMarkAsLongMissing)
-      .thenCompose(this::updateRequestStatusIfRequired)
-      .thenApply(item -> item.changeStatus(LONG_MISSING))
-      .thenCompose(itemCollection::update);
-  }
-
-  public CompletableFuture<Item> processMarkItemMissing(WebContext context) {
-    final String itemId = context.getStringParameter("id", null);
-
-    return itemCollection.findById(itemId)
-      .thenCompose(ItemsValidator::refuseWhenItemNotFound)
-      .thenCompose(MarkAsMissingValidators::itemHasAllowedStatusToMarkAsMissing)
-      .thenCompose(this::updateRequestStatusIfRequired)
-      .thenApply(item -> item.changeStatus(MISSING))
-      .thenCompose(itemCollection::update);
-  }
 
   public CompletableFuture<Item> processMarkItemRestricted(WebContext context) {
     final String itemId = context.getStringParameter("id", null);
