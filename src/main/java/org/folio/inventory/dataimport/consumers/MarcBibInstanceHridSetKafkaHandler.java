@@ -46,7 +46,7 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
       Promise<String> promise = Promise.promise();
       Event event = OBJECT_MAPPER.readValue(record.value(), Event.class);
       HashMap<String, String> eventPayload = OBJECT_MAPPER.readValue(ZIPArchiver.unzip(event.getEventPayload()), HashMap.class);
-      LOGGER.debug("Event payload has been received");
+      LOGGER.info("Event payload has been received with event type: {}", event.getEventType());
 
       if (isAnyEmpty(eventPayload.get(MARC_KEY), eventPayload.get(MAPPING_RULES_KEY), eventPayload.get(MAPPING_PARAMS_KEY))) {
         String message = "Event payload does not contain required data to update Instance";

@@ -63,7 +63,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       Promise<String> promise = Promise.promise();
       Event event = OBJECT_MAPPER.readValue(record.value(), Event.class);
       DataImportEventPayload eventPayload = new JsonObject(ZIPArchiver.unzip(event.getEventPayload())).mapTo(DataImportEventPayload.class);
-      LOGGER.debug("Data import event payload has been received with event type: {}", eventPayload.getEventType());
+      LOGGER.info("Data import event payload has been received with event type: {}", eventPayload.getEventType());
 
       EventManager.handleEvent(eventPayload).whenComplete((processedPayload, throwable) -> {
         if (throwable != null) {
