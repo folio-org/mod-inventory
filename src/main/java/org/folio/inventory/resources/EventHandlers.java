@@ -2,6 +2,7 @@ package org.folio.inventory.resources;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -46,12 +47,16 @@ public class EventHandlers {
 
   private static final String DATA_IMPORT_EVENT_HANDLER_PATH = "/inventory/handlers/data-import";
   private static final String INSTANCES_EVENT_HANDLER_PATH = "/inventory/handlers/instances";
+  // value in ms
+  private static final int DEFAULT_HTTP_TIMEOUT = 5000;
 
   private final Storage storage;
 
-  public EventHandlers(final Storage storage, final HttpClient client) {
+  public EventHandlers(final Storage storage) {
     Vertx vertx = Vertx.vertx();
     this.storage = storage;
+    HttpClientOptions params = new HttpClientOptions().setConnectTimeout(DEFAULT_HTTP_TIMEOUT);
+    HttpClient client = vertx.createHttpClient(params);
     MatchValueLoaderFactory.register(new InstanceLoader(storage, vertx));
     MatchValueLoaderFactory.register(new ItemLoader(storage, vertx));
     MatchValueLoaderFactory.register(new HoldingLoader(storage, vertx));
