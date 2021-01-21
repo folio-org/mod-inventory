@@ -145,6 +145,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
       dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(new JsonObject().put(INSTANCE_PATH, JsonObject.mapFrom(instance))));
       return instance;
     } catch (Exception e) {
+      LOGGER.error("Failed to map Record to Instance", e);
       throw new JsonMappingException("Error in default mapper.", e);
     }
   }
