@@ -14,7 +14,8 @@ public class ItemStatusURLTest {
       "/mark-in-process,In process",
       "/mark-in-process-non-requestable,In process (non-requestable)",
       "/mark-intellectual-item,Intellectual item",
-      "/mark-long-missing,Long missing"
+      "/mark-long-missing,Long missing",
+      "/mark-missing,Missing"
     }
   )
   @Test

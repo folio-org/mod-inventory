@@ -99,8 +99,8 @@ public class Items extends AbstractInventoryResource {
       .filter(itemStatusUrl -> itemStatusUrl.isPresent())
       .forEach(itemStatusUrl -> registerMarkItemAsHandler(itemStatusUrl.get(), router));
 
-    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-missing")
-      .handler(handle(this::markAsMissing));
+//    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-missing")
+//      .handler(handle(this::markAsMissing));
     router.post(RELATIVE_ITEMS_PATH_ID + "/mark-restricted")
       .handler(handle(this::markAsRestricted));
     router.post(RELATIVE_ITEMS_PATH_ID + "/mark-unavailable")
@@ -118,6 +118,7 @@ public class Items extends AbstractInventoryResource {
 
   private CompletableFuture<Void> markItemAsTargetStatus(
     RoutingContext routingContext, WebContext webContext, Clients clients) {
+
     final var itemStatusName = ItemStatusURL.getItemStatusNameForUrl(routingContext.request().uri());
     if (itemStatusName.isEmpty())
       log.error("Item status for url $URL$ not found.".replace("$URL$", routingContext.request().uri()),
@@ -138,30 +139,6 @@ public class Items extends AbstractInventoryResource {
       .getItemCollection(webContext), clients);
 
     return moveItemIntoStatusService.processMarkItemWithdrawn(webContext)
-      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_CREATED.toInt(),
-          routingContext, webContext));
-  }
-
-
-  private CompletableFuture<Void> markAsLongMissing(
-    RoutingContext routingContext, WebContext webContext, Clients clients) {
-
-    final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
-      .getItemCollection(webContext), clients);
-
-    return moveItemIntoStatusService.processMarkItemLongMissing(webContext)
-      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_OK.toInt(),
-        routingContext, webContext));
-  }
-
-
-  private CompletableFuture<Void> markAsMissing(
-    RoutingContext routingContext, WebContext webContext, Clients clients) {
-
-    final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
-      .getItemCollection(webContext), clients);
-
-    return moveItemIntoStatusService.processMarkItemMissing(webContext)
       .thenAccept(item -> respondWithItemRepresentation(item, HTTP_CREATED.toInt(),
           routingContext, webContext));
   }

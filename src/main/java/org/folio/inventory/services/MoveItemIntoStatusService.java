@@ -67,7 +67,7 @@ public class MoveItemIntoStatusService {
 
     return itemCollection.findById(itemId)
       .thenCompose(ItemsValidator::refuseWhenItemNotFound)
-      .thenCompose(item -> targetValidator.itemHasAllowedStatusToMark(item))
+      .thenCompose(item -> targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item))
       .thenCompose(this::updateRequestStatusIfRequired)
       .thenApply(item -> item.changeStatus(statusName))
       .thenCompose(itemCollection::update);
@@ -90,7 +90,7 @@ public class MoveItemIntoStatusService {
 
     return itemCollection.findById(itemId)
       .thenCompose(ItemsValidator::refuseWhenItemNotFound)
-      .thenCompose(item -> targetValidator.itemHasAllowedStatusToMark(item))
+      .thenCompose(item -> targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item))
       .thenCompose(this::updateRequestStatusIfRequired)
       .thenApply(item -> item.changeStatus(targetValidator.getItemStatusName()))
       .thenCompose(itemCollection::update);

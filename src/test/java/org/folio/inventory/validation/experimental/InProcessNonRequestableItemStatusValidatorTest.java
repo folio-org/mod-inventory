@@ -6,17 +6,15 @@ import lombok.SneakyThrows;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.domain.items.Status;
-import org.folio.inventory.exceptions.UnprocessableEntityException;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.inventory.domain.items.ItemStatusName.IN_PROCESS_NON_REQUESTABLE;
+import static org.junit.Assert.assertThrows;
 
 @RunWith(JUnitParamsRunner.class)
 public class InProcessNonRequestableItemStatusValidatorTest {
@@ -41,12 +39,12 @@ public class InProcessNonRequestableItemStatusValidatorTest {
     "Withdrawn"
   })
   @Test
-  public void itemCanBeMarkedAsInProcessNonRequestableWhenInAcceptableSourceStatus(String sourceStatus) {
+  public void itemCanBeMarkedAsInProcessNonRequestableWhenNotInAcceptableSourceStatus(String sourceStatus) {
     final var targetValidator = validators.getValidator(IN_PROCESS_NON_REQUESTABLE);
 
     final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
 
-    final var validationFuture = targetValidator.itemHasAllowedStatusToMark(item);
+    final var validationFuture = targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item);
 
     validationFuture.get(1, TimeUnit.SECONDS);
 
@@ -72,18 +70,12 @@ public class InProcessNonRequestableItemStatusValidatorTest {
   public void itemCanNotBeMarkedAsInProcessNonRequestableWhenInAcceptableSourceStatus(String sourceStatus) {
     final var targetValidator = validators.getValidator(IN_PROCESS_NON_REQUESTABLE);
     final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
-    final var validationFuture = targetValidator.itemHasAllowedStatusToMark(item);
+    final var validationFuture = targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item);
 
-    try {
-      validationFuture.get(1, TimeUnit.SECONDS);
-    } catch (InterruptedException e) {
-      e.printStackTrace();
-    } catch (ExecutionException e) {
-      e.printStackTrace();
-    } catch (TimeoutException e) {
-      e.printStackTrace();
-    } catch (UnprocessableEntityException e) {
-      assertThat(e).hasMessage("Item is not allowed to be marked as:\"In process (non-requestable)\"");
-    }
+    Exception e = assertThrows(
+      Exception.class,() -> validationFuture.get(1,TimeUnit.SECONDS)
+    );
+
+    assertThat(e.getCause().getMessage()).isEqualTo("Item is not allowed to be marked as In process (non-requestable)");
   }
 }

@@ -14,18 +14,18 @@ public abstract class AbstractTargetItemStatusValidator {
   private ItemStatusName itemStatusName;
   private Set<ItemStatusName> allowedStatusToMark;
 
-  protected AbstractTargetItemStatusValidator(ItemStatusName itemStatusName, Set<ItemStatusName> allowedStatusToMark) {
+  protected AbstractTargetItemStatusValidator(ItemStatusName itemStatusName, Set<ItemStatusName> allowedSourceStatuses) {
     this.itemStatusName = itemStatusName;
-    this.allowedStatusToMark = allowedStatusToMark;
+    this.allowedStatusToMark = allowedSourceStatuses;
   }
 
-  public CompletableFuture<Item> itemHasAllowedStatusToMark(Item item) {
+  public CompletableFuture<Item> refuseItemWhenNotInAcceptableSourceStatus(Item item) {
     if (isItemAllowedToMark(item)) {
       return CompletableFuture.completedFuture(item);
     }
 
     return failedFuture(new UnprocessableEntityException(
-      new ValidationError("Item is not allowed to be marked as:\"" + getItemStatusName() + "\"",
+      new ValidationError("Item is not allowed to be marked as " + getItemStatusName(),
         "status.name", item.getStatus().getName().value())));
   }
 
@@ -40,5 +40,4 @@ public abstract class AbstractTargetItemStatusValidator {
   public ItemStatusName getItemStatusName() {
     return itemStatusName;
   }
-
 }

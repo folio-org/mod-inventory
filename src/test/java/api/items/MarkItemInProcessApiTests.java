@@ -106,7 +106,7 @@ public class MarkItemInProcessApiTests extends ApiTests {
           .canCirculate());
 
         assertThat(markItemInProcess(createdItem), hasValidationError(
-          "Item is not allowed to be marked as:\"In process\"", "status.name", initialStatus));
+          "Item is not allowed to be marked as In process", "status.name", initialStatus));
   }
 
 

@@ -6,17 +6,15 @@ import lombok.SneakyThrows;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.domain.items.Status;
-import org.folio.inventory.exceptions.UnprocessableEntityException;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.inventory.domain.items.ItemStatusName.INTELLECTUAL_ITEM;
+import static org.junit.Assert.assertThrows;
 
 @RunWith(JUnitParamsRunner.class)
 public class IntellectualItemStatusValidatorTest {
@@ -47,12 +45,13 @@ public class IntellectualItemStatusValidatorTest {
     final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
     assertThat(item).isNotNull();
 
-    final var validationFuture = targetValidator.itemHasAllowedStatusToMark(item);
+    final var validationFuture = targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item);
     validationFuture.get(1, TimeUnit.SECONDS);
 
     // Validator responds with a successful future when valid
     assertThat(validationFuture.isDone()).isTrue();
   }
+
   @Parameters({
     "Aged to lost",
     "Checked out",
@@ -68,21 +67,15 @@ public class IntellectualItemStatusValidatorTest {
     "Unknown"
   })
   @Test
-  public void itemCanNotBeMarkedAsAsIntellectualItemWhenInAcceptableSourceStatus(String sourceStatus) {
+  public void itemCanNotBeMarkedAsAsIntellectualItemWhenNotInAcceptableSourceStatus(String sourceStatus) {
     final var targetValidator = validator.getValidator(INTELLECTUAL_ITEM);
     final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
-    final var validationFuture = targetValidator.itemHasAllowedStatusToMark(item);
+    final var validationFuture = targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item);
 
-    try {
-      validationFuture.get(1, TimeUnit.SECONDS);
-    } catch (InterruptedException e) {
-      e.printStackTrace();
-    } catch (ExecutionException e) {
-      e.printStackTrace();
-    } catch (TimeoutException e) {
-      e.printStackTrace();
-    } catch (UnprocessableEntityException e) {
-      assertThat(e).hasMessage("Item is not allowed to be marked as:\"Intellectual item\"");
-    }
+    Exception e = assertThrows(
+      Exception.class,() -> validationFuture.get(1,TimeUnit.SECONDS)
+    );
+
+    assertThat(e.getCause().getMessage()).isEqualTo("Item is not allowed to be marked as Intellectual item");
   }
 }

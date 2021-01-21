@@ -6,17 +6,15 @@ import lombok.SneakyThrows;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.domain.items.Status;
-import org.folio.inventory.exceptions.UnprocessableEntityException;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.inventory.domain.items.ItemStatusName.IN_PROCESS;
+import static org.junit.Assert.assertThrows;
 
 @RunWith(JUnitParamsRunner.class)
 public class InProcessItemStatusValidatorTest {
@@ -43,7 +41,7 @@ public class InProcessItemStatusValidatorTest {
   public void itemCanBeMarkedAsInProcessWhenInAcceptableSourceStatus(String sourceStatus) {
     final var targetValidator = validators.getValidator(IN_PROCESS);
     final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
-    final var validationFuture = targetValidator.itemHasAllowedStatusToMark(item);
+    final var validationFuture = targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item);
 
     validationFuture.get(1, TimeUnit.SECONDS);
 
@@ -63,23 +61,18 @@ public class InProcessItemStatusValidatorTest {
     "On order",
     "Restricted",
     "Unavailable",
-    "Unknown"})
+    "Unknown"
+  })
   @Test
-  public void itemCanNotBeMarkedAsInProcessWhenInAcceptableSourceStatus(String sourceStatus) {
+  public void itemCanNotBeMarkedAsInProcessWhenNotInAcceptableSourceStatus(String sourceStatus) {
     final var targetValidator = validators.getValidator(IN_PROCESS);
     final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
-    final var validationFuture = targetValidator.itemHasAllowedStatusToMark(item);
+    final var validationFuture = targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item);
 
-    try {
-      validationFuture.get(1, TimeUnit.SECONDS);
-    } catch (InterruptedException e) {
-      e.printStackTrace();
-    } catch (ExecutionException e) {
-      e.printStackTrace();
-    } catch (TimeoutException e) {
-      e.printStackTrace();
-    } catch (UnprocessableEntityException e) {
-      assertThat(e).hasMessage("Item is not allowed to be marked as:\"In process\"");
-    }
+    Exception e = assertThrows(
+      Exception.class,() -> validationFuture.get(1,TimeUnit.SECONDS)
+    );
+
+    assertThat(e.getCause().getMessage()).isEqualTo("Item is not allowed to be marked as In process");
   }
 }

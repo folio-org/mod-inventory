@@ -105,7 +105,7 @@ public class MarkItemIntellectualItemApiTests extends ApiTests {
       .canCirculate());
     Response response = markItemIntellectualItem(createdItem);
     assertThat(markItemIntellectualItem(createdItem), hasValidationError(
-      "Item is not allowed to be marked as:\"Intellectual item\"", "status.name", initialStatus));
+      "Item is not allowed to be marked as Intellectual item", "status.name", initialStatus));
   }
 
   @Test

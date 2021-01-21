@@ -110,7 +110,7 @@ public class MarkItemInProcessNonRequestableApiTests extends ApiTests {
           .canCirculate());
 
         assertThat(markItemInProcessNonRequestable(createdItem), hasValidationError(
-          "Item is not allowed to be marked as:\"In process (non-requestable)\"", "status.name", initialStatus));
+          "Item is not allowed to be marked as In process (non-requestable)", "status.name", initialStatus));
   }
 
 
