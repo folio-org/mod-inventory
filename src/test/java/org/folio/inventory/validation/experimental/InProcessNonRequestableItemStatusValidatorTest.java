@@ -39,7 +39,7 @@ public class InProcessNonRequestableItemStatusValidatorTest {
     "Withdrawn"
   })
   @Test
-  public void itemCanBeMarkedAsInProcessNonRequestableWhenNotInAcceptableSourceStatus(String sourceStatus) {
+  public void itemCanBeMarkedAsInProcessNonRequestableWhenInAcceptableSourceStatus(String sourceStatus) {
     final var targetValidator = validators.getValidator(IN_PROCESS_NON_REQUESTABLE);
 
     final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
@@ -67,7 +67,7 @@ public class InProcessNonRequestableItemStatusValidatorTest {
     "Unknown"
   })
   @Test
-  public void itemCanNotBeMarkedAsInProcessNonRequestableWhenInAcceptableSourceStatus(String sourceStatus) {
+  public void itemCannotBeMarkedAsInProcessNonRequestableWhenInAcceptableSourceStatus(String sourceStatus) {
     final var targetValidator = validators.getValidator(IN_PROCESS_NON_REQUESTABLE);
     final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
     final var validationFuture = targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item);

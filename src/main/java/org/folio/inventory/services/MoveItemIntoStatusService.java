@@ -1,11 +1,7 @@
 package org.folio.inventory.services;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.folio.inventory.domain.items.ItemStatusName.INTELLECTUAL_ITEM;
-import static org.folio.inventory.domain.items.ItemStatusName.IN_PROCESS;
-import static org.folio.inventory.domain.items.ItemStatusName.IN_PROCESS_NON_REQUESTABLE;
-import static org.folio.inventory.domain.items.ItemStatusName.LONG_MISSING;
-import static org.folio.inventory.domain.items.ItemStatusName.MISSING;
+
 import static org.folio.inventory.domain.items.ItemStatusName.RESTRICTED;
 import static org.folio.inventory.domain.items.ItemStatusName.UNAVAILABLE;
 import static org.folio.inventory.domain.items.ItemStatusName.UNKNOWN;
@@ -21,16 +17,11 @@ import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.domain.view.request.Request;
 import org.folio.inventory.storage.external.Clients;
 import org.folio.inventory.storage.external.repository.RequestRepository;
-import org.folio.inventory.validation.MarkAsInProcessNonRequestableValidators;
-import org.folio.inventory.validation.MarkAsIntellectualItemValidators;
-import org.folio.inventory.validation.MarkAsLongMissingValidators;
-import org.folio.inventory.validation.MarkAsMissingValidators;
 import org.folio.inventory.validation.MarkAsRestrictedValidators;
 import org.folio.inventory.validation.MarkAsUnavailableValidators;
 import org.folio.inventory.validation.MarkAsUnknownValidators;
 import org.folio.inventory.validation.MarkAsWithdrawnValidators;
 import org.folio.inventory.validation.ItemsValidator;
-import org.folio.inventory.validation.experimental.AbstractTargetItemStatusValidator;
 import org.folio.inventory.validation.experimental.TargetItemStatusValidators;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -63,17 +54,14 @@ public class MoveItemIntoStatusService {
 
   public CompletableFuture<Item> markItemAs(ItemStatusName statusName, WebContext context) {
     final String itemId = context.getStringParameter("id", null);
-    AbstractTargetItemStatusValidator targetValidator = validator.getValidator(statusName);
 
     return itemCollection.findById(itemId)
       .thenCompose(ItemsValidator::refuseWhenItemNotFound)
-      .thenCompose(item -> targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item))
+      .thenCompose(item -> validator.getValidator(statusName).refuseItemWhenNotInAcceptableSourceStatus(item))
       .thenCompose(this::updateRequestStatusIfRequired)
       .thenApply(item -> item.changeStatus(statusName))
       .thenCompose(itemCollection::update);
   }
-
-
 
   public CompletableFuture<Item> processMarkItemRestricted(WebContext context) {
     final String itemId = context.getStringParameter("id", null);

@@ -7,6 +7,7 @@ import org.folio.inventory.domain.items.ItemStatusName;
 
 import org.folio.inventory.domain.items.Status;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -16,7 +17,9 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.inventory.domain.items.ItemStatusName.forName;
-
+// This class testing transitions itself and is the helper for generation of
+// allowed and disallowed statuses parameters lists for tests
+@Ignore
 @RunWith(JUnitParamsRunner.class)
 public class TargetItemStatusValidatorsTest {
   private static TargetItemStatusValidators validator;

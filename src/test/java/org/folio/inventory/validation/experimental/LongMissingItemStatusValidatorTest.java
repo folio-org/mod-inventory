@@ -66,7 +66,7 @@ public class LongMissingItemStatusValidatorTest {
     "Unknown"
   })
   @Test
-  public void itemCanNotBeMarkedAsLongMissingWhenNotInAcceptableSourceStatus(String sourceStatus) {
+  public void itemCannotBeMarkedAsLongMissingWhenNotInAcceptableSourceStatus(String sourceStatus) {
     final var targetValidator = validator.getValidator(LONG_MISSING);
     final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
     final var validationFuture = targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item);

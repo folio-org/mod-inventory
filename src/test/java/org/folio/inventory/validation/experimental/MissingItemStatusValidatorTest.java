@@ -68,7 +68,7 @@ public class MissingItemStatusValidatorTest {
     "Unknown"
   })
   @Test
-  public void itemCanNotBeMarkedAsMissingWhenNotInAcceptableSourceStatus(String sourceStatus) {
+  public void itemCannotBeMarkedAsMissingWhenNotInAcceptableSourceStatus(String sourceStatus) {
     final var targetValidator = validator.getValidator(MISSING);
     final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
     final var validationFuture = targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item);

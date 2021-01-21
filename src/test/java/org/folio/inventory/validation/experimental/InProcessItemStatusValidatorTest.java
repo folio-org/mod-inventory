@@ -64,7 +64,7 @@ public class InProcessItemStatusValidatorTest {
     "Unknown"
   })
   @Test
-  public void itemCanNotBeMarkedAsInProcessWhenNotInAcceptableSourceStatus(String sourceStatus) {
+  public void itemCannotBeMarkedAsInProcessWhenNotInAcceptableSourceStatus(String sourceStatus) {
     final var targetValidator = validators.getValidator(IN_PROCESS);
     final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
     final var validationFuture = targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item);
