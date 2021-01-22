@@ -99,8 +99,6 @@ public class Items extends AbstractInventoryResource {
       .filter(itemStatusUrl -> itemStatusUrl.isPresent())
       .forEach(itemStatusUrl -> registerMarkItemAsHandler(itemStatusUrl.get(), router));
 
-    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-unknown")
-      .handler(handle(this::markAsUnknown));
     router.post(RELATIVE_ITEMS_PATH_ID + "/mark-withdrawn")
       .handler(handle(this::markAsWithdrawn));
   }
@@ -135,17 +133,6 @@ public class Items extends AbstractInventoryResource {
     return moveItemIntoStatusService.processMarkItemWithdrawn(webContext)
       .thenAccept(item -> respondWithItemRepresentation(item, HTTP_CREATED.toInt(),
           routingContext, webContext));
-  }
-
-  private CompletableFuture<Void> markAsUnknown(
-    RoutingContext routingContext, WebContext webContext, Clients clients) {
-
-    final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
-      .getItemCollection(webContext), clients);
-
-    return moveItemIntoStatusService.processMarkItemUnknown(webContext)
-      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_OK.toInt(),
-        routingContext, webContext));
   }
 
   private void getAll(RoutingContext routingContext) {

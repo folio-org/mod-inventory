@@ -15,6 +15,7 @@ public class TargetItemStatusValidators {
     validators.put(ItemStatusName.MISSING, new MissingTargetItemStatusValidator());
     validators.put(ItemStatusName.RESTRICTED, new RestrictedTargetItemStatusValidator());
     validators.put(ItemStatusName.UNAVAILABLE, new UnavaliableTargetItemStatusValidator());
+    validators.put(ItemStatusName.UNKNOWN, new UnknownTargetItemStatusValidator());
   }
 
   public AbstractTargetItemStatusValidator getValidator(ItemStatusName itemStatusName) {
