@@ -99,8 +99,6 @@ public class Items extends AbstractInventoryResource {
       .filter(itemStatusUrl -> itemStatusUrl.isPresent())
       .forEach(itemStatusUrl -> registerMarkItemAsHandler(itemStatusUrl.get(), router));
 
-    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-unavailable")
-      .handler(handle(this::markAsUnavailable));
     router.post(RELATIVE_ITEMS_PATH_ID + "/mark-unknown")
       .handler(handle(this::markAsUnknown));
     router.post(RELATIVE_ITEMS_PATH_ID + "/mark-withdrawn")
@@ -139,17 +137,6 @@ public class Items extends AbstractInventoryResource {
           routingContext, webContext));
   }
 
-  private CompletableFuture<Void> markAsUnavailable(
-    RoutingContext routingContext, WebContext webContext, Clients clients) {
-
-    final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
-      .getItemCollection(webContext), clients);
-
-    return moveItemIntoStatusService.processMarkItemUnavailable(webContext)
-      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_OK.toInt(),
-        routingContext, webContext));
-  }
-
   private CompletableFuture<Void> markAsUnknown(
     RoutingContext routingContext, WebContext webContext, Clients clients) {
 
@@ -160,7 +147,6 @@ public class Items extends AbstractInventoryResource {
       .thenAccept(item -> respondWithItemRepresentation(item, HTTP_OK.toInt(),
         routingContext, webContext));
   }
-
 
   private void getAll(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
