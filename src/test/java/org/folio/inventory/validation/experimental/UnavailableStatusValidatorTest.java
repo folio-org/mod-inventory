@@ -76,6 +76,6 @@ public class UnavailableStatusValidatorTest {
       Exception.class,() -> validationFuture.get(1,TimeUnit.SECONDS)
     );
 
-    assertThat(e.getCause().getMessage()).isEqualTo("Item is not allowed to be marked as Restricted");
+    assertThat(e.getCause().getMessage()).isEqualTo("Item is not allowed to be marked as Unavailable");
   }
 }
