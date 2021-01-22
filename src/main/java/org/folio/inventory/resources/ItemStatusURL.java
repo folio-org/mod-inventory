@@ -19,7 +19,7 @@ public class ItemStatusURL {
     itemStatusNameUrlMap.put(ItemStatusName.INTELLECTUAL_ITEM, "/mark-intellectual-item");
     itemStatusNameUrlMap.put(ItemStatusName.LONG_MISSING, "/mark-long-missing");
     itemStatusNameUrlMap.put(ItemStatusName.MISSING, "/mark-missing");
-//    itemStatusNameUrlMap.put(ItemStatusName.RESTRICTED, "/mark-restricted");
+    itemStatusNameUrlMap.put(ItemStatusName.RESTRICTED, "/mark-restricted");
 //    itemStatusNameUrlMap.put(ItemStatusName.UNAVAILABLE, "/mark-unavailable");
 //    itemStatusNameUrlMap.put(ItemStatusName.UNKNOWN, "/mark-unknown");
 //    itemStatusNameUrlMap.put(ItemStatusName.WITHDRAWN, "/mark-withdrawn");

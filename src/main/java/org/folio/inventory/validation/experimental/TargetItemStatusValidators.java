@@ -13,6 +13,7 @@ public class TargetItemStatusValidators {
     validators.put(ItemStatusName.INTELLECTUAL_ITEM, new IntellectualItemTargetItemStatusValidator());
     validators.put(ItemStatusName.LONG_MISSING, new LongMissingTargetItemStatusValidator());
     validators.put(ItemStatusName.MISSING, new MissingTargetItemStatusValidator());
+    validators.put(ItemStatusName.RESTRICTED, new RestrictedTargetItemStatusValidator());
   }
 
   public AbstractTargetItemStatusValidator getValidator(ItemStatusName itemStatusName) {

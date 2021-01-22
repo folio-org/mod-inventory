@@ -35,7 +35,8 @@ public class TargetItemStatusValidatorsTest {
       "In process (non-requestable)",
       "Intellectual item",
       "Long missing",
-      "Missing"
+      "Missing",
+      "Restricted"
     }
   )
   @Test
@@ -45,6 +46,7 @@ public class TargetItemStatusValidatorsTest {
     assertThat(statusValidator).isNotNull();
     List<ItemStatusName> allowedStatuses = new ArrayList<>(statusValidator.getAllStatusesAllowedToMark());
     Collections.sort(allowedStatuses);
+    assertThat(statusValidator.getItemStatusName().value()).isEqualTo(statusName);
     System.out.println("Allowed statuses for:"+statusValidator.getItemStatusName());
     allowedStatuses.stream().forEach(x -> {
       System.out.println("\t\""+x+"\",");
