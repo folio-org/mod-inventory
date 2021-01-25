@@ -40,36 +40,20 @@ public class MarkItemWithdrawnApiTests extends ApiTests {
       .forInstance(instance.getId()));
   }
 
-  @Parameters({
-    "In process",
-    "Available",
-    "In transit",
-    "Awaiting pickup",
-    "Awaiting delivery",
-    "Lost and paid",
-    "Missing",
-    "Paged"
-  })
   @Test
-  public void canWithdrawItemWhenInAllowedStatus(String initialStatus) throws Exception {
+  public void canWithdrawItemWhenInAllowedStatus() throws Exception {
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
-      .withStatus(initialStatus)
+      .withStatus("Paged")
       .canCirculate());
 
     assertThat(markItemWithdrawn(createdItem).getJson(), isWithdrawn());
     assertThat(itemsClient.getById(createdItem.getId()).getJson(), isWithdrawn());
   }
 
-  @Parameters({
-    "On order",
-    "Checked out",
-    "Withdrawn",
-    "Claimed returned",
-    "Declared lost"
-  })
   @Test
-  public void cannotWithdrawIItemWhenNotInAllowedStatus(String initialStatus) throws Exception {
+  public void cannotWithdrawIItemWhenNotInAllowedStatus() throws Exception {
+    final String initialStatus = "Checked out";
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
       .withStatus(initialStatus)

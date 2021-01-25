@@ -60,21 +60,12 @@ public class MarkItemRestrictedApiTests extends ApiTests {
     assertThat(checkInNote.getString(NOTE_KEY), is("Please read this note before checking in the item"));
     assertThat(checkInNote.getBoolean(STAFF_ONLY_KEY), is(false));
   }
-  @Parameters({
-    "Available",
-    "Awaiting delivery",
-    "In transit",
-    "Lost and paid",
-    "Missing",
-    "Order closed",
-    "Paged",
-    "Withdrawn"
-  })
+
   @Test
-  public void canMarkItemRestrictedWhenInAllowedStatus(String initialStatus) throws Exception {
+  public void canMarkItemRestrictedWhenInAllowedStatus() throws Exception {
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
-      .withStatus(initialStatus)
+      .withStatus("Withdrawn")
       .canCirculate());
     final Response response = markItemRestricted(createdItem);
 
@@ -83,22 +74,9 @@ public class MarkItemRestrictedApiTests extends ApiTests {
     assertThat(itemsClient.getById(createdItem.getId()).getJson(), isRestricted());
   }
 
-  @Parameters({
-    "Aged to lost",
-    "Checked out",
-    "Claimed returned",
-    "Declared lost",
-    "In process",
-    "In process (non-requestable)",
-    "Intellectual item",
-    "Long missing",
-    "On order",
-    "Restricted",
-    "Unavailable",
-    "Unknown"
-  })
   @Test
-  public void cannotMarkItemRestrictedWhenNotInAllowedStatus(String initialStatus) throws Exception {
+  public void cannotMarkItemRestrictedWhenNotInAllowedStatus() throws Exception {
+    final String initialStatus = "Unknown";
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
       .withStatus(initialStatus)
