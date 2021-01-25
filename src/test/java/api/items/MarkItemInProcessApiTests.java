@@ -59,14 +59,12 @@ public class MarkItemInProcessApiTests extends ApiTests {
     assertFalse(false);
   }
 
-  @Parameters({
-    "Available"
-  })
   @Test
-  public void canMarkItemInProcessWhenInAllowedStatus(String initialStatus) throws Exception {
+  public void canMarkItemInProcessWhenInAllowedStatus() throws Exception {
+    final String initialStatus = "Aged to lost";
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
-      .withStatus(initialStatus)
+      .withStatus("Available")
       .canCirculate());
     final Response response = markItemInProcess(createdItem);
 
@@ -75,21 +73,18 @@ public class MarkItemInProcessApiTests extends ApiTests {
     assertThat(itemsClient.getById(createdItem.getId()).getJson(), isInProcess());
   }
 
-  @Parameters({
-    "Aged to lost"
-  })
   @Test
-  public void cannotMarkItemInProcessWhenNotInAllowedStatus(String initialStatus) throws Exception {
-        final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
-          .forHolding(holdingsRecord.getId())
-          .withStatus(initialStatus)
-          .withBarcode(""+new Date().getTime())
-          .canCirculate());
+  public void cannotMarkItemInProcessWhenNotInAllowedStatus() throws Exception {
+    final String initialStatus = "Aged to lost";
+    final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingsRecord.getId())
+      .withStatus(initialStatus)
+      .withBarcode("" + new Date().getTime())
+      .canCirculate());
 
-        assertThat(markItemInProcess(createdItem), hasValidationError(
-          "Item is not allowed to be marked as In process", "status.name", initialStatus));
+    assertThat(markItemInProcess(createdItem), hasValidationError(
+      "Item is not allowed to be marked as In process", "status.name", initialStatus));
   }
-
 
   @Test
   public void shouldNotMarkItemInProcessThatCannotBeFound() {

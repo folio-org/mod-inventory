@@ -60,14 +60,12 @@ public class MarkItemUnavailableApiTests extends ApiTests {
     assertThat(checkInNote.getString(NOTE_KEY), is("Please read this note before checking in the item"));
     assertThat(checkInNote.getBoolean(STAFF_ONLY_KEY), is(false));
   }
-  @Parameters({
-    "Order closed",
-  })
+
   @Test
-  public void canMarkItemUnavailableWhenInAllowedStatus(String initialStatus) throws Exception {
+  public void canMarkItemUnavailableWhenInAllowedStatus() throws Exception {
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
-      .withStatus(initialStatus)
+      .withStatus("Order closed")
       .canCirculate());
     final Response response = markItemUnavailable(createdItem);
 
@@ -76,11 +74,9 @@ public class MarkItemUnavailableApiTests extends ApiTests {
     assertThat(itemsClient.getById(createdItem.getId()).getJson(), isUnavailable());
   }
 
-  @Parameters({
-    "Long missing"
-  })
   @Test
-  public void cannotMarkItemUnavailableWhenNotInAllowedStatus(String initialStatus) throws Exception {
+  public void cannotMarkItemUnavailableWhenNotInAllowedStatus() throws Exception {
+    final String initialStatus = "Long missing";
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
       .withStatus(initialStatus)

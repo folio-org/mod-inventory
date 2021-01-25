@@ -40,25 +40,20 @@ public class MarkItemWithdrawnApiTests extends ApiTests {
       .forInstance(instance.getId()));
   }
 
-  @Parameters({
-    "Paged"
-  })
   @Test
-  public void canWithdrawItemWhenInAllowedStatus(String initialStatus) throws Exception {
+  public void canWithdrawItemWhenInAllowedStatus() throws Exception {
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
-      .withStatus(initialStatus)
+      .withStatus("Paged")
       .canCirculate());
 
     assertThat(markItemWithdrawn(createdItem).getJson(), isWithdrawn());
     assertThat(itemsClient.getById(createdItem.getId()).getJson(), isWithdrawn());
   }
 
-  @Parameters({
-    "Checked out"
-  })
   @Test
-  public void cannotWithdrawIItemWhenNotInAllowedStatus(String initialStatus) throws Exception {
+  public void cannotWithdrawIItemWhenNotInAllowedStatus() throws Exception {
+    final String initialStatus = "Checked out";
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
       .withStatus(initialStatus)

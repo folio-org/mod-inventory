@@ -60,14 +60,12 @@ public class MarkItemIntellectualItemApiTests extends ApiTests {
     assertThat(checkInNote.getString(NOTE_KEY), is("Please read this note before checking in the item"));
     assertThat(checkInNote.getBoolean(STAFF_ONLY_KEY), is(false));
   }
-  @Parameters({
-    "Awaiting delivery"
-  })
+
   @Test
-  public void canMarkItemIntellectualItemWhenInAllowedStatus(String initialStatus) throws Exception {
+  public void canMarkItemIntellectualItemWhenInAllowedStatus() throws Exception {
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
-      .withStatus(initialStatus)
+      .withStatus("Awaiting delivery")
       .canCirculate());
     final Response response = markItemIntellectualItem(createdItem);
 
@@ -76,11 +74,9 @@ public class MarkItemIntellectualItemApiTests extends ApiTests {
     assertThat(itemsClient.getById(createdItem.getId()).getJson(), isIntellectualItem());
   }
 
-  @Parameters({
-    "Claimed returned"
-  })
   @Test
-  public void cannotMarkItemIntellectualItemWhenNotInAllowedStatus(String initialStatus) throws Exception {
+  public void cannotMarkItemIntellectualItemWhenNotInAllowedStatus() throws Exception {
+    final String initialStatus = "Claimed returned";
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
       .withStatus(initialStatus)

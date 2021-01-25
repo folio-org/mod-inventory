@@ -60,14 +60,12 @@ public class MarkItemLongMissingApiTests extends ApiTests {
     assertThat(checkInNote.getString(NOTE_KEY), is("Please read this note before checking in the item"));
     assertThat(checkInNote.getBoolean(STAFF_ONLY_KEY), is(false));
   }
-  @Parameters({
-    "Awaiting pickup"
-  })
+
   @Test
-  public void canMarkItemLongMissingWhenInAllowedStatus(String initialStatus) throws Exception {
+  public void canMarkItemLongMissingWhenInAllowedStatus() throws Exception {
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
-      .withStatus(initialStatus)
+      .withStatus("Awaiting pickup")
       .canCirculate());
     final Response response = markItemLongMissing(createdItem);
 
@@ -76,11 +74,9 @@ public class MarkItemLongMissingApiTests extends ApiTests {
     assertThat(itemsClient.getById(createdItem.getId()).getJson(), isLongMissing());
   }
 
-  @Parameters({
-    "Declared lost"
-  })
   @Test
-  public void cannotMarkItemLongMissingWhenNotInAllowedStatus(String initialStatus) throws Exception {
+  public void cannotMarkItemLongMissingWhenNotInAllowedStatus() throws Exception {
+    final String initialStatus = "Declared lost";
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
       .withStatus(initialStatus)
