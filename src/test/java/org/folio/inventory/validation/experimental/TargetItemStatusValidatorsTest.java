@@ -38,7 +38,8 @@ public class TargetItemStatusValidatorsTest {
       "Missing",
       "Restricted",
       "Unavailable",
-      "Unknown"
+      "Unknown",
+      "Withdrawn"
     }
   )
   @Test

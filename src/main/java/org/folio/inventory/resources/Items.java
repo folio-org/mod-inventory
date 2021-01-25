@@ -98,9 +98,6 @@ public class Items extends AbstractInventoryResource {
     Arrays.stream(ItemStatusName.values()).map(itemStatusName -> ItemStatusURL.getUrlForItemStatusName(itemStatusName))
       .filter(itemStatusUrl -> itemStatusUrl.isPresent())
       .forEach(itemStatusUrl -> registerMarkItemAsHandler(itemStatusUrl.get(), router));
-
-    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-withdrawn")
-      .handler(handle(this::markAsWithdrawn));
   }
 
   private void registerMarkItemAsHandler(String itemStatusUrl, Router router) {

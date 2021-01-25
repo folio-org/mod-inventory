@@ -22,7 +22,7 @@ public class ItemStatusURL {
     itemStatusNameUrlMap.put(ItemStatusName.RESTRICTED, "/mark-restricted");
     itemStatusNameUrlMap.put(ItemStatusName.UNAVAILABLE, "/mark-unavailable");
     itemStatusNameUrlMap.put(ItemStatusName.UNKNOWN, "/mark-unknown");
-//    itemStatusNameUrlMap.put(ItemStatusName.WITHDRAWN, "/mark-withdrawn");
+    itemStatusNameUrlMap.put(ItemStatusName.WITHDRAWN, "/mark-withdrawn");
 
     urlItemStatusNameMap = itemStatusNameUrlMap.entrySet().stream().collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));
   }
