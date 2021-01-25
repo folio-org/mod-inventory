@@ -61,15 +61,7 @@ public class MarkItemLongMissingApiTests extends ApiTests {
     assertThat(checkInNote.getBoolean(STAFF_ONLY_KEY), is(false));
   }
   @Parameters({
-    "Available",
-    "Awaiting delivery",
-    "Awaiting pickup",
-    "In transit",
-    "Lost and paid",
-    "Missing",
-    "Order closed",
-    "Paged",
-    "Withdrawn"
+    "Awaiting pickup"
   })
   @Test
   public void canMarkItemLongMissingWhenInAllowedStatus(String initialStatus) throws Exception {
@@ -85,18 +77,7 @@ public class MarkItemLongMissingApiTests extends ApiTests {
   }
 
   @Parameters({
-    "Aged to lost"
-    ,"Checked out"
-    ,"Claimed returned"
-    ,"Declared lost"
-    ,"In process"
-    ,"In process (non-requestable)"
-    ,"Intellectual item"
-    ,"Long missing"
-    ,"On order"
-    ,"Restricted"
-    ,"Unavailable"
-    ,"Unknown"
+    "Declared lost"
   })
   @Test
   public void cannotMarkItemLongMissingWhenNotInAllowedStatus(String initialStatus) throws Exception {

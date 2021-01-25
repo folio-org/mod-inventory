@@ -41,13 +41,6 @@ public class MarkItemWithdrawnApiTests extends ApiTests {
   }
 
   @Parameters({
-    "In process",
-    "Available",
-    "In transit",
-    "Awaiting pickup",
-    "Awaiting delivery",
-    "Lost and paid",
-    "Missing",
     "Paged"
   })
   @Test
@@ -62,11 +55,7 @@ public class MarkItemWithdrawnApiTests extends ApiTests {
   }
 
   @Parameters({
-    "On order",
-    "Checked out",
-    "Withdrawn",
-    "Claimed returned",
-    "Declared lost"
+    "Checked out"
   })
   @Test
   public void cannotWithdrawIItemWhenNotInAllowedStatus(String initialStatus) throws Exception {

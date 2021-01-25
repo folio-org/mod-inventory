@@ -62,14 +62,7 @@ public class MarkItemUnknownApiTests extends ApiTests {
     assertThat(checkInNote.getBoolean(STAFF_ONLY_KEY), is(false));
   }
   @Parameters({
-    "Available",
-    "Awaiting delivery",
-    "In transit",
-    "Lost and paid",
-    "Missing",
-    "Order closed",
-    "Paged",
-    "Withdrawn"
+    "In transit"
   })
   @Test
   public void canMarkItemUnknownWhenInAllowedStatus(String initialStatus) throws Exception {

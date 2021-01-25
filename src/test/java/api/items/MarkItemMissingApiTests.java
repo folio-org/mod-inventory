@@ -62,13 +62,7 @@ public class MarkItemMissingApiTests extends ApiTests {
   }
 
   @Parameters({
-    "In process",
-    "Available",
-    "In transit",
-    "Awaiting pickup",
-    "Awaiting delivery",
-    "Withdrawn",
-    "Paged"
+    "Withdrawn"
   })
   @Test
   public void canMarkItemMissingWhenInAllowedStatus(String initialStatus) throws Exception {
@@ -82,11 +76,7 @@ public class MarkItemMissingApiTests extends ApiTests {
   }
 
   @Parameters({
-    "On order",
-    "Checked out",
-    "Missing",
-    "Claimed returned",
-    "Declared lost"
+    "On order"
   })
   @Test
   public void cannotMarkItemMissingWhenNotInAllowedStatus(String initialStatus) throws Exception {

@@ -40,7 +40,6 @@ public class MarkItemInProcessApiTests extends ApiTests {
 
     holdingsRecord = holdingsStorageClient.create(new HoldingRequestBuilder()
       .forInstance(instance.getId()));
-
   }
 
   @Test
@@ -61,14 +60,7 @@ public class MarkItemInProcessApiTests extends ApiTests {
   }
 
   @Parameters({
-    "Available",
-    "Awaiting delivery",
-    "In transit",
-    "Lost and paid",
-    "Missing",
-    "Order closed",
-    "Paged",
-    "Withdrawn"
+    "Available"
   })
   @Test
   public void canMarkItemInProcessWhenInAllowedStatus(String initialStatus) throws Exception {
@@ -84,18 +76,7 @@ public class MarkItemInProcessApiTests extends ApiTests {
   }
 
   @Parameters({
-    "Aged to lost",
-     "Checked out",
-     "Claimed returned",
-     "Declared lost",
-     "In process",
-     "In process (non-requestable)",
-     "Intellectual item",
-     "Long missing",
-     "On order",
-     "Restricted",
-     "Unavailable",
-     "Unknown"
+    "Aged to lost"
   })
   @Test
   public void cannotMarkItemInProcessWhenNotInAllowedStatus(String initialStatus) throws Exception {

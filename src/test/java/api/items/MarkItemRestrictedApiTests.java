@@ -61,13 +61,6 @@ public class MarkItemRestrictedApiTests extends ApiTests {
     assertThat(checkInNote.getBoolean(STAFF_ONLY_KEY), is(false));
   }
   @Parameters({
-    "Available",
-    "Awaiting delivery",
-    "In transit",
-    "Lost and paid",
-    "Missing",
-    "Order closed",
-    "Paged",
     "Withdrawn"
   })
   @Test
@@ -84,17 +77,6 @@ public class MarkItemRestrictedApiTests extends ApiTests {
   }
 
   @Parameters({
-    "Aged to lost",
-    "Checked out",
-    "Claimed returned",
-    "Declared lost",
-    "In process",
-    "In process (non-requestable)",
-    "Intellectual item",
-    "Long missing",
-    "On order",
-    "Restricted",
-    "Unavailable",
     "Unknown"
   })
   @Test
