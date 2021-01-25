@@ -681,6 +681,11 @@
       "description": "Mark an item as restricted"
     },
     {
+      "permissionName": "inventory.items.item.mark-unavailable.post",
+      "displayName": "Inventory - mark an item as unavailable",
+      "description": "Mark an item as unavailable"
+    },
+    {
       "permissionName": "inventory.items.item.mark-unknown.post",
       "displayName": "Inventory - mark an item as unknown",
       "description": "Mark an item as unknown"
