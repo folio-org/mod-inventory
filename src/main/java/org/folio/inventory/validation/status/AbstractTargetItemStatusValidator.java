@@ -1,4 +1,4 @@
-package org.folio.inventory.validation.experimental;
+package org.folio.inventory.validation.status;
 
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemStatusName;

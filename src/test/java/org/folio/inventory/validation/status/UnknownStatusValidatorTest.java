@@ -1,4 +1,4 @@
-package org.folio.inventory.validation.experimental;
+package org.folio.inventory.validation.status;
 
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
@@ -6,6 +6,7 @@ import lombok.SneakyThrows;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.domain.items.Status;
+import org.folio.inventory.validation.status.TargetItemStatusValidators;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -13,24 +14,23 @@ import org.junit.runner.RunWith;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.folio.inventory.domain.items.ItemStatusName.IN_PROCESS_NON_REQUESTABLE;
+import static org.folio.inventory.domain.items.ItemStatusName.UNKNOWN;
 import static org.junit.Assert.assertThrows;
 
 @RunWith(JUnitParamsRunner.class)
-public class InProcessNonRequestableItemStatusValidatorTest {
-  private static TargetItemStatusValidators validators;
+public class UnknownStatusValidatorTest {
+  private static TargetItemStatusValidators validator;
 
   @BeforeClass
   public static void setUp() throws Exception {
-    validators = new TargetItemStatusValidators();
+    validator = new TargetItemStatusValidators();
   }
-
 
   @SneakyThrows
   @Parameters({
     "Available",
-    "Awaiting delivery",
     "Awaiting pickup",
+    "Awaiting delivery",
     "In transit",
     "Lost and paid",
     "Missing",
@@ -39,8 +39,8 @@ public class InProcessNonRequestableItemStatusValidatorTest {
     "Withdrawn"
   })
   @Test
-  public void itemCanBeMarkedAsInProcessNonRequestableWhenInAcceptableSourceStatus(String sourceStatus) {
-    final var targetValidator = validators.getValidator(IN_PROCESS_NON_REQUESTABLE);
+  public void itemCanBeMarkedAsUnavailableWhenInAcceptableSourceStatus(String sourceStatus) {
+    final var targetValidator = validator.getValidator(UNKNOWN);
 
     final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
 
@@ -67,8 +67,8 @@ public class InProcessNonRequestableItemStatusValidatorTest {
     "Unknown"
   })
   @Test
-  public void itemCannotBeMarkedAsInProcessNonRequestableWhenNotInAcceptableSourceStatus(String sourceStatus) {
-    final var targetValidator = validators.getValidator(IN_PROCESS_NON_REQUESTABLE);
+  public void itemCannotBeMarkedAsUnavailableWhenNotInAcceptableSourceStatus(String sourceStatus) {
+    final var targetValidator = validator.getValidator(UNKNOWN);
     final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
     final var validationFuture = targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item);
 
@@ -76,6 +76,6 @@ public class InProcessNonRequestableItemStatusValidatorTest {
       Exception.class,() -> validationFuture.get(1,TimeUnit.SECONDS)
     );
 
-    assertThat(e.getCause().getMessage()).isEqualTo("Item is not allowed to be marked as In process (non-requestable)");
+    assertThat(e.getCause().getMessage()).isEqualTo("Item is not allowed to be marked as Unknown");
   }
 }

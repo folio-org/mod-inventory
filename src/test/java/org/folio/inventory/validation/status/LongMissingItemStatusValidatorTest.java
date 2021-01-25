@@ -1,4 +1,4 @@
-package org.folio.inventory.validation.experimental;
+package org.folio.inventory.validation.status;
 
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
@@ -6,6 +6,7 @@ import lombok.SneakyThrows;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.domain.items.Status;
+import org.folio.inventory.validation.status.TargetItemStatusValidators;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -13,12 +14,11 @@ import org.junit.runner.RunWith;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.folio.inventory.domain.items.ItemStatusName.RESTRICTED;
-import static org.folio.inventory.domain.items.ItemStatusName.UNAVAILABLE;
+import static org.folio.inventory.domain.items.ItemStatusName.LONG_MISSING;
 import static org.junit.Assert.assertThrows;
 
 @RunWith(JUnitParamsRunner.class)
-public class UnavailableStatusValidatorTest {
+public class LongMissingItemStatusValidatorTest {
   private static TargetItemStatusValidators validator;
 
   @BeforeClass
@@ -29,8 +29,8 @@ public class UnavailableStatusValidatorTest {
   @SneakyThrows
   @Parameters({
     "Available",
-    "Awaiting pickup",
     "Awaiting delivery",
+    "Awaiting pickup",
     "In transit",
     "Lost and paid",
     "Missing",
@@ -39,8 +39,8 @@ public class UnavailableStatusValidatorTest {
     "Withdrawn"
   })
   @Test
-  public void itemCanBeMarkedAsUnavailableWhenInAcceptableSourceStatus(String sourceStatus) {
-    final var targetValidator = validator.getValidator(UNAVAILABLE);
+  public void itemCanBeMarkedAsLongMissingWhenInAcceptableSourceStatus(String sourceStatus) {
+    final var targetValidator = validator.getValidator(LONG_MISSING);
 
     final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
 
@@ -67,8 +67,8 @@ public class UnavailableStatusValidatorTest {
     "Unknown"
   })
   @Test
-  public void itemCannotBeMarkedAsUnavailableWhenNotInAcceptableSourceStatus(String sourceStatus) {
-    final var targetValidator = validator.getValidator(UNAVAILABLE);
+  public void itemCannotBeMarkedAsLongMissingWhenNotInAcceptableSourceStatus(String sourceStatus) {
+    final var targetValidator = validator.getValidator(LONG_MISSING);
     final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
     final var validationFuture = targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item);
 
@@ -76,6 +76,6 @@ public class UnavailableStatusValidatorTest {
       Exception.class,() -> validationFuture.get(1,TimeUnit.SECONDS)
     );
 
-    assertThat(e.getCause().getMessage()).isEqualTo("Item is not allowed to be marked as Unavailable");
+    assertThat(e.getCause().getMessage()).isEqualTo("Item is not allowed to be marked as Long missing");
   }
 }

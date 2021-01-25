@@ -2,10 +2,6 @@ package org.folio.inventory.services;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
-import static org.folio.inventory.domain.items.ItemStatusName.RESTRICTED;
-import static org.folio.inventory.domain.items.ItemStatusName.UNAVAILABLE;
-import static org.folio.inventory.domain.items.ItemStatusName.UNKNOWN;
-import static org.folio.inventory.domain.items.ItemStatusName.WITHDRAWN;
 import static org.folio.inventory.domain.view.request.RequestStatus.OPEN_NOT_YET_FILLED;
 
 import java.util.concurrent.CompletableFuture;
@@ -17,12 +13,8 @@ import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.domain.view.request.Request;
 import org.folio.inventory.storage.external.Clients;
 import org.folio.inventory.storage.external.repository.RequestRepository;
-import org.folio.inventory.validation.MarkAsRestrictedValidators;
-import org.folio.inventory.validation.MarkAsUnavailableValidators;
-import org.folio.inventory.validation.MarkAsUnknownValidators;
-import org.folio.inventory.validation.MarkAsWithdrawnValidators;
 import org.folio.inventory.validation.ItemsValidator;
-import org.folio.inventory.validation.experimental.TargetItemStatusValidators;
+import org.folio.inventory.validation.status.TargetItemStatusValidators;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.slf4j.Logger;
@@ -41,17 +33,6 @@ public class MoveItemIntoStatusService {
     this.requestRepository = new RequestRepository(clients);
   }
 
-  public CompletableFuture<Item> processMarkItemWithdrawn(WebContext context) {
-    final String itemId = context.getStringParameter("id", null);
-
-    return itemCollection.findById(itemId)
-      .thenCompose(ItemsValidator::refuseWhenItemNotFound)
-      .thenCompose(MarkAsWithdrawnValidators::itemHasAllowedStatusToMarkAsWithdrawn)
-      .thenCompose(this::updateRequestStatusIfRequired)
-      .thenApply(item -> item.changeStatus(WITHDRAWN))
-      .thenCompose(itemCollection::update);
-  }
-
   public CompletableFuture<Item> markItemAs(ItemStatusName statusName, WebContext context) {
     final String itemId = context.getStringParameter("id", null);
 
@@ -62,41 +43,6 @@ public class MoveItemIntoStatusService {
       .thenApply(item -> item.changeStatus(statusName))
       .thenCompose(itemCollection::update);
   }
-
-  public CompletableFuture<Item> processMarkItemRestricted(WebContext context) {
-    final String itemId = context.getStringParameter("id", null);
-
-    return itemCollection.findById(itemId)
-      .thenCompose(ItemsValidator::refuseWhenItemNotFound)
-      .thenCompose(MarkAsRestrictedValidators::itemHasAllowedStatusToMarkAsRestricted)
-      .thenCompose(this::updateRequestStatusIfRequired)
-      .thenApply(item -> item.changeStatus(RESTRICTED))
-      .thenCompose(itemCollection::update);
-  }
-
-  public CompletableFuture<Item> processMarkItemUnavailable(WebContext context) {
-    final String itemId = context.getStringParameter("id", null);
-
-    return itemCollection.findById(itemId)
-      .thenCompose(ItemsValidator::refuseWhenItemNotFound)
-      .thenCompose(MarkAsUnavailableValidators::itemHasAllowedStatusToMarkAsUnavailable)
-      .thenCompose(this::updateRequestStatusIfRequired)
-      .thenApply(item -> item.changeStatus(UNAVAILABLE))
-      .thenCompose(itemCollection::update);
-  }
-
-
-  public CompletableFuture<Item> processMarkItemUnknown(WebContext context) {
-    final String itemId = context.getStringParameter("id", null);
-
-    return itemCollection.findById(itemId)
-      .thenCompose(ItemsValidator::refuseWhenItemNotFound)
-      .thenCompose(MarkAsUnknownValidators::itemHasAllowedStatusToMarkAsUnknown)
-      .thenCompose(this::updateRequestStatusIfRequired)
-      .thenApply(item -> item.changeStatus(UNKNOWN))
-      .thenCompose(itemCollection::update);
-  }
-
 
   private CompletableFuture<Item> updateRequestStatusIfRequired(Item item) {
     return requestRepository.getRequestInFulfilmentForItem(item.id)

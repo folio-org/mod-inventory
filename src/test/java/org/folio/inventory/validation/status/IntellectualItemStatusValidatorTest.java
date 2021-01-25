@@ -1,4 +1,4 @@
-package org.folio.inventory.validation.experimental;
+package org.folio.inventory.validation.status;
 
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
@@ -6,6 +6,7 @@ import lombok.SneakyThrows;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.domain.items.Status;
+import org.folio.inventory.validation.status.TargetItemStatusValidators;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;

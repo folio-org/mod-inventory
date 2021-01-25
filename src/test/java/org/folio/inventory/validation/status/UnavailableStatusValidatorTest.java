@@ -1,4 +1,4 @@
-package org.folio.inventory.validation.experimental;
+package org.folio.inventory.validation.status;
 
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
@@ -6,20 +6,19 @@ import lombok.SneakyThrows;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.domain.items.Status;
-
+import org.folio.inventory.validation.status.TargetItemStatusValidators;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.util.concurrent.TimeUnit;
 
-
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.folio.inventory.domain.items.ItemStatusName.MISSING;
+import static org.folio.inventory.domain.items.ItemStatusName.UNAVAILABLE;
 import static org.junit.Assert.assertThrows;
 
 @RunWith(JUnitParamsRunner.class)
-public class MissingItemStatusValidatorTest {
+public class UnavailableStatusValidatorTest {
   private static TargetItemStatusValidators validator;
 
   @BeforeClass
@@ -32,14 +31,16 @@ public class MissingItemStatusValidatorTest {
     "Available",
     "Awaiting pickup",
     "Awaiting delivery",
-    "In process",
     "In transit",
+    "Lost and paid",
+    "Missing",
+    "Order closed",
     "Paged",
     "Withdrawn"
   })
   @Test
-  public void itemCanBeMarkedAsMissingWhenInAcceptableSourceStatus(String sourceStatus) {
-    final var targetValidator = validator.getValidator(MISSING);
+  public void itemCanBeMarkedAsUnavailableWhenInAcceptableSourceStatus(String sourceStatus) {
+    final var targetValidator = validator.getValidator(UNAVAILABLE);
 
     final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
 
@@ -56,20 +57,18 @@ public class MissingItemStatusValidatorTest {
     "Checked out",
     "Claimed returned",
     "Declared lost",
+    "In process",
     "In process (non-requestable)",
     "Intellectual item",
     "Long missing",
-    "Lost and paid",
-    "Missing",
     "On order",
-    "Order closed",
     "Restricted",
     "Unavailable",
     "Unknown"
   })
   @Test
-  public void itemCannotBeMarkedAsMissingWhenNotInAcceptableSourceStatus(String sourceStatus) {
-    final var targetValidator = validator.getValidator(MISSING);
+  public void itemCannotBeMarkedAsUnavailableWhenNotInAcceptableSourceStatus(String sourceStatus) {
+    final var targetValidator = validator.getValidator(UNAVAILABLE);
     final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
     final var validationFuture = targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item);
 
@@ -77,6 +76,6 @@ public class MissingItemStatusValidatorTest {
       Exception.class,() -> validationFuture.get(1,TimeUnit.SECONDS)
     );
 
-    assertThat(e.getCause().getMessage()).isEqualTo("Item is not allowed to be marked as Missing");
+    assertThat(e.getCause().getMessage()).isEqualTo("Item is not allowed to be marked as Unavailable");
   }
 }

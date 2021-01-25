@@ -121,17 +121,6 @@ public class Items extends AbstractInventoryResource {
         routingContext, webContext));
   }
 
-  private CompletableFuture<Void> markAsWithdrawn(
-    RoutingContext routingContext, WebContext webContext, Clients clients) {
-
-    final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
-      .getItemCollection(webContext), clients);
-
-    return moveItemIntoStatusService.processMarkItemWithdrawn(webContext)
-      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_CREATED.toInt(),
-          routingContext, webContext));
-  }
-
   private void getAll(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
 

@@ -1,12 +1,12 @@
-package org.folio.inventory.validation.experimental;
+package org.folio.inventory.validation.status;
 
 import org.folio.inventory.domain.items.ItemStatusName;
 
 import static java.util.Set.of;
 
-public class RestrictedTargetItemStatusValidator extends AbstractTargetItemStatusValidator {
-  public RestrictedTargetItemStatusValidator() {
-    super(ItemStatusName.RESTRICTED, of(
+public class IntellectualItemTargetItemStatusValidator extends AbstractTargetItemStatusValidator {
+  public IntellectualItemTargetItemStatusValidator() {
+    super(ItemStatusName.INTELLECTUAL_ITEM, of(
       ItemStatusName.AVAILABLE,
       ItemStatusName.AWAITING_DELIVERY,
       ItemStatusName.AWAITING_PICKUP,
@@ -15,6 +15,7 @@ public class RestrictedTargetItemStatusValidator extends AbstractTargetItemStatu
       ItemStatusName.MISSING,
       ItemStatusName.ORDER_CLOSED,
       ItemStatusName.PAGED,
-      ItemStatusName.WITHDRAWN));
+      ItemStatusName.WITHDRAWN
+    ));
   }
 }

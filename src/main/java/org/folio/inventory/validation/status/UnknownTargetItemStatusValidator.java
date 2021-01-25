@@ -1,12 +1,12 @@
-package org.folio.inventory.validation.experimental;
+package org.folio.inventory.validation.status;
 
 import org.folio.inventory.domain.items.ItemStatusName;
 
 import static java.util.Set.of;
 
-public class UnavailableTargetItemStatusValidator extends AbstractTargetItemStatusValidator {
-  public UnavailableTargetItemStatusValidator() {
-    super(ItemStatusName.UNAVAILABLE, of(
+public class UnknownTargetItemStatusValidator extends AbstractTargetItemStatusValidator {
+  public UnknownTargetItemStatusValidator() {
+    super(ItemStatusName.UNKNOWN, of(
       ItemStatusName.AVAILABLE,
       ItemStatusName.AWAITING_DELIVERY,
       ItemStatusName.AWAITING_PICKUP,
