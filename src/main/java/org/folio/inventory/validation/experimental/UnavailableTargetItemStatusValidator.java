@@ -4,8 +4,8 @@ import org.folio.inventory.domain.items.ItemStatusName;
 
 import static java.util.Set.of;
 
-public class UnavaliableTargetItemStatusValidator extends AbstractTargetItemStatusValidator {
-  public UnavaliableTargetItemStatusValidator() {
+public class UnavailableTargetItemStatusValidator extends AbstractTargetItemStatusValidator {
+  public UnavailableTargetItemStatusValidator() {
     super(ItemStatusName.UNAVAILABLE, of(
       ItemStatusName.AVAILABLE,
       ItemStatusName.AWAITING_DELIVERY,
