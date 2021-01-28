@@ -491,7 +491,7 @@
           ],
           "pathPattern": "/inventory/handlers/data-import",
           "permissionsRequired": [
-            "inventory.events.post"
+            "pubsub.events.post"
           ],
           "modulePermissions": [
             "pubsub.publish.post",
@@ -521,7 +521,7 @@
           ],
           "pathPattern": "/inventory/handlers/instances",
           "permissionsRequired": [
-            "inventory.events.post"
+            "pubsub.events.post"
           ],
           "modulePermissions": [
             "inventory-storage.instances.item.get",
@@ -760,11 +760,6 @@
       "permissionName": "inventory.config.instances.blocked-fields.get",
       "displayName": "Inventory - get configuration for blocked fields of instances",
       "description": "Get configuration for blocked fields of instances"
-    },
-    {
-      "permissionName": "inventory.events.post",
-      "displayName": "Inventory - post event",
-      "description": "Post event to handle in inventory"
     },
     {
       "permissionName": "inventory.all",
