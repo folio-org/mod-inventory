@@ -11,6 +11,7 @@ public class UnknownTargetItemStatusValidator extends AbstractTargetItemStatusVa
       ItemStatusName.AWAITING_DELIVERY,
       ItemStatusName.AWAITING_PICKUP,
       ItemStatusName.IN_TRANSIT,
+      ItemStatusName.LONG_MISSING,
       ItemStatusName.LOST_AND_PAID,
       ItemStatusName.MISSING,
       ItemStatusName.ORDER_CLOSED,

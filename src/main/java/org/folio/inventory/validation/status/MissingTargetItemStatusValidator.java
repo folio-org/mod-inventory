@@ -12,6 +12,7 @@ public class MissingTargetItemStatusValidator extends AbstractTargetItemStatusVa
       ItemStatusName.AWAITING_PICKUP,
       ItemStatusName.IN_TRANSIT,
       ItemStatusName.IN_PROCESS,
+      ItemStatusName.LONG_MISSING,
       ItemStatusName.PAGED,
       ItemStatusName.WITHDRAWN
     ));
