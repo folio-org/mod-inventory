@@ -21,6 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import static java.util.Objects.isNull;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 
@@ -81,7 +82,7 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
   public boolean isEligible(DataImportEventPayload dataImportEventPayload) {
     if (dataImportEventPayload.getCurrentNode() != null && MAPPING_PROFILE == dataImportEventPayload.getCurrentNode().getContentType()) {
       MappingProfile mappingProfile = JsonObject.mapFrom(dataImportEventPayload.getCurrentNode().getContent()).mapTo(MappingProfile.class);
-      return "DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING".equals(dataImportEventPayload.getEventType())
+      return DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value().equals(dataImportEventPayload.getEventType())
         && mappingProfile.getExistingRecordType() == EntityType.MARC_BIBLIOGRAPHIC;
     }
     return false;

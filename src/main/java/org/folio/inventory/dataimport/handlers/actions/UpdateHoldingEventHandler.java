@@ -35,7 +35,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
 
   private static final String UPDATE_HOLDING_ERROR_MESSAGE = "Can`t update  holding";
   private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t update Holding entity: context or Holding-entity are empty or doesn`t exist!";
-  private static final String EMPTY_REQUIRED_FIELDS_ERROR_MESSAGE = "Can`t udpate Holding entity: one of required fields(hrid, permanentLocationId, instanceId) are empty!";
+  private static final String EMPTY_REQUIRED_FIELDS_ERROR_MESSAGE = "Can`t update Holding entity: one of required fields(hrid, permanentLocationId, instanceId) are empty!";
   private static final String HOLDINGS_PATH_FIELD = "holdings";
 
   private final Storage storage;
