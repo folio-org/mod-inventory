@@ -61,35 +61,20 @@ public class MarkItemMissingApiTests extends ApiTests {
     assertThat(checkInNote.getBoolean(STAFF_ONLY_KEY), is(false));
   }
 
-  @Parameters({
-    "In process",
-    "Available",
-    "In transit",
-    "Awaiting pickup",
-    "Awaiting delivery",
-    "Withdrawn",
-    "Paged"
-  })
   @Test
-  public void canMarkItemMissingWhenInAllowedStatus(String initialStatus) throws Exception {
+  public void canMarkItemMissingWhenInAllowedStatus() throws Exception {
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
-      .withStatus(initialStatus)
+      .withStatus("Withdrawn")
       .canCirculate());
 
     assertThat(markItemMissing(createdItem).getJson(), isMissing());
     assertThat(itemsClient.getById(createdItem.getId()).getJson(), isMissing());
   }
 
-  @Parameters({
-    "On order",
-    "Checked out",
-    "Missing",
-    "Claimed returned",
-    "Declared lost"
-  })
   @Test
-  public void cannotMarkItemMissingWhenNotInAllowedStatus(String initialStatus) throws Exception {
+  public void cannotMarkItemMissingWhenNotInAllowedStatus() throws Exception {
+    final String initialStatus = "On order";
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
       .withStatus(initialStatus)

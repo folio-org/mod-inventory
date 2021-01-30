@@ -491,7 +491,7 @@
           ],
           "pathPattern": "/inventory/handlers/instances",
           "permissionsRequired": [
-            "inventory.events.post"
+            "pubsub.events.post"
           ],
           "modulePermissions": [
             "inventory-storage.instances.item.get",
@@ -651,6 +651,11 @@
       "description": "Mark an item as restricted"
     },
     {
+      "permissionName": "inventory.items.item.mark-unavailable.post",
+      "displayName": "Inventory - mark an item as unavailable",
+      "description": "Mark an item as unavailable"
+    },
+    {
       "permissionName": "inventory.items.item.mark-unknown.post",
       "displayName": "Inventory - mark an item as unknown",
       "description": "Mark an item as unknown"
@@ -725,11 +730,6 @@
       "permissionName": "inventory.config.instances.blocked-fields.get",
       "displayName": "Inventory - get configuration for blocked fields of instances",
       "description": "Get configuration for blocked fields of instances"
-    },
-    {
-      "permissionName": "inventory.events.post",
-      "displayName": "Inventory - post event",
-      "description": "Post event to handle in inventory"
     },
     {
       "permissionName": "inventory.all",

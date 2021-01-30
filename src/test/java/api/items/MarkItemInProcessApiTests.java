@@ -40,7 +40,6 @@ public class MarkItemInProcessApiTests extends ApiTests {
 
     holdingsRecord = holdingsStorageClient.create(new HoldingRequestBuilder()
       .forInstance(instance.getId()));
-
   }
 
   @Test
@@ -60,21 +59,12 @@ public class MarkItemInProcessApiTests extends ApiTests {
     assertFalse(false);
   }
 
-  @Parameters({
-    "Available",
-    "Awaiting delivery",
-    "In transit",
-    "Lost and paid",
-    "Missing",
-    "Order closed",
-    "Paged",
-    "Withdrawn"
-  })
   @Test
-  public void canMarkItemInProcessWhenInAllowedStatus(String initialStatus) throws Exception {
+  public void canMarkItemInProcessWhenInAllowedStatus() throws Exception {
+    final String initialStatus = "Aged to lost";
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
-      .withStatus(initialStatus)
+      .withStatus("Available")
       .canCirculate());
     final Response response = markItemInProcess(createdItem);
 
@@ -83,32 +73,18 @@ public class MarkItemInProcessApiTests extends ApiTests {
     assertThat(itemsClient.getById(createdItem.getId()).getJson(), isInProcess());
   }
 
-  @Parameters({
-    "Aged to lost",
-     "Checked out",
-     "Claimed returned",
-     "Declared lost",
-     "In process",
-     "In process (non-requestable)",
-     "Intellectual item",
-     "Long missing",
-     "On order",
-     "Restricted",
-     "Unavailable",
-     "Unknown"
-  })
   @Test
-  public void cannotMarkItemInProcessWhenNotInAllowedStatus(String initialStatus) throws Exception {
-        final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
-          .forHolding(holdingsRecord.getId())
-          .withStatus(initialStatus)
-          .withBarcode(""+new Date().getTime())
-          .canCirculate());
+  public void cannotMarkItemInProcessWhenNotInAllowedStatus() throws Exception {
+    final String initialStatus = "Aged to lost";
+    final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingsRecord.getId())
+      .withStatus(initialStatus)
+      .withBarcode("" + new Date().getTime())
+      .canCirculate());
 
-        assertThat(markItemInProcess(createdItem), hasValidationError(
-          "Item is not allowed to be marked as:\"In process\"", "status.name", initialStatus));
+    assertThat(markItemInProcess(createdItem), hasValidationError(
+      "Item is not allowed to be marked as In process", "status.name", initialStatus));
   }
-
 
   @Test
   public void shouldNotMarkItemInProcessThatCannotBeFound() {
