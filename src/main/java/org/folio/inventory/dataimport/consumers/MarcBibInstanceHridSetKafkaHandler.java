@@ -20,6 +20,7 @@ import org.folio.rest.jaxrs.model.Record;
 import java.util.HashMap;
 import java.util.Map;
 
+import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.isAnyEmpty;
 import static org.folio.rest.jaxrs.model.Record.RecordType.MARC;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
@@ -46,7 +47,7 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
       Promise<String> promise = Promise.promise();
       Event event = OBJECT_MAPPER.readValue(record.value(), Event.class);
       HashMap<String, String> eventPayload = OBJECT_MAPPER.readValue(ZIPArchiver.unzip(event.getEventPayload()), HashMap.class);
-      LOGGER.info("Event payload has been received with event type: {}", event.getEventType());
+      LOGGER.info(format("Event payload has been received with event type: %s", event.getEventType()));
 
       if (isAnyEmpty(eventPayload.get(MARC_KEY), eventPayload.get(MAPPING_RULES_KEY), eventPayload.get(MAPPING_PARAMS_KEY))) {
         String message = "Event payload does not contain required data to update Instance";
@@ -68,7 +69,7 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
       });
       return promise.future();
     } catch (Exception e) {
-      LOGGER.error("Failed to process data import kafka record from topic {}", e, record.topic());
+      LOGGER.error(format("Failed to process data import kafka record from topic %s", record.topic()), e);
       return Future.failedFuture(e);
     }
   }

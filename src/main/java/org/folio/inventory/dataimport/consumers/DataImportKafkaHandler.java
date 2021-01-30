@@ -5,7 +5,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -43,6 +42,7 @@ import org.folio.rest.jaxrs.model.Event;
 
 import java.io.IOException;
 
+import static java.lang.String.format;
 import static org.folio.DataImportEventTypes.DI_ERROR;
 
 public class DataImportKafkaHandler implements AsyncRecordHandler<String, String> {
@@ -63,7 +63,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       Promise<String> promise = Promise.promise();
       Event event = OBJECT_MAPPER.readValue(record.value(), Event.class);
       DataImportEventPayload eventPayload = new JsonObject(ZIPArchiver.unzip(event.getEventPayload())).mapTo(DataImportEventPayload.class);
-      LOGGER.info("Data import event payload has been received with event type: {}", eventPayload.getEventType());
+      LOGGER.info(format("Data import event payload has been received with event type: %s", eventPayload.getEventType()));
 
       EventManager.handleEvent(eventPayload).whenComplete((processedPayload, throwable) -> {
         if (throwable != null) {
@@ -76,7 +76,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       });
       return promise.future();
     } catch (IOException e) {
-      LOGGER.error("Failed to process data import kafka record from topic {}", e, record.topic());
+      LOGGER.error(format("Failed to process data import kafka record from topic %s", record.topic()), e);
       return Future.failedFuture(e);
     }
   }
