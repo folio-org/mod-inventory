@@ -36,7 +36,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTI
 
 public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
-  private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
+  private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload - event payload context does not contain MARC_BIBLIOGRAPHIC data";
 
   public CreateInstanceEventHandler(Storage storage, HttpClient client) {
     this.storage = storage;
