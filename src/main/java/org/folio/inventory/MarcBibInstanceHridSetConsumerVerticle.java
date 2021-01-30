@@ -16,6 +16,8 @@ import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.kafka.SubscriptionDefinition;
 import org.folio.util.pubsub.PubSubClientUtils;
 
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_INSTANCE_HRID_SET;
+
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_PORT;
@@ -25,7 +27,6 @@ import static org.folio.inventory.dataimport.util.KafkaConfigConstants.OKAPI_URL
 public class MarcBibInstanceHridSetConsumerVerticle extends AbstractVerticle {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(MarcBibInstanceHridSetConsumerVerticle.class);
-  public static final String MARC_BIB_INSTANCE_HRID_SET_EVENT = "DI_SRS_MARC_BIB_INSTANCE_HRID_SET";
   private static final GlobalLoadSensor GLOBAL_LOAD_SENSOR = new GlobalLoadSensor();
 
   private final int loadLimit = getLoadLimit();
@@ -44,7 +45,7 @@ public class MarcBibInstanceHridSetConsumerVerticle extends AbstractVerticle {
     LOGGER.info("kafkaConfig: {}", kafkaConfig);
 
     SubscriptionDefinition subscriptionDefinition = KafkaTopicNameHelper.createSubscriptionDefinition(kafkaConfig.getEnvId(),
-        KafkaTopicNameHelper.getDefaultNameSpace(), MARC_BIB_INSTANCE_HRID_SET_EVENT);
+        KafkaTopicNameHelper.getDefaultNameSpace(), DI_SRS_MARC_BIB_INSTANCE_HRID_SET.value());
 
     consumerWrapper = KafkaConsumerWrapper.<String, String>builder()
       .context(context)
