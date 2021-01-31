@@ -78,7 +78,7 @@ public class CreateHoldingEventHandler implements EventHandler {
           future.completeExceptionally(new EventProcessingException(SAVE_HOLDING_ERROR_MESSAGE));
         });
     } catch (Exception e) {
-      LOGGER.error(e);
+      LOGGER.error("Failed to create Holdings", e);
       future.completeExceptionally(e);
     }
     return future;

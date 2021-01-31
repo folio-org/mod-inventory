@@ -163,7 +163,7 @@ public class DataImportConsumerVerticleTest {
     // then
     String observeTopic = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_NAME, getDefaultNameSpace(), TENANT_ID, DI_COMPLETED.value());
     cluster.observeValues(ObserveKeyValues.on(observeTopic, 1)
-      .observeFor(15, TimeUnit.SECONDS)
+      .observeFor(20, TimeUnit.SECONDS)
       .build());
   }
 

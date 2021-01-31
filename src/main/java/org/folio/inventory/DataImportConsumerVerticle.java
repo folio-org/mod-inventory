@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static java.lang.String.format;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_MATCHED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_NOT_MATCHED;
@@ -73,7 +74,7 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
       .okapiUrl(config.getString(OKAPI_URL))
       .replicationFactor(Integer.parseInt(config.getString(KAFKA_REPLICATION_FACTOR)))
       .build();
-    LOGGER.info("kafkaConfig: {}", kafkaConfig);
+    LOGGER.info(format("kafkaConfig: %s", kafkaConfig));
     EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, maxDistributionNumber);
 
     HttpClient client = vertx.createHttpClient();
