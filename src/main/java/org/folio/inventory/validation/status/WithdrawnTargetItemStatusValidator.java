@@ -17,8 +17,9 @@ public class WithdrawnTargetItemStatusValidator extends AbstractTargetItemStatus
       ItemStatusName.IN_TRANSIT,
       ItemStatusName.LONG_MISSING,
       ItemStatusName.MISSING,
+      ItemStatusName.PAGED,
+      ItemStatusName.RESTRICTED,
       ItemStatusName.UNAVAILABLE,
-      ItemStatusName.UNKNOWN,
-      ItemStatusName.PAGED));
+      ItemStatusName.UNKNOWN));
   }
 }

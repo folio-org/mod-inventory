@@ -18,6 +18,7 @@ public class InProcessTargetItemStatusValidator extends AbstractTargetItemStatus
       ItemStatusName.MISSING,
       ItemStatusName.ORDER_CLOSED,
       ItemStatusName.PAGED,
+      ItemStatusName.RESTRICTED,
       ItemStatusName.UNAVAILABLE,
       ItemStatusName.UNKNOWN,
       ItemStatusName.WITHDRAWN

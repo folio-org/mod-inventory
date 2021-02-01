@@ -17,6 +17,7 @@ public class UnavailableTargetItemStatusValidator extends AbstractTargetItemStat
       ItemStatusName.LOST_AND_PAID,
       ItemStatusName.MISSING,
       ItemStatusName.ORDER_CLOSED,
+      ItemStatusName.RESTRICTED,
       ItemStatusName.PAGED,
       ItemStatusName.UNKNOWN,
       ItemStatusName.WITHDRAWN));

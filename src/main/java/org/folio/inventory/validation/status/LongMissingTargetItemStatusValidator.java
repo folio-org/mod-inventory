@@ -17,6 +17,7 @@ public class LongMissingTargetItemStatusValidator extends AbstractTargetItemStat
       ItemStatusName.MISSING,
       ItemStatusName.ORDER_CLOSED,
       ItemStatusName.PAGED,
+      ItemStatusName.RESTRICTED,
       ItemStatusName.UNAVAILABLE,
       ItemStatusName.UNKNOWN,
       ItemStatusName.WITHDRAWN

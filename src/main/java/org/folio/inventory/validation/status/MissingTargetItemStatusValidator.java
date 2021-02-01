@@ -16,6 +16,7 @@ public class MissingTargetItemStatusValidator extends AbstractTargetItemStatusVa
       ItemStatusName.IN_PROCESS_NON_REQUESTABLE,
       ItemStatusName.LONG_MISSING,
       ItemStatusName.PAGED,
+      ItemStatusName.RESTRICTED,
       ItemStatusName.UNAVAILABLE,
       ItemStatusName.UNKNOWN,
       ItemStatusName.WITHDRAWN
