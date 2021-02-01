@@ -34,6 +34,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+import static java.lang.String.format;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 
@@ -145,6 +146,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
       dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(new JsonObject().put(INSTANCE_PATH, JsonObject.mapFrom(instance))));
       return instance;
     } catch (Exception e) {
+      LOGGER.error("Failed to map Record to Instance", e);
       throw new JsonMappingException("Error in default mapper.", e);
     }
   }
@@ -153,7 +155,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     Promise<Void> promise = Promise.promise();
     instanceCollection.update(instance, success -> promise.complete(),
       failure -> {
-        LOGGER.error("Error updating Instance cause %s, status code %s", failure.getReason(), failure.getStatusCode());
+        LOGGER.error(format("Error updating Instance cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
         promise.fail(failure.getReason());
       });
     return promise.future();

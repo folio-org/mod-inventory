@@ -83,11 +83,6 @@ public class ApiRoot {
     return new URL(String.format("%s/_/tenant", ApiTestSuite.apiRoot()));
   }
 
-  public static URL dataImportEventHandler()
-    throws MalformedURLException {
-    return new URL(String.format("%s/data-import", handlers()));
-  }
-
   public static URL instancesEventHandler()
     throws MalformedURLException {
     return new URL(String.format("%s/instances", handlers()));

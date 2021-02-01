@@ -40,6 +40,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.ITEM;
@@ -101,7 +102,7 @@ public class CreateItemEventHandler implements EventHandler {
         isItemBarcodeUnique(itemAsJson.getString("barcode"), itemCollection)
           .compose(isUnique -> isUnique
             ? addItem(mappedItem, itemCollection)
-            : Future.failedFuture(String.format("Barcode must be unique, %s is already assigned to another item", finalItemAsJson.getString("barcode"))))
+            : Future.failedFuture(format("Barcode must be unique, %s is already assigned to another item", finalItemAsJson.getString("barcode"))))
           .onComplete(ar -> {
             if (ar.succeeded()) {
               dataImportEventPayload.getContext().put(ITEM.value(), Json.encode(ar.result()));
@@ -113,7 +114,7 @@ public class CreateItemEventHandler implements EventHandler {
             }
           });
       } else {
-        String msg = String.format("Mapped Item is invalid: %s", errors.toString());
+        String msg = format("Mapped Item is invalid: %s", errors.toString());
         LOG.error(msg);
         future.completeExceptionally(new EventProcessingException(msg));
       }
@@ -158,7 +159,7 @@ public class CreateItemEventHandler implements EventHandler {
   private void validateStatusName(JsonObject itemAsJson, List<String> errors) {
     String statusName = JsonHelper.getNestedProperty(itemAsJson, "status", "name");
     if (StringUtils.isNotBlank(statusName) && !ItemStatusName.isStatusCorrect(statusName)) {
-      errors.add(String.format("Invalid status specified '%s'", statusName));
+      errors.add(format("Invalid status specified '%s'", statusName));
     }
   }
 
@@ -187,7 +188,7 @@ public class CreateItemEventHandler implements EventHandler {
 
     itemCollection.add(item.withCirculationNotes(notes), success -> promise.complete(success.getResult()),
       failure -> {
-        LOG.error("Error posting Item cause {0}, status code {1}", failure.getReason(), failure.getStatusCode());
+        LOG.error(format("Error posting Item cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
         promise.fail(failure.getReason());
       });
     return promise.future();
