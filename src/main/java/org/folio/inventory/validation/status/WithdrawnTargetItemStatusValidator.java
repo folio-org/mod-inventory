@@ -12,6 +12,7 @@ public class WithdrawnTargetItemStatusValidator extends AbstractTargetItemStatus
       ItemStatusName.AWAITING_PICKUP,
       ItemStatusName.LOST_AND_PAID,
       ItemStatusName.IN_PROCESS,
+      ItemStatusName.INTELLECTUAL_ITEM,
       ItemStatusName.IN_PROCESS_NON_REQUESTABLE,
       ItemStatusName.IN_TRANSIT,
       ItemStatusName.LONG_MISSING,

@@ -10,6 +10,7 @@ public class UnavailableTargetItemStatusValidator extends AbstractTargetItemStat
       ItemStatusName.AVAILABLE,
       ItemStatusName.AWAITING_DELIVERY,
       ItemStatusName.AWAITING_PICKUP,
+      ItemStatusName.INTELLECTUAL_ITEM,
       ItemStatusName.IN_PROCESS_NON_REQUESTABLE,
       ItemStatusName.IN_TRANSIT,
       ItemStatusName.LONG_MISSING,
