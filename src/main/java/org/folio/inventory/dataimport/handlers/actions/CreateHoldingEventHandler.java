@@ -45,7 +45,6 @@ public class CreateHoldingEventHandler implements EventHandler {
   private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t create Holding entity: context is empty or doesn`t exists";
   private static final String PAYLOAD_DATA_HAS_NO_INSTANCE_ID_ERROR_MSG = "Failed to extract instanceId from instance entity or parsed record";
 
-
   private final Storage storage;
 
   public CreateHoldingEventHandler(Storage storage) {
@@ -79,7 +78,7 @@ public class CreateHoldingEventHandler implements EventHandler {
           future.completeExceptionally(new EventProcessingException(SAVE_HOLDING_ERROR_MESSAGE));
         });
     } catch (Exception e) {
-      LOGGER.error(e);
+      LOGGER.error("Failed to create Holdings", e);
       future.completeExceptionally(e);
     }
     return future;

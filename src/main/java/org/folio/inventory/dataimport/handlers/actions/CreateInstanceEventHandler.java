@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
@@ -35,7 +36,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTI
 
 public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
-  private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
+  private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload - event payload context does not contain MARC_BIBLIOGRAPHIC data";
 
   public CreateInstanceEventHandler(Storage storage, HttpClient client) {
     this.storage = storage;
@@ -86,7 +87,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
             future.completeExceptionally(ar);
           });
       } else {
-        String msg = String.format("Mapped Instance is invalid: %s", errors.toString());
+        String msg = format("Mapped Instance is invalid: %s", errors.toString());
         LOGGER.error(msg);
         future.completeExceptionally(new EventProcessingException(msg));
       }
@@ -120,7 +121,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
     Promise<Instance> promise = Promise.promise();
     instanceCollection.add(instance, success -> promise.complete(success.getResult()),
       failure -> {
-        LOGGER.error("Error posting Instance cause %s, status code %s", failure.getReason(), failure.getStatusCode());
+        LOGGER.error(format("Error posting Instance cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
         promise.fail(failure.getReason());
       });
     return promise.future();

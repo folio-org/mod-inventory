@@ -1,96 +1,6 @@
 {
   "publications": [
     {
-      "eventType": "DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING",
-      "description": "Payload for DI_INVENTORY_INSTANCE_CREATED event ready for post processing",
-      "eventTTL": 1,
-      "signed": false
-    },
-    {
-      "eventType": "DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING",
-      "description": "Payload for DI_INVENTORY_INSTANCE_UPDATED event ready for post processing",
-      "eventTTL": 1,
-      "signed": false
-    },
-    {
-      "eventType": "DI_ERROR",
-      "description": "Data import error occurred",
-      "eventTTL": 1,
-      "signed": false
-    },
-    {
-      "eventType": "DI_COMPLETED",
-      "description": "Data import completed",
-      "eventTTL": 1,
-      "signed": false
-    },
-    {
-      "eventType": "DI_SRS_MARC_BIB_RECORD_CREATED",
-      "description": "Created SRS Marc Bibliographic Record",
-      "eventTTL": 1,
-      "signed": false
-    },
-    {
-      "eventType": "DI_INVENTORY_INSTANCE_MATCHED",
-      "description": "Found match for Inventory Instance",
-      "eventTTL": 1,
-      "signed": false
-    },
-    {
-      "eventType": "DI_INVENTORY_INSTANCE_NOT_MATCHED",
-      "description": "Match not found for Inventory Instance",
-      "eventTTL": 1,
-      "signed": false
-    },
-    {
-      "eventType": "DI_INVENTORY_ITEM_CREATED",
-      "description": "Created inventory item",
-      "eventTTL": 1,
-      "signed": false
-    },
-    {
-      "eventType": "DI_INVENTORY_HOLDING_CREATED",
-      "description": "Created holding record",
-      "eventTTL": 1,
-      "signed": false
-    },
-    {
-      "eventType": "DI_INVENTORY_HOLDING_UPDATED",
-      "description": "Replaced holding record",
-      "eventTTL": 1,
-      "signed": false
-    },
-    {
-      "eventType": "DI_INVENTORY_ITEM_MATCHED",
-      "description": "Found match for Inventory Item",
-      "eventTTL": 1,
-      "signed": false
-    },
-    {
-      "eventType": "DI_INVENTORY_ITEM_NOT_MATCHED",
-      "description": "Match not found for Inventory Item",
-      "eventTTL": 1,
-      "signed": false
-    },
-    {
-      "eventType": "DI_INVENTORY_HOLDING_MATCHED",
-      "description": "Found match for Inventory Holding",
-      "eventTTL": 1,
-      "signed": false
-    },
-    {
-      "eventType": "DI_INVENTORY_HOLDING_NOT_MATCHED",
-      "description": "Match not found for Inventory Holding",
-      "eventTTL": 1,
-      "signed": false
-    },
-    {
-      "eventType": "QM_SRS_MARC_BIB_RECORD_UPDATED",
-      "description": "Updated SRS Marc Bibliographic Record",
-      "eventTTL": 1,
-      "signed": false
-    },
-    {
       "eventType": "QM_ERROR",
       "description": "Error during updating source record in QM workflow",
       "eventTTL": 1,
@@ -101,92 +11,12 @@
       "description": "Updated Inventory Instance Record by QM Editor",
       "eventTTL": 1,
       "signed": false
-    },
-    {
-      "eventType": "DI_INVENTORY_ITEM_UPDATED",
-      "description": "Updated inventory item",
-      "eventTTL": 1,
-      "signed": false
-    },
-    {
-      "eventType": "DI_SRS_MARC_BIB_RECORD_MODIFIED",
-      "description": "Modified SRS Marc Bibliographic Record",
-      "eventTTL": 1,
-      "signed": false
     }
   ],
   "subscriptions": [
     {
-      "eventType": "DI_SRS_MARC_BIB_RECORD_CREATED",
-      "callbackAddress": "/inventory/handlers/data-import"
-    },
-    {
-      "eventType": "DI_INVENTORY_INSTANCE_MATCHED",
-      "callbackAddress": "/inventory/handlers/data-import"
-    },
-    {
-      "eventType": "DI_INVENTORY_INSTANCE_NOT_MATCHED",
-      "callbackAddress": "/inventory/handlers/data-import"
-    },
-    {
-      "eventType": "DI_INVENTORY_ITEM_MATCHED",
-      "callbackAddress": "/inventory/handlers/data-import"
-    },
-    {
-      "eventType": "DI_INVENTORY_ITEM_NOT_MATCHED",
-      "callbackAddress": "/inventory/handlers/data-import"
-    },
-    {
-      "eventType": "DI_INVENTORY_HOLDING_MATCHED",
-      "callbackAddress": "/inventory/handlers/data-import"
-    },
-    {
-      "eventType": "DI_INVENTORY_HOLDING_NOT_MATCHED",
-      "callbackAddress": "/inventory/handlers/data-import"
-    },
-    {
-      "eventType": "DI_INVENTORY_INSTANCE_CREATED",
-      "callbackAddress": "/inventory/handlers/data-import"
-    },
-    {
-      "eventType": "DI_INVENTORY_INSTANCE_UPDATED",
-      "callbackAddress": "/inventory/handlers/data-import"
-    },
-    {
-      "eventType": "DI_INVENTORY_HOLDING_UPDATED",
-      "callbackAddress": "/inventory/handlers/data-import"
-    },
-    {
-      "eventType": "DI_INVENTORY_HOLDING_CREATED",
-      "callbackAddress": "/inventory/handlers/data-import"
-    },
-    {
-      "eventType": "DI_INVENTORY_ITEM_CREATED",
-      "callbackAddress": "/inventory/handlers/data-import"
-    },
-    {
-      "eventType": "DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING",
-      "callbackAddress": "/inventory/handlers/data-import"
-    },
-    {
-      "eventType": "DI_SRS_MARC_BIB_RECORD_MODIFIED",
-      "callbackAddress": "/inventory/handlers/data-import"
-    },
-    {
       "eventType": "QM_SRS_MARC_BIB_RECORD_UPDATED",
       "callbackAddress": "/inventory/handlers/instances"
-    },
-    {
-      "eventType": "DI_SRS_MARC_BIB_INSTANCE_HRID_SET",
-      "callbackAddress": "/inventory/handlers/instances"
-    },
-    {
-      "eventType": "DI_SRS_MARC_BIB_RECORD_MATCHED",
-      "callbackAddress": "/inventory/handlers/data-import"
-    },
-    {
-      "eventType": "DI_SRS_MARC_BIB_RECORD_NOT_MATCHED",
-      "callbackAddress": "/inventory/handlers/data-import"
     }
   ]
 }
