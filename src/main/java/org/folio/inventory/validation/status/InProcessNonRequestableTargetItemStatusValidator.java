@@ -17,6 +17,7 @@ public class InProcessNonRequestableTargetItemStatusValidator extends AbstractTa
       ItemStatusName.ORDER_CLOSED,
       ItemStatusName.PAGED,
       ItemStatusName.UNAVAILABLE,
+      ItemStatusName.UNKNOWN,
       ItemStatusName.WITHDRAWN
     ));
   }

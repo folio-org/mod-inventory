@@ -18,6 +18,7 @@ public class RestrictedTargetItemStatusValidator extends AbstractTargetItemStatu
       ItemStatusName.ORDER_CLOSED,
       ItemStatusName.PAGED,
       ItemStatusName.UNAVAILABLE,
+      ItemStatusName.UNKNOWN,
       ItemStatusName.WITHDRAWN));
   }
 }
