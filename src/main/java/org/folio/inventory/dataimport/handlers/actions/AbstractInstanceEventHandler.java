@@ -16,7 +16,6 @@ import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.storage.external.CollectionResourceRepository;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
-import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
@@ -32,8 +31,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
+import static java.lang.String.format;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 
@@ -49,38 +48,35 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   protected HttpClient client;
 
   protected Future<Void> createPrecedingSucceedingTitles(Instance instance, CollectionResourceRepository precedingSucceedingTitlesRepository) {
-    Promise<Void> promise = Promise.promise();
     List<PrecedingSucceedingTitle> precedingSucceedingTitles = new ArrayList<>();
     preparePrecedingTitles(instance, precedingSucceedingTitles);
     prepareSucceedingTitles(instance, precedingSucceedingTitles);
-    List<CompletableFuture<Response>> postFutures = new ArrayList<>();
 
-    precedingSucceedingTitles.forEach(title -> postFutures.add(precedingSucceedingTitlesRepository.post(title)));
-    CompletableFuture.allOf(postFutures.toArray(new CompletableFuture<?>[]{}))
+    precedingSucceedingTitles.forEach(title -> precedingSucceedingTitlesRepository
+      .post(title)
       .whenComplete((v, e) -> {
-        if (e != null) {
-          promise.fail(e);
-          return;
+          if (e != null) {
+            LOGGER.error("Error during creating PrecedingSucceedingTitle for instance {}", e, instance.getId());
+            LOGGER.info("Error during creating PrecedingSucceedingTitles retry creating new PrecedingSucceedingTitles");
+            precedingSucceedingTitlesRepository.post(title);
+          }
         }
-        promise.complete();
-      });
-    return promise.future();
+      ));
+    return Future.succeededFuture();
   }
 
   protected Future<Void> deletePrecedingSucceedingTitles(Set<String> ids, CollectionResourceRepository precedingSucceedingTitlesRepository) {
-    Promise<Void> promise = Promise.promise();
-    List<CompletableFuture<Response>> deleteFutures = new ArrayList<>();
-
-    ids.forEach(id -> deleteFutures.add(precedingSucceedingTitlesRepository.delete(id)));
-    CompletableFuture.allOf(deleteFutures.toArray(new CompletableFuture<?>[]{}))
+    ids.forEach(id -> precedingSucceedingTitlesRepository
+      .delete(id)
       .whenComplete((v, e) -> {
-        if (e != null) {
-          promise.fail(e);
-          return;
+          if (e != null) {
+            LOGGER.error("Error during deleting PrecedingSucceedingTitles with ids {}", e, id);
+            LOGGER.info("Error during deleting PrecedingSucceedingTitles retry delete PrecedingSucceedingTitles");
+            precedingSucceedingTitlesRepository.delete(id);
+          }
         }
-        promise.complete();
-      });
-    return promise.future();
+      ));
+    return Future.succeededFuture();
   }
 
   private void preparePrecedingTitles(Instance instance, List<PrecedingSucceedingTitle> preparedTitles) {
@@ -145,6 +141,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
       dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(new JsonObject().put(INSTANCE_PATH, JsonObject.mapFrom(instance))));
       return instance;
     } catch (Exception e) {
+      LOGGER.error("Failed to map Record to Instance", e);
       throw new JsonMappingException("Error in default mapper.", e);
     }
   }
@@ -153,7 +150,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     Promise<Void> promise = Promise.promise();
     instanceCollection.update(instance, success -> promise.complete(),
       failure -> {
-        LOGGER.error("Error updating Instance cause %s, status code %s", failure.getReason(), failure.getStatusCode());
+        LOGGER.error(format("Error updating Instance cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
         promise.fail(failure.getReason());
       });
     return promise.future();

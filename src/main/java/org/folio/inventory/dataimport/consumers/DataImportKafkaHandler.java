@@ -1,14 +1,16 @@
-package org.folio.inventory.resources;
+package org.folio.inventory.dataimport.consumers;
 
-
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
-import io.vertx.core.http.HttpClientOptions;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.BodyHandler;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
+import org.folio.DataImportEventPayload;
 import org.folio.dbschema.ObjectMapperTool;
-import org.folio.inventory.common.WebContext;
 import org.folio.inventory.dataimport.HoldingWriterFactory;
 import org.folio.inventory.dataimport.InstanceWriterFactory;
 import org.folio.inventory.dataimport.ItemWriterFactory;
@@ -19,7 +21,6 @@ import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.actions.MarcBibModifiedPostProcessingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.UpdateHoldingEventHandler;
-import org.folio.inventory.dataimport.handlers.actions.UpdateInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchInstanceEventHandler;
@@ -28,8 +29,7 @@ import org.folio.inventory.dataimport.handlers.matching.loaders.HoldingLoader;
 import org.folio.inventory.dataimport.handlers.matching.loaders.InstanceLoader;
 import org.folio.inventory.dataimport.handlers.matching.loaders.ItemLoader;
 import org.folio.inventory.storage.Storage;
-import org.folio.inventory.support.http.server.ServerErrorResponse;
-import org.folio.inventory.support.http.server.SuccessResponse;
+import org.folio.kafka.AsyncRecordHandler;
 import org.folio.processing.events.EventManager;
 import org.folio.processing.events.utils.ZIPArchiver;
 import org.folio.processing.mapping.MappingManager;
@@ -38,23 +38,50 @@ import org.folio.processing.matching.loader.MatchValueLoaderFactory;
 import org.folio.processing.matching.reader.MarcValueReaderImpl;
 import org.folio.processing.matching.reader.MatchValueReaderFactory;
 import org.folio.processing.matching.reader.StaticValueReaderImpl;
+import org.folio.rest.jaxrs.model.Event;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.io.IOException;
 
-public class EventHandlers {
+import static java.lang.String.format;
+import static org.folio.DataImportEventTypes.DI_ERROR;
 
-  private static final String INSTANCES_EVENT_HANDLER_PATH = "/inventory/handlers/instances";
-  private static final int DEFAULT_HTTP_TIMEOUT_IN_MILLISECONDS = 3000;
+public class DataImportKafkaHandler implements AsyncRecordHandler<String, String> {
 
-  private final Storage storage;
+  private static final Logger LOGGER = LoggerFactory.getLogger(DataImportKafkaHandler.class);
+  private static final ObjectMapper OBJECT_MAPPER = ObjectMapperTool.getMapper();
 
-  public EventHandlers(final Storage storage) {
+  private Vertx vertx;
 
-    Vertx vertx = Vertx.vertx();
-    this.storage = storage;
-    HttpClientOptions params = new HttpClientOptions().setConnectTimeout(DEFAULT_HTTP_TIMEOUT_IN_MILLISECONDS);
-    HttpClient client = vertx.createHttpClient(params);
+  public DataImportKafkaHandler(Vertx vertx, Storage storage, HttpClient client) {
+    this.vertx = vertx;
+    registerDataImportProcessingHandlers(storage, client);
+  }
+
+  @Override
+  public Future<String> handle(KafkaConsumerRecord<String, String> record) {
+    try {
+      Promise<String> promise = Promise.promise();
+      Event event = OBJECT_MAPPER.readValue(record.value(), Event.class);
+      DataImportEventPayload eventPayload = new JsonObject(ZIPArchiver.unzip(event.getEventPayload())).mapTo(DataImportEventPayload.class);
+      LOGGER.info(format("Data import event payload has been received with event type: %s", eventPayload.getEventType()));
+
+      EventManager.handleEvent(eventPayload).whenComplete((processedPayload, throwable) -> {
+        if (throwable != null) {
+          promise.fail(throwable);
+        } else if (DI_ERROR.value().equals(processedPayload.getEventType())) {
+          promise.fail("Failed to process data import event payload");
+        } else {
+          promise.complete(record.key());
+        }
+      });
+      return promise.future();
+    } catch (IOException e) {
+      LOGGER.error(format("Failed to process data import kafka record from topic %s", record.topic()), e);
+      return Future.failedFuture(e);
+    }
+  }
+
+  private void registerDataImportProcessingHandlers(Storage storage, HttpClient client) {
     MatchValueLoaderFactory.register(new InstanceLoader(storage, vertx));
     MatchValueLoaderFactory.register(new ItemLoader(storage, vertx));
     MatchValueLoaderFactory.register(new HoldingLoader(storage, vertx));
@@ -78,34 +105,4 @@ public class EventHandlers {
     EventManager.registerEventHandler(new ReplaceInstanceEventHandler(storage, client));
     EventManager.registerEventHandler(new MarcBibModifiedPostProcessingEventHandler(new InstanceUpdateDelegate(storage)));
   }
-
-  public void register(Router router) {
-    router
-      .post(INSTANCES_EVENT_HANDLER_PATH)
-      .handler(BodyHandler.create())
-      .handler(this::handleInstanceUpdate);
-  }
-
-  private void handleInstanceUpdate(RoutingContext routingContext) {
-    try {
-      HashMap<String, String> eventPayload = ObjectMapperTool.getMapper().readValue(ZIPArchiver.unzip(routingContext.getBodyAsString()), HashMap.class);
-      InstanceUpdateDelegate updateInstanceDelegate = new InstanceUpdateDelegate(storage);
-      new UpdateInstanceEventHandler(updateInstanceDelegate, new WebContext(routingContext)).handle(eventPayload, getOkapiHeaders(routingContext), routingContext.vertx());
-      SuccessResponse.noContent(routingContext.response());
-    } catch (Exception e) {
-      ServerErrorResponse.internalError(routingContext.response(), e);
-    }
-  }
-
-  private Map<String, String> getOkapiHeaders(RoutingContext rc) {
-    Map<String, String> okapiHeaders = new HashMap<>();
-    rc.request().headers().forEach(headerEntry -> {
-      String headerKey = headerEntry.getKey().toLowerCase();
-      if (headerKey.startsWith("x-okapi")) {
-        okapiHeaders.put(headerKey, headerEntry.getValue());
-      }
-    });
-    return okapiHeaders;
-  }
-
 }

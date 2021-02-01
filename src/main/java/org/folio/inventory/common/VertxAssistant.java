@@ -84,4 +84,10 @@ public class VertxAssistant {
       }
     });
   }
+
+  public CompletableFuture<Void> undeployVerticle(String deploymentId) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    undeployVerticle(deploymentId, future);
+    return future;
+  }
 }
