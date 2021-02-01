@@ -47,8 +47,7 @@ public class EventHandlers {
 
   private static final String DATA_IMPORT_EVENT_HANDLER_PATH = "/inventory/handlers/data-import";
   private static final String INSTANCES_EVENT_HANDLER_PATH = "/inventory/handlers/instances";
-  // value in ms
-  private static final int DEFAULT_HTTP_TIMEOUT = 3000;
+  private static final int DEFAULT_HTTP_TIMEOUT_IN_MILLISECONDS = 3000;
 
   private final Storage storage;
 
