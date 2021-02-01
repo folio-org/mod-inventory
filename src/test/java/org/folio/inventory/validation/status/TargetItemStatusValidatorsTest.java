@@ -71,16 +71,36 @@ public class TargetItemStatusValidatorsTest {
     });
   }
 
+//  @Parameters({
+//    "In process",
+//    "In process (non-requestable)",
+//    "Intellectual item",
+//    "Missing",
+//    "Restricted",
+//    "Unavailable",
+//    "Unknown",
+//    "Withdrawn"
+//  })
+//  @Test
+//  public void modinv_366_transitions_scenario_1(String targetItemStatus) {
+//    final var initialItemStatusName = ItemStatusName.LONG_MISSING;
+//    var validator = targetItemStatusValidators.getValidator(ItemStatusName.forName(targetItemStatus));
+//    Item item = new Item(null, null, new Status(initialItemStatusName), null, null, null);
+//    System.out.println("Transition "+initialItemStatusName+" -> "+targetItemStatus+" is "+ (validator.isItemAllowedToMark(item) ? "Allowed" : "Disallowed"));
+//    assertThat(validator.isItemAllowedToMark(item)).isTrue();
+//  }
+
   @Parameters({
-    "In process",
-    "In process (non-requestable)",
-    "Intellectual item",
-    "Missing",
-    "Restricted",
-    "Unavailable",
-    "Unknown",
-    "Withdrawn"
-  })
+      "In process",
+      "In process (non-requestable)",
+      "Intellectual item",
+//      "Long missing",
+      "Missing",
+      "Restricted",
+      "Unavailable",
+      "Unknown",
+      "Withdrawn"
+    })
   @Test
   public void modinv_366_transitions_scenario_1(String targetItemStatus) {
     final var initialItemStatusName = ItemStatusName.LONG_MISSING;
@@ -91,24 +111,25 @@ public class TargetItemStatusValidatorsTest {
   }
 
   @Parameters({
-      "In process",
-//      "In process (non-requestable)",
-      "Intellectual item",
-      "Long missing",
-      "Missing",
-      "Restricted",
-      "Unavailable",
-      "Unknown",
-      "Withdrawn"
-    })
+    "In process",
+//    "In process (non-requestable)",
+    "Intellectual item",
+    "Long missing",
+    "Missing",
+    "Restricted",
+    "Unavailable",
+    "Unknown",
+    "Withdrawn"
+  })
   @Test
-  public void uiin_1305_transitions_scenario_1(String targetItemStatus) {
-    final var initialItemStatusName = ItemStatusName.LONG_MISSING;
+  public void modinv_366_transitions_scenario_2(String targetItemStatus) {
+    final var initialItemStatusName = ItemStatusName.IN_PROCESS_NON_REQUESTABLE;
     var validator = targetItemStatusValidators.getValidator(ItemStatusName.forName(targetItemStatus));
     Item item = new Item(null, null, new Status(initialItemStatusName), null, null, null);
     System.out.println("Transition "+initialItemStatusName+" -> "+targetItemStatus+" is "+ (validator.isItemAllowedToMark(item) ? "Allowed" : "Disallowed"));
-//    assertThat(validator.isItemAllowedToMark(item)).isTrue();
+    assertThat(validator.isItemAllowedToMark(item)).isTrue();
   }
+
 
   @Parameters({
     "In process",

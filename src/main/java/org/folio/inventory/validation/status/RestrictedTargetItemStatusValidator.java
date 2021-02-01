@@ -10,6 +10,7 @@ public class RestrictedTargetItemStatusValidator extends AbstractTargetItemStatu
       ItemStatusName.AVAILABLE,
       ItemStatusName.AWAITING_DELIVERY,
       ItemStatusName.AWAITING_PICKUP,
+      ItemStatusName.IN_PROCESS_NON_REQUESTABLE,
       ItemStatusName.IN_TRANSIT,
       ItemStatusName.LONG_MISSING,
       ItemStatusName.LOST_AND_PAID,
