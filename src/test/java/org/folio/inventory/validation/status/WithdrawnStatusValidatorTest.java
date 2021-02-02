@@ -32,10 +32,16 @@ public class WithdrawnStatusValidatorTest {
     "Awaiting pickup",
     "Awaiting delivery",
     "In process",
+    "In process (non-requestable)",
     "In transit",
+    "Intellectual item",
+    "Long missing",
     "Lost and paid",
     "Missing",
-    "Paged"
+    "Paged",
+    "Restricted",
+    "Unavailable",
+    "Unknown"
   })
   @Test
   public void itemCanBeMarkedAsUnavailableWhenInAcceptableSourceStatus(String sourceStatus) {
@@ -56,14 +62,8 @@ public class WithdrawnStatusValidatorTest {
     "Checked out",
     "Claimed returned",
     "Declared lost",
-    "In process (non-requestable)",
-    "Intellectual item",
-    "Long missing",
     "On order",
     "Order closed",
-    "Restricted",
-    "Unavailable",
-    "Unknown",
     "Withdrawn"
   })
   @Test

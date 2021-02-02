@@ -76,7 +76,7 @@ public class MarkItemUnavailableApiTests extends ApiTests {
 
   @Test
   public void cannotMarkItemUnavailableWhenNotInAllowedStatus() throws Exception {
-    final String initialStatus = "Long missing";
+    final String initialStatus = "In process";
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
       .withStatus(initialStatus)

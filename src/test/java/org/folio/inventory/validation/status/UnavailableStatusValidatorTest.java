@@ -31,11 +31,16 @@ public class UnavailableStatusValidatorTest {
     "Available",
     "Awaiting pickup",
     "Awaiting delivery",
+    "In process (non-requestable)",
     "In transit",
+    "Intellectual item",
+    "Long missing",
     "Lost and paid",
     "Missing",
     "Order closed",
     "Paged",
+    "Restricted",
+    "Unknown",
     "Withdrawn"
   })
   @Test
@@ -58,13 +63,8 @@ public class UnavailableStatusValidatorTest {
     "Claimed returned",
     "Declared lost",
     "In process",
-    "In process (non-requestable)",
-    "Intellectual item",
-    "Long missing",
     "On order",
-    "Restricted",
-    "Unavailable",
-    "Unknown"
+    "Unavailable"
   })
   @Test
   public void itemCannotBeMarkedAsUnavailableWhenNotInAcceptableSourceStatus(String sourceStatus) {
