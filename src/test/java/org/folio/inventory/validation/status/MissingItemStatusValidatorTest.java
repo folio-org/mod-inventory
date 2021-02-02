@@ -34,8 +34,14 @@ public class MissingItemStatusValidatorTest {
     "Awaiting pickup",
     "Awaiting delivery",
     "In process",
+    "In process (non-requestable)",
     "In transit",
+    "Intellectual item",
+    "Long missing",
     "Paged",
+    "Restricted",
+    "Unavailable",
+    "Unknown",
     "Withdrawn"
   })
   @Test
@@ -57,16 +63,10 @@ public class MissingItemStatusValidatorTest {
     "Checked out",
     "Claimed returned",
     "Declared lost",
-    "In process (non-requestable)",
-    "Intellectual item",
-    "Long missing",
     "Lost and paid",
     "Missing",
     "On order",
-    "Order closed",
-    "Restricted",
-    "Unavailable",
-    "Unknown"
+    "Order closed"
   })
   @Test
   public void itemCannotBeMarkedAsMissingWhenNotInAcceptableSourceStatus(String sourceStatus) {
