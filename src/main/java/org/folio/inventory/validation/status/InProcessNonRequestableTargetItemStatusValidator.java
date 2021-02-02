@@ -10,11 +10,16 @@ public class InProcessNonRequestableTargetItemStatusValidator extends AbstractTa
       ItemStatusName.AVAILABLE,
       ItemStatusName.AWAITING_DELIVERY,
       ItemStatusName.AWAITING_PICKUP,
+      ItemStatusName.INTELLECTUAL_ITEM,
       ItemStatusName.IN_TRANSIT,
+      ItemStatusName.LONG_MISSING,
       ItemStatusName.LOST_AND_PAID,
       ItemStatusName.MISSING,
       ItemStatusName.ORDER_CLOSED,
       ItemStatusName.PAGED,
+      ItemStatusName.RESTRICTED,
+      ItemStatusName.UNAVAILABLE,
+      ItemStatusName.UNKNOWN,
       ItemStatusName.WITHDRAWN
     ));
   }

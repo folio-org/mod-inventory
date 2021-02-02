@@ -29,14 +29,17 @@ public class InProcessNonRequestableItemStatusValidatorTest {
 
   @SneakyThrows
   @Parameters({
-    "Available",
     "Awaiting delivery",
-    "Awaiting pickup",
     "In transit",
+    "Intellectual item",
+    "Long missing",
     "Lost and paid",
     "Missing",
     "Order closed",
     "Paged",
+    "Restricted",
+    "Unavailable",
+    "Unknown",
     "Withdrawn"
   })
   @Test
@@ -60,12 +63,7 @@ public class InProcessNonRequestableItemStatusValidatorTest {
     "Declared lost",
     "In process",
     "In process (non-requestable)",
-    "Intellectual item",
-    "Long missing",
-    "On order",
-    "Restricted",
-    "Unavailable",
-    "Unknown"
+    "On order"
   })
   @Test
   public void itemCannotBeMarkedAsInProcessNonRequestableWhenNotInAcceptableSourceStatus(String sourceStatus) {

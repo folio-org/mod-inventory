@@ -76,7 +76,7 @@ public class MarkItemRestrictedApiTests extends ApiTests {
 
   @Test
   public void cannotMarkItemRestrictedWhenNotInAllowedStatus() throws Exception {
-    final String initialStatus = "Unknown";
+    final String initialStatus = "In process";
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
       .withStatus(initialStatus)

@@ -10,11 +10,16 @@ public class LongMissingTargetItemStatusValidator extends AbstractTargetItemStat
       ItemStatusName.AVAILABLE,
       ItemStatusName.AWAITING_DELIVERY,
       ItemStatusName.AWAITING_PICKUP,
+      ItemStatusName.INTELLECTUAL_ITEM,
+      ItemStatusName.IN_PROCESS_NON_REQUESTABLE,
       ItemStatusName.IN_TRANSIT,
       ItemStatusName.LOST_AND_PAID,
       ItemStatusName.MISSING,
       ItemStatusName.ORDER_CLOSED,
       ItemStatusName.PAGED,
+      ItemStatusName.RESTRICTED,
+      ItemStatusName.UNAVAILABLE,
+      ItemStatusName.UNKNOWN,
       ItemStatusName.WITHDRAWN
     ));
   }
