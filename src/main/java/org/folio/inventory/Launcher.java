@@ -111,11 +111,11 @@ public class Launcher {
 
   private static Map<String, Object> getConsumerVerticleConfig() {
     Map<String, Object> configMap = new HashMap<>();
-    configMap.put(KAFKA_HOST, System.getenv(KAFKA_HOST));
-    configMap.put(KAFKA_PORT, System.getenv(KAFKA_PORT));
-    configMap.put(OKAPI_URL, System.getenv(OKAPI_URL));
-    configMap.put(KAFKA_REPLICATION_FACTOR, System.getenv(KAFKA_REPLICATION_FACTOR));
-    configMap.put(KAFKA_ENV, System.getenv(KAFKA_ENV));
+    configMap.put(KAFKA_HOST, System.getenv().getOrDefault(KAFKA_HOST, "kafka"));
+    configMap.put(KAFKA_PORT, System.getenv().getOrDefault(KAFKA_PORT, "9092"));
+    configMap.put(OKAPI_URL, System.getenv().getOrDefault(OKAPI_URL, "http://okapi:9130"));
+    configMap.put(KAFKA_REPLICATION_FACTOR, System.getenv().getOrDefault(KAFKA_REPLICATION_FACTOR, "1"));
+    configMap.put(KAFKA_ENV, System.getenv().getOrDefault(KAFKA_ENV, "folio"));
 
     String storageType = System.getProperty("org.folio.metadata.inventory.storage.type");
     String storageLocation = System.getProperty("org.folio.metadata.inventory.storage.location");
