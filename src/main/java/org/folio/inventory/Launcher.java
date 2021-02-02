@@ -2,7 +2,6 @@ package org.folio.inventory;
 
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import org.folio.DataImportEventTypes;
 import org.folio.inventory.common.VertxAssistant;
 
 import java.lang.invoke.MethodHandles;
@@ -112,11 +111,11 @@ public class Launcher {
 
   private static Map<String, Object> getConsumerVerticleConfig() {
     Map<String, Object> configMap = new HashMap<>();
-    configMap.put(KAFKA_HOST, System.getProperty(KAFKA_HOST, "kafka"));
-    configMap.put(KAFKA_PORT, System.getProperty(KAFKA_PORT, "9092"));
-    configMap.put(OKAPI_URL, System.getProperty(OKAPI_URL, "http://okapi:9130"));
-    configMap.put(KAFKA_REPLICATION_FACTOR, System.getProperty(KAFKA_REPLICATION_FACTOR, "1"));
-    configMap.put(KAFKA_ENV, System.getProperty(KAFKA_ENV, "folio"));
+    configMap.put(KAFKA_HOST, System.getenv(KAFKA_HOST));
+    configMap.put(KAFKA_PORT, System.getenv(KAFKA_PORT));
+    configMap.put(OKAPI_URL, System.getenv(OKAPI_URL));
+    configMap.put(KAFKA_REPLICATION_FACTOR, System.getenv(KAFKA_REPLICATION_FACTOR));
+    configMap.put(KAFKA_ENV, System.getenv(KAFKA_ENV));
 
     String storageType = System.getProperty("org.folio.metadata.inventory.storage.type");
     String storageLocation = System.getProperty("org.folio.metadata.inventory.storage.location");
