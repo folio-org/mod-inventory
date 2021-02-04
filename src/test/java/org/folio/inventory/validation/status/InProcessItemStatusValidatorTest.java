@@ -28,15 +28,20 @@ public class InProcessItemStatusValidatorTest {
 
   @SneakyThrows
   @Parameters({
+    "Aged to lost",
     "Available",
     "Awaiting pickup",
     "Awaiting delivery",
+    "Checked out",
+    "Claimed returned",
+    "Declared lost",
     "In process (non-requestable)",
     "In transit",
     "Intellectual item",
     "Long missing",
     "Lost and paid",
     "Missing",
+    "On order",
     "Order closed",
     "Paged",
     "Restricted",
@@ -57,12 +62,7 @@ public class InProcessItemStatusValidatorTest {
   }
 
   @Parameters({
-    "Aged to lost",
-    "Checked out",
-    "Claimed returned",
-    "Declared lost",
-    "In process",
-    "On order"
+    "In process"
   })
   @Test
   public void itemCannotBeMarkedAsInProcessWhenNotInAcceptableSourceStatus(String sourceStatus) {

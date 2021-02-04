@@ -28,14 +28,19 @@ public class IntellectualItemStatusValidatorTest {
 
   @SneakyThrows
   @Parameters({
+    "Aged to lost",
     "Available",
     "Awaiting pickup",
     "Awaiting delivery",
+    "Checked out",
+    "Claimed returned",
+    "Declared lost",
     "In process (non-requestable)",
     "In transit",
     "Long missing",
     "Lost and paid",
     "Missing",
+    "On order",
     "Order closed",
     "Paged",
     "Restricted",
@@ -59,13 +64,8 @@ public class IntellectualItemStatusValidatorTest {
   }
 
   @Parameters({
-    "Aged to lost",
-    "Checked out",
-    "Claimed returned",
-    "Declared lost",
     "In process",
-    "Intellectual item",
-    "On order"
+    "Intellectual item"
   })
   @Test
   public void itemCannotBeMarkedAsAsIntellectualItemWhenNotInAcceptableSourceStatus(String sourceStatus) {

@@ -77,7 +77,7 @@ public class MarkItemUnknownApiTests extends ApiTests {
 
   @Test
   public void cannotMarkItemUnknownWhenNotInAllowedStatus() throws Exception {
-    final String initialStatus = "Aged to lost";
+    final String initialStatus = "Unknown";
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
       .withStatus(initialStatus)

@@ -28,14 +28,19 @@ public class LongMissingItemStatusValidatorTest {
 
   @SneakyThrows
   @Parameters({
+    "Aged to lost",
     "Available",
     "Awaiting pickup",
     "Awaiting delivery",
+    "Checked out",
+    "Claimed returned",
+    "Declared lost",
     "In process (non-requestable)",
     "In transit",
     "Intellectual item",
     "Lost and paid",
     "Missing",
+    "On order",
     "Order closed",
     "Paged",
     "Restricted",
@@ -58,13 +63,8 @@ public class LongMissingItemStatusValidatorTest {
   }
 
   @Parameters({
-    "Aged to lost",
-    "Checked out",
-    "Claimed returned",
-    "Declared lost",
     "In process",
-    "Long missing",
-    "On order"
+    "Long missing"
   })
   @Test
   public void itemCannotBeMarkedAsLongMissingWhenNotInAcceptableSourceStatus(String sourceStatus) {
