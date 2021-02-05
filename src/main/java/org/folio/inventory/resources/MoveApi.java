@@ -76,7 +76,7 @@ public class MoveApi extends AbstractInventoryResource {
     }
     String toHoldingsRecordId = itemsMoveJsonRequest.getString(TO_HOLDINGS_RECORD_ID);
     List<String> itemIdsToUpdate = toListOfStrings(itemsMoveJsonRequest.getJsonArray(ITEM_IDS));
-    storage.getHoldingsRecordCollection(context)
+    storage.getHoldingCollection(context)
       .findById(toHoldingsRecordId)
       .thenAccept(holding -> {
         if (Objects.nonNull(holding)) {

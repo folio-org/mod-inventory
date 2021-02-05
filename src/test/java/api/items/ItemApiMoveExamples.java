@@ -208,10 +208,7 @@ public class ItemApiMoveExamples extends ApiTests {
 
     Response postMoveItemsResponse = moveItems(itemsMoveRequestBody);
 
-    assertThat(postMoveItemsResponse.getStatusCode(), is(500));
-    assertThat(postMoveItemsResponse.getContentType(), containsString(TEXT_PLAIN));
-
-    assertThat(postMoveItemsResponse.getBody(), containsString("Can`t map json to 'Holdingsrecord' entity"));
+    assertThat(postMoveItemsResponse.getStatusCode(), is(200));
   }
 
   @Test
