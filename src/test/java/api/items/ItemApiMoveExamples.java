@@ -3,7 +3,6 @@ package api.items;
 import static api.ApiTestSuite.ID_FOR_FAILURE;
 import static api.support.InstanceSamples.smallAngryPlanet;
 import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
-import static org.folio.inventory.support.http.ContentType.TEXT_PLAIN;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
@@ -188,7 +187,7 @@ public class ItemApiMoveExamples extends ApiTests {
   }
 
   @Test
-  public void cannotMoveDueToHoldingsRecordSchemasMismatching()
+  public void canMoveToHoldingsRecordWithHoldingSchemasMismatching()
     throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException, IllegalAccessException {
 
     UUID instanceId = UUID.randomUUID();
