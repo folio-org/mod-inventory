@@ -80,7 +80,7 @@ public class MarkItemInProcessNonRequestableApiTests extends ApiTests {
 
   @Test
   public void cannotMarkItemInProcessWhenNotInAllowedStatus() throws Exception {
-    final String initialStatus = "Aged to lost";
+    final String initialStatus = "In process (non-requestable)";
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
       .withStatus(initialStatus)

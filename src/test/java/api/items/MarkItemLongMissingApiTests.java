@@ -76,7 +76,7 @@ public class MarkItemLongMissingApiTests extends ApiTests {
 
   @Test
   public void cannotMarkItemLongMissingWhenNotInAllowedStatus() throws Exception {
-    final String initialStatus = "Declared lost";
+    final String initialStatus = "Long missing";
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
       .withStatus(initialStatus)
