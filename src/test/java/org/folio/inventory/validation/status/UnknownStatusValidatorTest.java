@@ -28,15 +28,20 @@ public class UnknownStatusValidatorTest {
 
   @SneakyThrows
   @Parameters({
+    "Aged to lost",
     "Available",
     "Awaiting pickup",
     "Awaiting delivery",
+    "Checked out",
+    "Claimed returned",
+    "Declared lost",
     "In process (non-requestable)",
     "In transit",
     "Intellectual item",
     "Long missing",
     "Lost and paid",
     "Missing",
+    "On order",
     "Order closed",
     "Paged",
     "Restricted",
@@ -58,12 +63,7 @@ public class UnknownStatusValidatorTest {
   }
 
   @Parameters({
-    "Aged to lost",
-    "Checked out",
-    "Claimed returned",
-    "Declared lost",
     "In process",
-    "On order",
     "Unknown"
   })
   @Test

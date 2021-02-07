@@ -76,7 +76,7 @@ public class MarkItemIntellectualItemApiTests extends ApiTests {
 
   @Test
   public void cannotMarkItemIntellectualItemWhenNotInAllowedStatus() throws Exception {
-    final String initialStatus = "Claimed returned";
+    final String initialStatus = "Intellectual item";
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
       .withStatus(initialStatus)
