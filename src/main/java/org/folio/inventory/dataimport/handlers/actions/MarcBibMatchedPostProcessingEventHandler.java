@@ -70,8 +70,8 @@ public class MarcBibMatchedPostProcessingEventHandler implements EventHandler {
                 findResult -> {
                   if (findResult.getResult() != null && findResult.getResult().totalRecords == 1) {
                     dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encode(findResult.getResult().records.get(0)));
-                    future.complete(dataImportEventPayload);
                   }
+                  future.complete(dataImportEventPayload);
                 },
                 failure -> {
                   LOGGER.error(ERROR_HOLDING_MSG + format(". StatusCode: %s. Message: %s", failure.getStatusCode(), failure.getReason()));
