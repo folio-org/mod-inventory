@@ -837,7 +837,7 @@ public class InstancesApiExamples extends ApiTests {
       .setBody(expectedErrorMessage)
       .setContentType("plain/text")
       .setStatusCode(500)
-      .setMethod(POST));
+      .setMethod(POST.name()));
 
     final Response response = instancesClient.attemptToCreate(smallAngryPlanet(UUID.randomUUID()));
 
@@ -857,7 +857,7 @@ public class InstancesApiExamples extends ApiTests {
       .setBody(expectedErrorMessage)
       .setContentType("plain/text")
       .setStatusCode(500)
-      .setMethod(PUT));
+      .setMethod(PUT.name()));
 
     final Response updateResponse = instancesClient
       .attemptToReplace(instance.getId(), instance.getJson().copy()
