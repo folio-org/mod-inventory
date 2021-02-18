@@ -421,12 +421,7 @@ public class InstancesApiExamples extends ApiTests {
     URL instanceLocation = new URL(String.format("%s/%s", ApiRoot.instances(),
       newInstance.getString("id")));
 
-    CompletableFuture<Response> putCompleted = new CompletableFuture<>();
-
-    okapiClient.put(instanceLocation, updateInstanceRequest,
-      ResponseHandler.any(putCompleted));
-
-    Response putResponse = putCompleted.get(5, SECONDS);
+    Response putResponse = updateInstance(updateInstanceRequest);
 
     assertThat(putResponse.getStatusCode(), is(204));
 
@@ -467,15 +462,7 @@ public class InstancesApiExamples extends ApiTests {
 
     JsonObject updateInstanceRequest = smallAngryPlanet(UUID.randomUUID());
 
-    CompletableFuture<Response> putCompleted = new CompletableFuture<>();
-
-    URL instanceLocation = new URL(String.format("%s/%s", ApiRoot.instances(),
-      updateInstanceRequest.getString("id")));
-
-    okapiClient.put(instanceLocation, updateInstanceRequest,
-      ResponseHandler.any(putCompleted));
-
-    Response putResponse = putCompleted.get(5, SECONDS);
+    Response putResponse = updateInstance(updateInstanceRequest);
 
     assertThat(putResponse.getStatusCode(), is(404));
     assertThat(putResponse.getBody(), is("Instance not found"));
@@ -494,10 +481,7 @@ public class InstancesApiExamples extends ApiTests {
     JsonObject instanceForUpdate = newInstance.copy();
     URL instanceLocation = new URL(String.format("%s/%s", ApiRoot.instances(), newInstance.getString("id")));
     // Put Instance for update
-    CompletableFuture<Response> putCompleted = new CompletableFuture<>();
-    okapiClient.put(instanceLocation, instanceForUpdate, ResponseHandler.any(putCompleted));
-    Response putResponse = putCompleted.get(5, SECONDS);
-
+    Response putResponse = updateInstance(instanceForUpdate);
     assertThat(putResponse.getStatusCode(), is(HttpResponseStatus.NO_CONTENT.code()));
     // Get existing Instance
     CompletableFuture<Response> getCompleted = new CompletableFuture<>();
@@ -526,9 +510,7 @@ public class InstancesApiExamples extends ApiTests {
     for (String field : config.getInstanceBlockedFields()) {
       URL instanceLocation = new URL(String.format("%s/%s", ApiRoot.instances(), id));
       // Put Instance for update
-      CompletableFuture<Response> putCompleted = new CompletableFuture<>();
-      okapiClient.put(instanceLocation, instanceForUpdate, ResponseHandler.any(putCompleted));
-      Response putResponse = putCompleted.get(5, SECONDS);
+      Response putResponse = updateInstance(instanceForUpdate);
 
       assertThat(putResponse.getStatusCode(), is(HttpResponseStatus.UNPROCESSABLE_ENTITY.code()));
       assertThat(putResponse.getJson().getJsonArray("errors").size(), is(1));
@@ -554,9 +536,7 @@ public class InstancesApiExamples extends ApiTests {
     JsonObject instanceForUpdate = treasureIslandInstance(id);
     URL instanceLocation = new URL(String.format("%s/%s", ApiRoot.instances(), newInstance.getString("id")));
     // Put Instance for update
-    CompletableFuture<Response> putCompleted = new CompletableFuture<>();
-    okapiClient.put(instanceLocation, instanceForUpdate, ResponseHandler.any(putCompleted));
-    Response putResponse = putCompleted.get(5, SECONDS);
+    Response putResponse = updateInstance(instanceForUpdate);
 
     assertThat(putResponse.getStatusCode(), is(HttpResponseStatus.UNPROCESSABLE_ENTITY.code()));
     assertNotNull(putResponse.getJson().getJsonArray("errors"));
@@ -603,9 +583,7 @@ public class InstancesApiExamples extends ApiTests {
       .put("sourceRecordFormat", "test-format-1");
     URL instanceLocation = new URL(String.format("%s/%s", ApiRoot.instances(), newInstance.getString("id")));
     // Put Instance for update
-    CompletableFuture<Response> putCompleted = new CompletableFuture<>();
-    okapiClient.put(instanceLocation, instanceForUpdate, ResponseHandler.any(putCompleted));
-    Response putResponse = putCompleted.get(5, SECONDS);
+    Response putResponse = updateInstance(instanceForUpdate);
 
     assertThat(putResponse.getStatusCode(), is(HttpResponseStatus.NO_CONTENT.code()));
 
@@ -1014,12 +992,11 @@ public class InstancesApiExamples extends ApiTests {
   private Response updateInstance(JsonObject instance) throws MalformedURLException,
     InterruptedException, ExecutionException, TimeoutException {
 
-    CompletableFuture<Response> putFuture = new CompletableFuture<>();
     String instanceUpdateUri = String
       .format("%s/%s", ApiRoot.instances(), instance.getString("id"));
 
-    okapiClient.put(instanceUpdateUri, instance, ResponseHandler.any(putFuture));
+    final var putFuture = okapiClient.put(instanceUpdateUri, instance);
 
-    return putFuture.get(5, SECONDS);
+    return putFuture.toCompletableFuture().get(5, SECONDS);
   }
 }

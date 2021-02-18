@@ -217,12 +217,10 @@ public class ResourceClient {
     throws MalformedURLException, InterruptedException, ExecutionException,
     TimeoutException {
 
-    CompletableFuture<Response> putCompleted = new CompletableFuture<>();
+    final var putCompleted = client.put(
+      urlMaker.combine(String.format("/%s", id)), request);
 
-    client.put(urlMaker.combine(String.format("/%s", id)), request,
-      ResponseHandler.any(putCompleted));
-
-    return putCompleted.get(5, TimeUnit.SECONDS);
+    return putCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
   }
 
   public Response getById(UUID id)

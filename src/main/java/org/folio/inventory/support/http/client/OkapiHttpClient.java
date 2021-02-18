@@ -13,7 +13,6 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.http.HttpHeaders;
-import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -134,30 +133,6 @@ public class OkapiHttpClient {
 
     return futureResponse
       .thenCompose(OkapiHttpClient::mapAsyncResultToCompletionStage);
-  }
-
-  public void put(URL url,
-                  Object body,
-                  Handler<HttpClientResponse> responseHandler) {
-
-    put(url.toString(), body, responseHandler);
-  }
-
-  public void put(String url,
-                  Object body,
-                  Handler<HttpClientResponse> responseHandler) {
-
-    HttpClientRequest request = client.putAbs(url, responseHandler);
-
-    okapiHeaders(request);
-    accept(request, ContentType.APPLICATION_JSON, ContentType.TEXT_PLAIN);
-    jsonContentType(request);
-
-    String encodedBody = Json.encodePrettily(body);
-
-    log.info(String.format("PUT %s, Request: %s", url, encodedBody));
-
-    request.end(encodedBody);
   }
 
   public void get(URL url, Handler<HttpClientResponse> responseHandler) {
