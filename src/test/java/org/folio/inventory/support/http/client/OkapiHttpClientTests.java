@@ -3,13 +3,16 @@ package org.folio.inventory.support.http.client;
 import static com.github.tomakehurst.wiremock.client.WireMock.created;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.noContent;
+import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.put;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.folio.HttpStatus.HTTP_CREATED;
 import static org.folio.HttpStatus.HTTP_NO_CONTENT;
+import static org.folio.HttpStatus.HTTP_OK;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.emptyOrNullString;
@@ -80,6 +83,28 @@ public class OkapiHttpClientTests {
     final var response = postCompleted.toCompletableFuture().get(2, SECONDS);
 
     assertThat(response.getStatusCode(), is(HTTP_CREATED.toInt()));
+    assertThat(response.getJson().getString("message"), is("hello"));
+    assertThat(response.getContentType(), is("application/json"));
+    assertThat(response.getLocation(), is(locationResponseHeader));
+  }
+
+  @Test
+  public void canGetJson()
+    throws InterruptedException, ExecutionException, TimeoutException {
+
+    final String locationResponseHeader = "/a-different-location";
+
+    fakeWebServer.stubFor(matchingFolioHeaders(get(urlPathEqualTo("/record")))
+      .willReturn(okJson(dummyJsonResponseBody())
+        .withHeader("Location", locationResponseHeader)));
+
+    OkapiHttpClient client = createClient();
+
+    final var getCompleted = client.get(fakeWebServer.url("/record"));
+
+    final Response response = getCompleted.toCompletableFuture().get(2, SECONDS);
+
+    assertThat(response.getStatusCode(), is(HTTP_OK.toInt()));
     assertThat(response.getJson().getString("message"), is("hello"));
     assertThat(response.getContentType(), is("application/json"));
     assertThat(response.getLocation(), is(locationResponseHeader));

@@ -135,19 +135,20 @@ public class OkapiHttpClient {
       .thenCompose(OkapiHttpClient::mapAsyncResultToCompletionStage);
   }
 
+  public CompletionStage<Response> get(String url) {
+    final var futureResponse = new CompletableFuture<AsyncResult<HttpResponse<Buffer>>>();
+
+    final HttpRequest<Buffer> request = withStandardHeaders(webClient.getAbs(url));
+
+    request.send(futureResponse::complete);
+
+    return futureResponse
+      .thenCompose(OkapiHttpClient::mapAsyncResultToCompletionStage);
+  }
+
   public void get(URL url, Handler<HttpClientResponse> responseHandler) {
 
     get(url.toString(), responseHandler);
-  }
-
-  public void get(URL url,
-                  String query,
-                  Handler<HttpClientResponse> responseHandler)
-    throws MalformedURLException {
-
-    get(new URL(url.getProtocol(), url.getHost(), url.getPort(),
-        url.getPath() + "?" + query),
-      responseHandler);
   }
 
   public void get(String url, Handler<HttpClientResponse> responseHandler) {

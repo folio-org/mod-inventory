@@ -37,8 +37,8 @@ public class CollectionResourceClient {
   }
 
   public void get(String id, Consumer<Response> responseHandler) {
-    client.get(recordUrl(id),
-      responseConversationHandler(responseHandler));
+    client.get(recordUrl(id))
+      .thenAccept(responseHandler);
   }
 
   public void delete(String id, Consumer<Response> responseHandler) {
@@ -52,13 +52,12 @@ public class CollectionResourceClient {
   }
 
   public void getMany(String query, Consumer<Response> responseHandler) {
-
     String url = isProvided(query)
       ? String.format("%s?%s", collectionRoot, query)
       : collectionRoot.toString();
 
-    client.get(url,
-      responseConversationHandler(responseHandler));
+    client.get(url)
+      .thenAccept(responseHandler);
   }
 
   public void getMany(
@@ -73,7 +72,8 @@ public class CollectionResourceClient {
       pageLimit, pageOffset)
       : collectionRoot.toString();
 
-    client.get(url, responseConversationHandler(responseHandler));
+    client.get(url)
+      .thenAccept(responseHandler);
   }
 
   private boolean isProvided(String query) {
