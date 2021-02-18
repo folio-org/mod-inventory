@@ -26,11 +26,11 @@ import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
 import static support.matchers.ResponseMatchers.hasValidationError;
 import static support.matchers.TextDateTimeMatcher.withinSecondsAfter;
 
@@ -282,12 +282,9 @@ public class ItemApiExamples extends ApiTests {
       .withNoMaterialType()
       .create();
 
-    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+    final var postCompleted = okapiClient.post(ApiRoot.items(), newItemRequest);
 
-    okapiClient.post(ApiRoot.items(), newItemRequest,
-      ResponseHandler.any(postCompleted));
-
-    Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
+    Response postResponse = postCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
 
     assertThat(postResponse.getStatusCode(), is(422));
   }
@@ -312,12 +309,9 @@ public class ItemApiExamples extends ApiTests {
       .withNoPermanentLoanType()
       .create();
 
-    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+    final var postCompleted = okapiClient.post(ApiRoot.items(), newItemRequest);
 
-    okapiClient.post(ApiRoot.items(), newItemRequest,
-      ResponseHandler.any(postCompleted));
-
-    Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
+    Response postResponse = postCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
 
     assertThat(postResponse.getStatusCode(), is(422));
   }
@@ -387,13 +381,12 @@ public class ItemApiExamples extends ApiTests {
       .create();
     item.remove("status");
 
-    CompletableFuture<Response> createCompleted = new CompletableFuture<>();
-    okapiClient.post(items(""), item, ResponseHandler.json(createCompleted));
+    final var createCompleted = okapiClient.post(items(""), item);
 
-    Response createResponse = createCompleted.get(5, TimeUnit.SECONDS);
+    Response createResponse = createCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
+
     assertThat(createResponse,
-      hasValidationError("Status is a required field", "status", null)
-    );
+      hasValidationError("Status is a required field", "status", null));
   }
 
   @Test
@@ -416,10 +409,9 @@ public class ItemApiExamples extends ApiTests {
       .create();
     item.getJsonObject("status").remove("name");
 
-    CompletableFuture<Response> createCompleted = new CompletableFuture<>();
-    okapiClient.post(items(""), item, ResponseHandler.json(createCompleted));
+    final var createCompleted = okapiClient.post(items(""), item);
 
-    Response createResponse = createCompleted.get(5, TimeUnit.SECONDS);
+    Response createResponse = createCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
     assertThat(createResponse,
       hasValidationError("Status is a required field", "status", null)
     );
@@ -906,12 +898,9 @@ public class ItemApiExamples extends ApiTests {
       .canCirculate()
       .withBarcode("645398607547").create();
 
-    CompletableFuture<Response> createItemCompleted = new CompletableFuture<>();
+    final var createItemCompleted = okapiClient.post(ApiRoot.items(), sameBarcodeItemRequest);
 
-    okapiClient.post(ApiRoot.items(), sameBarcodeItemRequest,
-      ResponseHandler.any(createItemCompleted));
-
-    Response sameBarcodeCreateResponse = createItemCompleted.get(5, TimeUnit.SECONDS);
+    Response sameBarcodeCreateResponse = createItemCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
 
     assertThat(sameBarcodeCreateResponse.getStatusCode(), is(400));
     assertThat(sameBarcodeCreateResponse.getBody(),
@@ -1511,14 +1500,9 @@ public class ItemApiExamples extends ApiTests {
       .create()
       .put("status", new JsonObject().put("name", "Unrecognized name"));
 
-    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+    final var postCompleted = okapiClient.post(items(""), itemWithUnrecognizedStatus);
 
-    okapiClient.post(items(""),
-      itemWithUnrecognizedStatus,
-      ResponseHandler.any(postCompleted)
-    );
-
-    Response response = postCompleted.get(5, TimeUnit.SECONDS);
+    Response response = postCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
     assertThat(response, hasValidationError(
       "Undefined status specified",
       "status.name",

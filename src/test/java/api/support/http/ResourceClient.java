@@ -154,7 +154,7 @@ public class ResourceClient {
     return create(builder.create());
   }
 
-  public IndividualResource create(Object request)
+  public IndividualResource create(JsonObject request)
     throws MalformedURLException,
     InterruptedException,
     ExecutionException,
@@ -181,17 +181,14 @@ public class ResourceClient {
     }
   }
 
-  public Response attemptToCreate(Object request)
+  public Response attemptToCreate(JsonObject request)
     throws MalformedURLException, InterruptedException, ExecutionException,
     TimeoutException {
 
-    CompletableFuture<Response> createCompleted = new CompletableFuture<>();
-
     //TODO: Reinstate json checking
-    client.post(urlMaker.combine(""), request,
-      ResponseHandler.any(createCompleted));
+    final var createCompleted = client.post(urlMaker.combine(""), request);
 
-    return createCompleted.get(5, TimeUnit.SECONDS);
+    return createCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
   }
 
   public void replace(UUID id, Builder builder)
@@ -354,12 +351,10 @@ public class ResourceClient {
   public void emulateFailure(EndpointFailureDescriptor failureDescriptor)
     throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
 
-    final CompletableFuture<Response> future = new CompletableFuture<>();
+    final var future = client.post(urlMaker.combine("/emulate-failure"),
+      JsonObject.mapFrom(failureDescriptor));
 
-    client.post(urlMaker.combine("/emulate-failure"),
-      JsonObject.mapFrom(failureDescriptor), any(future));
-
-    assertThat(future.get(5, TimeUnit.SECONDS).getStatusCode(), is(201));
+    assertThat(future.toCompletableFuture().get(5, TimeUnit.SECONDS).getStatusCode(), is(201));
   }
 
   public void disableFailureEmulation()

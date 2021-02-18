@@ -87,9 +87,12 @@ public class OkapiHttpClient {
     this.exceptionHandler = exceptionHandler;
   }
 
+  public CompletionStage<Response> post(URL url, JsonObject body) {
+    return post(url.toString(), body);
+  }
+
   public CompletionStage<Response> post(String url, JsonObject body) {
-    final CompletableFuture<AsyncResult<HttpResponse<Buffer>>> futureResponse
-      = new CompletableFuture<>();
+    final var futureResponse = new CompletableFuture<AsyncResult<HttpResponse<Buffer>>>();
 
     final HttpRequest<Buffer> request = withStandardHeaders(webClient.postAbs(url));
 
@@ -99,33 +102,23 @@ public class OkapiHttpClient {
       .thenCompose(OkapiHttpClient::mapAsyncResultToCompletionStage);
   }
 
-  public void post(URL url,
-                   Object body,
-                   Handler<HttpClientResponse> responseHandler) {
+  public CompletionStage<Response> post(URL url, String body) {
+    return post(url.toString(), body);
+  }
 
-    HttpClientRequest request = client.postAbs(url.toString(), responseHandler);
+  public CompletionStage<Response> post(String url, String body) {
+    final var futureResponse = new CompletableFuture<AsyncResult<HttpResponse<Buffer>>>();
 
-    okapiHeaders(request);
-    accept(request, ContentType.APPLICATION_JSON, ContentType.TEXT_PLAIN);
-    jsonContentType(request);
+    final HttpRequest<Buffer> request = withStandardHeaders(webClient.postAbs(url));
 
-    request.setTimeout(5000);
+    final var buffer = body != null
+      ? Buffer.buffer(body)
+      : Buffer.buffer();
 
-    if (exceptionHandler != null) {
-      request.exceptionHandler(this.exceptionHandler::accept);
-    }
+    request.sendBuffer(buffer, futureResponse::complete);
 
-    if(body != null) {
-      String encodedBody = Json.encodePrettily(body);
-
-      log.info(String.format("POST %s, Request: %s",
-        url.toString(), encodedBody));
-
-      request.end(encodedBody);
-    }
-    else {
-      request.end();
-    }
+    return futureResponse
+      .thenCompose(OkapiHttpClient::mapAsyncResultToCompletionStage);
   }
 
   public void put(URL url,

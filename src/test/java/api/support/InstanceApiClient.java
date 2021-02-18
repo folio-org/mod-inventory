@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class InstanceApiClient {
   public static JsonObject createInstance(
@@ -23,12 +23,9 @@ public class InstanceApiClient {
       ExecutionException,
       TimeoutException {
 
-    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+    final var postCompleted = client.post(ApiRoot.instances(), newInstanceRequest);
 
-    client.post(ApiRoot.instances(), newInstanceRequest,
-      ResponseHandler.any(postCompleted));
-
-    Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
+    Response postResponse = postCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
 
     assertThat("Failed to create instance",
       postResponse.getStatusCode(), is(201));

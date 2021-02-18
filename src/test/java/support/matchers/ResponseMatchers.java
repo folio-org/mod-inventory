@@ -1,7 +1,10 @@
 package support.matchers;
 
+import java.util.Locale;
 import java.util.Objects;
 
+import org.apache.commons.lang.StringUtils;
+import org.folio.inventory.support.http.ContentType;
 import org.folio.inventory.support.http.client.Response;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
@@ -20,6 +23,10 @@ public class ResponseMatchers {
       @Override
       protected boolean matchesSafely(Response response) {
         if (response.getStatusCode() != 422) {
+          return false;
+        }
+
+        if (!response.getContentType().startsWith(ContentType.APPLICATION_JSON)) {
           return false;
         }
 
@@ -59,7 +66,7 @@ public class ResponseMatchers {
         mismatchDescription.appendText("Status: ").appendValue(response.getStatusCode())
           .appendText(", body: ");
 
-        if (response.getContentType().startsWith("application/json")) {
+        if (response.getContentType().startsWith(ContentType.APPLICATION_JSON)) {
           mismatchDescription.appendValue(response.getJson());
         } else {
           mismatchDescription.appendValue(response.getBody());

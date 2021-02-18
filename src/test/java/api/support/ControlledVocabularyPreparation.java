@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class ControlledVocabularyPreparation {
   private final OkapiHttpClient client;
@@ -49,12 +49,9 @@ public class ControlledVocabularyPreparation {
     if (doesNotExist(existingTerms, name)) {
       JsonObject vocabularyEntryRequest = new JsonObject().put("name", name);
 
-      CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+      final var postCompleted = client.post(controlledVocabularyRoot, vocabularyEntryRequest);
 
-      client.post(controlledVocabularyRoot,
-        vocabularyEntryRequest, ResponseHandler.json(postCompleted));
-
-      Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
+      Response postResponse = postCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
 
       assertThat("Failed to create reference record",
         postResponse.getStatusCode(), is(201));
@@ -89,12 +86,9 @@ public class ControlledVocabularyPreparation {
         .put("code", code)
         .put("source", source);
 
-      CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+      final var  postCompleted = client.post(controlledVocabularyRoot, vocabularyEntryRequest);
 
-      client.post(controlledVocabularyRoot,
-        vocabularyEntryRequest, ResponseHandler.json(postCompleted));
-
-      Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
+      Response postResponse = postCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
 
       assertThat("Failed to create reference record",
         postResponse.getStatusCode(), is(201));

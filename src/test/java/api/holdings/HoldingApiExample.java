@@ -63,12 +63,9 @@ public class HoldingApiExample extends ApiTests {
 
     holdingAsJson.remove("permanentLocationId");
 
-    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+    final var postCompleted = okapiClient.post(new URL(HOLDINGS_URL), holdingAsJson);
 
-    okapiClient.post(new URL(HOLDINGS_URL), holdingAsJson,
-      ResponseHandler.any(postCompleted));
-
-    Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
+    Response postResponse = postCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
 
     assertThat(postResponse.getStatusCode(), is(422));
   }
@@ -87,12 +84,9 @@ public class HoldingApiExample extends ApiTests {
 
     holdingAsJson.remove("instanceId");
 
-    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+    final var postCompleted = okapiClient.post(new URL(HOLDINGS_URL), holdingAsJson);
 
-    okapiClient.post(new URL(HOLDINGS_URL), holdingAsJson,
-      ResponseHandler.any(postCompleted));
-
-    Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
+    Response postResponse = postCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
 
     assertThat(postResponse.getStatusCode(), is(422));
   }
