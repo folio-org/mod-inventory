@@ -8,6 +8,7 @@ import org.folio.inventory.support.http.client.Response;
 
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpClientResponse;
+import io.vertx.core.json.JsonObject;
 
 public class CollectionResourceClient {
 
@@ -24,9 +25,8 @@ public class CollectionResourceClient {
   public void post(Object resourceRepresentation,
                    Consumer<Response> responseHandler) {
 
-    client.post(collectionRoot,
-      resourceRepresentation,
-      responseConversationHandler(responseHandler));
+    client.post(collectionRoot.toString(), JsonObject.mapFrom(resourceRepresentation))
+      .thenAccept(responseHandler);
   }
 
   public void put(String id, Object resourceRepresentation,
