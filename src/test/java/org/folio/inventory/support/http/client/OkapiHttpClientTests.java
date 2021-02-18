@@ -3,15 +3,22 @@ package org.folio.inventory.support.http.client;
 import static com.github.tomakehurst.wiremock.client.WireMock.created;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
+import static com.github.tomakehurst.wiremock.client.WireMock.noContent;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.put;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.folio.HttpStatus.HTTP_CREATED;
+import static org.folio.HttpStatus.HTTP_NO_CONTENT;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.emptyOrNullString;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 import org.folio.inventory.common.VertxAssistant;
 import org.junit.AfterClass;
@@ -77,6 +84,28 @@ public class OkapiHttpClientTests {
     assertThat(response.getContentType(), is("application/json"));
     assertThat(response.getLocation(), is(locationResponseHeader));
   }
+
+  @Test
+  public void canPutWithJson()
+    throws InterruptedException, ExecutionException, TimeoutException {
+
+    fakeWebServer.stubFor(
+      matchingFolioHeaders(put(urlPathEqualTo("/record/12345")))
+        .withHeader("Content-Type", equalTo("application/json"))
+        .withRequestBody(equalToJson(dummyJsonRequestBody().encodePrettily()))
+        .willReturn(noContent()));
+
+    OkapiHttpClient client = createClient();
+
+    final var postCompleted = client.put(
+      fakeWebServer.url("/record/12345"), dummyJsonRequestBody());
+
+    final Response response = postCompleted.toCompletableFuture().get(2, SECONDS);
+
+    assertThat(response.getStatusCode(), is(HTTP_NO_CONTENT.toInt()));
+    assertThat(response.getBody(), is(emptyOrNullString()));
+  }
+
 
   //TODO: Maybe replace this with a filter extension
   private MappingBuilder matchingFolioHeaders(MappingBuilder mappingBuilder) {

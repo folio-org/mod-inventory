@@ -25,25 +25,24 @@ public class CollectionResourceClient {
   public void post(Object resourceRepresentation,
                    Consumer<Response> responseHandler) {
 
-    client.post(collectionRoot.toString(), JsonObject.mapFrom(resourceRepresentation))
+    client.post(collectionRoot, JsonObject.mapFrom(resourceRepresentation))
       .thenAccept(responseHandler);
   }
 
   public void put(String id, Object resourceRepresentation,
                   Consumer<Response> responseHandler) {
 
-    client.put(String.format(collectionRoot + "/%s", id),
-      resourceRepresentation,
-      responseConversationHandler(responseHandler));
+    client.put(recordUrl(id), JsonObject.mapFrom(resourceRepresentation))
+      .thenAccept(responseHandler);
   }
 
   public void get(String id, Consumer<Response> responseHandler) {
-    client.get(String.format(collectionRoot + "/%s", id),
+    client.get(recordUrl(id),
       responseConversationHandler(responseHandler));
   }
 
   public void delete(String id, Consumer<Response> responseHandler) {
-    client.delete(String.format(collectionRoot + "/%s", id),
+    client.delete(recordUrl(id),
       responseConversationHandler(responseHandler));
   }
 
@@ -87,5 +86,9 @@ public class CollectionResourceClient {
     return response ->
       response.bodyHandler(buffer ->
         responseHandler.accept(Response.from(response, buffer)));
+  }
+
+  private String recordUrl(String id) {
+    return String.format(collectionRoot + "/%s", id);
   }
 }
