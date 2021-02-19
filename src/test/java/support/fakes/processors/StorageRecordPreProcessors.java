@@ -130,22 +130,15 @@ public final class StorageRecordPreProcessors {
       return completedFuture(new JsonObject());
     }
 
-    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
-
     try {
-      ApiTestSuite.createOkapiHttpClient()
-        .get(
-          StorageInterfaceUrls.holdingStorageUrl("?query=id=" + id),
-          ResponseHandler.json(getCompleted)
-        );
+      return ApiTestSuite.createOkapiHttpClient().get(
+        StorageInterfaceUrls.holdingStorageUrl("?query=id=" + id))
+        .thenApply(
+          response -> response.getJson().getJsonArray("holdingsRecords").getJsonObject(0))
+        .toCompletableFuture();
     } catch (MalformedURLException ex) {
-      getCompleted.completeExceptionally(ex);
+      return CompletableFuture.failedFuture(ex);
     }
-
-    return getCompleted.thenApply(
-      response -> response.getJson().getJsonArray("holdingsRecords")
-        .getJsonObject(0)
-    );
   }
 
   public static RecordPreProcessor setHridProcessor(

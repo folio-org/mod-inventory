@@ -14,8 +14,6 @@ import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
@@ -24,7 +22,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.support.http.ContentType;
 
-import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.concurrent.CompletableFuture;
@@ -32,7 +29,6 @@ import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
 
 public class OkapiHttpClient {
-  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private static final String TENANT_HEADER = "X-Okapi-Tenant";
   private static final String TOKEN_HEADER = "X-Okapi-Token";
@@ -135,6 +131,10 @@ public class OkapiHttpClient {
       .thenCompose(OkapiHttpClient::mapAsyncResultToCompletionStage);
   }
 
+  public CompletionStage<Response> get(URL url) {
+    return get(url.toString());
+  }
+
   public CompletionStage<Response> get(String url) {
     final var futureResponse = new CompletableFuture<AsyncResult<HttpResponse<Buffer>>>();
 
@@ -144,24 +144,6 @@ public class OkapiHttpClient {
 
     return futureResponse
       .thenCompose(OkapiHttpClient::mapAsyncResultToCompletionStage);
-  }
-
-  public void get(URL url, Handler<HttpClientResponse> responseHandler) {
-
-    get(url.toString(), responseHandler);
-  }
-
-  public void get(String url, Handler<HttpClientResponse> responseHandler) {
-
-    HttpClientRequest request = client.getAbs(url, responseHandler);
-
-    accept(request, ContentType.APPLICATION_JSON);
-
-    okapiHeaders(request);
-
-    log.info(String.format("GET %s", url));
-
-    request.end();
   }
 
   public void delete(URL url, Handler<HttpClientResponse> responseHandler) {
@@ -205,11 +187,6 @@ public class OkapiHttpClient {
     String... contentTypes) {
 
     request.putHeader(HttpHeaders.ACCEPT, StringUtils.join(contentTypes, ","));
-  }
-
-  private void jsonContentType(HttpClientRequest request) {
-    request.putHeader(HttpHeaders.CONTENT_TYPE.toString(),
-      ContentType.APPLICATION_JSON);
   }
 
   private HttpRequest<Buffer> withStandardHeaders(HttpRequest<Buffer> request) {

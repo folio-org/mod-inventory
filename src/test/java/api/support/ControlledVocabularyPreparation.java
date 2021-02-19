@@ -34,11 +34,9 @@ public class ControlledVocabularyPreparation {
   public String createOrReferenceTerm(String name)
     throws InterruptedException, ExecutionException, TimeoutException {
 
-    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+    final var getItemCompleted = client.get(controlledVocabularyRoot);
 
-    client.get(controlledVocabularyRoot, ResponseHandler.json(getCompleted));
-
-    Response response = getCompleted.get(5, TimeUnit.SECONDS);
+    Response response = getItemCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
 
     assertThat("Controlled vocabulary API unavailable",
       response.getStatusCode(), is(200));
@@ -68,11 +66,9 @@ public class ControlledVocabularyPreparation {
   public String createOrReferenceTerm(String name, String code, String source)
     throws InterruptedException, ExecutionException, TimeoutException {
 
-    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+    final var getCompleted = client.get(controlledVocabularyRoot);
 
-    client.get(controlledVocabularyRoot, ResponseHandler.json(getCompleted));
-
-    Response response = getCompleted.get(5, TimeUnit.SECONDS);
+    Response response = getCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
 
     assertThat("Controlled vocabulary API unavailable",
       response.getStatusCode(), is(200));

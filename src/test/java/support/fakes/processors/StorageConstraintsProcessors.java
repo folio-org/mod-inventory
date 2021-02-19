@@ -108,10 +108,6 @@ public final class StorageConstraintsProcessors {
   }
 
   private static CompletableFuture<Response> get(URL url) throws MalformedURLException {
-    final CompletableFuture<Response> result = new CompletableFuture<>();
-
-    createOkapiHttpClient().get(url, ResponseHandler.any(result));
-
-    return result;
+    return createOkapiHttpClient().get(url).toCompletableFuture();
   }
 }

@@ -1,7 +1,9 @@
 package api.support.http;
 
 import static java.lang.String.format;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.folio.inventory.support.http.client.ResponseHandler.any;
+import static org.folio.util.StringUtil.urlEncode;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNull.notNullValue;
 import static org.hamcrest.junit.MatcherAssert.assertThat;
@@ -172,12 +174,9 @@ public class ResourceClient {
     else {
       assertThat(response.getLocation(), is(notNullValue()));
 
-      CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+      final var getCompleted = client.get(response.getLocation());
 
-      client.get(response.getLocation(),
-        ResponseHandler.any(getCompleted));
-
-      return new IndividualResource(getCompleted.get(5, TimeUnit.SECONDS));
+      return new IndividualResource(getCompleted.toCompletableFuture().get(5, SECONDS));
     }
   }
 
@@ -188,7 +187,7 @@ public class ResourceClient {
     //TODO: Reinstate json checking
     final var createCompleted = client.post(urlMaker.combine(""), request);
 
-    return createCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
+    return createCompleted.toCompletableFuture().get(5, SECONDS);
   }
 
   public void replace(UUID id, Builder builder)
@@ -220,7 +219,7 @@ public class ResourceClient {
     final var putCompleted = client.put(
       urlMaker.combine(String.format("/%s", id)), request);
 
-    return putCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
+    return putCompleted.toCompletableFuture().get(5, SECONDS);
   }
 
   public Response getById(UUID id)
@@ -229,12 +228,9 @@ public class ResourceClient {
     ExecutionException,
     TimeoutException {
 
-    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+    final var getCompleted = client.get(urlMaker.combine(String.format("/%s", id)));
 
-    client.get(urlMaker.combine(String.format("/%s", id)),
-      ResponseHandler.any(getCompleted));
-
-    return getCompleted.get(5, TimeUnit.SECONDS);
+    return getCompleted.toCompletableFuture().get(5, SECONDS);
   }
 
   public void delete(UUID id)
@@ -248,7 +244,7 @@ public class ResourceClient {
     client.delete(urlMaker.combine(String.format("/%s", id)),
       ResponseHandler.any(deleteFinished));
 
-    Response response = deleteFinished.get(5, TimeUnit.SECONDS);
+    Response response = deleteFinished.get(5, SECONDS);
 
     assertThat(String.format(
       "Failed to delete %s %s: %s", resourceName, id, response.getBody()),
@@ -266,7 +262,7 @@ public class ResourceClient {
     client.delete(urlMaker.combine(""),
       ResponseHandler.any(deleteAllFinished));
 
-    Response response = deleteAllFinished.get(5, TimeUnit.SECONDS);
+    Response response = deleteAllFinished.get(5, SECONDS);
 
     assertThat(String.format(
       "Failed to delete %s: %s", resourceName, response.getBody()),
@@ -289,7 +285,7 @@ public class ResourceClient {
           record.getString("id"))),
           ResponseHandler.any(deleteFinished));
 
-        Response deleteResponse = deleteFinished.get(5, TimeUnit.SECONDS);
+        Response deleteResponse = deleteFinished.get(5, SECONDS);
 
         assertThat(String.format(
           "Failed to delete %s: %s", resourceName, deleteResponse.getBody()),
@@ -309,12 +305,9 @@ public class ResourceClient {
     ExecutionException,
     TimeoutException {
 
-    CompletableFuture<Response> getFinished = new CompletableFuture<>();
+    final var getFinished = client.get(urlMaker.combine(""));
 
-    client.get(urlMaker.combine(""),
-      ResponseHandler.any(getFinished));
-
-    Response response = getFinished.get(5, TimeUnit.SECONDS);
+    Response response = getFinished.toCompletableFuture().get(5, SECONDS);
 
     assertThat(format("Get all records failed: %s", response.getBody()),
       response.getStatusCode(), is(200));
@@ -338,12 +331,10 @@ public class ResourceClient {
   public Response attemptGetMany(String query, Integer limit) throws MalformedURLException,
     InterruptedException, ExecutionException, TimeoutException {
 
-    CompletableFuture<Response> getFinished = new CompletableFuture<>();
+    final var getFinished = client.get(
+      urlMaker.combine(format("?query=%s&limit=%s", urlEncode(query), limit)));
 
-    client.get(urlMaker.combine(format("?query=%s&limit=%s", StringUtil.urlEncode(query), limit)),
-      ResponseHandler.any(getFinished));
-
-    return getFinished.get(5, TimeUnit.SECONDS);
+    return getFinished.toCompletableFuture().get(5, SECONDS);
   }
 
   public void emulateFailure(EndpointFailureDescriptor failureDescriptor)
@@ -352,7 +343,7 @@ public class ResourceClient {
     final var future = client.post(urlMaker.combine("/emulate-failure"),
       JsonObject.mapFrom(failureDescriptor));
 
-    assertThat(future.toCompletableFuture().get(5, TimeUnit.SECONDS).getStatusCode(), is(201));
+    assertThat(future.toCompletableFuture().get(5, SECONDS).getStatusCode(), is(201));
   }
 
   public void disableFailureEmulation()

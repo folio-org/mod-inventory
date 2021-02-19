@@ -1,18 +1,17 @@
 package api.support;
 
-import io.vertx.core.json.JsonObject;
-import org.folio.inventory.support.http.client.OkapiHttpClient;
-import org.folio.inventory.support.http.client.Response;
-import org.folio.inventory.support.http.client.ResponseHandler;
-
-import java.net.MalformedURLException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+
+import java.net.MalformedURLException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+
+import org.folio.inventory.support.http.client.OkapiHttpClient;
+import org.folio.inventory.support.http.client.Response;
+
+import io.vertx.core.json.JsonObject;
 
 public class InstanceApiClient {
   public static JsonObject createInstance(
@@ -25,16 +24,14 @@ public class InstanceApiClient {
 
     final var postCompleted = client.post(ApiRoot.instances(), newInstanceRequest);
 
-    Response postResponse = postCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
+    Response postResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
 
     assertThat("Failed to create instance",
       postResponse.getStatusCode(), is(201));
 
-    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+    final var getCompleted = client.get(postResponse.getLocation());
 
-    client.get(postResponse.getLocation(), ResponseHandler.json(getCompleted));
-
-    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+    Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
 
     assertThat("Failed to get instance",
       getResponse.getStatusCode(), is(200));
