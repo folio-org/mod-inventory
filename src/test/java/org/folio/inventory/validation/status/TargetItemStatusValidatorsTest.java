@@ -36,6 +36,8 @@ public class TargetItemStatusValidatorsTest {
     targetItemStatusValidators = new TargetItemStatusValidators();
   }
 
+  // Method for creation of real backend Item State Transition Matrix based directly on source code.
+  // For convenient visualisation copy content of created file an paste into Google Sheet document.
   @Test
   public void generateItemStatusTransitionMatrix( ) {
     final String fieldDelim = "\t";
