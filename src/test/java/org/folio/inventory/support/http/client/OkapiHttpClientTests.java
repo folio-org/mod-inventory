@@ -20,7 +20,6 @@ import static org.hamcrest.Matchers.emptyOrNullString;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
@@ -35,6 +34,7 @@ import com.github.tomakehurst.wiremock.junit.WireMockRule;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.WebClient;
 import lombok.SneakyThrows;
 
 public class OkapiHttpClientTests {
@@ -161,7 +161,8 @@ public class OkapiHttpClientTests {
   }
 
   private OkapiHttpClient createClient() {
-    return new OkapiHttpClient(vertxAssistant.createUsingVertx(Vertx::createHttpClient),
+    return new OkapiHttpClient(
+      WebClient.wrap(vertxAssistant.createUsingVertx(Vertx::createHttpClient)),
       okapiUrl, tenantId, token, userId, requestId, error -> {});
   }
 

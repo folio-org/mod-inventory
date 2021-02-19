@@ -7,6 +7,7 @@ import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.FileUpload;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.handler.BodyHandler;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.common.Context;
@@ -233,7 +234,7 @@ public class ModsIngestion {
 
     throws MalformedURLException {
 
-    return new OkapiHttpClient(client, context,
+    return new OkapiHttpClient(WebClient.wrap(client), context,
       exception -> ServerErrorResponse.internalError(routingContext.response(),
         String.format("Failed to contact storage module: %s",
           exception.toString())));

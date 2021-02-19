@@ -2,9 +2,10 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.WebClient;
+
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
@@ -15,6 +16,7 @@ import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.storage.external.CollectionResourceRepository;
 import org.folio.inventory.support.InstanceUtil;
+import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
 
@@ -22,9 +24,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiFunction;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.substring;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
@@ -38,9 +42,14 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload - event payload context does not contain MARC_BIBLIOGRAPHIC data";
 
-  public CreateInstanceEventHandler(Storage storage, HttpClient client) {
-    this.storage = storage;
-    this.client = client;
+  CreateInstanceEventHandler(Storage storage, WebClient webClient,
+    BiFunction<WebClient, Context, OkapiHttpClient> okapiClientCreator) {
+
+    super(storage, webClient, okapiClientCreator);
+  }
+
+  public CreateInstanceEventHandler(Storage storage, WebClient webClient) {
+    super(storage, webClient);
   }
 
   @Override

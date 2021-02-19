@@ -10,6 +10,7 @@ import org.folio.inventory.support.http.server.ServerErrorResponse;
 
 import io.vertx.core.http.HttpClient;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.client.WebClient;
 
 public final class Clients {
   private final CollectionResourceRepository requestStorageRepository;
@@ -39,7 +40,7 @@ public final class Clients {
     HttpClient client, RoutingContext routingContext, WebContext context)
     throws MalformedURLException {
 
-    return new OkapiHttpClient(client, context,
+    return new OkapiHttpClient(WebClient.wrap(client), context,
       exception -> ServerErrorResponse.internalError(routingContext.response(),
         String.format("Failed to contact storage module: %s", exception.toString())));
   }

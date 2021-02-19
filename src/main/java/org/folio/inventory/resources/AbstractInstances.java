@@ -40,6 +40,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.client.WebClient;
 
 public abstract class AbstractInstances {
 
@@ -446,7 +447,7 @@ public abstract class AbstractInstances {
     WebContext context)
     throws MalformedURLException {
 
-    return new OkapiHttpClient(client, context,
+    return new OkapiHttpClient(WebClient.wrap(client), context,
       exception -> ServerErrorResponse.internalError(routingContext.response(), format("Failed to contact storage module: %s",
         exception.toString())));
   }

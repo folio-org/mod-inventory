@@ -42,6 +42,7 @@ import api.tenant.TenantApiExamples;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.WebClient;
 import support.fakes.FakeOkapi;
 
 @RunWith(Suite.class)
@@ -214,11 +215,9 @@ public class ApiTestSuite {
     throws MalformedURLException {
 
     return new OkapiHttpClient(
-      vertxAssistant.createUsingVertx(Vertx::createHttpClient),
-      new URL(storageOkapiUrl()), TENANT_ID, TOKEN, USER_ID, null, it ->
-      System.out.println(
-        String.format("Request failed: %s",
-          it.toString())));
+      WebClient.wrap(vertxAssistant.createUsingVertx(Vertx::createHttpClient)),
+      new URL(storageOkapiUrl()), TENANT_ID, TOKEN, USER_ID, null,
+      it -> System.out.println(String.format("Request failed: %s", it.toString())));
   }
 
   public static String storageOkapiUrl() {

@@ -16,7 +16,6 @@ import org.folio.inventory.common.WebContext;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
@@ -38,18 +37,17 @@ public class OkapiHttpClient {
   private final String requestId;
   private final Consumer<Throwable> exceptionHandler;
 
-  public OkapiHttpClient(HttpClient httpClient,
-    WebContext context, Consumer<Throwable> exceptionHandler)
-    throws MalformedURLException {
+  public OkapiHttpClient(WebClient webClient, WebContext context,
+    Consumer<Throwable> exceptionHandler) throws MalformedURLException {
 
-    this(httpClient, new URL(context.getOkapiLocation()),
+    this(webClient, new URL(context.getOkapiLocation()),
       context.getTenantId(), context.getToken(), context.getUserId(),
       context.getRequestId(), exceptionHandler);
   }
 
   /** HTTP client that calls via Okapi
    *
-   * @param httpClient as returned from vertx createHttpClient
+   * @param webClient web client to use for HTTP requests
    * @param okapiUrl Okapi URL (java.net.URL)
    * @param tenantId Okapi tenantId - ignored if blank/empty
    * @param token - Okapi token - ignored if blank/empty
@@ -57,15 +55,10 @@ public class OkapiHttpClient {
    * @param requestId - Okapi Request ID - ignored if null
    * @param exceptionHandler - exceptionHandler (for POST only, not PUT??)
    */
-  public OkapiHttpClient(HttpClient httpClient,
-    URL okapiUrl,
-    String tenantId,
-    String token,
-    String userId,
-    String requestId,
-    Consumer<Throwable> exceptionHandler) {
+  public OkapiHttpClient(WebClient webClient, URL okapiUrl, String tenantId,
+    String token, String userId, String requestId, Consumer<Throwable> exceptionHandler) {
 
-    this.webClient = WebClient.wrap(httpClient);
+    this.webClient = webClient;
     this.okapiUrl = okapiUrl;
     this.tenantId = tenantId;
     this.userId = userId;

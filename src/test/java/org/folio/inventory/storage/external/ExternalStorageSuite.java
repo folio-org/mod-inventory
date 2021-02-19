@@ -9,6 +9,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
+
+import io.vertx.ext.web.client.WebClient;
 import support.fakes.FakeOkapi;
 
 import java.net.MalformedURLException;
@@ -86,11 +88,9 @@ public class ExternalStorageSuite {
     throws MalformedURLException {
 
     return new OkapiHttpClient(
-      vertxAssistant.createUsingVertx(Vertx::createHttpClient),
-      new URL(getStorageAddress()), TENANT_ID, TENANT_TOKEN, USER_ID, "1234", it ->
-      System.out.println(
-        String.format("Request failed: %s",
-          it.toString())));
+      WebClient.wrap(vertxAssistant.createUsingVertx(Vertx::createHttpClient)),
+      new URL(getStorageAddress()), TENANT_ID, TENANT_TOKEN, USER_ID, "1234",
+      it -> System.out.println(String.format("Request failed: %s", it.toString())));
   }
 
 }

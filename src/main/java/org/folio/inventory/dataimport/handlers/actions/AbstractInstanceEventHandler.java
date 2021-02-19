@@ -1,12 +1,19 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import static java.lang.String.format;
+import static org.folio.ActionProfile.FolioRecord.INSTANCE;
+import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
+
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.BiFunction;
+
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.domain.instances.Instance;
@@ -23,18 +30,14 @@ import org.folio.processing.mapping.defaultmapper.RecordToInstanceMapperBuilder;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.Record;
 
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-
-import static java.lang.String.format;
-import static org.folio.ActionProfile.FolioRecord.INSTANCE;
-import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import io.vertx.ext.web.client.WebClient;
+import lombok.SneakyThrows;
 
 public abstract class AbstractInstanceEventHandler implements EventHandler {
   protected static final Logger LOGGER = LoggerFactory.getLogger(AbstractInstanceEventHandler.class);
@@ -42,10 +45,26 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   protected static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   protected static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
   protected static final String INSTANCE_PATH = "instance";
-  protected final List<String> requiredFields = Arrays.asList("source", "title", "instanceTypeId");
+  protected static final List<String> requiredFields = Arrays.asList("source", "title", "instanceTypeId");
 
-  protected Storage storage;
-  protected HttpClient client;
+  protected final Storage storage;
+  protected final BiFunction<WebClient, Context, OkapiHttpClient> okapiClientCreator;
+  private final WebClient webClient;
+
+  public AbstractInstanceEventHandler(Storage storage, WebClient webClient,
+    BiFunction<WebClient, Context, OkapiHttpClient> okapiClientCreator) {
+
+    this.storage = storage;
+    this.webClient = webClient;
+    this.okapiClientCreator = okapiClientCreator;
+  }
+
+  public AbstractInstanceEventHandler(Storage storage, WebClient webClient) {
+    this.storage = storage;
+    this.webClient = webClient;
+    this.okapiClientCreator = this::createHttpClient;
+  }
+
 
   protected Future<Void> createPrecedingSucceedingTitles(Instance instance, CollectionResourceRepository precedingSucceedingTitlesRepository) {
     List<PrecedingSucceedingTitle> precedingSucceedingTitles = new ArrayList<>();
@@ -111,18 +130,18 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
 
   protected CollectionResourceClient createPrecedingSucceedingTitlesClient(Context context) {
     try {
-      OkapiHttpClient okapiClient = createHttpClient(context);
+      OkapiHttpClient okapiClient = okapiClientCreator.apply(webClient, context);
       return new CollectionResourceClient(okapiClient, new URL(context.getOkapiLocation() + "/preceding-succeeding-titles"));
     } catch (MalformedURLException e) {
       throw new EventProcessingException("Error creation of precedingSucceedingClient", e);
     }
   }
 
-  protected OkapiHttpClient createHttpClient(Context context) throws MalformedURLException {
-    return new OkapiHttpClient(client, new URL(context.getOkapiLocation()), context.getTenantId(),
-      context.getToken(), null, null, null);
+  @SneakyThrows
+  private OkapiHttpClient createHttpClient(WebClient webClient, Context context) {
+    return new OkapiHttpClient(webClient, new URL(context.getOkapiLocation()),
+      context.getTenantId(), context.getToken(), null, null, null);
   }
-
 
   protected void prepareEvent(DataImportEventPayload dataImportEventPayload) {
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
