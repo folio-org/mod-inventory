@@ -1,6 +1,6 @@
 #%RAML 1.0
 title: Inventory Event Handlers API
-version: v0.1
+version: v1.0
 protocols: [ HTTP, HTTPS ]
 baseUri: http://localhost
 
@@ -9,20 +9,6 @@ documentation:
     content: <b>API for handling events</b>
 
 /inventory/handlers:
-  /data-import:
-    displayName: API for handling all data-import events
-    post:
-      description: "Handler for data-import events"
-      body:
-        application/json:
-      responses:
-        204:
-          description: "Received data-import event"
-        500:
-          description: "Internal server error"
-          body:
-            text/plain:
-              example: "Internal server error"
   /instances:
     displayName: API for handling Instance update events
     post:
