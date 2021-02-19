@@ -146,6 +146,21 @@ public class OkapiHttpClient {
       .thenCompose(OkapiHttpClient::mapAsyncResultToCompletionStage);
   }
 
+  public CompletionStage<Response> delete(URL url) {
+    return delete(url.toString());
+  }
+
+  public CompletionStage<Response> delete(String url) {
+    final var futureResponse = new CompletableFuture<AsyncResult<HttpResponse<Buffer>>>();
+
+    final HttpRequest<Buffer> request = withStandardHeaders(webClient.deleteAbs(url));
+
+    request.send(futureResponse::complete);
+
+    return futureResponse
+      .thenCompose(OkapiHttpClient::mapAsyncResultToCompletionStage);
+  }
+
   public void delete(URL url, Handler<HttpClientResponse> responseHandler) {
 
     delete(url.toString(), responseHandler);

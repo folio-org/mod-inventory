@@ -1,6 +1,7 @@
 package org.folio.inventory.support.http.client;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.created;
+import static com.github.tomakehurst.wiremock.client.WireMock.delete;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
@@ -131,7 +132,24 @@ public class OkapiHttpClientTests {
     assertThat(response.getBody(), is(emptyOrNullString()));
   }
 
+  @Test
+  public void canDelete()
+    throws InterruptedException, ExecutionException, TimeoutException {
 
+    fakeWebServer.stubFor(matchingFolioHeaders(delete(urlPathEqualTo("/record")))
+      .willReturn(noContent()));
+
+    OkapiHttpClient client = createClient();
+
+    final var deleteCompleted = client.delete(
+      fakeWebServer.url("/record"));
+
+    final Response response = deleteCompleted.toCompletableFuture().get(2, SECONDS);
+
+    assertThat(response.getStatusCode(), is(HTTP_NO_CONTENT.toInt()));
+    assertThat(response.getBody(), is(emptyOrNullString()));
+  }
+  
   //TODO: Maybe replace this with a filter extension
   private MappingBuilder matchingFolioHeaders(MappingBuilder mappingBuilder) {
     return mappingBuilder

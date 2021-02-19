@@ -42,13 +42,13 @@ public class CollectionResourceClient {
   }
 
   public void delete(String id, Consumer<Response> responseHandler) {
-    client.delete(recordUrl(id),
-      responseConversationHandler(responseHandler));
+    client.delete(recordUrl(id))
+      .thenAccept(responseHandler);
   }
 
   public void delete(Consumer<Response> responseHandler) {
-    client.delete(collectionRoot,
-      responseConversationHandler(responseHandler));
+    client.delete(collectionRoot)
+      .thenAccept(responseHandler);
   }
 
   public void getMany(String query, Consumer<Response> responseHandler) {
@@ -78,14 +78,6 @@ public class CollectionResourceClient {
 
   private boolean isProvided(String query) {
     return query != null && !query.trim().equals("");
-  }
-
-  private Handler<HttpClientResponse> responseConversationHandler(
-    Consumer<Response> responseHandler) {
-
-    return response ->
-      response.bodyHandler(buffer ->
-        responseHandler.accept(Response.from(response, buffer)));
   }
 
   private String recordUrl(String id) {
