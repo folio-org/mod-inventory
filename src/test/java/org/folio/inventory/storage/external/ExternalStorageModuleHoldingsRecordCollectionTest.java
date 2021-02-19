@@ -1,11 +1,13 @@
 package org.folio.inventory.storage.external;
 
+import static org.folio.inventory.storage.external.ExternalStorageSuite.getStorageAddress;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 import java.util.UUID;
 
 import org.folio.HoldingsRecord;
+import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -15,13 +17,10 @@ import io.vertx.core.json.JsonObject;
 
 @Ignore("These tests fail during maven builds for an unknown reason")
 public class ExternalStorageModuleHoldingsRecordCollectionTest {
-
-  private ExternalStorageModuleHoldingsRecordCollection storage;
-
-  @Before
-  public void before() {
-    storage = new ExternalStorageModuleHoldingsRecordCollection(null, null, null, null, null);
-  }
+  private final ExternalStorageModuleHoldingsRecordCollection storage =
+    ExternalStorageSuite.useVertx(
+      it -> new ExternalStorageModuleHoldingsRecordCollection(it, getStorageAddress(),
+        ExternalStorageSuite.TENANT_ID, ExternalStorageSuite.TENANT_TOKEN, it.createHttpClient()));
 
   @Test
   public void shouldMapFromJson() {
