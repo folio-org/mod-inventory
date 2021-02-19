@@ -239,12 +239,10 @@ public class ResourceClient {
     ExecutionException,
     TimeoutException {
 
-    CompletableFuture<Response> deleteFinished = new CompletableFuture<>();
+    final var deleteCompleted
+      = client.delete(urlMaker.combine(String.format("/%s", id)));
 
-    client.delete(urlMaker.combine(String.format("/%s", id)),
-      ResponseHandler.any(deleteFinished));
-
-    Response response = deleteFinished.get(5, SECONDS);
+    Response response = deleteCompleted.toCompletableFuture().get(5, SECONDS);
 
     assertThat(String.format(
       "Failed to delete %s %s: %s", resourceName, id, response.getBody()),
@@ -257,46 +255,13 @@ public class ResourceClient {
     ExecutionException,
     TimeoutException {
 
-    CompletableFuture<Response> deleteAllFinished = new CompletableFuture<>();
+    final var deleteCompleted = client.delete(urlMaker.combine(""));
 
-    client.delete(urlMaker.combine(""),
-      ResponseHandler.any(deleteAllFinished));
-
-    Response response = deleteAllFinished.get(5, SECONDS);
+    Response response = deleteCompleted.toCompletableFuture().get(5, SECONDS);
 
     assertThat(String.format(
       "Failed to delete %s: %s", resourceName, response.getBody()),
       response.getStatusCode(), is(204));
-  }
-
-  public void deleteAllIndividually()
-    throws MalformedURLException,
-    InterruptedException,
-    ExecutionException,
-    TimeoutException {
-
-    List<JsonObject> records = getAll();
-
-    records.stream().forEach(record -> {
-      try {
-        CompletableFuture<Response> deleteFinished = new CompletableFuture<>();
-
-        client.delete(urlMaker.combine(String.format("/%s",
-          record.getString("id"))),
-          ResponseHandler.any(deleteFinished));
-
-        Response deleteResponse = deleteFinished.get(5, SECONDS);
-
-        assertThat(String.format(
-          "Failed to delete %s: %s", resourceName, deleteResponse.getBody()),
-          deleteResponse.getStatusCode(), is(204));
-
-      } catch (Throwable e) {
-        assertThat(String.format("Exception whilst deleting %s individually: %s",
-          resourceName, e.toString()),
-          true, is(false));
-      }
-    });
   }
 
   public List<JsonObject> getAll()

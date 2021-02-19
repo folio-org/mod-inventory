@@ -6,27 +6,21 @@ import static org.apache.http.HttpHeaders.ACCEPT;
 import static org.apache.http.HttpHeaders.CONTENT_TYPE;
 import static org.apache.http.HttpHeaders.LOCATION;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.http.HttpClientRequest;
-import io.vertx.core.http.HttpClientResponse;
-import io.vertx.core.http.HttpHeaders;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.client.HttpRequest;
-import io.vertx.ext.web.client.HttpResponse;
-import io.vertx.ext.web.client.WebClient;
-
-import org.apache.commons.lang3.StringUtils;
-import org.folio.inventory.common.WebContext;
-import org.folio.inventory.support.http.ContentType;
-
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
+
+import org.folio.inventory.common.WebContext;
+
+import io.vertx.core.AsyncResult;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.HttpRequest;
+import io.vertx.ext.web.client.HttpResponse;
+import io.vertx.ext.web.client.WebClient;
 
 public class OkapiHttpClient {
 
@@ -36,7 +30,6 @@ public class OkapiHttpClient {
   private static final String OKAPI_USER_ID_HEADER = "X-Okapi-User-Id";
   private static final String OKAPI_REQUEST_ID = "X-Okapi-Request-Id";
 
-  private final HttpClient client;
   private final WebClient webClient;
   private final URL okapiUrl;
   private final String tenantId;
@@ -72,7 +65,6 @@ public class OkapiHttpClient {
     String requestId,
     Consumer<Throwable> exceptionHandler) {
 
-    this.client = httpClient;
     this.webClient = WebClient.wrap(httpClient);
     this.okapiUrl = okapiUrl;
     this.tenantId = tenantId;
@@ -159,49 +151,6 @@ public class OkapiHttpClient {
 
     return futureResponse
       .thenCompose(OkapiHttpClient::mapAsyncResultToCompletionStage);
-  }
-
-  public void delete(URL url, Handler<HttpClientResponse> responseHandler) {
-
-    delete(url.toString(), responseHandler);
-  }
-
-  public void delete(String url, Handler<HttpClientResponse> responseHandler) {
-
-    HttpClientRequest request = client.deleteAbs(url, responseHandler);
-
-    accept(request, ContentType.APPLICATION_JSON, ContentType.TEXT_PLAIN);
-
-    okapiHeaders(request);
-
-    request.end();
-  }
-
-  private void okapiHeaders(HttpClientRequest request) {
-    if(StringUtils.isNotBlank(this.tenantId)) {
-      request.headers().add(TENANT_HEADER, this.tenantId);
-    }
-
-    if(StringUtils.isNotBlank(this.token)) {
-      request.headers().add(TOKEN_HEADER, this.token);
-    }
-
-    if (this.requestId != null) {
-      request.headers().add(OKAPI_REQUEST_ID, this.requestId);
-    }
-
-    request.headers().add(OKAPI_URL_HEADER, okapiUrl.toString());
-
-    if (this.userId != null) {
-      request.headers().add(OKAPI_USER_ID_HEADER, userId);
-    }
-  }
-
-  private static void accept(
-    HttpClientRequest request,
-    String... contentTypes) {
-
-    request.putHeader(HttpHeaders.ACCEPT, StringUtils.join(contentTypes, ","));
   }
 
   private HttpRequest<Buffer> withStandardHeaders(HttpRequest<Buffer> request) {

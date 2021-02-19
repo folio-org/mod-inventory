@@ -609,11 +609,9 @@ public class InstancesApiExamples extends ApiTests {
     createInstance(nod(UUID.randomUUID()));
     createInstance(leviathanWakes(UUID.randomUUID()));
 
-    CompletableFuture<Response> deleteCompleted = new CompletableFuture<>();
+    final var deleteCompleted = okapiClient.delete(ApiRoot.instances());
 
-    okapiClient.delete(ApiRoot.instances(), ResponseHandler.any(deleteCompleted));
-
-    Response deleteResponse = deleteCompleted.get(5, SECONDS);
+    Response deleteResponse = deleteCompleted.toCompletableFuture().get(5, SECONDS);
 
     assertThat(deleteResponse.getStatusCode(), is(204));
     assertThat(deleteResponse.hasBody(), is(false));
@@ -641,12 +639,9 @@ public class InstancesApiExamples extends ApiTests {
     URL instanceToDeleteLocation = new URL(String.format("%s/%s",
       ApiRoot.instances(), instanceToDelete.getString("id")));
 
-    CompletableFuture<Response> deleteCompleted = new CompletableFuture<>();
+    final var deleteCompleted = okapiClient.delete(instanceToDeleteLocation);
 
-    okapiClient.delete(instanceToDeleteLocation,
-      ResponseHandler.any(deleteCompleted));
-
-    Response deleteResponse = deleteCompleted.get(5, SECONDS);
+    Response deleteResponse = deleteCompleted.toCompletableFuture().get(5, SECONDS);
 
     assertThat(deleteResponse.getStatusCode(), is(204));
     assertThat(deleteResponse.hasBody(), is(false));
