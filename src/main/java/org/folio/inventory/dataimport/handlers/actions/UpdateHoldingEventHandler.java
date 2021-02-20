@@ -2,8 +2,8 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
@@ -31,7 +31,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTI
 
 public class UpdateHoldingEventHandler implements EventHandler {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(UpdateHoldingEventHandler.class);
+  private static final Logger LOGGER = LogManager.getLogger(UpdateHoldingEventHandler.class);
 
   private static final String UPDATE_HOLDING_ERROR_MESSAGE = "Can`t update  holding";
   private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t update Holding entity: context or Holding-entity are empty or doesn`t exist!";

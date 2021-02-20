@@ -10,6 +10,7 @@ import static api.support.InstanceSamples.girlOnTheTrain;
 import static api.support.InstanceSamples.nod;
 import static api.support.InstanceSamples.smallAngryPlanet;
 import static api.support.http.BusinessLogicInterfaceUrls.items;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.folio.inventory.domain.items.CirculationNote.DATE_KEY;
 import static org.folio.inventory.domain.items.CirculationNote.NOTE_KEY;
 import static org.folio.inventory.domain.items.CirculationNote.NOTE_TYPE_KEY;
@@ -26,11 +27,11 @@ import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
 import static support.matchers.ResponseMatchers.hasValidationError;
 import static support.matchers.TextDateTimeMatcher.withinSecondsAfter;
 
@@ -282,12 +283,9 @@ public class ItemApiExamples extends ApiTests {
       .withNoMaterialType()
       .create();
 
-    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+    final var postCompleted = okapiClient.post(ApiRoot.items(), newItemRequest);
 
-    okapiClient.post(ApiRoot.items(), newItemRequest,
-      ResponseHandler.any(postCompleted));
-
-    Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
+    Response postResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
 
     assertThat(postResponse.getStatusCode(), is(422));
   }
@@ -312,12 +310,9 @@ public class ItemApiExamples extends ApiTests {
       .withNoPermanentLoanType()
       .create();
 
-    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+    final var postCompleted = okapiClient.post(ApiRoot.items(), newItemRequest);
 
-    okapiClient.post(ApiRoot.items(), newItemRequest,
-      ResponseHandler.any(postCompleted));
-
-    Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
+    Response postResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
 
     assertThat(postResponse.getStatusCode(), is(422));
   }
@@ -387,13 +382,12 @@ public class ItemApiExamples extends ApiTests {
       .create();
     item.remove("status");
 
-    CompletableFuture<Response> createCompleted = new CompletableFuture<>();
-    okapiClient.post(items(""), item, ResponseHandler.json(createCompleted));
+    final var createCompleted = okapiClient.post(items(""), item);
 
-    Response createResponse = createCompleted.get(5, TimeUnit.SECONDS);
+    Response createResponse = createCompleted.toCompletableFuture().get(5, SECONDS);
+
     assertThat(createResponse,
-      hasValidationError("Status is a required field", "status", null)
-    );
+      hasValidationError("Status is a required field", "status", null));
   }
 
   @Test
@@ -416,10 +410,9 @@ public class ItemApiExamples extends ApiTests {
       .create();
     item.getJsonObject("status").remove("name");
 
-    CompletableFuture<Response> createCompleted = new CompletableFuture<>();
-    okapiClient.post(items(""), item, ResponseHandler.json(createCompleted));
+    final var createCompleted = okapiClient.post(items(""), item);
 
-    Response createResponse = createCompleted.get(5, TimeUnit.SECONDS);
+    Response createResponse = createCompleted.toCompletableFuture().get(5, SECONDS);
     assertThat(createResponse,
       hasValidationError("Status is a required field", "status", null)
     );
@@ -532,13 +525,11 @@ public class ItemApiExamples extends ApiTests {
       .temporarilyInReadingRoom()
       .create();
 
-    CompletableFuture<Response> putCompleted = new CompletableFuture<>();
+    final var putCompleted = okapiClient.put(
+      String.format("%s/%s", ApiRoot.items(), updateItemRequest.getString("id")),
+      updateItemRequest);
 
-    okapiClient.put(new URL(String.format("%s/%s", ApiRoot.items(),
-      updateItemRequest.getString("id"))),
-      updateItemRequest, ResponseHandler.any(putCompleted));
-
-    Response putResponse = putCompleted.get(5, TimeUnit.SECONDS);
+    Response putResponse = putCompleted.toCompletableFuture().get(5, SECONDS);
 
     assertThat(putResponse.getStatusCode(), is(404));
   }
@@ -571,11 +562,9 @@ public class ItemApiExamples extends ApiTests {
 
     itemsClient.deleteAll();
 
-    CompletableFuture<Response> getAllCompleted = new CompletableFuture<>();
+    final var getAllCompleted = okapiClient.get(ApiRoot.items());
 
-    okapiClient.get(ApiRoot.items(), ResponseHandler.json(getAllCompleted));
-
-    Response getAllResponse = getAllCompleted.get(5, TimeUnit.SECONDS);
+    Response getAllResponse = getAllCompleted.toCompletableFuture().get(5, SECONDS);
 
     assertThat(getAllResponse.getJson().getJsonArray("items").size(), is(0));
     assertThat(getAllResponse.getJson().getInteger("totalRecords"), is(0));
@@ -609,11 +598,9 @@ public class ItemApiExamples extends ApiTests {
 
     itemsClient.delete(itemToDeleteResponse.getId());
 
-    CompletableFuture<Response> getAllCompleted = new CompletableFuture<>();
+    final var getAllCompleted = okapiClient.get(ApiRoot.items());
 
-    okapiClient.get(ApiRoot.items(), ResponseHandler.json(getAllCompleted));
-
-    Response getAllResponse = getAllCompleted.get(5, TimeUnit.SECONDS);
+    Response getAllResponse = getAllCompleted.toCompletableFuture().get(5, SECONDS);
 
     assertThat(getAllResponse.getJson().getJsonArray("items").size(), is(2));
     assertThat(getAllResponse.getJson().getInteger("totalRecords"), is(2));
@@ -690,17 +677,11 @@ public class ItemApiExamples extends ApiTests {
       .courseReserves()
       .withBarcode("943209584495"));
 
-    CompletableFuture<Response> firstPageGetCompleted = new CompletableFuture<>();
-    CompletableFuture<Response> secondPageGetCompleted = new CompletableFuture<>();
+    final var firstPageGetCompleted = okapiClient.get(ApiRoot.items("limit=3"));
+    final var secondPageGetCompleted = okapiClient.get(ApiRoot.items("limit=3&offset=3"));
 
-    okapiClient.get(ApiRoot.items("limit=3"),
-      ResponseHandler.json(firstPageGetCompleted));
-
-    okapiClient.get(ApiRoot.items("limit=3&offset=3"),
-      ResponseHandler.json(secondPageGetCompleted));
-
-    Response firstPageResponse = firstPageGetCompleted.get(5, TimeUnit.SECONDS);
-    Response secondPageResponse = secondPageGetCompleted.get(5, TimeUnit.SECONDS);
+    Response firstPageResponse = firstPageGetCompleted.toCompletableFuture().get(5, SECONDS);
+    Response secondPageResponse = secondPageGetCompleted.toCompletableFuture().get(5, SECONDS);
 
     assertThat(firstPageResponse.getStatusCode(), is(200));
     assertThat(secondPageResponse.getStatusCode(), is(200));
@@ -766,11 +747,9 @@ public class ItemApiExamples extends ApiTests {
       .temporarilyCourseReserves()
       .withBarcode("175848607547"));
 
-    CompletableFuture<Response> getAllCompleted = new CompletableFuture<>();
+    final var getAllCompleted = okapiClient.get(ApiRoot.items());
 
-    okapiClient.get(ApiRoot.items(), ResponseHandler.json(getAllCompleted));
-
-    Response getAllResponse = getAllCompleted.get(5, TimeUnit.SECONDS);
+    Response getAllResponse = getAllCompleted.toCompletableFuture().get(5, SECONDS);
 
     assertThat(getAllResponse.getStatusCode(), is(200));
 
@@ -812,12 +791,9 @@ public class ItemApiExamples extends ApiTests {
     TimeoutException,
     ExecutionException {
 
-    CompletableFuture<Response> getPagedCompleted = new CompletableFuture<>();
+    final var getPagedCompleted = okapiClient.get(ApiRoot.items("limit=&offset="));
 
-    okapiClient.get(ApiRoot.items("limit=&offset="),
-      ResponseHandler.text(getPagedCompleted));
-
-    Response getPagedResponse = getPagedCompleted.get(5, TimeUnit.SECONDS);
+    Response getPagedResponse = getPagedCompleted.toCompletableFuture().get(5, SECONDS);
 
     assertThat(getPagedResponse.getStatusCode(), is(400));
     assertThat(getPagedResponse.getBody(),
@@ -857,12 +833,10 @@ public class ItemApiExamples extends ApiTests {
       .canCirculate()
       .withBarcode("564566456546"));
 
-    CompletableFuture<Response> searchGetCompleted = new CompletableFuture<>();
+    final var searchGetCompleted
+      = okapiClient.get(ApiRoot.items("query=title=*Small%20Angry*"));
 
-    okapiClient.get(ApiRoot.items("query=title=*Small%20Angry*"),
-      ResponseHandler.json(searchGetCompleted));
-
-    Response searchGetResponse = searchGetCompleted.get(5, TimeUnit.SECONDS);
+    Response searchGetResponse = searchGetCompleted.toCompletableFuture().get(5, SECONDS);
 
     assertThat(searchGetResponse.getStatusCode(), is(200));
 
@@ -906,12 +880,9 @@ public class ItemApiExamples extends ApiTests {
       .canCirculate()
       .withBarcode("645398607547").create();
 
-    CompletableFuture<Response> createItemCompleted = new CompletableFuture<>();
+    final var createItemCompleted = okapiClient.post(ApiRoot.items(), sameBarcodeItemRequest);
 
-    okapiClient.post(ApiRoot.items(), sameBarcodeItemRequest,
-      ResponseHandler.any(createItemCompleted));
-
-    Response sameBarcodeCreateResponse = createItemCompleted.get(5, TimeUnit.SECONDS);
+    Response sameBarcodeCreateResponse = createItemCompleted.toCompletableFuture().get(5, SECONDS);
 
     assertThat(sameBarcodeCreateResponse.getStatusCode(), is(400));
     assertThat(sameBarcodeCreateResponse.getBody(),
@@ -957,12 +928,9 @@ public class ItemApiExamples extends ApiTests {
     URL nodItemLocation = new URL(String.format("%s/%s",
       ApiRoot.items(), nodItemResponse.getId()));
 
-    CompletableFuture<Response> putItemCompleted = new CompletableFuture<>();
+    final var putItemCompleted = okapiClient.put(nodItemLocation, changedNodItem);
 
-    okapiClient.put(nodItemLocation, changedNodItem,
-      ResponseHandler.any(putItemCompleted));
-
-    Response putItemResponse = putItemCompleted.get(5, TimeUnit.SECONDS);
+    Response putItemResponse = putItemCompleted.toCompletableFuture().get(5, SECONDS);
 
     assertThat(putItemResponse.getStatusCode(), is(400));
     assertThat(putItemResponse.getBody(),
@@ -995,20 +963,15 @@ public class ItemApiExamples extends ApiTests {
     URL nodItemLocation = new URL(String.format("%s/%s",
       ApiRoot.items(), nodItemResponse.getId()));
 
-    CompletableFuture<Response> putItemCompleted = new CompletableFuture<>();
+    final var putItemCompleted = okapiClient.put(nodItemLocation, changedNodItem);
 
-    okapiClient.put(nodItemLocation, changedNodItem,
-        ResponseHandler.any(putItemCompleted));
-
-    Response putItemResponse = putItemCompleted.get(5, TimeUnit.SECONDS);
+    Response putItemResponse = putItemCompleted.toCompletableFuture().get(5, SECONDS);
 
     assertThat(putItemResponse.getStatusCode(), is(204));
 
-    CompletableFuture<Response> getItemCompleted = new CompletableFuture<>();
+    final var getItemCompleted = okapiClient.get(nodItemLocation);
 
-    okapiClient.get(nodItemLocation, ResponseHandler.json(getItemCompleted));
-
-    Response getItemResponse = getItemCompleted.get(5, TimeUnit.SECONDS);
+    Response getItemResponse = getItemCompleted.toCompletableFuture().get(5, SECONDS);
 
     assertThat(getItemResponse.getStatusCode(), is(200));
     assertThat(getItemResponse.getJson().getString("barcode"), is("645398607547"));
@@ -1055,20 +1018,15 @@ public class ItemApiExamples extends ApiTests {
     URL nodItemLocation = new URL(String.format("%s/%s",
       ApiRoot.items(), nodItemResponse.getId()));
 
-    CompletableFuture<Response> putItemCompleted = new CompletableFuture<>();
+    final var putItemCompleted = okapiClient.put(nodItemLocation, changedNodItem);
 
-    okapiClient.put(nodItemLocation, changedNodItem,
-      ResponseHandler.any(putItemCompleted));
-
-    Response putItemResponse = putItemCompleted.get(5, TimeUnit.SECONDS);
+    Response putItemResponse = putItemCompleted.toCompletableFuture().get(5, SECONDS);
 
     assertThat(putItemResponse.getStatusCode(), is(204));
 
-    CompletableFuture<Response> getItemCompleted = new CompletableFuture<>();
+    final var getItemCompleted = okapiClient.get(nodItemLocation);
 
-    okapiClient.get(nodItemLocation, ResponseHandler.json(getItemCompleted));
-
-    Response getItemResponse = getItemCompleted.get(5, TimeUnit.SECONDS);
+    Response getItemResponse = getItemCompleted.toCompletableFuture().get(5, SECONDS);
 
     assertThat(getItemResponse.getStatusCode(), is(200));
     assertThat(getItemResponse.getJson().containsKey("barcode"), is(false));
@@ -1511,14 +1469,9 @@ public class ItemApiExamples extends ApiTests {
       .create()
       .put("status", new JsonObject().put("name", "Unrecognized name"));
 
-    CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+    final var postCompleted = okapiClient.post(items(""), itemWithUnrecognizedStatus);
 
-    okapiClient.post(items(""),
-      itemWithUnrecognizedStatus,
-      ResponseHandler.any(postCompleted)
-    );
-
-    Response response = postCompleted.get(5, TimeUnit.SECONDS);
+    Response response = postCompleted.toCompletableFuture().get(5, SECONDS);
     assertThat(response, hasValidationError(
       "Undefined status specified",
       "status.name",
@@ -1736,11 +1689,9 @@ public class ItemApiExamples extends ApiTests {
     InterruptedException, ExecutionException, TimeoutException {
 
     String itemUpdateUri = String.format("%s/%s", ApiRoot.items(), item.getString("id"));
-    CompletableFuture<Response> putItemCompleted = new CompletableFuture<>();
+    final var putItemCompleted = okapiClient.put(itemUpdateUri, item);
 
-    okapiClient.put(itemUpdateUri, item, ResponseHandler.any(putItemCompleted));
-
-    return putItemCompleted.get(5, TimeUnit.SECONDS);
+    return putItemCompleted.toCompletableFuture().get(5, SECONDS);
   }
 
   private static void selfLinkRespectsWayResourceWasReached(JsonObject item) {
@@ -1753,12 +1704,10 @@ public class ItemApiExamples extends ApiTests {
 
   private void selfLinkShouldBeReachable(JsonObject item) {
     try {
-      CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+      final var getCompleted
+        = okapiClient.get(item.getJsonObject("links").getString("self"));
 
-      okapiClient.get(item.getJsonObject("links").getString("self"),
-        ResponseHandler.json(getCompleted));
-
-      Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+      Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
 
       assertThat(getResponse.getStatusCode(), is(200));
     }
@@ -1871,11 +1820,10 @@ public class ItemApiExamples extends ApiTests {
   private JsonObject findItems(String searchQuery)
     throws InterruptedException, TimeoutException, ExecutionException {
 
-    CompletableFuture<Response> getCompletedFuture = new CompletableFuture<>();
-    okapiClient.get(items("?query=") + urlEncode(searchQuery),
-      ResponseHandler.json(getCompletedFuture));
+    final var getCompleted
+      = okapiClient.get(items("?query=") + urlEncode(searchQuery));
 
-    return getCompletedFuture.get(5, TimeUnit.SECONDS).getJson();
+    return getCompleted.toCompletableFuture().get(5, SECONDS).getJson();
   }
 
   private void assertCallNumbers(JsonObject item) {

@@ -6,8 +6,9 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import io.vertx.ext.web.client.WebClient;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import org.folio.DataImportEventPayload;
 import org.folio.dbschema.ObjectMapperTool;
@@ -48,7 +49,7 @@ import static org.folio.DataImportEventTypes.DI_ERROR;
 
 public class DataImportKafkaHandler implements AsyncRecordHandler<String, String> {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(DataImportKafkaHandler.class);
+  private static final Logger LOGGER = LogManager.getLogger(DataImportKafkaHandler.class);
   private static final ObjectMapper OBJECT_MAPPER = ObjectMapperTool.getMapper();
 
   private Vertx vertx;
@@ -100,10 +101,10 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     EventManager.registerEventHandler(new MatchHoldingEventHandler());
     EventManager.registerEventHandler(new CreateItemEventHandler(storage));
     EventManager.registerEventHandler(new CreateHoldingEventHandler(storage));
-    EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, client));
+    EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, WebClient.wrap(client)));
     EventManager.registerEventHandler(new UpdateItemEventHandler(storage));
     EventManager.registerEventHandler(new UpdateHoldingEventHandler(storage));
-    EventManager.registerEventHandler(new ReplaceInstanceEventHandler(storage, client));
+    EventManager.registerEventHandler(new ReplaceInstanceEventHandler(storage, WebClient.wrap(client)));
     EventManager.registerEventHandler(new MarcBibModifiedPostProcessingEventHandler(new InstanceUpdateDelegate(storage)));
     EventManager.registerEventHandler(new MarcBibMatchedPostProcessingEventHandler(storage));
   }

@@ -1,8 +1,9 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.WebClient;
+
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
@@ -13,6 +14,7 @@ import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.storage.external.CollectionResourceRepository;
 import org.folio.inventory.support.InstanceUtil;
+import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
 
@@ -21,6 +23,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
@@ -39,9 +42,14 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC or INSTANCE data";
 
-  public ReplaceInstanceEventHandler(Storage storage, HttpClient client) {
-    this.storage = storage;
-    this.client = client;
+  public ReplaceInstanceEventHandler(Storage storage, WebClient webClient) {
+    super(storage, webClient);
+  }
+
+  public ReplaceInstanceEventHandler(Storage storage, WebClient webClient,
+    BiFunction<WebClient, Context, OkapiHttpClient> okapiClientCreator) {
+
+    super(storage, webClient, okapiClientCreator);
   }
 
   @Override

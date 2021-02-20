@@ -1,14 +1,11 @@
 package api;
 
-import api.support.ApiRoot;
-import api.support.ApiTests;
-import io.vertx.core.json.JsonObject;
-import org.apache.commons.lang3.StringUtils;
-import org.awaitility.Duration;
-import org.folio.inventory.support.JsonArrayHelper;
-import org.folio.inventory.support.http.client.Response;
-import org.folio.inventory.support.http.client.ResponseHandler;
-import org.junit.Test;
+import static api.ApiTestSuite.storageOkapiUrl;
+import static io.restassured.RestAssured.given;
+import static org.awaitility.Awaitility.await;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
 
 import java.io.File;
 import java.net.MalformedURLException;
@@ -17,18 +14,20 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
 
-import static api.ApiTestSuite.storageOkapiUrl;
-import static io.restassured.RestAssured.given;
-import static org.awaitility.Awaitility.await;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.junit.Assert.assertThat;
+import org.apache.commons.lang3.StringUtils;
+import org.awaitility.Duration;
+import org.folio.inventory.support.JsonArrayHelper;
+import org.folio.inventory.support.http.client.Response;
+import org.junit.Test;
+
+import api.support.ApiRoot;
+import api.support.ApiTests;
+import io.vertx.core.json.JsonObject;
 
 public class ModsIngestExamples extends ApiTests {
   public ModsIngestExamples() throws MalformedURLException {
@@ -205,11 +204,9 @@ public class ModsIngestExamples extends ApiTests {
     ExecutionException,
     TimeoutException {
 
-    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+    final var getCompleted = okapiClient.get(statusLocation);
 
-    okapiClient.get(statusLocation, ResponseHandler.json(getCompleted));
-
-    Response getResponse = getCompleted.get(5, TimeUnit.SECONDS);
+    Response getResponse = getCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
 
     assertThat("Should be able to get ingest job status",
       getResponse.getStatusCode(), is(200));

@@ -2,8 +2,8 @@ package org.folio.inventory.dataimport.util;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.processing.events.utils.ZIPArchiver;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.EventMetadata;
@@ -17,7 +17,7 @@ public final class EventHandlingUtil {
   private EventHandlingUtil() {
   }
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(EventHandlingUtil.class);
+  private static final Logger LOGGER = LogManager.getLogger(EventHandlingUtil.class);
 
   /**
    * Prepares and sends event with zipped payload to the mod-pubsub
@@ -44,12 +44,12 @@ public final class EventHandlingUtil {
           if (throwable == null) {
             promise.complete(true);
           } else {
-            LOGGER.error("Error during event sending: {}", throwable, event);
+            LOGGER.error("Error during event sending: {}", event, throwable);
             promise.fail(throwable);
           }
         });
     } catch (Exception e) {
-      LOGGER.error("Failed to send {} event to mod-pubsub", e, eventType);
+      LOGGER.error("Failed to send {} event to mod-pubsub", eventType, e);
       promise.fail(e);
     }
     return promise.future();

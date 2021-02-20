@@ -16,14 +16,14 @@ import com.github.ladutsko.isbn.ISBNException;
 
 import io.vertx.core.MultiMap;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 
 public class IsbnUtilsApi {
 
-  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+  private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
   private static final String ISBN_VALIDATOR_PATH = "/isbn/validator";
   private static final String ISBN_CONVERT_TO_ISBN10_PATH = "/isbn/convertTo10";

@@ -7,7 +7,10 @@ import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.ingest.IngestJobCollection;
 import org.folio.inventory.resources.ingest.IngestJob;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 

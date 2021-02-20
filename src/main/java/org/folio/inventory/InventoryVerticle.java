@@ -7,8 +7,8 @@ import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import io.vertx.ext.web.Router;
 import org.folio.inventory.common.WebRequestDiagnostics;
 import org.folio.inventory.domain.ingest.IngestMessageProcessor;
@@ -31,7 +31,7 @@ public class InventoryVerticle extends AbstractVerticle {
   public void start(Promise<Void> started) {
     Logging.initialiseFormat();
 
-    final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+    final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
     Router router = Router.router(vertx);
 
@@ -76,7 +76,7 @@ public class InventoryVerticle extends AbstractVerticle {
 
   @Override
   public void stop(Promise<Void> stopped) {
-    final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+    final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
     log.info("Stopping inventory module");
     server.close(result -> {

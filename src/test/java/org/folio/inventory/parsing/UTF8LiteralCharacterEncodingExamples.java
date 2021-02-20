@@ -2,8 +2,9 @@ package org.folio.inventory.parsing;
 
 import org.junit.Test;
 
-import static org.junit.Assert.assertThat;
-import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class UTF8LiteralCharacterEncodingExamples {
   private final UTF8LiteralCharacterEncoding encoding = new UTF8LiteralCharacterEncoding();

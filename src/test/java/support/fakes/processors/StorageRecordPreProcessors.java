@@ -1,7 +1,14 @@
 package support.fakes.processors;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.folio.inventory.support.JsonHelper.getNestedProperty;
+import api.ApiTestSuite;
+import api.support.http.StorageInterfaceUrls;
+import io.vertx.core.json.JsonObject;
+import org.apache.commons.lang3.ObjectUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.ImmutableTriple;
+import org.apache.commons.lang3.tuple.Triple;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 
 import java.net.MalformedURLException;
 import java.util.Arrays;
@@ -9,20 +16,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.BiFunction;
 
-import org.apache.commons.lang3.ObjectUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.ImmutableTriple;
-import org.apache.commons.lang3.tuple.Triple;
-import org.folio.inventory.support.http.client.Response;
-import org.folio.inventory.support.http.client.ResponseHandler;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
-
-import api.ApiTestSuite;
-import api.support.http.StorageInterfaceUrls;
-import io.vertx.core.json.JsonObject;
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.folio.inventory.support.JsonHelper.getNestedProperty;
 
 public final class StorageRecordPreProcessors {
   private static final AtomicLong hridSequence = new AtomicLong(1L);
@@ -130,22 +126,15 @@ public final class StorageRecordPreProcessors {
       return completedFuture(new JsonObject());
     }
 
-    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
-
     try {
-      ApiTestSuite.createOkapiHttpClient()
-        .get(
-          StorageInterfaceUrls.holdingStorageUrl("?query=id=" + id),
-          ResponseHandler.json(getCompleted)
-        );
+      return ApiTestSuite.createOkapiHttpClient().get(
+        StorageInterfaceUrls.holdingStorageUrl("?query=id=" + id))
+        .thenApply(
+          response -> response.getJson().getJsonArray("holdingsRecords").getJsonObject(0))
+        .toCompletableFuture();
     } catch (MalformedURLException ex) {
-      getCompleted.completeExceptionally(ex);
+      return CompletableFuture.failedFuture(ex);
     }
-
-    return getCompleted.thenApply(
-      response -> response.getJson().getJsonArray("holdingsRecords")
-        .getJsonObject(0)
-    );
   }
 
   public static RecordPreProcessor setHridProcessor(

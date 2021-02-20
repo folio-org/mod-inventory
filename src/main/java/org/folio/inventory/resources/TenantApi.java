@@ -5,8 +5,8 @@ import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import org.folio.rest.tools.utils.TenantTool;
@@ -18,7 +18,7 @@ import java.util.Map;
 
 public class TenantApi {
 
-  private static final Logger LOG = LoggerFactory.getLogger(TenantApi.class);
+  private static final Logger LOG = LogManager.getLogger(TenantApi.class);
   private static final String TENANT_API_PATH = "/_/tenant";
   private static final String OKAPI_TENANT_HEADER = "x-okapi-tenant";
 

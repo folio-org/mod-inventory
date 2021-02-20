@@ -4,6 +4,7 @@ import api.support.ApiTests;
 import api.support.builders.HoldingRequestBuilder;
 import api.support.builders.ItemRequestBuilder;
 import api.support.dto.Request;
+import io.vertx.core.json.JsonObject;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.folio.inventory.support.http.client.IndividualResource;
@@ -15,15 +16,20 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.net.MalformedURLException;
-import java.util.*;
+import java.util.Date;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import static api.support.InstanceSamples.smallAngryPlanet;
-import static org.folio.inventory.domain.items.CirculationNote.*;
+import static org.folio.inventory.domain.items.CirculationNote.NOTE_KEY;
+import static org.folio.inventory.domain.items.CirculationNote.NOTE_TYPE_KEY;
+import static org.folio.inventory.domain.items.CirculationNote.STAFF_ONLY_KEY;
 import static org.folio.inventory.domain.items.Item.CIRCULATION_NOTES_KEY;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static support.matchers.ItemMatchers.isInProcess;
 import static support.matchers.RequestMatchers.hasStatus;
 import static support.matchers.RequestMatchers.isOpenNotYetFilled;
@@ -88,7 +94,7 @@ public class MarkItemInProcessApiTests extends ApiTests {
 
   @Test
   public void shouldNotMarkItemInProcessThatCannotBeFound() {
-    assertThat(markInProcessFixture.markInProcess(UUID.randomUUID()).getStatusCode(),
+    assertThat(markItemFixture.markInProcess(UUID.randomUUID()).getStatusCode(),
       is(404));
   }
 
@@ -160,17 +166,17 @@ public class MarkItemInProcessApiTests extends ApiTests {
   }
 
   private Response markItemInProcess(IndividualResource item) {
-    return markInProcessFixture.markInProcess(item.getId());
+    return markItemFixture.markInProcess(item.getId());
   }
 
   private IndividualResource createRequest(UUID itemId, String status, DateTime expireDateTime)
     throws InterruptedException, ExecutionException, TimeoutException, MalformedURLException {
-    return requestStorageClient.create(Request.builder()
+    return requestStorageClient.create(JsonObject.mapFrom(Request.builder()
       .status(status)
       .itemId(itemId.toString())
       .holdShelfExpirationDate(expireDateTime.toDate())
       .requesterId(UUID.randomUUID().toString())
       .requestType("Hold")
-      .build());
+      .build()));
   }
 }

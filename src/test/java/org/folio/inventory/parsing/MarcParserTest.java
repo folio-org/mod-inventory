@@ -6,7 +6,8 @@ import static org.junit.Assert.assertEquals;
 import org.folio.inventory.exceptions.InvalidMarcJsonException;
 import org.folio.inventory.support.JsonHelper;
 import org.junit.Test;
-import java.io.*;
+
+import java.io.IOException;
 
 // TODO: Extend test data file (or even create multiple)
 // TODO: Check if sample data fully represent (all cases of) a true Marc JSON
