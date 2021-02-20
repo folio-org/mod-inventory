@@ -5,7 +5,7 @@ import static api.support.InstanceSamples.smallAngryPlanet;
 import static io.vertx.core.json.JsonObject.mapFrom;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static support.matchers.ResponseMatchers.hasValidationError;
 
 import java.net.MalformedURLException;

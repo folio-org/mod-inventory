@@ -1,34 +1,28 @@
 package api.support.http;
 
-import static java.lang.String.format;
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.folio.inventory.support.http.client.ResponseHandler.any;
-import static org.folio.util.StringUtil.urlEncode;
-import static org.hamcrest.core.Is.is;
-import static org.hamcrest.core.IsNull.notNullValue;
-import static org.hamcrest.junit.MatcherAssert.assertThat;
+import api.support.builders.Builder;
+import io.vertx.core.json.JsonObject;
+import org.folio.inventory.support.JsonArrayHelper;
+import org.folio.inventory.support.http.client.IndividualResource;
+import org.folio.inventory.support.http.client.OkapiHttpClient;
+import org.folio.inventory.support.http.client.Response;
+import org.joda.time.DateTime;
+import support.fakes.EndpointFailureDescriptor;
 
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.folio.inventory.support.JsonArrayHelper;
-import org.folio.inventory.support.http.client.IndividualResource;
-import org.folio.inventory.support.http.client.OkapiHttpClient;
-import org.folio.inventory.support.http.client.Response;
-import org.folio.inventory.support.http.client.ResponseHandler;
-import org.folio.util.StringUtil;
-import org.joda.time.DateTime;
-
-import api.support.builders.Builder;
-import io.vertx.core.json.JsonObject;
-import support.fakes.EndpointFailureDescriptor;
+import static java.lang.String.format;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.folio.util.StringUtil.urlEncode;
+import static org.hamcrest.core.Is.is;
+import static org.hamcrest.core.IsNull.notNullValue;
+import static org.hamcrest.junit.MatcherAssert.assertThat;
 
 public class ResourceClient {
 

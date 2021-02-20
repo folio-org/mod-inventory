@@ -75,7 +75,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
       .post(title)
       .whenComplete((v, e) -> {
           if (e != null) {
-            LOGGER.error("Error during creating PrecedingSucceedingTitle for instance {}", e, instance.getId());
+            LOGGER.error("Error during creating PrecedingSucceedingTitle for instance {}", instance.getId(), e);
             LOGGER.info("Error during creating PrecedingSucceedingTitles retry creating new PrecedingSucceedingTitles");
             precedingSucceedingTitlesRepository.post(title);
           }
@@ -89,7 +89,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
       .delete(id)
       .whenComplete((v, e) -> {
           if (e != null) {
-            LOGGER.error("Error during deleting PrecedingSucceedingTitles with ids {}", e, id);
+            LOGGER.error("Error during deleting PrecedingSucceedingTitles with ids {}", id, e);
             LOGGER.info("Error during deleting PrecedingSucceedingTitles retry delete PrecedingSucceedingTitles");
             precedingSucceedingTitlesRepository.delete(id);
           }

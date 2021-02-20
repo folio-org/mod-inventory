@@ -1,13 +1,17 @@
 package org.folio.inventory.domain.ingest;
 
 import java.lang.invoke.MethodHandles;
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.common.CollectAll;
 import org.folio.inventory.common.MessagingContext;
-import org.folio.inventory.domain.*;
+import org.folio.inventory.domain.Holding;
+import org.folio.inventory.domain.HoldingCollection;
+import org.folio.inventory.domain.Messages;
 import org.folio.inventory.domain.instances.Contributor;
 import org.folio.inventory.domain.instances.Identifier;
 import org.folio.inventory.domain.instances.Instance;

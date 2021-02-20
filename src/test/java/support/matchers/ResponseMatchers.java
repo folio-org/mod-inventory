@@ -1,18 +1,15 @@
 package support.matchers;
 
-import java.util.Locale;
-import java.util.Objects;
-
-import org.apache.commons.lang.StringUtils;
+import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import org.folio.inventory.support.http.ContentType;
 import org.folio.inventory.support.http.client.Response;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
 
-import io.vertx.core.json.DecodeException;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
+import java.util.Objects;
 
 public class ResponseMatchers {
 

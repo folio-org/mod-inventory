@@ -1,5 +1,16 @@
 package api.isbns;
 
+import api.support.ApiRoot;
+import api.support.ApiTests;
+import io.vertx.core.json.JsonObject;
+import org.folio.inventory.resources.IsbnUtilsApi;
+import org.folio.inventory.support.http.client.Response;
+import org.junit.Test;
+
+import java.net.MalformedURLException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.folio.inventory.resources.IsbnUtilsApi.CONVERTER_MISSING_REQUIRED_PARAM_MSG;
@@ -9,20 +20,6 @@ import static org.folio.inventory.resources.IsbnUtilsApi.ISBN_PARAM;
 import static org.folio.inventory.resources.IsbnUtilsApi.VALIDATOR_MISSING_REQUIRED_PARAMS_MSG;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-
-import java.net.MalformedURLException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
-
-import org.folio.inventory.resources.IsbnUtilsApi;
-import org.folio.inventory.support.http.client.Response;
-import org.folio.inventory.support.http.client.ResponseHandler;
-import org.junit.Test;
-
-import api.support.ApiRoot;
-import api.support.ApiTests;
-import io.vertx.core.json.JsonObject;
 
 public class IsbnUtilsApiExamples extends ApiTests {
 

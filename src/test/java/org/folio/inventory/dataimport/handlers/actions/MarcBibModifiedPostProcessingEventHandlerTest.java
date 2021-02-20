@@ -4,7 +4,6 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
-import org.folio.JobProfile;
 import org.folio.MappingProfile;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
@@ -36,7 +35,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
 import static org.folio.ActionProfile.Action.MODIFY;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_MATCHED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING;
 import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;

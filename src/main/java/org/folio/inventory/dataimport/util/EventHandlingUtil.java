@@ -44,12 +44,12 @@ public final class EventHandlingUtil {
           if (throwable == null) {
             promise.complete(true);
           } else {
-            LOGGER.error("Error during event sending: {}", throwable, event);
+            LOGGER.error("Error during event sending: {}", event, throwable);
             promise.fail(throwable);
           }
         });
     } catch (Exception e) {
-      LOGGER.error("Failed to send {} event to mod-pubsub", e, eventType);
+      LOGGER.error("Failed to send {} event to mod-pubsub", eventType, e);
       promise.fail(e);
     }
     return promise.future();

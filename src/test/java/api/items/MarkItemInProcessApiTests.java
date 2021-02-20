@@ -16,12 +16,15 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.net.MalformedURLException;
-import java.util.*;
+import java.util.Date;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import static api.support.InstanceSamples.smallAngryPlanet;
-import static org.folio.inventory.domain.items.CirculationNote.*;
+import static org.folio.inventory.domain.items.CirculationNote.NOTE_KEY;
+import static org.folio.inventory.domain.items.CirculationNote.NOTE_TYPE_KEY;
+import static org.folio.inventory.domain.items.CirculationNote.STAFF_ONLY_KEY;
 import static org.folio.inventory.domain.items.Item.CIRCULATION_NOTES_KEY;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;

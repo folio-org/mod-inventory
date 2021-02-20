@@ -1,29 +1,26 @@
 package api.holdings;
 
-import static api.support.InstanceSamples.smallAngryPlanet;
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-
-import org.folio.inventory.support.http.client.IndividualResource;
-import org.folio.inventory.support.http.client.Response;
-import org.folio.inventory.support.http.client.ResponseHandler;
-import org.junit.Test;
-
 import api.support.ApiTests;
 import api.support.InstanceApiClient;
 import api.support.builders.HoldingRequestBuilder;
 import io.vertx.core.json.JsonObject;
+import org.folio.inventory.support.http.client.IndividualResource;
+import org.folio.inventory.support.http.client.Response;
+import org.junit.Test;
 import support.fakes.FakeOkapi;
+
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+import static api.support.InstanceSamples.smallAngryPlanet;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertEquals;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 public class HoldingApiExample extends ApiTests {
 
