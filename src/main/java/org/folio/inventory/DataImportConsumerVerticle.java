@@ -6,8 +6,8 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventTypes;
 import org.folio.inventory.dataimport.consumers.DataImportKafkaHandler;
 import org.folio.inventory.storage.Storage;
@@ -50,7 +50,7 @@ import static org.folio.inventory.dataimport.util.KafkaConfigConstants.OKAPI_URL
 
 public class DataImportConsumerVerticle extends AbstractVerticle {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(DataImportConsumerVerticle.class);
+  private static final Logger LOGGER = LogManager.getLogger(DataImportConsumerVerticle.class);
   private static final List<DataImportEventTypes> EVENT_TYPES = List.of(DI_SRS_MARC_BIB_RECORD_CREATED,
     DI_SRS_MARC_BIB_RECORD_MODIFIED, DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING,
     DI_SRS_MARC_BIB_RECORD_MATCHED, DI_SRS_MARC_BIB_RECORD_NOT_MATCHED,

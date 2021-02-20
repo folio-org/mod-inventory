@@ -34,13 +34,13 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import io.vertx.ext.web.client.WebClient;
 import lombok.SneakyThrows;
 
 public abstract class AbstractInstanceEventHandler implements EventHandler {
-  protected static final Logger LOGGER = LoggerFactory.getLogger(AbstractInstanceEventHandler.class);
+  protected static final Logger LOGGER = LogManager.getLogger(AbstractInstanceEventHandler.class);
   protected static final String MARC_FORMAT = "MARC";
   protected static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   protected static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";

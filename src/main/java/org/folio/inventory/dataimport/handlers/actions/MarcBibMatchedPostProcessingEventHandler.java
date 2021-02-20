@@ -2,8 +2,8 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
@@ -30,7 +30,7 @@ import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 
 public class MarcBibMatchedPostProcessingEventHandler implements EventHandler {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(MarcBibMatchedPostProcessingEventHandler.class);
+  private static final Logger LOGGER = LogManager.getLogger(MarcBibMatchedPostProcessingEventHandler.class);
 
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Event does not contain required data to load Instance";
   private static final String ERROR_INSTANCE_MSG = "Error loading inventory instance for MARC BIB";

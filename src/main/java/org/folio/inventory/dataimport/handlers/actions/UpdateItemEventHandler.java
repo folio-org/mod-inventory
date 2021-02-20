@@ -3,8 +3,8 @@ package org.folio.inventory.dataimport.handlers.actions;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
@@ -46,7 +46,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTI
 
 public class UpdateItemEventHandler implements EventHandler {
 
-  private static final Logger LOG = LoggerFactory.getLogger(UpdateItemEventHandler.class);
+  private static final Logger LOG = LogManager.getLogger(UpdateItemEventHandler.class);
 
   public static final String ERROR_MSG_KEY = "ERROR_MSG";
   public static final String FAILED_EVENT_KEY = "FAILED_EVENT";

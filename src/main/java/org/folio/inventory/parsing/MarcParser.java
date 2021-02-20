@@ -3,8 +3,8 @@ package org.folio.inventory.parsing;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.inventory.exceptions.InvalidMarcJsonException;
 import org.folio.inventory.parsing.config.MarcConfig;
 import org.folio.inventory.exceptions.InvalidMarcConfigException;
@@ -26,7 +26,7 @@ public class MarcParser {
   private static final String SUBFIELD_NAME = "subfield-name";
   private static final String REQUIRED = "required";
   private static final String REPEATABLE = "repeatable";
-  private static final Logger LOGGER = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+  private static final Logger LOGGER = LogManager.getLogger(MethodHandles.lookup().lookupClass());
   private MarcConfig marcConfig;
 
   public MarcParser() throws IOException, InvalidMarcConfigException {

@@ -1,7 +1,7 @@
 package org.folio.inventory.common;
 
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import io.vertx.ext.web.RoutingContext;
 
 import java.lang.invoke.MethodHandles;
@@ -11,7 +11,7 @@ public class WebRequestDiagnostics {
 
   }
 
-  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+  private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
   public static void outputDiagnostics(RoutingContext routingContext) {
 

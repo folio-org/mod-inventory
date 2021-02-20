@@ -58,15 +58,15 @@ import org.folio.inventory.validation.ItemsValidator;
 
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.handler.BodyHandler;
 
 public class Items extends AbstractInventoryResource {
-  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+  private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
   private static final String RELATIVE_ITEMS_PATH = "/inventory/items";
   private static final String RELATIVE_ITEMS_PATH_ID = RELATIVE_ITEMS_PATH+"/:id";

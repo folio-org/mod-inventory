@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
@@ -29,7 +29,7 @@ import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
 
 public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<String, String> {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(MarcBibInstanceHridSetKafkaHandler.class);
+  private static final Logger LOGGER = LogManager.getLogger(MarcBibInstanceHridSetKafkaHandler.class);
   private static final String MARC_KEY = "MARC";
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";

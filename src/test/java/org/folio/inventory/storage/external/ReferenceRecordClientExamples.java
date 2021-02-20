@@ -9,7 +9,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.concurrent.CompletableFuture;
@@ -20,7 +19,7 @@ import static org.folio.inventory.common.FutureAssistance.waitForCompletion;
 import static org.folio.inventory.storage.external.ReferenceRecordClientExamples.CauseMatcher.causeMatches;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.fail;
 
 public class ReferenceRecordClientExamples {
@@ -67,8 +66,7 @@ public class ReferenceRecordClientExamples {
   public void canGetSingleReferenceRecord()
     throws InterruptedException,
     ExecutionException,
-    TimeoutException,
-    UnsupportedEncodingException {
+    TimeoutException {
 
     String bookId = preparation.createOrReferenceTerm("Book");
 
@@ -91,8 +89,7 @@ public class ReferenceRecordClientExamples {
   public void cannotGetReferenceRecordWhichDoesNotExist()
     throws InterruptedException,
     ExecutionException,
-    TimeoutException,
-    UnsupportedEncodingException {
+    TimeoutException {
 
     CompletableFuture<ReferenceRecord> recordFuture
       = referenceClient.getRecord("Book");
@@ -109,8 +106,7 @@ public class ReferenceRecordClientExamples {
   public void doesntGetReferenceRecordBySubstring()
     throws InterruptedException,
     ExecutionException,
-    TimeoutException,
-    UnsupportedEncodingException {
+    TimeoutException {
 
     preparation.createOrReferenceTerm("Tactile Book");
     preparation.createOrReferenceTerm("Book in Electronic Form");

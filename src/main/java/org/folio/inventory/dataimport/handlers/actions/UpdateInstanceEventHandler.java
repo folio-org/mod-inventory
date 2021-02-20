@@ -3,8 +3,8 @@ package org.folio.inventory.dataimport.handlers.actions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.processing.exceptions.EventProcessingException;
@@ -19,7 +19,7 @@ import static org.folio.inventory.dataimport.util.EventHandlingUtil.sendEventWit
 
 public class UpdateInstanceEventHandler {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(UpdateInstanceEventHandler.class);
+  private static final Logger LOGGER = LogManager.getLogger(UpdateInstanceEventHandler.class);
   private static final String MARC_KEY = "MARC";
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";

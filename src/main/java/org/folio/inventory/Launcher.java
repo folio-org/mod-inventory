@@ -1,7 +1,7 @@
 package org.folio.inventory;
 
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.VertxAssistant;
 
 import java.lang.invoke.MethodHandles;
@@ -54,7 +54,7 @@ public class Launcher {
   private static void start(Map<String, Object> config)
     throws InterruptedException, ExecutionException, TimeoutException {
 
-    final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+    final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
     vertxAssistant.start();
 
@@ -85,7 +85,7 @@ public class Launcher {
   }
 
   private static void stop() {
-    final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+    final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
     CompletableFuture<Void> stopped = new CompletableFuture<>();
 

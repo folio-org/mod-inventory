@@ -2,8 +2,8 @@ package org.folio.inventory.resources.ingest;
 
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import io.vertx.ext.web.FileUpload;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -38,7 +38,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
 public class ModsIngestion {
-  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+  private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
   private static final String RELATIVE_MODS_INGEST_PATH = "/inventory/ingest/mods";
 
   private final Storage storage;

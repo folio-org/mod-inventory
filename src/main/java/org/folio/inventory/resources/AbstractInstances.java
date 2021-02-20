@@ -37,8 +37,8 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.WebClient;
 
@@ -46,7 +46,7 @@ public abstract class AbstractInstances {
 
   protected static final String INVENTORY_PATH = "/inventory";
   protected static final String INSTANCES_PATH = INVENTORY_PATH + "/instances";
-  protected static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+  protected static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
   protected final Storage storage;
   protected final HttpClient client;
   protected final InventoryConfiguration config;

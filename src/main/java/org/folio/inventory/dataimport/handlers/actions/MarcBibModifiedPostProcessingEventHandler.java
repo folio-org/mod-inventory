@@ -2,8 +2,8 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
 import org.folio.MappingProfile;
 import org.folio.inventory.common.Context;
@@ -27,7 +27,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPP
 
 public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(MarcBibModifiedPostProcessingEventHandler.class);
+  private static final Logger LOGGER = LogManager.getLogger(MarcBibModifiedPostProcessingEventHandler.class);
 
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Event does not contain required data to update Instance";
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";

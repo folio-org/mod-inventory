@@ -4,8 +4,8 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.inventory.dataimport.consumers.MarcBibInstanceHridSetKafkaHandler;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.storage.Storage;
@@ -26,7 +26,7 @@ import static org.folio.inventory.dataimport.util.KafkaConfigConstants.OKAPI_URL
 
 public class MarcBibInstanceHridSetConsumerVerticle extends AbstractVerticle {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(MarcBibInstanceHridSetConsumerVerticle.class);
+  private static final Logger LOGGER = LogManager.getLogger(MarcBibInstanceHridSetConsumerVerticle.class);
   private static final GlobalLoadSensor GLOBAL_LOAD_SENSOR = new GlobalLoadSensor();
 
   private final int loadLimit = getLoadLimit();

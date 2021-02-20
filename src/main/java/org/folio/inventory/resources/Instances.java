@@ -216,12 +216,12 @@ public class Instances extends AbstractInstances {
       SourceStorageRecordsClient client = new SourceStorageRecordsClient(wContext.getOkapiLocation(),
         wContext.getTenantId(), wContext.getToken());
       client.putSourceStorageRecordsSuppressFromDiscoveryById(updatedInstance.getId(), "INSTANCE", updatedInstance.getDiscoverySuppress(), httpClientResponse -> {
-        if (httpClientResponse.statusCode() == HttpStatus.HTTP_OK.toInt()) {
+        if (httpClientResponse.result().statusCode() == HttpStatus.HTTP_OK.toInt()) {
           log.info(format("Suppress from discovery flag was successfully updated for record in SRS. InstanceID: %s",
             updatedInstance.getId()));
         } else {
           log.error(format("Suppress from discovery wasn't changed for SRS record. InstanceID: %s StatusCode: %s",
-            updatedInstance.getId(), httpClientResponse.statusCode()));
+            updatedInstance.getId(), httpClientResponse.result().statusCode()));
         }
       });
     } catch (Exception e) {
