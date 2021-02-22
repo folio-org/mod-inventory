@@ -89,6 +89,7 @@ public final class ItemUtil {
       itemFromServer.getString(PERMANENT_LOAN_TYPE_ID_KEY),
       itemFromServer.getJsonObject("metadata"))
       .withHrid(itemFromServer.getString(Item.HRID_KEY))
+      .withEffectiveShelvingOrder(itemFromServer.getString(Item.EFFECTIVE_SHELVING_ORDER_KEY))
       .withFormerIds(formerIds)
       .withDiscoverySuppress(itemFromServer.getBoolean(Item.DISCOVERY_SUPPRESS_KEY))
       .withBarcode(itemFromServer.getString(BARCODE))
@@ -146,6 +147,7 @@ public final class ItemUtil {
     includeIfPresent(itemToSend, COPY_NUMBER, item.getCopyNumber());
     itemToSend.put(NOTES, item.getNotes());
     itemToSend.put(Item.CIRCULATION_NOTES_KEY, item.getCirculationNotes());
+    includeIfPresent(itemToSend, Item.EFFECTIVE_SHELVING_ORDER_KEY, item.getEffectiveShelvingOrder());
     includeIfPresent(itemToSend, BARCODE, item.getBarcode());
     includeIfPresent(itemToSend, Item.ITEM_LEVEL_CALL_NUMBER_KEY, item.getItemLevelCallNumber());
     includeIfPresent(itemToSend, Item.ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY, item.getItemLevelCallNumberPrefix());
@@ -227,6 +229,7 @@ public final class ItemUtil {
       permanentLoanTypeId,
       null)
       .withHrid(itemRequest.getString(Item.HRID_KEY))
+      .withEffectiveShelvingOrder(itemRequest.getString(Item.EFFECTIVE_SHELVING_ORDER_KEY))
       .withFormerIds(formerIds)
       .withDiscoverySuppress(itemRequest.getBoolean(Item.DISCOVERY_SUPPRESS_KEY))
       .withBarcode(itemRequest.getString(BARCODE))
@@ -284,6 +287,7 @@ public final class ItemUtil {
     includeIfPresent(itemJson, COPY_NUMBER, item.getCopyNumber());
     itemJson.put(NOTES, item.getNotes());
     itemJson.put(Item.CIRCULATION_NOTES_KEY, item.getCirculationNotes());
+    includeIfPresent(itemJson, Item.EFFECTIVE_SHELVING_ORDER_KEY, item.getEffectiveShelvingOrder());
     includeIfPresent(itemJson, BARCODE, item.getBarcode());
     includeIfPresent(itemJson, Item.ITEM_LEVEL_CALL_NUMBER_KEY, item.getItemLevelCallNumber());
     includeIfPresent(itemJson, Item.ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY, item.getItemLevelCallNumberPrefix());
