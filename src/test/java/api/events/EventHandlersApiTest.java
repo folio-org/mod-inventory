@@ -2,39 +2,22 @@ package api.events;
 
 import api.support.ApiRoot;
 import api.support.ApiTests;
-import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import org.folio.ActionProfile;
-import org.folio.DataImportEventPayload;
-import org.folio.JobProfile;
-import org.folio.MappingProfile;
-import org.folio.UserInfo;
 import org.folio.inventory.TestUtil;
+import org.folio.inventory.support.http.ContentType;
 import org.folio.inventory.support.http.client.Response;
-import org.folio.inventory.support.http.client.ResponseHandler;
 import org.folio.processing.events.utils.ZIPArchiver;
-import org.folio.rest.jaxrs.model.EntityType;
-import org.folio.rest.jaxrs.model.MappingDetail;
-import org.folio.rest.jaxrs.model.MappingRule;
-import org.folio.rest.jaxrs.model.ParsedRecord;
-import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
-import org.folio.rest.jaxrs.model.Record;
 import org.junit.Test;
-import support.fakes.FakeOkapi;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class EventHandlersApiTest extends ApiTests {
 
@@ -43,25 +26,27 @@ public class EventHandlersApiTest extends ApiTests {
 
   @Test
   public void handleInstancesShouldReturnBadRequestOnEmptyBody() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
-    CompletableFuture<Response> conversionCompleted = new CompletableFuture<>();
-    okapiClient.post(ApiRoot.instancesEventHandler(), null, ResponseHandler.text(conversionCompleted));
-    Response response = conversionCompleted.get(1, TimeUnit.SECONDS);
+    final var conversionCompleted = okapiClient.post(ApiRoot.instancesEventHandler().toString(), (String) null);
+    Response response = conversionCompleted.toCompletableFuture().get(1, TimeUnit.SECONDS);
     assertThat(response.getStatusCode(), is(500));
+    assertThat(response.getContentType(), is(ContentType.TEXT_PLAIN));
   }
 
   @Test
   public void handleInstancesShouldReturnNoContentOnValidBody() throws IOException, InterruptedException, ExecutionException, TimeoutException {
-    CompletableFuture<Response> conversionCompleted = new CompletableFuture<>();
-    okapiClient.post(ApiRoot.instancesEventHandler(), ZIPArchiver.zip(new JsonObject().toString()), ResponseHandler.any(conversionCompleted));
-    Response response = conversionCompleted.get(5, TimeUnit.SECONDS);
+    final var conversionCompleted = okapiClient.post(ApiRoot.instancesEventHandler().toString(),
+      ZIPArchiver.zip(new JsonObject().toString()));
+
+    Response response = conversionCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
     assertThat(response.getStatusCode(), is(204));
   }
 
   @Test
   public void handleInstancesShouldReturnNoContentOnValidData() throws IOException, InterruptedException, ExecutionException, TimeoutException {
-    CompletableFuture<Response> conversionCompleted = new CompletableFuture<>();
-    okapiClient.post(ApiRoot.instancesEventHandler(), ZIPArchiver.zip(JsonObject.mapFrom(prepareEventPayload()).toString()), ResponseHandler.any(conversionCompleted));
-    Response response = conversionCompleted.get(5, TimeUnit.SECONDS);
+    final var conversionCompleted = okapiClient.post(ApiRoot.instancesEventHandler().toString(),
+      ZIPArchiver.zip(JsonObject.mapFrom(prepareEventPayload()).toString()));
+
+    Response response = conversionCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
     assertThat(response.getStatusCode(), is(204));
   }
 

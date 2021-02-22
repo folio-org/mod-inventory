@@ -1,21 +1,21 @@
 package api.support;
 
-import static api.ApiTestSuite.*;
-
-import java.time.LocalDate;
-import java.util.UUID;
-
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.folio.inventory.domain.instances.AlternativeTitle;
 import org.folio.inventory.domain.instances.Classification;
 import org.folio.inventory.domain.instances.Contributor;
 import org.folio.inventory.domain.instances.Identifier;
-import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
-import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
 import org.folio.inventory.domain.instances.Publication;
-import org.folio.inventory.domain.items.Note;
 import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
+
+import java.time.LocalDate;
+import java.util.UUID;
+
+import static api.ApiTestSuite.getAsinIdentifierType;
+import static api.ApiTestSuite.getIsbnIdentifierType;
+import static api.ApiTestSuite.getPersonalContributorNameType;
+import static api.ApiTestSuite.getTextInstanceType;
 
 public class InstanceSamples {
   public static JsonObject createInstanceRequest(

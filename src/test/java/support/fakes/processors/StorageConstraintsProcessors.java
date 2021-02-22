@@ -1,10 +1,12 @@
 package support.fakes.processors;
 
-import static api.ApiTestSuite.createOkapiHttpClient;
-import static api.support.http.StorageInterfaceUrls.instanceRelationshipTypeUrl;
-import static api.support.http.StorageInterfaceUrls.instancesStorageUrl;
-import static java.util.function.Function.identity;
-import static org.folio.inventory.support.JsonArrayHelper.toList;
+import io.vertx.core.json.JsonObject;
+import org.folio.inventory.domain.instances.InstanceRelationship;
+import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
+import org.folio.inventory.exceptions.UnprocessableEntityException;
+import org.folio.inventory.support.http.client.Response;
+import org.folio.inventory.support.http.server.ValidationError;
+import org.folio.util.StringUtil;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -14,15 +16,11 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import org.folio.inventory.domain.instances.InstanceRelationship;
-import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
-import org.folio.inventory.exceptions.UnprocessableEntityException;
-import org.folio.inventory.support.http.client.Response;
-import org.folio.inventory.support.http.client.ResponseHandler;
-import org.folio.inventory.support.http.server.ValidationError;
-import org.folio.util.StringUtil;
-
-import io.vertx.core.json.JsonObject;
+import static api.ApiTestSuite.createOkapiHttpClient;
+import static api.support.http.StorageInterfaceUrls.instanceRelationshipTypeUrl;
+import static api.support.http.StorageInterfaceUrls.instancesStorageUrl;
+import static java.util.function.Function.identity;
+import static org.folio.inventory.support.JsonArrayHelper.toList;
 
 public final class StorageConstraintsProcessors {
 
@@ -108,10 +106,6 @@ public final class StorageConstraintsProcessors {
   }
 
   private static CompletableFuture<Response> get(URL url) throws MalformedURLException {
-    final CompletableFuture<Response> result = new CompletableFuture<>();
-
-    createOkapiHttpClient().get(url, ResponseHandler.any(result));
-
-    return result;
+    return createOkapiHttpClient().get(url).toCompletableFuture();
   }
 }

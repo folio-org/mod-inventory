@@ -1,15 +1,15 @@
 package support.matchers;
 
-import java.util.Objects;
-
+import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import org.folio.inventory.support.http.ContentType;
 import org.folio.inventory.support.http.client.Response;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
 
-import io.vertx.core.json.DecodeException;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
+import java.util.Objects;
 
 public class ResponseMatchers {
 
@@ -20,6 +20,10 @@ public class ResponseMatchers {
       @Override
       protected boolean matchesSafely(Response response) {
         if (response.getStatusCode() != 422) {
+          return false;
+        }
+
+        if (!response.getContentType().startsWith(ContentType.APPLICATION_JSON)) {
           return false;
         }
 
@@ -59,7 +63,7 @@ public class ResponseMatchers {
         mismatchDescription.appendText("Status: ").appendValue(response.getStatusCode())
           .appendText(", body: ");
 
-        if (response.getContentType().startsWith("application/json")) {
+        if (response.getContentType().startsWith(ContentType.APPLICATION_JSON)) {
           mismatchDescription.appendValue(response.getJson());
         } else {
           mismatchDescription.appendValue(response.getBody());

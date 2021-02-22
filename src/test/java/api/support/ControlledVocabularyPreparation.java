@@ -4,17 +4,15 @@ import io.vertx.core.json.JsonObject;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
-import org.folio.inventory.support.http.client.ResponseHandler;
 
 import java.net.URL;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class ControlledVocabularyPreparation {
   private final OkapiHttpClient client;
@@ -34,11 +32,9 @@ public class ControlledVocabularyPreparation {
   public String createOrReferenceTerm(String name)
     throws InterruptedException, ExecutionException, TimeoutException {
 
-    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+    final var getItemCompleted = client.get(controlledVocabularyRoot);
 
-    client.get(controlledVocabularyRoot, ResponseHandler.json(getCompleted));
-
-    Response response = getCompleted.get(5, TimeUnit.SECONDS);
+    Response response = getItemCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
 
     assertThat("Controlled vocabulary API unavailable",
       response.getStatusCode(), is(200));
@@ -49,12 +45,9 @@ public class ControlledVocabularyPreparation {
     if (doesNotExist(existingTerms, name)) {
       JsonObject vocabularyEntryRequest = new JsonObject().put("name", name);
 
-      CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+      final var postCompleted = client.post(controlledVocabularyRoot, vocabularyEntryRequest);
 
-      client.post(controlledVocabularyRoot,
-        vocabularyEntryRequest, ResponseHandler.json(postCompleted));
-
-      Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
+      Response postResponse = postCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
 
       assertThat("Failed to create reference record",
         postResponse.getStatusCode(), is(201));
@@ -71,11 +64,9 @@ public class ControlledVocabularyPreparation {
   public String createOrReferenceTerm(String name, String code, String source)
     throws InterruptedException, ExecutionException, TimeoutException {
 
-    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+    final var getCompleted = client.get(controlledVocabularyRoot);
 
-    client.get(controlledVocabularyRoot, ResponseHandler.json(getCompleted));
-
-    Response response = getCompleted.get(5, TimeUnit.SECONDS);
+    Response response = getCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
 
     assertThat("Controlled vocabulary API unavailable",
       response.getStatusCode(), is(200));
@@ -89,12 +80,9 @@ public class ControlledVocabularyPreparation {
         .put("code", code)
         .put("source", source);
 
-      CompletableFuture<Response> postCompleted = new CompletableFuture<>();
+      final var  postCompleted = client.post(controlledVocabularyRoot, vocabularyEntryRequest);
 
-      client.post(controlledVocabularyRoot,
-        vocabularyEntryRequest, ResponseHandler.json(postCompleted));
-
-      Response postResponse = postCompleted.get(5, TimeUnit.SECONDS);
+      Response postResponse = postCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
 
       assertThat("Failed to create reference record",
         postResponse.getStatusCode(), is(201));

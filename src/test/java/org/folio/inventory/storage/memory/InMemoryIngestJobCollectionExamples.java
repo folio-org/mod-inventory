@@ -13,10 +13,14 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-import static org.folio.inventory.common.FutureAssistance.*;
+import static org.folio.inventory.common.FutureAssistance.complete;
+import static org.folio.inventory.common.FutureAssistance.fail;
+import static org.folio.inventory.common.FutureAssistance.getOnCompletion;
+import static org.folio.inventory.common.FutureAssistance.succeed;
+import static org.folio.inventory.common.FutureAssistance.waitForCompletion;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class InMemoryIngestJobCollectionExamples {
 

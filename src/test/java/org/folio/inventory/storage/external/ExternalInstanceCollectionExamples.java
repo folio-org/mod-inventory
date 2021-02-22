@@ -1,9 +1,12 @@
 package org.folio.inventory.storage.external;
 
-import static org.folio.inventory.common.FutureAssistance.*;
+import static org.folio.inventory.common.FutureAssistance.fail;
+import static org.folio.inventory.common.FutureAssistance.getOnCompletion;
+import static org.folio.inventory.common.FutureAssistance.succeed;
+import static org.folio.inventory.common.FutureAssistance.waitForCompletion;
 import static org.folio.inventory.storage.external.ExternalStorageSuite.getStorageAddress;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
@@ -17,7 +20,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.common.WaitForAllFutures;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
-import org.folio.inventory.domain.instances.Identifier;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.hamcrest.CoreMatchers;
@@ -343,8 +345,8 @@ public class ExternalInstanceCollectionExamples {
     final String value) {
 
     return instance.getIdentifiers().stream().anyMatch(it ->
-      StringUtils.equals(((Identifier)it).identifierTypeId, identifierTypeId)
-        && StringUtils.equals(((Identifier)it).value, value));
+      StringUtils.equals(it.identifierTypeId, identifierTypeId)
+        && StringUtils.equals(it.value, value));
   }
 
   private Instance getInstance(List<Instance> allInstances, final String title) {

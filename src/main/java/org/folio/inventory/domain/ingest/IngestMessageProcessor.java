@@ -1,13 +1,17 @@
 package org.folio.inventory.domain.ingest;
 
 import java.lang.invoke.MethodHandles;
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.common.CollectAll;
 import org.folio.inventory.common.MessagingContext;
-import org.folio.inventory.domain.*;
+import org.folio.inventory.domain.Holding;
+import org.folio.inventory.domain.HoldingCollection;
+import org.folio.inventory.domain.Messages;
 import org.folio.inventory.domain.instances.Contributor;
 import org.folio.inventory.domain.instances.Identifier;
 import org.folio.inventory.domain.instances.Instance;
@@ -25,11 +29,11 @@ import io.vertx.core.Handler;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class IngestMessageProcessor {
-  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+  private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
   private static final String TITLE_PROPERTY = "title";
   private final Storage storage;

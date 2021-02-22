@@ -1,18 +1,16 @@
 package api.support;
 
-import org.folio.inventory.support.http.client.OkapiHttpClient;
-import org.folio.inventory.support.http.client.Response;
-import org.folio.inventory.support.http.client.ResponseHandler;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import org.folio.inventory.support.http.client.OkapiHttpClient;
+import org.folio.inventory.support.http.client.Response;
 
 public class Preparation {
   private final OkapiHttpClient client;
@@ -42,11 +40,9 @@ public class Preparation {
   private void deleteAll(URL root)
     throws InterruptedException, ExecutionException, TimeoutException {
 
-    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
+    final var deleteCompleted = client.delete(root);
 
-    client.delete(root, ResponseHandler.any(getCompleted));
-
-    Response response = getCompleted.get(5, TimeUnit.SECONDS);
+    Response response = deleteCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
 
     assertThat("Failed to delete all records", response.getStatusCode(), is(204));
   }

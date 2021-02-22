@@ -1,13 +1,11 @@
 package org.folio.inventory.storage.external;
 
-import java.net.URL;
-import java.util.function.Consumer;
-
+import io.vertx.core.json.JsonObject;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
 
-import io.vertx.core.Handler;
-import io.vertx.core.http.HttpClientResponse;
+import java.net.URL;
+import java.util.function.Consumer;
 
 public class CollectionResourceClient {
 
@@ -24,42 +22,39 @@ public class CollectionResourceClient {
   public void post(Object resourceRepresentation,
                    Consumer<Response> responseHandler) {
 
-    client.post(collectionRoot,
-      resourceRepresentation,
-      responseConversationHandler(responseHandler));
+    client.post(collectionRoot, JsonObject.mapFrom(resourceRepresentation))
+      .thenAccept(responseHandler);
   }
 
   public void put(String id, Object resourceRepresentation,
                   Consumer<Response> responseHandler) {
 
-    client.put(String.format(collectionRoot + "/%s", id),
-      resourceRepresentation,
-      responseConversationHandler(responseHandler));
+    client.put(recordUrl(id), JsonObject.mapFrom(resourceRepresentation))
+      .thenAccept(responseHandler);
   }
 
   public void get(String id, Consumer<Response> responseHandler) {
-    client.get(String.format(collectionRoot + "/%s", id),
-      responseConversationHandler(responseHandler));
+    client.get(recordUrl(id))
+      .thenAccept(responseHandler);
   }
 
   public void delete(String id, Consumer<Response> responseHandler) {
-    client.delete(String.format(collectionRoot + "/%s", id),
-      responseConversationHandler(responseHandler));
+    client.delete(recordUrl(id))
+      .thenAccept(responseHandler);
   }
 
   public void delete(Consumer<Response> responseHandler) {
-    client.delete(collectionRoot,
-      responseConversationHandler(responseHandler));
+    client.delete(collectionRoot)
+      .thenAccept(responseHandler);
   }
 
   public void getMany(String query, Consumer<Response> responseHandler) {
-
     String url = isProvided(query)
       ? String.format("%s?%s", collectionRoot, query)
       : collectionRoot.toString();
 
-    client.get(url,
-      responseConversationHandler(responseHandler));
+    client.get(url)
+      .thenAccept(responseHandler);
   }
 
   public void getMany(
@@ -74,18 +69,15 @@ public class CollectionResourceClient {
       pageLimit, pageOffset)
       : collectionRoot.toString();
 
-    client.get(url, responseConversationHandler(responseHandler));
+    client.get(url)
+      .thenAccept(responseHandler);
   }
 
   private boolean isProvided(String query) {
     return query != null && !query.trim().equals("");
   }
 
-  private Handler<HttpClientResponse> responseConversationHandler(
-    Consumer<Response> responseHandler) {
-
-    return response ->
-      response.bodyHandler(buffer ->
-        responseHandler.accept(Response.from(response, buffer)));
+  private String recordUrl(String id) {
+    return String.format(collectionRoot + "/%s", id);
   }
 }

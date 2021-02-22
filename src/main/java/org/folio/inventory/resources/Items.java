@@ -1,6 +1,5 @@
 package org.folio.inventory.resources;
 
-import static org.folio.HttpStatus.HTTP_CREATED;
 import static org.folio.HttpStatus.HTTP_OK;
 import static org.folio.inventory.common.FutureAssistance.allOf;
 import static org.folio.inventory.support.CqlHelper.multipleRecordsCqlQuery;
@@ -59,14 +58,15 @@ import org.folio.inventory.validation.ItemsValidator;
 
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.handler.BodyHandler;
 
 public class Items extends AbstractInventoryResource {
-  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+  private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
   private static final String RELATIVE_ITEMS_PATH = "/inventory/items";
   private static final String RELATIVE_ITEMS_PATH_ID = RELATIVE_ITEMS_PATH+"/:id";
@@ -476,7 +476,7 @@ public class Items extends AbstractInventoryResource {
     WebContext context)
     throws MalformedURLException {
 
-    return new OkapiHttpClient(client, context,
+    return new OkapiHttpClient(WebClient.wrap(client), context,
       exception -> ServerErrorResponse.internalError(routingContext.response(),
       String.format("Failed to contact storage module: %s",
         exception.toString())));

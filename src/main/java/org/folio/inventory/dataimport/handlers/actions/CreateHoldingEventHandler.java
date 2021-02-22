@@ -2,8 +2,8 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.ActionProfile;
@@ -36,7 +36,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTI
 
 public class CreateHoldingEventHandler implements EventHandler {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(CreateHoldingEventHandler.class);
+  private static final Logger LOGGER = LogManager.getLogger(CreateHoldingEventHandler.class);
   private static final String INSTANCE_ID_FIELD = "instanceId";
   private static final String HOLDINGS_PATH_FIELD = "holdings";
   private static final String PERMANENT_LOCATION_ID_FIELD = "permanentLocationId";

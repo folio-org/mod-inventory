@@ -4,8 +4,8 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
@@ -56,7 +56,7 @@ public class CreateItemEventHandler implements EventHandler {
   public static final String HOLDING_ID_FIELD = "id";
   public static final String ITEM_ID_FIELD = "id";
 
-  private static final Logger LOG = LoggerFactory.getLogger(CreateItemEventHandler.class);
+  private static final Logger LOG = LogManager.getLogger(CreateItemEventHandler.class);
 
 
   private final DateTimeFormatter dateTimeFormatter =

@@ -1,8 +1,8 @@
 package org.folio.inventory.dataimport.handlers.matching.loaders;
 
 import io.vertx.core.Vertx;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
@@ -21,7 +21,7 @@ import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlin
 
 public abstract class AbstractLoader<T> implements MatchValueLoader {
 
-  private static final Logger LOG = LoggerFactory.getLogger(AbstractLoader.class);
+  private static final Logger LOG = LogManager.getLogger(AbstractLoader.class);
 
   private final Vertx vertx;
 
