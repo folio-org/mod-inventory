@@ -25,9 +25,8 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.ActionProfile.Action.UPDATE;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
-import static org.folio.DataImportEventTypes.DI_ERROR;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_UPDATED;
-import static org.folio.inventory.dataimport.handlers.actions.AbstractInstanceEventHandler.ERROR_MSG_KEY;
+import static org.folio.inventory.dataimport.handlers.actions.AbstractInstanceEventHandler.prepareErrorEventPayload;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
@@ -75,23 +74,15 @@ public class UpdateHoldingEventHandler implements EventHandler {
       holdingsRecords.update(holding, holdingSuccess -> constructDataImportEventPayload(future, dataImportEventPayload, holding),
         failure -> {
           LOGGER.error(UPDATE_HOLDING_ERROR_MESSAGE);
-          prepareErrorEventPayload(dataImportEventPayload, UPDATE_HOLDING_ERROR_MESSAGE);
+          prepareErrorEventPayload(dataImportEventPayload, DI_INVENTORY_HOLDING_UPDATED, UPDATE_HOLDING_ERROR_MESSAGE);
           future.completeExceptionally(new EventProcessingException(UPDATE_HOLDING_ERROR_MESSAGE));
         });
     } catch (Exception e) {
       LOGGER.error("Failed to update Holdings", e);
-      prepareErrorEventPayload(dataImportEventPayload, e.toString());
+      prepareErrorEventPayload(dataImportEventPayload, DI_INVENTORY_HOLDING_UPDATED, e.toString());
       future.completeExceptionally(e);
     }
     return future;
-  }
-
-  private void prepareErrorEventPayload(DataImportEventPayload dataImportEventPayload, String errorMessage) {
-    dataImportEventPayload.getEventsChain().add(DI_INVENTORY_HOLDING_UPDATED.value());
-    dataImportEventPayload.setEventType(DI_ERROR.value());
-    if (dataImportEventPayload.getContext() != null) {
-      dataImportEventPayload.getContext().put(ERROR_MSG_KEY, errorMessage);
-    }
   }
 
   @Override

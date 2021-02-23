@@ -39,9 +39,8 @@ import static java.lang.String.format;
 import static java.util.Objects.isNull;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.ActionProfile.Action.UPDATE;
-import static org.folio.DataImportEventTypes.DI_ERROR;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_UPDATED;
-import static org.folio.inventory.dataimport.handlers.actions.AbstractInstanceEventHandler.ERROR_MSG_KEY;
+import static org.folio.inventory.dataimport.handlers.actions.AbstractInstanceEventHandler.prepareErrorEventPayload;
 import static org.folio.inventory.domain.items.Item.STATUS_KEY;
 import static org.folio.rest.jaxrs.model.EntityType.ITEM;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
@@ -88,7 +87,7 @@ public class UpdateItemEventHandler implements EventHandler {
       if (!errors.isEmpty()) {
         String msg = format("Mapped Item is invalid: %s", errors.toString());
         LOG.error(msg);
-        prepareErrorEventPayload(dataImportEventPayload, msg);
+        prepareErrorEventPayload(dataImportEventPayload, DI_INVENTORY_ITEM_UPDATED, msg);
         future.completeExceptionally(new EventProcessingException(msg));
         return future;
       }
@@ -110,7 +109,7 @@ public class UpdateItemEventHandler implements EventHandler {
               String msg = String.format(STATUS_UPDATE_ERROR_MSG, oldItemStatus, newItemStatus);
               LOG.warn(msg);
               dataImportEventPayload.getContext().put(ITEM.value(), ItemUtil.mapToJson(updateAr.result()).encode());
-              prepareErrorEventPayload(dataImportEventPayload, Json.encode(msg));
+              prepareErrorEventPayload(dataImportEventPayload, DI_INVENTORY_ITEM_UPDATED, msg);
               future.completeExceptionally(new EventProcessingException(msg));
             } else {
               dataImportEventPayload.getContext().put(ITEM.value(), ItemUtil.mapToJson(updateAr.result()).encode());
@@ -119,30 +118,22 @@ public class UpdateItemEventHandler implements EventHandler {
             }
           } else {
             LOG.error("Error updating inventory Item", updateAr.cause());
-            prepareErrorEventPayload(dataImportEventPayload, Json.encode(updateAr.cause()));
+            prepareErrorEventPayload(dataImportEventPayload, DI_INVENTORY_ITEM_UPDATED, Json.encode(updateAr.cause()));
             future.completeExceptionally(updateAr.cause());
           }
         });
     } catch (Exception e) {
-      LOG.error("Error updating inventory Item", e);
-      prepareErrorEventPayload(dataImportEventPayload, String.format("Error updating inventory Item: %s", e));
+      String errorMessage = String.format("Error updating inventory Item: %s", e);
+      LOG.error(errorMessage);
+      prepareErrorEventPayload(dataImportEventPayload, DI_INVENTORY_ITEM_UPDATED, errorMessage);
       future.completeExceptionally(e);
     }
     return future;
   }
 
-  private void prepareErrorEventPayload(DataImportEventPayload dataImportEventPayload,String errorMessage) {
-    dataImportEventPayload.getEventsChain().add(DI_INVENTORY_ITEM_UPDATED.value());
-    dataImportEventPayload.setEventType(DI_ERROR.value());
-    if (dataImportEventPayload.getContext() != null) {
-      dataImportEventPayload.getContext().put(ERROR_MSG_KEY, errorMessage);
-    }
-  }
-
   private boolean isProtectedStatusChanged(String oldItemStatus, String newItemStatus){
     return PROTECTED_STATUSES_FROM_UPDATE.contains(oldItemStatus) && !oldItemStatus.equals(newItemStatus);
   }
-
 
   @Override
   public boolean isEligible(DataImportEventPayload dataImportEventPayload) {
