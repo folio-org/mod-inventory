@@ -5,7 +5,6 @@ import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
-
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
@@ -31,6 +30,7 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
+import static org.folio.DataImportEventTypes.DI_ERROR;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
@@ -92,18 +92,33 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
           })
           .onFailure(ar -> {
             LOGGER.error("Error creating inventory Instance", ar);
+
+            prepareErrorEventPayload(dataImportEventPayload, Json.encode(ar));
             future.completeExceptionally(ar);
           });
       } else {
         String msg = format("Mapped Instance is invalid: %s", errors.toString());
         LOGGER.error(msg);
+
+        prepareErrorEventPayload(dataImportEventPayload, msg);
         future.completeExceptionally(new EventProcessingException(msg));
       }
     } catch (Exception e) {
-      LOGGER.error("Error creating inventory Instance", e);
+      String msg = format("Error creating inventory Instance: %s", e);
+      LOGGER.error(msg);
+
+      prepareErrorEventPayload(dataImportEventPayload, msg);
       future.completeExceptionally(e);
     }
     return future;
+  }
+
+  private void prepareErrorEventPayload(DataImportEventPayload dataImportEventPayload, String errorMessage) {
+    if (dataImportEventPayload.getContext() != null) {
+      dataImportEventPayload.getContext().put(ERROR_MSG_KEY, errorMessage);
+    }
+    dataImportEventPayload.setEventType(DI_ERROR.value());
+    dataImportEventPayload.getEventsChain().add(DI_INVENTORY_INSTANCE_CREATED.value());
   }
 
   @Override

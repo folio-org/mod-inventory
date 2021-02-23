@@ -53,6 +53,7 @@ import static org.folio.rest.jaxrs.model.EntityType.ITEM;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 
@@ -222,11 +223,8 @@ public class CreateItemEventHandlerTest {
     Assert.assertNotNull(createdItem.getString("holdingId"));
   }
 
-  @Test(expected = ExecutionException.class)
-  public void shouldReturnFailedFutureWhenMappedItemWithoutStatus()
-    throws InterruptedException,
-    ExecutionException,
-    TimeoutException {
+  @Test
+  public void shouldReturnFailedFutureWhenMappedItemWithoutStatus() {
 
     // given
     Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(""));
@@ -248,14 +246,15 @@ public class CreateItemEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
 
     // then
-    future.get(5, TimeUnit.SECONDS);
+    Assert.assertTrue(future.isCompletedExceptionally());
+    Assert.assertNotNull(payloadContext.get("ERROR"));
+
+    int sz = dataImportEventPayload.getEventsChain().size();
+    assertEquals(DI_INVENTORY_ITEM_CREATED.value(), dataImportEventPayload.getEventsChain().get(sz - 1));
   }
 
-  @Test(expected = ExecutionException.class)
-  public void shouldReturnFailedFutureWhenMappedItemWithUnrecognizedStatusName()
-    throws InterruptedException,
-    ExecutionException,
-    TimeoutException {
+  @Test
+  public void shouldReturnFailedFutureWhenMappedItemWithUnrecognizedStatusName() {
 
     // given
     Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of("Invalid status"));
@@ -278,15 +277,15 @@ public class CreateItemEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
 
     // then
-    future.get(5, TimeUnit.SECONDS);
+    Assert.assertTrue(future.isCompletedExceptionally());
+    Assert.assertNotNull(payloadContext.get("ERROR"));
+
+    int sz = dataImportEventPayload.getEventsChain().size();
+    assertEquals(DI_INVENTORY_ITEM_CREATED.value(), dataImportEventPayload.getEventsChain().get(sz - 1));
   }
 
-  @Test(expected = ExecutionException.class)
-  public void shouldReturnFailedFutureWhenCreatedItemHasExistingBarcode()
-    throws InterruptedException,
-    ExecutionException,
-    TimeoutException,
-    UnsupportedEncodingException {
+  @Test
+  public void shouldReturnFailedFutureWhenCreatedItemHasExistingBarcode() throws UnsupportedEncodingException {
 
     // given
     Mockito.doAnswer(invocationOnMock -> {
@@ -315,17 +314,19 @@ public class CreateItemEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
 
     // then
-    future.get(5, TimeUnit.SECONDS);
+    Assert.assertTrue(future.isCompletedExceptionally());
+    Assert.assertNotNull(payloadContext.get("ERROR"));
+
+    int sz = dataImportEventPayload.getEventsChain().size();
+    assertEquals(DI_INVENTORY_ITEM_CREATED.value(), dataImportEventPayload.getEventsChain().get(sz - 1));
   }
 
-  @Test(expected = ExecutionException.class)
-  public void shouldReturnFailedFutureWhenMappedItemWithoutPermanentLoanType()
-    throws InterruptedException,
-    ExecutionException,
-    TimeoutException {
+  @Test
+  public void shouldReturnFailedFutureWhenMappedItemWithoutPermanentLoanType() {
 
     // given
-    Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(AVAILABLE.value()), StringValue.of(""), StringValue.of(UUID.randomUUID().toString()));
+    Mockito.when(fakeReader.read(any(MappingRule.class)))
+      .thenReturn(StringValue.of(AVAILABLE.value()), StringValue.of(""), StringValue.of(UUID.randomUUID().toString()));
 
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new ItemWriterFactory());
@@ -345,14 +346,16 @@ public class CreateItemEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
 
     // then
-    future.get(5, TimeUnit.SECONDS);
+    Assert.assertTrue(future.isCompletedExceptionally());
+    Assert.assertNotNull(payloadContext.get("ERROR"));
+
+    int sz = dataImportEventPayload.getEventsChain().size();
+    assertEquals(DI_INVENTORY_ITEM_CREATED.value(), dataImportEventPayload.getEventsChain().get(sz - 1));
   }
 
   @Test(expected = ExecutionException.class)
   public void shouldReturnFailedFutureWhenHasNoMarcRecord()
-    throws InterruptedException,
-    ExecutionException,
-    TimeoutException {
+    throws InterruptedException, ExecutionException, TimeoutException {
 
     // given
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
@@ -368,12 +371,8 @@ public class CreateItemEventHandlerTest {
     future.get(5, TimeUnit.SECONDS);
   }
 
-  @Test(expected = ExecutionException.class)
-  public void shouldReturnFailedFutureWhenCouldNotFindHoldingsRecordIdInEventPayload()
-    throws UnsupportedEncodingException,
-    InterruptedException,
-    ExecutionException,
-    TimeoutException {
+  @Test
+  public void shouldReturnFailedFutureWhenCouldNotFindHoldingsRecordIdInEventPayload() {
 
     // given
     MappingManager.registerReaderFactory(fakeReaderFactory);
@@ -394,7 +393,11 @@ public class CreateItemEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
 
     // then
-    future.get(5, TimeUnit.SECONDS);
+    Assert.assertTrue(future.isCompletedExceptionally());
+    Assert.assertNotNull(payloadContext.get("ERROR"));
+
+    int sz = dataImportEventPayload.getEventsChain().size();
+    assertEquals(DI_INVENTORY_ITEM_CREATED.value(), dataImportEventPayload.getEventsChain().get(sz - 1));
   }
 
   @Test

@@ -4,9 +4,9 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.commons.lang3.StringUtils;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.dbschema.ObjectMapperTool;
@@ -44,7 +44,9 @@ import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.ITEM;
+import static org.folio.DataImportEventTypes.DI_ERROR;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_CREATED;
+import static org.folio.inventory.dataimport.handlers.actions.AbstractInstanceEventHandler.ERROR_MSG_KEY;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 public class CreateItemEventHandler implements EventHandler {
@@ -110,19 +112,30 @@ public class CreateItemEventHandler implements EventHandler {
               future.complete(dataImportEventPayload);
             } else {
               LOG.error("Error creating inventory Item", ar.cause());
+              prepareErrorEventPayload(dataImportEventPayload, Json.encode(ar.cause()));
               future.completeExceptionally(ar.cause());
             }
           });
       } else {
         String msg = format("Mapped Item is invalid: %s", errors.toString());
         LOG.error(msg);
+        prepareErrorEventPayload(dataImportEventPayload, msg);
         future.completeExceptionally(new EventProcessingException(msg));
       }
     } catch (Exception e) {
       LOG.error("Error creating inventory Item", e);
+      prepareErrorEventPayload(dataImportEventPayload, Json.encode(e));
       future.completeExceptionally(e);
     }
     return future;
+  }
+
+  private void prepareErrorEventPayload(DataImportEventPayload dataImportEventPayload, String errorMessage) {
+    dataImportEventPayload.getEventsChain().add(DI_INVENTORY_ITEM_CREATED.value());
+    dataImportEventPayload.setEventType(DI_ERROR.value());
+    if (dataImportEventPayload.getContext() != null) {
+      dataImportEventPayload.getContext().put(ERROR_MSG_KEY, errorMessage);
+    }
   }
 
   @Override

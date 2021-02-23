@@ -3,7 +3,6 @@ package org.folio.inventory.dataimport.handlers.actions;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
-
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
@@ -31,8 +30,10 @@ import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.ActionProfile.Action.UPDATE;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
+import static org.folio.DataImportEventTypes.DI_ERROR;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_CREATED;
 import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
 import static org.folio.inventory.domain.instances.Instance.METADATA_KEY;
 import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
@@ -117,19 +118,30 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
               future.complete(dataImportEventPayload);
             } else {
               LOGGER.error("Error updating inventory Instance", ar.cause());
+              prepareErrorEventPayload(dataImportEventPayload, Json.encode(ar.cause()));
               future.completeExceptionally(ar.cause());
             }
           });
       } else {
         String msg = String.format("Mapped Instance is invalid: %s", errors.toString());
         LOGGER.error(msg);
+        prepareErrorEventPayload(dataImportEventPayload, msg);
         future.completeExceptionally(new EventProcessingException(msg));
       }
     } catch (Exception e) {
       LOGGER.error("Error updating inventory Instance", e);
+      prepareErrorEventPayload(dataImportEventPayload, e.toString());
       future.completeExceptionally(e);
     }
     return future;
+  }
+
+  private void prepareErrorEventPayload(DataImportEventPayload dataImportEventPayload, String errorMessage) {
+    dataImportEventPayload.getEventsChain().add(DI_INVENTORY_ITEM_CREATED.value());
+    dataImportEventPayload.setEventType(DI_ERROR.value());
+    if (dataImportEventPayload.getContext() != null) {
+      dataImportEventPayload.getContext().put(ERROR_MSG_KEY, errorMessage);
+    }
   }
 
   @Override

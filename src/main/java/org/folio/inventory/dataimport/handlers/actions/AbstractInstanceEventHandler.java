@@ -41,6 +41,7 @@ import lombok.SneakyThrows;
 
 public abstract class AbstractInstanceEventHandler implements EventHandler {
   protected static final Logger LOGGER = LogManager.getLogger(AbstractInstanceEventHandler.class);
+  protected static final String ERROR_MSG_KEY = "ERROR";
   protected static final String MARC_FORMAT = "MARC";
   protected static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   protected static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
