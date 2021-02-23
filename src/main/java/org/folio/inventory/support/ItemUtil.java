@@ -21,6 +21,8 @@ import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public final class ItemUtil {
 
