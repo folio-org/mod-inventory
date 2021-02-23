@@ -171,9 +171,9 @@ public class Items extends AbstractInventoryResource {
       unprocessableEntity(routingContext.response(), validationError.get());
       return;
     }
-
+    log.info("item before mapping:" + item.toString());
     Item newItem = ItemUtil.jsonToItem(item);
-
+    log.info("item field after mapping:" + newItem.getEffectiveShelvingOrder());
     ItemCollection itemCollection = storage.getItemCollection(context);
     UserCollection userCollection = storage.getUserCollection(context);
 
@@ -210,7 +210,7 @@ public class Items extends AbstractInventoryResource {
       unprocessableEntity(routingContext.response(), validationError.get());
       return;
     }
-
+    
     Item newItem = ItemUtil.jsonToItem(itemRequest);
 
     ItemCollection itemCollection = storage.getItemCollection(context);

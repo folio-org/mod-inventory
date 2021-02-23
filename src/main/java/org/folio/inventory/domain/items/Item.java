@@ -453,7 +453,6 @@ public class Item {
       holdingId, this.status, this.materialTypeId,
       this.permanentLoanTypeId, this.metadata)
             .withHrid(this.hrid)
-            .withEffectiveShelvingOrder(this.effectiveShelvingOrder)
             .withFormerIds(this.formerIds)
             .withDiscoverySuppress(this.discoverySuppress)
             .withBarcode(this.barcode)
@@ -491,7 +490,6 @@ public class Item {
       holdingId, new Status(newStatus), this.materialTypeId,
       this.permanentLoanTypeId, this.metadata)
       .withHrid(this.hrid)
-      .withEffectiveShelvingOrder(this.effectiveShelvingOrder)
       .withFormerIds(this.formerIds)
       .withDiscoverySuppress(this.discoverySuppress)
       .withBarcode(this.barcode)
