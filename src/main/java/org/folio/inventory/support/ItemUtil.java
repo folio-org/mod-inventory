@@ -142,7 +142,7 @@ public final class ItemUtil {
     if(item.getLastCheckIn() != null) {
       itemToSend.put(Item.LAST_CHECK_IN, item.getLastCheckIn().toJson());
     }
-
+    includeIfPresent(itemToSend, Item.EFFECTIVE_SHELVING_ORDER_KEY, item.getEffectiveShelvingOrder());
     includeIfPresent(itemToSend, Item.HRID_KEY, item.getHrid());
     itemToSend.put(Item.FORMER_IDS_KEY, item.getFormerIds());
     itemToSend.put(Item.DISCOVERY_SUPPRESS_KEY, item.getDiscoverySuppress());
