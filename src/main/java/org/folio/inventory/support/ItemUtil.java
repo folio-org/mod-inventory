@@ -230,10 +230,12 @@ public final class ItemUtil {
       permanentLoanTypeId,
       null)
       .withHrid(itemRequest.getString(Item.HRID_KEY))
+      .withEffectiveShelvingOrder(itemRequest.getString(Item.EFFECTIVE_SHELVING_ORDER_KEY))
       .withFormerIds(formerIds)
       .withDiscoverySuppress(itemRequest.getBoolean(Item.DISCOVERY_SUPPRESS_KEY))
       .withBarcode(itemRequest.getString(BARCODE))
       .withItemLevelCallNumber(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_KEY))
+      .withEffectiveShelvingOrder(itemRequest.getString(Item.EFFECTIVE_SHELVING_ORDER_KEY))
       .withItemLevelCallNumberPrefix(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY))
       .withItemLevelCallNumberSuffix(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY))
       .withItemLevelCallNumberTypeId(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY))
@@ -287,6 +289,7 @@ public final class ItemUtil {
     includeIfPresent(itemJson, COPY_NUMBER, item.getCopyNumber());
     itemJson.put(NOTES, item.getNotes());
     itemJson.put(Item.CIRCULATION_NOTES_KEY, item.getCirculationNotes());
+    itemJson.put(Item.EFFECTIVE_SHELVING_ORDER_KEY, item.getEffectiveShelvingOrder());
     includeIfPresent(itemJson, BARCODE, item.getBarcode());
     includeIfPresent(itemJson, Item.ITEM_LEVEL_CALL_NUMBER_KEY, item.getItemLevelCallNumber());
     includeIfPresent(itemJson, Item.ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY, item.getItemLevelCallNumberPrefix());
