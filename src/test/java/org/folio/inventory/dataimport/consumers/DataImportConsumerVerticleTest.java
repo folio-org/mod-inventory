@@ -122,8 +122,7 @@ public class DataImportConsumerVerticleTest {
         .put(KAFKA_HOST, hostAndPort[0])
         .put(KAFKA_PORT, hostAndPort[1])
         .put(KAFKA_REPLICATION_FACTOR, "1")
-        .put(KAFKA_ENV, KAFKA_ENV_NAME))
-      .setWorker(true);
+        .put(KAFKA_ENV, KAFKA_ENV_NAME));
     vertx.deployVerticle(DataImportConsumerVerticle.class.getName(), options, deployAr -> async.complete());
   }
 

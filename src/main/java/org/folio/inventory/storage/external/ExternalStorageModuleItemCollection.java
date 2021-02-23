@@ -21,9 +21,7 @@ class ExternalStorageModuleItemCollection extends ExternalStorageModuleCollectio
 
   @Override
   protected Item mapFromJson(JsonObject itemFromServer) {
-
-    //itemFromServer.put("effectiveShelvingOrder", "bdsthethagetagheth");
-    log.info("item from server: " + itemFromServer.toString());
+    log.info("item record from server: ", itemFromServer.toString());
     return ItemUtil.fromStoredItemRepresentation(itemFromServer);
   }
 
