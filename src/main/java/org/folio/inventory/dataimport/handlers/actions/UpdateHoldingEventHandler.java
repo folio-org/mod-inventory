@@ -26,7 +26,6 @@ import static org.folio.ActionProfile.Action.UPDATE;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_UPDATED;
-import static org.folio.inventory.dataimport.handlers.actions.AbstractInstanceEventHandler.prepareErrorEventPayload;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
@@ -49,6 +48,8 @@ public class UpdateHoldingEventHandler implements EventHandler {
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
+      dataImportEventPayload.setEventType(DI_INVENTORY_HOLDING_UPDATED.value());
+
       if (dataImportEventPayload.getContext() == null
         || isEmpty(dataImportEventPayload.getContext().get(HOLDINGS.value()))
         || isEmpty(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()))) {
@@ -74,12 +75,10 @@ public class UpdateHoldingEventHandler implements EventHandler {
       holdingsRecords.update(holding, holdingSuccess -> constructDataImportEventPayload(future, dataImportEventPayload, holding),
         failure -> {
           LOGGER.error(UPDATE_HOLDING_ERROR_MESSAGE);
-          prepareErrorEventPayload(dataImportEventPayload, DI_INVENTORY_HOLDING_UPDATED, UPDATE_HOLDING_ERROR_MESSAGE);
           future.completeExceptionally(new EventProcessingException(UPDATE_HOLDING_ERROR_MESSAGE));
         });
     } catch (Exception e) {
       LOGGER.error("Failed to update Holdings", e);
-      prepareErrorEventPayload(dataImportEventPayload, DI_INVENTORY_HOLDING_UPDATED, e.toString());
       future.completeExceptionally(e);
     }
     return future;
@@ -109,7 +108,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
 
   private void constructDataImportEventPayload(CompletableFuture<DataImportEventPayload> future, DataImportEventPayload dataImportEventPayload, HoldingsRecord holding) {
     dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encodePrettily(holding));
-    dataImportEventPayload.setEventType(DI_INVENTORY_HOLDING_UPDATED.value());
+    future.complete(dataImportEventPayload);
     future.complete(dataImportEventPayload);
   }
 }

@@ -45,7 +45,6 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.ITEM;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_CREATED;
-import static org.folio.inventory.dataimport.handlers.actions.AbstractInstanceEventHandler.prepareErrorEventPayload;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 public class CreateItemEventHandler implements EventHandler {
@@ -75,6 +74,8 @@ public class CreateItemEventHandler implements EventHandler {
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
+      dataImportEventPayload.setEventType(DI_INVENTORY_ITEM_CREATED.value());
+
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
       if (payloadContext == null || isBlank(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()))) {
         LOG.error(PAYLOAD_HAS_NO_DATA_MSG);
@@ -107,23 +108,19 @@ public class CreateItemEventHandler implements EventHandler {
           .onComplete(ar -> {
             if (ar.succeeded()) {
               dataImportEventPayload.getContext().put(ITEM.value(), Json.encode(ar.result()));
-              dataImportEventPayload.setEventType(DI_INVENTORY_ITEM_CREATED.value());
               future.complete(dataImportEventPayload);
             } else {
               LOG.error("Error creating inventory Item", ar.cause());
-              prepareErrorEventPayload(dataImportEventPayload, DI_INVENTORY_ITEM_CREATED, Json.encode(ar.cause()));
               future.completeExceptionally(ar.cause());
             }
           });
       } else {
         String msg = format("Mapped Item is invalid: %s", errors.toString());
         LOG.error(msg);
-        prepareErrorEventPayload(dataImportEventPayload, DI_INVENTORY_ITEM_CREATED, msg);
         future.completeExceptionally(new EventProcessingException(msg));
       }
     } catch (Exception e) {
       LOG.error("Error creating inventory Item", e);
-      prepareErrorEventPayload(dataImportEventPayload, DI_INVENTORY_ITEM_CREATED, Json.encode(e));
       future.completeExceptionally(e);
     }
     return future;

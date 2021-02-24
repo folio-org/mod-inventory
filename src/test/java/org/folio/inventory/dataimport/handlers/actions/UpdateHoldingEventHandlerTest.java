@@ -1,7 +1,27 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
+import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
+import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_UPDATED;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.when;
+
+import java.io.IOException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
+
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
@@ -30,28 +50,8 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 
-import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.function.Consumer;
-
-import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
-import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_UPDATED;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.when;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
 
 public class UpdateHoldingEventHandlerTest {
 
@@ -164,7 +164,7 @@ public class UpdateHoldingEventHandlerTest {
     Assert.assertEquals(holdingId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("id"));
   }
 
-  @Test
+  @Test(expected = ExecutionException.class)
   public void shouldNotProcessEventIfHoldingIdIsNotExistsInContext() throws InterruptedException, ExecutionException, TimeoutException {
     Reader fakeReader = Mockito.mock(Reader.class);
 
@@ -199,16 +199,11 @@ public class UpdateHoldingEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
-
-    Assert.assertTrue(future.isCompletedExceptionally());
-    Assert.assertNotNull(context.get("ERROR"));
-
-    int sz = dataImportEventPayload.getEventsChain().size();
-    assertEquals(DI_INVENTORY_HOLDING_UPDATED.value(), dataImportEventPayload.getEventsChain().get(sz - 1));
+    future.get(5, TimeUnit.MILLISECONDS);
   }
 
 
-  @Test
+  @Test(expected = ExecutionException.class)
   public void shouldNotProcessEventIfInstanceIdIsNotExistsInContext() throws InterruptedException, ExecutionException, TimeoutException {
     Reader fakeReader = Mockito.mock(Reader.class);
 
@@ -243,15 +238,10 @@ public class UpdateHoldingEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
-
-    Assert.assertTrue(future.isCompletedExceptionally());
-    Assert.assertNotNull(context.get("ERROR"));
-
-    int sz = dataImportEventPayload.getEventsChain().size();
-    assertEquals(DI_INVENTORY_HOLDING_UPDATED.value(), dataImportEventPayload.getEventsChain().get(sz - 1));
+    future.get(5, TimeUnit.MILLISECONDS);
   }
 
-  @Test
+  @Test(expected = ExecutionException.class)
   public void shouldNotProcessEventIfPermanentLocationIdIsNotExistsInContext() throws InterruptedException, ExecutionException, TimeoutException {
     Reader fakeReader = Mockito.mock(Reader.class);
 
@@ -287,15 +277,10 @@ public class UpdateHoldingEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
-
-    Assert.assertTrue(future.isCompletedExceptionally());
-    Assert.assertNotNull(context.get("ERROR"));
-
-    int sz = dataImportEventPayload.getEventsChain().size();
-    assertEquals(DI_INVENTORY_HOLDING_UPDATED.value(), dataImportEventPayload.getEventsChain().get(sz - 1));
+    future.get(5, TimeUnit.MILLISECONDS);
   }
 
-  @Test
+  @Test(expected = ExecutionException.class)
   public void shouldNotProcessEventIfNoHoldingInContext() throws IOException, InterruptedException, ExecutionException, TimeoutException {
     Reader fakeReader = Mockito.mock(Reader.class);
 
@@ -325,12 +310,7 @@ public class UpdateHoldingEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
-
-    Assert.assertTrue(future.isCompletedExceptionally());
-    Assert.assertNotNull(context.get("ERROR"));
-
-    int sz = dataImportEventPayload.getEventsChain().size();
-    assertEquals(DI_INVENTORY_HOLDING_UPDATED.value(), dataImportEventPayload.getEventsChain().get(sz - 1));
+    future.get(5, TimeUnit.MILLISECONDS);
   }
 
   @Test(expected = ExecutionException.class)

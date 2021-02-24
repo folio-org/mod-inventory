@@ -18,6 +18,7 @@ import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.mapper.reader.Reader;
+
 import org.folio.processing.mapping.mapper.reader.record.marc.MarcBibReaderFactory;
 import org.folio.processing.value.StringValue;
 import org.folio.rest.jaxrs.model.EntityType;
@@ -53,7 +54,6 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -246,7 +246,7 @@ public class CreateHoldingEventHandlerTest {
   }
 
 
-  @Test
+  @Test(expected = ExecutionException.class)
   public void shouldNotProcessEventIfInstanceIdIsNotExistsInInstanceInContextAndNotExistsInParsedParsedRecords() throws InterruptedException, ExecutionException, TimeoutException {
     Reader fakeReader = Mockito.mock(Reader.class);
 
@@ -274,16 +274,11 @@ public class CreateHoldingEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
-
-    Assert.assertTrue(future.isCompletedExceptionally());
-    Assert.assertNotNull(context.get("ERROR"));
-
-    int sz = dataImportEventPayload.getEventsChain().size();
-    assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), dataImportEventPayload.getEventsChain().get(sz - 1));
+    future.get(5, TimeUnit.MILLISECONDS);
   }
 
 
-  @Test
+  @Test(expected = ExecutionException.class)
   public void shouldNotProcessEventIfInstanceIdIsNotExistsInInstanceInContextAndMarcBibliographicNotExists() throws InterruptedException, ExecutionException, TimeoutException {
     Reader fakeReader = Mockito.mock(Reader.class);
 
@@ -312,15 +307,10 @@ public class CreateHoldingEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
-
-    Assert.assertTrue(future.isCompletedExceptionally());
-    Assert.assertNotNull(context.get("ERROR"));
-
-    int sz = dataImportEventPayload.getEventsChain().size();
-    assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), dataImportEventPayload.getEventsChain().get(sz - 1));
+    future.get(5, TimeUnit.MILLISECONDS);
   }
 
-  @Test
+  @Test(expected = ExecutionException.class)
   public void shouldNotProcessEventIfNoContextMarcBibliographic() throws IOException, InterruptedException, ExecutionException, TimeoutException {
     Reader fakeReader = Mockito.mock(Reader.class);
 
@@ -348,12 +338,7 @@ public class CreateHoldingEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
-
-    Assert.assertTrue(future.isCompletedExceptionally());
-    Assert.assertNotNull(context.get("ERROR"));
-
-    int sz = dataImportEventPayload.getEventsChain().size();
-    assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), dataImportEventPayload.getEventsChain().get(sz - 1));
+    future.get(5, TimeUnit.MILLISECONDS);
   }
 
   @Test(expected = ExecutionException.class)
@@ -406,7 +391,7 @@ public class CreateHoldingEventHandlerTest {
     future.get(5, TimeUnit.MILLISECONDS);
   }
 
-  @Test
+  @Test(expected = ExecutionException.class)
   public void shouldNotProcessEventIfPermanentLocationIdIsNotExistsInContext() throws IOException, InterruptedException, ExecutionException, TimeoutException {
     Reader fakeReader = Mockito.mock(Reader.class);
 
@@ -434,15 +419,10 @@ public class CreateHoldingEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
-
-    Assert.assertTrue(future.isCompletedExceptionally());
-    Assert.assertNotNull(context.get("ERROR"));
-
-    int sz = dataImportEventPayload.getEventsChain().size();
-    assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), dataImportEventPayload.getEventsChain().get(sz - 1));
+    future.get(5, TimeUnit.MILLISECONDS);
   }
 
-  @Test
+  @Test(expected = ExecutionException.class)
   public void shouldNotProcessEventIfHoldingRecordIsInvalid() throws IOException, InterruptedException, ExecutionException, TimeoutException {
     Reader fakeReader = Mockito.mock(Reader.class);
 
@@ -494,12 +474,7 @@ public class CreateHoldingEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
-
-    Assert.assertTrue(future.isCompletedExceptionally());
-    Assert.assertNotNull(context.get("ERROR"));
-
-    int sz = dataImportEventPayload.getEventsChain().size();
-    assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), dataImportEventPayload.getEventsChain().get(sz - 1));
+    future.get(5, TimeUnit.MILLISECONDS);
   }
 
   @Test

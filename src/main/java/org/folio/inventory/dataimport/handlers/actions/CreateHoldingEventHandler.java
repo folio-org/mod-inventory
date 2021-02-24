@@ -30,7 +30,6 @@ import static org.apache.logging.log4j.util.Strings.isNotEmpty;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
-import static org.folio.inventory.dataimport.handlers.actions.AbstractInstanceEventHandler.prepareErrorEventPayload;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
@@ -55,6 +54,8 @@ public class CreateHoldingEventHandler implements EventHandler {
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
+      dataImportEventPayload.setEventType(DI_INVENTORY_HOLDING_CREATED.value());
+
       if (dataImportEventPayload.getContext() == null
         || StringUtils.isEmpty(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()))) {
         throw new EventProcessingException(CONTEXT_EMPTY_ERROR_MESSAGE);
@@ -75,12 +76,10 @@ public class CreateHoldingEventHandler implements EventHandler {
       holdingsRecords.add(holding, holdingSuccess -> constructDataImportEventPayload(future, dataImportEventPayload, holdingSuccess),
         failure -> {
           LOGGER.error(SAVE_HOLDING_ERROR_MESSAGE);
-          prepareErrorEventPayload(dataImportEventPayload, DI_INVENTORY_HOLDING_CREATED, SAVE_HOLDING_ERROR_MESSAGE);
           future.completeExceptionally(new EventProcessingException(SAVE_HOLDING_ERROR_MESSAGE));
         });
     } catch (Exception e) {
       LOGGER.error("Failed to create Holdings", e);
-      prepareErrorEventPayload(dataImportEventPayload, DI_INVENTORY_HOLDING_CREATED, String.format("Failed to create Holdings, %s", e));
       future.completeExceptionally(e);
     }
     return future;
@@ -131,7 +130,6 @@ public class CreateHoldingEventHandler implements EventHandler {
   private void constructDataImportEventPayload(CompletableFuture<DataImportEventPayload> future, DataImportEventPayload dataImportEventPayload, Success<HoldingsRecord> holdingSuccess) {
     HoldingsRecord createdHolding = holdingSuccess.getResult();
     dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encodePrettily(createdHolding));
-    dataImportEventPayload.setEventType(DI_INVENTORY_HOLDING_CREATED.value());
     future.complete(dataImportEventPayload);
   }
 

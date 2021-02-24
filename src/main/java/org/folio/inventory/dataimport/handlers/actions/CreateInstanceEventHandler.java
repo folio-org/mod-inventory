@@ -54,6 +54,8 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
+      dataImportEventPayload.setEventType(DI_INVENTORY_INSTANCE_CREATED.value());
+
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
       if (payloadContext == null || payloadContext.isEmpty() ||
         isEmpty(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value())) ||
@@ -86,24 +88,20 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
           .compose(createdInstance -> createPrecedingSucceedingTitles(mappedInstance, precedingSucceedingTitlesRepository).map(createdInstance))
           .onSuccess(ar -> {
             dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(ar));
-            dataImportEventPayload.setEventType(DI_INVENTORY_INSTANCE_CREATED.value());
             future.complete(dataImportEventPayload);
           })
           .onFailure(ar -> {
             LOGGER.error("Error creating inventory Instance", ar);
-            prepareErrorEventPayload(dataImportEventPayload, DI_INVENTORY_INSTANCE_CREATED, Json.encode(ar));
             future.completeExceptionally(ar);
           });
       } else {
         String msg = format("Mapped Instance is invalid: %s", errors.toString());
         LOGGER.error(msg);
-        prepareErrorEventPayload(dataImportEventPayload, DI_INVENTORY_INSTANCE_CREATED, msg);
         future.completeExceptionally(new EventProcessingException(msg));
       }
     } catch (Exception e) {
       String msg = format("Error creating inventory Instance: %s", e);
       LOGGER.error(msg);
-      prepareErrorEventPayload(dataImportEventPayload, DI_INVENTORY_INSTANCE_CREATED, msg);
       future.completeExceptionally(e);
     }
     return future;

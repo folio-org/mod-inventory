@@ -9,7 +9,6 @@ import lombok.SneakyThrows;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
-import org.folio.DataImportEventTypes;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
@@ -41,7 +40,6 @@ import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 
 public abstract class AbstractInstanceEventHandler implements EventHandler {
   protected static final Logger LOGGER = LogManager.getLogger(AbstractInstanceEventHandler.class);
-  protected static final String ERROR_MSG_KEY = "ERROR";
   protected static final String MARC_FORMAT = "MARC";
   protected static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   protected static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
@@ -174,13 +172,5 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
         promise.fail(failure.getReason());
       });
     return promise.future();
-  }
-
-  protected static void prepareErrorEventPayload(DataImportEventPayload dataImportEventPayload,
-                                                 DataImportEventTypes handledEventType, String errorMessage) {
-    dataImportEventPayload.getEventsChain().add(handledEventType.value());
-    if (dataImportEventPayload.getContext() != null) {
-      dataImportEventPayload.getContext().put(ERROR_MSG_KEY, errorMessage);
-    }
   }
 }

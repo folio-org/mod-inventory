@@ -62,7 +62,6 @@ import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
-import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -310,10 +309,6 @@ public class UpdateItemEventHandlerTest {
     JsonObject updatedItem = new JsonObject(payloadContext.get(ITEM.value()));
     Assert.assertEquals(protectedItemStatus, updatedItem.getJsonObject(STATUS_KEY).getString("name"));
     Assert.assertEquals(expectedItemBarcode, updatedItem.getString(ItemUtil.BARCODE));
-    Assert.assertNotNull(payloadContext.get("ERROR"));
-
-    int sz = dataImportEventPayload.getEventsChain().size();
-    assertEquals(DI_INVENTORY_ITEM_UPDATED.value(), dataImportEventPayload.getEventsChain().get(sz-1));
   }
 
   @Test

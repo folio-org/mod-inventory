@@ -56,6 +56,8 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) { // NOSONAR
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
+      dataImportEventPayload.setEventType(DI_INVENTORY_INSTANCE_UPDATED.value());
+
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
       if (payloadContext == null
         || payloadContext.isEmpty()
@@ -113,23 +115,19 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           .onComplete(ar -> {
             if (ar.succeeded()) {
               dataImportEventPayload.getContext().put(INSTANCE.value(), finalInstanceAsJson.encode());
-              dataImportEventPayload.setEventType(DI_INVENTORY_INSTANCE_UPDATED.value());
               future.complete(dataImportEventPayload);
             } else {
               LOGGER.error("Error updating inventory Instance", ar.cause());
-              prepareErrorEventPayload(dataImportEventPayload, DI_INVENTORY_ITEM_CREATED, Json.encode(ar.cause()));
               future.completeExceptionally(ar.cause());
             }
           });
       } else {
         String msg = String.format("Mapped Instance is invalid: %s", errors.toString());
         LOGGER.error(msg);
-        prepareErrorEventPayload(dataImportEventPayload, DI_INVENTORY_ITEM_CREATED, msg);
         future.completeExceptionally(new EventProcessingException(msg));
       }
     } catch (Exception e) {
       LOGGER.error("Error updating inventory Instance", e);
-      prepareErrorEventPayload(dataImportEventPayload, DI_INVENTORY_ITEM_CREATED, e.toString());
       future.completeExceptionally(e);
     }
     return future;
