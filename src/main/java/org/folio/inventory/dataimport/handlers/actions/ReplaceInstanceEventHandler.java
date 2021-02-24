@@ -3,7 +3,6 @@ package org.folio.inventory.dataimport.handlers.actions;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
-
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
@@ -33,6 +32,7 @@ import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_CREATED;
 import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
 import static org.folio.inventory.domain.instances.Instance.METADATA_KEY;
 import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
@@ -56,6 +56,8 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) { // NOSONAR
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
+      dataImportEventPayload.setEventType(DI_INVENTORY_INSTANCE_UPDATED.value());
+
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
       if (payloadContext == null
         || payloadContext.isEmpty()
@@ -113,7 +115,6 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           .onComplete(ar -> {
             if (ar.succeeded()) {
               dataImportEventPayload.getContext().put(INSTANCE.value(), finalInstanceAsJson.encode());
-              dataImportEventPayload.setEventType(DI_INVENTORY_INSTANCE_UPDATED.value());
               future.complete(dataImportEventPayload);
             } else {
               LOGGER.error("Error updating inventory Instance", ar.cause());
