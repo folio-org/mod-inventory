@@ -21,11 +21,8 @@ import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 public final class ItemUtil {
-  private static final Logger log = LogManager.getLogger(ItemUtil.class);
   private static final String MATERIAL_TYPE_ID_KEY = "materialTypeId";
   private static final String PERMANENT_LOAN_TYPE_ID_KEY = "permanentLoanTypeId";
   private static final String TEMPORARY_LOAN_TYPE_ID_KEY = "temporaryLoanTypeId";
@@ -142,7 +139,6 @@ public final class ItemUtil {
     if(item.getLastCheckIn() != null) {
       itemToSend.put(Item.LAST_CHECK_IN, item.getLastCheckIn().toJson());
     }
-    includeIfPresent(itemToSend, Item.EFFECTIVE_SHELVING_ORDER_KEY, item.getEffectiveShelvingOrder());
     includeIfPresent(itemToSend, Item.HRID_KEY, item.getHrid());
     itemToSend.put(Item.FORMER_IDS_KEY, item.getFormerIds());
     itemToSend.put(Item.DISCOVERY_SUPPRESS_KEY, item.getDiscoverySuppress());
@@ -230,7 +226,6 @@ public final class ItemUtil {
       permanentLoanTypeId,
       null)
       .withHrid(itemRequest.getString(Item.HRID_KEY))
-      .withEffectiveShelvingOrder(itemRequest.getString(Item.EFFECTIVE_SHELVING_ORDER_KEY))
       .withFormerIds(formerIds)
       .withDiscoverySuppress(itemRequest.getBoolean(Item.DISCOVERY_SUPPRESS_KEY))
       .withBarcode(itemRequest.getString(BARCODE))
@@ -289,7 +284,6 @@ public final class ItemUtil {
     includeIfPresent(itemJson, COPY_NUMBER, item.getCopyNumber());
     itemJson.put(NOTES, item.getNotes());
     itemJson.put(Item.CIRCULATION_NOTES_KEY, item.getCirculationNotes());
-    itemJson.put(Item.EFFECTIVE_SHELVING_ORDER_KEY, item.getEffectiveShelvingOrder());
     includeIfPresent(itemJson, BARCODE, item.getBarcode());
     includeIfPresent(itemJson, Item.ITEM_LEVEL_CALL_NUMBER_KEY, item.getItemLevelCallNumber());
     includeIfPresent(itemJson, Item.ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY, item.getItemLevelCallNumberPrefix());
