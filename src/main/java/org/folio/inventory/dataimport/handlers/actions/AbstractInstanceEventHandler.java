@@ -1,19 +1,13 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import static java.lang.String.format;
-import static org.folio.ActionProfile.FolioRecord.INSTANCE;
-import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
-
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-import java.util.function.BiFunction;
-
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.WebClient;
+import lombok.SneakyThrows;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.domain.instances.Instance;
@@ -30,14 +24,19 @@ import org.folio.processing.mapping.defaultmapper.RecordToInstanceMapperBuilder;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.Record;
 
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import io.vertx.ext.web.client.WebClient;
-import lombok.SneakyThrows;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.BiFunction;
+
+import static java.lang.String.format;
+import static org.folio.ActionProfile.FolioRecord.INSTANCE;
+import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 
 public abstract class AbstractInstanceEventHandler implements EventHandler {
   protected static final Logger LOGGER = LogManager.getLogger(AbstractInstanceEventHandler.class);

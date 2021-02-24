@@ -2,10 +2,9 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import org.apache.commons.lang3.StringUtils;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
@@ -55,6 +54,8 @@ public class CreateHoldingEventHandler implements EventHandler {
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
+      dataImportEventPayload.setEventType(DI_INVENTORY_HOLDING_CREATED.value());
+
       if (dataImportEventPayload.getContext() == null
         || StringUtils.isEmpty(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()))) {
         throw new EventProcessingException(CONTEXT_EMPTY_ERROR_MESSAGE);
@@ -129,7 +130,6 @@ public class CreateHoldingEventHandler implements EventHandler {
   private void constructDataImportEventPayload(CompletableFuture<DataImportEventPayload> future, DataImportEventPayload dataImportEventPayload, Success<HoldingsRecord> holdingSuccess) {
     HoldingsRecord createdHolding = holdingSuccess.getResult();
     dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encodePrettily(createdHolding));
-    dataImportEventPayload.setEventType(DI_INVENTORY_HOLDING_CREATED.value());
     future.complete(dataImportEventPayload);
   }
 

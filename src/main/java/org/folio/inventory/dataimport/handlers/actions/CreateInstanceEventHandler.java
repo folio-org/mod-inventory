@@ -5,7 +5,6 @@ import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
-
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
@@ -55,6 +54,8 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
+      dataImportEventPayload.setEventType(DI_INVENTORY_INSTANCE_CREATED.value());
+
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
       if (payloadContext == null || payloadContext.isEmpty() ||
         isEmpty(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value())) ||
@@ -87,7 +88,6 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
           .compose(createdInstance -> createPrecedingSucceedingTitles(mappedInstance, precedingSucceedingTitlesRepository).map(createdInstance))
           .onSuccess(ar -> {
             dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(ar));
-            dataImportEventPayload.setEventType(DI_INVENTORY_INSTANCE_CREATED.value());
             future.complete(dataImportEventPayload);
           })
           .onFailure(ar -> {
@@ -100,7 +100,8 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
         future.completeExceptionally(new EventProcessingException(msg));
       }
     } catch (Exception e) {
-      LOGGER.error("Error creating inventory Instance", e);
+      String msg = format("Error creating inventory Instance: %s", e);
+      LOGGER.error(msg);
       future.completeExceptionally(e);
     }
     return future;
