@@ -144,6 +144,9 @@ public class ItemApiExamples extends ApiTests {
 
     assertCallNumbers(createdItem);
 
+    assertThat("Item should contain an effective shelving order",
+      createdItem.containsKey("effectiveShelvingOrder"), is(true));
+
     selfLinkRespectsWayResourceWasReached(createdItem);
     selfLinkShouldBeReachable(createdItem);
     assertThat(createdItem.getString("hrid"), notNullValue());
