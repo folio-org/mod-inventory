@@ -71,7 +71,6 @@ public class Items extends AbstractInventoryResource {
   private static final String RELATIVE_ITEMS_PATH = "/inventory/items";
   private static final String RELATIVE_ITEMS_PATH_ID = RELATIVE_ITEMS_PATH+"/:id";
 
-
   private static final int STATUS_CREATED = 201;
   private static final int STATUS_SUCCESS = 200;
 
@@ -171,9 +170,7 @@ public class Items extends AbstractInventoryResource {
       unprocessableEntity(routingContext.response(), validationError.get());
       return;
     }
-    log.info("item before mapping:" + item.toString());
     Item newItem = ItemUtil.jsonToItem(item);
-    log.info("item field after mapping:" + newItem.getEffectiveShelvingOrder());
     ItemCollection itemCollection = storage.getItemCollection(context);
     UserCollection userCollection = storage.getUserCollection(context);
 
@@ -215,7 +212,7 @@ public class Items extends AbstractInventoryResource {
 
     ItemCollection itemCollection = storage.getItemCollection(context);
     UserCollection userCollection = storage.getUserCollection(context);
-
+    
     final String itemId = routingContext.request().getParam("id");
     final CompletableFuture<Success<Item>> getItemFuture = new CompletableFuture<>();
 
