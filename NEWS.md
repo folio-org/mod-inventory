@@ -1,3 +1,7 @@
+## 16.2.0 IN-PROGRESS
+
+* Map shelving order property for items (MODINV-155)
+
 ## 16.1.0 2020-10-12
 
 * Provides the ability to move items between holdings (MODINV-309)
