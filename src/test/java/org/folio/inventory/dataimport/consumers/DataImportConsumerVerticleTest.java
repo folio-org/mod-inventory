@@ -122,8 +122,7 @@ public class DataImportConsumerVerticleTest {
         .put(KAFKA_HOST, hostAndPort[0])
         .put(KAFKA_PORT, hostAndPort[1])
         .put(KAFKA_REPLICATION_FACTOR, "1")
-        .put(KAFKA_ENV, KAFKA_ENV_NAME))
-      .setWorker(true);
+        .put(KAFKA_ENV, KAFKA_ENV_NAME));
     vertx.deployVerticle(DataImportConsumerVerticle.class.getName(), options, deployAr -> async.complete());
   }
 
@@ -163,7 +162,7 @@ public class DataImportConsumerVerticleTest {
     // then
     String observeTopic = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_NAME, getDefaultNameSpace(), TENANT_ID, DI_COMPLETED.value());
     cluster.observeValues(ObserveKeyValues.on(observeTopic, 1)
-      .observeFor(20, TimeUnit.SECONDS)
+      .observeFor(30, TimeUnit.SECONDS)
       .build());
   }
 
