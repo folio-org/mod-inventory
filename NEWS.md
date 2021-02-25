@@ -1,6 +1,7 @@
 ## 16.2.0 IN-PROGRESS
 
 * Map shelving order property for items (MODINV-155)
+* Provides `inventory` interface 10.9 (MODINV-155)
 * Requires `item-storage` interface 8.9 (MODINV-155)
 
 ## 16.1.0 2020-10-12
