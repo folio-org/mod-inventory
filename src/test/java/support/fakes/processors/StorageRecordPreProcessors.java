@@ -34,6 +34,7 @@ public final class StorageRecordPreProcessors {
   private static final String HOLDINGS_RECORD_PROPERTY_NAME = "holdingsRecordId";
   private static final String PERMANENT_LOCATION_PROPERTY = "permanentLocationId";
   private static final String TEMPORARY_LOCATION_PROPERTY = "temporaryLocationId";
+  private static final String EFFECTIVE_CALL_NUMBER_COMPONENTS = "effectiveCallNumberComponents";
   // RMB uses ISO-8601 compatible date time format by default.
   private static final String RMB_DATETIME_PATTERN = "yyyy-MM-dd'T'HH:mm:ss.SSS+0000";
 
@@ -89,8 +90,18 @@ public final class StorageRecordPreProcessors {
         effectiveCallNumberComponents.put(effectivePropertyName, propertyValue);
       });
 
-      return newItem.put("effectiveCallNumberComponents", effectiveCallNumberComponents);
+      return newItem.put(EFFECTIVE_CALL_NUMBER_COMPONENTS, effectiveCallNumberComponents);
     });
+  }
+
+  public static CompletableFuture<JsonObject> setEffectiveShelvingOrder(
+    @SuppressWarnings("unused") JsonObject oldItem, JsonObject newItem) {
+
+    final var effectiveCallNumberComponents
+      = newItem.getJsonObject(EFFECTIVE_CALL_NUMBER_COMPONENTS);
+
+    return completedFuture(newItem.put("effectiveShelvingOrder",
+      effectiveCallNumberComponents.getString("callNumber")));
   }
 
   public static CompletableFuture<JsonObject> setStatusDateProcessor(

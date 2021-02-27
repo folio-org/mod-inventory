@@ -177,6 +177,10 @@ class ItemRepresentation {
         item.getEffectiveCallNumberComponents().toJson());
     }
 
+    if (item.getEffectiveShelvingOrder() != null) {
+      representation.put("effectiveShelvingOrder", item.getEffectiveShelvingOrder());
+    }
+
     return representation;
   }
 
