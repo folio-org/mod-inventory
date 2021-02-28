@@ -54,12 +54,14 @@ abstract class ExternalStorageModuleCollection<T> {
   }
 
   protected abstract JsonObject mapToRequest(T record);
+
   protected abstract T mapFromJson(JsonObject fromServer);
+
   protected abstract String getId(T record);
 
   public void add(T item,
-    Consumer<Success<T>> resultCallback,
-    Consumer<Failure> failureCallback) {
+                  Consumer<Success<T>> resultCallback,
+                  Consumer<Failure> failureCallback) {
 
     final var futureResponse = new CompletableFuture<AsyncResult<HttpResponse<Buffer>>>();
 
@@ -71,19 +73,22 @@ abstract class ExternalStorageModuleCollection<T> {
       .thenCompose(this::mapAsyncResultToCompletionStage)
       .thenAccept(response -> {
         if (response.getStatusCode() == 201) {
-          T created = mapFromJson(response.getJson());
-
-          resultCallback.accept(new Success<>(created));
-        }
-        else {
+          try {
+            T created = mapFromJson(response.getJson());
+            resultCallback.accept(new Success<>(created));
+          } catch (Exception e) {
+            failureCallback.accept(new Failure(e.getMessage(), response.getStatusCode()));
+          }
+        } else {
           failureCallback.accept(new Failure(response.getBody(), response.getStatusCode()));
         }
       });
+
   }
 
   public void findById(String id,
-    Consumer<Success<T>> resultCallback,
-    Consumer<Failure> failureCallback) {
+                       Consumer<Success<T>> resultCallback,
+                       Consumer<Failure> failureCallback) {
 
     final var futureResponse = new CompletableFuture<AsyncResult<HttpResponse<Buffer>>>();
 
@@ -103,7 +108,7 @@ abstract class ExternalStorageModuleCollection<T> {
               T found = mapFromJson(instanceFromServer);
               resultCallback.accept(new Success<>(found));
               break;
-            } catch(Exception e) {
+            } catch (Exception e) {
               failureCallback.accept(new Failure(e.getMessage(), 500));
               break;
             }
@@ -138,9 +143,9 @@ abstract class ExternalStorageModuleCollection<T> {
   }
 
   public void findByCql(String cqlQuery,
-    PagingParameters pagingParameters,
-    Consumer<Success<MultipleRecords<T>>> resultCallback,
-    Consumer<Failure> failureCallback) {
+                        PagingParameters pagingParameters,
+                        Consumer<Success<MultipleRecords<T>>> resultCallback,
+                        Consumer<Failure> failureCallback) {
 
     String encodedQuery = URLEncoder.encode(cqlQuery, StandardCharsets.UTF_8);
 
@@ -153,8 +158,8 @@ abstract class ExternalStorageModuleCollection<T> {
   }
 
   public void update(T item,
-    Consumer<Success<Void>> completionCallback,
-    Consumer<Failure> failureCallback) {
+                     Consumer<Success<Void>> completionCallback,
+                     Consumer<Failure> failureCallback) {
 
     String location = individualRecordLocation(getId(item));
 
@@ -171,7 +176,7 @@ abstract class ExternalStorageModuleCollection<T> {
   }
 
   public void delete(String id, Consumer<Success<Void>> completionCallback,
-    Consumer<Failure> failureCallback) {
+                     Consumer<Failure> failureCallback) {
 
     deleteLocation(individualRecordLocation(id), completionCallback, failureCallback);
   }
@@ -213,7 +218,7 @@ abstract class ExternalStorageModuleCollection<T> {
   }
 
   private void find(String location,
-    Consumer<Success<MultipleRecords<T>>> resultCallback, Consumer<Failure> failureCallback) {
+                    Consumer<Success<MultipleRecords<T>>> resultCallback, Consumer<Failure> failureCallback) {
 
     final var futureResponse = new CompletableFuture<AsyncResult<HttpResponse<Buffer>>>();
 
@@ -245,14 +250,13 @@ abstract class ExternalStorageModuleCollection<T> {
         foundRecords, wrappedRecords.getInteger("totalRecords"));
 
       resultCallback.accept(new Success<>(result));
-    }
-    else {
+    } else {
       failureCallback.accept(new Failure(response.getBody(), response.getStatusCode()));
     }
   }
 
   private void deleteLocation(String location, Consumer<Success<Void>> completionCallback,
-    Consumer<Failure> failureCallback) {
+                              Consumer<Failure> failureCallback) {
 
     final var futureResponse = new CompletableFuture<AsyncResult<HttpResponse<Buffer>>>();
 
@@ -269,8 +273,7 @@ abstract class ExternalStorageModuleCollection<T> {
   private void interpretNoContentResponse(Response response, Consumer<Success<Void>> completionCallback, Consumer<Failure> failureCallback) {
     if (response.getStatusCode() == 204) {
       completionCallback.accept(new Success<>(null));
-    }
-    else {
+    } else {
       failureCallback.accept(new Failure(response.getBody(), response.getStatusCode()));
     }
   }

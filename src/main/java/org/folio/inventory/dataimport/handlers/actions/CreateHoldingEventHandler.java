@@ -142,10 +142,7 @@ public class CreateHoldingEventHandler implements EventHandler {
   private Future<HoldingsRecord> addHoldings(HoldingsRecord holdings, HoldingsRecordCollection holdingsRecordCollection) {
     Promise<HoldingsRecord> promise = Promise.promise();
     holdingsRecordCollection.add(holdings,
-      success -> {
-        LOGGER.info("Successfully created Holding record");
-        promise.complete(success.getResult());
-      },
+      success -> promise.complete(success.getResult()),
       failure -> {
         LOGGER.error(format("Error posting Holdings cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
         promise.fail(failure.getReason());
