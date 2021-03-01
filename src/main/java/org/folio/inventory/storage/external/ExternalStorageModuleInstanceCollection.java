@@ -225,18 +225,23 @@ class ExternalStorageModuleInstanceCollection
       .thenCompose(this::mapAsyncResultToCompletionStage)
       .thenAccept(response -> {
         if (isBatchResponse(response)) {
-          JsonObject batchResponse = response.getJson();
-          JsonArray createdInstances = batchResponse.getJsonArray("instances");
+          try {
+            JsonObject batchResponse = response.getJson();
+            JsonArray createdInstances = batchResponse.getJsonArray("instances");
 
-          List<Instance> instancesList = new ArrayList<>();
-          for (int i = 0; i < createdInstances.size(); i++) {
-            instancesList.add(mapFromJson(createdInstances.getJsonObject(i)));
+            List<Instance> instancesList = new ArrayList<>();
+            for (int i = 0; i < createdInstances.size(); i++) {
+              instancesList.add(mapFromJson(createdInstances.getJsonObject(i)));
+            }
+            BatchResult<Instance> batchResult = new BatchResult<>();
+            batchResult.setBatchItems(instancesList);
+            batchResult.setErrorMessages(batchResponse.getJsonArray("errorMessages").getList());
+
+            resultCallback.accept(new Success<>(batchResult));
+          } catch (Exception e) {
+            failureCallback.accept(new Failure(e.getMessage(), response.getStatusCode()));
           }
-          BatchResult<Instance> batchResult = new BatchResult<>();
-          batchResult.setBatchItems(instancesList);
-          batchResult.setErrorMessages(batchResponse.getJsonArray("errorMessages").getList());
 
-          resultCallback.accept(new Success<>(batchResult));
         } else {
           failureCallback.accept(new Failure(response.getBody(), response.getStatusCode()));
         }
