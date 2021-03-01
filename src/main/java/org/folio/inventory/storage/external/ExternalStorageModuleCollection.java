@@ -14,6 +14,8 @@ import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
@@ -32,6 +34,9 @@ import java.util.stream.Collectors;
 abstract class ExternalStorageModuleCollection<T> {
   private static final String TENANT_HEADER = "X-Okapi-Tenant";
   private static final String TOKEN_HEADER = "X-Okapi-Token";
+
+  private static final Logger LOGGER = LogManager.getLogger(ExternalStorageModuleCollection.class);
+
 
   private final String storageAddress;
   private final String tenant;
@@ -77,6 +82,7 @@ abstract class ExternalStorageModuleCollection<T> {
             T created = mapFromJson(response.getJson());
             resultCallback.accept(new Success<>(created));
           } catch (Exception e) {
+            LOGGER.error(e);
             failureCallback.accept(new Failure(e.getMessage(), response.getStatusCode()));
           }
         } else {
@@ -109,6 +115,7 @@ abstract class ExternalStorageModuleCollection<T> {
               resultCallback.accept(new Success<>(found));
               break;
             } catch (Exception e) {
+              LOGGER.error(e);
               failureCallback.accept(new Failure(e.getMessage(), 500));
               break;
             }
@@ -237,19 +244,25 @@ abstract class ExternalStorageModuleCollection<T> {
     Response response) {
 
     if (response.getStatusCode() == 200) {
-      JsonObject wrappedRecords = response.getJson();
+      try {
+        JsonObject wrappedRecords = response.getJson();
 
-      List<JsonObject> records = JsonArrayHelper.toList(
-        wrappedRecords.getJsonArray(collectionWrapperPropertyName));
+        List<JsonObject> records = JsonArrayHelper.toList(
+          wrappedRecords.getJsonArray(collectionWrapperPropertyName));
 
-      List<T> foundRecords = records.stream()
-        .map(this::mapFromJson)
-        .collect(Collectors.toList());
+        List<T> foundRecords = records.stream()
+          .map(this::mapFromJson)
+          .collect(Collectors.toList());
 
-      MultipleRecords<T> result = new MultipleRecords<>(
-        foundRecords, wrappedRecords.getInteger("totalRecords"));
+        MultipleRecords<T> result = new MultipleRecords<>(
+          foundRecords, wrappedRecords.getInteger("totalRecords"));
 
-      resultCallback.accept(new Success<>(result));
+        resultCallback.accept(new Success<>(result));
+      } catch (Exception e) {
+        LOGGER.error(e);
+        failureCallback.accept(new Failure(e.getMessage(), response.getStatusCode()));
+      }
+
     } else {
       failureCallback.accept(new Failure(response.getBody(), response.getStatusCode()));
     }
