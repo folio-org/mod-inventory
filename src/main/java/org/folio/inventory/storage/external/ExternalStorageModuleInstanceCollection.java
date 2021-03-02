@@ -8,6 +8,8 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.BatchResult;
@@ -40,6 +42,8 @@ import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
 class ExternalStorageModuleInstanceCollection
   extends ExternalStorageModuleCollection<Instance>
   implements InstanceCollection {
+
+  private static final Logger LOGGER = LogManager.getLogger(ExternalStorageModuleInstanceCollection.class);
 
   private final String batchAddress;
 
@@ -239,6 +243,7 @@ class ExternalStorageModuleInstanceCollection
 
             resultCallback.accept(new Success<>(batchResult));
           } catch (Exception e) {
+            LOGGER.error(e);
             failureCallback.accept(new Failure(e.getMessage(), response.getStatusCode()));
           }
 
