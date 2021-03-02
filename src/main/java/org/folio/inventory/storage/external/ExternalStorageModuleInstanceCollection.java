@@ -8,6 +8,8 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.BatchResult;
@@ -40,6 +42,8 @@ import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
 class ExternalStorageModuleInstanceCollection
   extends ExternalStorageModuleCollection<Instance>
   implements InstanceCollection {
+
+  private static final Logger LOGGER = LogManager.getLogger(ExternalStorageModuleInstanceCollection.class);
 
   private final String batchAddress;
 
@@ -225,18 +229,24 @@ class ExternalStorageModuleInstanceCollection
       .thenCompose(this::mapAsyncResultToCompletionStage)
       .thenAccept(response -> {
         if (isBatchResponse(response)) {
-          JsonObject batchResponse = response.getJson();
-          JsonArray createdInstances = batchResponse.getJsonArray("instances");
+          try {
+            JsonObject batchResponse = response.getJson();
+            JsonArray createdInstances = batchResponse.getJsonArray("instances");
 
-          List<Instance> instancesList = new ArrayList<>();
-          for (int i = 0; i < createdInstances.size(); i++) {
-            instancesList.add(mapFromJson(createdInstances.getJsonObject(i)));
+            List<Instance> instancesList = new ArrayList<>();
+            for (int i = 0; i < createdInstances.size(); i++) {
+              instancesList.add(mapFromJson(createdInstances.getJsonObject(i)));
+            }
+            BatchResult<Instance> batchResult = new BatchResult<>();
+            batchResult.setBatchItems(instancesList);
+            batchResult.setErrorMessages(batchResponse.getJsonArray("errorMessages").getList());
+
+            resultCallback.accept(new Success<>(batchResult));
+          } catch (Exception e) {
+            LOGGER.error(e);
+            failureCallback.accept(new Failure(e.getMessage(), response.getStatusCode()));
           }
-          BatchResult<Instance> batchResult = new BatchResult<>();
-          batchResult.setBatchItems(instancesList);
-          batchResult.setErrorMessages(batchResponse.getJsonArray("errorMessages").getList());
 
-          resultCallback.accept(new Success<>(batchResult));
         } else {
           failureCallback.accept(new Failure(response.getBody(), response.getStatusCode()));
         }
