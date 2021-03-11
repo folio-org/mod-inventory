@@ -2,36 +2,33 @@ package api.items;
 
 import static api.ApiTestSuite.ID_FOR_FAILURE;
 import static api.support.InstanceSamples.smallAngryPlanet;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
-import static org.folio.inventory.support.http.ContentType.TEXT_PLAIN;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertThat;
 
 import java.net.MalformedURLException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import api.ApiTestSuite;
-import api.support.builders.AbstractBuilder;
 import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
-import org.folio.inventory.support.http.client.ResponseHandler;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import api.ApiTestSuite;
 import api.support.ApiRoot;
 import api.support.ApiTests;
 import api.support.InstanceApiClient;
+import api.support.builders.AbstractBuilder;
 import api.support.builders.HoldingRequestBuilder;
 import api.support.builders.ItemRequestBuilder;
 import api.support.builders.ItemsMoveRequestBuilder;
@@ -122,14 +119,13 @@ public class ItemApiMoveExamples extends ApiTests {
   public void cannotMoveItemsToUnspecifiedHoldingsRecord()
       throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
 
-    CompletableFuture<Response> postMoveItemsCompleted = new CompletableFuture<>();
-
     JsonObject itemMoveWithoutToHoldingsRecordId = new ItemsMoveRequestBuilder(null,
         new JsonArray(Collections.singletonList(UUID.randomUUID()))).create();
 
-    okapiClient.post(ApiRoot.moveItems(), itemMoveWithoutToHoldingsRecordId, ResponseHandler.any(postMoveItemsCompleted));
+    final var postMoveItemsCompleted = okapiClient.post(
+      ApiRoot.moveItems(), itemMoveWithoutToHoldingsRecordId);
 
-    Response postMoveItemsResponse = postMoveItemsCompleted.get(5, TimeUnit.SECONDS);
+    Response postMoveItemsResponse = postMoveItemsCompleted.toCompletableFuture().get(5, SECONDS);
 
     assertThat(postMoveItemsResponse.getStatusCode(), is(422));
     assertThat(postMoveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
@@ -143,13 +139,12 @@ public class ItemApiMoveExamples extends ApiTests {
   public void cannotMoveUnspecifiedItems()
       throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
 
-    CompletableFuture<Response> postMoveItemsCompleted = new CompletableFuture<>();
-
     JsonObject itemMoveWithoutItemIds = new ItemsMoveRequestBuilder(UUID.randomUUID(), new JsonArray()).create();
 
-    okapiClient.post(ApiRoot.moveItems(), itemMoveWithoutItemIds, ResponseHandler.any(postMoveItemsCompleted));
+    final var postMoveItemsCompleted = okapiClient.post(
+      ApiRoot.moveItems(), itemMoveWithoutItemIds);
 
-    Response postMoveItemsResponse = postMoveItemsCompleted.get(5, TimeUnit.SECONDS);
+    Response postMoveItemsResponse = postMoveItemsCompleted.toCompletableFuture().get(5, SECONDS);
 
     assertThat(postMoveItemsResponse.getStatusCode(), is(422));
     assertThat(postMoveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
@@ -188,7 +183,7 @@ public class ItemApiMoveExamples extends ApiTests {
   }
 
   @Test
-  public void cannotMoveDueToHoldingsRecordSchemasMismatching()
+  public void canMoveToHoldingsRecordWithHoldingSchemasMismatching()
     throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException, IllegalAccessException {
 
     UUID instanceId = UUID.randomUUID();
@@ -208,10 +203,7 @@ public class ItemApiMoveExamples extends ApiTests {
 
     Response postMoveItemsResponse = moveItems(itemsMoveRequestBody);
 
-    assertThat(postMoveItemsResponse.getStatusCode(), is(500));
-    assertThat(postMoveItemsResponse.getContentType(), containsString(TEXT_PLAIN));
-
-    assertThat(postMoveItemsResponse.getBody(), containsString("Can`t map json to 'Holdingsrecord' entity"));
+    assertThat(postMoveItemsResponse.getStatusCode(), is(200));
   }
 
   @Test
@@ -259,9 +251,8 @@ public class ItemApiMoveExamples extends ApiTests {
   }
 
   private Response moveItems(JsonObject itemsMoveRequestBody) throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
-    CompletableFuture<Response> postItemsMoveCompleted = new CompletableFuture<>();
-    okapiClient.post(ApiRoot.moveItems(), itemsMoveRequestBody, ResponseHandler.any(postItemsMoveCompleted));
-    return postItemsMoveCompleted.get(5, TimeUnit.SECONDS);
+    final var postItemsMoveCompleted = okapiClient.post(ApiRoot.moveItems(), itemsMoveRequestBody);
+    return postItemsMoveCompleted.toCompletableFuture().get(5, SECONDS);
   }
 
   private UUID createHoldingForInstance(UUID instanceId)

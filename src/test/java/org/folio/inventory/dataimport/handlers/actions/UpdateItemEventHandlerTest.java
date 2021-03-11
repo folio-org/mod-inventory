@@ -21,7 +21,7 @@ import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.ItemUtil;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.mapper.reader.Reader;
-import org.folio.processing.mapping.mapper.reader.record.MarcBibReaderFactory;
+import org.folio.processing.mapping.mapper.reader.record.marc.MarcBibReaderFactory;
 import org.folio.processing.value.StringValue;
 import org.folio.rest.jaxrs.model.MappingDetail;
 import org.folio.rest.jaxrs.model.MappingRule;
@@ -52,8 +52,6 @@ import java.util.function.Consumer;
 import static org.folio.ActionProfile.Action.UPDATE;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_MATCHED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_UPDATED;
-import static org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler.ERROR_MSG_KEY;
-import static org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler.FAILED_EVENT_KEY;
 import static org.folio.inventory.domain.items.Item.HRID_KEY;
 import static org.folio.inventory.domain.items.Item.STATUS_KEY;
 import static org.folio.inventory.domain.items.ItemStatusName.AVAILABLE;
@@ -311,8 +309,6 @@ public class UpdateItemEventHandlerTest {
     JsonObject updatedItem = new JsonObject(payloadContext.get(ITEM.value()));
     Assert.assertEquals(protectedItemStatus, updatedItem.getJsonObject(STATUS_KEY).getString("name"));
     Assert.assertEquals(expectedItemBarcode, updatedItem.getString(ItemUtil.BARCODE));
-    Assert.assertNotNull(payloadContext.get(ERROR_MSG_KEY));
-    Assert.assertEquals(payloadContext.get(FAILED_EVENT_KEY), DI_INVENTORY_ITEM_UPDATED.value());
   }
 
   @Test

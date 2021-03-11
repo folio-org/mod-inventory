@@ -1,6 +1,5 @@
 package org.folio.inventory.resources;
 
-import static org.folio.HttpStatus.HTTP_CREATED;
 import static org.folio.HttpStatus.HTTP_OK;
 import static org.folio.inventory.common.FutureAssistance.allOf;
 import static org.folio.inventory.support.CqlHelper.multipleRecordsCqlQuery;
@@ -18,6 +17,7 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -35,6 +35,7 @@ import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.items.CirculationNote;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
+import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.domain.user.User;
 import org.folio.inventory.domain.user.UserCollection;
 import org.folio.inventory.services.MoveItemIntoStatusService;
@@ -57,14 +58,15 @@ import org.folio.inventory.validation.ItemsValidator;
 
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.handler.BodyHandler;
 
 public class Items extends AbstractInventoryResource {
-  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+  private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
   private static final String RELATIVE_ITEMS_PATH = "/inventory/items";
   private static final String RELATIVE_ITEMS_PATH_ID = RELATIVE_ITEMS_PATH+"/:id";
@@ -93,127 +95,31 @@ public class Items extends AbstractInventoryResource {
     router.put(RELATIVE_ITEMS_PATH_ID).handler(this::update);
     router.delete(RELATIVE_ITEMS_PATH_ID).handler(this::deleteById);
 
-    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-in-process")
-      .handler(handle(this::markAsInProcess));
-    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-in-process-non-requestable")
-      .handler(handle(this::markAsInProcessNonRequestable));
-    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-intellectual-item")
-      .handler(handle(this::markAsIntellectualItem));
-    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-long-missing")
-      .handler(handle(this::markAsLongMissing));
-    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-missing")
-      .handler(handle(this::markAsMissing));
-    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-restricted")
-      .handler(handle(this::markAsRestricted));
-    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-unavailable")
-      .handler(handle(this::markAsUnavailable));
-    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-unknown")
-      .handler(handle(this::markAsUnknown));
-    router.post(RELATIVE_ITEMS_PATH_ID + "/mark-withdrawn")
-      .handler(handle(this::markAsWithdrawn));
-
+    Arrays.stream(ItemStatusName.values()).map(itemStatusName -> ItemStatusURL.getUrlForItemStatusName(itemStatusName))
+      .filter(itemStatusUrl -> itemStatusUrl.isPresent())
+      .forEach(itemStatusUrl -> registerMarkItemAsHandler(itemStatusUrl.get(), router));
   }
 
-  private CompletableFuture<Void> markAsWithdrawn(
+  private void registerMarkItemAsHandler(String itemStatusUrl, Router router) {
+    router.post(RELATIVE_ITEMS_PATH_ID + itemStatusUrl)
+      .handler(handle(this::markItemAsTargetStatus));
+  }
+
+  private CompletableFuture<Void> markItemAsTargetStatus(
     RoutingContext routingContext, WebContext webContext, Clients clients) {
+
+    final var itemStatusName = ItemStatusURL.getItemStatusNameForUrl(routingContext.request().uri());
+    if (itemStatusName.isEmpty())
+      log.error("Item status for url $URL$ not found.".replace("$URL$", routingContext.request().uri()),
+        new Exception());
 
     final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
       .getItemCollection(webContext), clients);
 
-    return moveItemIntoStatusService.processMarkItemWithdrawn(webContext)
-      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_CREATED.toInt(),
-          routingContext, webContext));
-  }
-
-  private CompletableFuture<Void> markAsInProcess(
-    RoutingContext routingContext, WebContext webContext, Clients clients) {
-
-    final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
-      .getItemCollection(webContext), clients);
-
-    return moveItemIntoStatusService.processMarkItemInProcess(webContext)
+    return moveItemIntoStatusService.markItemAs(itemStatusName.get(), webContext)
       .thenAccept(item -> respondWithItemRepresentation(item, HTTP_OK.toInt(),
         routingContext, webContext));
   }
-
-  private CompletableFuture<Void> markAsInProcessNonRequestable(
-    RoutingContext routingContext, WebContext webContext, Clients clients) {
-
-    final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
-      .getItemCollection(webContext), clients);
-
-    return moveItemIntoStatusService.processMarkItemInProcessNonRequestable(webContext)
-      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_OK.toInt(),
-        routingContext, webContext));
-  }
-
-  private CompletableFuture<Void> markAsIntellectualItem(
-    RoutingContext routingContext, WebContext webContext, Clients clients) {
-
-    final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
-      .getItemCollection(webContext), clients);
-
-    return moveItemIntoStatusService.processMarkItemIntellectualItem(webContext)
-      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_OK.toInt(),
-        routingContext, webContext));
-  }
-
-  private CompletableFuture<Void> markAsLongMissing(
-    RoutingContext routingContext, WebContext webContext, Clients clients) {
-
-    final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
-      .getItemCollection(webContext), clients);
-
-    return moveItemIntoStatusService.processMarkItemLongMissing(webContext)
-      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_OK.toInt(),
-        routingContext, webContext));
-  }
-
-
-  private CompletableFuture<Void> markAsMissing(
-    RoutingContext routingContext, WebContext webContext, Clients clients) {
-
-    final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
-      .getItemCollection(webContext), clients);
-
-    return moveItemIntoStatusService.processMarkItemMissing(webContext)
-      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_CREATED.toInt(),
-          routingContext, webContext));
-  }
-
-  private CompletableFuture<Void> markAsRestricted(
-    RoutingContext routingContext, WebContext webContext, Clients clients) {
-
-    final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
-      .getItemCollection(webContext), clients);
-
-    return moveItemIntoStatusService.processMarkItemRestricted(webContext)
-      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_OK.toInt(),
-        routingContext, webContext));
-  }
-
-  private CompletableFuture<Void> markAsUnavailable(
-    RoutingContext routingContext, WebContext webContext, Clients clients) {
-
-    final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
-      .getItemCollection(webContext), clients);
-
-    return moveItemIntoStatusService.processMarkItemUnavailable(webContext)
-      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_OK.toInt(),
-        routingContext, webContext));
-  }
-
-  private CompletableFuture<Void> markAsUnknown(
-    RoutingContext routingContext, WebContext webContext, Clients clients) {
-
-    final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
-      .getItemCollection(webContext), clients);
-
-    return moveItemIntoStatusService.processMarkItemUnknown(webContext)
-      .thenAccept(item -> respondWithItemRepresentation(item, HTTP_OK.toInt(),
-        routingContext, webContext));
-  }
-
 
   private void getAll(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
@@ -570,7 +476,7 @@ public class Items extends AbstractInventoryResource {
     WebContext context)
     throws MalformedURLException {
 
-    return new OkapiHttpClient(client, context,
+    return new OkapiHttpClient(WebClient.wrap(client), context,
       exception -> ServerErrorResponse.internalError(routingContext.response(),
       String.format("Failed to contact storage module: %s",
         exception.toString())));

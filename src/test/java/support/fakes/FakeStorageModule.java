@@ -104,8 +104,8 @@ class FakeStorageModule extends AbstractVerticle {
         .setStatusCode(endpointFailureDescriptor.getStatusCode())
         .putHeader(HttpHeaders.CONTENT_TYPE, endpointFailureDescriptor.getContentType())
         .putHeader(HttpHeaders.CONTENT_LENGTH, Integer.toString(body.length()))
-        .write(body)
-        .end();
+        .end(body);
+
     } else {
       routingContext.next();
     }
@@ -119,7 +119,7 @@ class FakeStorageModule extends AbstractVerticle {
     return endpointFailureDescriptor != null && DateTime.now().toDate()
       .before(endpointFailureDescriptor.getFailureExpireDate())
       && endpointFailureDescriptor.getMethod().equals(routingContext.request()
-      .method());
+      .method().name());
   }
 
   void registerBatch(Router router, String batchPath) {

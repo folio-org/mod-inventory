@@ -8,7 +8,7 @@ import static org.folio.inventory.storage.external.ExternalStorageSuite.getStora
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 import java.io.UnsupportedEncodingException;
 import java.util.List;
@@ -31,8 +31,6 @@ import org.junit.Test;
 public class ExternalItemCollectionExamples {
   private final String bookMaterialTypeId = UUID.randomUUID().toString();
   private final String canCirculateLoanTypeId = UUID.randomUUID().toString();
-
-  private final String mainLibraryLocationId = UUID.randomUUID().toString();
   private final String annexLibraryLocationId = UUID.randomUUID().toString();
 
   private final ItemCollection collection =

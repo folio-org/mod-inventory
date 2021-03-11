@@ -2,8 +2,8 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
 import org.folio.MappingProfile;
 import org.folio.inventory.common.Context;
@@ -21,12 +21,13 @@ import java.util.concurrent.CompletableFuture;
 import static java.util.Objects.isNull;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 
 public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(MarcBibModifiedPostProcessingEventHandler.class);
+  private static final Logger LOGGER = LogManager.getLogger(MarcBibModifiedPostProcessingEventHandler.class);
 
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Event does not contain required data to update Instance";
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
@@ -81,7 +82,7 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
   public boolean isEligible(DataImportEventPayload dataImportEventPayload) {
     if (dataImportEventPayload.getCurrentNode() != null && MAPPING_PROFILE == dataImportEventPayload.getCurrentNode().getContentType()) {
       MappingProfile mappingProfile = JsonObject.mapFrom(dataImportEventPayload.getCurrentNode().getContent()).mapTo(MappingProfile.class);
-      return "DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING".equals(dataImportEventPayload.getEventType())
+      return DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value().equals(dataImportEventPayload.getEventType())
         && mappingProfile.getExistingRecordType() == EntityType.MARC_BIBLIOGRAPHIC;
     }
     return false;

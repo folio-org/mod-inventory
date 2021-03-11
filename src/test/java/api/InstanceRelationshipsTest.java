@@ -5,7 +5,7 @@ import static api.support.InstanceSamples.smallAngryPlanet;
 import static io.vertx.core.json.JsonObject.mapFrom;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static support.matchers.ResponseMatchers.hasValidationError;
 
 import java.net.MalformedURLException;
@@ -73,7 +73,7 @@ public class InstanceRelationshipsTest extends ApiTests {
         .setStatusCode(500)
         .setContentType("application/json")
         .setBody(expectedErrorResponse.toString())
-        .setMethod(HttpMethod.GET));
+        .setMethod(HttpMethod.GET.name()));
 
     Response response = instancesClient
       .attemptGetMany("title=(\"super\" or \"sub\"", expectedCount);
@@ -115,7 +115,7 @@ public class InstanceRelationshipsTest extends ApiTests {
         .setStatusCode(500)
         .setContentType("application/json")
         .setBody(expectedErrorResponse.toString())
-        .setMethod(HttpMethod.GET));
+        .setMethod(HttpMethod.GET.name()));
 
     Response response = instancesClient
       .attemptGetMany("title=(\"preceding\" or \"succeeding\"", expectedCount);
@@ -280,7 +280,7 @@ public class InstanceRelationshipsTest extends ApiTests {
         .setStatusCode(500)
         .setContentType("application/json")
         .setBody(expectedErrorResponse.toString())
-        .setMethod(HttpMethod.PUT));
+        .setMethod(HttpMethod.PUT.name()));
 
     JsonObject newSucceedingTitle = new JsonObject()
       .put("id", titleId)
@@ -321,7 +321,7 @@ public class InstanceRelationshipsTest extends ApiTests {
         .setStatusCode(500)
         .setContentType("application/json")
         .setBody(expectedErrorResponse.toString())
-        .setMethod(HttpMethod.DELETE));
+        .setMethod(HttpMethod.DELETE.name()));
 
     JsonObject newNod = nod.copy();
     newNod.put("succeedingTitles", new JsonArray());
@@ -361,7 +361,7 @@ public class InstanceRelationshipsTest extends ApiTests {
         .setStatusCode(500)
         .setContentType("application/json")
         .setBody(expectedErrorResponse.toString())
-        .setMethod(HttpMethod.PUT));
+        .setMethod(HttpMethod.PUT.name()));
 
     JsonObject newParentInstances = new JsonObject()
       .put("id", parentInstanceId)
@@ -407,7 +407,7 @@ public class InstanceRelationshipsTest extends ApiTests {
         .setStatusCode(500)
         .setContentType("application/json")
         .setBody(expectedErrorResponse.toString())
-        .setMethod(HttpMethod.DELETE));
+        .setMethod(HttpMethod.DELETE.name()));
 
     JsonObject newNod = nod.copy();
     newNod.put(PARENT_INSTANCES, new JsonArray());

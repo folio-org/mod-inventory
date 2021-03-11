@@ -1,8 +1,8 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.WebClient;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
@@ -13,6 +13,7 @@ import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.storage.external.CollectionResourceRepository;
 import org.folio.inventory.support.InstanceUtil;
+import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
 
@@ -21,6 +22,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
@@ -30,6 +32,7 @@ import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_CREATED;
 import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
 import static org.folio.inventory.domain.instances.Instance.METADATA_KEY;
 import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
@@ -39,15 +42,22 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC or INSTANCE data";
 
-  public ReplaceInstanceEventHandler(Storage storage, HttpClient client) {
-    this.storage = storage;
-    this.client = client;
+  public ReplaceInstanceEventHandler(Storage storage, WebClient webClient) {
+    super(storage, webClient);
+  }
+
+  public ReplaceInstanceEventHandler(Storage storage, WebClient webClient,
+    BiFunction<WebClient, Context, OkapiHttpClient> okapiClientCreator) {
+
+    super(storage, webClient, okapiClientCreator);
   }
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) { // NOSONAR
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
+      dataImportEventPayload.setEventType(DI_INVENTORY_INSTANCE_UPDATED.value());
+
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
       if (payloadContext == null
         || payloadContext.isEmpty()
@@ -105,7 +115,6 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           .onComplete(ar -> {
             if (ar.succeeded()) {
               dataImportEventPayload.getContext().put(INSTANCE.value(), finalInstanceAsJson.encode());
-              dataImportEventPayload.setEventType(DI_INVENTORY_INSTANCE_UPDATED.value());
               future.complete(dataImportEventPayload);
             } else {
               LOGGER.error("Error updating inventory Instance", ar.cause());

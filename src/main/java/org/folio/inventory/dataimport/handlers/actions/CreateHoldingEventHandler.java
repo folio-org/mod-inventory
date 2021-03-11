@@ -1,17 +1,17 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.storage.Storage;
@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.logging.log4j.util.Strings.isNotEmpty;
@@ -36,7 +37,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTI
 
 public class CreateHoldingEventHandler implements EventHandler {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(CreateHoldingEventHandler.class);
+  private static final Logger LOGGER = LogManager.getLogger(CreateHoldingEventHandler.class);
   private static final String INSTANCE_ID_FIELD = "instanceId";
   private static final String HOLDINGS_PATH_FIELD = "holdings";
   private static final String PERMANENT_LOCATION_ID_FIELD = "permanentLocationId";
@@ -44,7 +45,6 @@ public class CreateHoldingEventHandler implements EventHandler {
   private static final String SAVE_HOLDING_ERROR_MESSAGE = "Can`t save new holding";
   private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t create Holding entity: context is empty or doesn`t exists";
   private static final String PAYLOAD_DATA_HAS_NO_INSTANCE_ID_ERROR_MSG = "Failed to extract instanceId from instance entity or parsed record";
-
 
   private final Storage storage;
 
@@ -56,6 +56,8 @@ public class CreateHoldingEventHandler implements EventHandler {
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
+      dataImportEventPayload.setEventType(DI_INVENTORY_HOLDING_CREATED.value());
+
       if (dataImportEventPayload.getContext() == null
         || StringUtils.isEmpty(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()))) {
         throw new EventProcessingException(CONTEXT_EMPTY_ERROR_MESSAGE);
@@ -73,13 +75,18 @@ public class CreateHoldingEventHandler implements EventHandler {
       Context context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       HoldingsRecordCollection holdingsRecords = storage.getHoldingsRecordCollection(context);
       HoldingsRecord holding = ObjectMapperTool.getMapper().readValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), HoldingsRecord.class);
-      holdingsRecords.add(holding, holdingSuccess -> constructDataImportEventPayload(future, dataImportEventPayload, holdingSuccess),
-        failure -> {
-          LOGGER.error(SAVE_HOLDING_ERROR_MESSAGE);
-          future.completeExceptionally(new EventProcessingException(SAVE_HOLDING_ERROR_MESSAGE));
+      addHoldings(holding, holdingsRecords)
+        .onSuccess(createdHoldings -> {
+          LOGGER.info("Created Holding record");
+          dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encodePrettily(createdHoldings));
+          future.complete(dataImportEventPayload);
+        })
+        .onFailure(e -> {
+          LOGGER.error(SAVE_HOLDING_ERROR_MESSAGE, e);
+          future.completeExceptionally(e);
         });
     } catch (Exception e) {
-      LOGGER.error(e);
+      LOGGER.error("Failed to create Holdings", e);
       future.completeExceptionally(e);
     }
     return future;
@@ -127,15 +134,19 @@ public class CreateHoldingEventHandler implements EventHandler {
     }
   }
 
-  private void constructDataImportEventPayload(CompletableFuture<DataImportEventPayload> future, DataImportEventPayload dataImportEventPayload, Success<HoldingsRecord> holdingSuccess) {
-    HoldingsRecord createdHolding = holdingSuccess.getResult();
-    dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encodePrettily(createdHolding));
-    dataImportEventPayload.setEventType(DI_INVENTORY_HOLDING_CREATED.value());
-    future.complete(dataImportEventPayload);
-  }
-
   private void fillInstanceId(DataImportEventPayload dataImportEventPayload, JsonObject holdingAsJson, String instanceId) {
     holdingAsJson.put(INSTANCE_ID_FIELD, instanceId);
     dataImportEventPayload.getContext().put(HOLDINGS.value(), holdingAsJson.encode());
+  }
+
+  private Future<HoldingsRecord> addHoldings(HoldingsRecord holdings, HoldingsRecordCollection holdingsRecordCollection) {
+    Promise<HoldingsRecord> promise = Promise.promise();
+    holdingsRecordCollection.add(holdings,
+      success -> promise.complete(success.getResult()),
+      failure -> {
+        LOGGER.error(format("Error posting Holdings cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
+        promise.fail(failure.getReason());
+      });
+    return promise.future();
   }
 }

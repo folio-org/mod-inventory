@@ -2,9 +2,9 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.WebClient;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
@@ -15,6 +15,7 @@ import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.storage.external.CollectionResourceRepository;
 import org.folio.inventory.support.InstanceUtil;
+import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
 
@@ -22,7 +23,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiFunction;
 
+import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
@@ -35,17 +38,24 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTI
 
 public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
-  private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
+  private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload - event payload context does not contain MARC_BIBLIOGRAPHIC data";
 
-  public CreateInstanceEventHandler(Storage storage, HttpClient client) {
-    this.storage = storage;
-    this.client = client;
+  CreateInstanceEventHandler(Storage storage, WebClient webClient,
+    BiFunction<WebClient, Context, OkapiHttpClient> okapiClientCreator) {
+
+    super(storage, webClient, okapiClientCreator);
+  }
+
+  public CreateInstanceEventHandler(Storage storage, WebClient webClient) {
+    super(storage, webClient);
   }
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
+      dataImportEventPayload.setEventType(DI_INVENTORY_INSTANCE_CREATED.value());
+
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
       if (payloadContext == null || payloadContext.isEmpty() ||
         isEmpty(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value())) ||
@@ -78,7 +88,6 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
           .compose(createdInstance -> createPrecedingSucceedingTitles(mappedInstance, precedingSucceedingTitlesRepository).map(createdInstance))
           .onSuccess(ar -> {
             dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(ar));
-            dataImportEventPayload.setEventType(DI_INVENTORY_INSTANCE_CREATED.value());
             future.complete(dataImportEventPayload);
           })
           .onFailure(ar -> {
@@ -86,12 +95,13 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
             future.completeExceptionally(ar);
           });
       } else {
-        String msg = String.format("Mapped Instance is invalid: %s", errors.toString());
+        String msg = format("Mapped Instance is invalid: %s", errors.toString());
         LOGGER.error(msg);
         future.completeExceptionally(new EventProcessingException(msg));
       }
     } catch (Exception e) {
-      LOGGER.error("Error creating inventory Instance", e);
+      String msg = format("Error creating inventory Instance: %s", e);
+      LOGGER.error(msg);
       future.completeExceptionally(e);
     }
     return future;
@@ -120,7 +130,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
     Promise<Instance> promise = Promise.promise();
     instanceCollection.add(instance, success -> promise.complete(success.getResult()),
       failure -> {
-        LOGGER.error("Error posting Instance cause %s, status code %s", failure.getReason(), failure.getStatusCode());
+        LOGGER.error(format("Error posting Instance cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
         promise.fail(failure.getReason());
       });
     return promise.future();

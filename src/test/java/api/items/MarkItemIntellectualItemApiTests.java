@@ -4,6 +4,7 @@ import api.support.ApiTests;
 import api.support.builders.HoldingRequestBuilder;
 import api.support.builders.ItemRequestBuilder;
 import api.support.dto.Request;
+import io.vertx.core.json.JsonObject;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.folio.inventory.support.http.client.IndividualResource;
@@ -25,8 +26,8 @@ import static org.folio.inventory.domain.items.CirculationNote.NOTE_TYPE_KEY;
 import static org.folio.inventory.domain.items.CirculationNote.STAFF_ONLY_KEY;
 import static org.folio.inventory.domain.items.Item.CIRCULATION_NOTES_KEY;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 import static support.matchers.ItemMatchers.isIntellectualItem;
 import static support.matchers.RequestMatchers.hasStatus;
 import static support.matchers.RequestMatchers.isOpenNotYetFilled;
@@ -60,21 +61,12 @@ public class MarkItemIntellectualItemApiTests extends ApiTests {
     assertThat(checkInNote.getString(NOTE_KEY), is("Please read this note before checking in the item"));
     assertThat(checkInNote.getBoolean(STAFF_ONLY_KEY), is(false));
   }
-  @Parameters({
-    "Available",
-    "Awaiting delivery",
-    "In transit",
-    "Lost and paid",
-    "Missing",
-    "Order closed",
-    "Paged",
-    "Withdrawn"
-  })
+
   @Test
-  public void canMarkItemIntellectualItemWhenInAllowedStatus(String initialStatus) throws Exception {
+  public void canMarkItemIntellectualItemWhenInAllowedStatus() throws Exception {
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
-      .withStatus(initialStatus)
+      .withStatus("Awaiting delivery")
       .canCirculate());
     final Response response = markItemIntellectualItem(createdItem);
 
@@ -83,34 +75,21 @@ public class MarkItemIntellectualItemApiTests extends ApiTests {
     assertThat(itemsClient.getById(createdItem.getId()).getJson(), isIntellectualItem());
   }
 
-  @Parameters({
-    "Aged to lost",
-    "Claimed returned",
-    "Checked out",
-    "Declared lost",
-    "In process",
-    "In process (non-requestable)",
-    "Intellectual item",
-    "Long missing",
-    "On order",
-    "Restricted",
-    "Unavailable",
-    "Unknown"
-  })
   @Test
-  public void cannotMarkItemIntellectualItemWhenNotInAllowedStatus(String initialStatus) throws Exception {
+  public void cannotMarkItemIntellectualItemWhenNotInAllowedStatus() throws Exception {
+    final String initialStatus = "Intellectual item";
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
       .withStatus(initialStatus)
       .canCirculate());
     Response response = markItemIntellectualItem(createdItem);
     assertThat(markItemIntellectualItem(createdItem), hasValidationError(
-      "Item is not allowed to be marked as:\"Intellectual item\"", "status.name", initialStatus));
+      "Item is not allowed to be marked as Intellectual item", "status.name", initialStatus));
   }
 
   @Test
   public void shouldNotMarkItemIntellectualItemThatCannotBeFound() {
-    assertThat(markItemIntellectualItemFixture.markIntellectualItem(UUID.randomUUID()).getStatusCode(),
+    assertThat(markItemFixture.markIntellectualItem(UUID.randomUUID()).getStatusCode(),
       is(404));
   }
 
@@ -182,18 +161,18 @@ public class MarkItemIntellectualItemApiTests extends ApiTests {
   }
 
   private Response markItemIntellectualItem(IndividualResource item) {
-    return markItemIntellectualItemFixture.markIntellectualItem(item);
+    return markItemFixture.markIntellectualItem(item.getId());
   }
 
   private IndividualResource createRequest(UUID itemId, String status, DateTime expireDateTime)
     throws InterruptedException, ExecutionException, TimeoutException, MalformedURLException {
 
-    return requestStorageClient.create(Request.builder()
+    return requestStorageClient.create(JsonObject.mapFrom(Request.builder()
       .status(status)
       .itemId(itemId.toString())
       .holdShelfExpirationDate(expireDateTime.toDate())
       .requesterId(UUID.randomUUID().toString())
       .requestType("Hold")
-      .build());
+      .build()));
   }
 }

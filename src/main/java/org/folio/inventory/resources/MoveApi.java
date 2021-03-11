@@ -37,6 +37,7 @@ import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.handler.BodyHandler;
 
 public class MoveApi extends AbstractInventoryResource {
@@ -76,7 +77,7 @@ public class MoveApi extends AbstractInventoryResource {
     }
     String toHoldingsRecordId = itemsMoveJsonRequest.getString(TO_HOLDINGS_RECORD_ID);
     List<String> itemIdsToUpdate = toListOfStrings(itemsMoveJsonRequest.getJsonArray(ITEM_IDS));
-    storage.getHoldingsRecordCollection(context)
+    storage.getHoldingCollection(context)
       .findById(toHoldingsRecordId)
       .thenAccept(holding -> {
         if (Objects.nonNull(holding)) {
@@ -209,7 +210,8 @@ public class MoveApi extends AbstractInventoryResource {
   }
 
   private OkapiHttpClient createHttpClient(RoutingContext routingContext, WebContext context) throws MalformedURLException {
-    return new OkapiHttpClient(client, context, exception -> ServerErrorResponse.internalError(routingContext.response(),
+    return new OkapiHttpClient(WebClient.wrap(client), context,
+      exception -> ServerErrorResponse.internalError(routingContext.response(),
         String.format("Failed to contact storage module: %s", exception.toString())));
   }
 

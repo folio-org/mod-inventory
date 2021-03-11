@@ -4,6 +4,7 @@ import api.support.ApiTests;
 import api.support.builders.HoldingRequestBuilder;
 import api.support.builders.ItemRequestBuilder;
 import api.support.dto.Request;
+import io.vertx.core.json.JsonObject;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.folio.inventory.support.http.client.IndividualResource;
@@ -25,8 +26,8 @@ import static org.folio.inventory.domain.items.CirculationNote.NOTE_TYPE_KEY;
 import static org.folio.inventory.domain.items.CirculationNote.STAFF_ONLY_KEY;
 import static org.folio.inventory.domain.items.Item.CIRCULATION_NOTES_KEY;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 import static support.matchers.ItemMatchers.isRestricted;
 import static support.matchers.RequestMatchers.hasStatus;
 import static support.matchers.RequestMatchers.isOpenNotYetFilled;
@@ -60,21 +61,12 @@ public class MarkItemRestrictedApiTests extends ApiTests {
     assertThat(checkInNote.getString(NOTE_KEY), is("Please read this note before checking in the item"));
     assertThat(checkInNote.getBoolean(STAFF_ONLY_KEY), is(false));
   }
-  @Parameters({
-    "Available",
-    "Awaiting delivery",
-    "In transit",
-    "Lost and paid",
-    "Missing",
-    "Order closed",
-    "Paged",
-    "Withdrawn"
-  })
+
   @Test
-  public void canMarkItemRestrictedWhenInAllowedStatus(String initialStatus) throws Exception {
+  public void canMarkItemRestrictedWhenInAllowedStatus() throws Exception {
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
-      .withStatus(initialStatus)
+      .withStatus("Withdrawn")
       .canCirculate());
     final Response response = markItemRestricted(createdItem);
 
@@ -83,22 +75,9 @@ public class MarkItemRestrictedApiTests extends ApiTests {
     assertThat(itemsClient.getById(createdItem.getId()).getJson(), isRestricted());
   }
 
-  @Parameters({
-    "Aged to lost",
-    "Checked out",
-    "Claimed returned",
-    "Declared lost",
-    "In process",
-    "In process (non-requestable)",
-    "Intellectual item",
-    "Long missing",
-    "On order",
-    "Restricted",
-    "Unavailable",
-    "Unknown"
-  })
   @Test
-  public void cannotMarkItemRestrictedWhenNotInAllowedStatus(String initialStatus) throws Exception {
+  public void cannotMarkItemRestrictedWhenNotInAllowedStatus() throws Exception {
+    final String initialStatus = "In process";
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
       .withStatus(initialStatus)
@@ -110,7 +89,7 @@ public class MarkItemRestrictedApiTests extends ApiTests {
 
   @Test
   public void shouldNotMarkItemRestrictedThatCannotBeFound() {
-    assertThat(markItemRestrictedFixture.markRestricted(UUID.randomUUID()).getStatusCode(),
+    assertThat(markItemFixture.markRestricted(UUID.randomUUID()).getStatusCode(),
       is(404));
   }
 
@@ -182,19 +161,18 @@ public class MarkItemRestrictedApiTests extends ApiTests {
   }
 
   private Response markItemRestricted(IndividualResource item) {
-
-    return markItemRestrictedFixture.markRestricted(item.getId());
+    return markItemFixture.markRestricted(item.getId());
   }
 
   private IndividualResource createRequest(UUID itemId, String status, DateTime expireDateTime)
     throws InterruptedException, ExecutionException, TimeoutException, MalformedURLException {
 
-    return requestStorageClient.create(Request.builder()
+    return requestStorageClient.create(JsonObject.mapFrom(Request.builder()
       .status(status)
       .itemId(itemId.toString())
       .holdShelfExpirationDate(expireDateTime.toDate())
       .requesterId(UUID.randomUUID().toString())
       .requestType("Hold")
-      .build());
+      .build()));
   }
 }

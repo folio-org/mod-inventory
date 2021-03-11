@@ -23,7 +23,6 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public final class ItemUtil {
-
   private static final String MATERIAL_TYPE_ID_KEY = "materialTypeId";
   private static final String PERMANENT_LOAN_TYPE_ID_KEY = "permanentLoanTypeId";
   private static final String TEMPORARY_LOAN_TYPE_ID_KEY = "temporaryLoanTypeId";
@@ -89,6 +88,7 @@ public final class ItemUtil {
       itemFromServer.getString(PERMANENT_LOAN_TYPE_ID_KEY),
       itemFromServer.getJsonObject("metadata"))
       .withHrid(itemFromServer.getString(Item.HRID_KEY))
+      .withEffectiveShelvingOrder(itemFromServer.getString(Item.EFFECTIVE_SHELVING_ORDER_KEY))
       .withFormerIds(formerIds)
       .withDiscoverySuppress(itemFromServer.getBoolean(Item.DISCOVERY_SUPPRESS_KEY))
       .withBarcode(itemFromServer.getString(BARCODE))
@@ -139,7 +139,6 @@ public final class ItemUtil {
     if(item.getLastCheckIn() != null) {
       itemToSend.put(Item.LAST_CHECK_IN, item.getLastCheckIn().toJson());
     }
-
     includeIfPresent(itemToSend, Item.HRID_KEY, item.getHrid());
     itemToSend.put(Item.FORMER_IDS_KEY, item.getFormerIds());
     itemToSend.put(Item.DISCOVERY_SUPPRESS_KEY, item.getDiscoverySuppress());
@@ -231,6 +230,7 @@ public final class ItemUtil {
       .withDiscoverySuppress(itemRequest.getBoolean(Item.DISCOVERY_SUPPRESS_KEY))
       .withBarcode(itemRequest.getString(BARCODE))
       .withItemLevelCallNumber(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_KEY))
+      .withEffectiveShelvingOrder(itemRequest.getString(Item.EFFECTIVE_SHELVING_ORDER_KEY))
       .withItemLevelCallNumberPrefix(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY))
       .withItemLevelCallNumberSuffix(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY))
       .withItemLevelCallNumberTypeId(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY))

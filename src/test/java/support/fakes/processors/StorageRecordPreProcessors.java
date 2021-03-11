@@ -1,7 +1,14 @@
 package support.fakes.processors;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.folio.inventory.support.JsonHelper.getNestedProperty;
+import api.ApiTestSuite;
+import api.support.http.StorageInterfaceUrls;
+import io.vertx.core.json.JsonObject;
+import org.apache.commons.lang3.ObjectUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.ImmutableTriple;
+import org.apache.commons.lang3.tuple.Triple;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 
 import java.net.MalformedURLException;
 import java.util.Arrays;
@@ -9,20 +16,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.BiFunction;
 
-import org.apache.commons.lang3.ObjectUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.ImmutableTriple;
-import org.apache.commons.lang3.tuple.Triple;
-import org.folio.inventory.support.http.client.Response;
-import org.folio.inventory.support.http.client.ResponseHandler;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
-
-import api.ApiTestSuite;
-import api.support.http.StorageInterfaceUrls;
-import io.vertx.core.json.JsonObject;
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.folio.inventory.support.JsonHelper.getNestedProperty;
 
 public final class StorageRecordPreProcessors {
   private static final AtomicLong hridSequence = new AtomicLong(1L);
@@ -38,6 +34,7 @@ public final class StorageRecordPreProcessors {
   private static final String HOLDINGS_RECORD_PROPERTY_NAME = "holdingsRecordId";
   private static final String PERMANENT_LOCATION_PROPERTY = "permanentLocationId";
   private static final String TEMPORARY_LOCATION_PROPERTY = "temporaryLocationId";
+  private static final String EFFECTIVE_CALL_NUMBER_COMPONENTS = "effectiveCallNumberComponents";
   // RMB uses ISO-8601 compatible date time format by default.
   private static final String RMB_DATETIME_PATTERN = "yyyy-MM-dd'T'HH:mm:ss.SSS+0000";
 
@@ -93,8 +90,18 @@ public final class StorageRecordPreProcessors {
         effectiveCallNumberComponents.put(effectivePropertyName, propertyValue);
       });
 
-      return newItem.put("effectiveCallNumberComponents", effectiveCallNumberComponents);
+      return newItem.put(EFFECTIVE_CALL_NUMBER_COMPONENTS, effectiveCallNumberComponents);
     });
+  }
+
+  public static CompletableFuture<JsonObject> setEffectiveShelvingOrder(
+    @SuppressWarnings("unused") JsonObject oldItem, JsonObject newItem) {
+
+    final var effectiveCallNumberComponents
+      = newItem.getJsonObject(EFFECTIVE_CALL_NUMBER_COMPONENTS);
+
+    return completedFuture(newItem.put("effectiveShelvingOrder",
+      effectiveCallNumberComponents.getString("callNumber")));
   }
 
   public static CompletableFuture<JsonObject> setStatusDateProcessor(
@@ -130,22 +137,15 @@ public final class StorageRecordPreProcessors {
       return completedFuture(new JsonObject());
     }
 
-    CompletableFuture<Response> getCompleted = new CompletableFuture<>();
-
     try {
-      ApiTestSuite.createOkapiHttpClient()
-        .get(
-          StorageInterfaceUrls.holdingStorageUrl("?query=id=" + id),
-          ResponseHandler.json(getCompleted)
-        );
+      return ApiTestSuite.createOkapiHttpClient().get(
+        StorageInterfaceUrls.holdingStorageUrl("?query=id=" + id))
+        .thenApply(
+          response -> response.getJson().getJsonArray("holdingsRecords").getJsonObject(0))
+        .toCompletableFuture();
     } catch (MalformedURLException ex) {
-      getCompleted.completeExceptionally(ex);
+      return CompletableFuture.failedFuture(ex);
     }
-
-    return getCompleted.thenApply(
-      response -> response.getJson().getJsonArray("holdingsRecords")
-        .getJsonObject(0)
-    );
   }
 
   public static RecordPreProcessor setHridProcessor(

@@ -4,6 +4,7 @@ import api.support.ApiTests;
 import api.support.builders.HoldingRequestBuilder;
 import api.support.builders.ItemRequestBuilder;
 import api.support.dto.Request;
+import io.vertx.core.json.JsonObject;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.folio.inventory.support.http.client.IndividualResource;
@@ -26,9 +27,9 @@ import static org.folio.inventory.domain.items.CirculationNote.NOTE_TYPE_KEY;
 import static org.folio.inventory.domain.items.CirculationNote.STAFF_ONLY_KEY;
 import static org.folio.inventory.domain.items.Item.CIRCULATION_NOTES_KEY;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
 import static support.matchers.ItemMatchers.isInProcessNonRequestable;
 import static support.matchers.RequestMatchers.hasStatus;
 import static support.matchers.RequestMatchers.isOpenNotYetFilled;
@@ -64,21 +65,12 @@ public class MarkItemInProcessNonRequestableApiTests extends ApiTests {
     assertThat(checkInNote.getBoolean(STAFF_ONLY_KEY), is(false));
     assertFalse(false);
   }
-  @Parameters({
-    "Available",
-    "Awaiting delivery",
-    "In transit",
-    "Lost and paid",
-    "Missing",
-    "Order closed",
-    "Paged",
-    "Withdrawn"
-  })
+
   @Test
-  public void canMarkItemInProcessNonRequestableWhenInAllowedStatus(String initialStatus) throws Exception {
+  public void canMarkItemInProcessNonRequestableWhenInAllowedStatus() throws Exception {
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
-      .withStatus(initialStatus)
+      .withStatus("Available")
       .canCirculate());
     final Response response = markItemInProcessNonRequestable(createdItem);
 
@@ -87,36 +79,23 @@ public class MarkItemInProcessNonRequestableApiTests extends ApiTests {
     assertThat(itemsClient.getById(createdItem.getId()).getJson(), isInProcessNonRequestable());
   }
 
-  @Parameters({
-    "Aged to lost",
-    "Checked out",
-    "Claimed returned",
-    "Declared lost",
-    "In process",
-    "In process (non-requestable)",
-    "Intellectual item",
-    "Long missing",
-    "On order",
-    "Restricted",
-    "Unavailable",
-    "Unknown"
-  })
   @Test
-  public void cannotMarkItemInProcessWhenNotInAllowedStatus(String initialStatus) throws Exception {
-        final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
-          .forHolding(holdingsRecord.getId())
-          .withStatus(initialStatus)
-          .withBarcode(""+new Date().getTime())
-          .canCirculate());
+  public void cannotMarkItemInProcessWhenNotInAllowedStatus() throws Exception {
+    final String initialStatus = "In process (non-requestable)";
+    final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingsRecord.getId())
+      .withStatus(initialStatus)
+      .withBarcode("" + new Date().getTime())
+      .canCirculate());
 
-        assertThat(markItemInProcessNonRequestable(createdItem), hasValidationError(
-          "Item is not allowed to be marked as:\"In process (non-requestable)\"", "status.name", initialStatus));
+    assertThat(markItemInProcessNonRequestable(createdItem), hasValidationError(
+      "Item is not allowed to be marked as In process (non-requestable)", "status.name", initialStatus));
   }
 
 
   @Test
   public void shouldNotMarkItemInProcessThatCannotBeFound() {
-    assertThat(markInProcessFixture.markInProcess(UUID.randomUUID()).getStatusCode(),
+    assertThat(markItemFixture.markInProcess(UUID.randomUUID()).getStatusCode(),
       is(404));
   }
 
@@ -188,17 +167,17 @@ public class MarkItemInProcessNonRequestableApiTests extends ApiTests {
   }
 
   private Response markItemInProcessNonRequestable(IndividualResource item) {
-    return markInProcessNonRequestableFixture.markInProcessNonRequestable(item.getId());
+    return markItemFixture.markInProcessNonRequestable(item.getId());
   }
 
   private IndividualResource createRequest(UUID itemId, String status, DateTime expireDateTime)
     throws InterruptedException, ExecutionException, TimeoutException, MalformedURLException {
-    return requestStorageClient.create(Request.builder()
+    return requestStorageClient.create(JsonObject.mapFrom(Request.builder()
       .status(status)
       .itemId(itemId.toString())
       .holdShelfExpirationDate(expireDateTime.toDate())
       .requesterId(UUID.randomUUID().toString())
       .requestType("Hold")
-      .build());
+      .build()));
   }
 }

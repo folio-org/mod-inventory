@@ -1,7 +1,6 @@
 package support.fakes;
 
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.Router;
@@ -131,6 +130,7 @@ public class FakeOkapi extends AbstractVerticle {
         StorageRecordPreProcessors.setHridProcessor("it"),
         StorageRecordPreProcessors::setEffectiveLocationForItem,
         StorageRecordPreProcessors::setEffectiveCallNumberComponents,
+        StorageRecordPreProcessors::setEffectiveShelvingOrder,
         StorageRecordPreProcessors::setStatusDateProcessor
       )
       .create().register(router);

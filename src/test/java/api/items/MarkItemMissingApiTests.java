@@ -6,7 +6,7 @@ import static org.folio.inventory.domain.items.CirculationNote.NOTE_TYPE_KEY;
 import static org.folio.inventory.domain.items.CirculationNote.STAFF_ONLY_KEY;
 import static org.folio.inventory.domain.items.Item.CIRCULATION_NOTES_KEY;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static support.matchers.ItemMatchers.isMissing;
 import static support.matchers.RequestMatchers.hasStatus;
 import static support.matchers.RequestMatchers.isOpenNotYetFilled;
@@ -29,6 +29,7 @@ import api.support.ApiTests;
 import api.support.builders.HoldingRequestBuilder;
 import api.support.builders.ItemRequestBuilder;
 import api.support.dto.Request;
+import io.vertx.core.json.JsonObject;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 
@@ -61,35 +62,20 @@ public class MarkItemMissingApiTests extends ApiTests {
     assertThat(checkInNote.getBoolean(STAFF_ONLY_KEY), is(false));
   }
 
-  @Parameters({
-    "In process",
-    "Available",
-    "In transit",
-    "Awaiting pickup",
-    "Awaiting delivery",
-    "Withdrawn",
-    "Paged"
-  })
   @Test
-  public void canMarkItemMissingWhenInAllowedStatus(String initialStatus) throws Exception {
+  public void canMarkItemMissingWhenInAllowedStatus() throws Exception {
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
-      .withStatus(initialStatus)
+      .withStatus("Withdrawn")
       .canCirculate());
 
     assertThat(markItemMissing(createdItem).getJson(), isMissing());
     assertThat(itemsClient.getById(createdItem.getId()).getJson(), isMissing());
   }
 
-  @Parameters({
-    "On order",
-    "Checked out",
-    "Missing",
-    "Claimed returned",
-    "Declared lost"
-  })
   @Test
-  public void cannotMarkItemMissingWhenNotInAllowedStatus(String initialStatus) throws Exception {
+  public void cannotMarkItemMissingWhenNotInAllowedStatus() throws Exception {
+    final String initialStatus = "On order";
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
       .withStatus(initialStatus)
@@ -101,7 +87,7 @@ public class MarkItemMissingApiTests extends ApiTests {
 
   @Test
   public void shouldNotMarkItemMissingThatCannotBeFound() {
-    assertThat(markMissingFixture.markMissing(UUID.randomUUID()).getStatusCode(),
+    assertThat(markItemFixture.markMissing(UUID.randomUUID()).getStatusCode(),
       is(404));
   }
 
@@ -173,18 +159,18 @@ public class MarkItemMissingApiTests extends ApiTests {
   }
 
   private Response markItemMissing(IndividualResource item) {
-    return markMissingFixture.markMissing(item);
+    return markItemFixture.markMissing(item.getId());
   }
 
   private IndividualResource createRequest(UUID itemId, String status, DateTime expireDateTime)
     throws InterruptedException, ExecutionException, TimeoutException, MalformedURLException {
 
-    return requestStorageClient.create(Request.builder()
+    return requestStorageClient.create(JsonObject.mapFrom(Request.builder()
       .status(status)
       .itemId(itemId.toString())
       .holdShelfExpirationDate(expireDateTime.toDate())
       .requesterId(UUID.randomUUID().toString())
       .requestType("Hold")
-      .build());
+      .build()));
   }
 }

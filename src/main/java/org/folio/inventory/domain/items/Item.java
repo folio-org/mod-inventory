@@ -40,6 +40,7 @@ public class Item {
   public static final String PURCHASE_ORDER_LINE_IDENTIFIER = "purchaseOrderLineIdentifier";
   public static final String LAST_CHECK_IN = "lastCheckIn";
   public static final String COPY_NUMBER_KEY = "copyNumber";
+  public static final String EFFECTIVE_SHELVING_ORDER_KEY = "effectiveShelvingOrder";
 
   public final String id;
   private String hrid;
@@ -71,6 +72,7 @@ public class Item {
   private final Status status;
   private final String materialTypeId;
   private final String permanentLoanTypeId;
+  private String effectiveShelvingOrder;
 
   private String temporaryLoanTypeId;
   private String permanentLocationId;
@@ -102,6 +104,15 @@ public class Item {
 
   public String getId() {
     return id;
+  }
+
+  public String getEffectiveShelvingOrder() {
+    return effectiveShelvingOrder;
+  }
+
+  public Item withEffectiveShelvingOrder(String effectiveShelvingOrder) {
+    this.effectiveShelvingOrder = effectiveShelvingOrder;
+    return this;
   }
 
   public String getHrid() {

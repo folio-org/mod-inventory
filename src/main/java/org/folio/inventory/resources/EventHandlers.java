@@ -1,12 +1,13 @@
 package org.folio.inventory.resources;
 
+
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.JsonObject;
+import io.vertx.core.http.HttpClientOptions;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.handler.BodyHandler;
-import org.folio.DataImportEventPayload;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.dataimport.HoldingWriterFactory;
@@ -15,10 +16,10 @@ import org.folio.inventory.dataimport.ItemWriterFactory;
 import org.folio.inventory.dataimport.handlers.actions.CreateHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler;
+import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.actions.MarcBibModifiedPostProcessingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.UpdateHoldingEventHandler;
-import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.actions.UpdateInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchHoldingEventHandler;
@@ -33,7 +34,7 @@ import org.folio.inventory.support.http.server.SuccessResponse;
 import org.folio.processing.events.EventManager;
 import org.folio.processing.events.utils.ZIPArchiver;
 import org.folio.processing.mapping.MappingManager;
-import org.folio.processing.mapping.mapper.reader.record.MarcBibReaderFactory;
+import org.folio.processing.mapping.mapper.reader.record.marc.MarcBibReaderFactory;
 import org.folio.processing.matching.loader.MatchValueLoaderFactory;
 import org.folio.processing.matching.reader.MarcValueReaderImpl;
 import org.folio.processing.matching.reader.MatchValueReaderFactory;
@@ -44,14 +45,17 @@ import java.util.Map;
 
 public class EventHandlers {
 
-  private static final String DATA_IMPORT_EVENT_HANDLER_PATH = "/inventory/handlers/data-import";
   private static final String INSTANCES_EVENT_HANDLER_PATH = "/inventory/handlers/instances";
+  private static final int DEFAULT_HTTP_TIMEOUT_IN_MILLISECONDS = 3000;
 
   private final Storage storage;
 
-  public EventHandlers(final Storage storage, final HttpClient client) {
+  public EventHandlers(final Storage storage) {
+
     Vertx vertx = Vertx.vertx();
     this.storage = storage;
+    HttpClientOptions params = new HttpClientOptions().setConnectTimeout(DEFAULT_HTTP_TIMEOUT_IN_MILLISECONDS);
+    HttpClient client = vertx.createHttpClient(params);
     MatchValueLoaderFactory.register(new InstanceLoader(storage, vertx));
     MatchValueLoaderFactory.register(new ItemLoader(storage, vertx));
     MatchValueLoaderFactory.register(new HoldingLoader(storage, vertx));
@@ -69,32 +73,18 @@ public class EventHandlers {
     EventManager.registerEventHandler(new MatchHoldingEventHandler());
     EventManager.registerEventHandler(new CreateItemEventHandler(storage));
     EventManager.registerEventHandler(new CreateHoldingEventHandler(storage));
-    EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, client));
+    EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, WebClient.wrap(client)));
     EventManager.registerEventHandler(new UpdateItemEventHandler(storage));
     EventManager.registerEventHandler(new UpdateHoldingEventHandler(storage));
-    EventManager.registerEventHandler(new ReplaceInstanceEventHandler(storage, client));
+    EventManager.registerEventHandler(new ReplaceInstanceEventHandler(storage, WebClient.wrap(client)));
     EventManager.registerEventHandler(new MarcBibModifiedPostProcessingEventHandler(new InstanceUpdateDelegate(storage)));
   }
 
   public void register(Router router) {
     router
-      .post(DATA_IMPORT_EVENT_HANDLER_PATH)
-      .handler(BodyHandler.create())
-      .handler(this::handleDataImportEvent);
-    router
       .post(INSTANCES_EVENT_HANDLER_PATH)
       .handler(BodyHandler.create())
       .handler(this::handleInstanceUpdate);
-  }
-
-  private void handleDataImportEvent(RoutingContext routingContext) {
-    try {
-      DataImportEventPayload eventPayload = new JsonObject(ZIPArchiver.unzip(routingContext.getBodyAsString())).mapTo(DataImportEventPayload.class);
-      EventManager.handleEvent(eventPayload);
-      SuccessResponse.noContent(routingContext.response());
-    } catch (Exception e) {
-      ServerErrorResponse.internalError(routingContext.response(), e);
-    }
   }
 
   private void handleInstanceUpdate(RoutingContext routingContext) {

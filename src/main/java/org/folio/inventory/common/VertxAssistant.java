@@ -3,8 +3,8 @@ package org.folio.inventory.common;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.lang.invoke.MethodHandles;
 import java.util.Map;
@@ -12,7 +12,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 public class VertxAssistant {
-  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+  private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
   private Vertx vertx;
 
@@ -83,5 +83,11 @@ public class VertxAssistant {
         undeployed.completeExceptionally(result.cause());
       }
     });
+  }
+
+  public CompletableFuture<Void> undeployVerticle(String deploymentId) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    undeployVerticle(deploymentId, future);
+    return future;
   }
 }

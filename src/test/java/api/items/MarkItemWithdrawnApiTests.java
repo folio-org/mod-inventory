@@ -2,7 +2,7 @@ package api.items;
 
 import static api.support.InstanceSamples.smallAngryPlanet;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static support.matchers.ItemMatchers.isMissing;
 import static support.matchers.ItemMatchers.isWithdrawn;
 import static support.matchers.RequestMatchers.hasStatus;
@@ -23,6 +23,7 @@ import api.support.ApiTests;
 import api.support.builders.HoldingRequestBuilder;
 import api.support.builders.ItemRequestBuilder;
 import api.support.dto.Request;
+import io.vertx.core.json.JsonObject;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import lombok.SneakyThrows;
@@ -40,36 +41,20 @@ public class MarkItemWithdrawnApiTests extends ApiTests {
       .forInstance(instance.getId()));
   }
 
-  @Parameters({
-    "In process",
-    "Available",
-    "In transit",
-    "Awaiting pickup",
-    "Awaiting delivery",
-    "Lost and paid",
-    "Missing",
-    "Paged"
-  })
   @Test
-  public void canWithdrawItemWhenInAllowedStatus(String initialStatus) throws Exception {
+  public void canWithdrawItemWhenInAllowedStatus() throws Exception {
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
-      .withStatus(initialStatus)
+      .withStatus("Paged")
       .canCirculate());
 
     assertThat(markItemWithdrawn(createdItem).getJson(), isWithdrawn());
     assertThat(itemsClient.getById(createdItem.getId()).getJson(), isWithdrawn());
   }
 
-  @Parameters({
-    "On order",
-    "Checked out",
-    "Withdrawn",
-    "Claimed returned",
-    "Declared lost"
-  })
   @Test
-  public void cannotWithdrawIItemWhenNotInAllowedStatus(String initialStatus) throws Exception {
+  public void cannotWithdrawIItemWhenNotInAllowedStatus() throws Exception {
+    final String initialStatus = "Checked out";
     final IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingsRecord.getId())
       .withStatus(initialStatus)
@@ -81,7 +66,7 @@ public class MarkItemWithdrawnApiTests extends ApiTests {
 
   @Test
   public void shouldWithdrawItemThatCannotBeFound() {
-    assertThat(markWithdrawnFixture.markWithdrawn(UUID.randomUUID()).getStatusCode(),
+    assertThat(markItemFixture.markWithdrawn(UUID.randomUUID()).getStatusCode(),
       is(404));
   }
 
@@ -160,23 +145,23 @@ public class MarkItemWithdrawnApiTests extends ApiTests {
       .canCirculate());
 
     markItemWithdrawn(createdItem);
-    markMissingFixture.markMissing(createdItem);
+    markItemFixture.markMissing(createdItem.getId());
 
     assertThat(itemsClient.getById(createdItem.getId()).getJson(), isMissing());
   }
 
   private Response markItemWithdrawn(IndividualResource item) {
-    return markWithdrawnFixture.markWithdrawn(item);
+    return markItemFixture.markWithdrawn(item.getId());
   }
 
   @SneakyThrows
   private IndividualResource createRequest(UUID itemId, String status, DateTime expiryDateTime) {
-    return requestStorageClient.create(Request.builder()
+    return requestStorageClient.create(JsonObject.mapFrom(Request.builder()
       .status(status)
       .itemId(itemId.toString())
       .holdShelfExpirationDate(expiryDateTime.toDate())
       .requesterId(UUID.randomUUID().toString())
       .requestType("Hold")
-      .build());
+      .build()));
   }
 }
