@@ -18,6 +18,7 @@ import org.folio.MappingProfile;
 import org.folio.inventory.DataImportConsumerVerticle;
 import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaTopicNameHelper;
+import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.processing.events.EventManager;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.events.utils.ZIPArchiver;
@@ -30,6 +31,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import java.io.IOException;
@@ -71,6 +73,10 @@ public class DataImportConsumerVerticleTest {
 
   @Mock
   private EventHandler mockedEventHandler;
+
+  @Mock
+  private KafkaInternalCache kafkaInternalCache;
+
 
   private JobProfile jobProfile = new JobProfile()
     .withId(UUID.randomUUID().toString())
@@ -152,9 +158,11 @@ public class DataImportConsumerVerticleTest {
       .withProfileSnapshot(profileSnapshotWrapper);
 
     String topic = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_NAME, getDefaultNameSpace(), TENANT_ID, dataImportEventPayload.getEventType());
-    Event event = new Event().withEventPayload(ZIPArchiver.zip(Json.encode(dataImportEventPayload)));
+    Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(dataImportEventPayload)));
     KeyValue<String, String> record = new KeyValue<>("test-key", Json.encode(event));
     SendKeyValues<String, String> request = SendKeyValues.to(topic, Collections.singletonList(record)).useDefaults();
+
+    Mockito.when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
 
     // when
     cluster.send(request);
