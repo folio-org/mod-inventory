@@ -16,6 +16,7 @@ import org.folio.JobProfile;
 import org.folio.MappingProfile;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.KafkaConfig;
+import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.processing.events.EventManager;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.events.utils.ZIPArchiver;
@@ -26,6 +27,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import java.io.IOException;
@@ -44,6 +46,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTI
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -57,6 +60,10 @@ public class DataImportKafkaHandlerTest {
 
   @Mock
   private Storage mockedStorage;
+
+  @Mock
+  private KafkaInternalCache kafkaInternalCache;
+
   @Mock
   private KafkaConsumerRecord<String, String> kafkaRecord;
 
@@ -106,7 +113,7 @@ public class DataImportKafkaHandlerTest {
       .build();
 
     HttpClient client = vertx.createHttpClient();
-    dataImportKafkaHandler = new DataImportKafkaHandler(vertx, mockedStorage, client);
+    dataImportKafkaHandler = new DataImportKafkaHandler(vertx, mockedStorage, client, kafkaInternalCache);
     EventManager.clearEventHandlers();
     EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, 1);
   }
@@ -122,7 +129,7 @@ public class DataImportKafkaHandlerTest {
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper);
 
-    Event event = new Event().withEventPayload(ZIPArchiver.zip(Json.encode(dataImportEventPayload)));
+    Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(dataImportEventPayload)));
     String expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
@@ -132,6 +139,8 @@ public class DataImportKafkaHandlerTest {
     when(mockedEventHandler.handle(any(DataImportEventPayload.class)))
       .thenReturn(CompletableFuture.completedFuture(new DataImportEventPayload()));
     EventManager.registerEventHandler(mockedEventHandler);
+
+    Mockito.when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
 
     // when
     Future<String> future = dataImportKafkaHandler.handle(kafkaRecord);
@@ -156,7 +165,7 @@ public class DataImportKafkaHandlerTest {
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper);
 
-    Event event = new Event().withEventPayload(ZIPArchiver.zip(Json.encode(dataImportEventPayload)));
+    Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(dataImportEventPayload)));
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
 
     EventHandler mockedEventHandler = mock(EventHandler.class);
@@ -165,12 +174,49 @@ public class DataImportKafkaHandlerTest {
       .thenReturn(CompletableFuture.failedFuture(new RuntimeException()));
     EventManager.registerEventHandler(mockedEventHandler);
 
+    Mockito.when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
+
     // when
     Future<String> future = dataImportKafkaHandler.handle(kafkaRecord);
 
     // then
     future.onComplete(ar -> {
       context.assertTrue(ar.failed());
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldNotHandleIfCacheAlreadyContainsThisEvent(TestContext context) throws IOException {
+    // given
+    Async async = context.async();
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withTenant(TENANT_ID)
+      .withOkapiUrl("localhost")
+      .withToken("test-token")
+      .withContext(new HashMap<>())
+      .withProfileSnapshot(profileSnapshotWrapper);
+
+    Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(dataImportEventPayload)));
+    String expectedKafkaRecordKey = "test_key";
+    when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
+    when(kafkaRecord.value()).thenReturn(Json.encode(event));
+
+    EventHandler mockedEventHandler = mock(EventHandler.class);
+    when(mockedEventHandler.isEligible(any(DataImportEventPayload.class))).thenReturn(true);
+    when(mockedEventHandler.handle(any(DataImportEventPayload.class)))
+      .thenReturn(CompletableFuture.completedFuture(new DataImportEventPayload()));
+    EventManager.registerEventHandler(mockedEventHandler);
+
+    Mockito.when(kafkaInternalCache.containsByKey("01")).thenReturn(true);
+
+    // when
+    Future<String> future = dataImportKafkaHandler.handle(kafkaRecord);
+
+    // then
+    future.onComplete(ar -> {
+      context.assertTrue(ar.succeeded());
+      context.assertNotEquals(expectedKafkaRecordKey, ar.result());
       async.complete();
     });
   }
