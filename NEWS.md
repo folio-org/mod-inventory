@@ -1,8 +1,20 @@
-## 16.2.0 IN-PROGRESS
+## 16.2.0 2020-03-15
 
-* Map shelving order property for items (MODINV-155)
-* Provides `inventory` interface 10.9 (MODINV-155)
-* Requires `item-storage` interface 8.9 (MODINV-155)
+* Uses Kafka to coordinate data import process (MODINV-326)
+* Allows matching between MARC records during import (MODINV-379)
+* Can mark an item as `Unavailable` (MODINV-356, MODINV-366)
+* Can mark an item as `In process` (MODINV-356, MODINV-366)
+* Can mark an item as `In process (non-requestable)` (MODINV-356, MODINV-366)
+* Can mark an item as an `Intellectual item` (MODINV-356, MODINV-366)
+* Can mark an item as `Long missing` (MODINV-356, MODINV-366)
+* Can mark an item as `Restricted` (MODINV-356, MODINV-366)
+* Can mark an item as `Unknown` (MODINV-356, MODINV-366)
+* Includes `effective shelving order` property for items (MODINV-155)
+* Upgrades to vert.x 4.0.0 (MODINV-371)
+* Provides `inventory 10.9`
+* Provides `inventory-event-handlers 1.0`
+* Requires `item-storage 8.9`
+* Requires `Kafka 2.6`
 
 ## 16.1.0 2020-10-12
 

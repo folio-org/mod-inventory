@@ -1,18 +1,23 @@
 package org.folio.inventory.dataimport.consumers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
+
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaHeaderUtils;
+import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.processing.events.utils.ZIPArchiver;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.Record;
@@ -36,9 +41,11 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
   private static final ObjectMapper OBJECT_MAPPER = ObjectMapperTool.getMapper();
 
   private InstanceUpdateDelegate instanceUpdateDelegate;
+  private KafkaInternalCache kafkaInternalCache;
 
-  public MarcBibInstanceHridSetKafkaHandler(InstanceUpdateDelegate instanceUpdateDelegate) {
+  public MarcBibInstanceHridSetKafkaHandler(InstanceUpdateDelegate instanceUpdateDelegate, KafkaInternalCache kafkaInternalCache) {
     this.instanceUpdateDelegate = instanceUpdateDelegate;
+    this.kafkaInternalCache = kafkaInternalCache;
   }
 
   @Override
@@ -46,31 +53,35 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
     try {
       Promise<String> promise = Promise.promise();
       Event event = OBJECT_MAPPER.readValue(record.value(), Event.class);
-      HashMap<String, String> eventPayload = OBJECT_MAPPER.readValue(ZIPArchiver.unzip(event.getEventPayload()), HashMap.class);
-      LOGGER.info(format("Event payload has been received with event type: %s", event.getEventType()));
+      if (!kafkaInternalCache.containsByKey(event.getId())) {
+        kafkaInternalCache.putToCache(event.getId());
+        HashMap<String, String> eventPayload = OBJECT_MAPPER.readValue(ZIPArchiver.unzip(event.getEventPayload()), HashMap.class);
+        LOGGER.info(format("Event payload has been received with event type: %s", event.getEventType()));
 
-      if (isAnyEmpty(eventPayload.get(MARC_KEY), eventPayload.get(MAPPING_RULES_KEY), eventPayload.get(MAPPING_PARAMS_KEY))) {
-        String message = "Event payload does not contain required data to update Instance";
-        LOGGER.error(message);
-        return Future.failedFuture(message);
-      }
-
-      Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(record.headers());
-      Context context = EventHandlingUtil.constructContext(headersMap.get(OKAPI_TENANT_HEADER), headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER));
-      Record marcRecord = new JsonObject(eventPayload.get(MARC.value())).mapTo(Record.class);
-
-      instanceUpdateDelegate.handle(eventPayload, marcRecord, context).onComplete(ar -> {
-        if (ar.succeeded()) {
-          promise.complete(record.key());
-        } else {
-          LOGGER.error("Failed to process data import event payload", ar.cause());
-          promise.fail(ar.cause());
+        if (isAnyEmpty(eventPayload.get(MARC_KEY), eventPayload.get(MAPPING_RULES_KEY), eventPayload.get(MAPPING_PARAMS_KEY))) {
+          String message = "Event payload does not contain required data to update Instance";
+          LOGGER.error(message);
+          return Future.failedFuture(message);
         }
-      });
-      return promise.future();
+
+        Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(record.headers());
+        Context context = EventHandlingUtil.constructContext(headersMap.get(OKAPI_TENANT_HEADER), headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER));
+        Record marcRecord = new JsonObject(eventPayload.get(MARC.value())).mapTo(Record.class);
+
+        instanceUpdateDelegate.handle(eventPayload, marcRecord, context).onComplete(ar -> {
+          if (ar.succeeded()) {
+            promise.complete(record.key());
+          } else {
+            LOGGER.error("Failed to process data import event payload", ar.cause());
+            promise.fail(ar.cause());
+          }
+        });
+        return promise.future();
+      }
     } catch (Exception e) {
       LOGGER.error(format("Failed to process data import kafka record from topic %s", record.topic()), e);
       return Future.failedFuture(e);
     }
+    return Future.succeededFuture();
   }
 }
