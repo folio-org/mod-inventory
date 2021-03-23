@@ -55,8 +55,8 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
 
   private static final Logger LOGGER = LogManager.getLogger(DataImportConsumerVerticle.class);
 
-  private static final long DELAY_TIME_BETWEEN_EVENTS_CLEANUP_VALUE_MILLIS = 3600000;
-  private static final int EVENT_TIMEOUT_VALUE_HOURS = 3;
+  private static final long DELAY_TIME_BETWEEN_EVENTS_CLEANUP_VALUE_MILLIS = 900000;
+  private static final int EVENT_TIMEOUT_VALUE_HOURS = 1;
 
   private static final List<DataImportEventTypes> EVENT_TYPES = List.of(DI_SRS_MARC_BIB_RECORD_CREATED,
     DI_SRS_MARC_BIB_RECORD_MODIFIED, DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING,

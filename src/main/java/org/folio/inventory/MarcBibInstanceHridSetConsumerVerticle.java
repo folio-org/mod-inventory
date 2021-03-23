@@ -30,8 +30,8 @@ import static org.folio.inventory.dataimport.util.KafkaConfigConstants.OKAPI_URL
 public class MarcBibInstanceHridSetConsumerVerticle extends AbstractVerticle {
 
   private static final Logger LOGGER = LogManager.getLogger(MarcBibInstanceHridSetConsumerVerticle.class);
-  private static final long DELAY_TIME_BETWEEN_EVENTS_CLEANUP_VALUE_MILLIS = 3600000;
-  private static final int EVENT_TIMEOUT_VALUE_HOURS = 3;
+  private static final long DELAY_TIME_BETWEEN_EVENTS_CLEANUP_VALUE_MILLIS = 900000;
+  private static final int EVENT_TIMEOUT_VALUE_HOURS = 1;
   private static final GlobalLoadSensor GLOBAL_LOAD_SENSOR = new GlobalLoadSensor();
 
   private final int loadLimit = getLoadLimit();
