@@ -6,6 +6,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventTypes;
@@ -17,6 +18,8 @@ import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaConsumerWrapper;
 import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.kafka.SubscriptionDefinition;
+import org.folio.kafka.cache.KafkaInternalCache;
+import org.folio.kafka.cache.util.CacheUtil;
 import org.folio.processing.events.EventManager;
 import org.folio.util.pubsub.PubSubClientUtils;
 
@@ -51,6 +54,10 @@ import static org.folio.inventory.dataimport.util.KafkaConfigConstants.OKAPI_URL
 public class DataImportConsumerVerticle extends AbstractVerticle {
 
   private static final Logger LOGGER = LogManager.getLogger(DataImportConsumerVerticle.class);
+
+  private static final long DELAY_TIME_BETWEEN_EVENTS_CLEANUP_VALUE_MILLIS = 3600000;
+  private static final int EVENT_TIMEOUT_VALUE_HOURS = 3;
+
   private static final List<DataImportEventTypes> EVENT_TYPES = List.of(DI_SRS_MARC_BIB_RECORD_CREATED,
     DI_SRS_MARC_BIB_RECORD_MODIFIED, DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING,
     DI_SRS_MARC_BIB_RECORD_MATCHED, DI_SRS_MARC_BIB_RECORD_NOT_MATCHED,
@@ -81,7 +88,13 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
 
     HttpClient client = vertx.createHttpClient();
     Storage storage = Storage.basedUpon(vertx, config, client);
-    DataImportKafkaHandler dataImportKafkaHandler = new DataImportKafkaHandler(vertx, storage, client);
+
+    KafkaInternalCache kafkaInternalCache = KafkaInternalCache.builder()
+      .kafkaConfig(kafkaConfig)
+      .build();
+    kafkaInternalCache.initKafkaCache();
+
+    DataImportKafkaHandler dataImportKafkaHandler = new DataImportKafkaHandler(vertx, storage, client, kafkaInternalCache);
 
     List<Future> futures = EVENT_TYPES.stream()
       .map(eventType -> createKafkaConsumerWrapper(kafkaConfig, eventType, dataImportKafkaHandler))
@@ -93,6 +106,8 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
         futures.forEach(future -> consumerWrappers.add((KafkaConsumerWrapper<String, String>) future.result()));
         startPromise.complete();
       });
+
+    CacheUtil.initCacheCleanupPeriodicTask(vertx, kafkaInternalCache, DELAY_TIME_BETWEEN_EVENTS_CLEANUP_VALUE_MILLIS, EVENT_TIMEOUT_VALUE_HOURS);
   }
 
   @Override
