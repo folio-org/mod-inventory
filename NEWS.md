@@ -1,3 +1,10 @@
+## 16.3.0 2021-03-26
+
+* Introduces `contributorsNames` CQL index for searching `instances` (MODINV-390)
+* Tracks processed data import events to ensure events are only processed once (MODINV-373)
+* Provides `inventory 10.10`
+* Requires `instance-storage 7.7`
+
 ## 16.2.0 2020-03-15
 
 * Uses Kafka to coordinate data import process (MODINV-326)
