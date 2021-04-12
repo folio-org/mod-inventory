@@ -6,6 +6,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 
+import io.vertx.kafka.client.producer.KafkaHeader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -23,6 +24,7 @@ import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.Record;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static java.lang.String.format;
@@ -39,6 +41,7 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
   private static final ObjectMapper OBJECT_MAPPER = ObjectMapperTool.getMapper();
+  private static final String CORRELATION_ID_HEADER = "correlationId";
 
   private InstanceUpdateDelegate instanceUpdateDelegate;
   private KafkaInternalCache kafkaInternalCache;
@@ -56,7 +59,8 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
       if (!kafkaInternalCache.containsByKey(event.getId())) {
         kafkaInternalCache.putToCache(event.getId());
         HashMap<String, String> eventPayload = OBJECT_MAPPER.readValue(ZIPArchiver.unzip(event.getEventPayload()), HashMap.class);
-        LOGGER.info(format("Event payload has been received with event type: %s", event.getEventType()));
+        String correlationId = extractCorrelationId(record.headers());
+        LOGGER.info(format("Event payload has been received with event type: %s and correlationId: %s", event.getEventType(), correlationId));
 
         if (isAnyEmpty(eventPayload.get(MARC_KEY), eventPayload.get(MAPPING_RULES_KEY), eventPayload.get(MAPPING_PARAMS_KEY))) {
           String message = "Event payload does not contain required data to update Instance";
@@ -83,5 +87,12 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
       return Future.failedFuture(e);
     }
     return Future.succeededFuture();
+  }
+
+  private String extractCorrelationId(List<KafkaHeader> headers) {
+    return headers.stream()
+      .filter(header -> header.key().equals(CORRELATION_ID_HEADER)).findFirst()
+      .map(header -> header.value().toString())
+      .orElse(null);
   }
 }
