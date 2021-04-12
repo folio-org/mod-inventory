@@ -59,7 +59,8 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
       if (!kafkaInternalCache.containsByKey(event.getId())) {
         kafkaInternalCache.putToCache(event.getId());
         HashMap<String, String> eventPayload = OBJECT_MAPPER.readValue(ZIPArchiver.unzip(event.getEventPayload()), HashMap.class);
-        String correlationId = extractCorrelationId(record.headers());
+        Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(record.headers());
+        String correlationId = headersMap.get(CORRELATION_ID_HEADER);
         LOGGER.info(format("Event payload has been received with event type: %s and correlationId: %s", event.getEventType(), correlationId));
 
         if (isAnyEmpty(eventPayload.get(MARC_KEY), eventPayload.get(MAPPING_RULES_KEY), eventPayload.get(MAPPING_PARAMS_KEY))) {
@@ -68,7 +69,6 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
           return Future.failedFuture(message);
         }
 
-        Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(record.headers());
         Context context = EventHandlingUtil.constructContext(headersMap.get(OKAPI_TENANT_HEADER), headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER));
         Record marcRecord = new JsonObject(eventPayload.get(MARC.value())).mapTo(Record.class);
 
@@ -89,10 +89,4 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
     return Future.succeededFuture();
   }
 
-  private String extractCorrelationId(List<KafkaHeader> headers) {
-    return headers.stream()
-      .filter(header -> header.key().equals(CORRELATION_ID_HEADER)).findFirst()
-      .map(header -> header.value().toString())
-      .orElse(null);
-  }
 }

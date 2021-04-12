@@ -1,20 +1,16 @@
 package org.folio.inventory.dataimport.consumers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
-
+import io.vertx.ext.web.client.WebClient;
+import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import io.vertx.ext.web.client.WebClient;
-import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
-
 import org.folio.DataImportEventPayload;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.dataimport.HoldingWriterFactory;
@@ -37,7 +33,6 @@ import org.folio.inventory.dataimport.handlers.matching.loaders.InstanceLoader;
 import org.folio.inventory.dataimport.handlers.matching.loaders.ItemLoader;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.AsyncRecordHandler;
-import org.folio.kafka.KafkaHeaderUtils;
 import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.processing.events.EventManager;
 import org.folio.processing.events.utils.ZIPArchiver;
