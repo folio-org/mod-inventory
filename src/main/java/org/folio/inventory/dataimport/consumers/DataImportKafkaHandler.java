@@ -76,6 +76,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
         String correlationId = extractCorrelationId(record.headers());
         LOGGER.info(format("Data import event payload has been received with event type: %s correlationId: %s", eventPayload.getEventType(), correlationId));
 
+        eventPayload.getContext().put(CORRELATION_ID_HEADER, correlationId);
         EventManager.handleEvent(eventPayload).whenComplete((processedPayload, throwable) -> {
           if (throwable != null) {
             promise.fail(throwable);
@@ -122,7 +123,8 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
 
   private String extractCorrelationId(List<KafkaHeader> headers) {
     return headers.stream()
-      .filter(header -> header.key().equals(CORRELATION_ID_HEADER)).findFirst()
+      .filter(header -> header.key().equals(CORRELATION_ID_HEADER))
+      .findFirst()
       .map(header -> header.value().toString())
       .orElse(null);
   }
