@@ -93,7 +93,7 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
   @Before
   public void setUp() throws IOException {
     mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
-    existingInstance = InstanceUtil.jsonToInstance(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
+    existingInstance = Instance.fromJson(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
     record = Json.decodeValue(TestUtil.readFileFromPath(RECORD_PATH), Record.class);
     record.getParsedRecord().withContent(JsonObject.mapFrom(record.getParsedRecord().getContent()).encode());
 

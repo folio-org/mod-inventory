@@ -14,7 +14,6 @@ import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.storage.external.CollectionResourceRepository;
-import org.folio.inventory.support.InstanceUtil;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
@@ -83,7 +82,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
       List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
       if (errors.isEmpty()) {
-        Instance mappedInstance = InstanceUtil.jsonToInstance(instanceAsJson);
+        Instance mappedInstance = Instance.fromJson(instanceAsJson);
         addInstance(mappedInstance, instanceCollection)
           .compose(createdInstance -> createPrecedingSucceedingTitles(mappedInstance, precedingSucceedingTitlesRepository).map(createdInstance))
           .onSuccess(ar -> {
