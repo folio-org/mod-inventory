@@ -40,11 +40,7 @@ public class UpdateInstanceEventHandler {
   public CompletableFuture<Instance> handle(Map<String, String> eventPayload, Map<String, String> requestHeaders, Vertx vertx) {
     CompletableFuture<Instance> future = new CompletableFuture<>();
     try {
-      if (eventPayload == null
-        || isEmpty(eventPayload.get(MARC_KEY))
-        || isEmpty(eventPayload.get(MAPPING_RULES_KEY))
-        || isEmpty(eventPayload.get(MAPPING_PARAMS_KEY))
-        || isEmpty(eventPayload.get(USER_CONTEXT_KEY))) {
+      if (eventPayload == null || isEmpty(eventPayload.get(MARC_KEY)) || isEmpty(eventPayload.get(MAPPING_RULES_KEY)) || isEmpty(eventPayload.get(MAPPING_PARAMS_KEY)) || isEmpty(eventPayload.get(USER_CONTEXT_KEY))) {
         String message = "Event does not contain required data to update Instance";
         LOGGER.error(message);
         future.completeExceptionally(new EventProcessingException(message));
