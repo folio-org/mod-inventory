@@ -87,6 +87,7 @@ public class UpdateInstanceEventHandlerUnitTest {
     eventPayload.put("MARC", record.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
+    eventPayload.put("USER_CONTEXT", "{\"userId\":\"1\", \"token\":\"token\"}");
 
     CompletableFuture<Instance> future = updateInstanceEventHandler.handle(eventPayload, headers, Vertx.vertx());
     Instance updatedInstance = future.get(5, TimeUnit.MILLISECONDS);

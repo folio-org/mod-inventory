@@ -21,9 +21,13 @@ public class UpdateInstanceEventHandler {
 
   private static final Logger LOGGER = LogManager.getLogger(UpdateInstanceEventHandler.class);
   private static final String MARC_KEY = "MARC";
+  private static final String USER_CONTEXT_KEY = "USER_CONTEXT";
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
   private static final String DI_INDICATOR = "DI";
+
+  private static final String TOKEN_KEY = "token";
+  private static final String USER_ID_KEY = "userId";
 
   private final Context context;
   private final InstanceUpdateDelegate instanceUpdateDelegate;
@@ -36,15 +40,21 @@ public class UpdateInstanceEventHandler {
   public CompletableFuture<Instance> handle(Map<String, String> eventPayload, Map<String, String> requestHeaders, Vertx vertx) {
     CompletableFuture<Instance> future = new CompletableFuture<>();
     try {
-      if (eventPayload == null || isEmpty(eventPayload.get(MARC_KEY)) || isEmpty(eventPayload.get(MAPPING_RULES_KEY)) || isEmpty(eventPayload.get(MAPPING_PARAMS_KEY))) {
+      if (eventPayload == null
+        || isEmpty(eventPayload.get(MARC_KEY))
+        || isEmpty(eventPayload.get(MAPPING_RULES_KEY))
+        || isEmpty(eventPayload.get(MAPPING_PARAMS_KEY))
+        || isEmpty(eventPayload.get(USER_CONTEXT_KEY))) {
         String message = "Event does not contain required data to update Instance";
         LOGGER.error(message);
         future.completeExceptionally(new EventProcessingException(message));
         return future;
       }
 
+      var userContext = new JsonObject(eventPayload.get(USER_CONTEXT_KEY));
+
       Record marcRecord = new JsonObject(eventPayload.get(MARC_KEY)).mapTo(Record.class);
-      instanceUpdateDelegate.handle(eventPayload, marcRecord, context)
+      instanceUpdateDelegate.handle(eventPayload, marcRecord, getUpdateContext(userContext))
         .onComplete(ar -> {
           if (isEmpty(eventPayload.get((DI_INDICATOR)))) {
             OkapiConnectionParams params = new OkapiConnectionParams(requestHeaders, vertx);
@@ -62,5 +72,29 @@ public class UpdateInstanceEventHandler {
       future.completeExceptionally(e);
     }
     return future;
+  }
+
+  private Context getUpdateContext(JsonObject userContext) {
+    return new Context() {
+
+      @Override
+      public String getTenantId() {
+        return UpdateInstanceEventHandler.this.context.getTenantId();
+      }
+
+      @Override
+      public String getToken() {
+        return userContext.getString(TOKEN_KEY);
+      }
+
+      @Override
+      public String getOkapiLocation() {
+        return UpdateInstanceEventHandler.this.context.getOkapiLocation();
+      }
+
+      @Override public String getUserId() {
+        return userContext.getString(USER_ID_KEY);
+      }
+    };
   }
 }
