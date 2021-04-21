@@ -1,7 +1,31 @@
 package org.folio.inventory.eventhandlers;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
+
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.mockito.Spy;
+
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
@@ -13,26 +37,6 @@ import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.InstanceUtil;
 import org.folio.processing.events.utils.ZIPArchiver;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.function.Consumer;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.when;
 
 public class UpdateInstanceEventHandlerUnitTest {
 
@@ -47,6 +51,9 @@ public class UpdateInstanceEventHandlerUnitTest {
   private Context context;
   @Mock
   InstanceCollection instanceRecordCollection;
+  @Spy
+  @InjectMocks
+  InstanceUpdateDelegate instanceUpdateDelegate;
 
   private UpdateInstanceEventHandler updateInstanceEventHandler;
   private JsonObject mappingRules;
@@ -61,7 +68,7 @@ public class UpdateInstanceEventHandlerUnitTest {
     headers.put("x-okapi-token", "dummy");
     MockitoAnnotations.initMocks(this);
     existingInstance = InstanceUtil.jsonToInstance(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
-    updateInstanceEventHandler = new UpdateInstanceEventHandler(new InstanceUpdateDelegate(storage), context);
+    updateInstanceEventHandler = new UpdateInstanceEventHandler(instanceUpdateDelegate, context);
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
     doAnswer(invocationOnMock -> {
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
@@ -76,17 +83,20 @@ public class UpdateInstanceEventHandlerUnitTest {
       return null;
     }).when(instanceRecordCollection).update(any(), any(Consumer.class), any(Consumer.class));
 
+    when(context.getTenantId()).thenReturn("dummy");
+    when(context.getOkapiLocation()).thenReturn("localhost");
+
     mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
     record = new JsonObject(TestUtil.readFileFromPath(RECORD_PATH));
   }
 
   @Test
   public void shouldProcessEvent() throws InterruptedException, ExecutionException, TimeoutException {
-
     HashMap<String, String> eventPayload = new HashMap<>();
     eventPayload.put("MARC", record.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
+    eventPayload.put("USER_CONTEXT", "{\"userId\":\"1\", \"token\":\"token\"}");
 
     CompletableFuture<Instance> future = updateInstanceEventHandler.handle(eventPayload, headers, Vertx.vertx());
     Instance updatedInstance = future.get(5, TimeUnit.MILLISECONDS);
@@ -102,6 +112,13 @@ public class UpdateInstanceEventHandlerUnitTest {
     Assert.assertFalse(updatedInstance.getSubjects().get(0).contains("Environmentalism in literature"));
     Assert.assertNotNull(updatedInstance.getNotes());
     Assert.assertEquals("Adding a note", updatedInstance.getNotes().get(0).note);
+
+    ArgumentCaptor<Context> argument = ArgumentCaptor.forClass(Context.class);
+    verify(instanceUpdateDelegate).handle(any(), any(), argument.capture());
+    Assert.assertEquals("token", argument.getValue().getToken());
+    Assert.assertEquals("1", argument.getValue().getUserId());
+    Assert.assertEquals("dummy", argument.getValue().getTenantId());
+    Assert.assertEquals("localhost", argument.getValue().getOkapiLocation());
   }
 
   @Test
