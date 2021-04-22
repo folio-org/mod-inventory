@@ -1,3 +1,10 @@
+## 16.3.1 2021-04-22
+
+* Introduces parameters to set a number of data import verticle instances (MODINV-393)
+* Provides support for USER_CONTEXT in handling QM-update events (MODINV-399)
+* Provides additional logging for data import event correlationId
+* Includes dependencies upgrades (folio-kafka-wrapper to v2.0.5 and data-import-processing-core to v3.0.1)
+
 ## 16.3.0 2021-03-26
 
 * Introduces `contributorsNames` CQL index for searching `instances` (MODINV-390)
