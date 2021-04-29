@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <artifactId>mod-inventory</artifactId>
   <groupId>org.folio</groupId>
-  <version>16.3.0-SNAPSHOT</version>
+  <version>16.4.0-SNAPSHOT</version>
   <licenses>
     <license>
       <name>Apache License 2.0</name>
@@ -116,7 +116,7 @@
     <dependency>
       <groupId>org.folio</groupId>
       <artifactId>folio-kafka-wrapper</artifactId>
-      <version>2.1.0-SNAPSHOT</version>
+      <version>2.0.5</version>
     </dependency>
 
     <dependency>
@@ -181,12 +181,12 @@
     <dependency>
       <groupId>org.folio</groupId>
       <artifactId>mod-pubsub-client</artifactId>
-      <version>2.0.0</version>
+      <version>2.0.5</version>
     </dependency>
     <dependency>
       <groupId>org.folio</groupId>
       <artifactId>data-import-processing-core</artifactId>
-      <version>3.0.0</version>
+      <version>3.0.1</version>
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>

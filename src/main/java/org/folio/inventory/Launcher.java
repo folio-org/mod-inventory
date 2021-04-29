@@ -19,6 +19,8 @@ import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_REP
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.OKAPI_URL;
 
 public class Launcher {
+  private static final String DATA_IMPORT_CONSUMER_VERTICLE_INSTANCES_NUMBER_CONFIG = "inventory.kafka.DataImportConsumerVerticle.instancesNumber";
+  private static final String MARC_BIB_INSTANCE_HRID_SET_CONSUMER_VERTICLE_INSTANCES_NUMBER_CONFIG = "inventory.kafka.MarcBibInstanceHridSetConsumerVerticle.instancesNumber";
   private static final VertxAssistant vertxAssistant = new VertxAssistant();
   private static String inventoryModuleDeploymentId;
   private static String consumerVerticleDeploymentId;
@@ -72,13 +74,15 @@ public class Launcher {
 
   private static void startConsumerVerticles(Map<String, Object> consumerVerticlesConfig)
     throws InterruptedException, ExecutionException, TimeoutException {
+    int dataImportConsumerVerticleNumber = Integer.parseInt(System.getenv().getOrDefault(DATA_IMPORT_CONSUMER_VERTICLE_INSTANCES_NUMBER_CONFIG, "5"));
+    int instanceHridSetConsumerVerticleNumber = Integer.parseInt(System.getenv().getOrDefault(MARC_BIB_INSTANCE_HRID_SET_CONSUMER_VERTICLE_INSTANCES_NUMBER_CONFIG, "5"));
 
     CompletableFuture<String> future1 = new CompletableFuture<>();
     CompletableFuture<String> future2 = new CompletableFuture<>();
     vertxAssistant.deployVerticle(DataImportConsumerVerticle.class.getName(),
-      consumerVerticlesConfig, future1);
+      consumerVerticlesConfig, dataImportConsumerVerticleNumber, future1);
     vertxAssistant.deployVerticle(MarcBibInstanceHridSetConsumerVerticle.class.getName(),
-      consumerVerticlesConfig, future2);
+      consumerVerticlesConfig, instanceHridSetConsumerVerticleNumber, future2);
 
     consumerVerticleDeploymentId = future1.get(20, TimeUnit.SECONDS);
     marcInstHridSetConsumerVerticleDeploymentId = future2.get(20, TimeUnit.SECONDS);
