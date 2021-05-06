@@ -119,8 +119,7 @@ public class UpdateItemEventHandler implements EventHandler {
           }
         });
     } catch (Exception e) {
-      String errorMessage = String.format("Error updating inventory Item: %s", e);
-      LOG.error(errorMessage);
+      LOG.error("Error updating inventory Item", e);
       future.completeExceptionally(e);
     }
     return future;
