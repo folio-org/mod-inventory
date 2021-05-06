@@ -7,10 +7,7 @@ import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
 import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class InstancesResponse {
   private Success<MultipleRecords<Instance>> success;
@@ -18,6 +15,7 @@ public class InstancesResponse {
   private Map<String, List<InstanceRelationshipToChild>> childInstanceMap = new HashMap();
   private Map<String, List<PrecedingSucceedingTitle>> precedingTitlesMap = new HashMap();
   private Map<String, List<PrecedingSucceedingTitle>> succeedingTitlesMap = new HashMap();
+  private Set<String> instancesThatAreBoundWith = new HashSet<>();
 
   public Success<MultipleRecords<Instance>> getSuccess() {
     return success;
@@ -26,6 +24,10 @@ public class InstancesResponse {
   public InstancesResponse setSuccess(Success<MultipleRecords<Instance>> success) {
     this.success = success;
     return this;
+  }
+
+  public boolean hasRecords () {
+    return !success.getResult().records.isEmpty();
   }
 
   public Map<String, List<InstanceRelationshipToParent>> getParentInstanceMap() {
@@ -70,5 +72,18 @@ public class InstancesResponse {
 
     this.succeedingTitlesMap = succeedingTitlesMap;
     return this;
+  }
+
+  public InstancesResponse setBoundWithInstanceIds(List<String> instanceIds) {
+    this.instancesThatAreBoundWith = Set.copyOf(instanceIds);
+    for (Instance instance : success.getResult().records) {
+      instance.setIsBoundWith(isBoundWith(instance.getId()));
+    }
+    return this;
+  }
+
+  public boolean isBoundWith (String instanceId) {
+    System.out.println("==== " + instanceId + " is bound with?: " + instancesThatAreBoundWith.contains(instanceId));
+    return instancesThatAreBoundWith.contains(instanceId);
   }
 }

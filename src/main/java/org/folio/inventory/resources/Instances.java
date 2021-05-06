@@ -13,12 +13,7 @@ import static org.folio.inventory.validation.InstancesValidators.refuseWhenHridC
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
@@ -39,6 +34,8 @@ import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.services.InstanceRelationshipsService;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
+import org.folio.inventory.storage.external.CqlQuery;
+import org.folio.inventory.storage.external.MultipleRecordsFetchClient;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.server.ClientErrorResponse;
@@ -135,13 +132,13 @@ public class Instances extends AbstractInstances {
 
   private void makeInstancesResponse(Success<MultipleRecords<Instance>> success,
     RoutingContext routingContext, WebContext context) {
-
     InstancesResponse instancesResponse = new InstancesResponse();
     instancesResponse.setSuccess(success);
 
     completedFuture(instancesResponse)
       .thenCompose(response -> fetchRelationships(response, routingContext))
       .thenCompose(response -> fetchPrecedingSucceedingTitles(response, routingContext, context))
+      .thenCompose(response -> lookUpBoundWithsForInstanceRecordSet(instancesResponse, routingContext, context))
       .whenComplete((result, ex) -> {
         if (ex == null) {
           JsonResponse.success(routingContext.response(),
@@ -314,7 +311,7 @@ public class Instances extends AbstractInstances {
           completedFuture(instance)
             .thenCompose(response -> fetchInstanceRelationships(it, routingContext, context))
             .thenCompose(response -> fetchPrecedingSucceedingTitles(it, routingContext, context))
-            //.thenCompose(response -> resolveBoundWithFlags(it, routingContext, context))// NETODO: resolve isBoundWith here?
+            .thenCompose(response -> setBoundWithFlag(it, routingContext, context))
             .thenAccept(response -> successResponse(routingContext, context, response));
         } else {
           ClientErrorResponse.notFound(routingContext.response());
@@ -322,6 +319,15 @@ public class Instances extends AbstractInstances {
       }, FailureResponseConsumer.serverError(routingContext.response()));
   }
 
+  private CompletableFuture<Instance> setBoundWithFlag (Success<Instance> success, RoutingContext routingContext, WebContext webContext) {
+    Instance instance = success.getResult();
+    return findBoundWithPartsForInstanceId(instance.getId(), routingContext, webContext).thenCompose(
+      boundWithParts -> {
+        instance.setIsBoundWith(boundWithParts != null && !boundWithParts.isEmpty());
+        return completedFuture(instance);
+      }
+    );
+  }
 
   /**
    * Fetches instance relationships for multiple Instance records, populates, responds
@@ -350,6 +356,88 @@ public class Instances extends AbstractInstances {
       .fetchInstancePrecedingSucceedingTitles(instanceIds)
       .thenCompose(response ->
         withPrecedingSucceedingTitles(routingContext, context, instancesResponse, response));
+  }
+
+  private CompletableFuture<List<JsonObject>> fetchHoldingsRecordsForInstanceRecordSet(
+    InstancesResponse instancesResponse, RoutingContext routingContext, WebContext context) {
+    List<String> instanceIds = getInstanceIdsFromInstanceResult(instancesResponse.getSuccess());
+
+    MultipleRecordsFetchClient holdingsFetcher = MultipleRecordsFetchClient.builder()
+      .withCollectionPropertyName("holdingsRecords")
+      .withExpectedStatus(200)
+      .withCollectionResourceClient(createHoldingsStorageClient(routingContext, context))
+      .build();
+
+    return holdingsFetcher.find(instanceIds, this::cqlMatchAnyByInstanceIds);
+  }
+
+  private CompletableFuture<List<JsonObject>> findBoundWithPartsForInstanceId(
+    String instanceId, RoutingContext routingContext, WebContext webContext ) {
+    CompletableFuture<Response> holdingsFuture = new CompletableFuture<>();
+
+    createHoldingsStorageClient(routingContext, webContext).getMany("query=instanceId=="+instanceId, holdingsFuture::complete);
+    return holdingsFuture.thenCompose(
+      response -> {
+        List<String> holdingsRecordsList =
+          response.getJson().getJsonArray("holdingsRecords")
+            .stream().map(o -> ((JsonObject) o).getString("id")).collect(Collectors.toList());
+        return fetchBoundWithsByHoldingsRecordIds(holdingsRecordsList, routingContext, webContext);
+      }
+    );
+  }
+
+  private CompletableFuture<List<JsonObject>> fetchBoundWithsByHoldingsRecordIds(
+                                              List<String> holdingsRecordIds,
+                                              RoutingContext routingContext,
+                                              WebContext webContext) {
+    return MultipleRecordsFetchClient
+      .builder()
+      .withCollectionPropertyName("boundWithParts")
+      .withExpectedStatus(200)
+      .withCollectionResourceClient(createBoundWithPartsClient(routingContext, webContext))
+      .build()
+      .find(holdingsRecordIds, this::cqlMatchAnyByHoldingsRecordIds);
+  }
+
+  private CqlQuery cqlMatchAnyByInstanceIds(List<String> instanceIds) {
+    return CqlQuery.exactMatchAny("instanceId", instanceIds);
+  }
+
+  private CqlQuery cqlMatchAnyByHoldingsRecordIds(List<String> holdingsRecordIds) {
+    return CqlQuery.exactMatchAny("holdingsRecordId", holdingsRecordIds);
+  }
+
+  private CompletableFuture<InstancesResponse> lookUpBoundWithsForInstanceRecordSet(
+                                                  InstancesResponse instancesResponse,
+                                                  RoutingContext routingContext,
+                                                  WebContext webContext) {
+
+    if (instancesResponse.hasRecords()) {
+      return fetchHoldingsRecordsForInstanceRecordSet(instancesResponse, routingContext, webContext)
+        .thenCompose(holdingsRecordList -> {
+          if (holdingsRecordList.isEmpty()) {
+            return completedFuture(instancesResponse);
+          } else {
+            Map<String, String> holdingsToInstanceMap = new HashMap<>();
+            for (JsonObject holdingsRecord : holdingsRecordList) {
+              holdingsToInstanceMap.put(holdingsRecord.getString("id"), holdingsRecord.getString("instanceId"));
+            }
+            ArrayList<String> holdingsIdsList = new ArrayList(holdingsToInstanceMap.keySet());
+            return fetchBoundWithsByHoldingsRecordIds(holdingsIdsList, routingContext, webContext)
+              .thenCompose(boundWithParts -> {
+                  List<String> boundWithInstanceIds = new ArrayList<>();
+                  for (JsonObject boundWithPart : boundWithParts) {
+                    boundWithInstanceIds.add(holdingsToInstanceMap.get(boundWithPart.getString("holdingsRecordId")));
+                  }
+                  instancesResponse.setBoundWithInstanceIds(boundWithInstanceIds);
+                return completedFuture(instancesResponse);
+                }
+              );
+          }
+        });
+    } else {
+      return completedFuture(instancesResponse);
+    }
   }
 
   /**

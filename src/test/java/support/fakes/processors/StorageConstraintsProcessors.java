@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 import static api.ApiTestSuite.createOkapiHttpClient;
 import static api.support.http.StorageInterfaceUrls.instanceRelationshipTypeUrl;
 import static api.support.http.StorageInterfaceUrls.instancesStorageUrl;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.function.Function.identity;
 import static org.folio.inventory.support.JsonArrayHelper.toList;
 
@@ -56,6 +57,11 @@ public final class StorageConstraintsProcessors {
       });
   }
 
+  public static CompletableFuture<JsonObject> boundWithConstraints(
+    @SuppressWarnings("unused") JsonObject oldBoundWithPart, JsonObject newBoundWithPart) throws MalformedURLException {
+    return completedFuture(newBoundWithPart);
+  }
+
   public static CompletableFuture<JsonObject> instancePrecedingSucceedingTitleConstraints(
     @SuppressWarnings("unused") JsonObject oldRelationship, JsonObject newRelationship) throws MalformedURLException {
 
@@ -85,7 +91,7 @@ public final class StorageConstraintsProcessors {
             relationship.succeedingInstanceId));
         }
 
-        return CompletableFuture.completedFuture(newRelationship);
+        return completedFuture(newRelationship);
       });
   }
 

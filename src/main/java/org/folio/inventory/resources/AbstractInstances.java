@@ -305,6 +305,19 @@ public abstract class AbstractInstances {
       "/preceding-succeeding-titles");
   }
 
+  protected CollectionResourceClient createBoundWithPartsClient(
+    RoutingContext routingContext, WebContext context) {
+
+    return getCollectionResourceRepository(routingContext, context,
+      "/bound-with-parts");
+  }
+
+  protected CollectionResourceClient createHoldingsStorageClient (
+    RoutingContext routingContext, WebContext webContext) {
+    return getCollectionResourceRepository(routingContext, webContext,
+      "/holdings-storage/holdings");
+  }
+
   private CollectionResourceClient getCollectionResourceRepository(
     RoutingContext routingContext, WebContext context, String path) {
     CollectionResourceClient collectionResourceClient = null;
