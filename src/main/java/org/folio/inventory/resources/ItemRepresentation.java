@@ -140,7 +140,7 @@ class ItemRepresentation {
     representation.put(Item.YEAR_CAPTION_KEY, item.getYearCaption());
     representation.put(Item.ELECTRONIC_ACCESS_KEY, item.getElectronicAccess());
     representation.put(Item.STATISTICAL_CODE_IDS_KEY, item.getStatisticalCodeIds());
-    representation.put(Item.PURCHASE_ORDER_LINE_IDENTIFIER, item.getPurchaseOrderLineidentifier());
+    representation.put(Item.PURCHASE_ORDER_LINE_IDENTIFIER, item.getPurchaseOrderLineIdentifier());
     includeReferenceIfPresent(representation, "materialType",
       item.getMaterialTypeId());
 
@@ -180,6 +180,8 @@ class ItemRepresentation {
     if (item.getEffectiveShelvingOrder() != null) {
       representation.put("effectiveShelvingOrder", item.getEffectiveShelvingOrder());
     }
+
+    representation.put("isBoundWith", item.getIsBoundWith());
 
     return representation;
   }
