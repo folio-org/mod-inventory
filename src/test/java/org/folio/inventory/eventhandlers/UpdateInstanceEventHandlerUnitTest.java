@@ -9,13 +9,11 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
-import io.vertx.core.Vertx;
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import org.junit.Assert;
 import org.junit.Before;
@@ -65,7 +63,7 @@ public class UpdateInstanceEventHandlerUnitTest {
   public void setUp() throws IOException {
     headers.put("x-okapi-url", "localhost");
     headers.put("x-okapi-tenant", "dummy");
-    headers.put("x-okapi-token", "dummy");
+    headers.put("x-okapi-token", "token");
     MockitoAnnotations.initMocks(this);
     existingInstance = InstanceUtil.jsonToInstance(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
     updateInstanceEventHandler = new UpdateInstanceEventHandler(instanceUpdateDelegate, context);
@@ -84,6 +82,7 @@ public class UpdateInstanceEventHandlerUnitTest {
     }).when(instanceRecordCollection).update(any(), any(Consumer.class), any(Consumer.class));
 
     when(context.getTenantId()).thenReturn("dummy");
+    when(context.getToken()).thenReturn("token");
     when(context.getOkapiLocation()).thenReturn("localhost");
 
     mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
@@ -96,10 +95,10 @@ public class UpdateInstanceEventHandlerUnitTest {
     eventPayload.put("MARC", record.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
-    eventPayload.put("USER_CONTEXT", "{\"userId\":\"1\", \"token\":\"token\"}");
 
-    CompletableFuture<Instance> future = updateInstanceEventHandler.handle(eventPayload, headers, Vertx.vertx());
-    Instance updatedInstance = future.get(5, TimeUnit.MILLISECONDS);
+    Future<Instance> future =
+      updateInstanceEventHandler.handle(eventPayload);
+    Instance updatedInstance = future.result();
 
     Assert.assertNotNull(updatedInstance);
     Assert.assertEquals(INSTANCE_ID, updatedInstance.getId());
@@ -116,7 +115,6 @@ public class UpdateInstanceEventHandlerUnitTest {
     ArgumentCaptor<Context> argument = ArgumentCaptor.forClass(Context.class);
     verify(instanceUpdateDelegate).handle(any(), any(), argument.capture());
     Assert.assertEquals("token", argument.getValue().getToken());
-    Assert.assertEquals("1", argument.getValue().getUserId());
     Assert.assertEquals("dummy", argument.getValue().getTenantId());
     Assert.assertEquals("localhost", argument.getValue().getOkapiLocation());
   }
@@ -129,9 +127,10 @@ public class UpdateInstanceEventHandlerUnitTest {
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
 
-    CompletableFuture<Instance> future = updateInstanceEventHandler.handle(eventPayload, headers, Vertx.vertx());
+    Future<Instance> future =
+      updateInstanceEventHandler.handle(eventPayload);
 
-    Assert.assertTrue(future.isCompletedExceptionally());
+    Assert.assertTrue(future.failed());
   }
 
   @Test
@@ -148,9 +147,10 @@ public class UpdateInstanceEventHandlerUnitTest {
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
 
-    CompletableFuture<Instance> future = updateInstanceEventHandler.handle(eventPayload, headers, Vertx.vertx());
+    Future<Instance> future =
+      updateInstanceEventHandler.handle(eventPayload);
 
-    Assert.assertTrue(future.isCompletedExceptionally());
+    Assert.assertTrue(future.failed());
   }
 
 }

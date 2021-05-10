@@ -10,10 +10,6 @@ public class ApiRoot {
     return String.format("%s/inventory", ApiTestSuite.apiRoot());
   }
 
-  public static String handlers() {
-    return String.format("%s/handlers", inventory());
-  }
-
   public static URL instances()
     throws MalformedURLException {
 
@@ -83,8 +79,4 @@ public class ApiRoot {
     return new URL(String.format("%s/_/tenant", ApiTestSuite.apiRoot()));
   }
 
-  public static URL instancesEventHandler()
-    throws MalformedURLException {
-    return new URL(String.format("%s/instances", handlers()));
-  }
 }
