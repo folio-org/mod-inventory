@@ -1,19 +1,16 @@
 package org.folio.inventory.dataimport.consumers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
-
+import io.vertx.kafka.client.producer.KafkaHeader;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.dataimport.HoldingWriterFactory;
@@ -48,6 +45,7 @@ import org.folio.processing.matching.reader.StaticValueReaderImpl;
 import org.folio.rest.jaxrs.model.Event;
 
 import java.io.IOException;
+import java.util.List;
 
 import static java.lang.String.format;
 import static org.folio.DataImportEventTypes.DI_ERROR;
@@ -56,8 +54,9 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
 
   private static final Logger LOGGER = LogManager.getLogger(DataImportKafkaHandler.class);
   private static final ObjectMapper OBJECT_MAPPER = ObjectMapperTool.getMapper();
-  private KafkaInternalCache kafkaInternalCache;
+  private static final String CORRELATION_ID_HEADER = "correlationId";
 
+  private KafkaInternalCache kafkaInternalCache;
   private Vertx vertx;
 
   public DataImportKafkaHandler(Vertx vertx, Storage storage, HttpClient client, KafkaInternalCache kafkaInternalCache) {
@@ -74,8 +73,10 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       if (!kafkaInternalCache.containsByKey(event.getId())) {
         kafkaInternalCache.putToCache(event.getId());
         DataImportEventPayload eventPayload = new JsonObject(ZIPArchiver.unzip(event.getEventPayload())).mapTo(DataImportEventPayload.class);
-        LOGGER.info(format("Data import event payload has been received with event type: %s", eventPayload.getEventType()));
+        String correlationId = extractCorrelationId(record.headers());
+        LOGGER.info(format("Data import event payload has been received with event type: %s correlationId: %s", eventPayload.getEventType(), correlationId));
 
+        eventPayload.getContext().put(CORRELATION_ID_HEADER, correlationId);
         EventManager.handleEvent(eventPayload).whenComplete((processedPayload, throwable) -> {
           if (throwable != null) {
             promise.fail(throwable);
@@ -118,5 +119,13 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     EventManager.registerEventHandler(new ReplaceInstanceEventHandler(storage, WebClient.wrap(client)));
     EventManager.registerEventHandler(new MarcBibModifiedPostProcessingEventHandler(new InstanceUpdateDelegate(storage)));
     EventManager.registerEventHandler(new MarcBibMatchedPostProcessingEventHandler(storage));
+  }
+
+  private String extractCorrelationId(List<KafkaHeader> headers) {
+    return headers.stream()
+      .filter(header -> header.key().equals(CORRELATION_ID_HEADER))
+      .findFirst()
+      .map(header -> header.value().toString())
+      .orElse(null);
   }
 }

@@ -6,6 +6,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 
+import io.vertx.kafka.client.producer.KafkaHeader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -23,6 +24,7 @@ import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.Record;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static java.lang.String.format;
@@ -39,6 +41,7 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
   private static final ObjectMapper OBJECT_MAPPER = ObjectMapperTool.getMapper();
+  private static final String CORRELATION_ID_HEADER = "correlationId";
 
   private InstanceUpdateDelegate instanceUpdateDelegate;
   private KafkaInternalCache kafkaInternalCache;
@@ -56,7 +59,9 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
       if (!kafkaInternalCache.containsByKey(event.getId())) {
         kafkaInternalCache.putToCache(event.getId());
         HashMap<String, String> eventPayload = OBJECT_MAPPER.readValue(ZIPArchiver.unzip(event.getEventPayload()), HashMap.class);
-        LOGGER.info(format("Event payload has been received with event type: %s", event.getEventType()));
+        Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(record.headers());
+        String correlationId = headersMap.get(CORRELATION_ID_HEADER);
+        LOGGER.info(format("Event payload has been received with event type: %s and correlationId: %s", event.getEventType(), correlationId));
 
         if (isAnyEmpty(eventPayload.get(MARC_KEY), eventPayload.get(MAPPING_RULES_KEY), eventPayload.get(MAPPING_PARAMS_KEY))) {
           String message = "Event payload does not contain required data to update Instance";
@@ -64,7 +69,6 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
           return Future.failedFuture(message);
         }
 
-        Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(record.headers());
         Context context = EventHandlingUtil.constructContext(headersMap.get(OKAPI_TENANT_HEADER), headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER));
         Record marcRecord = new JsonObject(eventPayload.get(MARC.value())).mapTo(Record.class);
 
@@ -84,4 +88,5 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
     }
     return Future.succeededFuture();
   }
+
 }
