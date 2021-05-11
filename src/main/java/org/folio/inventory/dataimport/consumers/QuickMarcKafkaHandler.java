@@ -64,12 +64,10 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
     createProducer(kafkaConfig, QM_ERROR);
   }
 
-  private void createProducer(KafkaConfig kafkaConfig,
-                              QMEventTypes qmInventoryInstanceUpdated) {
-    var producerName = qmInventoryInstanceUpdated.name() + "_Producer";
-    KafkaProducer<String, String> successProducer =
-      createShared(Vertx.currentContext().owner(), producerName, kafkaConfig.getProducerProps());
-    producerMap.put(qmInventoryInstanceUpdated, successProducer);
+  private void createProducer(KafkaConfig kafkaConfig, QMEventTypes eventType) {
+    var producerName = eventType.name() + "_Producer";
+    KafkaProducer<String, String> producer = createShared(vertx, producerName, kafkaConfig.getProducerProps());
+    producerMap.put(eventType, producer);
   }
 
   @Override
@@ -99,7 +97,7 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
     try {
       var eventPayload = Json.decodeValue(ZIPArchiver.unzip(event.getEventPayload()), HashMap.class);
       return Future.succeededFuture(eventPayload);
-    } catch (IOException e) {
+    } catch (Exception e) {
       return Future.failedFuture(e);
     }
   }
