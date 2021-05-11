@@ -338,30 +338,6 @@ public abstract class AbstractInstances {
     return format("query=subInstanceId==(%s)+or+superInstanceId==(%s)", idList, idList);
   }
 
-  private void putIfNotNull(JsonObject target, String propertyName, String value) {
-    if (value != null) {
-      target.put(propertyName, value);
-    }
-  }
-
-  private void putIfNotNull(JsonObject target, String propertyName, List<String> value) {
-    if (value != null) {
-      target.put(propertyName, value);
-    }
-  }
-
-  private void putIfNotNull(JsonObject target, String propertyName, Object value) {
-    if (value != null) {
-      if (value instanceof List) {
-        target.put(propertyName, value);
-      } else if (value instanceof Boolean) {
-        target.put(propertyName, value);
-      } else {
-        target.put(propertyName, new JsonObject(Json.encode(value)));
-      }
-    }
-  }
-
   protected OkapiHttpClient createHttpClient(
     RoutingContext routingContext,
     WebContext context)

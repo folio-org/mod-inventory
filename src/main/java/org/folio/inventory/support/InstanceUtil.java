@@ -2,21 +2,12 @@ package org.folio.inventory.support;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.folio.ChildInstance;
 import org.folio.ParentInstance;
-import org.folio.inventory.domain.instances.AlternativeTitle;
-import org.folio.inventory.domain.instances.Classification;
-import org.folio.inventory.domain.instances.Contributor;
-import org.folio.inventory.domain.instances.Identifier;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
 import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
-import org.folio.inventory.domain.instances.Note;
-import org.folio.inventory.domain.instances.Publication;
-import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
-import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
