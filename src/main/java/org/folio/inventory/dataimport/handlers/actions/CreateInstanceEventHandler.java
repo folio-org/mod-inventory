@@ -100,8 +100,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
         future.completeExceptionally(new EventProcessingException(msg));
       }
     } catch (Exception e) {
-      String msg = format("Error creating inventory Instance: %s", e);
-      LOGGER.error(msg);
+      LOGGER.error("Error creating inventory Instance", e);
       future.completeExceptionally(e);
     }
     return future;

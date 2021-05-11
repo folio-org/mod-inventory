@@ -59,7 +59,7 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
             future.completeExceptionally(new MatchingException(failure.getReason()));
           });
       } catch (UnsupportedEncodingException e) {
-        LOG.error("Failed to retrieve records");
+        LOG.error("Failed to retrieve records", e);
         future.completeExceptionally(e);
       }
     });
