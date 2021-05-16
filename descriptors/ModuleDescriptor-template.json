@@ -21,7 +21,8 @@
             "inventory-storage.holdings.collection.get",
             "inventory-storage.holdings.item.get",
             "inventory-storage.instances.collection.get",
-            "inventory-storage.instances.item.get"
+            "inventory-storage.instances.item.get",
+            "inventory-storage.bound-with-parts.collection.get"
           ]
         }, {
           "methods": ["GET"],
@@ -38,7 +39,8 @@
             "inventory-storage.holdings.collection.get",
             "inventory-storage.holdings.item.get",
             "inventory-storage.instances.collection.get",
-            "inventory-storage.instances.item.get"
+            "inventory-storage.instances.item.get",
+            "inventory-storage.bound-with-parts.collection.get"
           ]
         },
         {
@@ -63,6 +65,7 @@
             "inventory-storage.holdings.item.get",
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
+            "inventory-storage.bound-with-parts.collection.get",
             "users.item.get"
           ]
         },
@@ -88,6 +91,7 @@
             "inventory-storage.holdings.item.get",
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
+            "inventory-storage.bound-with-parts.collection.get",
             "users.item.get"
           ]
         },
@@ -113,6 +117,7 @@
             "inventory-storage.holdings.item.get",
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
+            "inventory-storage.bound-with-parts.collection.get",
             "users.item.get"
           ]
         },
@@ -138,6 +143,7 @@
             "inventory-storage.holdings.item.get",
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
+            "inventory-storage.bound-with-parts.collection.get",
             "users.item.get"
           ]
         },
@@ -163,6 +169,7 @@
             "inventory-storage.holdings.item.get",
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
+            "inventory-storage.bound-with-parts.collection.get",
             "users.item.get"
           ]
         },
@@ -188,6 +195,7 @@
             "inventory-storage.holdings.item.get",
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
+            "inventory-storage.bound-with-parts.collection.get",
             "users.item.get"
           ]
         },
@@ -213,6 +221,7 @@
             "inventory-storage.holdings.item.get",
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
+            "inventory-storage.bound-with-parts.collection.get",
             "users.item.get"
           ]
         },
@@ -238,6 +247,7 @@
             "inventory-storage.holdings.item.get",
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
+            "inventory-storage.bound-with-parts.collection.get",
             "users.item.get"
           ]
         },
@@ -263,6 +273,7 @@
             "inventory-storage.holdings.item.get",
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
+            "inventory-storage.bound-with-parts.collection.get",
             "users.item.get"
           ]
         },
@@ -283,6 +294,7 @@
             "inventory-storage.holdings.item.get",
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
+            "inventory-storage.bound-with-parts.collection.get",
             "users.item.get"
           ]
         }, {
@@ -314,7 +326,27 @@
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
             "inventory-storage.preceding-succeeding-titles.collection.get",
-            "inventory-storage.instance-relationships.collection.get"
+            "inventory-storage.instance-relationships.collection.get",
+            "inventory-storage.bound-with-parts.collection.get"
+          ]
+        }, {
+          "methods": ["GET"],
+          "pathPattern": "/inventory/bound-with-items",
+          "permissionsRequired": ["inventory.bound-with-items.collection.get"],
+          "modulePermissions": [
+            "inventory-storage.bound-with-parts.collection.get",
+            "inventory-storage.bound-with-parts.item.get",
+            "inventory-storage.items.collection.get",
+            "inventory-storage.material-types.item.get",
+            "inventory-storage.material-types.collection.get",
+            "inventory-storage.loan-types.item.get",
+            "inventory-storage.loan-types.collection.get",
+            "inventory-storage.locations.item.get",
+            "inventory-storage.locations.collection.get",
+            "inventory-storage.holdings.collection.get",
+            "inventory-storage.holdings.item.get",
+            "inventory-storage.instances.collection.get",
+            "inventory-storage.instances.item.get"
           ]
         }, {
           "methods": ["GET"],
@@ -323,7 +355,8 @@
           "modulePermissions": [
             "inventory-storage.instances.item.get",
             "inventory-storage.preceding-succeeding-titles.collection.get",
-            "inventory-storage.instance-relationships.collection.get"
+            "inventory-storage.instance-relationships.collection.get",
+            "inventory-storage.bound-with-parts.collection.get"
           ]
         }, {
           "methods": ["POST"],
@@ -592,6 +625,10 @@
     {
       "id": "source-storage-records",
       "version": "2.0"
+    },
+    {
+      "id": "bound-with-parts-storage",
+      "version": "1.0"
     }
   ],
   "permissionSets": [
@@ -757,7 +794,8 @@
         "inventory.items.item.mark-in-process-non-requestable.post",
         "inventory.items.item.mark-missing.post",
         "inventory.items.move.item.post",
-        "inventory.holdings.move.item.post"
+        "inventory.holdings.move.item.post",
+        "inventory.bound-with-items.collection.get"
       ]
     },
     {

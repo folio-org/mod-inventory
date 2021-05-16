@@ -279,7 +279,7 @@ public class Items extends AbstractInventoryResource {
       }, FailureResponseConsumer.serverError(routingContext.response()));
   }
 
-  private void respondWithManyItems(
+  protected void respondWithManyItems(
     RoutingContext routingContext,
     WebContext context,
     MultipleRecords<Item> wrappedItems) {
@@ -612,7 +612,7 @@ public class Items extends AbstractInventoryResource {
     OkapiHttpClient client,
     WebContext webContext)
     throws MalformedURLException {
-    return createCollectionResourceClient(client, webContext, "/bound-with-parts");
+    return createCollectionResourceClient(client, webContext, "/inventory-storage/bound-with-parts");
   }
 
   private CollectionResourceClient createCollectionResourceClient(

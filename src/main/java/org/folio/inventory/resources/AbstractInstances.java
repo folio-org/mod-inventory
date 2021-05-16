@@ -309,7 +309,7 @@ public abstract class AbstractInstances {
     RoutingContext routingContext, WebContext context) {
 
     return getCollectionResourceRepository(routingContext, context,
-      "/bound-with-parts");
+      "/inventory-storage/bound-with-parts");
   }
 
   protected CollectionResourceClient createHoldingsStorageClient (

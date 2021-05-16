@@ -268,6 +268,20 @@ resourceTypes:
               body:
                 text/plain:
                   example: "Internal server error"
+  /bound-with-items:
+    displayName: Bound-with items
+    type:
+      collection:
+        exampleCollection: !include examples/items_get.json
+        schemaCollection: items
+        schemaItem: item
+        exampleItem: !include examples/items_get.json
+    get:
+      is: [pageable,
+          searchable: {description: "query by holdings record ID or item ID using CQL",
+            example: "holdingsRecordId==\"[UUID]\""}
+          ]
+
   /instances:
     displayName: Instances
     type:

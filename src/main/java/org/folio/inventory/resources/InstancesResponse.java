@@ -83,7 +83,6 @@ public class InstancesResponse {
   }
 
   public boolean isBoundWith (String instanceId) {
-    System.out.println("==== " + instanceId + " is bound with?: " + instancesThatAreBoundWith.contains(instanceId));
     return instancesThatAreBoundWith.contains(instanceId);
   }
 }
