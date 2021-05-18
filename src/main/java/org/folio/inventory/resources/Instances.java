@@ -39,7 +39,6 @@ import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.services.InstanceRelationshipsService;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
-import org.folio.inventory.support.InstanceUtil;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.server.ClientErrorResponse;
@@ -165,7 +164,7 @@ public class Instances extends AbstractInstances {
       return;
     }
 
-    Instance newInstance = InstanceUtil.jsonToInstance(instanceRequest);
+    Instance newInstance = Instance.fromJson(instanceRequest);
 
     completedFuture(newInstance)
       .thenCompose(InstancePrecedingSucceedingTitleValidators::refuseWhenUnconnectedHasNoTitle)
@@ -192,7 +191,7 @@ public class Instances extends AbstractInstances {
   private void update(RoutingContext rContext) {
     WebContext wContext = new WebContext(rContext);
     JsonObject instanceRequest = rContext.getBodyAsJson();
-    Instance updatedInstance = InstanceUtil.jsonToInstance(instanceRequest);
+    Instance updatedInstance = Instance.fromJson(instanceRequest);
     InstanceCollection instanceCollection = storage.getInstanceCollection(wContext);
 
     completedFuture(updatedInstance)
@@ -315,6 +314,7 @@ public class Instances extends AbstractInstances {
           completedFuture(instance)
             .thenCompose(response -> fetchInstanceRelationships(it, routingContext, context))
             .thenCompose(response -> fetchPrecedingSucceedingTitles(it, routingContext, context))
+            //.thenCompose(response -> resolveBoundWithFlags(it, routingContext, context))// NETODO: resolve isBoundWith here?
             .thenAccept(response -> successResponse(routingContext, context, response));
         } else {
           ClientErrorResponse.notFound(routingContext.response());
@@ -382,9 +382,7 @@ public class Instances extends AbstractInstances {
   private void successResponse(RoutingContext routingContext, WebContext context,
     Instance instance) {
 
-    JsonResponse.success(routingContext.response(), toRepresentation(instance,
-      instance.getParentInstances(), instance.getChildInstances(),
-      instance.getPrecedingTitles(), instance.getSucceedingTitles(), context));
+    JsonResponse.success(routingContext.response(), instance.getJsonForResponse(context));
   }
 
   private CompletableFuture<InstancesResponse> withInstancesRelationships(

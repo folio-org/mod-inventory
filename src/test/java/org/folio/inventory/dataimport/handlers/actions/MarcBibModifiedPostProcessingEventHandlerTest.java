@@ -11,7 +11,6 @@ import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
-import org.folio.inventory.support.InstanceUtil;
 import org.folio.rest.jaxrs.model.MappingDetail;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
@@ -88,7 +87,7 @@ public class MarcBibModifiedPostProcessingEventHandlerTest {
   @Before
   public void setUp() throws IOException {
     mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
-    existingInstance = InstanceUtil.jsonToInstance(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
+    existingInstance = Instance.fromJson(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
     record = Json.decodeValue(TestUtil.readFileFromPath(RECORD_PATH), Record.class);
     record.getParsedRecord().withContent(JsonObject.mapFrom(record.getParsedRecord().getContent()).encode());
 
@@ -129,7 +128,7 @@ public class MarcBibModifiedPostProcessingEventHandlerTest {
 
     DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
     JsonObject instanceJson = new JsonObject(eventPayload.getContext().get(INSTANCE.value()));
-    Instance updatedInstance = InstanceUtil.jsonToInstance(instanceJson);
+    Instance updatedInstance = Instance.fromJson(instanceJson);
 
     // then
     Assert.assertEquals(existingInstance.getId(), instanceJson.getString("id"));
