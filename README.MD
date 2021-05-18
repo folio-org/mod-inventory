@@ -89,7 +89,7 @@ To deactivate and unregister the module, run `./stop-managed-demo.sh` from the r
 
 
 There are several properties that should be set for modules that interact with Kafka: **KAFKA_HOST, KAFKA_PORT, OKAPI_URL, ENV**(unique env ID).
-After setup, it is good to check logs in all related modules for errors. Data import consumers and producers work in separate verticles that are set up in RMB's InitAPI for each module. That would be the first place to check deploy/install logs.
+After setup, it is good to check logs in all related modules for errors.
 
 **Environment variables** that can be adjusted for this module and default values:
 * "_kafkacache.topic.number.partitions_": 1
