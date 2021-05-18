@@ -35,7 +35,6 @@ import org.folio.inventory.dataimport.handlers.actions.UpdateInstanceEventHandle
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
-import org.folio.inventory.support.InstanceUtil;
 import org.folio.processing.events.utils.ZIPArchiver;
 
 public class UpdateInstanceEventHandlerUnitTest {
@@ -67,7 +66,7 @@ public class UpdateInstanceEventHandlerUnitTest {
     headers.put("x-okapi-tenant", "dummy");
     headers.put("x-okapi-token", "dummy");
     MockitoAnnotations.initMocks(this);
-    existingInstance = InstanceUtil.jsonToInstance(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
+    existingInstance = Instance.fromJson(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
     updateInstanceEventHandler = new UpdateInstanceEventHandler(instanceUpdateDelegate, context);
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
     doAnswer(invocationOnMock -> {
