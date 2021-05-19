@@ -7,21 +7,15 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
-import static org.folio.ActionProfile.Action.MODIFY;
 import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_ERROR;
 import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_INSTANCE_UPDATED;
 import static org.folio.kafka.KafkaTopicNameHelper.formatTopicName;
 import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
-import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -43,8 +37,6 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import org.folio.ActionProfile;
-import org.folio.MappingProfile;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Success;
@@ -53,14 +45,11 @@ import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
-import org.folio.inventory.support.InstanceUtil;
 import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.processing.events.utils.ZIPArchiver;
 import org.folio.rest.jaxrs.model.Event;
-import org.folio.rest.jaxrs.model.MappingDetail;
-import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
 
 @RunWith(VertxUnitRunner.class)
@@ -96,7 +85,7 @@ public class QuickMarcKafkaHandlerTest {
   @Before
   public void setUp() throws IOException {
     mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
-    existingInstance = InstanceUtil.jsonToInstance(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
+    existingInstance = Instance.fromJson(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
     record = Json.decodeValue(TestUtil.readFileFromPath(RECORD_PATH), Record.class);
     record.getParsedRecord().withContent(JsonObject.mapFrom(record.getParsedRecord().getContent()).encode());
 
