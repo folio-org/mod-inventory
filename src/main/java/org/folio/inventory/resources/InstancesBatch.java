@@ -24,7 +24,6 @@ import org.folio.inventory.domain.BatchResult;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.storage.Storage;
-import org.folio.inventory.support.InstanceUtil;
 import org.folio.inventory.support.http.server.RedirectResponse;
 
 import java.util.ArrayList;
@@ -71,7 +70,7 @@ public class InstancesBatch extends AbstractInstances {
     } else {
       setInstancesIdIfNecessary(validInstances);
       List<Instance> instancesToCreate = validInstances.stream()
-        .map(InstanceUtil::jsonToInstance)
+        .map(Instance::fromJson)
         .collect(Collectors.toList());
 
       storage.getInstanceCollection(webContext).addBatch(instancesToCreate, success -> {
@@ -168,8 +167,7 @@ public class InstancesBatch extends AbstractInstances {
 
   private JsonObject getBatchResponse(List<Instance> createdInstances, List<String> errorMessages, WebContext webContext) {
     List<JsonObject> jsonInstances = createdInstances.stream()
-      .map(instance -> toRepresentation(instance, new ArrayList<>(), new ArrayList<>(),
-        instance.getPrecedingTitles(), instance.getSucceedingTitles(), webContext))
+      .map(instance -> instance.getJsonForResponse(webContext))
       .collect(Collectors.toList());
 
     return new JsonObject()
@@ -203,7 +201,7 @@ public class InstancesBatch extends AbstractInstances {
                                                        RoutingContext routingContext, WebContext webContext) {
     try {
       Map<String, Instance> mapInstanceById = newInstances.stream()
-        .collect(Collectors.toMap(instance -> instance.getString("id"), InstanceUtil::jsonToInstance));
+        .collect(Collectors.toMap(instance -> instance.getString("id"), Instance::fromJson));
 
       List<Future> updateRelationshipsFutures = new ArrayList<>();
       for (Instance createdInstance : createdInstances) {
