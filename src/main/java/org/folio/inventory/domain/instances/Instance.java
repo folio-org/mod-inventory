@@ -340,7 +340,6 @@ public class Instance {
     return this;
   }
 
-
   public Instance setPrecedingTitles(List<PrecedingSucceedingTitle> precedingTitles) {
     this.precedingTitles = (precedingTitles != null ? precedingTitles : this.precedingTitles);
     return this;
