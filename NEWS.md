@@ -1,3 +1,7 @@
+## 16.3.2 2021-05-21
+* Includes fix for item update failure (MODINV-404)
+* Includes data-import-processing-core dependency update to v3.0.2
+
 ## 16.3.1 2021-04-22
 
 * Introduces parameters to set a number of data import verticle instances (MODINV-393)
