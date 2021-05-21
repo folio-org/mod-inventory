@@ -312,6 +312,13 @@ public abstract class AbstractInstances {
       "/inventory-storage/bound-with-parts");
   }
 
+  protected CollectionResourceClient createItemsStorageClient(
+    RoutingContext routingContext, WebContext context) {
+
+    return getCollectionResourceRepository(routingContext, context,
+      "/item-storage/items");
+  }
+
   protected CollectionResourceClient createHoldingsStorageClient (
     RoutingContext routingContext, WebContext webContext) {
     return getCollectionResourceRepository(routingContext, webContext,
