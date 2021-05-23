@@ -619,7 +619,7 @@ public class Items extends AbstractInventoryResource {
     OkapiHttpClient client,
     WebContext webContext)
     throws MalformedURLException {
-    return createCollectionResourceClient(client, webContext, "/inventory-storage/bound-with-parts-storage");
+    return createCollectionResourceClient(client, webContext, "/inventory-storage/bound-with-parts");
   }
 
   private CollectionResourceClient createCollectionResourceClient(

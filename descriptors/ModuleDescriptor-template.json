@@ -592,6 +592,10 @@
     {
       "id": "source-storage-records",
       "version": "2.0"
+    },
+    {
+      "id": "bound-with-parts-storage",
+      "version": "1.0"
     }
   ],
   "permissionSets": [

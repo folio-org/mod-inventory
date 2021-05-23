@@ -58,7 +58,7 @@ public class StorageInterfaceUrls {
   }
 
   public static URL boundWithPartsUrl(String subPath) {
-    return viaOkapiURL( "/inventory-storage/bound-with-parts-storage" + subPath );
+    return viaOkapiURL( "/inventory-storage/bound-with-parts" + subPath );
   }
 
   private static URL viaOkapiURL(String path) {
