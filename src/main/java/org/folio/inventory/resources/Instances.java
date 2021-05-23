@@ -321,9 +321,9 @@ public class Instances extends AbstractInstances {
 
   private CompletableFuture<Instance> setBoundWithFlag (Success<Instance> success, RoutingContext routingContext, WebContext webContext) {
     Instance instance = success.getResult();
-    return findBoundWithPartsForInstanceId(instance.getId(), routingContext, webContext).thenCompose(
-      boundWithParts -> {
-        instance.setIsBoundWith(boundWithParts != null && !boundWithParts.isEmpty());
+    return findBoundWithHoldingsIdsForInstanceId(instance.getId(), routingContext, webContext).thenCompose(
+      boundWithHoldings -> {
+        instance.setIsBoundWith(boundWithHoldings != null && !boundWithHoldings.isEmpty());
         return completedFuture(instance);
       }
     );
@@ -333,7 +333,7 @@ public class Instances extends AbstractInstances {
    * Fetches instance relationships for multiple Instance records, populates, responds
    *
    * @param instancesResponse Multi record Instances result
-   * @param routingContext
+   * @param routingContext Routing
    */
   private CompletableFuture<InstancesResponse> fetchRelationships(
     InstancesResponse instancesResponse,
@@ -371,7 +371,14 @@ public class Instances extends AbstractInstances {
     return holdingsFetcher.find(instanceIds, this::cqlMatchAnyByInstanceIds);
   }
 
-  private CompletableFuture<List<JsonObject>> findBoundWithPartsForInstanceId(
+  /**
+   * Retrieves a list of IDs for the holdings under the provided Instance that are part of a bound-with.
+   * @param instanceId  The ID of the Instance to find bound-with holdings for
+   * @param routingContext  Routing
+   * @param webContext      Context
+   * @return List of IDs of holdings records that are bound-with
+   */
+  private CompletableFuture<List<String>> findBoundWithHoldingsIdsForInstanceId(
     String instanceId, RoutingContext routingContext, WebContext webContext ) {
     CompletableFuture<Response> holdingsFuture = new CompletableFuture<>();
 
@@ -381,32 +388,85 @@ public class Instances extends AbstractInstances {
         List<String> holdingsRecordsList =
           response.getJson().getJsonArray("holdingsRecords")
             .stream().map(o -> ((JsonObject) o).getString("id")).collect(Collectors.toList());
-        return fetchBoundWithsByHoldingsRecordIds(holdingsRecordsList, routingContext, webContext);
+        return checkHoldingsForBoundWith(holdingsRecordsList, routingContext, webContext);
       }
     );
   }
 
-  private CompletableFuture<List<JsonObject>> fetchBoundWithsByHoldingsRecordIds(
+  /**
+   * From the provided list of holdings record IDs, finds out which of them
+   * are part of  bound-withs -- if any -- and returns a list of those.
+   * @param holdingsRecordIds holdings records to check for bound-with
+   * @param routingContext Routing
+   * @param webContext Context
+   * @return List of IDs for holdings records that are bound with others.
+   */
+  private CompletableFuture<List<String>> checkHoldingsForBoundWith(
                                               List<String> holdingsRecordIds,
                                               RoutingContext routingContext,
                                               WebContext webContext) {
+    List<String> holdingsRecordsThatAreBoundWith = new ArrayList<>();
+    // Check if any IDs in the list of holdings appears in bound-with-parts
     return MultipleRecordsFetchClient
       .builder()
       .withCollectionPropertyName("boundWithParts")
       .withExpectedStatus(200)
       .withCollectionResourceClient(createBoundWithPartsClient(routingContext, webContext))
       .build()
-      .find(holdingsRecordIds, this::cqlMatchAnyByHoldingsRecordIds);
+      .find(holdingsRecordIds, this::cqlMatchAnyByHoldingsRecordIds)
+      .thenCompose( boundWithParts -> {
+          holdingsRecordsThatAreBoundWith.addAll(boundWithParts.stream()
+           .map( boundWithPart -> boundWithPart.getString( "holdingsRecordId" ))
+           .collect( Collectors.toList()));
+           // Check if any of the holdings has an item that appears in bound-with-parts
+           // First, find the holdings' items
+           return MultipleRecordsFetchClient
+             .builder()
+             .withCollectionPropertyName( "items" )
+             .withExpectedStatus( 200 )
+             .withCollectionResourceClient( createItemsStorageClient( routingContext, webContext ) )
+             .build()
+             .find( holdingsRecordIds, this::cqlMatchAnyByHoldingsRecordIds)
+             .thenCompose(
+               items -> {
+                 List<String> itemIds = new ArrayList();
+                 Map<String,String> itemHoldingsMap = new HashMap<>();
+                 for (JsonObject item : items) {
+                   itemHoldingsMap.put(item.getString( "id" ), item.getString( "holdingsRecordId" ));
+                   itemIds.add(item.getString( "id" ));
+                 }
+                 // Then look up the items in bound-with-parts
+                 return MultipleRecordsFetchClient
+                   .builder()
+                   .withCollectionPropertyName( "boundWithParts" )
+                   .withExpectedStatus( 200 )
+                   .withCollectionResourceClient( createBoundWithPartsClient( routingContext, webContext ) )
+                   .build()
+                   .find( itemIds, this::cqlMatchAnyByItemIds )
+                   .thenCompose( boundWithParts2 ->
+                   {
+                     List<String> boundWithItemIds =
+                       boundWithParts2.stream()
+                         .map(boundWithPart2 -> boundWithPart2.getString( "itemId" ))
+                         .distinct()
+                         .collect(Collectors.toList());
+                     for (String itemId : boundWithItemIds) {
+                       holdingsRecordsThatAreBoundWith.add(itemHoldingsMap.get(itemId));
+                     }
+                     return completedFuture( holdingsRecordsThatAreBoundWith );
+                   });
+               });
+        });
   }
 
-  private CqlQuery cqlMatchAnyByInstanceIds(List<String> instanceIds) {
-    return CqlQuery.exactMatchAny("instanceId", instanceIds);
-  }
-
-  private CqlQuery cqlMatchAnyByHoldingsRecordIds(List<String> holdingsRecordIds) {
-    return CqlQuery.exactMatchAny("holdingsRecordId", holdingsRecordIds);
-  }
-
+  /**
+   * Checks if any holdings/items under the listed instances are parts of bound-withs
+   * and sets a flag on each Instance in the response where that is true
+   * @param instancesResponse Instance result set
+   * @param routingContext Routing
+   * @param webContext Context
+   * @return Returns the provided result set with 0 or more Instances marked as bound-with
+   */
   private CompletableFuture<InstancesResponse> lookUpBoundWithsForInstanceRecordSet(
                                                   InstancesResponse instancesResponse,
                                                   RoutingContext routingContext,
@@ -423,11 +483,11 @@ public class Instances extends AbstractInstances {
               holdingsToInstanceMap.put(holdingsRecord.getString("id"), holdingsRecord.getString("instanceId"));
             }
             ArrayList<String> holdingsIdsList = new ArrayList(holdingsToInstanceMap.keySet());
-            return fetchBoundWithsByHoldingsRecordIds(holdingsIdsList, routingContext, webContext)
-              .thenCompose(boundWithParts -> {
+            return checkHoldingsForBoundWith(holdingsIdsList, routingContext, webContext)
+              .thenCompose(holdingsRecordIds -> {
                   List<String> boundWithInstanceIds = new ArrayList<>();
-                  for (JsonObject boundWithPart : boundWithParts) {
-                    boundWithInstanceIds.add(holdingsToInstanceMap.get(boundWithPart.getString("holdingsRecordId")));
+                  for (String holdingsRecordId : holdingsRecordIds) {
+                    boundWithInstanceIds.add(holdingsToInstanceMap.get(holdingsRecordId));
                   }
                   instancesResponse.setBoundWithInstanceIds(boundWithInstanceIds);
                 return completedFuture(instancesResponse);
@@ -444,8 +504,8 @@ public class Instances extends AbstractInstances {
    * Fetches instance relationships for a single Instance result, populates, responds
    *
    * @param success        Single record Instance result
-   * @param routingContext
-   * @param context
+   * @param routingContext Routing
+   * @param context        Context
    */
   private CompletableFuture<Instance> fetchInstanceRelationships(
     Success<Instance> success, RoutingContext routingContext, WebContext context) {
@@ -530,6 +590,18 @@ public class Instances extends AbstractInstances {
   }
 
   // Utilities
+
+  private CqlQuery cqlMatchAnyByInstanceIds(List<String> instanceIds) {
+    return CqlQuery.exactMatchAny("instanceId", instanceIds);
+  }
+
+  private CqlQuery cqlMatchAnyByHoldingsRecordIds(List<String> holdingsRecordIds) {
+    return CqlQuery.exactMatchAny("holdingsRecordId", holdingsRecordIds);
+  }
+
+  private CqlQuery cqlMatchAnyByItemIds (List<String> itemIds) {
+    return CqlQuery.exactMatchAny( "itemId", itemIds );
+  }
 
   private List<String> getInstanceIdsFromInstanceResult(Success success) {
     List<String> instanceIds = new ArrayList<>();

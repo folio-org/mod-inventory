@@ -120,6 +120,11 @@ public class ResourceClient {
       "request storage", "requests");
   }
 
+  public static ResourceClient forBoundWithPartsStorage (OkapiHttpClient okapiClient) {
+    return new ResourceClient( okapiClient, StorageInterfaceUrls::boundWithPartsUrl,
+      "bound-with parts storage", "boundWithParts");
+  }
+
   private ResourceClient(
     OkapiHttpClient client,
     UrlMaker urlMaker, String resourceName,
