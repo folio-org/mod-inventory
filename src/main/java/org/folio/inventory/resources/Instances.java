@@ -406,6 +406,7 @@ public class Instances extends AbstractInstances {
                                               RoutingContext routingContext,
                                               WebContext webContext) {
     List<String> holdingsRecordsThatAreBoundWith = new ArrayList<>();
+    String holdingsRecordIdKey = "holdingsRecordId";
     // Check if any IDs in the list of holdings appears in bound-with-parts
     return MultipleRecordsFetchClient
       .builder()
@@ -416,7 +417,7 @@ public class Instances extends AbstractInstances {
       .find(holdingsRecordIds, this::cqlMatchAnyByHoldingsRecordIds)
       .thenCompose( boundWithParts -> {
           holdingsRecordsThatAreBoundWith.addAll(boundWithParts.stream()
-           .map( boundWithPart -> boundWithPart.getString( "holdingsRecordId" ))
+           .map( boundWithPart -> boundWithPart.getString( holdingsRecordIdKey ))
            .collect( Collectors.toList()));
            // Check if any of the holdings has an item that appears in bound-with-parts
            // First, find the holdings' items
@@ -429,10 +430,10 @@ public class Instances extends AbstractInstances {
              .find( holdingsRecordIds, this::cqlMatchAnyByHoldingsRecordIds)
              .thenCompose(
                items -> {
-                 List<String> itemIds = new ArrayList();
+                 List<String> itemIds = new ArrayList<>();
                  Map<String,String> itemHoldingsMap = new HashMap<>();
                  for (JsonObject item : items) {
-                   itemHoldingsMap.put(item.getString( "id" ), item.getString( "holdingsRecordId" ));
+                   itemHoldingsMap.put(item.getString( "id" ), item.getString( holdingsRecordIdKey ));
                    itemIds.add(item.getString( "id" ));
                  }
                  // Then look up the items in bound-with-parts
@@ -482,7 +483,7 @@ public class Instances extends AbstractInstances {
             for (JsonObject holdingsRecord : holdingsRecordList) {
               holdingsToInstanceMap.put(holdingsRecord.getString("id"), holdingsRecord.getString("instanceId"));
             }
-            ArrayList<String> holdingsIdsList = new ArrayList(holdingsToInstanceMap.keySet());
+            ArrayList<String> holdingsIdsList = new ArrayList<>(holdingsToInstanceMap.keySet());
             return checkHoldingsForBoundWith(holdingsIdsList, routingContext, webContext)
               .thenCompose(holdingsRecordIds -> {
                   List<String> boundWithInstanceIds = new ArrayList<>();
