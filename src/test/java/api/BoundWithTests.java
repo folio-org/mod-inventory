@@ -30,7 +30,7 @@ public class BoundWithTests extends ApiTests
   }
 
   @Test
-  public void canCreateAnInstance() throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException
+  public void boundWithFlagsArePresentOnInstancesAndItemsAsExpected() throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException
   {
     IndividualResource instance1 = instancesStorageClient.create( InstanceSamples.smallAngryPlanet( UUID.randomUUID() ) );
     IndividualResource holdings1a = holdingsStorageClient.create(new HoldingRequestBuilder()
