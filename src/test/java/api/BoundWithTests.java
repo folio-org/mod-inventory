@@ -6,17 +6,19 @@ import api.support.builders.HoldingRequestBuilder;
 import api.support.builders.ItemRequestBuilder;
 
 import api.support.http.ResourceClient;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.folio.inventory.support.http.client.IndividualResource;
+import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
 import org.junit.Test;
 
 import java.net.MalformedURLException;
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.fail;
@@ -120,22 +122,41 @@ public class BoundWithTests extends ApiTests
     IndividualResource item3a = itemsClient.create(new ItemRequestBuilder()
       .forHolding( holdings3a.getId() ).withBarcode( "ITEM 3A" ));
 
-    // Adding 'holdings2a' to bound-with item 'item1a' means
-    //    'item1a' becomes a bound-with and
-    //    'holdings2a' becomes a bound-with part
-    //    'holdings1a' becomes a bound-with part, inferred by it's direct relation to bound-with item 'item1a'
-    //    'instance1' becomes a bound-with part (through holdings1a)
-    //    'instance2' becomes a bound-with part (through holdings2a)
-    //    'item2a' and 'item3a' are not bound-with items
-    //    'holdings3a', 'instance3a' are not parts of any bound-with
-    JsonObject boundWithPart = makeObjectBoundWithPart( item1a.getJson().getString("id"), holdings2a.getJson().getString( "id" ) );
-    boundWithPartsStorageClient.create(boundWithPart);
+    boundWithPartsStorageClient.create(
+      makeObjectBoundWithPart( item1a.getJson().getString("id"), holdings2a.getJson().getString( "id" ) ));
+    boundWithPartsStorageClient.create(
+      makeObjectBoundWithPart( item1a.getJson().getString("id"), holdings1a.getJson().getString( "id" ) ));
 
-    List<JsonObject> boundWithItems = boundWithItemsClient.getMany( "holdingsRecordId=="+holdings2a.getJson().getString( "id" ),10 );
-    assertThat("One and only one bound-with item is found: ", boundWithItems.size(), is(1));
-    JsonObject boundWithItem = boundWithItems.get( 0 );
-    assertThat("The bound-with item returned is indeed flagged as a bound-with", boundWithItem.getBoolean("isBoundWith"), is(true));
-    assertThat( "The bound-with item returned is the item with barcode 'ITEM 1A'", boundWithItem.getString("barcode"), is("ITEM 1A"));
+    // Need Okapi client with the option to set extra parameter (excludePrimary)
+    OkapiHttpClient okapiClient = ApiTestSuite.createOkapiHttpClient();
+    Response itemsResponse1 = okapiClient.get(ApiTestSuite.apiRoot()+
+      "/inventory/bound-with-items?query=holdingsRecordId=="
+      +holdings2a.getJson().getString( "id" ))
+      .toCompletableFuture().get(5, SECONDS);
+
+    assertThat("One and only one bound-with item is found: ", itemsResponse1.getJson().getInteger( "totalRecords" ), is(1));
+    JsonArray boundWithItems1 = itemsResponse1.getJson().getJsonArray( "items" );
+    JsonObject item1 = boundWithItems1.getJsonObject( 0 );
+    assertThat("The bound-with item returned is indeed flagged as a bound-with", item1.getBoolean("isBoundWith"), is(true));
+    assertThat( "The bound-with item returned is the item with barcode 'ITEM 1A'", item1.getString("barcode"), is("ITEM 1A"));
+
+    Response itemsResponse2 = okapiClient.get(ApiTestSuite.apiRoot()+
+      "/inventory/bound-with-items?query=holdingsRecordId=="
+      +holdings1a.getJson().getString( "id" ))
+      .toCompletableFuture().get(5, SECONDS);
+
+    assertThat("One and only one bound-with item is found: ", itemsResponse2.getJson().getInteger( "totalRecords" ), is(1));
+    JsonArray boundWithItems2 = itemsResponse2.getJson().getJsonArray( "items" );
+    JsonObject item2 = boundWithItems2.getJsonObject( 0 );
+    assertThat("The bound-with item returned is indeed flagged as a bound-with", item2.getBoolean("isBoundWith"), is(true));
+    assertThat( "The bound-with item returned is the item with barcode 'ITEM 1A'", item2.getString("barcode"), is("ITEM 1A"));
+
+    Response itemsResponse3 = okapiClient.get(ApiTestSuite.apiRoot()+
+      "/inventory/bound-with-items?query=holdingsRecordId=="
+      +holdings1a.getJson().getString( "id" ) + "&excludePrimary=true")
+      .toCompletableFuture().get(5, SECONDS);
+
+    assertThat("No bound-with item is found when excludePrimary is set: ", itemsResponse3.getJson().getInteger( "totalRecords" ), is(0));
   }
 
   private JsonObject makeObjectBoundWithPart (String itemId, String holdingsRecordId) {

@@ -484,28 +484,25 @@ public class Items extends AbstractInventoryResource {
   {
     CompletableFuture<Response> future = new CompletableFuture<>();
 
-    if (!wrappedItems.records.isEmpty()) {
-      List<String> itemIds = wrappedItems.records.stream()
-        .map(Item::getId)
-        .collect(Collectors.toList());
+    List<String> itemIds = wrappedItems.records.stream()
+      .map(Item::getId)
+      .collect(Collectors.toList());
 
-      String boundWithPartsByItemIdsQuery =
-        String.format("itemId==(%s)",
-          itemIds.stream()
-          .map(String::toString)
-          .collect(Collectors.joining(" or ")));
+    String boundWithPartsByItemIdsQuery =
+      String.format("itemId==(%s)",
+        itemIds.stream()
+        .map(String::toString)
+        .collect(Collectors.joining(" or ")));
 
-      boundWithPartsByItemIdsQuery = URLEncoder
-        .encode(boundWithPartsByItemIdsQuery, StandardCharsets.UTF_8);
+    boundWithPartsByItemIdsQuery = URLEncoder
+      .encode(boundWithPartsByItemIdsQuery, StandardCharsets.UTF_8);
 
-      boundWithPartsClient.getMany(
-        boundWithPartsByItemIdsQuery,
-        itemIds.size(),
-        0,
-        future::complete);
-    } else {
-      future.complete(null);
-    }
+    boundWithPartsClient.getMany(
+      boundWithPartsByItemIdsQuery,
+      itemIds.size(),
+      0,
+      future::complete);
+
     return future;
   }
 

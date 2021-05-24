@@ -69,7 +69,7 @@ public class BoundWithItems extends Items
         context,
         BOUND_WITH_PARTS_STORAGE_PATH);
 
-      boundWithPartsClient.getMany(query,
+    boundWithPartsClient.getMany(query,
         pagingParameters.limit,
         pagingParameters.offset,
         response -> joinAndRespondWithManyItems( routingContext, context, response, exclusive ));
