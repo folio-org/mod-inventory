@@ -28,7 +28,6 @@ import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
-import api.events.EventHandlersApiTest;
 import api.holdings.HoldingApiExample;
 import api.isbns.IsbnUtilsApiExamples;
 import api.items.ItemAllowedStatusesSchemaTest;
@@ -38,7 +37,6 @@ import api.items.MarkItemMissingApiTests;
 import api.items.MarkItemWithdrawnApiTests;
 import api.support.ControlledVocabularyPreparation;
 import api.support.http.ResourceClient;
-import api.tenant.TenantApiExamples;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -53,10 +51,8 @@ import support.fakes.FakeOkapi;
   ModsIngestExamples.class,
   IsbnUtilsApiExamples.class,
   ItemAllowedStatusesSchemaTest.class,
-  TenantApiExamples.class,
   PrecedingSucceedingTitlesApiExamples.class,
   InstanceRelationshipsTest.class,
-  EventHandlersApiTest.class,
   HoldingApiExample.class,
   MarkItemWithdrawnApiTests.class,
   ItemApiMoveExamples.class,

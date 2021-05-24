@@ -32,7 +32,6 @@ import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_CREATED;
 import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
 import static org.folio.inventory.domain.instances.Instance.METADATA_KEY;
 import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
@@ -72,7 +71,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       }
 
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
-      Instance instanceToUpdate = InstanceUtil.jsonToInstance(new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value())));
+      Instance instanceToUpdate = Instance.fromJson(new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value())));
 
       prepareEvent(dataImportEventPayload);
 
@@ -107,7 +106,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       CollectionResourceRepository precedingSucceedingTitlesRepository = new CollectionResourceRepository(precedingSucceedingTitlesClient);
       List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
       if (errors.isEmpty()) {
-        Instance mappedInstance = InstanceUtil.jsonToInstance(instanceAsJson);
+        Instance mappedInstance = Instance.fromJson(instanceAsJson);
         JsonObject finalInstanceAsJson = instanceAsJson;
         updateInstance(mappedInstance, instanceCollection)
           .compose(ar -> deletePrecedingSucceedingTitles(precedingSucceedingIds, precedingSucceedingTitlesRepository))

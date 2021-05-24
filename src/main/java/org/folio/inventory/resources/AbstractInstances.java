@@ -274,7 +274,11 @@ public abstract class AbstractInstances {
       List<InstanceRelationshipToChild> childInstances = instancesResponse.getChildInstanceMap().get(instance.getId());
       List<PrecedingSucceedingTitle> precedingTitles = instancesResponse.getPrecedingTitlesMap().get(instance.getId());
       List<PrecedingSucceedingTitle> succeedingTitles = instancesResponse.getSucceedingTitlesMap().get(instance.getId());
-      results.add(toRepresentation(instance, parentInstances, childInstances, precedingTitles, succeedingTitles, context));
+      results.add(instance
+        .setParentInstances(parentInstances)
+        .setChildInstances(childInstances)
+        .setPrecedingTitles(precedingTitles)
+        .setSucceedingTitles(succeedingTitles).getJsonForResponse(context));
     });
 
     representation
@@ -284,90 +288,6 @@ public abstract class AbstractInstances {
     return representation;
   }
 
-  /**
-   * Populates an Instance record representation (downwards)
-   *
-   * @param instance        Instance result to transform to representation
-   * @param parentInstances Super instances for this Instance
-   * @param childInstances  Sub instances for this Instance
-   * @param context
-   * @return
-   */
-  protected JsonObject toRepresentation(Instance instance,
-    List<InstanceRelationshipToParent> parentInstances, List<InstanceRelationshipToChild> childInstances,
-    List<PrecedingSucceedingTitle> precedingTitles, List<PrecedingSucceedingTitle> succeedingTitles,
-    WebContext context) {
-    JsonObject resp = new JsonObject();
-
-    try {
-      resp.put("@context", context.absoluteUrl(
-        INSTANCES_PATH + "/context").toString());
-    } catch (MalformedURLException e) {
-      log.warn(
-        format("Failed to create context link for instance: %s", e.toString()));
-    }
-
-    resp.put("id", instance.getId());
-    resp.put("hrid", instance.getHrid());
-    resp.put(Instance.SOURCE_KEY, instance.getSource());
-    resp.put(Instance.TITLE_KEY, instance.getTitle());
-    putIfNotNull(resp, Instance.MATCH_KEY_KEY, instance.getMatchKey());
-    putIfNotNull(resp, Instance.INDEX_TITLE_KEY, instance.getIndexTitle());
-    putIfNotNull(resp, Instance.PARENT_INSTANCES_KEY, parentInstances);
-    putIfNotNull(resp, Instance.CHILD_INSTANCES_KEY, childInstances);
-    putIfNotNull(resp, Instance.ALTERNATIVE_TITLES_KEY, instance.getAlternativeTitles());
-    putIfNotNull(resp, Instance.EDITIONS_KEY, instance.getEditions());
-    putIfNotNull(resp, Instance.SERIES_KEY, instance.getSeries());
-    putIfNotNull(resp, Instance.IDENTIFIERS_KEY, instance.getIdentifiers());
-    putIfNotNull(resp, Instance.CONTRIBUTORS_KEY, instance.getContributors());
-    putIfNotNull(resp, Instance.SUBJECTS_KEY, instance.getSubjects());
-    putIfNotNull(resp, Instance.CLASSIFICATIONS_KEY, instance.getClassifications());
-    putIfNotNull(resp, Instance.PUBLICATION_KEY, instance.getPublication());
-    putIfNotNull(resp, Instance.PUBLICATION_FREQUENCY_KEY, instance.getPublicationFrequency());
-    putIfNotNull(resp, Instance.PUBLICATION_RANGE_KEY, instance.getPublicationRange());
-    putIfNotNull(resp, Instance.ELECTRONIC_ACCESS_KEY, instance.getElectronicAccess());
-    putIfNotNull(resp, Instance.INSTANCE_TYPE_ID_KEY, instance.getInstanceTypeId());
-    putIfNotNull(resp, Instance.INSTANCE_FORMAT_IDS_KEY, instance.getInstanceFormatIds());
-    putIfNotNull(resp, Instance.PHYSICAL_DESCRIPTIONS_KEY, instance.getPhysicalDescriptions());
-    putIfNotNull(resp, Instance.LANGUAGES_KEY, instance.getLanguages());
-    putIfNotNull(resp, Instance.NOTES_KEY, instance.getNotes());
-    putIfNotNull(resp, Instance.MODE_OF_ISSUANCE_ID_KEY, instance.getModeOfIssuanceId());
-    putIfNotNull(resp, Instance.CATALOGED_DATE_KEY, instance.getCatalogedDate());
-    putIfNotNull(resp, Instance.PREVIOUSLY_HELD_KEY, instance.getPreviouslyHeld());
-    putIfNotNull(resp, Instance.STAFF_SUPPRESS_KEY, instance.getStaffSuppress());
-    putIfNotNull(resp, Instance.DISCOVERY_SUPPRESS_KEY, instance.getDiscoverySuppress());
-    putIfNotNull(resp, Instance.STATISTICAL_CODE_IDS_KEY, instance.getStatisticalCodeIds());
-    putIfNotNull(resp, Instance.SOURCE_RECORD_FORMAT_KEY, instance.getSourceRecordFormat());
-    putIfNotNull(resp, Instance.STATUS_ID_KEY, instance.getStatusId());
-    putIfNotNull(resp, Instance.STATUS_UPDATED_DATE_KEY, instance.getStatusUpdatedDate());
-    putIfNotNull(resp, Instance.METADATA_KEY, instance.getMetadata());
-    putIfNotNull(resp, Instance.TAGS_KEY, new JsonObject().put(Instance.TAG_LIST_KEY, new JsonArray(instance.getTags())));
-    putIfNotNull(resp, Instance.NATURE_OF_CONTENT_TERM_IDS_KEY, instance.getNatureOfContentTermIds());
-
-    if (precedingTitles != null) {
-      JsonArray precedingTitlesJsonArray = new JsonArray();
-      precedingTitles.forEach(title -> precedingTitlesJsonArray .add(title.toPrecedingTitleJson()));
-      resp.put(Instance.PRECEDING_TITLES_KEY, precedingTitlesJsonArray );
-    }
-
-    if (succeedingTitles != null) {
-      JsonArray succeedingTitlesJsonArray = new JsonArray();
-      succeedingTitles.forEach(title -> succeedingTitlesJsonArray .add(title.toSucceedingTitleJson()));
-      resp.put(Instance.SUCCEEDING_TITLES_KEY, succeedingTitlesJsonArray );
-    }
-
-    try {
-      URL selfUrl = context.absoluteUrl(format("%s/%s",
-        INSTANCES_PATH, instance.getId()));
-
-      resp.put("links", new JsonObject().put("self", selfUrl.toString()));
-    } catch (MalformedURLException e) {
-      log.warn(
-        format("Failed to create self link for instance: %s", e.toString()));
-    }
-
-    return resp;
-  }
 
   // Utilities
 
@@ -416,30 +336,6 @@ public abstract class AbstractInstances {
   protected String createQueryForRelatedInstances(List<String> instanceIds) {
     String idList = instanceIds.stream().distinct().collect(Collectors.joining(" or "));
     return format("query=subInstanceId==(%s)+or+superInstanceId==(%s)", idList, idList);
-  }
-
-  private void putIfNotNull(JsonObject target, String propertyName, String value) {
-    if (value != null) {
-      target.put(propertyName, value);
-    }
-  }
-
-  private void putIfNotNull(JsonObject target, String propertyName, List<String> value) {
-    if (value != null) {
-      target.put(propertyName, value);
-    }
-  }
-
-  private void putIfNotNull(JsonObject target, String propertyName, Object value) {
-    if (value != null) {
-      if (value instanceof List) {
-        target.put(propertyName, value);
-      } else if (value instanceof Boolean) {
-        target.put(propertyName, value);
-      } else {
-        target.put(propertyName, new JsonObject(Json.encode(value)));
-      }
-    }
   }
 
   protected OkapiHttpClient createHttpClient(

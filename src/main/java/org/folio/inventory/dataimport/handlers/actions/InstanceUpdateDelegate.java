@@ -74,7 +74,7 @@ public class InstanceUpdateDelegate {
       JsonObject existing = JsonObject.mapFrom(existingInstance);
       JsonObject mapped = JsonObject.mapFrom(mappedInstance);
       JsonObject mergedInstanceAsJson = InstanceUtil.mergeInstances(existing, mapped);
-      Instance mergedInstance = InstanceUtil.jsonToInstance(mergedInstanceAsJson);
+      Instance mergedInstance = Instance.fromJson(mergedInstanceAsJson);
       return Future.succeededFuture(mergedInstance);
     } catch (Exception e) {
       LOGGER.error("Error updating instance", e);
