@@ -12,6 +12,7 @@ import org.folio.inventory.support.http.client.Response;
 import org.junit.Test;
 
 import java.net.MalformedURLException;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -23,14 +24,16 @@ import static org.junit.Assert.fail;
 public class BoundWithTests extends ApiTests
 {
   protected final ResourceClient boundWithPartsStorageClient;
+  protected final ResourceClient boundWithItemsClient;
 
   public BoundWithTests () {
     super();
     boundWithPartsStorageClient = ResourceClient.forBoundWithPartsStorage(okapiClient);
+    boundWithItemsClient = ResourceClient.forBoundWithItems( okapiClient );
   }
 
   @Test
-  public void canCreateAnInstance() throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException
+  public void boundWithFlagsArePresentOnInstancesAndItemsAsExpected() throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException
   {
     IndividualResource instance1 = instancesStorageClient.create( InstanceSamples.smallAngryPlanet( UUID.randomUUID() ) );
     IndividualResource holdings1a = holdingsStorageClient.create(new HoldingRequestBuilder()
@@ -94,6 +97,45 @@ public class BoundWithTests extends ApiTests
     Response item2byId = itemsClient.getById( item2a.getId() );
     assertThat("Item 2 fetched by ID is NOT a bound-with", item2byId.getJson().getBoolean( "isBoundWith" ), is(false));
 
+  }
+
+  @Test
+  public void canRetrieveBoundWithItemByHoldingsRecordId() throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException
+  {
+    IndividualResource instance1 = instancesStorageClient.create( InstanceSamples.smallAngryPlanet( UUID.randomUUID() ) );
+    IndividualResource holdings1a = holdingsStorageClient.create(new HoldingRequestBuilder()
+      .forInstance(instance1.getId()).permanentlyInMainLibrary().withCallNumber( "HOLDINGS 1A" ));
+    IndividualResource item1a = itemsClient.create(new ItemRequestBuilder()
+      .forHolding( holdings1a.getId() ).withBarcode( "ITEM 1A" ));
+
+    IndividualResource instance2 = instancesStorageClient.create( InstanceSamples.girlOnTheTrain( UUID.randomUUID() ) );
+    IndividualResource holdings2a = holdingsStorageClient.create(new HoldingRequestBuilder()
+      .forInstance( instance2.getId()).permanentlyInMainLibrary().withCallNumber( "HOLDINGS 2A" ) );
+    IndividualResource item2a = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdings2a.getId()  ).withBarcode( "ITEM 2A" ) );
+
+    IndividualResource instance3 = instancesStorageClient.create( InstanceSamples.leviathanWakes( UUID.randomUUID() ) );
+    IndividualResource holdings3a = holdingsStorageClient.create(new HoldingRequestBuilder()
+      .forInstance(instance3.getId()).permanentlyInMainLibrary().withCallNumber( "HOLDINGS 3A" ));
+    IndividualResource item3a = itemsClient.create(new ItemRequestBuilder()
+      .forHolding( holdings3a.getId() ).withBarcode( "ITEM 3A" ));
+
+    // Adding 'holdings2a' to bound-with item 'item1a' means
+    //    'item1a' becomes a bound-with and
+    //    'holdings2a' becomes a bound-with part
+    //    'holdings1a' becomes a bound-with part, inferred by it's direct relation to bound-with item 'item1a'
+    //    'instance1' becomes a bound-with part (through holdings1a)
+    //    'instance2' becomes a bound-with part (through holdings2a)
+    //    'item2a' and 'item3a' are not bound-with items
+    //    'holdings3a', 'instance3a' are not parts of any bound-with
+    JsonObject boundWithPart = makeObjectBoundWithPart( item1a.getJson().getString("id"), holdings2a.getJson().getString( "id" ) );
+    boundWithPartsStorageClient.create(boundWithPart);
+
+    List<JsonObject> boundWithItems = boundWithItemsClient.getMany( "holdingsRecordId=="+holdings2a.getJson().getString( "id" ),10 );
+    assertThat("One and only one bound-with item is found: ", boundWithItems.size(), is(1));
+    JsonObject boundWithItem = boundWithItems.get( 0 );
+    assertThat("The bound-with item returned is indeed flagged as a bound-with", boundWithItem.getBoolean("isBoundWith"), is(true));
+    assertThat( "The bound-with item returned is the item with barcode 'ITEM 1A'", boundWithItem.getString("barcode"), is("ITEM 1A"));
   }
 
   private JsonObject makeObjectBoundWithPart (String itemId, String holdingsRecordId) {

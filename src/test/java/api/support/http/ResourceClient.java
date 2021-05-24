@@ -66,6 +66,11 @@ public class ResourceClient {
       "instances");
   }
 
+  public static ResourceClient forBoundWithItems (OkapiHttpClient okapiClient) {
+    return new ResourceClient( okapiClient, BusinessLogicInterfaceUrls::boundWithItemsUrl,
+      "bound-with items", "items");
+  }
+
   public static ResourceClient forInstitutions(OkapiHttpClient client) {
     return new ResourceClient(client, StorageInterfaceUrls::institutionsStorageUrl,
       "institutions", "locinsts");
