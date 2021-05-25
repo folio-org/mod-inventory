@@ -153,10 +153,69 @@ public class BoundWithTests extends ApiTests
 
     Response itemsResponse3 = okapiClient.get(ApiTestSuite.apiRoot()+
       "/inventory/bound-with-items?query=holdingsRecordId=="
-      +holdings1a.getJson().getString( "id" ) + "&excludePrimary=true")
+      +holdings1a.getJson().getString( "id" ) + "&skipDirectlyLinkedItem=true")
+      .toCompletableFuture().get(5, SECONDS);
+    assertThat("No bound-with item is found when skipDirectlyLinkedItem is set: ", itemsResponse3.getJson().getInteger( "totalRecords" ), is(0));
+
+    Response itemsResponse4 = okapiClient.get(ApiTestSuite.apiRoot()+
+      "/inventory/bound-with-items?query=holdingsRecordId=="
+      +holdings1a.getJson().getString( "id" ) + "&skipDirectlyLinkedItem=false")
+      .toCompletableFuture().get(5, SECONDS);
+    assertThat("One bound-with item is found when skipDirectlyLinkedItem is set to false: ", itemsResponse4.getJson().getInteger( "totalRecords" ), is(1));
+
+    Response itemsResponse5 = okapiClient.get(ApiTestSuite.apiRoot()+
+      "/inventory/bound-with-items?query=itemId=="
+      +item1a.getJson().getString( "id" ) + "&skipDirectlyLinkedItem=true")
+      .toCompletableFuture().get(5, SECONDS);
+  }
+
+  @Test
+  public void canOnlyAskForSkipDirectlyLinkedItemWhenQueryingByHoldingsRecordId()
+    throws InterruptedException, TimeoutException, ExecutionException {
+
+    Response itemsResponse1 = okapiClient.get(ApiTestSuite.apiRoot()+
+      "/inventory/bound-with-items?query=holdingsRecordId=="
+      + UUID.randomUUID() + "&skipDirectlyLinkedItem=true")
       .toCompletableFuture().get(5, SECONDS);
 
-    assertThat("No bound-with item is found when excludePrimary is set: ", itemsResponse3.getJson().getInteger( "totalRecords" ), is(0));
+    assertThat("Response code 200 (OK) expected when querying by holdingsRecordId and asking for skipDirectlyLinkedItem",
+      itemsResponse1.getStatusCode(), is(200));
+
+    Response itemsResponse2 = okapiClient.get(ApiTestSuite.apiRoot()+
+      "/inventory/bound-with-items?query=itemId=="
+      + UUID.randomUUID() + "&skipDirectlyLinkedItem=true")
+      .toCompletableFuture().get(5, SECONDS);
+
+    assertThat("Response code 400 (bad request) expected when querying by itemId and asking for skipDirectlyLinkedItem",
+      itemsResponse2.getStatusCode(), is(400));
+  }
+
+  @Test
+  public void mustQueryBoundWithItemsByHoldingsRecordIdOrItemId()
+    throws InterruptedException, TimeoutException, ExecutionException {
+
+    Response itemsResponse1 = okapiClient.get(ApiTestSuite.apiRoot()+
+      "/inventory/bound-with-items?query=holdingsRecordId=="
+      + UUID.randomUUID() )
+      .toCompletableFuture().get(5, SECONDS);
+
+    assertThat("Response code 200 (OK) expected when querying by holdingsRecordId",
+      itemsResponse1.getStatusCode(), is(200));
+
+    Response itemsResponse2 = okapiClient.get(ApiTestSuite.apiRoot()+
+      "/inventory/bound-with-items?query=itemId=="
+      + UUID.randomUUID() )
+      .toCompletableFuture().get(5, SECONDS);
+
+    assertThat("Response code 200 (OK) expected when querying by itemId",
+      itemsResponse2.getStatusCode(), is(200));
+
+    Response itemsResponse3 = okapiClient.get(ApiTestSuite.apiRoot()+
+      "/inventory/bound-with-items/")
+      .toCompletableFuture().get(5, SECONDS);
+
+    assertThat("Response code 400 (bad request) expected when not querying by itemId or holdingsRecordId",
+      itemsResponse3.getStatusCode(), is(400));
   }
 
   private JsonObject makeObjectBoundWithPart (String itemId, String holdingsRecordId) {

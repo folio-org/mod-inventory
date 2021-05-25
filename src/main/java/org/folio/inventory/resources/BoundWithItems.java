@@ -46,20 +46,25 @@ public class BoundWithItems extends Items
   @Override
   public void register( Router router )
   {
-    router.get(RELATIVE_BOUND_WITH_ITEMS_PATH).handler(this::getAllBoundWithItems);
+    router.get(RELATIVE_BOUND_WITH_ITEMS_PATH).handler(this::getBoundWithItems );
   }
 
-  private void getAllBoundWithItems( RoutingContext routingContext) {
+  private void getBoundWithItems( RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
 
     String query = context.getStringParameter("query", null);
-    String excludePrimary = context.getStringParameter( "excludePrimary", null );
-    boolean exclusive = excludePrimary != null && !excludePrimary.equalsIgnoreCase( "false" );
-    PagingParameters pagingParameters = PagingParameters.from(context);
+    String skipDirectlyLinkedItem = context.getStringParameter( "skipDirectlyLinkedItem", null );
+    boolean excludeDirectlyLinkedItem = skipDirectlyLinkedItem != null && !skipDirectlyLinkedItem.equalsIgnoreCase( "false" );
 
-    if(pagingParameters == null) {
+    if (query == null) {
       ClientErrorResponse.badRequest(routingContext.response(),
-        "limit and offset must be numeric when supplied");
+        "Bound-with Items must be retrieved by 'holdingsRecordId' or 'itemId'. Request for all bound-with Items is not supported");
+      return;
+    }
+
+    if (excludeDirectlyLinkedItem && !query.contains( "holdingsRecordId=" )) {
+      ClientErrorResponse.badRequest(routingContext.response(),
+        "Incompatible combination of request parameters: skipping the item directly linked to the holdings record only applies when looking for bound-with Items by holdingsRecordId");
       return;
     }
 
@@ -70,46 +75,44 @@ public class BoundWithItems extends Items
         BOUND_WITH_PARTS_STORAGE_PATH);
 
     boundWithPartsClient.getMany(query,
-        pagingParameters.limit,
-        pagingParameters.offset,
-        response -> joinAndRespondWithManyItems( routingContext, context, response, exclusive ));
+        1000,
+        0,
+        response -> joinAndRespondWithManyItems( routingContext, context, response, excludeDirectlyLinkedItem ));
   }
 
   private void joinAndRespondWithManyItems(RoutingContext routingContext,
                                            WebContext webContext,
                                            Response boundWithParts,
-                                           boolean excludePrimary) {
-    if (boundWithParts.getStatusCode() == STATUS_SUCCESS) {
-      String itemQuery = "id==(NOOP)";
-      List<String> itemIds = new ArrayList<>();
+                                           boolean skipDirectlyLinkedItem) {
+    String itemQuery = "id==(NOOP)";
+    List<String> itemIds = new ArrayList<>();
 
-      JsonObject boundWithPartsJson = boundWithParts.getJson();
-      if (boundWithPartsJson.containsKey( BOUND_WITH_PARTS_JSON_ARRAY )) {
-        JsonArray boundWithPartRecords =
-          boundWithPartsJson.getJsonArray( BOUND_WITH_PARTS_JSON_ARRAY );
-        if (!boundWithPartRecords.isEmpty())
-        {
-          itemIds = boundWithPartRecords.stream()
-            .map( o -> (JsonObject) o )
-            .map( part -> part.getString( "itemId" ) )
-            .collect( Collectors.toList() );
+    JsonObject boundWithPartsJson = boundWithParts.getJson();
 
-          String holdingsRecordId = boundWithPartRecords
-            .getJsonObject( 0 )
-            .getString( "holdingsRecordId" );
+    JsonArray boundWithPartRecords =
+      boundWithPartsJson.getJsonArray( BOUND_WITH_PARTS_JSON_ARRAY );
 
-          itemQuery = buildQueryByIds( itemIds )
-            + ( excludePrimary ? " and holdingsRecordId <>" + holdingsRecordId : "" );
-        }
-        try {
-          storage.getItemCollection(webContext).findByCql(itemQuery,
-              new PagingParameters(itemIds.size(),0), success ->
-              respondWithManyItems(routingContext, webContext, success.getResult()),
-            FailureResponseConsumer.serverError(routingContext.response()));
-        } catch (UnsupportedEncodingException e) {
-          ServerErrorResponse.internalError(routingContext.response(), e.toString());
-        }
-      }
+    if (!boundWithPartRecords.isEmpty())
+    {
+      itemIds = boundWithPartRecords.stream()
+        .map( o -> (JsonObject) o )
+        .map( part -> part.getString( "itemId" ) )
+        .collect( Collectors.toList() );
+
+      String holdingsRecordId = boundWithPartRecords
+        .getJsonObject( 0 )
+        .getString( "holdingsRecordId" );
+
+      itemQuery = buildQueryByIds( itemIds )
+        + ( skipDirectlyLinkedItem ? " and holdingsRecordId <>" + holdingsRecordId : "" );
+    }
+    try {
+      storage.getItemCollection(webContext).findByCql(itemQuery,
+          new PagingParameters(itemIds.size(),0), success ->
+          respondWithManyItems(routingContext, webContext, success.getResult()),
+        FailureResponseConsumer.serverError(routingContext.response()));
+    } catch (UnsupportedEncodingException e) {
+      ServerErrorResponse.internalError(routingContext.response(), e.toString());
     }
   }
 
