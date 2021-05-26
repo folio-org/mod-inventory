@@ -125,7 +125,9 @@ public class Instance {
   }
 
   /**
-   *
+   * Creates Instance POJO from JSON.
+   * Note: Doesn't set Metadata (since some DI processing seems to fail with it)
+   *       Metadata thus have to be added after instantiation where required.
    * @param instanceJson  JSON from client request or storage server response
    * @return Instance object that holds all (known) properties from the JSON
    */
@@ -138,6 +140,7 @@ public class Instance {
       instanceJson.getString(TITLE_KEY),
       instanceJson.getString(INSTANCE_TYPE_ID_KEY))
       .setIndexTitle(instanceJson.getString(INDEX_TITLE_KEY))
+      .setMatchKey(instanceJson.getString(MATCH_KEY_KEY))
       .setParentInstances(instanceJson.getJsonArray(PARENT_INSTANCES_KEY))
       .setChildInstances(instanceJson.getJsonArray(CHILD_INSTANCES_KEY))
       .setPrecedingTitles(instanceJson.getJsonArray(PRECEDING_TITLES_KEY))
