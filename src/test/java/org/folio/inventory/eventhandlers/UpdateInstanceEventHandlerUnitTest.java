@@ -91,7 +91,7 @@ public class UpdateInstanceEventHandlerUnitTest {
   @Test
   public void shouldProcessEvent() throws InterruptedException, ExecutionException, TimeoutException {
     HashMap<String, String> eventPayload = new HashMap<>();
-    eventPayload.put("MARC", record.encode());
+    eventPayload.put("MARC_BIB", record.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
 
