@@ -1,6 +1,6 @@
 #%RAML 1.0
 title: Inventory API
-version: v10.10
+version: v10.11
 protocols: [ HTTP, HTTPS ]
 baseUri: http://localhost
 
@@ -268,6 +268,22 @@ resourceTypes:
               body:
                 text/plain:
                   example: "Internal server error"
+  /items-by-holdings-id:
+    displayName: Items, including bound-with Items, by holdingsRecord ID
+    type:
+      collection:
+        exampleCollection: !include examples/items_get.json
+        schemaCollection: items
+        schemaItem: item
+        exampleItem: !include examples/items_get.json
+    get:
+      is: [searchable: {description: "query by holdings record ID. This is a mandatory query parameter.
+       An optional parameter, 'relations', can be passed outside of the query to restrict what
+       Items are returned based on their type of relationship with the holdings record.
+       Possible values of the 'relations' parameter are: 'onlyBoundWiths', 'onlyBoundWithsSkipDirectlyLinkedItem'",
+            example: "holdingsRecordId==\"[UUID]\""}
+          ]
+
   /instances:
     displayName: Instances
     type:

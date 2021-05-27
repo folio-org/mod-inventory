@@ -66,6 +66,11 @@ public class ResourceClient {
       "instances");
   }
 
+  public static ResourceClient forBoundWithItems (OkapiHttpClient okapiClient) {
+    return new ResourceClient( okapiClient, BusinessLogicInterfaceUrls::boundWithItemsUrl,
+      "bound-with items", "items");
+  }
+
   public static ResourceClient forInstitutions(OkapiHttpClient client) {
     return new ResourceClient(client, StorageInterfaceUrls::institutionsStorageUrl,
       "institutions", "locinsts");
@@ -118,6 +123,11 @@ public class ResourceClient {
   public static ResourceClient forRequestStorage(OkapiHttpClient okapiClient) {
     return new ResourceClient(okapiClient, StorageInterfaceUrls::requestStorageUrl,
       "request storage", "requests");
+  }
+
+  public static ResourceClient forBoundWithPartsStorage (OkapiHttpClient okapiClient) {
+    return new ResourceClient( okapiClient, StorageInterfaceUrls::boundWithPartsUrl,
+      "bound-with parts storage", "boundWithParts");
   }
 
   private ResourceClient(
