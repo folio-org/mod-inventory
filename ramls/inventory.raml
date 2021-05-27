@@ -268,8 +268,8 @@ resourceTypes:
               body:
                 text/plain:
                   example: "Internal server error"
-  /bound-with-items:
-    displayName: Bound-with items
+  /items-by-holdings-id:
+    displayName: Items, including bound-with Items, by holdingsRecord ID
     type:
       collection:
         exampleCollection: !include examples/items_get.json
@@ -277,7 +277,10 @@ resourceTypes:
         schemaItem: item
         exampleItem: !include examples/items_get.json
     get:
-      is: [searchable: {description: "query by holdings record ID or item ID using CQL (NOT limiting by one of these two IDs is not supported",
+      is: [searchable: {description: "query by holdings record ID. This is a mandatory query parameter.
+       An optional parameter, 'relations', can be passed outside of the query to restrict what
+       Items are returned based on their type of relationship with the holdings record.
+       Possible values of the 'relations' parameter are: 'onlyBoundWiths', 'onlyBoundWithsSkipDirectlyLinkedItem'",
             example: "holdingsRecordId==\"[UUID]\""}
           ]
 

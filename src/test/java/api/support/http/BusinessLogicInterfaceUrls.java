@@ -55,7 +55,7 @@ public class BusinessLogicInterfaceUrls {
   }
 
   public static URL boundWithItemsUrl(String subPath) {
-    return getUrl("/inventory/bound-with-items", subPath);
+    return getUrl("/inventory/items-by-holdings-id", subPath);
   }
 
   public static URL isbns(String subPath) {

@@ -14,6 +14,7 @@ import org.folio.inventory.support.http.client.Response;
 import org.junit.Test;
 
 import java.net.MalformedURLException;
+import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -101,6 +102,9 @@ public class BoundWithTests extends ApiTests
 
   }
 
+  // NOTE: To be investigated: Several of these tests could possibly falsely pass
+  //       due to the complexities of the queries, not all of which are
+  //       necessarily supported by the fake storage modules.
   @Test
   public void canRetrieveBoundWithItemByHoldingsRecordId() throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException
   {
@@ -123,25 +127,39 @@ public class BoundWithTests extends ApiTests
       .forHolding( holdings3a.getId() ).withBarcode( "ITEM 3A" ));
 
     boundWithPartsStorageClient.create(
-      makeObjectBoundWithPart( item1a.getJson().getString("id"), holdings2a.getJson().getString( "id" ) ));
-    boundWithPartsStorageClient.create(
       makeObjectBoundWithPart( item1a.getJson().getString("id"), holdings1a.getJson().getString( "id" ) ));
+    boundWithPartsStorageClient.create(
+      makeObjectBoundWithPart( item1a.getJson().getString("id"), holdings2a.getJson().getString( "id" ) ));
 
-    // Need Okapi client with the option to set extra parameter (excludePrimary)
+    // Need straight Okapi client for the option to set extra parameters
     OkapiHttpClient okapiClient = ApiTestSuite.createOkapiHttpClient();
     Response itemsResponse1 = okapiClient.get(ApiTestSuite.apiRoot()+
-      "/inventory/bound-with-items?query=holdingsRecordId=="
+      "/inventory/items-by-holdings-id?query=holdingsRecordId=="
       +holdings2a.getJson().getString( "id" ))
       .toCompletableFuture().get(5, SECONDS);
 
-    assertThat("One and only one bound-with item is found: ", itemsResponse1.getJson().getInteger( "totalRecords" ), is(1));
-    JsonArray boundWithItems1 = itemsResponse1.getJson().getJsonArray( "items" );
-    JsonObject item1 = boundWithItems1.getJsonObject( 0 );
-    assertThat("The bound-with item returned is indeed flagged as a bound-with", item1.getBoolean("isBoundWith"), is(true));
-    assertThat( "The bound-with item returned is the item with barcode 'ITEM 1A'", item1.getString("barcode"), is("ITEM 1A"));
+    assertThat("Two items are found for holdings record: " + itemsResponse1.getJson().encodePrettily(), itemsResponse1.getJson().getInteger( "totalRecords" ), is(2));
+    JsonArray itemsForHoldingsId1 = itemsResponse1.getJson().getJsonArray( "items" );
+    boolean foundBoundWithItem = false;
+    boolean foundNonBoundWithItem = false;
+    for (Object o : itemsForHoldingsId1) {
+      JsonObject item = ((JsonObject) o);
+      String barcode = item.getString( "barcode" );
+      assertThat("The items returned are 'ITEM 1A' and 'ITEM 2A'",
+        Arrays.asList("ITEM 1A", "ITEM 2A").contains( barcode ), is(true));
+      if (barcode.equals( "ITEM 1A" )) {
+        assertThat("ITEM 1A is bound-with item ", item.getBoolean( "isBoundWith" ), is(true));
+        foundBoundWithItem = item.getBoolean( "isBoundWith" );
+      } else if (barcode.equals( "ITEM 2A" )) {
+        assertThat("ITEM 2A is not bound-with ", item.getBoolean( "isBoundWith" ), is(false));
+        foundNonBoundWithItem = !(item.getBoolean( "isBoundWith" ));
+      }
+    }
+    assertThat("Found one bound-with and one non-bound-with item " + itemsResponse1.getJson().encodePrettily(),
+      foundBoundWithItem && foundNonBoundWithItem, is(true));
 
     Response itemsResponse2 = okapiClient.get(ApiTestSuite.apiRoot()+
-      "/inventory/bound-with-items?query=holdingsRecordId=="
+      "/inventory/items-by-holdings-id?query=holdingsRecordId=="
       +holdings1a.getJson().getString( "id" ))
       .toCompletableFuture().get(5, SECONDS);
 
@@ -152,70 +170,65 @@ public class BoundWithTests extends ApiTests
     assertThat( "The bound-with item returned is the item with barcode 'ITEM 1A'", item2.getString("barcode"), is("ITEM 1A"));
 
     Response itemsResponse3 = okapiClient.get(ApiTestSuite.apiRoot()+
-      "/inventory/bound-with-items?query=holdingsRecordId=="
-      +holdings1a.getJson().getString( "id" ) + "&skipDirectlyLinkedItem=true")
+      "/inventory/items-by-holdings-id?query=holdingsRecordId=="
+      +holdings1a.getJson().getString( "id" ) + "&relations=onlyBoundWithsSkipDirectlyLinkedItem")
       .toCompletableFuture().get(5, SECONDS);
-    assertThat("No bound-with item is found when skipDirectlyLinkedItem is set: ", itemsResponse3.getJson().getInteger( "totalRecords" ), is(0));
+    assertThat("No item is found for 'holdings1a' when relations is set to onlyBoundWithsSkipDirectlyLinkedItem: ", itemsResponse3.getJson().getInteger( "totalRecords" ), is(0));
 
     Response itemsResponse4 = okapiClient.get(ApiTestSuite.apiRoot()+
-      "/inventory/bound-with-items?query=holdingsRecordId=="
-      +holdings1a.getJson().getString( "id" ) + "&skipDirectlyLinkedItem=false")
+      "/inventory/items-by-holdings-id?query=holdingsRecordId=="
+      +holdings1a.getJson().getString( "id" ) + "&relations=onlyBoundWiths")
       .toCompletableFuture().get(5, SECONDS);
-    assertThat("One bound-with item is found when skipDirectlyLinkedItem is set to false: ", itemsResponse4.getJson().getInteger( "totalRecords" ), is(1));
+    assertThat("One item is found for 'holdings1a' when relations is set to onlyBoundWiths: ", itemsResponse4.getJson().getInteger( "totalRecords" ), is(1));
 
     Response itemsResponse5 = okapiClient.get(ApiTestSuite.apiRoot()+
-      "/inventory/bound-with-items?query=itemId=="
-      +item1a.getJson().getString( "id" ) + "&skipDirectlyLinkedItem=true")
+      "/inventory/items-by-holdings-id?query=holdingsRecordId=="
+      +holdings3a.getJson().getString( "id" ))
       .toCompletableFuture().get(5, SECONDS);
+    assertThat("One item is found for 'holdings3a' (non-bound-with) with relations criterion: ", itemsResponse4.getJson().getInteger( "totalRecords" ), is(1));
+
   }
 
   @Test
-  public void canOnlyAskForSkipDirectlyLinkedItemWhenQueryingByHoldingsRecordId()
+  public void mustQueryBoundWithItemsByHoldingsRecordIdId()
     throws InterruptedException, TimeoutException, ExecutionException {
 
     Response itemsResponse1 = okapiClient.get(ApiTestSuite.apiRoot()+
-      "/inventory/bound-with-items?query=holdingsRecordId=="
-      + UUID.randomUUID() + "&skipDirectlyLinkedItem=true")
-      .toCompletableFuture().get(5, SECONDS);
-
-    assertThat("Response code 200 (OK) expected when querying by holdingsRecordId and asking for skipDirectlyLinkedItem",
-      itemsResponse1.getStatusCode(), is(200));
-
-    Response itemsResponse2 = okapiClient.get(ApiTestSuite.apiRoot()+
-      "/inventory/bound-with-items?query=itemId=="
-      + UUID.randomUUID() + "&skipDirectlyLinkedItem=true")
-      .toCompletableFuture().get(5, SECONDS);
-
-    assertThat("Response code 400 (bad request) expected when querying by itemId and asking for skipDirectlyLinkedItem",
-      itemsResponse2.getStatusCode(), is(400));
-  }
-
-  @Test
-  public void mustQueryBoundWithItemsByHoldingsRecordIdOrItemId()
-    throws InterruptedException, TimeoutException, ExecutionException {
-
-    Response itemsResponse1 = okapiClient.get(ApiTestSuite.apiRoot()+
-      "/inventory/bound-with-items?query=holdingsRecordId=="
+      "/inventory/items-by-holdings-id?query=holdingsRecordId=="
       + UUID.randomUUID() )
       .toCompletableFuture().get(5, SECONDS);
 
     assertThat("Response code 200 (OK) expected when querying by holdingsRecordId",
       itemsResponse1.getStatusCode(), is(200));
 
-    Response itemsResponse2 = okapiClient.get(ApiTestSuite.apiRoot()+
-      "/inventory/bound-with-items?query=itemId=="
-      + UUID.randomUUID() )
-      .toCompletableFuture().get(5, SECONDS);
-
-    assertThat("Response code 200 (OK) expected when querying by itemId",
-      itemsResponse2.getStatusCode(), is(200));
-
     Response itemsResponse3 = okapiClient.get(ApiTestSuite.apiRoot()+
-      "/inventory/bound-with-items/")
+      "/inventory/items-by-holdings-id/")
       .toCompletableFuture().get(5, SECONDS);
 
-    assertThat("Response code 400 (bad request) expected when not querying by itemId or holdingsRecordId",
+    assertThat("Response code 400 (bad request) expected when not querying by holdingsRecordId",
       itemsResponse3.getStatusCode(), is(400));
+  }
+
+  @Test
+  public void mustPassValidRelationsParameterValue ()
+    throws InterruptedException, TimeoutException, ExecutionException {
+
+    Response itemsResponse1 = okapiClient.get(ApiTestSuite.apiRoot()+
+      "/inventory/items-by-holdings-id?query=holdingsRecordId=="
+      + UUID.randomUUID()  + "&relations=onlyBoundWiths" )
+      .toCompletableFuture().get(5, SECONDS);
+
+    assertThat("Response code 200 (OK) expected when querying by holdingsRecordId and relations=onlyBoundWiths",
+      itemsResponse1.getStatusCode(), is(200));
+
+    Response itemsResponse2 = okapiClient.get(ApiTestSuite.apiRoot()+
+      "/inventory/items-by-holdings-id?query=holdingsRecordId=="
+      + UUID.randomUUID()  + "&relations=RANDOM" )
+      .toCompletableFuture().get(5, SECONDS);
+
+    assertThat("Response code 400 (bad request) expected when providing invalid 'relations' parameter value",
+      itemsResponse2.getStatusCode(), is(400));
+
   }
 
   private JsonObject makeObjectBoundWithPart (String itemId, String holdingsRecordId) {

@@ -331,8 +331,8 @@
           ]
         }, {
           "methods": ["GET"],
-          "pathPattern": "/inventory/bound-with-items",
-          "permissionsRequired": ["inventory.bound-with-items.collection.get"],
+          "pathPattern": "/inventory/items-by-holdings-id",
+          "permissionsRequired": ["inventory.items.collection.get"],
           "modulePermissions": [
             "inventory-storage.bound-with-parts.collection.get",
             "inventory-storage.bound-with-parts.item.get",
@@ -740,8 +740,7 @@
         "inventory.items.item.mark-in-process-non-requestable.post",
         "inventory.items.item.mark-missing.post",
         "inventory.items.move.item.post",
-        "inventory.holdings.move.item.post",
-        "inventory.bound-with-items.collection.get"
+        "inventory.holdings.move.item.post"
       ]
     },
     {
