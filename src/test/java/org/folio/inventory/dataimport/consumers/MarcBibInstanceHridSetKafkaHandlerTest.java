@@ -121,7 +121,7 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
     // given
     Async async = context.async();
     Map<String, String> payload = new HashMap<>();
-    payload.put(Record.RecordType.MARC.value(), Json.encode(record));
+    payload.put("MARC", Json.encode(record));
     payload.put("MAPPING_RULES", mappingRules.encode());
     payload.put("MAPPING_PARAMS", new JsonObject().encode());
 
@@ -190,7 +190,7 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
     // given
     Async async = context.async();
     Map<String, String> payload = new HashMap<>();
-    payload.put(Record.RecordType.MARC.value(), Json.encode(record));
+    payload.put("MARC", Json.encode(record));
     payload.put("MAPPING_RULES", mappingRules.encode());
     payload.put("MAPPING_PARAMS", new JsonObject().encode());
 

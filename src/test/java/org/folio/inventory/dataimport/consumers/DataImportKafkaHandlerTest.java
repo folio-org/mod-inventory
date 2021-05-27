@@ -73,7 +73,7 @@ public class DataImportKafkaHandlerTest {
   private JobProfile jobProfile = new JobProfile()
     .withId(UUID.randomUUID().toString())
     .withName("Create instance")
-    .withDataType(org.folio.JobProfile.DataType.MARC);
+    .withDataType(org.folio.JobProfile.DataType.MARC_BIB);
 
   private ActionProfile actionProfile = new ActionProfile()
     .withId(UUID.randomUUID().toString())
