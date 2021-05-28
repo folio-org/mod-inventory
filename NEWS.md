@@ -1,9 +1,9 @@
 ## 16.4.0 IN-PROGRESS
 
-* Sets isBoundWith flag on Instances, Items (MODINV-388)
-* Provides end-point /inventory/items-by-holdings-id (MODINV-418)
-* Provides inventory 10.11
-* Requires bound-with-parts-storage 1.0
+* Sets `isBoundWith` flag on Instances, Items (MODINV-388)
+* Provides end-point `/inventory/items-by-holdings-id` (MODINV-418)
+* Provides `inventory 10.11`
+* Requires `bound-with-parts-storage 1.0`
 
 ## 16.3.0 2021-03-26
 
