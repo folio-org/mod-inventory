@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "inventory",
-      "version": "10.11",
+      "version": "11.0",
       "handlers": [
         {
           "methods": ["GET"],
@@ -428,7 +428,7 @@
     },
     {
       "id": "inventory-batch",
-      "version": "0.5",
+      "version": "1.0",
       "handlers": [
         {
           "methods": ["POST"],
@@ -518,19 +518,19 @@
   "requires": [
     {
       "id": "item-storage",
-      "version": "8.9"
+      "version": "8.9 9.0"
     },
     {
       "id": "instance-storage",
-      "version": "7.7"
+      "version": "7.7 8.0"
     },
     {
       "id": "instance-storage-batch",
-      "version": "0.2"
+      "version": "0.2 1.0"
     },
     {
       "id": "holdings-storage",
-      "version": "2.0 3.0 4.0"
+      "version": "2.0 3.0 4.0 5.0"
     },
     {
       "id": "material-types",

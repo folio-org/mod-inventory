@@ -147,7 +147,7 @@ public class CreateHoldingEventHandlerTest {
     MappingManager.registerWriterFactory(new HoldingWriterFactory());
 
     String instanceId = String.valueOf(UUID.randomUUID());
-    Instance instance = new Instance(instanceId, String.valueOf(UUID.randomUUID()),
+    Instance instance = new Instance(instanceId, "5", String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();
@@ -326,7 +326,7 @@ public class CreateHoldingEventHandlerTest {
     MappingManager.registerWriterFactory(new HoldingWriterFactory());
 
     String instanceId = String.valueOf(UUID.randomUUID());
-    Instance instance = new Instance(instanceId, String.valueOf(UUID.randomUUID()),
+    Instance instance = new Instance(instanceId, "9", String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
     HashMap<String, String> context = new HashMap<>();
     context.put("InvalidField", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
@@ -405,7 +405,7 @@ public class CreateHoldingEventHandlerTest {
     MappingManager.registerWriterFactory(new HoldingWriterFactory());
 
     String instanceId = String.valueOf(UUID.randomUUID());
-    Instance instance = new Instance(instanceId, String.valueOf(UUID.randomUUID()),
+    Instance instance = new Instance(instanceId, "8", String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();
@@ -462,7 +462,7 @@ public class CreateHoldingEventHandlerTest {
     MappingManager.registerWriterFactory(new HoldingWriterFactory());
 
     String instanceId = String.valueOf(UUID.randomUUID());
-    Instance instance = new Instance(instanceId, String.valueOf(UUID.randomUUID()),
+    Instance instance = new Instance(instanceId, "7", String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
     HashMap<String, String> context = new HashMap<>();
     context.put("INSTANCE", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());

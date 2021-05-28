@@ -51,7 +51,7 @@ public class UnavailableStatusValidatorTest {
   public void itemCanBeMarkedAsUnavailableWhenInAcceptableSourceStatus(String sourceStatus) {
     final var targetValidator = validator.getValidator(UNAVAILABLE);
 
-    final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
+    final var item = new Item(null, null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
 
     final var validationFuture = targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item);
 
@@ -68,7 +68,7 @@ public class UnavailableStatusValidatorTest {
   @Test
   public void itemCannotBeMarkedAsUnavailableWhenNotInAcceptableSourceStatus(String sourceStatus) {
     final var targetValidator = validator.getValidator(UNAVAILABLE);
-    final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
+    final var item = new Item(null, null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
     final var validationFuture = targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item);
 
     Exception e = assertThrows(
