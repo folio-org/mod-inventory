@@ -289,6 +289,12 @@
         "id"
       ]
     },
+    "isBoundWith": {
+      "description": "Indicates if this Item is a bound-with",
+      "type": "boolean",
+      "default": false,
+      "readonly": true
+    },
     "permanentLoanType": {
       "description": "Permanent loan type, is the default loan type for a given item. Loan types are tenant-defined in a reference table in Settings, Inventory, Item, Loan type (e.g. Can circulate, Course reserves, Reading room, Selected)",
       "type": "object",

@@ -13,6 +13,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.BatchResult;
+import org.folio.inventory.domain.Metadata;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.support.http.client.Response;
@@ -55,7 +56,8 @@ class ExternalStorageModuleInstanceCollection
 
   @Override
   protected Instance mapFromJson(JsonObject instanceFromServer) {
-    return Instance.fromJson(instanceFromServer);
+    return Instance.fromJson(instanceFromServer)
+      .setMetadata(new Metadata(instanceFromServer.getJsonObject("metadata")));
   }
 
   @Override
