@@ -14,10 +14,10 @@ import java.util.Map;
 
 public class InstancesResponse {
   private Success<MultipleRecords<Instance>> success;
-  private Map<String, List<InstanceRelationshipToParent>> parentInstanceMap = new HashMap();
-  private Map<String, List<InstanceRelationshipToChild>> childInstanceMap = new HashMap();
-  private Map<String, List<PrecedingSucceedingTitle>> precedingTitlesMap = new HashMap();
-  private Map<String, List<PrecedingSucceedingTitle>> succeedingTitlesMap = new HashMap();
+  private Map<String, List<InstanceRelationshipToParent>> parentInstanceMap = new HashMap<>();
+  private Map<String, List<InstanceRelationshipToChild>> childInstanceMap = new HashMap<>();
+  private Map<String, List<PrecedingSucceedingTitle>> precedingTitlesMap = new HashMap<>();
+  private Map<String, List<PrecedingSucceedingTitle>> succeedingTitlesMap = new HashMap<>();
 
   public Success<MultipleRecords<Instance>> getSuccess() {
     return success;
