@@ -328,7 +328,8 @@
             "inventory-storage.preceding-succeeding-titles.collection.get",
             "inventory-storage.instance-relationships.collection.get",
             "inventory-storage.bound-with-parts.collection.get",
-            "inventory-storage.holdings.collection.get"
+            "inventory-storage.holdings.collection.get",
+            "inventory-storage.items.collection.get"
           ]
         }, {
           "methods": ["GET"],
