@@ -403,6 +403,12 @@
         "$ref": "uuid.json"
       }
     },
+    "isBoundWith": {
+      "description": "Indicates if this Instance is included in a bound-with",
+      "type": "boolean",
+      "default": false,
+      "readonly": true
+    },
     "precedingTitles": {
       "description": "Array of preceding titles",
       "type": "array",

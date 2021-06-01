@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "inventory",
-      "version": "10.10",
+      "version": "10.11",
       "handlers": [
         {
           "methods": ["GET"],
@@ -21,7 +21,8 @@
             "inventory-storage.holdings.collection.get",
             "inventory-storage.holdings.item.get",
             "inventory-storage.instances.collection.get",
-            "inventory-storage.instances.item.get"
+            "inventory-storage.instances.item.get",
+            "inventory-storage.bound-with-parts.collection.get"
           ]
         }, {
           "methods": ["GET"],
@@ -38,7 +39,8 @@
             "inventory-storage.holdings.collection.get",
             "inventory-storage.holdings.item.get",
             "inventory-storage.instances.collection.get",
-            "inventory-storage.instances.item.get"
+            "inventory-storage.instances.item.get",
+            "inventory-storage.bound-with-parts.collection.get"
           ]
         },
         {
@@ -63,6 +65,7 @@
             "inventory-storage.holdings.item.get",
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
+            "inventory-storage.bound-with-parts.collection.get",
             "users.item.get"
           ]
         },
@@ -88,6 +91,7 @@
             "inventory-storage.holdings.item.get",
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
+            "inventory-storage.bound-with-parts.collection.get",
             "users.item.get"
           ]
         },
@@ -113,6 +117,7 @@
             "inventory-storage.holdings.item.get",
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
+            "inventory-storage.bound-with-parts.collection.get",
             "users.item.get"
           ]
         },
@@ -138,6 +143,7 @@
             "inventory-storage.holdings.item.get",
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
+            "inventory-storage.bound-with-parts.collection.get",
             "users.item.get"
           ]
         },
@@ -163,6 +169,7 @@
             "inventory-storage.holdings.item.get",
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
+            "inventory-storage.bound-with-parts.collection.get",
             "users.item.get"
           ]
         },
@@ -188,6 +195,7 @@
             "inventory-storage.holdings.item.get",
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
+            "inventory-storage.bound-with-parts.collection.get",
             "users.item.get"
           ]
         },
@@ -213,6 +221,7 @@
             "inventory-storage.holdings.item.get",
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
+            "inventory-storage.bound-with-parts.collection.get",
             "users.item.get"
           ]
         },
@@ -238,6 +247,7 @@
             "inventory-storage.holdings.item.get",
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
+            "inventory-storage.bound-with-parts.collection.get",
             "users.item.get"
           ]
         },
@@ -263,6 +273,7 @@
             "inventory-storage.holdings.item.get",
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
+            "inventory-storage.bound-with-parts.collection.get",
             "users.item.get"
           ]
         },
@@ -283,6 +294,7 @@
             "inventory-storage.holdings.item.get",
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
+            "inventory-storage.bound-with-parts.collection.get",
             "users.item.get"
           ]
         }, {
@@ -314,7 +326,29 @@
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
             "inventory-storage.preceding-succeeding-titles.collection.get",
-            "inventory-storage.instance-relationships.collection.get"
+            "inventory-storage.instance-relationships.collection.get",
+            "inventory-storage.bound-with-parts.collection.get",
+            "inventory-storage.holdings.collection.get",
+            "inventory-storage.items.collection.get"
+          ]
+        }, {
+          "methods": ["GET"],
+          "pathPattern": "/inventory/items-by-holdings-id",
+          "permissionsRequired": ["inventory.items.collection.get"],
+          "modulePermissions": [
+            "inventory-storage.bound-with-parts.collection.get",
+            "inventory-storage.bound-with-parts.item.get",
+            "inventory-storage.items.collection.get",
+            "inventory-storage.material-types.item.get",
+            "inventory-storage.material-types.collection.get",
+            "inventory-storage.loan-types.item.get",
+            "inventory-storage.loan-types.collection.get",
+            "inventory-storage.locations.item.get",
+            "inventory-storage.locations.collection.get",
+            "inventory-storage.holdings.collection.get",
+            "inventory-storage.holdings.item.get",
+            "inventory-storage.instances.collection.get",
+            "inventory-storage.instances.item.get"
           ]
         }, {
           "methods": ["GET"],
@@ -323,7 +357,8 @@
           "modulePermissions": [
             "inventory-storage.instances.item.get",
             "inventory-storage.preceding-succeeding-titles.collection.get",
-            "inventory-storage.instance-relationships.collection.get"
+            "inventory-storage.instance-relationships.collection.get",
+            "inventory-storage.bound-with-parts.collection.get"
           ]
         }, {
           "methods": ["POST"],
@@ -538,6 +573,10 @@
     {
       "id": "source-storage-records",
       "version": "2.0"
+    },
+    {
+      "id": "bound-with-parts-storage",
+      "version": "1.0"
     }
   ],
   "permissionSets": [

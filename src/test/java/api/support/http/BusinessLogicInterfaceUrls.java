@@ -54,6 +54,10 @@ public class BusinessLogicInterfaceUrls {
     return getUrl("/inventory/instances/batch", subPath);
   }
 
+  public static URL boundWithItemsUrl(String subPath) {
+    return getUrl("/inventory/items-by-holdings-id", subPath);
+  }
+
   public static URL isbns(String subPath) {
     return getUrl("/isbn", subPath);
   }

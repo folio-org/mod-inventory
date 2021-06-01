@@ -118,7 +118,7 @@ public final class ItemUtil {
       .withYearCaption(yearCaption)
       .withElectronicAccess(mappedElectronicAccess)
       .withStatisticalCodeIds(statisticalCodeIds)
-      .withPurchaseOrderLineidentifier(itemFromServer.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER))
+      .withPurchaseOrderLineIdentifier(itemFromServer.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER))
       .withTags(tags)
       .withLastCheckIn(LastCheckIn.from(itemFromServer.getJsonObject("lastCheckIn")))
       .withEffectiveCallNumberComponents(
@@ -171,7 +171,7 @@ public final class ItemUtil {
     itemToSend.put(Item.YEAR_CAPTION_KEY, item.getYearCaption());
     itemToSend.put(Item.ELECTRONIC_ACCESS_KEY, item.getElectronicAccess());
     itemToSend.put(Item.STATISTICAL_CODE_IDS_KEY, item.getStatisticalCodeIds());
-    itemToSend.put(Item.PURCHASE_ORDER_LINE_IDENTIFIER, item.getPurchaseOrderLineidentifier());
+    itemToSend.put(Item.PURCHASE_ORDER_LINE_IDENTIFIER, item.getPurchaseOrderLineIdentifier());
     itemToSend.put(Item.TAGS_KEY, new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray(item.getTags())));
 
     return itemToSend;
@@ -255,7 +255,7 @@ public final class ItemUtil {
       .withYearCaption(yearCaption)
       .withElectronicAccess(electronicAccess)
       .withStatisticalCodeIds(statisticalCodeIds)
-      .withPurchaseOrderLineidentifier(itemRequest.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER))
+      .withPurchaseOrderLineIdentifier(itemRequest.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER))
       .withLastCheckIn(LastCheckIn.from(itemRequest.getJsonObject(Item.LAST_CHECK_IN)))
       .withTags(tags);
   }
@@ -310,7 +310,7 @@ public final class ItemUtil {
     itemJson.put(Item.YEAR_CAPTION_KEY, item.getYearCaption());
     itemJson.put(Item.ELECTRONIC_ACCESS_KEY, item.getElectronicAccess());
     itemJson.put(Item.STATISTICAL_CODE_IDS_KEY, item.getStatisticalCodeIds());
-    itemJson.put(Item.PURCHASE_ORDER_LINE_IDENTIFIER, item.getPurchaseOrderLineidentifier());
+    itemJson.put(Item.PURCHASE_ORDER_LINE_IDENTIFIER, item.getPurchaseOrderLineIdentifier());
     itemJson.put(Item.TAGS_KEY, new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray(item.getTags())));
 
     return itemJson;

@@ -33,6 +33,7 @@ public class Instance {
   public static final String CHILD_INSTANCES_KEY = "childInstances";
   public static final String PRECEDING_TITLES_KEY = "precedingTitles";
   public static final String SUCCEEDING_TITLES_KEY = "succeedingTitles";
+  public static final String IS_BOUND_WITH_KEY = "isBoundWith";
   public static final String TITLE_KEY = "title";
   public static final String INDEX_TITLE_KEY = "indexTitle";
   public static final String ALTERNATIVE_TITLES_KEY = "alternativeTitles";
@@ -73,6 +74,7 @@ public class Instance {
   private List<InstanceRelationshipToChild> childInstances = new ArrayList();
   private List<PrecedingSucceedingTitle> precedingTitles = new ArrayList<>();
   private List<PrecedingSucceedingTitle> succeedingTitles = new ArrayList<>();
+  private boolean isBoundWith = false;
   private final String title;
   private String indexTitle;
   private List<AlternativeTitle> alternativeTitles = new ArrayList();
@@ -123,7 +125,9 @@ public class Instance {
   }
 
   /**
-   *
+   * Creates Instance POJO from JSON.
+   * Note: Doesn't set Metadata (since some DI processing seems to fail with it)
+   *       Metadata thus have to be added after instantiation where required.
    * @param instanceJson  JSON from client request or storage server response
    * @return Instance object that holds all (known) properties from the JSON
    */
@@ -136,10 +140,12 @@ public class Instance {
       instanceJson.getString(TITLE_KEY),
       instanceJson.getString(INSTANCE_TYPE_ID_KEY))
       .setIndexTitle(instanceJson.getString(INDEX_TITLE_KEY))
+      .setMatchKey(instanceJson.getString(MATCH_KEY_KEY))
       .setParentInstances(instanceJson.getJsonArray(PARENT_INSTANCES_KEY))
       .setChildInstances(instanceJson.getJsonArray(CHILD_INSTANCES_KEY))
       .setPrecedingTitles(instanceJson.getJsonArray(PRECEDING_TITLES_KEY))
       .setSucceedingTitles(instanceJson.getJsonArray(SUCCEEDING_TITLES_KEY))
+      .setIsBoundWith(instanceJson.containsKey(IS_BOUND_WITH_KEY) ? instanceJson.getBoolean(IS_BOUND_WITH_KEY) : false)
       .setAlternativeTitles(instanceJson.getJsonArray(ALTERNATIVE_TITLES_KEY))
       .setEditions(toListOfStrings(instanceJson.getJsonArray(EDITIONS_KEY)))
       .setSeries(toListOfStrings(instanceJson.getJsonArray(SERIES_KEY)))
@@ -240,6 +246,7 @@ public class Instance {
     putIfNotNull(json, INDEX_TITLE_KEY, getIndexTitle());
     putIfNotNull(json, PARENT_INSTANCES_KEY, parentInstances);
     putIfNotNull(json, CHILD_INSTANCES_KEY, childInstances);
+    putIfNotNull(json, IS_BOUND_WITH_KEY, getIsBoundWith());
     putIfNotNull(json, ALTERNATIVE_TITLES_KEY, getAlternativeTitles());
     putIfNotNull(json, EDITIONS_KEY, getEditions());
     putIfNotNull(json, SERIES_KEY, getSeries());
@@ -336,7 +343,6 @@ public class Instance {
     return this;
   }
 
-
   public Instance setPrecedingTitles(List<PrecedingSucceedingTitle> precedingTitles) {
     this.precedingTitles = (precedingTitles != null ? precedingTitles : this.precedingTitles);
     return this;
@@ -362,6 +368,11 @@ public class Instance {
       .map(PrecedingSucceedingTitle::from)
       .collect(Collectors.toList())
       : new ArrayList<>();
+    return this;
+  }
+
+  public Instance setIsBoundWith(boolean isBoundWith) {
+    this.isBoundWith = isBoundWith;
     return this;
   }
 
@@ -598,6 +609,10 @@ public class Instance {
 
   public List<PrecedingSucceedingTitle> getSucceedingTitles() {
     return Collections.unmodifiableList(succeedingTitles);
+  }
+
+  public boolean getIsBoundWith() {
+    return isBoundWith;
   }
 
   public String getTitle() {

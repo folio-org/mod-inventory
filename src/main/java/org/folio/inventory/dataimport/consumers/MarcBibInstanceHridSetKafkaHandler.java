@@ -29,7 +29,6 @@ import java.util.Map;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.isAnyEmpty;
-import static org.folio.rest.jaxrs.model.Record.RecordType.MARC;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
@@ -70,7 +69,7 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
         }
 
         Context context = EventHandlingUtil.constructContext(headersMap.get(OKAPI_TENANT_HEADER), headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER));
-        Record marcRecord = new JsonObject(eventPayload.get(MARC.value())).mapTo(Record.class);
+        Record marcRecord = new JsonObject(eventPayload.get(MARC_KEY)).mapTo(Record.class);
 
         instanceUpdateDelegate.handle(eventPayload, marcRecord, context).onComplete(ar -> {
           if (ar.succeeded()) {

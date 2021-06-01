@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.folio.ChildInstance;
 import org.folio.ParentInstance;
+import org.folio.Tags;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
 import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
@@ -47,6 +48,7 @@ public class InstanceUtil {
       .withStatusId(existing.getStatusId())
       .withStatisticalCodeIds(existing.getStatisticalCodeIds())
       .withNatureOfContentTermIds(existing.getNatureOfContentTermIds())
+      .withTags(new Tags().withTagList(existing.getTags()))
       .withParentInstances(parentInstances)
       .withChildInstances(childInstances);
 
