@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 
 import org.folio.ChildInstance;
 import org.folio.ParentInstance;
+import org.folio.Tags;
 import org.folio.inventory.domain.instances.AlternativeTitle;
 import org.folio.inventory.domain.instances.Classification;
 import org.folio.inventory.domain.instances.Contributor;
@@ -183,6 +184,7 @@ public class InstanceUtil {
       .withStatusId(existing.getStatusId())
       .withStatisticalCodeIds(existing.getStatisticalCodeIds())
       .withNatureOfContentTermIds(existing.getNatureOfContentTermIds())
+      .withTags(new Tags().withTagList(existing.getTags()))
       .withParentInstances(parentInstances)
       .withChildInstances(childInstances);
 

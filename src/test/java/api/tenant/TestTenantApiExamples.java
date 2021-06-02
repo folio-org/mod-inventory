@@ -15,9 +15,9 @@ import api.support.ApiRoot;
 import api.support.ApiTests;
 import io.netty.handler.codec.http.HttpResponseStatus;
 
-public class TenantApiExamples extends ApiTests {
+public class TestTenantApiExamples extends ApiTests {
 
-  public TenantApiExamples() {
+  public TestTenantApiExamples() {
     super();
   }
 
