@@ -21,6 +21,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
+import io.vertx.ext.web.client.WebClient;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaProducer;
 import io.vertx.kafka.client.producer.KafkaProducerRecord;
@@ -59,7 +60,7 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
     this.maxDistributionNumber = maxDistributionNumber;
     this.kafkaConfig = kafkaConfig;
     this.kafkaInternalCache = kafkaInternalCache;
-    this.instanceUpdateDelegate = new InstanceUpdateDelegate(storage);
+    this.instanceUpdateDelegate = new InstanceUpdateDelegate(storage, WebClient.wrap(vertx.createHttpClient()));
     createProducer(kafkaConfig, QM_INVENTORY_INSTANCE_UPDATED);
     createProducer(kafkaConfig, QM_ERROR);
   }

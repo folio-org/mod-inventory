@@ -1,10 +1,10 @@
 package org.folio.inventory.dataimport.consumers;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
@@ -12,7 +12,6 @@ import io.vertx.kafka.client.producer.KafkaHeader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
-import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.dataimport.HoldingWriterFactory;
 import org.folio.inventory.dataimport.InstanceWriterFactory;
 import org.folio.inventory.dataimport.ItemWriterFactory;
@@ -53,7 +52,6 @@ import static org.folio.DataImportEventTypes.DI_ERROR;
 public class DataImportKafkaHandler implements AsyncRecordHandler<String, String> {
 
   private static final Logger LOGGER = LogManager.getLogger(DataImportKafkaHandler.class);
-  private static final ObjectMapper OBJECT_MAPPER = ObjectMapperTool.getMapper();
   private static final String CORRELATION_ID_HEADER = "correlationId";
 
   private KafkaInternalCache kafkaInternalCache;
@@ -69,7 +67,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
   public Future<String> handle(KafkaConsumerRecord<String, String> record) {
     try {
       Promise<String> promise = Promise.promise();
-      Event event = OBJECT_MAPPER.readValue(record.value(), Event.class);
+      Event event = Json.decodeValue(record.value(), Event.class);
       if (!kafkaInternalCache.containsByKey(event.getId())) {
         kafkaInternalCache.putToCache(event.getId());
         DataImportEventPayload eventPayload = new JsonObject(ZIPArchiver.unzip(event.getEventPayload())).mapTo(DataImportEventPayload.class);
@@ -117,7 +115,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     EventManager.registerEventHandler(new UpdateItemEventHandler(storage));
     EventManager.registerEventHandler(new UpdateHoldingEventHandler(storage));
     EventManager.registerEventHandler(new ReplaceInstanceEventHandler(storage, WebClient.wrap(client)));
-    EventManager.registerEventHandler(new MarcBibModifiedPostProcessingEventHandler(new InstanceUpdateDelegate(storage)));
+    EventManager.registerEventHandler(new MarcBibModifiedPostProcessingEventHandler(new InstanceUpdateDelegate(storage, WebClient.wrap(client))));
     EventManager.registerEventHandler(new MarcBibMatchedPostProcessingEventHandler(storage));
   }
 
