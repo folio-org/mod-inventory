@@ -21,6 +21,7 @@ import org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.actions.MarcBibMatchedPostProcessingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.MarcBibModifiedPostProcessingEventHandler;
+import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
 import org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.UpdateHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler;
@@ -106,16 +107,17 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     MappingManager.registerWriterFactory(new HoldingWriterFactory());
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
 
+    PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper = new PrecedingSucceedingTitlesHelper(WebClient.wrap(client));
     EventManager.registerEventHandler(new MatchInstanceEventHandler());
     EventManager.registerEventHandler(new MatchItemEventHandler());
     EventManager.registerEventHandler(new MatchHoldingEventHandler());
     EventManager.registerEventHandler(new CreateItemEventHandler(storage));
     EventManager.registerEventHandler(new CreateHoldingEventHandler(storage));
-    EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, WebClient.wrap(client)));
+    EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, precedingSucceedingTitlesHelper));
     EventManager.registerEventHandler(new UpdateItemEventHandler(storage));
     EventManager.registerEventHandler(new UpdateHoldingEventHandler(storage));
-    EventManager.registerEventHandler(new ReplaceInstanceEventHandler(storage, WebClient.wrap(client)));
-    EventManager.registerEventHandler(new MarcBibModifiedPostProcessingEventHandler(new InstanceUpdateDelegate(storage, WebClient.wrap(client))));
+    EventManager.registerEventHandler(new ReplaceInstanceEventHandler(storage, precedingSucceedingTitlesHelper));
+    EventManager.registerEventHandler(new MarcBibModifiedPostProcessingEventHandler(new InstanceUpdateDelegate(storage), precedingSucceedingTitlesHelper));
     EventManager.registerEventHandler(new MarcBibMatchedPostProcessingEventHandler(storage));
   }
 

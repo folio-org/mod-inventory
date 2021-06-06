@@ -120,7 +120,8 @@ public class MarcBibModifiedPostProcessingEventHandlerTest {
       return null;
     }).when(mockedInstanceCollection).update(any(Instance.class), any(Consumer.class), any(Consumer.class));
 
-    marcBibModifiedEventHandler = new MarcBibModifiedPostProcessingEventHandler(new InstanceUpdateDelegate(mockedStorage, ctxt -> mockedOkapiHttpClient));
+    PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper = new PrecedingSucceedingTitlesHelper(ctxt -> mockedOkapiHttpClient);
+    marcBibModifiedEventHandler = new MarcBibModifiedPostProcessingEventHandler(new InstanceUpdateDelegate(mockedStorage), precedingSucceedingTitlesHelper);
   }
 
   @Test

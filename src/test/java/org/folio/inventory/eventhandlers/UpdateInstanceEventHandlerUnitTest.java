@@ -1,50 +1,44 @@
 package org.folio.inventory.eventhandlers;
 
-import static org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle.TITLE_KEY;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-import java.io.IOException;
-import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
-import java.util.function.Consumer;
-
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
-import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
-import org.folio.inventory.support.http.client.OkapiHttpClient;
-import org.folio.inventory.support.http.client.Response;
-import org.folio.rest.jaxrs.model.Record;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.MockitoAnnotations;
-import org.mockito.Spy;
-
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
+import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
 import org.folio.inventory.dataimport.handlers.actions.UpdateInstanceEventHandler;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
+import org.folio.inventory.support.http.client.OkapiHttpClient;
+import org.folio.inventory.support.http.client.Response;
 import org.folio.processing.events.utils.ZIPArchiver;
+import org.folio.rest.jaxrs.model.Record;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
+
+import java.io.IOException;
+import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
+
+import static org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle.TITLE_KEY;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class UpdateInstanceEventHandlerUnitTest {
 
@@ -65,6 +59,7 @@ public class UpdateInstanceEventHandlerUnitTest {
 
   private UpdateInstanceEventHandler updateInstanceEventHandler;
   private InstanceUpdateDelegate instanceUpdateDelegate;
+  private PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
   private JsonObject mappingRules;
   private JsonObject record;
   private Instance existingInstance;
@@ -77,8 +72,10 @@ public class UpdateInstanceEventHandlerUnitTest {
     headers.put("x-okapi-token", "token");
     MockitoAnnotations.initMocks(this);
     existingInstance = Instance.fromJson(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
-    instanceUpdateDelegate = Mockito.spy(new InstanceUpdateDelegate(storage, ctxt -> okapiHttpClient));
-    updateInstanceEventHandler = new UpdateInstanceEventHandler(instanceUpdateDelegate, context);
+    instanceUpdateDelegate = Mockito.spy(new InstanceUpdateDelegate(storage));
+    precedingSucceedingTitlesHelper = Mockito.spy(new PrecedingSucceedingTitlesHelper(ctxt -> okapiHttpClient));
+    updateInstanceEventHandler = new UpdateInstanceEventHandler(instanceUpdateDelegate, context, precedingSucceedingTitlesHelper);
+
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
     doAnswer(invocationOnMock -> {
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
@@ -107,7 +104,7 @@ public class UpdateInstanceEventHandlerUnitTest {
   }
 
   @Test
-  public void shouldProcessEvent() throws InterruptedException, ExecutionException, TimeoutException {
+  public void shouldProcessEvent() {
     HashMap<String, String> eventPayload = new HashMap<>();
     eventPayload.put("MARC_BIB", record.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
@@ -157,6 +154,7 @@ public class UpdateInstanceEventHandlerUnitTest {
     Assert.assertEquals("Houston oil directory", updatedInstance.getPrecedingTitles().get(0).toPrecedingTitleJson().getString(TITLE_KEY));
     Assert.assertEquals(1, updatedInstance.getSucceedingTitles().size());
     Assert.assertEquals("SAIS review of international affairs", updatedInstance.getSucceedingTitles().get(0).toSucceedingTitleJson().getString(TITLE_KEY));
+    verify(precedingSucceedingTitlesHelper).createPrecedingSucceedingTitles(any(Instance.class), any(Context.class));
   }
 
   @Test

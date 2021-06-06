@@ -2,7 +2,6 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.client.WebClient;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
@@ -10,10 +9,7 @@ import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
-import org.folio.inventory.storage.external.CollectionResourceClient;
-import org.folio.inventory.storage.external.CollectionResourceRepository;
 import org.folio.inventory.support.InstanceUtil;
-import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
 
@@ -22,7 +18,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
@@ -41,14 +36,11 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC or INSTANCE data";
 
-  public ReplaceInstanceEventHandler(Storage storage, WebClient webClient) {
-    super(storage, webClient);
-  }
+  private PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
 
-  public ReplaceInstanceEventHandler(Storage storage, WebClient webClient,
-    BiFunction<WebClient, Context, OkapiHttpClient> okapiClientCreator) {
-
-    super(storage, webClient, okapiClientCreator);
+  public ReplaceInstanceEventHandler(Storage storage, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper) {
+    super(storage);
+    this.precedingSucceedingTitlesHelper = precedingSucceedingTitlesHelper;
   }
 
   @Override
@@ -102,15 +94,13 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       instanceAsJson.put(METADATA_KEY, instanceToUpdate.getMetadata());
 
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
-      CollectionResourceClient precedingSucceedingTitlesClient = createPrecedingSucceedingTitlesClient(context);
-      CollectionResourceRepository precedingSucceedingTitlesRepository = new CollectionResourceRepository(precedingSucceedingTitlesClient);
       List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
       if (errors.isEmpty()) {
         Instance mappedInstance = Instance.fromJson(instanceAsJson);
         JsonObject finalInstanceAsJson = instanceAsJson;
         updateInstance(mappedInstance, instanceCollection)
-          .compose(ar -> deletePrecedingSucceedingTitles(precedingSucceedingIds, precedingSucceedingTitlesRepository))
-          .compose(ar -> createPrecedingSucceedingTitles(mappedInstance, precedingSucceedingTitlesRepository))
+          .compose(ar -> precedingSucceedingTitlesHelper.deletePrecedingSucceedingTitles(precedingSucceedingIds, context))
+          .compose(ar -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(mappedInstance, context))
           .onComplete(ar -> {
             if (ar.succeeded()) {
               dataImportEventPayload.getContext().put(INSTANCE.value(), finalInstanceAsJson.encode());

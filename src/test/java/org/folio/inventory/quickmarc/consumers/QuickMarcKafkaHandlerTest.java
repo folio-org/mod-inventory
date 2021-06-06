@@ -1,24 +1,5 @@
 package org.folio.inventory.quickmarc.consumers;
 
-import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
-import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.useDefaults;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.when;
-
-import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_ERROR;
-import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_INSTANCE_UPDATED;
-import static org.folio.kafka.KafkaTopicNameHelper.formatTopicName;
-import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
-
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
@@ -30,6 +11,22 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
 import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
 import net.mguenther.kafka.junit.ObserveKeyValues;
+import org.folio.inventory.TestUtil;
+import org.folio.inventory.common.Context;
+import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.dataimport.consumers.QuickMarcKafkaHandler;
+import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
+import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.domain.instances.InstanceCollection;
+import org.folio.inventory.storage.Storage;
+import org.folio.inventory.support.http.client.OkapiHttpClient;
+import org.folio.inventory.support.http.client.Response;
+import org.folio.kafka.KafkaConfig;
+import org.folio.kafka.cache.KafkaInternalCache;
+import org.folio.okapi.common.XOkapiHeaders;
+import org.folio.processing.events.utils.ZIPArchiver;
+import org.folio.rest.jaxrs.model.Event;
+import org.folio.rest.jaxrs.model.Record;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -37,20 +34,24 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import org.folio.inventory.TestUtil;
-import org.folio.inventory.common.Context;
-import org.folio.inventory.common.domain.Success;
-import org.folio.inventory.dataimport.consumers.QuickMarcKafkaHandler;
-import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
-import org.folio.inventory.domain.instances.Instance;
-import org.folio.inventory.domain.instances.InstanceCollection;
-import org.folio.inventory.storage.Storage;
-import org.folio.kafka.KafkaConfig;
-import org.folio.kafka.cache.KafkaInternalCache;
-import org.folio.okapi.common.XOkapiHeaders;
-import org.folio.processing.events.utils.ZIPArchiver;
-import org.folio.rest.jaxrs.model.Event;
-import org.folio.rest.jaxrs.model.Record;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+
+import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
+import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.useDefaults;
+import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_ERROR;
+import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_INSTANCE_UPDATED;
+import static org.folio.kafka.KafkaTopicNameHelper.formatTopicName;
+import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.when;
 
 @RunWith(VertxUnitRunner.class)
 public class QuickMarcKafkaHandlerTest {
@@ -74,8 +75,7 @@ public class QuickMarcKafkaHandlerTest {
   @Mock
   private KafkaInternalCache kafkaInternalCache;
   @Mock
-  private InstanceUpdateDelegate instanceUpdateDelegate;
-
+  private OkapiHttpClient okapiHttpClient;
 
   private JsonObject mappingRules;
   private Record record;
@@ -106,6 +106,9 @@ public class QuickMarcKafkaHandlerTest {
       return null;
     }).when(mockedInstanceCollection).update(any(Instance.class), any(Consumer.class), any(Consumer.class));
 
+    when(okapiHttpClient.get(anyString())).thenReturn(
+      CompletableFuture.completedFuture(new Response(200, new JsonObject().encode(), null, null)));
+
     String[] hostAndPort = cluster.getBrokerList().split(":");
     kafkaConfig = KafkaConfig.builder()
       .envId("env")
@@ -113,7 +116,8 @@ public class QuickMarcKafkaHandlerTest {
       .kafkaPort(hostAndPort[1])
       .build();
 
-    handler = new QuickMarcKafkaHandler(vertx, mockedStorage, 100, kafkaConfig, kafkaInternalCache);
+    PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper = new PrecedingSucceedingTitlesHelper(context -> okapiHttpClient);
+    handler = new QuickMarcKafkaHandler(vertx, mockedStorage, 100, kafkaConfig, kafkaInternalCache, precedingSucceedingTitlesHelper);
 
     when(kafkaRecord.headers()).thenReturn(List.of(
       KafkaHeader.header(XOkapiHeaders.TENANT.toLowerCase(), TENANT_ID),

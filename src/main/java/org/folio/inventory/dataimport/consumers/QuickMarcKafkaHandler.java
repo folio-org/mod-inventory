@@ -1,35 +1,17 @@
 package org.folio.inventory.dataimport.consumers;
 
-import static io.vertx.kafka.client.producer.KafkaProducer.createShared;
-import static java.lang.String.format;
-
-import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_ERROR;
-import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_INSTANCE_UPDATED;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
-import static org.folio.kafka.KafkaHeaderUtils.kafkaHeadersFromMap;
-import static org.folio.kafka.KafkaHeaderUtils.kafkaHeadersToMap;
-import static org.folio.kafka.KafkaTopicNameHelper.formatTopicName;
-import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
-
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
-import io.vertx.ext.web.client.WebClient;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaProducer;
 import io.vertx.kafka.client.producer.KafkaProducerRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
 import org.folio.inventory.dataimport.handlers.QMEventTypes;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
+import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
 import org.folio.inventory.dataimport.handlers.actions.UpdateInstanceEventHandler;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.AsyncRecordHandler;
@@ -41,6 +23,22 @@ import org.folio.rest.jaxrs.model.EventMetadata;
 import org.folio.rest.util.OkapiConnectionParams;
 import org.folio.util.pubsub.PubSubClientUtils;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
+
+import static io.vertx.kafka.client.producer.KafkaProducer.createShared;
+import static java.lang.String.format;
+import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_ERROR;
+import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_INSTANCE_UPDATED;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
+import static org.folio.kafka.KafkaHeaderUtils.kafkaHeadersFromMap;
+import static org.folio.kafka.KafkaHeaderUtils.kafkaHeadersToMap;
+import static org.folio.kafka.KafkaTopicNameHelper.formatTopicName;
+import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
+
 public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String> {
 
   private static final Logger LOGGER = LogManager.getLogger(QuickMarcKafkaHandler.class);
@@ -48,6 +46,7 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
   private static final AtomicLong indexer = new AtomicLong();
 
   private final InstanceUpdateDelegate instanceUpdateDelegate;
+  private final PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
   private final int maxDistributionNumber;
   private final KafkaConfig kafkaConfig;
   private final KafkaInternalCache kafkaInternalCache;
@@ -55,12 +54,13 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
   private final Map<QMEventTypes, KafkaProducer<String, String>> producerMap = new HashMap<>();
 
   public QuickMarcKafkaHandler(Vertx vertx, Storage storage, int maxDistributionNumber, KafkaConfig kafkaConfig,
-                               KafkaInternalCache kafkaInternalCache) {
+                               KafkaInternalCache kafkaInternalCache, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper) {
     this.vertx = vertx;
     this.maxDistributionNumber = maxDistributionNumber;
     this.kafkaConfig = kafkaConfig;
     this.kafkaInternalCache = kafkaInternalCache;
-    this.instanceUpdateDelegate = new InstanceUpdateDelegate(storage, WebClient.wrap(vertx.createHttpClient()));
+    this.instanceUpdateDelegate = new InstanceUpdateDelegate(storage);
+    this.precedingSucceedingTitlesHelper = precedingSucceedingTitlesHelper;
     createProducer(kafkaConfig, QM_INVENTORY_INSTANCE_UPDATED);
     createProducer(kafkaConfig, QM_ERROR);
   }
@@ -80,7 +80,7 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
       LOGGER.info(format("Quick marc event payload has been received with event type: %s", event.getEventType()));
       kafkaInternalCache.putToCache(event.getId());
       return getEventPayload(event)
-        .compose(eventPayload -> new UpdateInstanceEventHandler(instanceUpdateDelegate, context).handle(eventPayload)
+        .compose(eventPayload -> new UpdateInstanceEventHandler(instanceUpdateDelegate, context, precedingSucceedingTitlesHelper).handle(eventPayload)
             .compose(ar -> sendEvent(eventPayload, QM_INVENTORY_INSTANCE_UPDATED, params))
             .recover(throwable -> {
               eventPayload.put("ERROR", throwable.getMessage());
