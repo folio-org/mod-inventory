@@ -22,7 +22,6 @@ public class UpdateInstanceEventHandler {
   private static final Logger LOGGER = LogManager.getLogger(UpdateInstanceEventHandler.class);
 
   private static final String MARC_KEY = "MARC_BIB";
-  private static final String USER_CONTEXT_KEY = "USER_CONTEXT";
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
 
