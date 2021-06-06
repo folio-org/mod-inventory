@@ -56,6 +56,7 @@ import org.folio.rest.jaxrs.model.Record;
 public class QuickMarcKafkaHandlerTest {
 
   private static final String TENANT_ID = "test";
+  private static final String OKAPI_URL = "http://localhost";
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/rules.json";
   private static final String RECORD_PATH = "src/test/resources/handlers/record.json";
   private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
@@ -114,7 +115,9 @@ public class QuickMarcKafkaHandlerTest {
 
     handler = new QuickMarcKafkaHandler(vertx, mockedStorage, 100, kafkaConfig, kafkaInternalCache);
 
-    when(kafkaRecord.headers()).thenReturn(List.of(KafkaHeader.header(XOkapiHeaders.TENANT.toLowerCase(), TENANT_ID)));
+    when(kafkaRecord.headers()).thenReturn(List.of(
+      KafkaHeader.header(XOkapiHeaders.TENANT.toLowerCase(), TENANT_ID),
+      KafkaHeader.header(XOkapiHeaders.URL.toLowerCase(), OKAPI_URL)));
   }
 
   @Test
