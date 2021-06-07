@@ -5,6 +5,7 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.json.JsonObject;
 
 import org.apache.logging.log4j.LogManager;
@@ -57,6 +58,7 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
 
   private static final long DELAY_TIME_BETWEEN_EVENTS_CLEANUP_VALUE_MILLIS = 3600000;
   private static final int EVENT_TIMEOUT_VALUE_HOURS = 3;
+  private static final int DEFAULT_HTTP_TIMEOUT_IN_MILLISECONDS = 3000;
 
   private static final List<DataImportEventTypes> EVENT_TYPES = List.of(DI_SRS_MARC_BIB_RECORD_CREATED,
     DI_SRS_MARC_BIB_RECORD_MODIFIED, DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING,
@@ -86,7 +88,8 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
     LOGGER.info(format("kafkaConfig: %s", kafkaConfig));
     EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, maxDistributionNumber);
 
-    HttpClient client = vertx.createHttpClient();
+    HttpClientOptions params = new HttpClientOptions().setConnectTimeout(DEFAULT_HTTP_TIMEOUT_IN_MILLISECONDS);
+    HttpClient client = vertx.createHttpClient(params);
     Storage storage = Storage.basedUpon(vertx, config, client);
 
     KafkaInternalCache kafkaInternalCache = KafkaInternalCache.builder()
