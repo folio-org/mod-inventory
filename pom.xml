@@ -16,6 +16,11 @@
       <name>FOLIO Maven repository</name>
       <url>https://repository.folio.org/repository/maven-folio</url>
     </repository>
+    <repository>
+      <id>indexdata</id>
+      <name>Indexdata Maven repository</name>
+      <url>https://maven.indexdata.com</url>
+    </repository>
   </repositories>
 
   <dependencyManagement>
