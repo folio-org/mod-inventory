@@ -1,5 +1,6 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import io.vertx.core.Future;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
@@ -9,6 +10,7 @@ import org.folio.MappingProfile;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
+import org.folio.inventory.domain.instances.Instance;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.EntityType;
@@ -17,6 +19,7 @@ import org.folio.rest.jaxrs.model.Record;
 
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import static java.util.Objects.isNull;
 import static org.apache.commons.lang3.StringUtils.isBlank;
@@ -34,9 +37,11 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
 
   private final InstanceUpdateDelegate instanceUpdateDelegate;
+  private PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
 
-  public MarcBibModifiedPostProcessingEventHandler(InstanceUpdateDelegate updateInstanceDelegate) {
+  public MarcBibModifiedPostProcessingEventHandler(InstanceUpdateDelegate updateInstanceDelegate, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper) {
     this.instanceUpdateDelegate = updateInstanceDelegate;
+    this.precedingSucceedingTitlesHelper = precedingSucceedingTitlesHelper;
   }
 
   @Override
@@ -61,10 +66,18 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
 
       record.setExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId));
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
-      instanceUpdateDelegate.handle(dataImportEventPayload.getContext(), record, context)
+      Future<Instance> instanceUpdateFuture = instanceUpdateDelegate.handle(dataImportEventPayload.getContext(), record, context);
+
+      instanceUpdateFuture
+        .compose(updatedInstance -> precedingSucceedingTitlesHelper.getExistingPrecedingSucceedingTitles(updatedInstance, context))
+        .map(precedingSucceedingTitles -> precedingSucceedingTitles.stream()
+          .map(titleJson -> titleJson.getString("id"))
+          .collect(Collectors.toSet()))
+        .compose(precedingSucceedingTitles -> precedingSucceedingTitlesHelper.deletePrecedingSucceedingTitles(precedingSucceedingTitles, context))
+        .compose(ar -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(instanceUpdateFuture.result(), context))
         .onComplete(updateAr -> {
           if (updateAr.succeeded()) {
-            dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(updateAr.result()));
+            dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(instanceUpdateFuture.result()));
             future.complete(dataImportEventPayload);
           } else {
             LOGGER.error("Error updating inventory instance", updateAr.cause());

@@ -128,9 +128,8 @@ public class ReplaceInstanceEventHandlerTest {
     MockitoAnnotations.initMocks(this);
     MappingManager.clearReaderFactories();
 
-    // webClient can be null as the factory method used for the client does not use it
-    replaceInstanceEventHandler = new ReplaceInstanceEventHandler(storage, null,
-      ((webClient, context) -> mockedClient));
+    replaceInstanceEventHandler = new ReplaceInstanceEventHandler(storage,
+      new PrecedingSucceedingTitlesHelper(ctxt -> mockedClient));
 
     mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
 
