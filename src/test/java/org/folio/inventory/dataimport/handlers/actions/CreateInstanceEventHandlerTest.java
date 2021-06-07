@@ -127,9 +127,8 @@ public class CreateInstanceEventHandlerTest {
     MockitoAnnotations.initMocks(this);
     MappingManager.clearReaderFactories();
 
-    // webClient can be null as the factory method used for the client does not use it
-    createInstanceEventHandler = new CreateInstanceEventHandler(storage, null,
-      ((webClient, context) -> mockedClient));
+    createInstanceEventHandler = new CreateInstanceEventHandler(storage,
+      new PrecedingSucceedingTitlesHelper(context -> mockedClient));
 
     mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
 

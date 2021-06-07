@@ -82,7 +82,6 @@ public class InstanceUpdateDelegate {
     }
   }
 
-
   private Future<Instance> updateInstanceInStorage(Instance instance, InstanceCollection instanceCollection) {
     Promise<Instance> promise = Promise.promise();
     instanceCollection.update(instance, success -> promise.complete(instance),

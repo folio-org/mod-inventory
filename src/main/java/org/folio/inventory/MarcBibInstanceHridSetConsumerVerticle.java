@@ -4,7 +4,6 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.dataimport.consumers.MarcBibInstanceHridSetKafkaHandler;
@@ -20,7 +19,6 @@ import org.folio.kafka.cache.util.CacheUtil;
 import org.folio.util.pubsub.PubSubClientUtils;
 
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_INSTANCE_HRID_SET;
-
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_PORT;

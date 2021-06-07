@@ -18,6 +18,7 @@ import org.folio.inventory.dataimport.handlers.actions.CreateInstanceEventHandle
 import org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.actions.MarcBibModifiedPostProcessingEventHandler;
+import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
 import org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.UpdateHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.UpdateInstanceEventHandler;
@@ -49,13 +50,14 @@ public class EventHandlers {
   private static final int DEFAULT_HTTP_TIMEOUT_IN_MILLISECONDS = 3000;
 
   private final Storage storage;
+  private final HttpClient client;
 
   public EventHandlers(final Storage storage) {
 
     Vertx vertx = Vertx.vertx();
     this.storage = storage;
     HttpClientOptions params = new HttpClientOptions().setConnectTimeout(DEFAULT_HTTP_TIMEOUT_IN_MILLISECONDS);
-    HttpClient client = vertx.createHttpClient(params);
+    this.client = vertx.createHttpClient(params);
     MatchValueLoaderFactory.register(new InstanceLoader(storage, vertx));
     MatchValueLoaderFactory.register(new ItemLoader(storage, vertx));
     MatchValueLoaderFactory.register(new HoldingLoader(storage, vertx));
@@ -68,16 +70,17 @@ public class EventHandlers {
     MappingManager.registerWriterFactory(new HoldingWriterFactory());
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
 
+    PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper = new PrecedingSucceedingTitlesHelper(WebClient.wrap(client));
     EventManager.registerEventHandler(new MatchInstanceEventHandler());
     EventManager.registerEventHandler(new MatchItemEventHandler());
     EventManager.registerEventHandler(new MatchHoldingEventHandler());
     EventManager.registerEventHandler(new CreateItemEventHandler(storage));
     EventManager.registerEventHandler(new CreateHoldingEventHandler(storage));
-    EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, WebClient.wrap(client)));
+    EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, precedingSucceedingTitlesHelper));
     EventManager.registerEventHandler(new UpdateItemEventHandler(storage));
     EventManager.registerEventHandler(new UpdateHoldingEventHandler(storage));
-    EventManager.registerEventHandler(new ReplaceInstanceEventHandler(storage, WebClient.wrap(client)));
-    EventManager.registerEventHandler(new MarcBibModifiedPostProcessingEventHandler(new InstanceUpdateDelegate(storage)));
+    EventManager.registerEventHandler(new ReplaceInstanceEventHandler(storage, precedingSucceedingTitlesHelper));
+    EventManager.registerEventHandler(new MarcBibModifiedPostProcessingEventHandler(new InstanceUpdateDelegate(storage), precedingSucceedingTitlesHelper));
   }
 
   public void register(Router router) {
@@ -91,7 +94,8 @@ public class EventHandlers {
     try {
       HashMap<String, String> eventPayload = ObjectMapperTool.getMapper().readValue(ZIPArchiver.unzip(routingContext.getBodyAsString()), HashMap.class);
       InstanceUpdateDelegate updateInstanceDelegate = new InstanceUpdateDelegate(storage);
-      new UpdateInstanceEventHandler(updateInstanceDelegate, new WebContext(routingContext)).handle(eventPayload, getOkapiHeaders(routingContext), routingContext.vertx());
+      UpdateInstanceEventHandler updateInstanceEventHandler = new UpdateInstanceEventHandler(updateInstanceDelegate, new WebContext(routingContext), new PrecedingSucceedingTitlesHelper(WebClient.wrap(client)));
+      updateInstanceEventHandler.handle(eventPayload, getOkapiHeaders(routingContext), routingContext.vertx());
       SuccessResponse.noContent(routingContext.response());
     } catch (Exception e) {
       ServerErrorResponse.internalError(routingContext.response(), e);

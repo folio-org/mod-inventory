@@ -1,5 +1,6 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
@@ -17,6 +18,11 @@ import java.util.concurrent.CompletableFuture;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.inventory.dataimport.util.EventHandlingUtil.sendEventWithPayload;
 
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+
 public class UpdateInstanceEventHandler {
 
   private static final Logger LOGGER = LogManager.getLogger(UpdateInstanceEventHandler.class);
@@ -31,10 +37,13 @@ public class UpdateInstanceEventHandler {
 
   private final Context context;
   private final InstanceUpdateDelegate instanceUpdateDelegate;
+  private final PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
 
-  public UpdateInstanceEventHandler(InstanceUpdateDelegate updateInstanceDelegate, Context context) {
+  public UpdateInstanceEventHandler(InstanceUpdateDelegate updateInstanceDelegate, Context context,
+                                    PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper) {
     this.context = context;
     this.instanceUpdateDelegate = updateInstanceDelegate;
+    this.precedingSucceedingTitlesHelper = precedingSucceedingTitlesHelper;
   }
 
   public CompletableFuture<Instance> handle(Map<String, String> eventPayload, Map<String, String> requestHeaders, Vertx vertx) {
@@ -50,13 +59,19 @@ public class UpdateInstanceEventHandler {
       var userContext = new JsonObject(eventPayload.get(USER_CONTEXT_KEY));
 
       Record marcRecord = new JsonObject(eventPayload.get(MARC_KEY)).mapTo(Record.class);
-      instanceUpdateDelegate.handle(eventPayload, marcRecord, getUpdateContext(userContext))
+      Future<Instance> instanceUpdateFuture = instanceUpdateDelegate.handle(eventPayload, marcRecord, getUpdateContext(userContext));
+
+      instanceUpdateFuture
+        .compose(updatedInstance -> precedingSucceedingTitlesHelper.getExistingPrecedingSucceedingTitles(updatedInstance, context))
+        .map(UpdateInstanceEventHandler::retrieveTitlesIds)
+        .compose(titlesIds -> precedingSucceedingTitlesHelper.deletePrecedingSucceedingTitles(titlesIds, context))
+        .compose(ar -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(instanceUpdateFuture.result(), context))
         .onComplete(ar -> {
           if (isEmpty(eventPayload.get((DI_INDICATOR)))) {
             OkapiConnectionParams params = new OkapiConnectionParams(requestHeaders, vertx);
             if (ar.succeeded()) {
               sendEventWithPayload(Json.encode(eventPayload), "QM_INVENTORY_INSTANCE_UPDATED", params)
-                .onComplete(v -> future.complete(ar.result()));
+                .onComplete(v -> future.complete(instanceUpdateFuture.result()));
             } else {
               sendEventWithPayload(Json.encode(eventPayload), "QM_ERROR", params)
                 .onComplete(v -> future.completeExceptionally(ar.cause()));
@@ -92,5 +107,11 @@ public class UpdateInstanceEventHandler {
         return userContext.getString(USER_ID_KEY);
       }
     };
+  }
+
+  private static Set<String> retrieveTitlesIds(List<JsonObject> precedingSucceedingTitles) {
+    return precedingSucceedingTitles.stream()
+      .map(titleJson -> titleJson.getString("id"))
+      .collect(Collectors.toSet());
   }
 }
