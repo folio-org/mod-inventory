@@ -52,7 +52,7 @@ public class IntellectualItemStatusValidatorTest {
     final var targetValidator = validator.getValidator(INTELLECTUAL_ITEM);
     assertThat(targetValidator).isNotNull();
 
-    final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
+    final var item = new Item(null, null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
     assertThat(item).isNotNull();
 
     final var validationFuture = targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item);
@@ -69,7 +69,7 @@ public class IntellectualItemStatusValidatorTest {
   @Test
   public void itemCannotBeMarkedAsAsIntellectualItemWhenNotInAcceptableSourceStatus(String sourceStatus) {
     final var targetValidator = validator.getValidator(INTELLECTUAL_ITEM);
-    final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
+    final var item = new Item(null, null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
     final var validationFuture = targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item);
 
     Exception e = assertThrows(

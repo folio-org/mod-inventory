@@ -338,7 +338,7 @@ public class MatchInstanceEventHandlerUnitTest {
   }
 
   private Instance createInstance() {
-    return new Instance(INSTANCE_ID, INSTANCE_HRID, "MARC", "Wonderful", "12334");
+    return new Instance(INSTANCE_ID, "5", INSTANCE_HRID, "MARC", "Wonderful", "12334");
   }
 
 }

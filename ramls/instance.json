@@ -11,6 +11,10 @@
       "type": "string",
       "description": "The system assigned unique ID of the instance record"
     },
+    "_version": {
+      "type": "integer",
+      "description": "Record version for optimistic locking"
+    },
     "hrid": {
       "type": "string",
       "description": "The human readable ID, also called eye readable ID. A system-assigned sequential ID which maps to the Instance ID"

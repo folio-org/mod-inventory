@@ -26,6 +26,7 @@ import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
 
 public class Instance {
   // JSON property names
+  public static final String VERSION_KEY = "_version";
   public static final String HRID_KEY = "hrid";
   public static final String MATCH_KEY_KEY = "matchKey";
   public static final String SOURCE_KEY = "source";
@@ -67,6 +68,7 @@ public class Instance {
   public static final String NATURE_OF_CONTENT_TERM_IDS_KEY = "natureOfContentTermIds";
 
   private final String id;
+  private final String version;
   private final String hrid;
   private String matchKey;
   private final String source;
@@ -112,12 +114,14 @@ public class Instance {
 
   public Instance(
     String id,
+    String version,
     String hrid,
     String source,
     String title,
     String instanceTypeId) {
 
     this.id = id;
+    this.version = version;
     this.hrid = hrid;
     this.source = source;
     this.title = title;
@@ -135,6 +139,7 @@ public class Instance {
 
     return new Instance(
       instanceJson.getString("id"),
+      instanceJson.getString(VERSION_KEY),
       instanceJson.getString("hrid"),
       instanceJson.getString(SOURCE_KEY),
       instanceJson.getString(TITLE_KEY),
@@ -185,6 +190,7 @@ public class Instance {
     json.put("id", getId() != null
       ? getId()
       : UUID.randomUUID().toString());
+    putIfNotNull(json, VERSION_KEY, version);
     json.put(HRID_KEY, hrid);
     if (source != null) json.put(SOURCE_KEY, source);
     json.put(MATCH_KEY_KEY, matchKey);
@@ -239,6 +245,7 @@ public class Instance {
     }
 
     json.put("id", getId());
+    putIfNotNull(json, VERSION_KEY, version);
     json.put("hrid", getHrid());
     json.put(SOURCE_KEY, getSource());
     json.put(TITLE_KEY, getTitle());
@@ -579,8 +586,12 @@ public class Instance {
     return this.metadata != null;
   }
 
-    public String getId() {
+  public String getId() {
     return id;
+  }
+
+  public String getVersion() {
+    return version;
   }
 
   public String getHrid() {
@@ -737,7 +748,7 @@ public class Instance {
   }
 
   public Instance copyWithNewId(String newId) {
-    return new Instance(newId, null, this.source, this.title, this.instanceTypeId)
+    return new Instance(newId, null, null, this.source, this.title, this.instanceTypeId)
             .setIndexTitle(indexTitle)
             .setAlternativeTitles(alternativeTitles)
             .setEditions(editions)
@@ -769,7 +780,7 @@ public class Instance {
   }
 
   public Instance copyInstance() {
-    return new Instance(this.id, this.hrid, this.source, this.title, this.instanceTypeId)
+    return new Instance(this.id, this.version, this.hrid, this.source, this.title, this.instanceTypeId)
             .setIndexTitle(indexTitle)
             .setAlternativeTitles(alternativeTitles)
             .setEditions(editions)
@@ -851,19 +862,19 @@ public class Instance {
     }
   }
 
-  private void putIfNotNull(JsonObject target, String propertyName, String value) {
+  private static void putIfNotNull(JsonObject target, String propertyName, String value) {
     if (value != null) {
       target.put(propertyName, value);
     }
   }
 
-  private void putIfNotNull(JsonObject target, String propertyName, List<String> value) {
+  private static void putIfNotNull(JsonObject target, String propertyName, List<String> value) {
     if (value != null) {
       target.put(propertyName, value);
     }
   }
 
-  private void putIfNotNull(JsonObject target, String propertyName, Object value) {
+  private static void putIfNotNull(JsonObject target, String propertyName, Object value) {
     if (value != null) {
       if (value instanceof List) {
         target.put(propertyName, value);

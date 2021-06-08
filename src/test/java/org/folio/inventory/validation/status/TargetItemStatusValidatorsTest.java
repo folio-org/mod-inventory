@@ -54,7 +54,7 @@ public class TargetItemStatusValidatorsTest {
     System.out.println("Allowed statuses for:"+statusValidator.getItemStatusName());
     allowedStatuses.stream().forEach(x -> {
       System.out.println("\t\""+x+"\",");
-      Item item = new Item(null, null, new Status(x), null, null, null);
+      Item item = new Item(null, null, null, new Status(x), null, null, null);
       assertThat(statusValidator.isItemAllowedToMark(item)).isTrue();
     });
 
@@ -65,7 +65,7 @@ public class TargetItemStatusValidatorsTest {
     System.out.println("Disallowed statuses for:"+statusValidator.getItemStatusName());
     disallowedStatuses.stream().forEach(x -> {
       System.out.println("\t\""+x+"\",");
-      Item item = new Item(null, null, new Status(x), null, null, null);
+      Item item = new Item(null, null, null, new Status(x), null, null, null);
       assertThat(statusValidator.isItemAllowedToMark(item)).isFalse();
     });
   }
@@ -104,7 +104,7 @@ public class TargetItemStatusValidatorsTest {
   public void modinv_366_transitions_scenario_1(String targetItemStatus) {
     final var initialItemStatusName = ItemStatusName.LONG_MISSING;
     var validator = targetItemStatusValidators.getValidator(ItemStatusName.forName(targetItemStatus));
-    Item item = new Item(null, null, new Status(initialItemStatusName), null, null, null);
+    Item item = new Item(null, null, null, new Status(initialItemStatusName), null, null, null);
     System.out.println("Transition "+initialItemStatusName+" -> "+targetItemStatus+" is "+ (validator.isItemAllowedToMark(item) ? "Allowed" : "Disallowed"));
     assertThat(validator.isItemAllowedToMark(item)).isTrue();
   }
@@ -124,7 +124,7 @@ public class TargetItemStatusValidatorsTest {
   public void modinv_366_transitions_scenario_2(String targetItemStatus) {
     final var initialItemStatusName = ItemStatusName.IN_PROCESS_NON_REQUESTABLE;
     var validator = targetItemStatusValidators.getValidator(ItemStatusName.forName(targetItemStatus));
-    Item item = new Item(null, null, new Status(initialItemStatusName), null, null, null);
+    Item item = new Item(null, null, null, new Status(initialItemStatusName), null, null, null);
     System.out.println("Transition "+initialItemStatusName+" -> "+targetItemStatus+" is "+ (validator.isItemAllowedToMark(item) ? "Allowed" : "Disallowed"));
     assertThat(validator.isItemAllowedToMark(item)).isTrue();
   }
@@ -144,7 +144,7 @@ public class TargetItemStatusValidatorsTest {
   public void modinv_366_transitions_scenario_3(String targetItemStatus) {
     final var initialItemStatusName = ItemStatusName.UNAVAILABLE;
     var validator = targetItemStatusValidators.getValidator(ItemStatusName.forName(targetItemStatus));
-    Item item = new Item(null, null, new Status(initialItemStatusName), null, null, null);
+    Item item = new Item(null, null, null, new Status(initialItemStatusName), null, null, null);
     System.out.println("Transition "+initialItemStatusName+" -> "+targetItemStatus+" is "+ (validator.isItemAllowedToMark(item) ? "Allowed" : "Disallowed"));
     assertThat(validator.isItemAllowedToMark(item)).isTrue();
   }
@@ -164,7 +164,7 @@ public class TargetItemStatusValidatorsTest {
   public void modinv_366_transitions_scenario_4(String targetItemStatus) {
     final var initialItemStatusName = ItemStatusName.UNKNOWN;
     var validator = targetItemStatusValidators.getValidator(ItemStatusName.forName(targetItemStatus));
-    Item item = new Item(null, null, new Status(initialItemStatusName), null, null, null);
+    Item item = new Item(null, null, null, new Status(initialItemStatusName), null, null, null);
     System.out.println("Transition "+initialItemStatusName+" -> "+targetItemStatus+" is "+ (validator.isItemAllowedToMark(item) ? "Allowed" : "Disallowed"));
     assertThat(validator.isItemAllowedToMark(item)).isTrue();
   }
@@ -184,7 +184,7 @@ public class TargetItemStatusValidatorsTest {
   public void modinv_366_transitions_scenario_5(String targetItemStatus) {
     final var initialItemStatusName = ItemStatusName.INTELLECTUAL_ITEM;
     var validator = targetItemStatusValidators.getValidator(ItemStatusName.forName(targetItemStatus));
-    Item item = new Item(null, null, new Status(initialItemStatusName), null, null, null);
+    Item item = new Item(null, null, null, new Status(initialItemStatusName), null, null, null);
     System.out.println("Transition "+initialItemStatusName+" -> "+targetItemStatus+" is "+ (validator.isItemAllowedToMark(item) ? "Allowed" : "Disallowed"));
     assertThat(validator.isItemAllowedToMark(item)).isTrue();
   }
@@ -204,7 +204,7 @@ public class TargetItemStatusValidatorsTest {
   public void modinv_366_transitions_scenario_6(String targetItemStatus) {
     final var initialItemStatusName = ItemStatusName.RESTRICTED;
     var validator = targetItemStatusValidators.getValidator(ItemStatusName.forName(targetItemStatus));
-    Item item = new Item(null, null, new Status(initialItemStatusName), null, null, null);
+    Item item = new Item(null, null, null, new Status(initialItemStatusName), null, null, null);
     System.out.println("Transition "+initialItemStatusName+" -> "+targetItemStatus+" is "+ (validator.isItemAllowedToMark(item) ? "Allowed" : "Disallowed"));
     assertThat(validator.isItemAllowedToMark(item)).isTrue();
   }
@@ -224,7 +224,7 @@ public class TargetItemStatusValidatorsTest {
   public void uiin_1305_transitions_scenario_2(String targetItemStatus) {
     final var initialItemStatusName = ItemStatusName.IN_PROCESS_NON_REQUESTABLE;
     var validator = targetItemStatusValidators.getValidator(ItemStatusName.forName(targetItemStatus));
-    Item item = new Item(null, null, new Status(initialItemStatusName), null, null, null);
+    Item item = new Item(null, null, null, new Status(initialItemStatusName), null, null, null);
     System.out.println("Transition "+initialItemStatusName+" -> "+targetItemStatus+" is "+ (validator.isItemAllowedToMark(item) ? "Allowed" : "Disallowed"));
     assertThat(validator.isItemAllowedToMark(item)).isTrue();
   }
@@ -244,7 +244,7 @@ public class TargetItemStatusValidatorsTest {
   public void uiin_1305_transitions_scenario_3(String targetItemStatus) {
     final var initialItemStatusName = ItemStatusName.UNAVAILABLE;
     var validator = targetItemStatusValidators.getValidator(ItemStatusName.forName(targetItemStatus));
-    Item item = new Item(null, null, new Status(initialItemStatusName), null, null, null);
+    Item item = new Item(null, null, null, new Status(initialItemStatusName), null, null, null);
     System.out.println("Transition "+initialItemStatusName+" -> "+targetItemStatus+" is "+ (validator.isItemAllowedToMark(item) ? "Allowed" : "Disallowed"));
     assertThat(validator.isItemAllowedToMark(item)).isTrue();
   }
@@ -264,7 +264,7 @@ public class TargetItemStatusValidatorsTest {
   public void uiin_1305_transitions_scenario_4(String targetItemStatus) {
     final var initialItemStatusName = ItemStatusName.UNKNOWN;
     var validator = targetItemStatusValidators.getValidator(ItemStatusName.forName(targetItemStatus));
-    Item item = new Item(null, null, new Status(initialItemStatusName), null, null, null);
+    Item item = new Item(null, null, null, new Status(initialItemStatusName), null, null, null);
     System.out.println("Transition "+initialItemStatusName+" -> "+targetItemStatus+" is "+ (validator.isItemAllowedToMark(item) ? "Allowed" : "Disallowed"));
     assertThat(validator.isItemAllowedToMark(item)).isTrue();
   }
@@ -284,7 +284,7 @@ public class TargetItemStatusValidatorsTest {
   public void uiin_1305_transitions_scenario_5(String targetItemStatus) {
     final var initialItemStatusName = ItemStatusName.INTELLECTUAL_ITEM;
     var validator = targetItemStatusValidators.getValidator(ItemStatusName.forName(targetItemStatus));
-    Item item = new Item(null, null, new Status(initialItemStatusName), null, null, null);
+    Item item = new Item(null, null, null, new Status(initialItemStatusName), null, null, null);
     System.out.println("Transition "+initialItemStatusName+" -> "+targetItemStatus+" is "+ (validator.isItemAllowedToMark(item) ? "Allowed" : "Disallowed"));
     assertThat(validator.isItemAllowedToMark(item)).isTrue();
   }
@@ -304,7 +304,7 @@ public class TargetItemStatusValidatorsTest {
   public void uiin_1305_transitions_scenario_6(String targetItemStatus) {
     final var initialItemStatusName = ItemStatusName.RESTRICTED;
     var validator = targetItemStatusValidators.getValidator(ItemStatusName.forName(targetItemStatus));
-    Item item = new Item(null, null, new Status(initialItemStatusName), null, null, null);
+    Item item = new Item(null, null, null, new Status(initialItemStatusName), null, null, null);
     System.out.println("Transition "+initialItemStatusName+" -> "+targetItemStatus+" is "+ (validator.isItemAllowedToMark(item) ? "Allowed" : "Disallowed"));
     assertThat(validator.isItemAllowedToMark(item)).isTrue();
   }

@@ -10,6 +10,7 @@ import io.vertx.core.json.JsonObject;
 
 public class Item {
 
+  public static final String VERSION_KEY = "_version";
   public static final String HRID_KEY = "hrid";
   public static final String FORMER_IDS_KEY = "formerIds";
   public static final String DISCOVERY_SUPPRESS_KEY = "discoverySuppress";
@@ -43,6 +44,7 @@ public class Item {
   public static final String EFFECTIVE_SHELVING_ORDER_KEY = "effectiveShelvingOrder";
 
   public final String id;
+  private final String version;
   private String hrid;
   private Boolean discoverySuppress;
   private List<String> formerIds = new ArrayList<>();
@@ -90,6 +92,7 @@ public class Item {
   private final JsonObject metadata;
 
   public Item(String id,
+              String version,
               String holdingId,
               Status status,
               String materialTypeId,
@@ -97,6 +100,7 @@ public class Item {
               JsonObject metadata) {
 
     this.id = id;
+    this.version = version;
     this.holdingId = holdingId;
     this.status = Objects.requireNonNull(status, "Status is required");
     this.materialTypeId = materialTypeId;
@@ -106,6 +110,10 @@ public class Item {
 
   public String getId() {
     return id;
+  }
+
+  public String getVersion() {
+    return version;
   }
 
   public String getEffectiveShelvingOrder() {
@@ -460,7 +468,7 @@ public class Item {
   }
 
   public Item copyWithNewId(String newId) {
-    return new Item(newId,
+    return new Item(newId, null,
       holdingId, this.status, this.materialTypeId,
       this.permanentLoanTypeId, this.metadata)
             .withHrid(this.hrid)
@@ -497,7 +505,7 @@ public class Item {
   }
 
   public Item changeStatus(ItemStatusName newStatus) {
-    return new Item(this.id,
+    return new Item(this.id, this.version,
       holdingId, new Status(newStatus), this.materialTypeId,
       this.permanentLoanTypeId, this.metadata)
       .withHrid(this.hrid)
