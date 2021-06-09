@@ -7,8 +7,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
-import java.util.Optional;
-
 import io.vertx.core.json.JsonObject;
 
 public class JsonHelper {
