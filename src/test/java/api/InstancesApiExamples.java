@@ -51,6 +51,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.folio.inventory.domain.instances.Instance.PUBLICATION_PERIOD_KEY;
 import static org.folio.inventory.domain.instances.Instance.TAGS_KEY;
 import static org.folio.inventory.domain.instances.Instance.TAG_LIST_KEY;
+import static org.folio.inventory.domain.instances.PublicationPeriod.publicationPeriodToJson;
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.CoreMatchers.is;
@@ -93,7 +94,7 @@ public class InstancesApiExamples extends ApiTests {
       .put("source", "Local")
       .put("instanceTypeId", ApiTestSuite.getTextInstanceType())
       .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameOne)))
-      .put(PUBLICATION_PERIOD_KEY, new PublicationPeriod(1000, 2000).toJson())
+      .put(PUBLICATION_PERIOD_KEY, publicationPeriodToJson(new PublicationPeriod(1000, 2000)))
       .put("natureOfContentTermIds",
         new JsonArray(asList(
           ApiTestSuite.getAudiobookNatureOfContentTermId(),
@@ -410,14 +411,14 @@ public class InstancesApiExamples extends ApiTests {
     JsonObject smallAngryPlanet = smallAngryPlanet(id);
     smallAngryPlanet.put("natureOfContentTermIds",
       new JsonArray().add(ApiTestSuite.getBibliographyNatureOfContentTermId()));
-    smallAngryPlanet.put(PUBLICATION_PERIOD_KEY, new PublicationPeriod(1000, 2000).toJson());
+    smallAngryPlanet.put(PUBLICATION_PERIOD_KEY, publicationPeriodToJson(new PublicationPeriod(1000, 2000)));
 
     JsonObject newInstance = createInstance(smallAngryPlanet);
 
     JsonObject updateInstanceRequest = newInstance.copy()
       .put("title", "The Long Way to a Small, Angry Planet")
       .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameTwo)))
-      .put(PUBLICATION_PERIOD_KEY, new PublicationPeriod(2000, 2012).toJson())
+      .put(PUBLICATION_PERIOD_KEY, publicationPeriodToJson(new PublicationPeriod(2000, 2012)))
       .put("natureOfContentTermIds",
         new JsonArray().add(ApiTestSuite.getAudiobookNatureOfContentTermId()));
 

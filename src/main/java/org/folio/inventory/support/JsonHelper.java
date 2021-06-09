@@ -38,15 +38,6 @@ public class JsonHelper {
     }
   }
 
-  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-  public static <T> void includeIfPresent(
-    JsonObject representation, String propertyName, Optional<T> value) {
-
-    if (representation != null && isNotBlank(propertyName) && value.isPresent()) {
-      representation.put(propertyName, value.get());
-    }
-  }
-
   public JsonObject getJsonFileAsJsonObject(String filePath) throws IOException {
     InputStream is = this.getClass().getResourceAsStream(filePath);
     return new JsonObject(readFile(is));

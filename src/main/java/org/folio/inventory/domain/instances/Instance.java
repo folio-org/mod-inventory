@@ -1,5 +1,13 @@
 package org.folio.inventory.domain.instances;
 
+import static java.lang.String.format;
+import static org.folio.inventory.domain.instances.PublicationPeriod.publicationPeriodFromJson;
+import static org.folio.inventory.domain.instances.PublicationPeriod.publicationPeriodToJson;
+import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
+
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -8,10 +16,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -20,12 +24,6 @@ import org.folio.inventory.domain.Metadata;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 import org.folio.inventory.support.JsonArrayHelper;
-
-import static java.lang.String.format;
-import static java.util.Optional.ofNullable;
-import static org.folio.inventory.domain.instances.PublicationPeriod.publicationPeriodFromJson;
-import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
-import static org.folio.inventory.support.JsonHelper.includeIfPresent;
 
 public class Instance {
   // JSON property names
@@ -223,8 +221,7 @@ public class Instance {
     json.put(STATUS_UPDATED_DATE_KEY, statusUpdatedDate);
     json.put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray(getTags() == null ? Collections.emptyList() : getTags())));
     json.put(NATURE_OF_CONTENT_TERM_IDS_KEY, natureOfContentTermIds);
-    includeIfPresent(json, PUBLICATION_PERIOD_KEY,
-      ofNullable(publicationPeriod).map(PublicationPeriod::toJson));
+    putIfNotNull(json, PUBLICATION_PERIOD_KEY, publicationPeriodToJson(publicationPeriod));
 
     return json;
   }
@@ -283,7 +280,7 @@ public class Instance {
     putIfNotNull(json, METADATA_KEY, getMetadata());
     putIfNotNull(json, TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray(getTags())));
     putIfNotNull(json, NATURE_OF_CONTENT_TERM_IDS_KEY, getNatureOfContentTermIds());
-    includeIfPresent(json, PUBLICATION_PERIOD_KEY, ofNullable(publicationPeriod).map(PublicationPeriod::toJson));
+    putIfNotNull(json, PUBLICATION_PERIOD_KEY, publicationPeriodToJson(publicationPeriod));
 
     if (precedingTitles != null) {
       JsonArray precedingTitlesJsonArray = new JsonArray();

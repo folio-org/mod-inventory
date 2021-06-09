@@ -22,10 +22,14 @@ public class PublicationPeriod {
     return end;
   }
 
-  public JsonObject toJson() {
+  public static JsonObject publicationPeriodToJson(PublicationPeriod period) {
+    if (period == null || (period.getStart() == null && period.getEnd() == null)) {
+      return null;
+    }
+
     var json = new JsonObject();
-    includeIfPresent(json, "start", start);
-    includeIfPresent(json, "end", end);
+    includeIfPresent(json, "start", period.getStart());
+    includeIfPresent(json, "end", period.getEnd());
 
     return json;
   }
