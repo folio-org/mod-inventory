@@ -16,11 +16,11 @@ import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
 import org.apache.http.message.BasicHeader;
 import org.folio.inventory.config.InventoryConfiguration;
 import org.folio.inventory.config.InventoryConfigurationImpl;
+import org.folio.inventory.domain.instances.PublicationPeriod;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.ContentType;
 import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
-import org.folio.inventory.support.http.client.ResponseHandler;
 import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Assert;
@@ -33,9 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static api.support.InstanceSamples.leviathanWakes;
@@ -50,8 +48,10 @@ import static io.vertx.core.http.HttpMethod.POST;
 import static io.vertx.core.http.HttpMethod.PUT;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.folio.inventory.domain.instances.Instance.PUBLICATION_PERIOD_KEY;
 import static org.folio.inventory.domain.instances.Instance.TAGS_KEY;
 import static org.folio.inventory.domain.instances.Instance.TAG_LIST_KEY;
+import static org.folio.inventory.domain.instances.PublicationPeriod.publicationPeriodToJson;
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.CoreMatchers.is;
@@ -94,6 +94,7 @@ public class InstancesApiExamples extends ApiTests {
       .put("source", "Local")
       .put("instanceTypeId", ApiTestSuite.getTextInstanceType())
       .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameOne)))
+      .put(PUBLICATION_PERIOD_KEY, publicationPeriodToJson(new PublicationPeriod(1000, 2000)))
       .put("natureOfContentTermIds",
         new JsonArray(asList(
           ApiTestSuite.getAudiobookNatureOfContentTermId(),
@@ -157,6 +158,10 @@ public class InstancesApiExamples extends ApiTests {
     selfLinkShouldBeReachable(createdInstance);
 
     assertThat(createdInstance.getString("hrid"), notNullValue());
+
+    var publicationPeriod = createdInstance.getJsonObject(PUBLICATION_PERIOD_KEY);
+    assertThat(publicationPeriod.getInteger("start"), is(1000));
+    assertThat(publicationPeriod.getInteger("end"), is(2000));
   }
 
   @Test
@@ -406,12 +411,14 @@ public class InstancesApiExamples extends ApiTests {
     JsonObject smallAngryPlanet = smallAngryPlanet(id);
     smallAngryPlanet.put("natureOfContentTermIds",
       new JsonArray().add(ApiTestSuite.getBibliographyNatureOfContentTermId()));
+    smallAngryPlanet.put(PUBLICATION_PERIOD_KEY, publicationPeriodToJson(new PublicationPeriod(1000, 2000)));
 
     JsonObject newInstance = createInstance(smallAngryPlanet);
 
     JsonObject updateInstanceRequest = newInstance.copy()
       .put("title", "The Long Way to a Small, Angry Planet")
       .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameTwo)))
+      .put(PUBLICATION_PERIOD_KEY, publicationPeriodToJson(new PublicationPeriod(2000, 2012)))
       .put("natureOfContentTermIds",
         new JsonArray().add(ApiTestSuite.getAudiobookNatureOfContentTermId()));
 
@@ -446,6 +453,10 @@ public class InstancesApiExamples extends ApiTests {
 
     selfLinkRespectsWayResourceWasReached(updatedInstance);
     selfLinkShouldBeReachable(updatedInstance);
+
+    var publicationPeriod = updatedInstance.getJsonObject(PUBLICATION_PERIOD_KEY);
+    assertThat(publicationPeriod.getInteger("start"), is(2000));
+    assertThat(publicationPeriod.getInteger("end"), is(2012));
   }
 
   @Test

@@ -1,5 +1,13 @@
 package org.folio.inventory.domain.instances;
 
+import static java.lang.String.format;
+import static org.folio.inventory.domain.instances.PublicationPeriod.publicationPeriodFromJson;
+import static org.folio.inventory.domain.instances.PublicationPeriod.publicationPeriodToJson;
+import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
+
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -8,10 +16,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -20,9 +24,6 @@ import org.folio.inventory.domain.Metadata;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 import org.folio.inventory.support.JsonArrayHelper;
-
-import static java.lang.String.format;
-import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
 
 public class Instance {
   // JSON property names
@@ -65,6 +66,7 @@ public class Instance {
   public static final String TAGS_KEY = "tags";
   public static final String TAG_LIST_KEY = "tagList";
   public static final String NATURE_OF_CONTENT_TERM_IDS_KEY = "natureOfContentTermIds";
+  public static final String PUBLICATION_PERIOD_KEY = "publicationPeriod";
 
   private final String id;
   private final String hrid;
@@ -105,6 +107,7 @@ public class Instance {
   private Metadata metadata = null;
   private List<String> tags;
   private List<String> natureOfContentTermIds = new ArrayList<>();
+  private PublicationPeriod publicationPeriod;
 
   protected static final String INVENTORY_PATH = "/inventory";
   protected static final String INSTANCES_PATH = INVENTORY_PATH + "/instances";
@@ -171,7 +174,8 @@ public class Instance {
       .setStatusId(instanceJson.getString(STATUS_ID_KEY))
       .setStatusUpdatedDate(instanceJson.getString(STATUS_UPDATED_DATE_KEY))
       .setTags(getTags(instanceJson))
-      .setNatureOfContentTermIds(toListOfStrings(instanceJson.getJsonArray(NATURE_OF_CONTENT_TERM_IDS_KEY)));
+      .setNatureOfContentTermIds(toListOfStrings(instanceJson.getJsonArray(NATURE_OF_CONTENT_TERM_IDS_KEY)))
+      .setPublicationPeriod(publicationPeriodFromJson(instanceJson.getJsonObject(PUBLICATION_PERIOD_KEY)));
   }
 
   /**
@@ -217,6 +221,7 @@ public class Instance {
     json.put(STATUS_UPDATED_DATE_KEY, statusUpdatedDate);
     json.put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray(getTags() == null ? Collections.emptyList() : getTags())));
     json.put(NATURE_OF_CONTENT_TERM_IDS_KEY, natureOfContentTermIds);
+    putIfNotNull(json, PUBLICATION_PERIOD_KEY, publicationPeriodToJson(publicationPeriod));
 
     return json;
   }
@@ -275,6 +280,7 @@ public class Instance {
     putIfNotNull(json, METADATA_KEY, getMetadata());
     putIfNotNull(json, TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray(getTags())));
     putIfNotNull(json, NATURE_OF_CONTENT_TERM_IDS_KEY, getNatureOfContentTermIds());
+    putIfNotNull(json, PUBLICATION_PERIOD_KEY, publicationPeriodToJson(publicationPeriod));
 
     if (precedingTitles != null) {
       JsonArray precedingTitlesJsonArray = new JsonArray();
@@ -765,7 +771,8 @@ public class Instance {
             .setStatusUpdatedDate(statusUpdatedDate)
             .setMetadata(metadata)
             .setTags(tags)
-            .setNatureOfContentTermIds(natureOfContentTermIds);
+            .setNatureOfContentTermIds(natureOfContentTermIds)
+            .setPublicationPeriod(publicationPeriod);
   }
 
   public Instance copyInstance() {
@@ -797,7 +804,8 @@ public class Instance {
             .setStatusUpdatedDate(statusUpdatedDate)
             .setMetadata(metadata)
             .setTags(tags)
-            .setNatureOfContentTermIds(natureOfContentTermIds);
+            .setNatureOfContentTermIds(natureOfContentTermIds)
+            .setPublicationPeriod(publicationPeriod);
   }
 
   public Instance addIdentifier(Identifier identifier) {
@@ -831,6 +839,10 @@ public class Instance {
     return copyInstance().setIdentifiers(newIdentifiers);
   }
 
+  public Instance setPublicationPeriod(PublicationPeriod period) {
+    this.publicationPeriod = period;
+    return this;
+  }
 
   @Override
   public String toString() {

@@ -1,11 +1,11 @@
 package org.folio.inventory.support;
 
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-
-import org.apache.commons.lang3.StringUtils;
 
 import io.vertx.core.json.JsonObject;
 
@@ -28,10 +28,10 @@ public class JsonHelper {
     return null;
   }
 
-  public static void includeIfPresent(
-    JsonObject representation, String propertyName, String value) {
+  public static <T> void includeIfPresent(
+    JsonObject representation, String propertyName, T value) {
 
-    if (representation != null && StringUtils.isNotBlank(propertyName) && value != null) {
+    if (representation != null && isNotBlank(propertyName) && value != null) {
       representation.put(propertyName, value);
     }
   }
