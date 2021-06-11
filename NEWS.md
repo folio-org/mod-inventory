@@ -1,4 +1,4 @@
-## 16.4.0 IN-PROGRESS
+## 17.0.0 IN-PROGRESS
 
 * Sets `isBoundWith` flag on Instances, Items (MODINV-388)
 * Provides end-point `/inventory/items-by-holdings-id` (MODINV-418)
