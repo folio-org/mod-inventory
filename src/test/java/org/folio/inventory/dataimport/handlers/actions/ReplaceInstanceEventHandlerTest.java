@@ -15,7 +15,6 @@ import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.InstanceWriterFactory;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
-import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
@@ -150,13 +149,12 @@ public class ReplaceInstanceEventHandlerTest {
       return null;
     }).when(instanceRecordCollection).update(any(), any(Consumer.class), any(Consumer.class));
 
-    doAnswer(invocationOnMock -> completedStage(createdResponse()))
+    doAnswer(invocationOnMock -> completedStage(createResponse(201, null)))
       .when(mockedClient).post(any(URL.class), any(JsonObject.class));
-
-    when(mockedClient.get(anyString()))
-      .thenReturn(CompletableFuture.completedFuture(new Response(200, null, null, null)));
-    when(mockedClient.delete(anyString()))
-      .thenReturn(CompletableFuture.completedFuture(new Response(204, null, null, null)));
+    doAnswer(invocationOnMock -> completedStage(createResponse(200, new JsonObject().encode())))
+      .when(mockedClient).get(anyString());
+    doAnswer(invocationOnMock -> completedStage(createResponse(204, null)))
+      .when(mockedClient).delete(anyString());
   }
 
   @Test
@@ -218,7 +216,8 @@ public class ReplaceInstanceEventHandlerTest {
 
     JsonObject precedingSucceedingTitles = new JsonObject().put(PRECEDING_SUCCEEDING_TITLES_KEY, new JsonArray().add(existingPrecedingTitle));
     when(mockedClient.get(anyString()))
-      .thenReturn(CompletableFuture.completedFuture(new Response(HttpStatus.SC_OK, precedingSucceedingTitles.encode(), null, null)));
+//      .thenReturn(CompletableFuture.completedFuture(new Response(HttpStatus.SC_OK, precedingSucceedingTitles.encode(), null, null)));
+      .thenReturn(CompletableFuture.completedFuture(createResponse(HttpStatus.SC_OK, precedingSucceedingTitles.encode())));
 
     String instanceTypeId = UUID.randomUUID().toString();
     String title = "titleValue";
@@ -485,7 +484,7 @@ public class ReplaceInstanceEventHandlerTest {
     assertEquals(DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING.value(), replaceInstanceEventHandler.getPostProcessingInitializationEventType());
   }
 
-  private Response createdResponse() {
-    return new Response(HttpStatus.SC_CREATED, null, null, null);
+  private Response createResponse(int statusCode, String body) {
+    return new Response(statusCode, body, null, null);
   }
 }
