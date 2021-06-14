@@ -79,7 +79,7 @@ public class ReplaceInstanceEventHandlerTest {
 
   private static final String PARSED_CONTENT = "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"780\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"Houston oil directory\"}]}},{\"785\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"SAIS review of international affairs\"},{\"x\":\"1945-4724\"}]}},{\"500\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Adaptation of Xi xiang ji by Wang Shifu.\"}]}},{\"520\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\"}]}}]}\n";
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/rules.json";
-  public static final String OKAPI_URL = "http://localhost";
+  private static final String OKAPI_URL = "http://localhost";
   private static final String PRECEDING_SUCCEEDING_TITLES_KEY = "precedingSucceedingTitles";
 
   @Mock
@@ -216,7 +216,6 @@ public class ReplaceInstanceEventHandlerTest {
 
     JsonObject precedingSucceedingTitles = new JsonObject().put(PRECEDING_SUCCEEDING_TITLES_KEY, new JsonArray().add(existingPrecedingTitle));
     when(mockedClient.get(anyString()))
-//      .thenReturn(CompletableFuture.completedFuture(new Response(HttpStatus.SC_OK, precedingSucceedingTitles.encode(), null, null)));
       .thenReturn(CompletableFuture.completedFuture(createResponse(HttpStatus.SC_OK, precedingSucceedingTitles.encode())));
 
     String instanceTypeId = UUID.randomUUID().toString();
