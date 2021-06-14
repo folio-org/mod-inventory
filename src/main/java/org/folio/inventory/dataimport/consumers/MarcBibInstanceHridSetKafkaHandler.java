@@ -6,7 +6,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 
-import io.vertx.kafka.client.producer.KafkaHeader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -24,7 +23,6 @@ import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.Record;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static java.lang.String.format;
@@ -36,14 +34,14 @@ import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
 public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<String, String> {
 
   private static final Logger LOGGER = LogManager.getLogger(MarcBibInstanceHridSetKafkaHandler.class);
-  private static final String MARC_KEY = "MARC";
+  private static final String MARC_KEY = "MARC_BIB";
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
   private static final ObjectMapper OBJECT_MAPPER = ObjectMapperTool.getMapper();
   private static final String CORRELATION_ID_HEADER = "correlationId";
 
-  private InstanceUpdateDelegate instanceUpdateDelegate;
-  private KafkaInternalCache kafkaInternalCache;
+  private final InstanceUpdateDelegate instanceUpdateDelegate;
+  private final KafkaInternalCache kafkaInternalCache;
 
   public MarcBibInstanceHridSetKafkaHandler(InstanceUpdateDelegate instanceUpdateDelegate, KafkaInternalCache kafkaInternalCache) {
     this.instanceUpdateDelegate = instanceUpdateDelegate;
@@ -57,6 +55,7 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
       Event event = OBJECT_MAPPER.readValue(record.value(), Event.class);
       if (!kafkaInternalCache.containsByKey(event.getId())) {
         kafkaInternalCache.putToCache(event.getId());
+        @SuppressWarnings("unchecked")
         HashMap<String, String> eventPayload = OBJECT_MAPPER.readValue(ZIPArchiver.unzip(event.getEventPayload()), HashMap.class);
         Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(record.headers());
         String correlationId = headersMap.get(CORRELATION_ID_HEADER);
