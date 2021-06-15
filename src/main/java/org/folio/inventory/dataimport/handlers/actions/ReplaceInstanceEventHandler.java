@@ -27,7 +27,6 @@ import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_CREATED;
 import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
 import static org.folio.inventory.domain.instances.Instance.METADATA_KEY;
 import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
@@ -100,7 +99,11 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         Instance mappedInstance = InstanceUtil.jsonToInstance(instanceAsJson);
         JsonObject finalInstanceAsJson = instanceAsJson;
         updateInstance(mappedInstance, instanceCollection)
-          .compose(ar -> precedingSucceedingTitlesHelper.deletePrecedingSucceedingTitles(precedingSucceedingIds, context))
+          .compose(updatedInstance -> precedingSucceedingTitlesHelper.getExistingPrecedingSucceedingTitles(mappedInstance, context))
+          .map(precedingSucceedingTitles -> precedingSucceedingTitles.stream()
+            .map(titleJson -> titleJson.getString("id"))
+            .collect(Collectors.toSet()))
+          .compose(titlesIds -> precedingSucceedingTitlesHelper.deletePrecedingSucceedingTitles(titlesIds, context))
           .compose(ar -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(mappedInstance, context))
           .onComplete(ar -> {
             if (ar.succeeded()) {

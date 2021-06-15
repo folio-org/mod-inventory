@@ -2,6 +2,7 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import com.google.common.collect.Lists;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.http.HttpStatus;
 import org.folio.ActionProfile;
@@ -9,6 +10,7 @@ import org.folio.DataImportEventPayload;
 import org.folio.JobProfile;
 import org.folio.MappingProfile;
 import org.folio.inventory.TestUtil;
+import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.InstanceWriterFactory;
 import org.folio.inventory.domain.instances.Instance;
@@ -29,6 +31,7 @@ import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -38,6 +41,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -52,6 +56,7 @@ import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING;
+import static org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle.TITLE_KEY;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
@@ -60,9 +65,11 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -72,7 +79,8 @@ public class ReplaceInstanceEventHandlerTest {
 
   private static final String PARSED_CONTENT = "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"780\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"Houston oil directory\"}]}},{\"785\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"SAIS review of international affairs\"},{\"x\":\"1945-4724\"}]}},{\"500\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Adaptation of Xi xiang ji by Wang Shifu.\"}]}},{\"520\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\"}]}}]}\n";
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/rules.json";
-  public static final String OKAPI_URL = "http://localhost";
+  private static final String OKAPI_URL = "http://localhost";
+  private static final String PRECEDING_SUCCEEDING_TITLES_KEY = "precedingSucceedingTitles";
 
   @Mock
   private Storage storage;
@@ -121,6 +129,7 @@ public class ReplaceInstanceEventHandlerTest {
             .withContent(JsonObject.mapFrom(mappingProfile).getMap())))));
 
   private ReplaceInstanceEventHandler replaceInstanceEventHandler;
+  private PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
   private JsonObject mappingRules;
 
   @Before
@@ -128,8 +137,8 @@ public class ReplaceInstanceEventHandlerTest {
     MockitoAnnotations.initMocks(this);
     MappingManager.clearReaderFactories();
 
-    replaceInstanceEventHandler = new ReplaceInstanceEventHandler(storage,
-      new PrecedingSucceedingTitlesHelper(ctxt -> mockedClient));
+    precedingSucceedingTitlesHelper = Mockito.spy(new PrecedingSucceedingTitlesHelper(ctxt -> mockedClient));
+    replaceInstanceEventHandler = new ReplaceInstanceEventHandler(storage, precedingSucceedingTitlesHelper);
 
     mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
 
@@ -140,8 +149,12 @@ public class ReplaceInstanceEventHandlerTest {
       return null;
     }).when(instanceRecordCollection).update(any(), any(Consumer.class), any(Consumer.class));
 
-    doAnswer(invocationOnMock -> completedStage(createdResponse()))
+    doAnswer(invocationOnMock -> completedStage(createResponse(201, null)))
       .when(mockedClient).post(any(URL.class), any(JsonObject.class));
+    doAnswer(invocationOnMock -> completedStage(createResponse(200, new JsonObject().encode())))
+      .when(mockedClient).get(anyString());
+    doAnswer(invocationOnMock -> completedStage(createResponse(204, null)))
+      .when(mockedClient).delete(anyString());
   }
 
   @Test
@@ -193,6 +206,60 @@ public class ReplaceInstanceEventHandlerTest {
     assertThat(createdInstance.getJsonArray("notes").getJsonObject(0).getString("instanceNoteTypeId"), notNullValue());
     assertThat(createdInstance.getJsonArray("notes").getJsonObject(1).getString("instanceNoteTypeId"), notNullValue());
     verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
+  }
+
+  @Test
+  public void shouldReplaceExistingPrecedingTitleOnInstanceUpdate() throws InterruptedException, ExecutionException {
+    JsonObject existingPrecedingTitle = new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put(TITLE_KEY, "Butterflies in the snow");
+
+    JsonObject precedingSucceedingTitles = new JsonObject().put(PRECEDING_SUCCEEDING_TITLES_KEY, new JsonArray().add(existingPrecedingTitle));
+    when(mockedClient.get(anyString()))
+      .thenReturn(CompletableFuture.completedFuture(createResponse(HttpStatus.SC_OK, precedingSucceedingTitles.encode())));
+
+    String instanceTypeId = UUID.randomUUID().toString();
+    String title = "titleValue";
+
+    Reader fakeReader = Mockito.mock(Reader.class);
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId), StringValue.of(title));
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new InstanceWriterFactory());
+
+    HashMap<String, String> context = new HashMap<>();
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put("MAPPING_RULES", mappingRules.encode());
+    context.put("MAPPING_PARAMS", new JsonObject().encode());
+    context.put(INSTANCE.value(), new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("hrid", UUID.randomUUID().toString())
+      .encode());
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withOkapiUrl(OKAPI_URL);
+
+    CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload actualDataImportEventPayload = future.get();
+
+    assertEquals(DI_INVENTORY_INSTANCE_UPDATED.value(), actualDataImportEventPayload.getEventType());
+    assertNotNull(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
+    JsonObject updatedInstance = new JsonObject(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
+
+    assertEquals(title, updatedInstance.getString("title"));
+    assertThat(updatedInstance.getJsonArray("precedingTitles").size(), is(1));
+    assertNotEquals(existingPrecedingTitle.getString(TITLE_KEY), updatedInstance.getJsonArray("precedingTitles").getJsonObject(0).getString(TITLE_KEY));
+
+    ArgumentCaptor<Set<String>> titleIdCaptor = ArgumentCaptor.forClass(Set.class);
+    verify(precedingSucceedingTitlesHelper).deletePrecedingSucceedingTitles(titleIdCaptor.capture(), any(Context.class));
+    assertTrue(titleIdCaptor.getValue().contains(existingPrecedingTitle.getString("id")));
   }
 
   @Test(expected = ExecutionException.class)
@@ -416,7 +483,7 @@ public class ReplaceInstanceEventHandlerTest {
     assertEquals(DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING.value(), replaceInstanceEventHandler.getPostProcessingInitializationEventType());
   }
 
-  private Response createdResponse() {
-    return new Response(HttpStatus.SC_CREATED, null, null, null);
+  private Response createResponse(int statusCode, String body) {
+    return new Response(statusCode, body, null, null);
   }
 }
