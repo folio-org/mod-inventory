@@ -99,7 +99,11 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         Instance mappedInstance = Instance.fromJson(instanceAsJson);
         JsonObject finalInstanceAsJson = instanceAsJson;
         updateInstance(mappedInstance, instanceCollection)
-          .compose(ar -> precedingSucceedingTitlesHelper.deletePrecedingSucceedingTitles(precedingSucceedingIds, context))
+          .compose(updatedInstance -> precedingSucceedingTitlesHelper.getExistingPrecedingSucceedingTitles(mappedInstance, context))
+          .map(precedingSucceedingTitles -> precedingSucceedingTitles.stream()
+            .map(titleJson -> titleJson.getString("id"))
+            .collect(Collectors.toSet()))
+          .compose(titlesIds -> precedingSucceedingTitlesHelper.deletePrecedingSucceedingTitles(titlesIds, context))
           .compose(ar -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(mappedInstance, context))
           .onComplete(ar -> {
             if (ar.succeeded()) {
