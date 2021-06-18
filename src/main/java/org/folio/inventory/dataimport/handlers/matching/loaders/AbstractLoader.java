@@ -1,7 +1,6 @@
 package org.folio.inventory.dataimport.handlers.matching.loaders;
 
 import io.vertx.core.Vertx;
-import io.vertx.core.json.Json;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
@@ -49,7 +48,7 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
             if (collection.totalRecords == 1) {
               loadResult.setValue(mapEntityToJsonString(collection.records.get(0)));
             } else if (collection.totalRecords > 1) {
-              String errorMessage = String.format("Found multiple records matching specified conditions. CQL query: [%s].\nFound records: %s", cql, Json.encodePrettily(collection.records));
+              String errorMessage = "Found multiple records matching specified conditions";
               LOG.error(errorMessage);
               future.completeExceptionally(new MatchingException(errorMessage));
             }
