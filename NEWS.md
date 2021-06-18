@@ -1,3 +1,11 @@
+## 16.3.3 2021-06-18
+* Includes fix of Instance tags deletion when the instance is updated by an imported MARC record (MODINV-419)
+* Includes fix of excessive CPU usage in a system with no user activity (MODINV-423)
+* Includes fix of Instance's Preceding/Succeeding titles update when the SRS MARC is updated (MODINV-429)
+* Ensures Instance's Preceding/Succeeding titles are consistently updated when the SRS MARC is updated (MODINV-434)
+* Includes upgrade to folio-kafka-wrapper v2.0.8
+* Includes upgrade to data-import-processing-core v3.0.3
+
 ## 16.3.2 2021-05-21
 * Includes fix for item update failure (MODINV-404)
 * Includes data-import-processing-core dependency update to v3.0.2
