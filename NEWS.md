@@ -1,9 +1,24 @@
-## 17.0.0 IN-PROGRESS
+## 17.0.0 2021-06-15
 
-* Sets `isBoundWith` flag on Instances, Items (MODINV-388)
+* Sets `isBoundWith` flag on instances and items (MODINV-388)
 * Provides end-point `/inventory/items-by-holdings-id` (MODINV-418)
-* Provides `inventory 10.11`
+* Introduces `publication period` for instances (MODINV-428)
+* QuickMARC updates now use Kafka instead of pub-sub (MODINV-407)
+* Includes fix for item update failure (MODINV-404)
+* No longer removes instance tags during MARC record import (MODINV-419)
+* Preceding/succeeding titles may be updated during MARC record import (MODINV-429, MODINV-434)
+* Introduces parameters to set a number of data import verticle instances (MODINV-393, MODINV-423)
+* Provides support for USER_CONTEXT in handling QM-update events (MODINV-399)
+* Provides `inventory 10.12`
+* No longer provides `inventory-event-handlers 1.0`
+* No longer provides `_tenant 1.2`
+* No longer provides `pubsub-event-types 0.1`
+* No longer provides `pubsub-publishers 0.1`
+* No longer provides `pubsub-subscribers 0.1`
+* No longer provides `pubsub-publish 0.1`
+* Requires `instance-storage 7.8`
 * Requires `bound-with-parts-storage 1.0`
+* Requires `source-storage-records 3.0`
 
 ## 16.3.0 2021-03-26
 
