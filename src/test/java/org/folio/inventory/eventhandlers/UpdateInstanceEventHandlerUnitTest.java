@@ -106,7 +106,7 @@ public class UpdateInstanceEventHandlerUnitTest {
   @Test
   public void shouldProcessEvent() {
     HashMap<String, String> eventPayload = new HashMap<>();
-    eventPayload.put("MARC_BIB", record.encode());
+    eventPayload.put("MARC", record.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
 
@@ -139,7 +139,7 @@ public class UpdateInstanceEventHandlerUnitTest {
     record.getParsedRecord().withContent(PARSED_CONTENT_WITH_PRECEDING_SUCCEEDING_TITLES);
 
     HashMap<String, String> eventPayload = new HashMap<>();
-    eventPayload.put("MARC_BIB", Json.encode(record));
+    eventPayload.put("MARC", Json.encode(record));
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
 
