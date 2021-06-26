@@ -1,3 +1,8 @@
+## 17.0.1 2021-06-25
+
+* Contains change of MARC related subtypes to generic MARC (MODINV-438)
+* Upgrade to data-import-processing-core v3.1.2
+
 ## 17.0.0 2021-06-15
 
 * Sets `isBoundWith` flag on instances and items (MODINV-388)
