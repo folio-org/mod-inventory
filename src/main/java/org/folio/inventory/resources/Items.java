@@ -432,7 +432,8 @@ public class Items extends AbstractInventoryResource {
             locationsClient.get(id, newFuture::complete);
           });
 
-        CompletableFuture<Response> boundWithPartsFuture = getBoundWithPartsForMultipleItemsFuture(wrappedItems, boundWithPartsClient);
+        CompletableFuture<Response> boundWithPartsFuture =
+          getBoundWithPartsForMultipleItemsFuture(wrappedItems, boundWithPartsClient);
         allFutures.add(boundWithPartsFuture);
 
         CompletableFuture<Void> allDoneFuture = allOf(allFutures);
@@ -478,77 +479,6 @@ public class Items extends AbstractInventoryResource {
     });
   }
 
-  private CompletableFuture<Response> getBoundWithPartsForMultipleItemsFuture(
-    MultipleRecords<Item> wrappedItems,
-    CollectionResourceClient boundWithPartsClient)
-  {
-    CompletableFuture<Response> future = new CompletableFuture<>();
-
-    List<String> itemIds = wrappedItems.records.stream()
-      .map(Item::getId)
-      .collect(Collectors.toList());
-
-    String boundWithPartsByItemIdsQuery =
-      String.format("itemId==(%s)",
-        itemIds.stream()
-        .map(String::toString)
-        .collect(Collectors.joining(" or ")));
-
-    boundWithPartsByItemIdsQuery = URLEncoder
-      .encode(boundWithPartsByItemIdsQuery, StandardCharsets.UTF_8);
-
-    boundWithPartsClient.getMany(
-      boundWithPartsByItemIdsQuery,
-      itemIds.size(),
-      0,
-      future::complete);
-
-    return future;
-  }
-
-  private CompletableFuture<Response> getBoundWithPartsForItemFuture(
-    Item item,
-    CollectionResourceClient boundWithPartsClient)
-  {
-
-    CompletableFuture<Response> future = new CompletableFuture<>();
-
-    String boundWithPartsByItemIdQuery = String.format("itemId==(%s)",
-      item.getId());
-
-    boundWithPartsClient.getMany(
-      boundWithPartsByItemIdQuery,
-      1000,
-      0,
-      future::complete);
-
-    return future;
-  }
-
-
-  private void setBoundWithFlagsOnItems(MultipleRecords<Item> wrappedItems,
-                                        CompletableFuture<Response> boundWithPartsFuture) {
-
-    Response response = boundWithPartsFuture.join();
-    if (response != null && response.hasBody() && response.getStatusCode()==200) {
-      JsonArray boundWithParts = response.getJson().getJsonArray("boundWithParts");
-      if (boundWithParts != null && !boundWithParts.isEmpty()) {
-        Set<String> boundWithItemIds = boundWithParts
-          .stream()
-          .map(o -> ((JsonObject) o).getString("itemId"))
-          .collect(Collectors.toSet());
-
-        for (Item item : wrappedItems.records) {
-          if (boundWithItemIds.contains(item.getId())) {
-            item.withIsBoundWith(true);
-          }
-        }
-      }
-    } else {
-      log.error("Failed to retrieve bound-with parts, status code:  " + (response != null ? response.getStatusCode() : "null response"));
-    }
-
-  }
 
   private OkapiHttpClient createHttpClient(
     RoutingContext routingContext,
@@ -731,19 +661,15 @@ public class Items extends AbstractInventoryResource {
         CompletableFuture<Response> effectiveLocationFuture = getReferenceRecord(
           item.getEffectiveLocationId(), locationsClient, allFutures);
 
-        CompletableFuture<Response> boundWithPartsFuture =
-          getBoundWithPartsForItemFuture(item, boundWithPartsClient);
-
-        allFutures.add(boundWithPartsFuture);
-
-
+        allFutures.add(
+          setBoundWithTitlesOnItemFuture( item,
+            boundWithPartsClient, holdingsClient, instancesClient )
+        );
 
         CompletableFuture<Void> allDoneFuture = allOf(allFutures);
 
         allDoneFuture.thenAccept(v -> {
           try {
-            int boundWithPartsCount = getTotalRecords(boundWithPartsFuture);
-            item.withIsBoundWith(boundWithPartsCount>0);
             JsonObject representation = includeReferenceRecordInformationInItem(
                       webContext, item, holding, instance,
                       materialTypeFuture,
@@ -773,27 +699,6 @@ public class Items extends AbstractInventoryResource {
       });
     });
   }
-
-  /**
-   *
-   * @param futureResponse response of a GET request for multiple records
-   * @return value of "totalRecords" from the response,
-   * or, -1 if the GET request was unsuccessful, if no JSON body was found
-   * in the response, or if the response did not contain a 'totalRecords'
-   * property (ie if it was a single record, getById response)
-   */
-  private int getTotalRecords (CompletableFuture<Response> futureResponse) {
-    Response response = futureResponse.join();
-    if (response.getStatusCode() == 200) {
-      JsonObject responseJson = response.getJson();
-      if (responseJson != null) {
-        if (responseJson.containsKey("totalRecords")) {
-          return responseJson.getInteger("totalRecords");
-        }
-      }
-    }
-    return -1;
- }
 
   private void invalidOkapiUrlResponse(RoutingContext routingContext, WebContext context) {
     ServerErrorResponse.internalError(routingContext.response(),
@@ -829,7 +734,7 @@ public class Items extends AbstractInventoryResource {
     CompletableFuture<Response> temporaryLocationFuture,
     CompletableFuture<Response> permanentLocationFuture,
     CompletableFuture<Response> effectiveLocationFuture) {
-
+log.info("Item has boundWithTitles? " + (item.getBoundWithTitles() != null));
     JsonObject foundMaterialType =
       referenceRecordFrom(item.getMaterialTypeId(), materialTypeFuture);
 
@@ -951,6 +856,190 @@ public class Items extends AbstractInventoryResource {
       return !newNote.getStaffOnly().equals(oldNote.getStaffOnly());
     }
   }
+
+  private CompletableFuture<Response> setBoundWithTitlesOnItemFuture(
+    Item item,
+    CollectionResourceClient boundWithPartsClient,
+    CollectionResourceClient holdingsClient,
+    CollectionResourceClient instancesClient
+  ) {
+    return getBoundWithPartsForItemFuture( item, boundWithPartsClient ).thenCompose( partsResponse -> {
+      JsonArray boundWithParts = (JsonArray) partsResponse.getJson().getJsonArray(
+        "boundWithParts" );
+      if ( boundWithParts.isEmpty() ) {
+        item.withIsBoundWith( false );
+        return CompletableFuture.completedFuture( null );
+      } else {
+        log.info( "Found bound-with parts?: " + boundWithParts.encodePrettily() );
+        List<String> holdingsRecordIds = getStringPropertyFromJsonArray(
+          boundWithParts, "holdingsRecordId" );
+        log.info( "They have holdingsRecord IDs: " + holdingsRecordIds );
+        CompletableFuture<Response> holdingsFetched = new CompletableFuture<>();
+        holdingsClient.getMany( multipleRecordsCqlQuery( holdingsRecordIds ),
+          holdingsRecordIds.size(), 0, holdingsFetched::complete );
+        return holdingsFetched.thenCompose( holdingsResponse -> {
+          JsonArray holdingsRecords = holdingsResponse.getJson().getJsonArray(
+            "holdingsRecords" );
+          log.info(
+            "Found holdings for bound-with parts?: " + holdingsRecords.encodePrettily() );
+          List<String> instanceIds = getStringPropertyFromJsonArray(
+            holdingsRecords, "instanceId" );
+          log.info( "They have instance IDs: " + instanceIds );
+          CompletableFuture<Response> instancesFetched = new CompletableFuture<>();
+          instancesClient.getMany( multipleRecordsCqlQuery( instanceIds ),
+            instanceIds.size(), 0, instancesFetched::complete );
+          return instancesFetched.thenCompose( instancesResponse -> {
+            JsonArray instances = instancesResponse.getJson().getJsonArray(
+              "instances" );
+            log.info(
+              "Found Instances for bound-with parts?: " + instances.encodePrettily() );
+            Map<String, JsonObject> instancesByIdMap = new HashMap();
+            instances.stream().forEach( instance -> {
+              instancesByIdMap.put( ( (JsonObject) instance ).getString( "id" ),
+                (JsonObject) instance );
+            } );
+            JsonArray boundWithTitles = new JsonArray();
+            holdingsRecords.stream().forEach( record -> {
+              JsonObject holdingsRecord = (JsonObject) record;
+              JsonObject boundWithTitle = new JsonObject();
+              JsonObject shortHoldingsRecord = new JsonObject();
+              JsonObject shortInstance = new JsonObject();
+              String instanceId = holdingsRecord.getString( "instanceId" );
+              shortHoldingsRecord.put( "id", holdingsRecord.getString( "id" ) );
+              shortHoldingsRecord.put( "hrid",
+                holdingsRecord.getString( "hrid" ) );
+              shortInstance.put( "id", instanceId );
+              shortInstance.put( "title",
+                instancesByIdMap.get( instanceId ).getString( "title" ) );
+              shortInstance.put( "hrid",
+                instancesByIdMap.get( instanceId ).getString( "hrid" ) );
+
+              boundWithTitle.put( "holdingsRecord", shortHoldingsRecord );
+              boundWithTitle.put( "instance", shortInstance );
+              boundWithTitles.add( boundWithTitle );
+            } );
+            if ( !boundWithTitles.isEmpty() )
+            {
+              log.info(
+                "Built bound-with titles: " + boundWithTitles.encodePrettily() );
+              item.withBoundWithTitles( boundWithTitles ).withIsBoundWith( true );
+            }
+            return CompletableFuture.completedFuture( null );
+          } );
+        });
+      }
+    });
+  }
+
+  private CompletableFuture<JsonArray> joinWithHoldings (JsonArray entities, CollectionResourceClient holdingsClient) {
+    List<String> holdingsRecordIds = getStringPropertyFromJsonArray(
+      entities, "holdingsRecordId" );
+    CompletableFuture<Response> holdingsFetched = new CompletableFuture<>();
+    holdingsClient.getMany( multipleRecordsCqlQuery( holdingsRecordIds ),
+      holdingsRecordIds.size(), 0, holdingsFetched::complete );
+    return holdingsFetched.thenCompose( holdingsResponse -> {
+      JsonArray holdingsRecords = holdingsResponse.getJson().getJsonArray(
+        "holdingsRecords" );
+      log.info(
+        "Found holdings for bound-with parts?: " + holdingsRecords.encodePrettily() );
+
+      return CompletableFuture.completedFuture( holdingsRecords );
+    });
+  }
+
+  private CompletableFuture<JsonArray> joinWithInstances (JsonArray entities, CollectionResourceClient instancesClient) {
+    List<String> instanceIds = getStringPropertyFromJsonArray(
+      entities, "instanceId" );
+    log.info( "They have instance IDs: " + instanceIds );
+    CompletableFuture<Response> instancesFetched = new CompletableFuture<>();
+    instancesClient.getMany( multipleRecordsCqlQuery( instanceIds ),
+      instanceIds.size(), 0, instancesFetched::complete );
+    return instancesFetched.thenCompose( instancesResponse -> {
+      JsonArray instances = instancesResponse.getJson().getJsonArray(
+        "instances" );
+      log.info(
+        "Found Instances for bound-with parts?: " + instances.encodePrettily() );
+      return CompletableFuture.completedFuture( instances );
+    });
+  }
+
+  private List<String> getStringPropertyFromJsonArray( JsonArray entities, String propertyName) {
+    return entities.stream()
+      .map(o -> ((JsonObject)o).getString(propertyName))
+      .collect( Collectors.toList());
+  }
+
+  private CompletableFuture<Response> getBoundWithPartsForItemFuture(
+    Item item,
+    CollectionResourceClient boundWithPartsClient)
+  {
+
+    CompletableFuture<Response> future = new CompletableFuture<>();
+
+    String boundWithPartsByItemIdQuery = String.format("itemId==(%s)",
+      item.getId());
+
+    boundWithPartsClient.getMany(
+      boundWithPartsByItemIdQuery,
+      1000,
+      0,
+      future::complete);
+
+    return future;
+  }
+
+  private void setBoundWithFlagsOnItems(MultipleRecords<Item> wrappedItems,
+                                        CompletableFuture<Response> boundWithPartsFuture) {
+
+    Response response = boundWithPartsFuture.join();
+    if (response != null && response.hasBody() && response.getStatusCode()==200) {
+      JsonArray boundWithParts = response.getJson().getJsonArray("boundWithParts");
+      if (boundWithParts != null && !boundWithParts.isEmpty()) {
+        Set<String> boundWithItemIds = boundWithParts
+          .stream()
+          .map(o -> ((JsonObject) o).getString("itemId"))
+          .collect(Collectors.toSet());
+
+        for (Item item : wrappedItems.records) {
+          if (boundWithItemIds.contains(item.getId())) {
+            item.withIsBoundWith(true);
+          }
+        }
+      }
+    } else {
+      log.error("Failed to retrieve bound-with parts, status code:  " + (response != null ? response.getStatusCode() : "null response"));
+    }
+
+  }
+
+  private CompletableFuture<Response> getBoundWithPartsForMultipleItemsFuture(
+    MultipleRecords<Item> wrappedItems,
+    CollectionResourceClient boundWithPartsClient)
+  {
+    CompletableFuture<Response> future = new CompletableFuture<>();
+
+    List<String> itemIds = wrappedItems.records.stream()
+      .map(Item::getId)
+      .collect(Collectors.toList());
+
+    String boundWithPartsByItemIdsQuery =
+      String.format("itemId==(%s)",
+        itemIds.stream()
+          .map(String::toString)
+          .collect(Collectors.joining(" or ")));
+
+    boundWithPartsByItemIdsQuery = URLEncoder
+      .encode(boundWithPartsByItemIdsQuery, StandardCharsets.UTF_8);
+
+    boundWithPartsClient.getMany(
+      boundWithPartsByItemIdsQuery,
+      itemIds.size(),
+      0,
+      future::complete);
+
+    return future;
+  }
+
 }
 
 
