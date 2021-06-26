@@ -662,9 +662,8 @@ public class Items extends AbstractInventoryResource {
           item.getEffectiveLocationId(), locationsClient, allFutures);
 
         allFutures.add(
-          setBoundWithTitlesOnItemFuture( item,
-            boundWithPartsClient, holdingsClient, instancesClient )
-        );
+          setBoundWithTitlesOnItem( item,
+            boundWithPartsClient, holdingsClient, instancesClient));
 
         CompletableFuture<Void> allDoneFuture = allOf(allFutures);
 
@@ -734,7 +733,7 @@ public class Items extends AbstractInventoryResource {
     CompletableFuture<Response> temporaryLocationFuture,
     CompletableFuture<Response> permanentLocationFuture,
     CompletableFuture<Response> effectiveLocationFuture) {
-log.info("Item has boundWithTitles? " + (item.getBoundWithTitles() != null));
+
     JsonObject foundMaterialType =
       referenceRecordFrom(item.getMaterialTypeId(), materialTypeFuture);
 
@@ -857,81 +856,81 @@ log.info("Item has boundWithTitles? " + (item.getBoundWithTitles() != null));
     }
   }
 
-  private CompletableFuture<Response> setBoundWithTitlesOnItemFuture(
+  /**
+   * Fetches bound-with parts and referenced holdingsRecords and Instances
+   * and builds a list of bound-with titles that is set on the provided Item.
+   * NOTE: This method will mutate the argument item (adding data to it)
+   *
+   * @param item The Item to set bound-with titles on
+   * @param boundWithPartsClient Client for retrieving bound-with parts from storage
+   * @param holdingsClient Client for retrieving holdings from storage
+   * @param instancesClient Client for retrieving Instance from storage
+   * @return Future with null Response (Using Response return type in order to
+   * add this future to a list of other futures returning Response)
+   */
+  private CompletableFuture<Response> setBoundWithTitlesOnItem(
     Item item,
     CollectionResourceClient boundWithPartsClient,
     CollectionResourceClient holdingsClient,
     CollectionResourceClient instancesClient
   ) {
     return getBoundWithPartsForItemFuture( item, boundWithPartsClient ).thenCompose( partsResponse -> {
-      JsonArray boundWithParts = (JsonArray) partsResponse.getJson().getJsonArray(
-        "boundWithParts" );
+      JsonArray boundWithParts = partsResponse.getJson().getJsonArray("boundWithParts" );
       if ( boundWithParts.isEmpty() ) {
         item.withIsBoundWith( false );
         return CompletableFuture.completedFuture( null );
       } else {
-        log.info( "Found bound-with parts?: " + boundWithParts.encodePrettily() );
-        List<String> holdingsRecordIds = getStringPropertyFromJsonArray(
-          boundWithParts, "holdingsRecordId" );
-        log.info( "They have holdingsRecord IDs: " + holdingsRecordIds );
-        CompletableFuture<Response> holdingsFetched = new CompletableFuture<>();
-        holdingsClient.getMany( multipleRecordsCqlQuery( holdingsRecordIds ),
-          holdingsRecordIds.size(), 0, holdingsFetched::complete );
-        return holdingsFetched.thenCompose( holdingsResponse -> {
-          JsonArray holdingsRecords = holdingsResponse.getJson().getJsonArray(
-            "holdingsRecords" );
-          log.info(
-            "Found holdings for bound-with parts?: " + holdingsRecords.encodePrettily() );
-          List<String> instanceIds = getStringPropertyFromJsonArray(
-            holdingsRecords, "instanceId" );
-          log.info( "They have instance IDs: " + instanceIds );
-          CompletableFuture<Response> instancesFetched = new CompletableFuture<>();
-          instancesClient.getMany( multipleRecordsCqlQuery( instanceIds ),
-            instanceIds.size(), 0, instancesFetched::complete );
-          return instancesFetched.thenCompose( instancesResponse -> {
-            JsonArray instances = instancesResponse.getJson().getJsonArray(
-              "instances" );
-            log.info(
-              "Found Instances for bound-with parts?: " + instances.encodePrettily() );
-            Map<String, JsonObject> instancesByIdMap = new HashMap();
-            instances.stream().forEach( instance -> {
-              instancesByIdMap.put( ( (JsonObject) instance ).getString( "id" ),
-                (JsonObject) instance );
-            } );
-            JsonArray boundWithTitles = new JsonArray();
-            holdingsRecords.stream().forEach( record -> {
-              JsonObject holdingsRecord = (JsonObject) record;
-              JsonObject boundWithTitle = new JsonObject();
-              JsonObject shortHoldingsRecord = new JsonObject();
-              JsonObject shortInstance = new JsonObject();
-              String instanceId = holdingsRecord.getString( "instanceId" );
-              shortHoldingsRecord.put( "id", holdingsRecord.getString( "id" ) );
-              shortHoldingsRecord.put( "hrid",
-                holdingsRecord.getString( "hrid" ) );
-              shortInstance.put( "id", instanceId );
-              shortInstance.put( "title",
-                instancesByIdMap.get( instanceId ).getString( "title" ) );
-              shortInstance.put( "hrid",
-                instancesByIdMap.get( instanceId ).getString( "hrid" ) );
-
-              boundWithTitle.put( "holdingsRecord", shortHoldingsRecord );
-              boundWithTitle.put( "instance", shortInstance );
-              boundWithTitles.add( boundWithTitle );
-            } );
-            if ( !boundWithTitles.isEmpty() )
-            {
-              log.info(
-                "Built bound-with titles: " + boundWithTitles.encodePrettily() );
+        return fetchHoldingsByForeignKeys( boundWithParts, holdingsClient ).thenCompose(
+          holdingsRecords -> fetchInstancesByForeignKeys( holdingsRecords, instancesClient ).thenCompose(
+            instances -> {
+              JsonArray boundWithTitles = buildBoundWithTitlesArray( holdingsRecords, instances );
               item.withBoundWithTitles( boundWithTitles ).withIsBoundWith( true );
-            }
-            return CompletableFuture.completedFuture( null );
-          } );
-        });
-      }
-    });
+              return CompletableFuture.completedFuture( null );
+            } ) );
+      }});
   }
 
-  private CompletableFuture<JsonArray> joinWithHoldings (JsonArray entities, CollectionResourceClient holdingsClient) {
+  /**
+   * Constructs a JSON array of boundWithTitles containing Instance and
+   * holdingsRecord information
+   * @param holdingsRecords The holdings records that should populate the array
+   * @param instances The Instances that should populate the array
+   * @return JSON array of boundWithTitles
+   */
+  private JsonArray buildBoundWithTitlesArray (JsonArray holdingsRecords, JsonArray instances) {
+    JsonArray boundWithTitles = new JsonArray();
+
+    Map<String, JsonObject> instancesByIdMap = new HashMap();
+    instances.stream().forEach( instance -> {
+      instancesByIdMap.put( ( (JsonObject) instance ).getString( "id" ),
+        (JsonObject) instance );
+    } );
+
+    holdingsRecords.stream().forEach( record -> {
+      JsonObject holdingsRecord = (JsonObject) record;
+      JsonObject boundWithTitle = new JsonObject();
+      JsonObject shortHoldingsRecord = new JsonObject();
+      JsonObject shortInstance = new JsonObject();
+      String instanceId = holdingsRecord.getString( "instanceId" );
+      shortHoldingsRecord.put( "id", holdingsRecord.getString( "id" ) );
+      shortHoldingsRecord.put( "hrid", holdingsRecord.getString( "hrid" ) );
+      shortInstance.put( "id", instanceId );
+      shortInstance.put( "title", instancesByIdMap.get( instanceId ).getString( "title" ) );
+      shortInstance.put( "hrid", instancesByIdMap.get( instanceId ).getString( "hrid" ) );
+      boundWithTitle.put( "holdingsRecord", shortHoldingsRecord );
+      boundWithTitle.put( "instance", shortInstance );
+      boundWithTitles.add( boundWithTitle );
+    } );
+    return boundWithTitles;
+  }
+
+  /**
+   * "Joins" a JSON array of entities by 'holdingsRecordId' with holdingsRecords fetched from storage
+   * @param entities  Array of records with a property named 'holdingsRecordId'
+   * @param holdingsClient Client for fetching holdings records from storage
+   * @return Array of holdings records found by provided entities' holdingsRecordIds
+   */
+  private CompletableFuture<JsonArray> fetchHoldingsByForeignKeys( JsonArray entities, CollectionResourceClient holdingsClient) {
     List<String> holdingsRecordIds = getStringPropertyFromJsonArray(
       entities, "holdingsRecordId" );
     CompletableFuture<Response> holdingsFetched = new CompletableFuture<>();
@@ -940,29 +939,35 @@ log.info("Item has boundWithTitles? " + (item.getBoundWithTitles() != null));
     return holdingsFetched.thenCompose( holdingsResponse -> {
       JsonArray holdingsRecords = holdingsResponse.getJson().getJsonArray(
         "holdingsRecords" );
-      log.info(
-        "Found holdings for bound-with parts?: " + holdingsRecords.encodePrettily() );
-
       return CompletableFuture.completedFuture( holdingsRecords );
     });
   }
 
-  private CompletableFuture<JsonArray> joinWithInstances (JsonArray entities, CollectionResourceClient instancesClient) {
+  /**
+   * "Joins" Instances from storage with a JSON array of entities with 'instanceId's
+   * @param entities  Array of records with a property named 'instanceId'
+   * @param instancesClient Client for fetching Instances from storage
+   * @return Array of Instances found by the provided entities' instanceIds
+   */
+  private CompletableFuture<JsonArray> fetchInstancesByForeignKeys( JsonArray entities, CollectionResourceClient instancesClient) {
     List<String> instanceIds = getStringPropertyFromJsonArray(
       entities, "instanceId" );
-    log.info( "They have instance IDs: " + instanceIds );
     CompletableFuture<Response> instancesFetched = new CompletableFuture<>();
     instancesClient.getMany( multipleRecordsCqlQuery( instanceIds ),
       instanceIds.size(), 0, instancesFetched::complete );
     return instancesFetched.thenCompose( instancesResponse -> {
       JsonArray instances = instancesResponse.getJson().getJsonArray(
         "instances" );
-      log.info(
-        "Found Instances for bound-with parts?: " + instances.encodePrettily() );
       return CompletableFuture.completedFuture( instances );
     });
   }
 
+  /**
+   * Picks select String property from JSON array of records
+   * @param entities  The records to pick the property from
+   * @param propertyName Name of the property to retrieve
+   * @return List of values for the provided property name
+   */
   private List<String> getStringPropertyFromJsonArray( JsonArray entities, String propertyName) {
     return entities.stream()
       .map(o -> ((JsonObject)o).getString(propertyName))
