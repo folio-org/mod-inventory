@@ -199,6 +199,9 @@ public class Instances extends AbstractInstances {
       .thenCompose(InstancePrecedingSucceedingTitleValidators::refuseWhenUnconnectedHasNoTitle)
       .thenCompose(instance -> instanceCollection.findById(rContext.request().getParam("id")))
       .thenCompose(InstancesValidators::refuseWhenInstanceNotFound)
+//      .thenCompose(existingInstance -> fetchInstanceRelationships(new Success<>(existingInstance), rContext, wContext))
+      .thenCompose(existingInstance -> fetchPrecedingSucceedingTitles(new Success<>(existingInstance), rContext, wContext))
+//      .thenCompose(existingInstance -> setBoundWithFlag(new Success<>(existingInstance), rContext, wContext))
       .thenCompose(existingInstance -> refuseWhenBlockedFieldsChanged(existingInstance, updatedInstance))
       .thenCompose(existingInstance -> refuseWhenHridChanged(existingInstance, updatedInstance))
       .thenAccept(existingInstance -> updateInstance(updatedInstance, rContext, wContext))
@@ -278,6 +281,10 @@ public class Instances extends AbstractInstances {
   private boolean areInstanceBlockedFieldsChanged(Instance existingInstance, Instance updatedInstance) {
     JsonObject existingInstanceJson = JsonObject.mapFrom(existingInstance);
     JsonObject updatedInstanceJson = JsonObject.mapFrom(updatedInstance);
+
+    zeroingFields(existingInstanceJson.getJsonArray("precedingTitles"));
+    zeroingFields(existingInstanceJson.getJsonArray("succeedingTitles"));
+
     Map<String, Object> existingBlockedFields = new HashMap<>();
     Map<String, Object> updatedBlockedFields = new HashMap<>();
     for (String blockedFieldCode : config.getInstanceBlockedFields()) {
@@ -285,6 +292,17 @@ public class Instances extends AbstractInstances {
       updatedBlockedFields.put(blockedFieldCode, updatedInstanceJson.getValue(blockedFieldCode));
     }
     return ObjectUtils.notEqual(existingBlockedFields, updatedBlockedFields);
+  }
+
+  private void zeroingFields(JsonArray precedingSucceedingTitles) {
+    if (precedingSucceedingTitles.isEmpty()) {
+      return;
+    }
+    for (int i = 0; i < precedingSucceedingTitles.size(); i++) {
+      JsonObject jsonObject = precedingSucceedingTitles.getJsonObject(i);
+      jsonObject.put("precedingInstanceId", null);
+      jsonObject.put("succeedingInstanceId", null);
+    }
   }
 
   private void deleteAll(RoutingContext routingContext) {
