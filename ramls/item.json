@@ -295,6 +295,49 @@
       "default": false,
       "readonly": true
     },
+    "boundWithTitles": {
+      "description": "List of titles that are bound together within this Item",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "description": "A title that is bound with other titles in this Item",
+        "properties": {
+          "briefHoldingsRecord": {
+            "type": "object",
+            "description": "Information about the holdings record that links the title to the bound-with Item",
+            "properties": {
+              "id": {
+                "description": "The UUID of the holdingsRecord",
+                "type": "string"
+              },
+              "hrid": {
+                "description": "The human-readable ID of the holdingsRecord",
+                "type": "string"
+              }
+            }
+          },
+          "briefInstance": {
+            "type": "object",
+            "description": "Information about the Instance / title that is bound with others in this Item",
+            "properties": {
+              "id": {
+                "description": "The UUID of the Instance",
+                "type": "string"
+              },
+              "hrid": {
+                "description": "The human-readable ID of the Instance",
+                "type": "string"
+              },
+              "title": {
+                "description": "The title of the Instance",
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "readonly": true
+    },
     "permanentLoanType": {
       "description": "Permanent loan type, is the default loan type for a given item. Loan types are tenant-defined in a reference table in Settings, Inventory, Item, Loan type (e.g. Can circulate, Course reserves, Reading room, Selected)",
       "type": "object",

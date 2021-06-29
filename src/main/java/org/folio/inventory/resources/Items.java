@@ -909,23 +909,23 @@ public class Items extends AbstractInventoryResource {
     holdingsRecords.stream().forEach( record -> {
       JsonObject holdingsRecord = (JsonObject) record;
       JsonObject boundWithTitle = new JsonObject();
-      JsonObject shortHoldingsRecord = new JsonObject();
-      JsonObject shortInstance = new JsonObject();
+      JsonObject briefHoldingsRecord = new JsonObject();
+      JsonObject briefInstance = new JsonObject();
       String instanceId = holdingsRecord.getString( "instanceId" );
-      shortHoldingsRecord.put( "id", holdingsRecord.getString( "id" ) );
-      shortHoldingsRecord.put( "hrid", holdingsRecord.getString( "hrid" ) );
-      shortInstance.put( "id", instanceId );
-      shortInstance.put( "title", instancesByIdMap.get( instanceId ).getString( "title" ) );
-      shortInstance.put( "hrid", instancesByIdMap.get( instanceId ).getString( "hrid" ) );
-      boundWithTitle.put( "holdingsRecord", shortHoldingsRecord );
-      boundWithTitle.put( "instance", shortInstance );
+      briefHoldingsRecord.put( "id", holdingsRecord.getString( "id" ) );
+      briefHoldingsRecord.put( "hrid", holdingsRecord.getString( "hrid" ) );
+      briefInstance.put( "id", instanceId );
+      briefInstance.put( "title", instancesByIdMap.get( instanceId ).getString( "title" ) );
+      briefInstance.put( "hrid", instancesByIdMap.get( instanceId ).getString( "hrid" ) );
+      boundWithTitle.put( "briefHoldingsRecord", briefHoldingsRecord );
+      boundWithTitle.put( "briefInstance", briefInstance );
       boundWithTitles.add( boundWithTitle );
     } );
     return boundWithTitles;
   }
 
   /**
-   * "Joins" a JSON array of entities by 'holdingsRecordId' with holdingsRecords fetched from storage
+   * For a set of entities with a 'holdingsRecordId' property, this method fetches holdingsRecords from storage by those holdingsRecordIds
    * @param entities  Array of records with a property named 'holdingsRecordId'
    * @param holdingsClient Client for fetching holdings records from storage
    * @return Array of holdings records found by provided entities' holdingsRecordIds
