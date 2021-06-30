@@ -199,9 +199,7 @@ public class Instances extends AbstractInstances {
       .thenCompose(InstancePrecedingSucceedingTitleValidators::refuseWhenUnconnectedHasNoTitle)
       .thenCompose(instance -> instanceCollection.findById(rContext.request().getParam("id")))
       .thenCompose(InstancesValidators::refuseWhenInstanceNotFound)
-//      .thenCompose(existingInstance -> fetchInstanceRelationships(new Success<>(existingInstance), rContext, wContext))
       .thenCompose(existingInstance -> fetchPrecedingSucceedingTitles(new Success<>(existingInstance), rContext, wContext))
-//      .thenCompose(existingInstance -> setBoundWithFlag(new Success<>(existingInstance), rContext, wContext))
       .thenCompose(existingInstance -> refuseWhenBlockedFieldsChanged(existingInstance, updatedInstance))
       .thenCompose(existingInstance -> refuseWhenHridChanged(existingInstance, updatedInstance))
       .thenAccept(existingInstance -> updateInstance(updatedInstance, rContext, wContext))
@@ -282,8 +280,8 @@ public class Instances extends AbstractInstances {
     JsonObject existingInstanceJson = JsonObject.mapFrom(existingInstance);
     JsonObject updatedInstanceJson = JsonObject.mapFrom(updatedInstance);
 
-    zeroingFields(existingInstanceJson.getJsonArray("precedingTitles"));
-    zeroingFields(existingInstanceJson.getJsonArray("succeedingTitles"));
+    zeroingFields(existingInstanceJson.getJsonArray(Instance.PRECEDING_TITLES_KEY));
+    zeroingFields(existingInstanceJson.getJsonArray(Instance.SUCCEEDING_TITLES_KEY));
 
     Map<String, Object> existingBlockedFields = new HashMap<>();
     Map<String, Object> updatedBlockedFields = new HashMap<>();
@@ -298,10 +296,10 @@ public class Instances extends AbstractInstances {
     if (precedingSucceedingTitles.isEmpty()) {
       return;
     }
-    for (int i = 0; i < precedingSucceedingTitles.size(); i++) {
-      JsonObject jsonObject = precedingSucceedingTitles.getJsonObject(i);
-      jsonObject.put("precedingInstanceId", null);
-      jsonObject.put("succeedingInstanceId", null);
+    for (int index = 0; index < precedingSucceedingTitles.size(); index++) {
+      JsonObject jsonObject = precedingSucceedingTitles.getJsonObject(index);
+      jsonObject.put(PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY, null);
+      jsonObject.put(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY, null);
     }
   }
 
