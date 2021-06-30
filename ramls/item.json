@@ -300,11 +300,11 @@
       "type": "array",
       "items": {
         "type": "object",
-        "description": "A title that is bound with other titles in this Item",
+        "description": "A title that is bound with other titles within this Item",
         "properties": {
           "briefHoldingsRecord": {
             "type": "object",
-            "description": "Information about the holdings record that links the title to the bound-with Item",
+            "description": "Information about a holdings record that links a title to the bound-with Item",
             "properties": {
               "id": {
                 "description": "The UUID of the holdingsRecord",
@@ -314,11 +314,12 @@
                 "description": "The human-readable ID of the holdingsRecord",
                 "type": "string"
               }
-            }
+            },
+            "additionalProperties": false
           },
           "briefInstance": {
             "type": "object",
-            "description": "Information about the Instance / title that is bound with others in this Item",
+            "description": "Information about an Instance / title that is bound with other title within this Item",
             "properties": {
               "id": {
                 "description": "The UUID of the Instance",
@@ -332,9 +333,11 @@
                 "description": "The title of the Instance",
                 "type": "string"
               }
-            }
+            },
+            "additionalProperties": false
           }
-        }
+        },
+        "additionalProperties": false
       },
       "readonly": true
     },
