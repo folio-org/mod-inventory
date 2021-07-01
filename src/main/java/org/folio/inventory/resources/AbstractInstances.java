@@ -34,7 +34,6 @@ import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
 
 import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
