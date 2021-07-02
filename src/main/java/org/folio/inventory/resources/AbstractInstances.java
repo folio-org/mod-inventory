@@ -8,6 +8,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -71,11 +72,11 @@ public abstract class AbstractInstances {
     CollectionResourceClient relatedInstancesClient = createInstanceRelationshipsClient(
       routingContext, context);
     CollectionResourceRepository relatedInstancesRepository = new CollectionResourceRepository(relatedInstancesClient);
-    List<String> instanceId = Arrays.asList(instance.getId());
+    List<String> instanceId = Collections.singletonList( instance.getId() );
     String query = createQueryForRelatedInstances(instanceId);
 
     CompletableFuture<Response> future = new CompletableFuture<>();
-    relatedInstancesClient.getMany(query, future::complete);
+    relatedInstancesClient.getMany(query, Integer.MAX_VALUE, 0, future::complete);
 
     return future.thenCompose(result ->
       updateInstanceRelationships(instance, relatedInstancesRepository, result));
@@ -134,7 +135,7 @@ public abstract class AbstractInstances {
     CollectionResourceRepository precedingSucceedingTitlesRepository =
       new CollectionResourceRepository(precedingSucceedingTitlesClient);
 
-    List<String> instanceId = Arrays.asList(instance.getId());
+    List<String> instanceId = Collections.singletonList( instance.getId() );
     String query = createQueryForPrecedingSucceedingInstances(instanceId);
 
     CompletableFuture<Response> future = new CompletableFuture<>();
@@ -257,7 +258,7 @@ public abstract class AbstractInstances {
    *
    * @param instancesResponse Set of Instances to transform to representations
    * @param context
-   * @return
+   * @return Result set as JSON object
    */
   protected JsonObject toRepresentation(InstancesResponse instancesResponse,
     WebContext context) {
@@ -355,7 +356,7 @@ public abstract class AbstractInstances {
 
   protected String createQueryForRelatedInstances(List<String> instanceIds) {
     String idList = instanceIds.stream().distinct().collect(Collectors.joining(" or "));
-    return format("query=subInstanceId==(%s)+or+superInstanceId==(%s)", idList, idList);
+    return format("subInstanceId==(%s)+or+superInstanceId==(%s)", idList, idList);
   }
 
   protected OkapiHttpClient createHttpClient(
