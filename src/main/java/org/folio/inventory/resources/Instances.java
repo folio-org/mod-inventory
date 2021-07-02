@@ -538,7 +538,7 @@ public class Instances extends AbstractInstances {
     if (relatedInstancesClient != null) {
       CompletableFuture<Response> relatedInstancesFetched = new CompletableFuture<>();
 
-      relatedInstancesClient.getMany(query, relatedInstancesFetched::complete);
+      relatedInstancesClient.getMany( query, Integer.MAX_VALUE, 0, relatedInstancesFetched::complete);
 
       return relatedInstancesFetched
         .thenCompose(response -> withInstanceRelationships(instance, response));
