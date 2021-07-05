@@ -134,7 +134,7 @@ public abstract class AbstractInstances {
     CollectionResourceRepository precedingSucceedingTitlesRepository =
       new CollectionResourceRepository(precedingSucceedingTitlesClient);
 
-    List<String> instanceId = Collections.singletonList( instance.getId() );
+    List<String> instanceId = List.of(instance.getId());
     String query = createQueryForPrecedingSucceedingInstances(instanceId);
 
     CompletableFuture<Response> future = new CompletableFuture<>();
