@@ -71,7 +71,7 @@ public abstract class AbstractInstances {
     CollectionResourceClient relatedInstancesClient = createInstanceRelationshipsClient(
       routingContext, context);
     CollectionResourceRepository relatedInstancesRepository = new CollectionResourceRepository(relatedInstancesClient);
-    List<String> instanceId = Collections.singletonList( instance.getId() );
+    List<String> instanceId = List.of(instance.getId());
     String query = createQueryForRelatedInstances(instanceId);
 
     CompletableFuture<Response> future = new CompletableFuture<>();
