@@ -56,16 +56,16 @@ public class UpdateInstanceEventHandler {
         return future;
       }
 
-      var userContext = new JsonObject(eventPayload.get(USER_CONTEXT_KEY));
+      var userContext = getUpdateContext(new JsonObject(eventPayload.get(USER_CONTEXT_KEY)));
 
       Record marcRecord = new JsonObject(eventPayload.get(MARC_KEY)).mapTo(Record.class);
-      Future<Instance> instanceUpdateFuture = instanceUpdateDelegate.handle(eventPayload, marcRecord, getUpdateContext(userContext));
+      Future<Instance> instanceUpdateFuture = instanceUpdateDelegate.handle(eventPayload, marcRecord, userContext);
 
       instanceUpdateFuture
-        .compose(updatedInstance -> precedingSucceedingTitlesHelper.getExistingPrecedingSucceedingTitles(updatedInstance, context))
+        .compose(updatedInstance -> precedingSucceedingTitlesHelper.getExistingPrecedingSucceedingTitles(updatedInstance, userContext))
         .map(UpdateInstanceEventHandler::retrieveTitlesIds)
-        .compose(titlesIds -> precedingSucceedingTitlesHelper.deletePrecedingSucceedingTitles(titlesIds, context))
-        .compose(ar -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(instanceUpdateFuture.result(), context))
+        .compose(titlesIds -> precedingSucceedingTitlesHelper.deletePrecedingSucceedingTitles(titlesIds, userContext))
+        .compose(ar -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(instanceUpdateFuture.result(), userContext))
         .onComplete(ar -> {
           if (isEmpty(eventPayload.get((DI_INDICATOR)))) {
             OkapiConnectionParams params = new OkapiConnectionParams(requestHeaders, vertx);
