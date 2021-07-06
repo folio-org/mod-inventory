@@ -47,9 +47,9 @@ public class PrecedingSucceedingTitlesHelper {
 
     Promise<List<JsonObject>> promise = Promise.promise();
     String instanceId = instance.getId();
-    String queryForPrecedingSucceedingInstances = String.format("query=succeedingInstanceId==(%s)+or+precedingInstanceId==(%s)", instanceId, instanceId);
+    String queryForPrecedingSucceedingInstances = String.format("succeedingInstanceId==(%s) or precedingInstanceId==(%s)", instanceId, instanceId);
 
-    precedingSucceedingTitlesClient.getMany(queryForPrecedingSucceedingInstances, response -> {
+    precedingSucceedingTitlesClient.getAll(queryForPrecedingSucceedingInstances, response -> {
       if (response.getStatusCode() == 200) {
         JsonObject json = response.getJson();
         List<JsonObject> precedingSucceedingTitles = JsonArrayHelper.toList(json.getJsonArray("precedingSucceedingTitles"));
