@@ -398,7 +398,7 @@ public class Instances extends AbstractInstances {
     String instanceId, RoutingContext routingContext, WebContext webContext ) {
     CompletableFuture<Response> holdingsFuture = new CompletableFuture<>();
 
-    createHoldingsStorageClient(routingContext, webContext).getMany("query=instanceId=="+instanceId, holdingsFuture::complete);
+    createHoldingsStorageClient(routingContext, webContext).getAll("instanceId=="+instanceId, holdingsFuture::complete);
     return holdingsFuture.thenCompose(
       response -> {
         List<String> holdingsRecordsList =
@@ -599,7 +599,7 @@ public class Instances extends AbstractInstances {
 
     CompletableFuture<Response> precedingSucceedingTitlesFetched = new CompletableFuture<>();
 
-    precedingSucceedingTitlesClient.getMany(queryForPrecedingSucceedingInstances, precedingSucceedingTitlesFetched::complete);
+    precedingSucceedingTitlesClient.getAll(queryForPrecedingSucceedingInstances, precedingSucceedingTitlesFetched::complete);
 
     return precedingSucceedingTitlesFetched
       .thenCompose(response ->

@@ -13,8 +13,6 @@ import java.io.UnsupportedEncodingException;
 import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -493,9 +491,6 @@ public class Items extends AbstractInventoryResource {
         itemIds.stream()
         .map(String::toString)
         .collect(Collectors.joining(" or ")));
-
-    boundWithPartsByItemIdsQuery = URLEncoder
-      .encode(boundWithPartsByItemIdsQuery, StandardCharsets.UTF_8);
 
     boundWithPartsClient.getMany(
       boundWithPartsByItemIdsQuery,

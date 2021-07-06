@@ -7,8 +7,6 @@ import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -75,7 +73,7 @@ public abstract class AbstractInstances {
     String query = createQueryForRelatedInstances(instanceId);
 
     CompletableFuture<Response> future = new CompletableFuture<>();
-    relatedInstancesClient.getMany(query, Integer.MAX_VALUE, 0, future::complete);
+    relatedInstancesClient.getAll(query, future::complete);
 
     return future.thenCompose(result ->
       updateInstanceRelationships(instance, relatedInstancesRepository, result));
@@ -138,7 +136,7 @@ public abstract class AbstractInstances {
     String query = createQueryForPrecedingSucceedingInstances(instanceId);
 
     CompletableFuture<Response> future = new CompletableFuture<>();
-    precedingSucceedingTitlesClient.getMany(query, future::complete);
+    precedingSucceedingTitlesClient.getAll(query, future::complete);
 
     return future.thenCompose(result ->
       updatePrecedingSucceedingTitles(instance, precedingSucceedingTitlesRepository, result));
@@ -342,7 +340,7 @@ public abstract class AbstractInstances {
 
   protected String createQueryForPrecedingSucceedingInstances(List<String> instanceIds) {
     String idList = instanceIds.stream().distinct().collect(Collectors.joining(" or "));
-    return format("query=succeedingInstanceId==(%s)+or+precedingInstanceId==(%s)", idList, idList);
+    return format("succeedingInstanceId==(%s) or precedingInstanceId==(%s)", idList, idList);
   }
 
   protected <T> CompletableFuture<List<T>> allResultsOf(
@@ -355,7 +353,7 @@ public abstract class AbstractInstances {
 
   protected String createQueryForRelatedInstances(List<String> instanceIds) {
     String idList = instanceIds.stream().distinct().collect(Collectors.joining(" or "));
-    return format("subInstanceId==(%s)+or+superInstanceId==(%s)", idList, idList);
+    return format("subInstanceId==(%s) or superInstanceId==(%s)", idList, idList);
   }
 
   protected OkapiHttpClient createHttpClient(
