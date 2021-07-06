@@ -477,7 +477,6 @@ public class InstancesApiExamples extends ApiTests {
     JsonArray procedingTitles = new JsonArray();
     procedingTitles.add(
       new JsonObject()
-        .put("id", "69938f33-17f3-45f6-b62a-122a304d7b86")
         .put("title", "Chilton's automotive industries")
         .put("identifiers", new JsonArray().add(
           new JsonObject()
@@ -492,6 +491,7 @@ public class InstancesApiExamples extends ApiTests {
     JsonObject updateInstanceRequest = newInstance.copy()
       .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameTwo)))
       .put(PUBLICATION_PERIOD_KEY, publicationPeriodToJson(new PublicationPeriod(2000, 2012)))
+      .put(PRECEDING_TITLES_KEY, procedingTitles)
       .put("natureOfContentTermIds",
         new JsonArray().add(ApiTestSuite.getAudiobookNatureOfContentTermId()));
 
