@@ -477,6 +477,7 @@ public class InstancesApiExamples extends ApiTests {
 
     JsonObject updateInstanceRequest = newInstance.copy()
       .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameTwo)))
+      .put(PRECEDING_TITLES_KEY, procedingTitles)
       .put("natureOfContentTermIds",
         new JsonArray().add(ApiTestSuite.getAudiobookNatureOfContentTermId()));
 
