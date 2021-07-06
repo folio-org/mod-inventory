@@ -48,6 +48,7 @@ import static io.vertx.core.http.HttpMethod.POST;
 import static io.vertx.core.http.HttpMethod.PUT;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.folio.inventory.domain.instances.Instance.PRECEDING_TITLES_KEY;
 import static org.folio.inventory.domain.instances.Instance.PUBLICATION_PERIOD_KEY;
 import static org.folio.inventory.domain.instances.Instance.TAGS_KEY;
 import static org.folio.inventory.domain.instances.Instance.TAG_LIST_KEY;
@@ -457,6 +458,46 @@ public class InstancesApiExamples extends ApiTests {
     var publicationPeriod = updatedInstance.getJsonObject(PUBLICATION_PERIOD_KEY);
     assertThat(publicationPeriod.getInteger("start"), is(2000));
     assertThat(publicationPeriod.getInteger("end"), is(2012));
+  }
+
+  @Test
+  public void canUpdateAnExistingInstanceWithPreceedingSucceedingTitlesMarcSource()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    UUID id = UUID.randomUUID();
+
+    JsonObject smallAngryPlanet = smallAngryPlanet(id);
+    smallAngryPlanet.put("natureOfContentTermIds",
+      new JsonArray().add(ApiTestSuite.getBibliographyNatureOfContentTermId()));
+    smallAngryPlanet.put(PUBLICATION_PERIOD_KEY, publicationPeriodToJson(new PublicationPeriod(1000, 2000)));
+
+    JsonArray procedingTitles = new JsonArray();
+    procedingTitles.add(
+      new JsonObject()
+        .put("id", "69938f33-17f3-45f6-b62a-122a304d7b86")
+        .put("title", "Chilton's automotive industries")
+        .put("identifiers", new JsonArray().add(
+          new JsonObject()
+            .put("identifierTypeId", "913300b2-03ed-469a-8179-c1092c991227")
+            .put("value", "0273-656X"))
+        ));
+    smallAngryPlanet.put(PRECEDING_TITLES_KEY, procedingTitles);
+    smallAngryPlanet.put("source", "MARC");
+
+    JsonObject newInstance = createInstance(smallAngryPlanet);
+
+    JsonObject updateInstanceRequest = newInstance.copy()
+      .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameTwo)))
+      .put(PUBLICATION_PERIOD_KEY, publicationPeriodToJson(new PublicationPeriod(2000, 2012)))
+      .put("natureOfContentTermIds",
+        new JsonArray().add(ApiTestSuite.getAudiobookNatureOfContentTermId()));
+
+    Response putResponse = updateInstance(updateInstanceRequest);
+
+    assertThat(putResponse.getStatusCode(), is(204));
   }
 
   @Test
