@@ -61,6 +61,7 @@ public class Instances extends AbstractInstances {
   private static final String BLOCKED_FIELDS_CONFIG_PATH = INVENTORY_PATH + "/config/instances/blocked-fields";
   private static final String BLOCKED_FIELDS_UPDATE_ERROR_MESSAGE = "Instance is controlled by MARC record, "
     + "these fields are blocked and can not be updated: ";
+  private static final String ID = "id";
 
   public Instances(final Storage storage, final HttpClient client) {
     super(storage, client);
@@ -294,6 +295,7 @@ public class Instances extends AbstractInstances {
     }
     for (int index = 0; index < precedingSucceedingTitles.size(); index++) {
       JsonObject jsonObject = precedingSucceedingTitles.getJsonObject(index);
+      jsonObject.put(ID, null);
       jsonObject.put(PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY, null);
       jsonObject.put(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY, null);
     }
