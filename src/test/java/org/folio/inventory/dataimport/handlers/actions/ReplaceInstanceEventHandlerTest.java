@@ -405,7 +405,7 @@ public class ReplaceInstanceEventHandlerTest {
     future.get(5, TimeUnit.MILLISECONDS);
   }
 
-  @Test(expected = ExecutionException.class)
+  @Test
   public void shouldReturnFailedFutureIfCurrentActionProfileHasNoMappingProfile() {
     HashMap<String, String> context = new HashMap<>();
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT))));
