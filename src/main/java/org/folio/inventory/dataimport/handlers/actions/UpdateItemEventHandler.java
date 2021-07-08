@@ -48,6 +48,7 @@ public class UpdateItemEventHandler implements EventHandler {
 
   private static final Logger LOG = LogManager.getLogger(UpdateItemEventHandler.class);
 
+  public static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to update an item has no a mapping profile";
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data or ITEM to update";
   private static final String STATUS_UPDATE_ERROR_MSG = "Could not change item status '%s' to '%s'";
   private static final String ITEM_PATH_FIELD = "item";
@@ -72,8 +73,11 @@ public class UpdateItemEventHandler implements EventHandler {
       if (isNull(payloadContext) || isBlank(payloadContext.get(MARC_BIBLIOGRAPHIC.value()))
         || isBlank(payloadContext.get(ITEM.value()))) {
         LOG.error(PAYLOAD_HAS_NO_DATA_MSG);
-        future.completeExceptionally(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
-        return future;
+        return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
+      }
+      if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
+        LOG.error(ACTION_HAS_NO_MAPPING_MSG);
+        return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
 
       JsonObject itemAsJson = new JsonObject(payloadContext.get(ITEM.value()));

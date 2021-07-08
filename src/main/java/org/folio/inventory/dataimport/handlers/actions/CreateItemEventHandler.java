@@ -49,6 +49,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTI
 
 public class CreateItemEventHandler implements EventHandler {
 
+  public static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create an item has no a mapping profile";
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
   private static final String PAYLOAD_DATA_HAS_NO_HOLDING_ID_MSG = "Failed to extract holdingsRecordId from holdingsRecord entity or parsed record";
   public static final String HOLDINGS_RECORD_ID_FIELD = "holdingsRecordId";
@@ -79,8 +80,11 @@ public class CreateItemEventHandler implements EventHandler {
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
       if (payloadContext == null || isBlank(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()))) {
         LOG.error(PAYLOAD_HAS_NO_DATA_MSG);
-        future.completeExceptionally(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
-        return future;
+        return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
+      }
+      if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
+        LOG.error(ACTION_HAS_NO_MAPPING_MSG);
+        return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
 
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());

@@ -35,6 +35,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTI
 public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { // NOSONAR
 
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC or INSTANCE data";
+  static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to update instance has no a mapping profile";
 
   private PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
 
@@ -58,8 +59,11 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         || isEmpty(dataImportEventPayload.getContext().get(INSTANCE.value()))
       ) {
         LOGGER.error(PAYLOAD_HAS_NO_DATA_MSG);
-        future.completeExceptionally(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
-        return future;
+        return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
+      }
+      if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
+        LOGGER.error(ACTION_HAS_NO_MAPPING_MSG);
+        return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
 
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());

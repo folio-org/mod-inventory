@@ -33,6 +33,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTI
 public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload - event payload context does not contain MARC_BIBLIOGRAPHIC data";
+  static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create instance has no a mapping profile";
 
   private PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
 
@@ -54,9 +55,13 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
         isEmpty(dataImportEventPayload.getContext().get(MAPPING_PARAMS_KEY))
       ) {
         LOGGER.error(PAYLOAD_HAS_NO_DATA_MSG);
-        future.completeExceptionally(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
-        return future;
+        return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
       }
+      if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
+        LOGGER.error(ACTION_HAS_NO_MAPPING_MSG);
+        return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
+      }
+
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       prepareEvent(dataImportEventPayload);
       defaultMapRecordToInstance(dataImportEventPayload);
