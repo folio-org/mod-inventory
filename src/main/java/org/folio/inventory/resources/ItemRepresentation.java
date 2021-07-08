@@ -182,6 +182,7 @@ class ItemRepresentation {
     }
 
     representation.put("isBoundWith", item.getIsBoundWith());
+    includeIfPresent(representation, Item.BOUND_WITH_TITLES_KEY, item.getBoundWithTitles());
 
     return representation;
   }
@@ -253,6 +254,15 @@ class ItemRepresentation {
 
     if (propertyValue != null) {
       representation.put(propertyName, propertyValue);
+    }
+  }
+
+  private void includeIfPresent(
+    JsonObject representation,
+    String propertyName,
+    JsonArray propertyValue) {
+    if (propertyValue != null) {
+      representation.put( propertyName, propertyValue );
     }
   }
 

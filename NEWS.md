@@ -1,3 +1,7 @@
+## 17.1.0 IN-PROGRESS
+
+* Adds `boundWithTitles` property to individual bound-with item (MODINV-443)
+
 ## 17.0.0 2021-06-15
 
 * Sets `isBoundWith` flag on instances and items (MODINV-388)
