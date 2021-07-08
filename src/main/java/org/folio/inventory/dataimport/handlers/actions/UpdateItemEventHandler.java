@@ -48,7 +48,7 @@ public class UpdateItemEventHandler implements EventHandler {
 
   private static final Logger LOG = LogManager.getLogger(UpdateItemEventHandler.class);
 
-  public static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to update an item has no a mapping profile";
+  static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to update an Item requires a mapping profile";
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data or ITEM to update";
   private static final String STATUS_UPDATE_ERROR_MSG = "Could not change item status '%s' to '%s'";
   private static final String ITEM_PATH_FIELD = "item";

@@ -35,7 +35,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTI
 public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { // NOSONAR
 
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC or INSTANCE data";
-  static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to update instance has no a mapping profile";
+  static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to update an Instance requires a mapping profile";
 
   private PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
 
