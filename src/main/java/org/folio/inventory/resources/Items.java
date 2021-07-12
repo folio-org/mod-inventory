@@ -13,6 +13,8 @@ import java.io.UnsupportedEncodingException;
 import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -477,74 +479,6 @@ public class Items extends AbstractInventoryResource {
     });
   }
 
-  private CompletableFuture<Response> getBoundWithPartsForMultipleItemsFuture(
-    MultipleRecords<Item> wrappedItems,
-    CollectionResourceClient boundWithPartsClient)
-  {
-    CompletableFuture<Response> future = new CompletableFuture<>();
-
-    List<String> itemIds = wrappedItems.records.stream()
-      .map(Item::getId)
-      .collect(Collectors.toList());
-
-    String boundWithPartsByItemIdsQuery =
-      String.format("itemId==(%s)",
-        itemIds.stream()
-        .map(String::toString)
-        .collect(Collectors.joining(" or ")));
-
-    boundWithPartsClient.getMany(
-      boundWithPartsByItemIdsQuery,
-      itemIds.size(),
-      0,
-      future::complete);
-
-    return future;
-  }
-
-  private CompletableFuture<Response> getBoundWithPartsForItemFuture(
-    Item item,
-    CollectionResourceClient boundWithPartsClient)
-  {
-
-    CompletableFuture<Response> future = new CompletableFuture<>();
-
-    String boundWithPartsByItemIdQuery = String.format("itemId==(%s)",
-      item.getId());
-
-    boundWithPartsClient.getMany(
-      boundWithPartsByItemIdQuery,
-      1000,
-      0,
-      future::complete);
-
-    return future;
-  }
-
-
-  private void setBoundWithFlagsOnItems(MultipleRecords<Item> wrappedItems,
-                                        CompletableFuture<Response> boundWithPartsFuture) {
-
-    Response response = boundWithPartsFuture.join();
-    if (response != null && response.hasBody() && response.getStatusCode()==200) {
-      JsonArray boundWithParts = response.getJson().getJsonArray("boundWithParts");
-      if (boundWithParts != null && !boundWithParts.isEmpty()) {
-        Set<String> boundWithItemIds = boundWithParts
-          .stream()
-          .map(o -> ((JsonObject) o).getString("itemId"))
-          .collect(Collectors.toSet());
-
-        for (Item item : wrappedItems.records) {
-          if (boundWithItemIds.contains(item.getId())) {
-            item.withIsBoundWith(true);
-          }
-        }
-      }
-    } else {
-      log.error("Failed to retrieve bound-with parts, status code:  " + (response != null ? response.getStatusCode() : "null response"));
-    }
-
-  }
 
   private OkapiHttpClient createHttpClient(
     RoutingContext routingContext,
