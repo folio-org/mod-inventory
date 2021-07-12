@@ -102,6 +102,38 @@ public class BoundWithTests extends ApiTests
 
   }
 
+  @Test
+  public void boundWithTitlesArePresentInBoundWithItem () throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException
+  {
+    IndividualResource instance1 = instancesStorageClient.create( InstanceSamples.smallAngryPlanet( UUID.randomUUID() ) );
+    IndividualResource holdings1a = holdingsStorageClient.create(new HoldingRequestBuilder()
+      .forInstance(instance1.getId()).permanentlyInMainLibrary().withCallNumber( "HOLDINGS 1A" ));
+    IndividualResource item1a = itemsClient.create(new ItemRequestBuilder()
+      .forHolding( holdings1a.getId() ).withBarcode( "ITEM 1A" ));
+
+    IndividualResource instance2 = instancesStorageClient.create( InstanceSamples.girlOnTheTrain( UUID.randomUUID() ) );
+    IndividualResource holdings2a = holdingsStorageClient.create(new HoldingRequestBuilder()
+      .forInstance( instance2.getId()).permanentlyInMainLibrary().withCallNumber( "HOLDINGS 2A" ) );
+
+    IndividualResource instance3 = instancesStorageClient.create( InstanceSamples.leviathanWakes( UUID.randomUUID() ) );
+    IndividualResource holdings3a = holdingsStorageClient.create(new HoldingRequestBuilder()
+      .forInstance(instance3.getId()).permanentlyInMainLibrary().withCallNumber( "HOLDINGS 3A" ));
+
+    boundWithPartsStorageClient.create(
+      makeObjectBoundWithPart( item1a.getJson().getString("id"), holdings1a.getJson().getString( "id" ) ));
+    boundWithPartsStorageClient.create(
+      makeObjectBoundWithPart( item1a.getJson().getString("id"), holdings2a.getJson().getString( "id" ) ));
+    boundWithPartsStorageClient.create(
+      makeObjectBoundWithPart( item1a.getJson().getString("id"), holdings3a.getJson().getString( "id" ) ));
+
+    Response itemResponse = okapiClient.get(ApiTestSuite.apiRoot()+
+      "/inventory/items/"+item1a.getId())
+      .toCompletableFuture().get(5, SECONDS);
+
+    assertThat("Item has boundWithTitles array with three titles",
+      itemResponse.getJson().getJsonArray( "boundWithTitles" ).size(), is(3));
+  }
+
   // NOTE: To be investigated: Several of these tests could possibly falsely pass
   //       due to the complexities of the queries, not all of which are
   //       necessarily supported by the fake storage modules.
