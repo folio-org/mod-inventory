@@ -164,6 +164,8 @@ public class CreateInstanceEventHandlerTest {
 
     HashMap<String, String> context = new HashMap<>();
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    record.setId("567859ad-505a-400d-a699-0028a1fdbf84");
+
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
     context.put("MAPPING_RULES", mappingRules.encode());
     context.put("MAPPING_PARAMS", new JsonObject().encode());
