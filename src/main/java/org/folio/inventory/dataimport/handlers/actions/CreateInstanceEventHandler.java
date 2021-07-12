@@ -4,6 +4,8 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
@@ -14,10 +16,11 @@ import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.InstanceUtil;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
+import org.folio.rest.jaxrs.model.EntityType;
+import org.folio.rest.jaxrs.model.Record;
 
 import java.util.HashMap;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import static java.lang.String.format;
@@ -32,6 +35,8 @@ import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
+
+  private static final Logger LOGGER = LogManager.getLogger(CreateInstanceEventHandler.class);
 
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload - event payload context does not contain MARC_BIBLIOGRAPHIC data";
 
@@ -58,7 +63,11 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
         future.completeExceptionally(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
         return future;
       }
-      Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+      Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(),
+        dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+      Record record = new JsonObject(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()))
+        .mapTo(Record.class);
+
       prepareEvent(dataImportEventPayload);
       defaultMapRecordToInstance(dataImportEventPayload);
       MappingManager.map(dataImportEventPayload);
@@ -66,9 +75,11 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
       if (instanceAsJson.getJsonObject(INSTANCE_PATH) != null) {
         instanceAsJson = instanceAsJson.getJsonObject(INSTANCE_PATH);
       }
-      instanceAsJson.put("id", UUID.randomUUID().toString());
+      instanceAsJson.put("id", record.getId());
       instanceAsJson.put(SOURCE_KEY, MARC_FORMAT);
       instanceAsJson.remove(HRID_KEY);
+
+      LOGGER.debug("Creating instance with id: {}", record.getId());
 
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
       List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
