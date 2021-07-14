@@ -29,6 +29,7 @@ import org.folio.rest.jaxrs.model.MappingRule;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -54,8 +55,10 @@ import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING;
+import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.ACTION_HAS_NO_MAPPING_MSG;
 import static org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle.TITLE_KEY;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
@@ -344,7 +347,7 @@ public class ReplaceInstanceEventHandlerTest {
   }
 
   @Test(expected = ExecutionException.class)
-  public void shouldNotProcessEventIfMArcBibliographicIsEmptyInContext() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+  public void shouldNotProcessEventIfMarcBibliographicIsEmptyInContext() throws IOException, InterruptedException, ExecutionException, TimeoutException {
     Reader fakeReader = Mockito.mock(Reader.class);
 
     String instanceTypeId = UUID.randomUUID().toString();
@@ -400,6 +403,28 @@ public class ReplaceInstanceEventHandlerTest {
 
     CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
+  }
+
+  @Test
+  public void shouldReturnFailedFutureIfCurrentActionProfileHasNoMappingProfile() {
+    HashMap<String, String> context = new HashMap<>();
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT))));
+    context.put(INSTANCE.value(), new JsonObject().encode());
+    context.put("MAPPING_RULES", new JsonObject().encode());
+    context.put("MAPPING_PARAMS", new JsonObject().encode());
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_INSTANCE_MATCHED.value())
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode( new ProfileSnapshotWrapper()
+        .withContentType(ACTION_PROFILE)
+        .withContent(actionProfile));
+
+    CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
+
+    ExecutionException exception = Assert.assertThrows(ExecutionException.class, future::get);
+    Assert.assertEquals(ACTION_HAS_NO_MAPPING_MSG, exception.getCause().getMessage());
   }
 
   @Test
