@@ -20,7 +20,6 @@ import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.ContentType;
 import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
-import org.folio.inventory.support.http.client.ResponseHandler;
 import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Assert;
@@ -463,7 +462,6 @@ public class InstancesApiExamples extends ApiTests {
     JsonArray procedingTitles = new JsonArray();
     procedingTitles.add(
       new JsonObject()
-        .put("id", "69938f33-17f3-45f6-b62a-122a304d7b86")
         .put("title", "Chilton's automotive industries")
         .put("identifiers", new JsonArray().add(
           new JsonObject()
