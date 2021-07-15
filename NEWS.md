@@ -1,3 +1,10 @@
+## 16.3.4 2021-07-15
+* Includes fix of editing an instance field not controlled by MARC (MODINV-432)
+* Includes fix of Instances duplication when imported via data-import (MODINV-455)
+* Includes fix of Inventory instance record not updating although quickMARC/SRS updates (MODINV-451, MODINV-445)
+* Includes upgrade to data-import-processing-core v3.0.4
+
+
 ## 16.3.3 2021-06-18
 * Includes fix of Instance tags deletion when the instance is updated by an imported MARC record (MODINV-419)
 * Includes fix of excessive CPU usage in a system with no user activity (MODINV-423)
