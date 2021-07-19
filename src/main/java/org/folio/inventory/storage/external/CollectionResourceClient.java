@@ -1,5 +1,7 @@
 package org.folio.inventory.storage.external;
 
+import static org.folio.util.StringUtil.urlEncode;
+
 import io.vertx.core.json.JsonObject;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
@@ -48,29 +50,31 @@ public class CollectionResourceClient {
       .thenAccept(responseHandler);
   }
 
-  public void getMany(String query, Consumer<Response> responseHandler) {
-    String url = isProvided(query)
-      ? String.format("%s?%s", collectionRoot, query)
-      : collectionRoot.toString();
-
-    client.get(url)
-      .thenAccept(responseHandler);
-  }
-
+  /**
+   * Run the query using some limit and offset.
+   *
+   * @param cqlQuery the query without percent (url) encoding
+   */
   public void getMany(
     String cqlQuery,
     Integer pageLimit,
     Integer pageOffset,
     Consumer<Response> responseHandler) {
 
-    //TODO: Replace with query string creator that checks each parameter
-    String url = isProvided(cqlQuery)
-      ? String.format("%s?query=%s&limit=%s&offset=%s", collectionRoot, cqlQuery,
-      pageLimit, pageOffset)
-      : collectionRoot.toString();
-
+    String url = collectionRoot + "?"
+        + (isProvided(cqlQuery) ? ("query=" + urlEncode(cqlQuery) + "&") : "")
+        + "limit=" + pageLimit + "&offset=" + pageOffset;
     client.get(url)
       .thenAccept(responseHandler);
+  }
+
+  /**
+   * Runs the query while setting limit to maximum and offset to zero to get all records.
+   *
+   * @param cqlQuery the query without percent (url) encoding
+   */
+  public void getAll(String cqlQuery, Consumer<Response> responseHandler) {
+    getMany(cqlQuery, Integer.MAX_VALUE, 0, responseHandler);
   }
 
   private boolean isProvided(String query) {

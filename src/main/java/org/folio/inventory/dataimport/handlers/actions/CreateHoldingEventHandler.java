@@ -45,6 +45,7 @@ public class CreateHoldingEventHandler implements EventHandler {
   private static final String SAVE_HOLDING_ERROR_MESSAGE = "Can`t save new holding";
   private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t create Holding entity: context is empty or doesn`t exists";
   private static final String PAYLOAD_DATA_HAS_NO_INSTANCE_ID_ERROR_MSG = "Failed to extract instanceId from instance entity or parsed record";
+  static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create a Holding entity requires a mapping profile";
 
   private final Storage storage;
 
@@ -62,6 +63,11 @@ public class CreateHoldingEventHandler implements EventHandler {
         || StringUtils.isEmpty(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()))) {
         throw new EventProcessingException(CONTEXT_EMPTY_ERROR_MESSAGE);
       }
+      if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
+        LOGGER.error(ACTION_HAS_NO_MAPPING_MSG);
+        return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
+      }
+
       prepareEvent(dataImportEventPayload);
       MappingManager.map(dataImportEventPayload);
       JsonObject holdingAsJson = new JsonObject(dataImportEventPayload.getContext().get(HOLDINGS.value()));

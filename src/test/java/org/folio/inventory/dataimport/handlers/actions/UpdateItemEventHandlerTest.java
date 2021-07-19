@@ -52,6 +52,7 @@ import java.util.function.Consumer;
 import static org.folio.ActionProfile.Action.UPDATE;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_MATCHED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_UPDATED;
+import static org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler.ACTION_HAS_NO_MAPPING_MSG;
 import static org.folio.inventory.domain.items.Item.HRID_KEY;
 import static org.folio.inventory.domain.items.Item.STATUS_KEY;
 import static org.folio.inventory.domain.items.ItemStatusName.AVAILABLE;
@@ -81,7 +82,7 @@ public class UpdateItemEventHandlerTest {
   private JobProfile jobProfile = new JobProfile()
     .withId(UUID.randomUUID().toString())
     .withName("Create MARC Bibs")
-    .withDataType(JobProfile.DataType.MARC_BIB);
+    .withDataType(JobProfile.DataType.MARC);
 
   private ActionProfile actionProfile = new ActionProfile()
     .withId(UUID.randomUUID().toString())
@@ -309,6 +310,29 @@ public class UpdateItemEventHandlerTest {
     JsonObject updatedItem = new JsonObject(payloadContext.get(ITEM.value()));
     Assert.assertEquals(protectedItemStatus, updatedItem.getJsonObject(STATUS_KEY).getString("name"));
     Assert.assertEquals(expectedItemBarcode, updatedItem.getString(ItemUtil.BARCODE));
+  }
+
+  @Test
+  public void shouldReturnFailedFutureWhenCurrentActionProfileHasNoMappingProfile() {
+    // given
+    HashMap<String, String> payloadContext = new HashMap<>();
+    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+    payloadContext.put(ITEM.value(), existingItemJson.encode());
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_ITEM_MATCHED.value())
+      .withContext(payloadContext)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(new ProfileSnapshotWrapper()
+        .withContent(JsonObject.mapFrom(actionProfile).getMap())
+        .withContentType(ACTION_PROFILE));
+
+    // when
+    CompletableFuture<DataImportEventPayload> future = updateItemHandler.handle(dataImportEventPayload);
+
+    // then
+    ExecutionException exception = Assert.assertThrows(ExecutionException.class, future::get);
+    Assert.assertEquals(ACTION_HAS_NO_MAPPING_MSG, exception.getCause().getMessage());
   }
 
   @Test

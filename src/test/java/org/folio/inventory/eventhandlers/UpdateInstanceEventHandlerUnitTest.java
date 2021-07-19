@@ -161,7 +161,7 @@ public class UpdateInstanceEventHandlerUnitTest {
   public void shouldCompleteExceptionally() throws IOException {
 
     HashMap<String, String> eventPayload = new HashMap<>();
-    eventPayload.put("MARC", ZIPArchiver.zip(record.encode()));
+    eventPayload.put("MARC_BIB", ZIPArchiver.zip(record.encode()));
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
 

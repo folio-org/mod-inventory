@@ -61,6 +61,7 @@ public class Instances extends AbstractInstances {
   private static final String BLOCKED_FIELDS_CONFIG_PATH = INVENTORY_PATH + "/config/instances/blocked-fields";
   private static final String BLOCKED_FIELDS_UPDATE_ERROR_MESSAGE = "Instance is controlled by MARC record, "
     + "these fields are blocked and can not be updated: ";
+  private static final String ID = "id";
 
   public Instances(final Storage storage, final HttpClient client) {
     super(storage, client);
@@ -195,6 +196,7 @@ public class Instances extends AbstractInstances {
       .thenCompose(InstancePrecedingSucceedingTitleValidators::refuseWhenUnconnectedHasNoTitle)
       .thenCompose(instance -> instanceCollection.findById(rContext.request().getParam("id")))
       .thenCompose(InstancesValidators::refuseWhenInstanceNotFound)
+      .thenCompose(existingInstance -> fetchPrecedingSucceedingTitles(new Success<>(existingInstance), rContext, wContext))
       .thenCompose(existingInstance -> refuseWhenBlockedFieldsChanged(existingInstance, updatedInstance))
       .thenCompose(existingInstance -> refuseWhenHridChanged(existingInstance, updatedInstance))
       .thenAccept(existingInstance -> updateInstance(updatedInstance, rContext, wContext))
@@ -274,6 +276,10 @@ public class Instances extends AbstractInstances {
   private boolean areInstanceBlockedFieldsChanged(Instance existingInstance, Instance updatedInstance) {
     JsonObject existingInstanceJson = JsonObject.mapFrom(existingInstance);
     JsonObject updatedInstanceJson = JsonObject.mapFrom(updatedInstance);
+
+    zeroingFields(existingInstanceJson.getJsonArray(Instance.PRECEDING_TITLES_KEY));
+    zeroingFields(existingInstanceJson.getJsonArray(Instance.SUCCEEDING_TITLES_KEY));
+
     Map<String, Object> existingBlockedFields = new HashMap<>();
     Map<String, Object> updatedBlockedFields = new HashMap<>();
     for (String blockedFieldCode : config.getInstanceBlockedFields()) {
@@ -281,6 +287,18 @@ public class Instances extends AbstractInstances {
       updatedBlockedFields.put(blockedFieldCode, updatedInstanceJson.getValue(blockedFieldCode));
     }
     return ObjectUtils.notEqual(existingBlockedFields, updatedBlockedFields);
+  }
+
+  private void zeroingFields(JsonArray precedingSucceedingTitles) {
+    if (precedingSucceedingTitles.isEmpty()) {
+      return;
+    }
+    for (int index = 0; index < precedingSucceedingTitles.size(); index++) {
+      JsonObject jsonObject = precedingSucceedingTitles.getJsonObject(index);
+      jsonObject.put(ID, null);
+      jsonObject.put(PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY, null);
+      jsonObject.put(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY, null);
+    }
   }
 
   private void deleteAll(RoutingContext routingContext) {
@@ -382,7 +400,7 @@ public class Instances extends AbstractInstances {
     String instanceId, RoutingContext routingContext, WebContext webContext ) {
     CompletableFuture<Response> holdingsFuture = new CompletableFuture<>();
 
-    createHoldingsStorageClient(routingContext, webContext).getMany("query=instanceId=="+instanceId, holdingsFuture::complete);
+    createHoldingsStorageClient(routingContext, webContext).getAll("instanceId=="+instanceId, holdingsFuture::complete);
     return holdingsFuture.thenCompose(
       response -> {
         List<String> holdingsRecordsList =
@@ -520,7 +538,7 @@ public class Instances extends AbstractInstances {
     if (relatedInstancesClient != null) {
       CompletableFuture<Response> relatedInstancesFetched = new CompletableFuture<>();
 
-      relatedInstancesClient.getMany(query, relatedInstancesFetched::complete);
+      relatedInstancesClient.getMany(query, Integer.MAX_VALUE, 0, relatedInstancesFetched::complete);
 
       return relatedInstancesFetched
         .thenCompose(response -> withInstanceRelationships(instance, response));
@@ -583,7 +601,7 @@ public class Instances extends AbstractInstances {
 
     CompletableFuture<Response> precedingSucceedingTitlesFetched = new CompletableFuture<>();
 
-    precedingSucceedingTitlesClient.getMany(queryForPrecedingSucceedingInstances, precedingSucceedingTitlesFetched::complete);
+    precedingSucceedingTitlesClient.getAll(queryForPrecedingSucceedingInstances, precedingSucceedingTitlesFetched::complete);
 
     return precedingSucceedingTitlesFetched
       .thenCompose(response ->

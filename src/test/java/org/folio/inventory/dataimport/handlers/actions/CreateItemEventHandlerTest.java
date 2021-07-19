@@ -27,7 +27,9 @@ import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -48,6 +50,7 @@ import java.util.function.Consumer;
 
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_CREATED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
+import static org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler.ACTION_HAS_NO_MAPPING_MSG;
 import static org.folio.inventory.domain.items.ItemStatusName.AVAILABLE;
 import static org.folio.rest.jaxrs.model.EntityType.ITEM;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
@@ -73,7 +76,7 @@ public class CreateItemEventHandlerTest {
   private JobProfile jobProfile = new JobProfile()
     .withId(UUID.randomUUID().toString())
     .withName("Create MARC Bibs")
-    .withDataType(JobProfile.DataType.MARC_BIB);
+    .withDataType(JobProfile.DataType.MARC);
 
   private ActionProfile actionProfile = new ActionProfile()
     .withId(UUID.randomUUID().toString())
@@ -395,6 +398,33 @@ public class CreateItemEventHandlerTest {
 
     // then
     future.get(5, TimeUnit.SECONDS);
+  }
+
+  @Rule
+  public ExpectedException exceptionRule = ExpectedException.none();
+
+  @Test
+  public void shouldReturnFailedFutureWhenCurrentActionProfileHasNoMappingProfile() {
+    // given
+    CreateItemEventHandler createItemHandler = new CreateItemEventHandler(mockedStorage);
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_HOLDING_ID));
+    HashMap<String, String> payloadContext = new HashMap<>();
+    payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withContext(payloadContext)
+      .withProfileSnapshot(this.profileSnapshotWrapper)
+      .withCurrentNode(new ProfileSnapshotWrapper()
+        .withContent(JsonObject.mapFrom(actionProfile).getMap())
+        .withContentType(ACTION_PROFILE));
+
+    // when
+    CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
+
+    // then
+    ExecutionException exception = Assert.assertThrows(ExecutionException.class, future::get);
+    Assert.assertEquals(ACTION_HAS_NO_MAPPING_MSG, exception.getCause().getMessage());
   }
 
   @Test
