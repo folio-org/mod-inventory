@@ -62,8 +62,12 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
         LOGGER.error(PAYLOAD_HAS_NO_DATA_MSG);
         return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
       }
-      Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(),
-        dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+      if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
+        LOGGER.error(ACTION_HAS_NO_MAPPING_MSG);
+        return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
+      }
+
+      Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       Record record = new JsonObject(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()))
         .mapTo(Record.class);
 
