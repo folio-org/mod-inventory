@@ -1,3 +1,11 @@
+## 17.0.2 2021-07-21
+
+* Resolves issue of duplicate Instances created via data-import (MODINV-456)
+* Adds additional validation of JobProfile before processing (MODINV-454)
+* Resolves issue caused by editing an instance field not controlled by MARC (MODINV-452)
+* Contains fix of inventory instance record not updating although quickMARC/SRS updates (MODINV-439)
+* Upgrade to data-import-processing-core v3.1.3
+
 ## 17.0.1 2021-06-25
 
 * Contains change of MARC related subtypes to generic MARC (MODINV-438)
