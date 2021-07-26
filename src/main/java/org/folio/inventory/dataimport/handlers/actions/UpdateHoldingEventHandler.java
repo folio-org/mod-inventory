@@ -37,6 +37,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
   private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t update Holding entity: context or Holding-entity are empty or doesn`t exist!";
   private static final String EMPTY_REQUIRED_FIELDS_ERROR_MESSAGE = "Can`t update Holding entity: one of required fields(hrid, permanentLocationId, instanceId) are empty!";
   private static final String HOLDINGS_PATH_FIELD = "holdings";
+  static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to update a Holding entity has no a mapping profile";
 
   private final Storage storage;
 
@@ -55,6 +56,11 @@ public class UpdateHoldingEventHandler implements EventHandler {
         || isEmpty(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()))) {
         throw new EventProcessingException(CONTEXT_EMPTY_ERROR_MESSAGE);
       }
+      if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
+        LOGGER.error(ACTION_HAS_NO_MAPPING_MSG);
+        return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
+      }
+
       HoldingsRecord tmpHoldingsRecord = retrieveHolding(dataImportEventPayload.getContext());
 
       String holdingId = tmpHoldingsRecord.getId();

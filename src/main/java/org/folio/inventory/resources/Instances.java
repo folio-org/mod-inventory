@@ -400,7 +400,7 @@ public class Instances extends AbstractInstances {
     String instanceId, RoutingContext routingContext, WebContext webContext ) {
     CompletableFuture<Response> holdingsFuture = new CompletableFuture<>();
 
-    createHoldingsStorageClient(routingContext, webContext).getMany("query=instanceId=="+instanceId, holdingsFuture::complete);
+    createHoldingsStorageClient(routingContext, webContext).getAll("instanceId=="+instanceId, holdingsFuture::complete);
     return holdingsFuture.thenCompose(
       response -> {
         List<String> holdingsRecordsList =
@@ -538,7 +538,7 @@ public class Instances extends AbstractInstances {
     if (relatedInstancesClient != null) {
       CompletableFuture<Response> relatedInstancesFetched = new CompletableFuture<>();
 
-      relatedInstancesClient.getMany(query, relatedInstancesFetched::complete);
+      relatedInstancesClient.getMany(query, Integer.MAX_VALUE, 0, relatedInstancesFetched::complete);
 
       return relatedInstancesFetched
         .thenCompose(response -> withInstanceRelationships(instance, response));
@@ -601,7 +601,7 @@ public class Instances extends AbstractInstances {
 
     CompletableFuture<Response> precedingSucceedingTitlesFetched = new CompletableFuture<>();
 
-    precedingSucceedingTitlesClient.getMany(queryForPrecedingSucceedingInstances, precedingSucceedingTitlesFetched::complete);
+    precedingSucceedingTitlesClient.getAll(queryForPrecedingSucceedingInstances, precedingSucceedingTitlesFetched::complete);
 
     return precedingSucceedingTitlesFetched
       .thenCompose(response ->

@@ -22,8 +22,6 @@ import java.io.UnsupportedEncodingException;
 import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -109,7 +107,7 @@ public class ItemsByHoldingsRecordId extends Items
             BOUND_WITH_PARTS_STORAGE_PATH);
 
         boundWithPartsClient.getMany(
-          URLEncoder.encode(queryByHoldingsRecordId + queryByHoldingsRecordsItemIds, StandardCharsets.UTF_8),
+          queryByHoldingsRecordId + queryByHoldingsRecordsItemIds,
           1000,
           0,
           response2 -> {
