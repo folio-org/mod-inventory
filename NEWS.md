@@ -1,3 +1,7 @@
+## 17.0.3 2021-07-26
+
+* More than 10 parent / child instances will be included with an instance (MODINV-446)
+
 ## 17.0.2 2021-07-21
 
 * Resolves issue of duplicate Instances created via data-import (MODINV-456)
