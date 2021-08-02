@@ -23,6 +23,7 @@ import org.folio.util.pubsub.PubSubClientUtils;
 import static java.lang.String.format;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
+import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX_REQUEST_SIZE;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_PORT;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_REPLICATION_FACTOR;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.OKAPI_URL;
@@ -76,6 +77,7 @@ public class QuickMarcConsumerVerticle extends AbstractVerticle {
       .kafkaPort(config.getString(KAFKA_PORT))
       .okapiUrl(config.getString(OKAPI_URL))
       .replicationFactor(Integer.parseInt(config.getString(KAFKA_REPLICATION_FACTOR)))
+      .maxRequestSize(Integer.parseInt(config.getString(KAFKA_MAX_REQUEST_SIZE)))
       .build();
     LOGGER.info(format("kafkaConfig: %s", kafkaConfig));
     return kafkaConfig;
