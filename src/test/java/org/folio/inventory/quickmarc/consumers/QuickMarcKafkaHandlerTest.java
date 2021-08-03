@@ -114,6 +114,7 @@ public class QuickMarcKafkaHandlerTest {
       .envId("env")
       .kafkaHost(hostAndPort[0])
       .kafkaPort(hostAndPort[1])
+      .maxRequestSize(1048576)
       .build();
 
     PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper = new PrecedingSucceedingTitlesHelper(context -> okapiHttpClient);
