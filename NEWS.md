@@ -1,3 +1,9 @@
+## 17.0.4 2021-08-04
+
+* Adds support fir max.request.size configuration for Kafka messages (MODINV-466)
+* Upgrade to data-import-processing-core v3.1.4
+* Upgrade to folio-kafka-wrapper v2.3.3
+
 ## 17.0.3 2021-07-26
 
 * More than 10 parent / child instances will be included with an instance (MODINV-446)
