@@ -12,11 +12,11 @@ public class PrecedingSucceedingTitleCollection {
     this.totalRecords = totalRecords;
   }
 
-  private List<PrecedingSucceedingTitle> getPrecedingSucceedingTitles() {
+  public List<PrecedingSucceedingTitle> getPrecedingSucceedingTitles() {
     return precedingSucceedingTitles;
   }
 
-  private int getTotalRecords() {
+  public int getTotalRecords() {
     return totalRecords;
   }
 }
