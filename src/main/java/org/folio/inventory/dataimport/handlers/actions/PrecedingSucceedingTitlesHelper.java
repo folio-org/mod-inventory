@@ -21,7 +21,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
-import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitles;
+import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitleCollection;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.storage.external.CollectionResourceRepository;
 import org.folio.inventory.support.JsonArrayHelper;
@@ -110,7 +110,7 @@ public class PrecedingSucceedingTitlesHelper {
     preparePrecedingTitles(instance, titlesList);
     prepareSucceedingTitles(instance, titlesList);
 
-    var precedingSucceedingTitles = new PrecedingSucceedingTitles(titlesList, titlesList.size());
+    var precedingSucceedingTitles = new PrecedingSucceedingTitleCollection(titlesList, titlesList.size());
     var requestUrl = String.format("%s/instances/%s", getRootUrl(context), instance.getId());
     var apply = okapiHttpClientCreator.apply(context);
     apply.put(requestUrl, JsonObject.mapFrom(precedingSucceedingTitles))
