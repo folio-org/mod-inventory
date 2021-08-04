@@ -1,20 +1,6 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.client.WebClient;
-import lombok.SneakyThrows;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.folio.inventory.common.Context;
-import org.folio.inventory.domain.instances.Instance;
-import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
-import org.folio.inventory.storage.external.CollectionResourceClient;
-import org.folio.inventory.storage.external.CollectionResourceRepository;
-import org.folio.inventory.support.JsonArrayHelper;
-import org.folio.inventory.support.http.client.OkapiHttpClient;
-import org.folio.processing.exceptions.EventProcessingException;
+import static java.lang.String.format;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -24,7 +10,23 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 
-import static java.lang.String.format;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.WebClient;
+import lombok.SneakyThrows;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import org.folio.inventory.common.Context;
+import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
+import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitles;
+import org.folio.inventory.storage.external.CollectionResourceClient;
+import org.folio.inventory.storage.external.CollectionResourceRepository;
+import org.folio.inventory.support.JsonArrayHelper;
+import org.folio.inventory.support.http.client.OkapiHttpClient;
+import org.folio.processing.exceptions.EventProcessingException;
 
 public class PrecedingSucceedingTitlesHelper {
 
@@ -101,6 +103,30 @@ public class PrecedingSucceedingTitlesHelper {
     return Future.succeededFuture();
   }
 
+  public Future<Void> updatePrecedingSucceedingTitles(Instance instance, Context context) {
+    Promise<Void> promise = Promise.promise();
+
+    List<PrecedingSucceedingTitle> titlesList = new ArrayList<>();
+    preparePrecedingTitles(instance, titlesList);
+    prepareSucceedingTitles(instance, titlesList);
+
+    var precedingSucceedingTitles = new PrecedingSucceedingTitles(titlesList, titlesList.size());
+    var requestUrl = String.format("%s/instances/%s", getRootUrl(context), instance.getId());
+    var apply = okapiHttpClientCreator.apply(context);
+    apply.put(requestUrl, JsonObject.mapFrom(precedingSucceedingTitles))
+      .whenComplete((v, e) -> {
+          if (e != null) {
+            LOGGER.error("Error during updating preceding/succeeding titles for instance {}", instance.getId(), e);
+            promise.fail(e);
+          } else {
+            promise.complete();
+          }
+        }
+      );
+
+    return promise.future();
+  }
+
   private void preparePrecedingTitles(Instance instance, List<PrecedingSucceedingTitle> preparedTitles) {
     if (instance.getPrecedingTitles() != null) {
       for (PrecedingSucceedingTitle parent : instance.getPrecedingTitles()) {
@@ -132,18 +158,22 @@ public class PrecedingSucceedingTitlesHelper {
   }
 
   private CollectionResourceClient createPrecedingSucceedingTitlesClient(Context context) {
-    try {
-      OkapiHttpClient okapiClient = okapiHttpClientCreator.apply(context);
-      return new CollectionResourceClient(okapiClient, new URL(context.getOkapiLocation() + "/preceding-succeeding-titles"));
-    } catch (MalformedURLException e) {
-      throw new EventProcessingException("Error during creating precedingSucceedingTitlesClient", e);
-    }
+    OkapiHttpClient okapiClient = okapiHttpClientCreator.apply(context);
+    return new CollectionResourceClient(okapiClient, getRootUrl(context));
   }
 
   @SneakyThrows
   private OkapiHttpClient createHttpClient(Context context) {
     return new OkapiHttpClient(webClient, new URL(context.getOkapiLocation()),
       context.getTenantId(), context.getToken(), null, null, null);
+  }
+
+  private URL getRootUrl(Context context) {
+    try {
+      return new URL(context.getOkapiLocation() + "/preceding-succeeding-titles");
+    } catch (MalformedURLException e) {
+      throw new EventProcessingException("Error during creating precedingSucceedingTitlesClient", e);
+    }
   }
 
 }

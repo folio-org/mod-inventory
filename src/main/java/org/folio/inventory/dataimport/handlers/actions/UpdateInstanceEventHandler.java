@@ -1,21 +1,19 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+
+import java.util.Map;
+
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
 import org.folio.inventory.common.Context;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.Record;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 public class UpdateInstanceEventHandler {
 
@@ -50,10 +48,7 @@ public class UpdateInstanceEventHandler {
       Future<Instance> instanceUpdateFuture = instanceUpdateDelegate.handle(eventPayload, marcRecord, context);
 
       instanceUpdateFuture
-        .compose(updatedInstance -> precedingSucceedingTitlesHelper.getExistingPrecedingSucceedingTitles(updatedInstance, context))
-        .map(UpdateInstanceEventHandler::retrieveTitlesIds)
-        .compose(titlesIds -> precedingSucceedingTitlesHelper.deletePrecedingSucceedingTitles(titlesIds, context))
-        .compose(ar -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(instanceUpdateFuture.result(), context))
+        .compose(updatedInstance -> precedingSucceedingTitlesHelper.updatePrecedingSucceedingTitles(updatedInstance, context))
         .onComplete(ar -> {
           if (ar.succeeded()) {
             future.complete(instanceUpdateFuture.result());
@@ -73,9 +68,4 @@ public class UpdateInstanceEventHandler {
       || isEmpty(eventPayload.get(MAPPING_PARAMS_KEY));
   }
 
-  private static Set<String> retrieveTitlesIds(List<JsonObject> precedingSucceedingTitles) {
-    return precedingSucceedingTitles.stream()
-      .map(titleJson -> titleJson.getString("id"))
-      .collect(Collectors.toSet());
-  }
 }
