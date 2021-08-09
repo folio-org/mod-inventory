@@ -108,6 +108,8 @@ public class QuickMarcKafkaHandlerTest {
 
     when(okapiHttpClient.get(anyString())).thenReturn(
       CompletableFuture.completedFuture(new Response(200, new JsonObject().encode(), null, null)));
+    when(okapiHttpClient.put(anyString(), any(JsonObject.class)))
+      .thenReturn(CompletableFuture.completedFuture(new Response(204, null, null, null)));
 
     String[] hostAndPort = cluster.getBrokerList().split(":");
     kafkaConfig = KafkaConfig.builder()
