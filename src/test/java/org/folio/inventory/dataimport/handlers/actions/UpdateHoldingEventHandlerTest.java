@@ -1,27 +1,7 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
-import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_UPDATED;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.when;
-
-import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.function.Consumer;
-
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
@@ -50,8 +30,29 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
+
+import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
+import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_MATCHED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_UPDATED;
+import static org.folio.inventory.dataimport.handlers.actions.UpdateHoldingEventHandler.ACTION_HAS_NO_MAPPING_MSG;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.when;
 
 public class UpdateHoldingEventHandlerTest {
 
@@ -361,6 +362,27 @@ public class UpdateHoldingEventHandlerTest {
 
     CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
+  }
+
+  @Test
+  public void shouldReturnFailedFutureIfCurrentActionProfileHasNoMappingProfile() {
+    HashMap<String, String> context = new HashMap<>();
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(HOLDINGS.value(), Json.encode(new HoldingsRecord()));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(new ProfileSnapshotWrapper()
+        .withContent(JsonObject.mapFrom(actionProfile).getMap())
+        .withContentType(ACTION_PROFILE));
+
+    CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
+
+    ExecutionException exception = Assert.assertThrows(ExecutionException.class, future::get);
+    Assert.assertEquals(ACTION_HAS_NO_MAPPING_MSG, exception.getCause().getMessage());
   }
 
   @Test

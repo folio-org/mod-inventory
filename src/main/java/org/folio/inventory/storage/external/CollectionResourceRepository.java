@@ -4,7 +4,6 @@ import java.util.concurrent.CompletableFuture;
 
 import org.folio.inventory.exceptions.ExternalResourceFetchException;
 import org.folio.inventory.support.http.client.Response;
-import org.folio.util.StringUtil;
 
 public class CollectionResourceRepository {
   private final CollectionResourceClient resourceClient;
@@ -16,7 +15,7 @@ public class CollectionResourceRepository {
   public CompletableFuture<Response> getMany(CqlQuery query, Limit limit, Offset offset) {
     final CompletableFuture<Response> future = new CompletableFuture<>();
 
-    resourceClient.getMany(StringUtil.urlEncode(query.toString()), limit.getLimit(),
+    resourceClient.getMany(query.toString(), limit.getLimit(),
       offset.getOffset(), future::complete);
 
     return future.thenCompose(response -> handleResponse(response, 200));
