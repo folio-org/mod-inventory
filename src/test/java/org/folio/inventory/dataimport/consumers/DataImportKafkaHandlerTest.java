@@ -46,7 +46,6 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTI
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -73,7 +72,7 @@ public class DataImportKafkaHandlerTest {
   private JobProfile jobProfile = new JobProfile()
     .withId(UUID.randomUUID().toString())
     .withName("Create instance")
-    .withDataType(org.folio.JobProfile.DataType.MARC_BIB);
+    .withDataType(org.folio.JobProfile.DataType.MARC);
 
   private ActionProfile actionProfile = new ActionProfile()
     .withId(UUID.randomUUID().toString())
@@ -110,6 +109,7 @@ public class DataImportKafkaHandlerTest {
     KafkaConfig kafkaConfig = KafkaConfig.builder()
       .kafkaHost(hostAndPort[0])
       .kafkaPort(hostAndPort[1])
+      .maxRequestSize(1048576)
       .build();
 
     HttpClient client = vertx.createHttpClient();

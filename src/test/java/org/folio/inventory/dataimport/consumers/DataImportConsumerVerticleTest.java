@@ -48,6 +48,7 @@ import static org.folio.DataImportEventTypes.DI_COMPLETED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
+import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX_REQUEST_SIZE;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_PORT;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_REPLICATION_FACTOR;
 import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
@@ -81,7 +82,7 @@ public class DataImportConsumerVerticleTest {
   private JobProfile jobProfile = new JobProfile()
     .withId(UUID.randomUUID().toString())
     .withName("Create instance")
-    .withDataType(org.folio.JobProfile.DataType.MARC_BIB);
+    .withDataType(org.folio.JobProfile.DataType.MARC);
   private ActionProfile actionProfile = new ActionProfile()
     .withId(UUID.randomUUID().toString())
     .withName("Create instance")
@@ -128,7 +129,8 @@ public class DataImportConsumerVerticleTest {
         .put(KAFKA_HOST, hostAndPort[0])
         .put(KAFKA_PORT, hostAndPort[1])
         .put(KAFKA_REPLICATION_FACTOR, "1")
-        .put(KAFKA_ENV, KAFKA_ENV_NAME));
+        .put(KAFKA_ENV, KAFKA_ENV_NAME)
+        .put(KAFKA_MAX_REQUEST_SIZE, "1048576"));
     vertx.deployVerticle(DataImportConsumerVerticle.class.getName(), options, deployAr -> async.complete());
   }
 

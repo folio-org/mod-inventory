@@ -2,8 +2,6 @@ package org.folio.inventory.storage.external;
 
 import static org.apache.commons.collections4.ListUtils.partition;
 import static org.folio.inventory.support.JsonArrayHelper.toList;
-import static org.folio.util.StringUtil.urlEncode;
-
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -49,8 +47,7 @@ public class MultipleRecordsFetchClient {
   private CompletableFuture<Response> getAllMatched(CqlQuery query) {
     final CompletableFuture<Response> future = new CompletableFuture<>();
 
-    resourceClient.getMany(urlEncode(query.toString()), Integer.MAX_VALUE, 0,
-      future::complete);
+    resourceClient.getAll(query.toString(), future::complete);
 
     return future.thenCompose(response -> {
       if (response.getStatusCode() != expectedStatus) {

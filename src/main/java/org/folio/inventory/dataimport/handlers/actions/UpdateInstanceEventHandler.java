@@ -20,16 +20,18 @@ public class UpdateInstanceEventHandler {
   private static final Logger LOGGER = LogManager.getLogger(UpdateInstanceEventHandler.class);
 
   private static final String MARC_KEY = "MARC_BIB";
-  private static final String USER_CONTEXT_KEY = "USER_CONTEXT";
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
 
   private final Context context;
   private final InstanceUpdateDelegate instanceUpdateDelegate;
+  private final PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
 
-  public UpdateInstanceEventHandler(InstanceUpdateDelegate updateInstanceDelegate, Context context) {
+  public UpdateInstanceEventHandler(InstanceUpdateDelegate updateInstanceDelegate, Context context,
+                                    PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper) {
     this.context = context;
     this.instanceUpdateDelegate = updateInstanceDelegate;
+    this.precedingSucceedingTitlesHelper = precedingSucceedingTitlesHelper;
   }
 
   public Future<Instance> handle(Map<String, String> eventPayload) {
@@ -43,10 +45,13 @@ public class UpdateInstanceEventHandler {
       }
 
       Record marcRecord = new JsonObject(eventPayload.get(MARC_KEY)).mapTo(Record.class);
-      instanceUpdateDelegate.handle(eventPayload, marcRecord, context)
+      Future<Instance> instanceUpdateFuture = instanceUpdateDelegate.handle(eventPayload, marcRecord, context);
+
+      instanceUpdateFuture
+        .compose(updatedInstance -> precedingSucceedingTitlesHelper.updatePrecedingSucceedingTitles(updatedInstance, context))
         .onComplete(ar -> {
           if (ar.succeeded()) {
-            future.complete(ar.result());
+            future.complete(instanceUpdateFuture.result());
           } else {
             future.fail(ar.cause());
           }
@@ -62,4 +67,5 @@ public class UpdateInstanceEventHandler {
     return eventPayload == null || isEmpty(eventPayload.get(MARC_KEY)) || isEmpty(eventPayload.get(MAPPING_RULES_KEY))
       || isEmpty(eventPayload.get(MAPPING_PARAMS_KEY));
   }
+
 }

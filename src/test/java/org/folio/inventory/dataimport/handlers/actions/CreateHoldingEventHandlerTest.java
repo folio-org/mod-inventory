@@ -18,7 +18,6 @@ import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.mapper.reader.Reader;
-
 import org.folio.processing.mapping.mapper.reader.record.marc.MarcBibReaderFactory;
 import org.folio.processing.value.StringValue;
 import org.folio.rest.jaxrs.model.EntityType;
@@ -51,6 +50,7 @@ import java.util.function.Consumer;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
+import static org.folio.inventory.dataimport.handlers.actions.CreateHoldingEventHandler.ACTION_HAS_NO_MAPPING_MSG;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
@@ -76,7 +76,7 @@ public class CreateHoldingEventHandlerTest {
   private JobProfile jobProfile = new JobProfile()
     .withId(UUID.randomUUID().toString())
     .withName("Create MARC Bibs")
-    .withDataType(JobProfile.DataType.MARC_BIB);
+    .withDataType(JobProfile.DataType.MARC);
 
   private ActionProfile actionProfile = new ActionProfile()
     .withId(UUID.randomUUID().toString())
@@ -475,6 +475,26 @@ public class CreateHoldingEventHandlerTest {
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
+  }
+
+  @Test
+  public void shouldReturnFailedFutureIfCurrentActionProfileHasNoMappingProfile() {
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    HashMap<String, String> context = new HashMap<>();
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(new ProfileSnapshotWrapper()
+        .withContent(JsonObject.mapFrom(mappingProfile).getMap())
+        .withContentType(ACTION_PROFILE));
+
+    CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
+
+    ExecutionException exception = Assert.assertThrows(ExecutionException.class, future::get);
+    Assert.assertEquals(ACTION_HAS_NO_MAPPING_MSG, exception.getCause().getMessage());
   }
 
   @Test

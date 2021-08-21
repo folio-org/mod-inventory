@@ -1,19 +1,16 @@
 package org.folio.inventory.storage.external;
 
-import java.io.IOException;
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.ObjectWriter;
 import org.folio.HoldingsRecord;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
 
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.JsonObject;
+import java.io.IOException;
 
 class ExternalStorageModuleHoldingsRecordCollection
   extends ExternalStorageModuleCollection<HoldingsRecord>
@@ -49,13 +46,9 @@ class ExternalStorageModuleHoldingsRecordCollection
 
   @Override
   protected JsonObject mapToRequest(HoldingsRecord holding) {
-    ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
     try {
-      JsonObject jsonObject = new JsonObject(ow.writeValueAsString(holding));
-      // a workaround that should be revisited - Holdingsrecord schema contains "_version" field which cannot be correctly mapped from the object to json
-      jsonObject.remove("version");
-      return jsonObject;
-    } catch (IOException e) {
+      return JsonObject.mapFrom(holding);
+    } catch (Exception e) {
       LOGGER.error(e);
       throw new JsonMappingException("Can`t map 'Holdingsrecord' entity to json", e);
     }

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import io.vertx.core.json.JsonArray;
 import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 
 import io.vertx.core.json.JsonObject;
@@ -42,6 +43,7 @@ public class Item {
   public static final String LAST_CHECK_IN = "lastCheckIn";
   public static final String COPY_NUMBER_KEY = "copyNumber";
   public static final String EFFECTIVE_SHELVING_ORDER_KEY = "effectiveShelvingOrder";
+  public static final String BOUND_WITH_TITLES_KEY = "boundWithTitles";
 
   public final String id;
   private final String version;
@@ -88,6 +90,7 @@ public class Item {
   private EffectiveCallNumberComponents effectiveCallNumberComponents;
 
   private boolean isBoundWith = false;
+  private JsonArray boundWithTitles = null;
 
   private final JsonObject metadata;
 
@@ -456,6 +459,15 @@ public class Item {
 
   public Item withIsBoundWith(boolean boundWith) {
     this.isBoundWith = boundWith;
+    return this;
+  }
+
+  public JsonArray getBoundWithTitles () {
+    return boundWithTitles;
+  }
+
+  public Item withBoundWithTitles (JsonArray titles) {
+    this.boundWithTitles = titles;
     return this;
   }
 

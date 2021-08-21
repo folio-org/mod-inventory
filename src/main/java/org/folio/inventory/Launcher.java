@@ -14,6 +14,7 @@ import java.util.concurrent.TimeoutException;
 
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
+import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX_REQUEST_SIZE;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_PORT;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_REPLICATION_FACTOR;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.OKAPI_URL;
@@ -77,9 +78,9 @@ public class Launcher {
 
   private static void startConsumerVerticles(Map<String, Object> consumerVerticlesConfig)
     throws InterruptedException, ExecutionException, TimeoutException {
-    int dataImportConsumerVerticleNumber = Integer.parseInt(System.getenv().getOrDefault(DATA_IMPORT_CONSUMER_VERTICLE_INSTANCES_NUMBER_CONFIG, "5"));
-    int instanceHridSetConsumerVerticleNumber = Integer.parseInt(System.getenv().getOrDefault(MARC_BIB_INSTANCE_HRID_SET_CONSUMER_VERTICLE_INSTANCES_NUMBER_CONFIG, "5"));
-    int quickMarcConsumerVerticleNumber = Integer.parseInt(System.getenv().getOrDefault(QUICK_MARC_CONSUMER_VERTICLE_INSTANCES_NUMBER_CONFIG, "5"));
+    int dataImportConsumerVerticleNumber = Integer.parseInt(System.getenv().getOrDefault(DATA_IMPORT_CONSUMER_VERTICLE_INSTANCES_NUMBER_CONFIG, "3"));
+    int instanceHridSetConsumerVerticleNumber = Integer.parseInt(System.getenv().getOrDefault(MARC_BIB_INSTANCE_HRID_SET_CONSUMER_VERTICLE_INSTANCES_NUMBER_CONFIG, "3"));
+    int quickMarcConsumerVerticleNumber = Integer.parseInt(System.getenv().getOrDefault(QUICK_MARC_CONSUMER_VERTICLE_INSTANCES_NUMBER_CONFIG, "1"));
 
     CompletableFuture<String> future1 = new CompletableFuture<>();
     CompletableFuture<String> future2 = new CompletableFuture<>();
@@ -129,6 +130,7 @@ public class Launcher {
     configMap.put(OKAPI_URL, System.getenv().getOrDefault(OKAPI_URL, "http://okapi:9130"));
     configMap.put(KAFKA_REPLICATION_FACTOR, System.getenv().getOrDefault(KAFKA_REPLICATION_FACTOR, "1"));
     configMap.put(KAFKA_ENV, System.getenv().getOrDefault(KAFKA_ENV, "folio"));
+    configMap.put(KAFKA_MAX_REQUEST_SIZE, System.getenv().getOrDefault(KAFKA_MAX_REQUEST_SIZE, "1048576"));
 
     String storageType = System.getProperty("org.folio.metadata.inventory.storage.type");
     String storageLocation = System.getProperty("org.folio.metadata.inventory.storage.location");

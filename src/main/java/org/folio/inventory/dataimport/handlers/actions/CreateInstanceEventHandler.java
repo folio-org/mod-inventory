@@ -4,7 +4,8 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.client.WebClient;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
@@ -12,17 +13,14 @@ import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
-import org.folio.inventory.storage.external.CollectionResourceClient;
-import org.folio.inventory.storage.external.CollectionResourceRepository;
-import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
+import org.folio.rest.jaxrs.model.EntityType;
+import org.folio.rest.jaxrs.model.Record;
 
 import java.util.HashMap;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.BiFunction;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
@@ -37,16 +35,16 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTI
 
 public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
+  private static final Logger LOGGER = LogManager.getLogger(CreateInstanceEventHandler.class);
+
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload - event payload context does not contain MARC_BIBLIOGRAPHIC data";
+  static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create an Instance requires a mapping profile";
 
-  CreateInstanceEventHandler(Storage storage, WebClient webClient,
-    BiFunction<WebClient, Context, OkapiHttpClient> okapiClientCreator) {
+  private PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
 
-    super(storage, webClient, okapiClientCreator);
-  }
-
-  public CreateInstanceEventHandler(Storage storage, WebClient webClient) {
-    super(storage, webClient);
+  public CreateInstanceEventHandler(Storage storage, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper) {
+    super(storage);
+    this.precedingSucceedingTitlesHelper = precedingSucceedingTitlesHelper;
   }
 
   @Override
@@ -62,29 +60,36 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
         isEmpty(dataImportEventPayload.getContext().get(MAPPING_PARAMS_KEY))
       ) {
         LOGGER.error(PAYLOAD_HAS_NO_DATA_MSG);
-        future.completeExceptionally(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
-        return future;
+        return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
       }
+      if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
+        LOGGER.error(ACTION_HAS_NO_MAPPING_MSG);
+        return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
+      }
+
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+      Record record = new JsonObject(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()))
+        .mapTo(Record.class);
+
       prepareEvent(dataImportEventPayload);
       defaultMapRecordToInstance(dataImportEventPayload);
       MappingManager.map(dataImportEventPayload);
-      CollectionResourceClient precedingSucceedingTitlesClient = createPrecedingSucceedingTitlesClient(context);
-      CollectionResourceRepository precedingSucceedingTitlesRepository = new CollectionResourceRepository(precedingSucceedingTitlesClient);
       JsonObject instanceAsJson = new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value()));
       if (instanceAsJson.getJsonObject(INSTANCE_PATH) != null) {
         instanceAsJson = instanceAsJson.getJsonObject(INSTANCE_PATH);
       }
-      instanceAsJson.put("id", UUID.randomUUID().toString());
+      instanceAsJson.put("id", record.getId());
       instanceAsJson.put(SOURCE_KEY, MARC_FORMAT);
       instanceAsJson.remove(HRID_KEY);
+
+      LOGGER.debug("Creating instance with id: {}", record.getId());
 
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
       List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
       if (errors.isEmpty()) {
         Instance mappedInstance = Instance.fromJson(instanceAsJson);
         addInstance(mappedInstance, instanceCollection)
-          .compose(createdInstance -> createPrecedingSucceedingTitles(mappedInstance, precedingSucceedingTitlesRepository).map(createdInstance))
+          .compose(createdInstance -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(mappedInstance, context).map(createdInstance))
           .onSuccess(ar -> {
             dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(ar));
             future.complete(dataImportEventPayload);

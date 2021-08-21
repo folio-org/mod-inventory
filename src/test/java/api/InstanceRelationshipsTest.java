@@ -62,6 +62,24 @@ public class InstanceRelationshipsTest extends ApiTests {
   }
 
   @Test
+  public void canFetchOneInstancesWith11Children() throws Exception {
+    UUID superInstanceId = UUID.randomUUID();
+    instancesClient.create(smallAngryPlanet(superInstanceId)
+        .put("title", randomString("super")));
+
+    for (int i = 0; i < 11; i++) {
+      UUID subInstanceId = UUID.randomUUID();
+      instancesClient.create(nod(subInstanceId).put("title", randomString("sub")));
+      instanceRelationshipClient.create(
+        createInstanceRelationships(superInstanceId, subInstanceId));
+    }
+
+    var json = instancesClient.getById(superInstanceId).getJson();
+    assertThat(json.getJsonArray("parentInstances").size(), is(0));
+    assertThat(json.getJsonArray("childInstances").size(), is(11));
+  }
+
+  @Test
   public void canForwardInstanceRelationshipsFetchFailure() throws Exception {
     final int expectedCount = 4;
     createSuperInstanceSubInstance(expectedCount);

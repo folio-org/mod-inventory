@@ -5,6 +5,7 @@ import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.useDefaults;
 
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
+import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX_REQUEST_SIZE;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_PORT;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_REPLICATION_FACTOR;
 
@@ -47,7 +48,8 @@ public class QuickMarcConsumerVerticleTest {
         .put(KAFKA_HOST, hostAndPort[0])
         .put(KAFKA_PORT, hostAndPort[1])
         .put(KAFKA_REPLICATION_FACTOR, "1")
-        .put(KAFKA_ENV, KAFKA_ENV_NAME))
+        .put(KAFKA_ENV, KAFKA_ENV_NAME)
+        .put(KAFKA_MAX_REQUEST_SIZE, "1048576"))
       .setWorker(true);
 
     Promise<String> promise = Promise.promise();

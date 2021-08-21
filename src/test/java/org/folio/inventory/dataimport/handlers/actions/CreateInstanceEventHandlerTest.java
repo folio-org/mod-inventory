@@ -27,6 +27,7 @@ import org.folio.rest.jaxrs.model.MappingRule;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -51,6 +52,8 @@ import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
+import static org.folio.inventory.dataimport.handlers.actions.CreateInstanceEventHandler.ACTION_HAS_NO_MAPPING_MSG;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
@@ -85,7 +88,7 @@ public class CreateInstanceEventHandlerTest {
   private JobProfile jobProfile = new JobProfile()
     .withId(UUID.randomUUID().toString())
     .withName("Create MARC Bibs")
-    .withDataType(JobProfile.DataType.MARC_BIB);
+    .withDataType(JobProfile.DataType.MARC);
 
   private ActionProfile actionProfile = new ActionProfile()
     .withId(UUID.randomUUID().toString())
@@ -127,9 +130,8 @@ public class CreateInstanceEventHandlerTest {
     MockitoAnnotations.initMocks(this);
     MappingManager.clearReaderFactories();
 
-    // webClient can be null as the factory method used for the client does not use it
-    createInstanceEventHandler = new CreateInstanceEventHandler(storage, null,
-      ((webClient, context) -> mockedClient));
+    createInstanceEventHandler = new CreateInstanceEventHandler(storage,
+      new PrecedingSucceedingTitlesHelper(context -> mockedClient));
 
     mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
 
@@ -162,6 +164,8 @@ public class CreateInstanceEventHandlerTest {
 
     HashMap<String, String> context = new HashMap<>();
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    record.setId("567859ad-505a-400d-a699-0028a1fdbf84");
+
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
     context.put("MAPPING_RULES", mappingRules.encode());
     context.put("MAPPING_PARAMS", new JsonObject().encode());
@@ -329,6 +333,27 @@ public class CreateInstanceEventHandlerTest {
 
     CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
+  }
+
+  @Test
+  public void shouldReturnFailedFutureIfCurrentActionProfileHasNoMappingProfile() {
+    HashMap<String, String> context = new HashMap<>();
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT))));
+    context.put("MAPPING_RULES", new JsonObject().encode());
+    context.put("MAPPING_PARAMS", new JsonObject().encode());
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(new ProfileSnapshotWrapper()
+        .withContentType(ACTION_PROFILE)
+        .withContent(actionProfile));
+
+    CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
+
+    ExecutionException exception = Assert.assertThrows(ExecutionException.class, future::get);
+    Assert.assertEquals(ACTION_HAS_NO_MAPPING_MSG, exception.getCause().getMessage());
   }
 
   @Test

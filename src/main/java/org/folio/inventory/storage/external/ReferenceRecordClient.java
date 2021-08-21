@@ -3,9 +3,7 @@ package org.folio.inventory.storage.external;
 import io.vertx.core.json.JsonObject;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.Response;
-
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
+import org.folio.util.StringUtil;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -30,7 +28,7 @@ public class ReferenceRecordClient {
     CompletableFuture<ReferenceRecord> overallFuture
       = new CompletableFuture<>();
 
-    collectionResourceClient.getMany(query, requestFuture::complete);
+    collectionResourceClient.getAll(query, requestFuture::complete);
 
     requestFuture.thenAccept(response -> {
       if(response == null) {
@@ -69,7 +67,7 @@ public class ReferenceRecordClient {
 
   private static String getReferenceRecordQuery(String name) {
 
-    return "query=" + URLEncoder.encode(String.format("name==\"%s\"", name), StandardCharsets.UTF_8);
+    return "name==" + StringUtil.cqlEncode(name);
   }
 
   public static class ReferenceRecordClientException extends Exception {
