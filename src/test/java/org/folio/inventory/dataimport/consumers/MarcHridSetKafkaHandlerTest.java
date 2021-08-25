@@ -35,7 +35,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
 @RunWith(VertxUnitRunner.class)
-public class MarcBibInstanceHridSetKafkaHandlerTest {
+public class MarcHridSetKafkaHandlerTest {
 
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/rules.json";
   private static final String RECORD_PATH = "src/test/resources/handlers/record.json";
@@ -53,7 +53,7 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
   private JsonObject mappingRules;
   private Record record;
   private Instance existingInstance;
-  private MarcBibInstanceHridSetKafkaHandler marcBibInstanceHridSetKafkaHandler;
+  private MarcHridSetKafkaHandler marcHridSetKafkaHandler;
 
   @Before
   public void setUp() throws IOException {
@@ -78,7 +78,7 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
       return null;
     }).when(mockedInstanceCollection).update(any(Instance.class), any(), any());
 
-    marcBibInstanceHridSetKafkaHandler = new MarcBibInstanceHridSetKafkaHandler(new InstanceUpdateDelegate(mockedStorage), kafkaInternalCache);
+    marcHridSetKafkaHandler = new MarcHridSetKafkaHandler(new InstanceUpdateDelegate(mockedStorage), holdingUpdateDelegate, kafkaInternalCache);
   }
 
   @Test
@@ -98,7 +98,7 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
     when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
 
     // when
-    Future<String> future = marcBibInstanceHridSetKafkaHandler.handle(kafkaRecord);
+    Future<String> future = marcHridSetKafkaHandler.handle(kafkaRecord);
 
     // then
     future.onComplete(ar -> {
@@ -122,7 +122,7 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
     when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
 
     // when
-    Future<String> future = marcBibInstanceHridSetKafkaHandler.handle(kafkaRecord);
+    Future<String> future = marcHridSetKafkaHandler.handle(kafkaRecord);
 
     // then
     future.onComplete(ar -> {
@@ -141,7 +141,7 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
     when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
 
     // when
-    Future<String> future = marcBibInstanceHridSetKafkaHandler.handle(kafkaRecord);
+    Future<String> future = marcHridSetKafkaHandler.handle(kafkaRecord);
 
     // then
     future.onComplete(ar -> {
@@ -167,7 +167,7 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
     when(kafkaInternalCache.containsByKey("01")).thenReturn(true);
 
     // when
-    Future<String> future = marcBibInstanceHridSetKafkaHandler.handle(kafkaRecord);
+    Future<String> future = marcHridSetKafkaHandler.handle(kafkaRecord);
 
     // then
     future.onComplete(ar -> {

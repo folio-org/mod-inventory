@@ -1,0 +1,70 @@
+package org.folio.inventory.dataimport.consumers;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.json.JsonObject;
+import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.folio.DataImportEventPayload;
+import org.folio.dbschema.ObjectMapperTool;
+import org.folio.inventory.common.Context;
+import org.folio.inventory.dataimport.handlers.actions.HoldingUpdateDelegate;
+import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
+import org.folio.kafka.AsyncRecordHandler;
+import org.folio.kafka.KafkaHeaderUtils;
+import org.folio.kafka.cache.KafkaInternalCache;
+import org.folio.processing.events.utils.ZIPArchiver;
+import org.folio.rest.jaxrs.model.Event;
+import java.util.Map;
+
+import static java.lang.String.format;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
+
+public class MarcHoldingsHridSetKafkaHandler implements AsyncRecordHandler<String, String> {
+  private static final Logger LOGGER = LogManager.getLogger(MarcHoldingsHridSetKafkaHandler.class);
+  private static final String CORRELATION_ID_HEADER = "correlationId";
+  private static final ObjectMapper OBJECT_MAPPER = ObjectMapperTool.getMapper();
+
+  private final HoldingUpdateDelegate holdingUpdateDelegate;
+  private final KafkaInternalCache kafkaInternalCache;
+
+  public MarcHoldingsHridSetKafkaHandler(HoldingUpdateDelegate holdingUpdateDelegate, KafkaInternalCache kafkaInternalCache) {
+    this.holdingUpdateDelegate = holdingUpdateDelegate;
+    this.kafkaInternalCache = kafkaInternalCache;
+  }
+
+  @Override
+  public Future<String> handle(KafkaConsumerRecord<String, String> record) {
+    try {
+      Promise<String> promise = Promise.promise();
+      Event event = OBJECT_MAPPER.readValue(record.value(), Event.class);
+      if (!kafkaInternalCache.containsByKey(event.getId())) {
+        kafkaInternalCache.putToCache(event.getId());
+        @SuppressWarnings("unchecked")
+        Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(record.headers());
+        String correlationId = headersMap.get(CORRELATION_ID_HEADER);
+        LOGGER.info(format("Event payload has been received with event type: %s and correlationId: %s", event.getEventType(), correlationId));
+        DataImportEventPayload eventPayload = new JsonObject(ZIPArchiver.unzip(event.getEventPayload())).mapTo(DataImportEventPayload.class);
+
+        Context context = EventHandlingUtil.constructContext(headersMap.get(OKAPI_TENANT_HEADER), headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER));
+        holdingUpdateDelegate.handle(eventPayload, context).onComplete(ar -> {
+          if (ar.succeeded()) {
+            promise.complete(record.key());
+          } else {
+            LOGGER.error("Failed to process data import event payload", ar.cause());
+            promise.fail(ar.cause());
+          }
+        });
+        return promise.future();
+      }
+    } catch (Exception e) {
+      LOGGER.error(format("Failed to process data import kafka record from topic %s", record.topic()), e);
+      return Future.failedFuture(e);
+    }
+    return Future.succeededFuture();
+  }
+}

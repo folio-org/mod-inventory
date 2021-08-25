@@ -6,7 +6,10 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.DataImportEventTypes;
 import org.folio.inventory.dataimport.consumers.MarcBibInstanceHridSetKafkaHandler;
+import org.folio.inventory.dataimport.consumers.MarcHoldingsHridSetKafkaHandler;
+import org.folio.inventory.dataimport.handlers.actions.HoldingUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.GlobalLoadSensor;
@@ -26,15 +29,16 @@ import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_POR
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_REPLICATION_FACTOR;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.OKAPI_URL;
 
-public class MarcBibInstanceHridSetConsumerVerticle extends AbstractVerticle {
+public class MarcHridSetConsumerVerticle extends AbstractVerticle {
 
-  private static final Logger LOGGER = LogManager.getLogger(MarcBibInstanceHridSetConsumerVerticle.class);
+  private static final Logger LOGGER = LogManager.getLogger(MarcHridSetConsumerVerticle.class);
   private static final long DELAY_TIME_BETWEEN_EVENTS_CLEANUP_VALUE_MILLIS = 3600000;
   private static final int EVENT_TIMEOUT_VALUE_HOURS = 3;
   private static final GlobalLoadSensor GLOBAL_LOAD_SENSOR = new GlobalLoadSensor();
 
   private final int loadLimit = getLoadLimit();
-  private KafkaConsumerWrapper<String, String> consumerWrapper;
+  private KafkaConsumerWrapper<String, String> marcBibConsumerWrapper;
+  private KafkaConsumerWrapper<String, String> marcHoldingsConsumerWrapper;
 
   @Override
   public void start(Promise<Void> startPromise) {
@@ -49,29 +53,26 @@ public class MarcBibInstanceHridSetConsumerVerticle extends AbstractVerticle {
       .build();
     LOGGER.info("kafkaConfig: {}", kafkaConfig);
 
-    SubscriptionDefinition subscriptionDefinition = KafkaTopicNameHelper.createSubscriptionDefinition(kafkaConfig.getEnvId(),
-        KafkaTopicNameHelper.getDefaultNameSpace(), DI_SRS_MARC_BIB_INSTANCE_HRID_SET.value());
-
-    consumerWrapper = KafkaConsumerWrapper.<String, String>builder()
-      .context(context)
-      .vertx(vertx)
-      .kafkaConfig(kafkaConfig)
-      .loadLimit(loadLimit)
-      .globalLoadSensor(GLOBAL_LOAD_SENSOR)
-      .subscriptionDefinition(subscriptionDefinition)
-      .build();
+    marcBibConsumerWrapper = createConsumerByEvent(kafkaConfig, DI_SRS_MARC_BIB_INSTANCE_HRID_SET);
+    marcHoldingsConsumerWrapper = createConsumerByEvent(kafkaConfig, DI_SRS_MARC_BIB_INSTANCE_HRID_SET);
 
     HttpClient client = vertx.createHttpClient();
     Storage storage = Storage.basedUpon(vertx, config, client);
     InstanceUpdateDelegate instanceUpdateDelegate = new InstanceUpdateDelegate(storage);
+    HoldingUpdateDelegate holdingUpdateDelegate = new HoldingUpdateDelegate(storage);
 
     KafkaInternalCache kafkaInternalCache = KafkaInternalCache.builder()
       .kafkaConfig(kafkaConfig).build();
     kafkaInternalCache.initKafkaCache();
 
-    MarcBibInstanceHridSetKafkaHandler marcBibInstanceHridSetKafkaHandler = new MarcBibInstanceHridSetKafkaHandler(instanceUpdateDelegate, kafkaInternalCache);
+    MarcBibInstanceHridSetKafkaHandler instanceHridSetKafkaHandler = new MarcBibInstanceHridSetKafkaHandler(instanceUpdateDelegate, kafkaInternalCache);
+    MarcHoldingsHridSetKafkaHandler marcHoldingsHridSetKafkaHandler = new MarcHoldingsHridSetKafkaHandler(holdingUpdateDelegate, kafkaInternalCache);
 
-    consumerWrapper.start(marcBibInstanceHridSetKafkaHandler, PubSubClientUtils.constructModuleName())
+    marcBibConsumerWrapper.start(instanceHridSetKafkaHandler, PubSubClientUtils.constructModuleName())
+      .onSuccess(v -> startPromise.complete())
+      .onFailure(startPromise::fail);
+
+    marcHoldingsConsumerWrapper.start(marcHoldingsHridSetKafkaHandler, PubSubClientUtils.constructModuleName())
       .onSuccess(v -> startPromise.complete())
       .onFailure(startPromise::fail);
 
@@ -80,10 +81,26 @@ public class MarcBibInstanceHridSetConsumerVerticle extends AbstractVerticle {
 
   @Override
   public void stop(Promise<Void> stopPromise) {
-    consumerWrapper.stop().onComplete(ar -> stopPromise.complete());
+    marcBibConsumerWrapper.stop().onComplete(ar -> stopPromise.complete());
+    marcHoldingsConsumerWrapper.stop().onComplete(ar -> stopPromise.complete());
   }
 
   private int getLoadLimit() {
     return Integer.parseInt(System.getProperty("inventory.kafka.MarcBibInstanceHridSetConsumer.loadLimit", "5"));
+  }
+
+  private KafkaConsumerWrapper<String, String> createConsumerByEvent(KafkaConfig kafkaConfig, DataImportEventTypes event) {
+    SubscriptionDefinition subscriptionDefinition = KafkaTopicNameHelper.createSubscriptionDefinition(
+      kafkaConfig.getEnvId(),
+      KafkaTopicNameHelper.getDefaultNameSpace(), event.value()
+    );
+    return KafkaConsumerWrapper.<String, String>builder()
+      .context(context)
+      .vertx(vertx)
+      .kafkaConfig(kafkaConfig)
+      .loadLimit(loadLimit)
+      .globalLoadSensor(GLOBAL_LOAD_SENSOR)
+      .subscriptionDefinition(subscriptionDefinition)
+      .build();
   }
 }

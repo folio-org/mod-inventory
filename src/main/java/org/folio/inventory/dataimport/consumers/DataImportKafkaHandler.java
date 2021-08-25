@@ -38,6 +38,7 @@ import org.folio.processing.events.EventManager;
 import org.folio.processing.events.utils.ZIPArchiver;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.mapper.reader.record.marc.MarcBibReaderFactory;
+import org.folio.processing.mapping.mapper.reader.record.marc.MarcHoldingsReaderFactory;
 import org.folio.processing.matching.loader.MatchValueLoaderFactory;
 import org.folio.processing.matching.reader.MarcValueReaderImpl;
 import org.folio.processing.matching.reader.MatchValueReaderFactory;
@@ -103,6 +104,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     MatchValueReaderFactory.register(new StaticValueReaderImpl());
 
     MappingManager.registerReaderFactory(new MarcBibReaderFactory());
+    MappingManager.registerReaderFactory(new MarcHoldingsReaderFactory());
     MappingManager.registerWriterFactory(new ItemWriterFactory());
     MappingManager.registerWriterFactory(new HoldingWriterFactory());
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
