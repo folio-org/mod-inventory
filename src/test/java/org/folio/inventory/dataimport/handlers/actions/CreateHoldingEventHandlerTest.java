@@ -1,9 +1,9 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
