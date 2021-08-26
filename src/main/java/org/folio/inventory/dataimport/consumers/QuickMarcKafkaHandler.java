@@ -13,6 +13,7 @@ import org.folio.inventory.dataimport.handlers.QMEventTypes;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
 import org.folio.inventory.dataimport.handlers.actions.UpdateInstanceEventHandler;
+import org.folio.inventory.dataimport.util.ConsumerWrapperUtil;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaConfig;
@@ -21,7 +22,6 @@ import org.folio.processing.events.utils.ZIPArchiver;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.EventMetadata;
 import org.folio.rest.util.OkapiConnectionParams;
-import org.folio.util.pubsub.PubSubClientUtils;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -143,7 +143,7 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
       .withEventMetadata(new EventMetadata()
         .withTenantId(params.getTenantId())
         .withEventTTL(1)
-        .withPublishedBy(PubSubClientUtils.constructModuleName()));
+        .withPublishedBy(ConsumerWrapperUtil.constructModuleName()));
 
     String topicName = formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), params.getTenantId(), eventType);
 
