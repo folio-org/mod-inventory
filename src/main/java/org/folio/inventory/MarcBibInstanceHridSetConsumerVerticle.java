@@ -8,6 +8,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.dataimport.consumers.MarcBibInstanceHridSetKafkaHandler;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
+import org.folio.inventory.dataimport.util.ConsumerWrapperUtil;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.GlobalLoadSensor;
 import org.folio.kafka.KafkaConfig;
@@ -16,7 +17,6 @@ import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.kafka.SubscriptionDefinition;
 import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.kafka.cache.util.CacheUtil;
-import org.folio.util.pubsub.PubSubClientUtils;
 
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_INSTANCE_HRID_SET;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
@@ -71,7 +71,7 @@ public class MarcBibInstanceHridSetConsumerVerticle extends AbstractVerticle {
 
     MarcBibInstanceHridSetKafkaHandler marcBibInstanceHridSetKafkaHandler = new MarcBibInstanceHridSetKafkaHandler(instanceUpdateDelegate, kafkaInternalCache);
 
-    consumerWrapper.start(marcBibInstanceHridSetKafkaHandler, PubSubClientUtils.constructModuleName())
+    consumerWrapper.start(marcBibInstanceHridSetKafkaHandler, ConsumerWrapperUtil.constructModuleName())
       .onSuccess(v -> startPromise.complete())
       .onFailure(startPromise::fail);
 
