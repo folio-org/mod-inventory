@@ -22,6 +22,7 @@ import org.folio.kafka.cache.util.CacheUtil;
 import org.folio.util.pubsub.PubSubClientUtils;
 
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_INSTANCE_HRID_SET;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_HOLDINGS_HOLDING_HRID_SET;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX_REQUEST_SIZE;
@@ -54,7 +55,7 @@ public class MarcHridSetConsumerVerticle extends AbstractVerticle {
     LOGGER.info("kafkaConfig: {}", kafkaConfig);
 
     marcBibConsumerWrapper = createConsumerByEvent(kafkaConfig, DI_SRS_MARC_BIB_INSTANCE_HRID_SET);
-    marcHoldingsConsumerWrapper = createConsumerByEvent(kafkaConfig, DI_SRS_MARC_BIB_INSTANCE_HRID_SET);
+    marcHoldingsConsumerWrapper = createConsumerByEvent(kafkaConfig, DI_SRS_MARC_HOLDINGS_HOLDING_HRID_SET);
 
     HttpClient client = vertx.createHttpClient();
     Storage storage = Storage.basedUpon(vertx, config, client);
@@ -65,10 +66,10 @@ public class MarcHridSetConsumerVerticle extends AbstractVerticle {
       .kafkaConfig(kafkaConfig).build();
     kafkaInternalCache.initKafkaCache();
 
-    MarcBibInstanceHridSetKafkaHandler instanceHridSetKafkaHandler = new MarcBibInstanceHridSetKafkaHandler(instanceUpdateDelegate, kafkaInternalCache);
+    MarcBibInstanceHridSetKafkaHandler marcBibInstanceHridSetKafkaHandler = new MarcBibInstanceHridSetKafkaHandler(instanceUpdateDelegate, kafkaInternalCache);
     MarcHoldingsHridSetKafkaHandler marcHoldingsHridSetKafkaHandler = new MarcHoldingsHridSetKafkaHandler(holdingUpdateDelegate, kafkaInternalCache);
 
-    marcBibConsumerWrapper.start(instanceHridSetKafkaHandler, PubSubClientUtils.constructModuleName())
+    marcBibConsumerWrapper.start(marcBibInstanceHridSetKafkaHandler, PubSubClientUtils.constructModuleName())
       .onSuccess(v -> startPromise.complete())
       .onFailure(startPromise::fail);
 

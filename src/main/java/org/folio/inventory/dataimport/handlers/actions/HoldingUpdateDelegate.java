@@ -5,14 +5,10 @@ import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.storage.Storage;
-import org.folio.inventory.support.HoldingsSupport;
-import org.folio.processing.mapping.MappingManager;
-import org.folio.rest.jaxrs.model.EntityType;
 
 import static java.lang.String.format;
 
@@ -24,15 +20,10 @@ public class HoldingUpdateDelegate {
     this.STORAGE = storage;
   }
 
-  public Future<HoldingsRecord> handle(DataImportEventPayload dataImportEventPayload, Context context) {
+  public Future<HoldingsRecord> handle(HoldingsRecord mappedHolding, String existingHoldingsId, Context context) {
     try {
-      MappingManager.map(dataImportEventPayload);
-      JsonObject holdingAsJson = new JsonObject(dataImportEventPayload.getContext().get(EntityType.MARC_HOLDINGS));
-      HoldingsRecord mappedHolding = holdingAsJson.mapTo(HoldingsRecord.class);
-
-      String holdingsRecordId = dataImportEventPayload.getContext().get("holdingsRecordId");
       HoldingsRecordCollection holdingsRecordCollection = STORAGE.getHoldingsRecordCollection(context);
-      return getHoldingById(holdingsRecordId, holdingsRecordCollection)
+      return getHoldingById(existingHoldingsId, holdingsRecordCollection)
         .compose(existingRecord -> updateHolding(existingRecord, mappedHolding))
         .compose(updatedRecord -> updateHoldingInStorage(updatedRecord, holdingsRecordCollection));
     } catch (Exception e) {

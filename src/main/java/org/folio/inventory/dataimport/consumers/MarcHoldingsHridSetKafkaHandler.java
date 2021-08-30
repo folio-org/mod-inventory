@@ -8,6 +8,7 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
+import org.folio.HoldingsRecord;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.handlers.actions.HoldingUpdateDelegate;
@@ -16,10 +17,13 @@ import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaHeaderUtils;
 import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.processing.events.utils.ZIPArchiver;
+import org.folio.processing.mapping.MappingManager;
 import org.folio.rest.jaxrs.model.Event;
 import java.util.Map;
 
 import static java.lang.String.format;
+import static org.folio.rest.jaxrs.model.EntityType.HOLDINGS;
+import static org.folio.rest.jaxrs.model.EntityType.MARC_HOLDINGS;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
@@ -27,6 +31,7 @@ import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
 public class MarcHoldingsHridSetKafkaHandler implements AsyncRecordHandler<String, String> {
   private static final Logger LOGGER = LogManager.getLogger(MarcHoldingsHridSetKafkaHandler.class);
   private static final String CORRELATION_ID_HEADER = "correlationId";
+  private static final String HOLDINGS_ID = "holdingsId";
   private static final ObjectMapper OBJECT_MAPPER = ObjectMapperTool.getMapper();
 
   private final HoldingUpdateDelegate holdingUpdateDelegate;
@@ -51,7 +56,13 @@ public class MarcHoldingsHridSetKafkaHandler implements AsyncRecordHandler<Strin
         DataImportEventPayload eventPayload = new JsonObject(ZIPArchiver.unzip(event.getEventPayload())).mapTo(DataImportEventPayload.class);
 
         Context context = EventHandlingUtil.constructContext(headersMap.get(OKAPI_TENANT_HEADER), headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER));
-        holdingUpdateDelegate.handle(eventPayload, context).onComplete(ar -> {
+        if (!(eventPayload.getContext().containsKey(HOLDINGS_ID) && eventPayload.getContext().containsKey(HOLDINGS.value()) && eventPayload.getContext().containsKey(MARC_HOLDINGS.value()))) {
+          throw new IllegalArgumentException(format("The event payload not does not contain all the %s, %s, %s", HOLDINGS_ID, HOLDINGS.value(), MARC_HOLDINGS.value()));
+        }
+        String existingHoldingsId = eventPayload.getContext().get(HOLDINGS_ID);
+        MappingManager.map(eventPayload);
+        HoldingsRecord mappedHolding = new JsonObject(eventPayload.getContext().get(HOLDINGS.value())).mapTo(HoldingsRecord.class);
+        holdingUpdateDelegate.handle(mappedHolding, existingHoldingsId, context).onComplete(ar -> {
           if (ar.succeeded()) {
             promise.complete(record.key());
           } else {
