@@ -29,6 +29,7 @@ import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
 
 /**
+ * This handler is a part of post-processing logic that is intended to handling Holdings creation.
  * The handler is intended to process the event that is thrown on setting HRID to Holdings record
  * Execution steps:
  * 1. Create a new Holdings record by the way of mapping the incoming SRS Marc record using Mapping profile
