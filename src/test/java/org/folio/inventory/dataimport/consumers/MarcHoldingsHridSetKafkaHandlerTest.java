@@ -104,7 +104,7 @@ public class MarcHoldingsHridSetKafkaHandlerTest {
   }
 
   @Test
-  public void shouldReturnSucceededFuture(TestContext testContext) throws IOException {
+  public void shouldMapHoldingAndReturnSucceededFuture(TestContext testContext) throws IOException {
     // given
     Async async = testContext.async();
 
