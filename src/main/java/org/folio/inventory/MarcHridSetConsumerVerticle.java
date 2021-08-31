@@ -11,6 +11,7 @@ import org.folio.inventory.dataimport.consumers.MarcBibInstanceHridSetKafkaHandl
 import org.folio.inventory.dataimport.consumers.MarcHoldingsHridSetKafkaHandler;
 import org.folio.inventory.dataimport.handlers.actions.HoldingUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
+import org.folio.inventory.dataimport.util.ConsumerWrapperUtil;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.GlobalLoadSensor;
 import org.folio.kafka.KafkaConfig;
@@ -19,7 +20,6 @@ import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.kafka.SubscriptionDefinition;
 import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.kafka.cache.util.CacheUtil;
-import org.folio.util.pubsub.PubSubClientUtils;
 
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_INSTANCE_HRID_SET;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_HOLDINGS_HOLDING_HRID_SET;
@@ -69,11 +69,11 @@ public class MarcHridSetConsumerVerticle extends AbstractVerticle {
     MarcBibInstanceHridSetKafkaHandler marcBibInstanceHridSetKafkaHandler = new MarcBibInstanceHridSetKafkaHandler(instanceUpdateDelegate, kafkaInternalCache);
     MarcHoldingsHridSetKafkaHandler marcHoldingsHridSetKafkaHandler = new MarcHoldingsHridSetKafkaHandler(holdingUpdateDelegate, kafkaInternalCache);
 
-    marcBibConsumerWrapper.start(marcBibInstanceHridSetKafkaHandler, PubSubClientUtils.constructModuleName())
+    marcBibConsumerWrapper.start(marcBibInstanceHridSetKafkaHandler, ConsumerWrapperUtil.constructModuleName())
       .onSuccess(v -> startPromise.complete())
       .onFailure(startPromise::fail);
 
-    marcHoldingsConsumerWrapper.start(marcHoldingsHridSetKafkaHandler, PubSubClientUtils.constructModuleName())
+    marcHoldingsConsumerWrapper.start(marcHoldingsHridSetKafkaHandler, ConsumerWrapperUtil.constructModuleName())
       .onSuccess(v -> startPromise.complete())
       .onFailure(startPromise::fail);
 
