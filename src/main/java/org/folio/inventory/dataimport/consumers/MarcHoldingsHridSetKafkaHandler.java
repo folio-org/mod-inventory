@@ -28,6 +28,14 @@ import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
 
+/**
+ * The handler is intended to process the event that is thrown on setting HRID to Holdings record
+ * Execution steps:
+ * 1. Create a new Holdings record by the way of mapping the incoming SRS Marc record using Mapping profile
+ * 2. Retrieve an existing Inventory Holdings record
+ * 3. Merge a new record (from step 1) with an existing record (from step 2)
+ * 4. Update an existing record (from step 2) with a result of merge (from step 3)
+ */
 public class MarcHoldingsHridSetKafkaHandler implements AsyncRecordHandler<String, String> {
   private static final Logger LOGGER = LogManager.getLogger(MarcHoldingsHridSetKafkaHandler.class);
   private static final String CORRELATION_ID_HEADER = "correlationId";
@@ -66,14 +74,14 @@ public class MarcHoldingsHridSetKafkaHandler implements AsyncRecordHandler<Strin
           if (ar.succeeded()) {
             promise.complete(record.key());
           } else {
-            LOGGER.error("Failed to process data import event payload", ar.cause());
+            LOGGER.error("Failed to process data import event payload ", ar.cause());
             promise.fail(ar.cause());
           }
         });
         return promise.future();
       }
     } catch (Exception e) {
-      LOGGER.error(format("Failed to process data import kafka record from topic %s", record.topic()), e);
+      LOGGER.error(format("Failed to process data import kafka record from topic %s ", record.topic()), e);
       return Future.failedFuture(e);
     }
     return Future.succeededFuture();
