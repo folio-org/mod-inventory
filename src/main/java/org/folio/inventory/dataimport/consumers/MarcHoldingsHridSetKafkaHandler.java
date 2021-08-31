@@ -57,7 +57,7 @@ public class MarcHoldingsHridSetKafkaHandler implements AsyncRecordHandler<Strin
 
         Context context = EventHandlingUtil.constructContext(headersMap.get(OKAPI_TENANT_HEADER), headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER));
         if (!(eventPayload.getContext().containsKey(HOLDINGS_ID) && eventPayload.getContext().containsKey(HOLDINGS.value()) && eventPayload.getContext().containsKey(MARC_HOLDINGS.value()))) {
-          throw new IllegalArgumentException(format("The event payload not does not contain all the %s, %s, %s", HOLDINGS_ID, HOLDINGS.value(), MARC_HOLDINGS.value()));
+          throw new IllegalArgumentException(format("The event payload does not contain all the %s, %s, %s", HOLDINGS_ID, HOLDINGS.value(), MARC_HOLDINGS.value()));
         }
         String existingHoldingsId = eventPayload.getContext().get(HOLDINGS_ID);
         MappingManager.map(eventPayload);
