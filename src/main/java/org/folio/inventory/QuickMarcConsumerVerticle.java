@@ -11,6 +11,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.inventory.dataimport.consumers.QuickMarcKafkaHandler;
 import org.folio.inventory.dataimport.handlers.QMEventTypes;
 import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
+import org.folio.inventory.dataimport.util.ConsumerWrapperUtil;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.GlobalLoadSensor;
@@ -18,7 +19,6 @@ import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaConsumerWrapper;
 import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.kafka.cache.util.CacheUtil;
-import org.folio.util.pubsub.PubSubClientUtils;
 
 import static java.lang.String.format;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
@@ -102,7 +102,7 @@ public class QuickMarcConsumerVerticle extends AbstractVerticle {
       .subscriptionDefinition(subscriptionDefinition)
       .build();
 
-    return consumerWrapper.start(recordHandler, PubSubClientUtils.constructModuleName())
+    return consumerWrapper.start(recordHandler, ConsumerWrapperUtil.constructModuleName())
       .map(consumerWrapper);
   }
 
