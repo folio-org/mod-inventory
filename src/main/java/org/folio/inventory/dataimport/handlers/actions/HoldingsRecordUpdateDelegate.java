@@ -56,9 +56,9 @@ public class HoldingsRecordUpdateDelegate {
     }
   }
 
-  private Future<HoldingsRecord> updateRecordInStorage(HoldingsRecord holding, HoldingsRecordCollection holdingCollection) {
+  private Future<HoldingsRecord> updateRecordInStorage(HoldingsRecord holdingsRecord, HoldingsRecordCollection holdingsRecordCollection) {
     Promise<HoldingsRecord> promise = Promise.promise();
-    holdingCollection.update(holding, success -> promise.complete(holding),
+    holdingsRecordCollection.update(holdingsRecord, success -> promise.complete(holdingsRecord),
       failure -> {
         LOGGER.error(format("Error updating Holdings record - %s, status code %s", failure.getReason(), failure.getStatusCode()));
         promise.fail(failure.getReason());
