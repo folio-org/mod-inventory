@@ -12,37 +12,37 @@ import org.folio.inventory.storage.Storage;
 
 import static java.lang.String.format;
 
-public class HoldingUpdateDelegate {
-  private static final Logger LOGGER = LogManager.getLogger(HoldingUpdateDelegate.class);
+public class HoldingsRecordUpdateDelegate {
+  private static final Logger LOGGER = LogManager.getLogger(HoldingsRecordUpdateDelegate.class);
   protected final Storage STORAGE;
 
-  public HoldingUpdateDelegate(Storage storage) {
+  public HoldingsRecordUpdateDelegate(Storage storage) {
     this.STORAGE = storage;
   }
 
-  public Future<HoldingsRecord> handle(HoldingsRecord mappedHolding, String existingHoldingsId, Context context) {
+  public Future<HoldingsRecord> handle(HoldingsRecord mappedHoldingsRecord, String existingHoldingsRecordId, Context context) {
     try {
       HoldingsRecordCollection holdingsRecordCollection = STORAGE.getHoldingsRecordCollection(context);
-      return getHoldingById(existingHoldingsId, holdingsRecordCollection)
-        .compose(existingRecord -> updateHolding(existingRecord, mappedHolding))
-        .compose(updatedRecord -> updateHoldingInStorage(updatedRecord, holdingsRecordCollection));
+      return getRecordById(existingHoldingsRecordId, holdingsRecordCollection)
+        .compose(existingRecord -> mergeRecords(existingRecord, mappedHoldingsRecord))
+        .compose(updatedRecord -> updateRecordInStorage(updatedRecord, holdingsRecordCollection));
     } catch (Exception e) {
-      LOGGER.error("Error updating inventory Holding", e);
+      LOGGER.error("Error updating inventory Holdings record", e);
       return Future.failedFuture(e);
     }
   }
 
-  private Future<HoldingsRecord> getHoldingById(String holdingId, HoldingsRecordCollection holdingsRecordCollection) {
+  private Future<HoldingsRecord> getRecordById(String holdingRecordId, HoldingsRecordCollection holdingsRecordCollection) {
     Promise<HoldingsRecord> promise = Promise.promise();
-    holdingsRecordCollection.findById(holdingId, success -> promise.complete(success.getResult()),
+    holdingsRecordCollection.findById(holdingRecordId, success -> promise.complete(success.getResult()),
       failure -> {
-        LOGGER.error(format("Error retrieving Holding by id %s - %s, status code %s", holdingId, failure.getReason(), failure.getStatusCode()));
+        LOGGER.error(format("Error retrieving Holdings record by id %s - %s, status code %s", holdingRecordId, failure.getReason(), failure.getStatusCode()));
         promise.fail(failure.getReason());
       });
     return promise.future();
   }
 
-  private Future<HoldingsRecord> updateHolding(HoldingsRecord existingRecord, HoldingsRecord mappedRecord) {
+  private Future<HoldingsRecord> mergeRecords(HoldingsRecord existingRecord, HoldingsRecord mappedRecord) {
     try {
       mappedRecord.setId(existingRecord.getId());
       JsonObject existing = JsonObject.mapFrom(existingRecord);
@@ -51,16 +51,16 @@ public class HoldingUpdateDelegate {
       HoldingsRecord mergedHolding = merged.mapTo(HoldingsRecord.class);
       return Future.succeededFuture(mergedHolding);
     } catch (Exception e) {
-      LOGGER.error("Error updating Holding", e);
+      LOGGER.error("Error while merging an existing Holdings record to mapped Holdings record", e);
       return Future.failedFuture(e);
     }
   }
 
-  private Future<HoldingsRecord> updateHoldingInStorage(HoldingsRecord holding, HoldingsRecordCollection holdingCollection) {
+  private Future<HoldingsRecord> updateRecordInStorage(HoldingsRecord holding, HoldingsRecordCollection holdingCollection) {
     Promise<HoldingsRecord> promise = Promise.promise();
     holdingCollection.update(holding, success -> promise.complete(holding),
       failure -> {
-        LOGGER.error(format("Error updating Holding - %s, status code %s", failure.getReason(), failure.getStatusCode()));
+        LOGGER.error(format("Error updating Holdings record - %s, status code %s", failure.getReason(), failure.getStatusCode()));
         promise.fail(failure.getReason());
       });
     return promise.future();

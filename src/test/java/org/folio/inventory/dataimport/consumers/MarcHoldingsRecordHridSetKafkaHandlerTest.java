@@ -15,7 +15,7 @@ import org.folio.Record;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.HoldingWriterFactory;
-import org.folio.inventory.dataimport.handlers.actions.HoldingUpdateDelegate;
+import org.folio.inventory.dataimport.handlers.actions.HoldingsRecordUpdateDelegate;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.cache.KafkaInternalCache;
@@ -51,11 +51,11 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
 @RunWith(VertxUnitRunner.class)
-public class MarcHoldingsHridSetKafkaHandlerTest {
+public class MarcHoldingsRecordHridSetKafkaHandlerTest {
 
   private final String parsedRecord = "{ \"leader\":\"01314nam  22003851a 4500\", \"fields\":[ {\"001\":\"009221\"}, { \"042\": { \"ind1\": \" \", \"ind2\": \" \", \"subfields\": [ { \"3\": \"test\" } ] } }, { \"042\": { \"ind1\": \" \", \"ind2\": \" \", \"subfields\": [ { \"a\": \"pcc\" } ] } }, { \"042\": { \"ind1\": \" \", \"ind2\": \" \", \"subfields\": [ { \"a\": \"pcc\" } ] } }, { \"245\":\"American Bar Association journal\" } ] }";
   private final String incomingSrsRecord = JsonObject.mapFrom(new Record().withParsedRecord(new ParsedRecord().withContent(parsedRecord))).encode();
-  private final String existingHolding = "{ \"id\": \"4d21d6ee-695b-441e-8f7a-e57b8eb940cb\", \"hrid\": \"ho00000000001\", \"instanceId\": \"ddd266ef-07ac-4117-be13-d418b8cd6902\", \"callNumber\": \"99101245\", \"copyNumber\": \"si990183\", \"numberOfItems\": \"2\" }\n";
+  private final String existingHoldingsRecord = "{ \"id\": \"4d21d6ee-695b-441e-8f7a-e57b8eb940cb\", \"hrid\": \"ho00000000001\", \"instanceId\": \"ddd266ef-07ac-4117-be13-d418b8cd6902\", \"callNumber\": \"99101245\", \"copyNumber\": \"si990183\", \"numberOfItems\": \"2\" }\n";
 
   @Mock
   private Storage storageMock;
@@ -65,7 +65,7 @@ public class MarcHoldingsHridSetKafkaHandlerTest {
   private KafkaConsumerRecord<String, String> kafkaRecordMock;
   @Mock
   private KafkaInternalCache kafkaInternalCacheMock;
-  private MarcHoldingsHridSetKafkaHandler handler;
+  private MarcHoldingsRecordHridSetKafkaHandler handler;
 
   private final MappingProfile mappingProfile = new MappingProfile()
     .withId(UUID.randomUUID().toString())
@@ -87,7 +87,7 @@ public class MarcHoldingsHridSetKafkaHandlerTest {
 
     when(storageMock.getHoldingsRecordCollection(any(Context.class))).thenReturn(holdingsRecordCollectionMock);
     doAnswer(invocationOnMock -> {
-      HoldingsRecord existingRecord = new JsonObject(existingHolding).mapTo(HoldingsRecord.class);
+      HoldingsRecord existingRecord = new JsonObject(existingHoldingsRecord).mapTo(HoldingsRecord.class);
       Consumer<Success<HoldingsRecord>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(existingRecord));
       return null;
@@ -100,7 +100,7 @@ public class MarcHoldingsHridSetKafkaHandlerTest {
     }).when(holdingsRecordCollectionMock).update(any(HoldingsRecord.class), any(), any());
     Mockito.when(kafkaRecordMock.key()).thenReturn("testKey");
 
-    this.handler = new MarcHoldingsHridSetKafkaHandler(new HoldingUpdateDelegate(storageMock), kafkaInternalCacheMock);
+    this.handler = new MarcHoldingsRecordHridSetKafkaHandler(new HoldingsRecordUpdateDelegate(storageMock), kafkaInternalCacheMock);
   }
 
   @Test

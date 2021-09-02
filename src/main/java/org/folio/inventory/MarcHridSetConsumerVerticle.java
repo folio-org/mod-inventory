@@ -1,6 +1,7 @@
 package org.folio.inventory;
 
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
@@ -8,10 +9,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventTypes;
 import org.folio.inventory.dataimport.consumers.MarcBibInstanceHridSetKafkaHandler;
-import org.folio.inventory.dataimport.consumers.MarcHoldingsHridSetKafkaHandler;
-import org.folio.inventory.dataimport.handlers.actions.HoldingUpdateDelegate;
+import org.folio.inventory.dataimport.consumers.MarcHoldingsRecordHridSetKafkaHandler;
+import org.folio.inventory.dataimport.handlers.actions.HoldingsRecordUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
-import org.folio.inventory.dataimport.util.ConsumerWrapperUtil;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.GlobalLoadSensor;
 import org.folio.kafka.KafkaConfig;
@@ -23,6 +23,7 @@ import org.folio.kafka.cache.util.CacheUtil;
 
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_INSTANCE_HRID_SET;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_HOLDINGS_HOLDING_HRID_SET;
+import static org.folio.inventory.dataimport.util.ConsumerWrapperUtil.constructModuleName;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX_REQUEST_SIZE;
@@ -60,30 +61,29 @@ public class MarcHridSetConsumerVerticle extends AbstractVerticle {
     HttpClient client = vertx.createHttpClient();
     Storage storage = Storage.basedUpon(vertx, config, client);
     InstanceUpdateDelegate instanceUpdateDelegate = new InstanceUpdateDelegate(storage);
-    HoldingUpdateDelegate holdingUpdateDelegate = new HoldingUpdateDelegate(storage);
+    HoldingsRecordUpdateDelegate holdingsRecordUpdateDelegate = new HoldingsRecordUpdateDelegate(storage);
 
     KafkaInternalCache kafkaInternalCache = KafkaInternalCache.builder()
       .kafkaConfig(kafkaConfig).build();
     kafkaInternalCache.initKafkaCache();
 
     MarcBibInstanceHridSetKafkaHandler marcBibInstanceHridSetKafkaHandler = new MarcBibInstanceHridSetKafkaHandler(instanceUpdateDelegate, kafkaInternalCache);
-    MarcHoldingsHridSetKafkaHandler marcHoldingsHridSetKafkaHandler = new MarcHoldingsHridSetKafkaHandler(holdingUpdateDelegate, kafkaInternalCache);
+    MarcHoldingsRecordHridSetKafkaHandler marcHoldingsRecordHridSetKafkaHandler = new MarcHoldingsRecordHridSetKafkaHandler(holdingsRecordUpdateDelegate, kafkaInternalCache);
 
-    marcBibConsumerWrapper.start(marcBibInstanceHridSetKafkaHandler, ConsumerWrapperUtil.constructModuleName())
-      .onSuccess(v -> startPromise.complete())
-      .onFailure(startPromise::fail);
-
-    marcHoldingsConsumerWrapper.start(marcHoldingsHridSetKafkaHandler, ConsumerWrapperUtil.constructModuleName())
-      .onSuccess(v -> startPromise.complete())
-      .onFailure(startPromise::fail);
+    CompositeFuture.all(
+        marcBibConsumerWrapper.start(marcBibInstanceHridSetKafkaHandler, constructModuleName()),
+        marcHoldingsConsumerWrapper.start(marcHoldingsRecordHridSetKafkaHandler, constructModuleName())
+      )
+      .onFailure(startPromise::fail)
+      .onSuccess(ar -> startPromise.complete());
 
     CacheUtil.initCacheCleanupPeriodicTask(vertx, kafkaInternalCache, DELAY_TIME_BETWEEN_EVENTS_CLEANUP_VALUE_MILLIS, EVENT_TIMEOUT_VALUE_HOURS);
   }
 
   @Override
   public void stop(Promise<Void> stopPromise) {
-    marcBibConsumerWrapper.stop().onComplete(ar -> stopPromise.complete());
-    marcHoldingsConsumerWrapper.stop().onComplete(ar -> stopPromise.complete());
+    CompositeFuture.join(marcBibConsumerWrapper.stop(), marcHoldingsConsumerWrapper.stop())
+      .onComplete(ar -> stopPromise.complete());
   }
 
   private int getLoadLimit() {
