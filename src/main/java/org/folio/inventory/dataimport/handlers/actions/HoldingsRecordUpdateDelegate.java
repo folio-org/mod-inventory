@@ -32,11 +32,11 @@ public class HoldingsRecordUpdateDelegate {
     }
   }
 
-  private Future<HoldingsRecord> getRecordById(String holdingRecordId, HoldingsRecordCollection holdingsRecordCollection) {
+  private Future<HoldingsRecord> getRecordById(String holdingsRecordId, HoldingsRecordCollection holdingsRecordCollection) {
     Promise<HoldingsRecord> promise = Promise.promise();
-    holdingsRecordCollection.findById(holdingRecordId, success -> promise.complete(success.getResult()),
+    holdingsRecordCollection.findById(holdingsRecordId, success -> promise.complete(success.getResult()),
       failure -> {
-        LOGGER.error(format("Error retrieving Holdings record by id %s - %s, status code %s", holdingRecordId, failure.getReason(), failure.getStatusCode()));
+        LOGGER.error(format("Error retrieving Holdings record by id %s - %s, status code %s", holdingsRecordId, failure.getReason(), failure.getStatusCode()));
         promise.fail(failure.getReason());
       });
     return promise.future();
