@@ -14,15 +14,15 @@ import static java.lang.String.format;
 
 public class HoldingsRecordUpdateDelegate {
   private static final Logger LOGGER = LogManager.getLogger(HoldingsRecordUpdateDelegate.class);
-  protected final Storage STORAGE;
+  private Storage storage;
 
   public HoldingsRecordUpdateDelegate(Storage storage) {
-    this.STORAGE = storage;
+    this.storage = storage;
   }
 
   public Future<HoldingsRecord> handle(HoldingsRecord mappedHoldingsRecord, String existingHoldingsRecordId, Context context) {
     try {
-      HoldingsRecordCollection holdingsRecordCollection = STORAGE.getHoldingsRecordCollection(context);
+      HoldingsRecordCollection holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
       return getRecordById(existingHoldingsRecordId, holdingsRecordCollection)
         .compose(existingRecord -> mergeRecords(existingRecord, mappedHoldingsRecord))
         .compose(updatedRecord -> updateRecordInStorage(updatedRecord, holdingsRecordCollection));
