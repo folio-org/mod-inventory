@@ -48,8 +48,8 @@ public class HoldingsRecordUpdateDelegate {
       JsonObject existing = JsonObject.mapFrom(existingRecord);
       JsonObject mapped = JsonObject.mapFrom(mappedRecord);
       JsonObject merged = existing.mergeIn(mapped);
-      HoldingsRecord mergedHolding = merged.mapTo(HoldingsRecord.class);
-      return Future.succeededFuture(mergedHolding);
+      HoldingsRecord mergedHoldingsRecord = merged.mapTo(HoldingsRecord.class);
+      return Future.succeededFuture(mergedHoldingsRecord);
     } catch (Exception e) {
       LOGGER.error("Error while merging an existing Holdings record to mapped Holdings record", e);
       return Future.failedFuture(e);
