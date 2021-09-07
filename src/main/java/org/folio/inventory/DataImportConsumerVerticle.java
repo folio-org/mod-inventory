@@ -12,6 +12,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventTypes;
 import org.folio.inventory.dataimport.consumers.DataImportKafkaHandler;
+import org.folio.inventory.dataimport.util.ConsumerWrapperUtil;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.GlobalLoadSensor;
@@ -22,7 +23,6 @@ import org.folio.kafka.SubscriptionDefinition;
 import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.kafka.cache.util.CacheUtil;
 import org.folio.processing.events.EventManager;
-import org.folio.util.pubsub.PubSubClientUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,6 +48,7 @@ import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED_REA
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_NOT_MATCHED;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
+import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX_REQUEST_SIZE;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_PORT;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_REPLICATION_FACTOR;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.OKAPI_URL;
@@ -84,6 +85,7 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
       .kafkaPort(config.getString(KAFKA_PORT))
       .okapiUrl(config.getString(OKAPI_URL))
       .replicationFactor(Integer.parseInt(config.getString(KAFKA_REPLICATION_FACTOR)))
+      .maxRequestSize(Integer.parseInt(config.getString(KAFKA_MAX_REQUEST_SIZE)))
       .build();
     LOGGER.info(format("kafkaConfig: %s", kafkaConfig));
     EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, maxDistributionNumber);
@@ -136,7 +138,7 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
       .subscriptionDefinition(subscriptionDefinition)
       .build();
 
-    return consumerWrapper.start(recordHandler, PubSubClientUtils.constructModuleName())
+    return consumerWrapper.start(recordHandler, ConsumerWrapperUtil.constructModuleName())
       .map(consumerWrapper);
   }
 

@@ -90,10 +90,8 @@ public class UpdateInstanceEventHandlerUnitTest {
       return null;
     }).when(instanceRecordCollection).update(any(), any(Consumer.class), any(Consumer.class));
 
-    when(okapiHttpClient.get(anyString()))
-      .thenReturn(CompletableFuture.completedFuture(new Response(200, new JsonObject().encode(), null, null)));
-    when(okapiHttpClient.post(any(URL.class), any(JsonObject.class)))
-      .thenReturn(CompletableFuture.completedFuture(new Response(201, null, null, null)));
+    when(okapiHttpClient.put(anyString(), any(JsonObject.class)))
+      .thenReturn(CompletableFuture.completedFuture(new Response(204, null, null, null)));
 
     when(context.getTenantId()).thenReturn("dummy");
     when(context.getToken()).thenReturn("token");
@@ -154,7 +152,7 @@ public class UpdateInstanceEventHandlerUnitTest {
     Assert.assertEquals("Houston oil directory", updatedInstance.getPrecedingTitles().get(0).toPrecedingTitleJson().getString(TITLE_KEY));
     Assert.assertEquals(1, updatedInstance.getSucceedingTitles().size());
     Assert.assertEquals("SAIS review of international affairs", updatedInstance.getSucceedingTitles().get(0).toSucceedingTitleJson().getString(TITLE_KEY));
-    verify(precedingSucceedingTitlesHelper).createPrecedingSucceedingTitles(any(Instance.class), any(Context.class));
+    verify(precedingSucceedingTitlesHelper).updatePrecedingSucceedingTitles(any(Instance.class), any(Context.class));
   }
 
   @Test

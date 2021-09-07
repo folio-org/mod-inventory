@@ -108,12 +108,15 @@ public class QuickMarcKafkaHandlerTest {
 
     when(okapiHttpClient.get(anyString())).thenReturn(
       CompletableFuture.completedFuture(new Response(200, new JsonObject().encode(), null, null)));
+    when(okapiHttpClient.put(anyString(), any(JsonObject.class)))
+      .thenReturn(CompletableFuture.completedFuture(new Response(204, null, null, null)));
 
     String[] hostAndPort = cluster.getBrokerList().split(":");
     kafkaConfig = KafkaConfig.builder()
       .envId("env")
       .kafkaHost(hostAndPort[0])
       .kafkaPort(hostAndPort[1])
+      .maxRequestSize(1048576)
       .build();
 
     PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper = new PrecedingSucceedingTitlesHelper(context -> okapiHttpClient);

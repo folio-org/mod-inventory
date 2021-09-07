@@ -1,8 +1,8 @@
 package org.folio.inventory;
 
-import java.io.File;
 import java.io.IOException;
-import org.apache.commons.io.FileUtils;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 /**
  * Util class contains helper methods for unit testing needs
@@ -10,6 +10,6 @@ import org.apache.commons.io.FileUtils;
 public final class TestUtil {
 
   public static String readFileFromPath(String path) throws IOException {
-    return new String(FileUtils.readFileToByteArray(new File(path)));
+    return Files.readString(Path.of(path));
   }
 }
