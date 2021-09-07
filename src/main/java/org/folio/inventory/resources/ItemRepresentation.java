@@ -98,6 +98,7 @@ class ItemRepresentation {
 
     JsonObject representation = new JsonObject();
     representation.put("id", item.id);
+    includeIfPresent(representation, "_version", item.getVersion());
 
     representation.put(Item.STATUS_KEY,
       converterForClass(Status.class).toJson(item.getStatus()));
