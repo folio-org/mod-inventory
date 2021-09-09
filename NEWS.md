@@ -1,7 +1,6 @@
 ## 17.1.0 IN-PROGRESS
 
 * Adds `boundWithTitles` property to individual bound-with item (MODINV-443)
-* Data Import updates SRS Record (but not Inventory record) (MODINV-487)
 
 ## 17.0.0 2021-06-15
 
