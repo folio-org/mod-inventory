@@ -15,7 +15,7 @@ public final class ParsedRecordUtil {
   }
 
   public static String getAdditionalSubfieldValue(ParsedRecord parsedRecord, AdditionalSubfields additionalSubfield) {
-    JsonObject parsedContent = new JsonObject(parsedRecord.getContent().toString());
+    JsonObject parsedContent = normalize(parsedRecord.getContent());
     JsonArray fields = parsedContent.getJsonArray("fields");
     if (fields == null) {
       return EMPTY;
@@ -32,6 +32,12 @@ public final class ParsedRecordUtil {
       .findFirst()
       .map(targetSubfield -> targetSubfield.getString(additionalSubfield.subfieldCode))
       .orElse(EMPTY);
+  }
+
+  private static JsonObject normalize(Object content) {
+    return (content instanceof String)
+      ? new JsonObject((String) content)
+      : JsonObject.mapFrom(content);
   }
 
   public enum AdditionalSubfields {
