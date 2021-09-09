@@ -10,7 +10,8 @@ import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.InstanceUtil;
-import org.folio.processing.mapping.defaultmapper.RecordToInstanceMapperBuilder;
+import org.folio.processing.mapping.defaultmapper.RecordMapper;
+import org.folio.processing.mapping.defaultmapper.RecordMapperBuilder;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.Record;
@@ -25,7 +26,7 @@ public class InstanceUpdateDelegate {
 
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
-  private static final String MARC_FORMAT = "MARC";
+  private static final String MARC_FORMAT = "MARC_BIB";
 
   private final Storage storage;
 
@@ -40,7 +41,8 @@ public class InstanceUpdateDelegate {
 
       JsonObject parsedRecord = retrieveParsedContent(marcRecord.getParsedRecord());
       String instanceId = marcRecord.getExternalIdsHolder().getInstanceId();
-      org.folio.Instance mappedInstance = RecordToInstanceMapperBuilder.buildMapper(MARC_FORMAT).mapRecord(parsedRecord, mappingParameters, mappingRules);
+      RecordMapper<org.folio.Instance> recordMapper = RecordMapperBuilder.buildMapper(MARC_FORMAT);
+      var mappedInstance = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
 
       return getInstanceById(instanceId, instanceCollection)
