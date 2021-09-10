@@ -19,7 +19,6 @@ import org.folio.inventory.dataimport.handlers.actions.HoldingsRecordUpdateDeleg
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.cache.KafkaInternalCache;
-import org.folio.processing.events.utils.ZIPArchiver;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.mapper.reader.record.marc.MarcHoldingsReaderFactory;
 import org.folio.rest.jaxrs.model.EntityType;
@@ -117,7 +116,7 @@ public class MarcHoldingsRecordHridSetKafkaHandlerTest {
       .withEventType(DI_SRS_MARC_HOLDINGS_HOLDING_HRID_SET.value())
       .withContext(context)
       .withCurrentNode(profileSnapshotWrapper);
-    Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(dataImportEventPayload)));
+    Event event = new Event().withId("01").withEventPayload(Json.encode(dataImportEventPayload));
     when(kafkaRecordMock.value()).thenReturn(Json.encode(event));
     when(kafkaInternalCacheMock.containsByKey("01")).thenReturn(false);
 
@@ -139,7 +138,7 @@ public class MarcHoldingsRecordHridSetKafkaHandlerTest {
     Async async = testContext.async();
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload();
-    Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(dataImportEventPayload)));
+    Event event = new Event().withId("01").withEventPayload(Json.encode(dataImportEventPayload));
     when(kafkaRecordMock.value()).thenReturn(Json.encode(event));
     when(kafkaInternalCacheMock.containsByKey("01")).thenReturn(true);
 
@@ -167,7 +166,7 @@ public class MarcHoldingsRecordHridSetKafkaHandlerTest {
       .withEventType(DI_SRS_MARC_HOLDINGS_HOLDING_HRID_SET.value())
       .withContext(context)
       .withCurrentNode(profileSnapshotWrapper);
-    Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(dataImportEventPayload)));
+    Event event = new Event().withId("01").withEventPayload(Json.encode(dataImportEventPayload));
     when(kafkaRecordMock.value()).thenReturn(Json.encode(event));
     when(kafkaInternalCacheMock.containsByKey("01")).thenReturn(false);
 

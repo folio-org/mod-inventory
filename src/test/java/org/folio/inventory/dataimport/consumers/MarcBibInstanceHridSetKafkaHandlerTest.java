@@ -15,7 +15,6 @@ import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.cache.KafkaInternalCache;
-import org.folio.processing.events.utils.ZIPArchiver;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.Record;
 import org.junit.Before;
@@ -90,7 +89,7 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
     payload.put("MAPPING_RULES", mappingRules.encode());
     payload.put("MAPPING_PARAMS", new JsonObject().encode());
 
-    Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(payload)));
+    Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
     String expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
@@ -116,7 +115,7 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
     payload.put("MAPPING_RULES", mappingRules.encode());
     payload.put("MAPPING_PARAMS", new JsonObject().encode());
 
-    Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(payload)));
+    Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
 
     when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
@@ -159,7 +158,7 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
     payload.put("MAPPING_RULES", mappingRules.encode());
     payload.put("MAPPING_PARAMS", new JsonObject().encode());
 
-    Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(payload)));
+    Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
     String expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(event));

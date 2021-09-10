@@ -35,7 +35,6 @@ import org.folio.inventory.storage.Storage;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.processing.events.EventManager;
-import org.folio.processing.events.utils.ZIPArchiver;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.mapper.reader.record.marc.MarcBibReaderFactory;
 import org.folio.processing.mapping.mapper.reader.record.marc.MarcHoldingsReaderFactory;
@@ -45,7 +44,6 @@ import org.folio.processing.matching.reader.MatchValueReaderFactory;
 import org.folio.processing.matching.reader.StaticValueReaderImpl;
 import org.folio.rest.jaxrs.model.Event;
 
-import java.io.IOException;
 import java.util.List;
 
 import static java.lang.String.format;
@@ -66,31 +64,26 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
   }
 
   @Override
-  public Future<String> handle(KafkaConsumerRecord<String, String> record) {
-    try {
-      Promise<String> promise = Promise.promise();
-      Event event = Json.decodeValue(record.value(), Event.class);
-      if (!kafkaInternalCache.containsByKey(event.getId())) {
-        kafkaInternalCache.putToCache(event.getId());
-        DataImportEventPayload eventPayload = new JsonObject(ZIPArchiver.unzip(event.getEventPayload())).mapTo(DataImportEventPayload.class);
-        String correlationId = extractCorrelationId(record.headers());
-        LOGGER.info(format("Data import event payload has been received with event type: %s correlationId: %s", eventPayload.getEventType(), correlationId));
+  public Future<String> handle(KafkaConsumerRecord<String, String> imprtedRecord) {
+    Promise<String> promise = Promise.promise();
+    Event event = Json.decodeValue(imprtedRecord.value(), Event.class);
+    if (!kafkaInternalCache.containsByKey(event.getId())) {
+      kafkaInternalCache.putToCache(event.getId());
+      DataImportEventPayload eventPayload = new JsonObject(event.getEventPayload()).mapTo(DataImportEventPayload.class);
+      String correlationId = extractCorrelationId(imprtedRecord.headers());
+      LOGGER.info("Data import event payload has been received with event type: {} correlationId: {}", eventPayload.getEventType(), correlationId);
 
-        eventPayload.getContext().put(CORRELATION_ID_HEADER, correlationId);
-        EventManager.handleEvent(eventPayload).whenComplete((processedPayload, throwable) -> {
-          if (throwable != null) {
-            promise.fail(throwable);
-          } else if (DI_ERROR.value().equals(processedPayload.getEventType())) {
-            promise.fail("Failed to process data import event payload");
-          } else {
-            promise.complete(record.key());
-          }
-        });
-        return promise.future();
-      }
-    } catch (IOException e) {
-      LOGGER.error(format("Failed to process data import kafka record from topic %s", record.topic()), e);
-      return Future.failedFuture(e);
+      eventPayload.getContext().put(CORRELATION_ID_HEADER, correlationId);
+      EventManager.handleEvent(eventPayload).whenComplete((processedPayload, throwable) -> {
+        if (throwable != null) {
+          promise.fail(throwable);
+        } else if (DI_ERROR.value().equals(processedPayload.getEventType())) {
+          promise.fail("Failed to process data import event payload");
+        } else {
+          promise.complete(imprtedRecord.key());
+        }
+      });
+      return promise.future();
     }
     return Future.succeededFuture();
   }

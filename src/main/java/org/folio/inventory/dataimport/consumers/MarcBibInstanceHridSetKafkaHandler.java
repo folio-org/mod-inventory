@@ -18,7 +18,6 @@ import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaHeaderUtils;
 import org.folio.kafka.cache.KafkaInternalCache;
-import org.folio.processing.events.utils.ZIPArchiver;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.Record;
 
@@ -56,7 +55,7 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
       if (!kafkaInternalCache.containsByKey(event.getId())) {
         kafkaInternalCache.putToCache(event.getId());
         @SuppressWarnings("unchecked")
-        HashMap<String, String> eventPayload = OBJECT_MAPPER.readValue(ZIPArchiver.unzip(event.getEventPayload()), HashMap.class);
+        HashMap<String, String> eventPayload = OBJECT_MAPPER.readValue(event.getEventPayload(), HashMap.class);
         Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(record.headers());
         String correlationId = headersMap.get(CORRELATION_ID_HEADER);
         LOGGER.info(format("Event payload has been received with event type: %s and correlationId: %s", event.getEventType(), correlationId));

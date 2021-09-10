@@ -19,7 +19,6 @@ import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.processing.events.EventManager;
 import org.folio.processing.events.services.handler.EventHandler;
-import org.folio.processing.events.utils.ZIPArchiver;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.junit.Before;
@@ -129,7 +128,7 @@ public class DataImportKafkaHandlerTest {
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper);
 
-    Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(dataImportEventPayload)));
+    Event event = new Event().withId("01").withEventPayload(Json.encode(dataImportEventPayload));
     String expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
@@ -165,7 +164,7 @@ public class DataImportKafkaHandlerTest {
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper);
 
-    Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(dataImportEventPayload)));
+    Event event = new Event().withId("01").withEventPayload(Json.encode(dataImportEventPayload));
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
 
     EventHandler mockedEventHandler = mock(EventHandler.class);
@@ -197,7 +196,7 @@ public class DataImportKafkaHandlerTest {
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper);
 
-    Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(dataImportEventPayload)));
+    Event event = new Event().withId("01").withEventPayload(Json.encode(dataImportEventPayload));
     String expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(event));

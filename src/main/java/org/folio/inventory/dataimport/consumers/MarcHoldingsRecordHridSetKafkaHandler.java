@@ -16,7 +16,6 @@ import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaHeaderUtils;
 import org.folio.kafka.cache.KafkaInternalCache;
-import org.folio.processing.events.utils.ZIPArchiver;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.rest.jaxrs.model.Event;
 
@@ -63,7 +62,7 @@ public class MarcHoldingsRecordHridSetKafkaHandler implements AsyncRecordHandler
         Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(record.headers());
         String correlationId = headersMap.get(CORRELATION_ID_HEADER);
         LOGGER.info(format("Event payload has been received with event type: %s and correlationId: %s", event.getEventType(), correlationId));
-        DataImportEventPayload eventPayload = new JsonObject(ZIPArchiver.unzip(event.getEventPayload())).mapTo(DataImportEventPayload.class);
+        DataImportEventPayload eventPayload = new JsonObject(event.getEventPayload()).mapTo(DataImportEventPayload.class);
 
         Context context = EventHandlingUtil.constructContext(headersMap.get(OKAPI_TENANT_HEADER), headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER));
         if (!(eventPayload.getContext().containsKey(HOLDINGS_ID) && eventPayload.getContext().containsKey(HOLDINGS.value()) && eventPayload.getContext().containsKey(MARC_HOLDINGS.value()))) {

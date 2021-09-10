@@ -24,7 +24,6 @@ import org.folio.inventory.support.http.client.Response;
 import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.okapi.common.XOkapiHeaders;
-import org.folio.processing.events.utils.ZIPArchiver;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.Record;
 import org.junit.Before;
@@ -137,7 +136,7 @@ public class QuickMarcKafkaHandlerTest {
     payload.put("MAPPING_RULES", mappingRules.encode());
     payload.put("MAPPING_PARAMS", new JsonObject().encode());
 
-    Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(payload)));
+    Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
     String expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
@@ -168,7 +167,7 @@ public class QuickMarcKafkaHandlerTest {
     payload.put("MAPPING_RULES", mappingRules.encode());
     payload.put("MAPPING_PARAMS", new JsonObject().encode());
 
-    Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(payload)));
+    Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
     String expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
@@ -218,7 +217,7 @@ public class QuickMarcKafkaHandlerTest {
     payload.put("MAPPING_RULES", mappingRules.encode());
     payload.put("MAPPING_PARAMS", new JsonObject().encode());
 
-    Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(payload)));
+    Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
     String expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(event));

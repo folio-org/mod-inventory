@@ -21,7 +21,6 @@ import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.processing.events.EventManager;
 import org.folio.processing.events.services.handler.EventHandler;
-import org.folio.processing.events.utils.ZIPArchiver;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.junit.AfterClass;
@@ -160,7 +159,7 @@ public class DataImportConsumerVerticleTest {
       .withProfileSnapshot(profileSnapshotWrapper);
 
     String topic = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_NAME, getDefaultNameSpace(), TENANT_ID, dataImportEventPayload.getEventType());
-    Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(dataImportEventPayload)));
+    Event event = new Event().withId("01").withEventPayload(Json.encode(dataImportEventPayload));
     KeyValue<String, String> record = new KeyValue<>("test-key", Json.encode(event));
     SendKeyValues<String, String> request = SendKeyValues.to(topic, Collections.singletonList(record)).useDefaults();
 

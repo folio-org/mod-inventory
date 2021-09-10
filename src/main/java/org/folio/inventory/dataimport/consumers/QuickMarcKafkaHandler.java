@@ -18,7 +18,6 @@ import org.folio.inventory.storage.Storage;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.cache.KafkaInternalCache;
-import org.folio.processing.events.utils.ZIPArchiver;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.EventMetadata;
 import org.folio.rest.util.OkapiConnectionParams;
@@ -96,7 +95,7 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
   @SuppressWarnings("unchecked")
   private Future<HashMap<String, String>> getEventPayload(Event event) {
     try {
-      var eventPayload = Json.decodeValue(ZIPArchiver.unzip(event.getEventPayload()), HashMap.class);
+      var eventPayload = Json.decodeValue(event.getEventPayload(), HashMap.class);
       return Future.succeededFuture(eventPayload);
     } catch (Exception e) {
       return Future.failedFuture(e);
@@ -139,7 +138,7 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
     Event event = new Event()
       .withId(UUID.randomUUID().toString())
       .withEventType(eventType)
-      .withEventPayload(ZIPArchiver.zip(eventPayload))
+      .withEventPayload(eventPayload)
       .withEventMetadata(new EventMetadata()
         .withTenantId(params.getTenantId())
         .withEventTTL(1)
