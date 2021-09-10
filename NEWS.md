@@ -1,3 +1,7 @@
+## 17.0.5 2021-09-10
+
+* Fix update of Inventory record triggered by data import with match on SRS record (MODINV-487)
+
 ## 17.0.4 2021-08-04
 
 * Adds support fir max.request.size configuration for Kafka messages (MODINV-466)
