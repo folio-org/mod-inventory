@@ -105,22 +105,6 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
               promise.complete(record.key());
             }
           });
-
-        String jobExecutionId = eventPayload.getJobExecutionId();
-        mappingMetadataCache.get(eventPayload.getJobExecutionId(), eventPayload.getContext())
-          .toCompletionStage()
-          .thenCompose(mappingMetadataDtoOptional -> mappingMetadataDtoOptional
-            .map(mappingMetadataDto -> EventManager.handleEvent(eventPayload))
-            .orElse(CompletableFuture.failedFuture(new EventProcessingException(format("MappingMetadata with id '%s' does not exist", jobExecutionId)))))
-          .whenComplete((processedPayload, throwable) -> {
-            if (throwable != null) {
-              promise.fail(throwable);
-            } else if (DI_ERROR.value().equals(processedPayload.getEventType())) {
-              promise.fail("Failed to process data import event payload");
-            } else {
-              promise.complete(record.key());
-            }
-          });
         return promise.future();
       }
     } catch (IOException e) {

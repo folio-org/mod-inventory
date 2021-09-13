@@ -102,17 +102,11 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
       .build();
     kafkaInternalCache.initKafkaCache();
 
-    String profileSnapshotCacheExpirationTime = config.getString("inventory.profile-snapshot-cache.expiration.time.seconds");
-    if (StringUtils.isBlank(profileSnapshotCacheExpirationTime)){
-      profileSnapshotCacheExpirationTime = "3600";
-    }
+    String profileSnapshotExpirationTime = getCacheEnvVariable(config, "inventory.profile-snapshot-cache.expiration.time.seconds");
+    String mappingMetadataExpirationTime = getCacheEnvVariable(config, "inventory.mapping-metadata-cache.expiration.time.seconds");
 
-    String mappingMetadataCacheExpirationTime = config.getString("inventory.profile-snapshot-cache.expiration.time.seconds");
-    if (StringUtils.isBlank(mappingMetadataCacheExpirationTime)){
-      mappingMetadataCacheExpirationTime = "3600";
-    }
-    ProfileSnapshotCache profileSnapshotCache = new ProfileSnapshotCache(vertx, client, Long.parseLong(profileSnapshotCacheExpirationTime));
-    MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, client, Long.parseLong(mappingMetadataCacheExpirationTime));
+    ProfileSnapshotCache profileSnapshotCache = new ProfileSnapshotCache(vertx, client, Long.parseLong(profileSnapshotExpirationTime));
+    MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, client, Long.parseLong(mappingMetadataExpirationTime));
 
 
     DataImportKafkaHandler dataImportKafkaHandler = new DataImportKafkaHandler(vertx, storage, client, kafkaInternalCache, profileSnapshotCache, mappingMetadataCache);
@@ -129,6 +123,14 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
       });
 
     CacheUtil.initCacheCleanupPeriodicTask(vertx, kafkaInternalCache, DELAY_TIME_BETWEEN_EVENTS_CLEANUP_VALUE_MILLIS, EVENT_TIMEOUT_VALUE_HOURS);
+  }
+
+  private String getCacheEnvVariable(JsonObject config, String variableName) {
+    String cacheExpirationTime = config.getString(variableName);
+    if (StringUtils.isBlank(cacheExpirationTime)) {
+      cacheExpirationTime = "3600";
+    }
+    return cacheExpirationTime;
   }
 
   @Override
