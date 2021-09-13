@@ -125,13 +125,6 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
     CacheUtil.initCacheCleanupPeriodicTask(vertx, kafkaInternalCache, DELAY_TIME_BETWEEN_EVENTS_CLEANUP_VALUE_MILLIS, EVENT_TIMEOUT_VALUE_HOURS);
   }
 
-  private String getCacheEnvVariable(JsonObject config, String variableName) {
-    String cacheExpirationTime = config.getString(variableName);
-    if (StringUtils.isBlank(cacheExpirationTime)) {
-      cacheExpirationTime = "3600";
-    }
-    return cacheExpirationTime;
-  }
 
   @Override
   public void stop(Promise<Void> stopPromise) {
@@ -166,5 +159,13 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
 
   private int getMaxDistributionNumber() {
     return Integer.parseInt(System.getProperty("inventory.kafka.DataImportConsumerVerticle.maxDistributionNumber", "100"));
+  }
+
+  private String getCacheEnvVariable(JsonObject config, String variableName) {
+    String cacheExpirationTime = config.getString(variableName);
+    if (StringUtils.isBlank(cacheExpirationTime)) {
+      cacheExpirationTime = "3600";
+    }
+    return cacheExpirationTime;
   }
 }

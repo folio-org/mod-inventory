@@ -20,6 +20,9 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 
+/**
+ * Cache for storing MappingMetadataDto entities by jobExecutionId
+ */
 public class MappingMetadataCache {
 
   private static final Logger LOGGER = LogManager.getLogger();

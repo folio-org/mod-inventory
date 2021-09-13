@@ -20,6 +20,9 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 
+/**
+ * Cache for storing ProfileSnapshotWrapper entities by jobProfileSnapshotId
+ */
 public class ProfileSnapshotCache {
 
   private static final Logger LOGGER = LogManager.getLogger();
