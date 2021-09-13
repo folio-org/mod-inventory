@@ -4,35 +4,26 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
-import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
-import org.folio.processing.events.EventManager;
 import org.folio.processing.events.services.handler.EventHandler;
-import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.defaultmapper.RecordMapper;
 import org.folio.processing.mapping.defaultmapper.RecordMapperBuilder;
-import org.folio.processing.mapping.defaultmapper.RecordToInstanceMapperBuilder;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
-import org.folio.rest.jaxrs.model.MappingMetadataDto;
 import org.folio.rest.jaxrs.model.Record;
-import org.folio.rest.jaxrs.resource.MappingRules;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 import static java.lang.String.format;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
-import static org.folio.DataImportEventTypes.DI_ERROR;
 
 public abstract class AbstractInstanceEventHandler implements EventHandler {
   protected static final Logger LOGGER = LogManager.getLogger(AbstractInstanceEventHandler.class);
@@ -61,7 +52,8 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
       HashMap<String, String> context = dataImportEventPayload.getContext();
       JsonObject parsedRecord = new JsonObject((String) new JsonObject(context.get(MARC_BIBLIOGRAPHIC.value()))
         .mapTo(Record.class).getParsedRecord().getContent());
-      org.folio.Instance instance = RecordToInstanceMapperBuilder.buildMapper(MARC_FORMAT).mapRecord(parsedRecord, mappingParameters, mappingRules);
+      RecordMapper<org.folio.Instance> recordMapper = RecordMapperBuilder.buildMapper(MARC_BIB_RECORD_FORMAT);
+      var instance = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
       dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(new JsonObject().put(INSTANCE_PATH, JsonObject.mapFrom(instance))));
       return instance;
     } catch (Exception e) {

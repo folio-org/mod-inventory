@@ -80,7 +80,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
       mappingMetadataCache.get(dataImportEventPayload.getJobExecutionId(), payloadContext)
         .compose(parametersOptional -> parametersOptional
-          .map(mappingMetadata -> prepare(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()), new JsonObject(mappingMetadata.getMappingParams())
+          .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()), new JsonObject(mappingMetadata.getMappingParams())
             .mapTo(MappingParameters.class)))
           .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, dataImportEventPayload.getJobExecutionId()))))
         .onComplete(e -> {
@@ -100,7 +100,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
                 future.completeExceptionally(ar);
               });
           } else {
-            String msg = format("Mapped Instance is invalid: %s", errors.toString());
+            String msg = format("Mapped Instance is invalid: %s", errors);
             LOGGER.error(msg);
             future.completeExceptionally(new EventProcessingException(msg));
           }
@@ -144,10 +144,10 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
     return DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING.value();
   }
 
-  private Future<Void> prepare(DataImportEventPayload dataImportEventPayload, JsonObject mappingRules, MappingParameters mappingParameters) {
+  private Future<Void> prepareAndExecuteMapping(DataImportEventPayload dataImportEventPayload, JsonObject mappingRules, MappingParameters mappingParameters) {
     try {
       defaultMapRecordToInstance(dataImportEventPayload, mappingRules, mappingParameters);
-      MappingManager.map(dataImportEventPayload, new MappingContext(mappingRules, mappingParameters));
+      MappingManager.map(dataImportEventPayload, new MappingContext(mappingParameters));
       return Future.succeededFuture();
     } catch (Exception e) {
       return Future.failedFuture(e);
