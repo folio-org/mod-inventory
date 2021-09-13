@@ -5,12 +5,12 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTI
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.folio.inventory.common.Context;
+import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
-import org.folio.rest.util.OkapiConnectionParams;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -54,17 +54,14 @@ public class JobProfileSnapshotCacheTest {
       .withId(UUID.randomUUID().toString())
       .withContentType(ACTION_PROFILE)));
 
-  private Map<String, String> context;
+  private Context context;
 
   @Before
   public void setUp() {
     WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(PROFILE_SNAPSHOT_URL + "/.*"), true))
       .willReturn(WireMock.ok().withBody(Json.encode(jobProfileSnapshot))));
 
-    this.context = Map.of(OkapiConnectionParams.OKAPI_TENANT_HEADER, TENANT_ID,
-      OkapiConnectionParams.OKAPI_TOKEN_HEADER, "token",
-      OkapiConnectionParams.OKAPI_URL_HEADER, mockServer.baseUrl());
-
+    context = EventHandlingUtil.constructContext(TENANT_ID, "token", mockServer.baseUrl());
   }
 
   @Test

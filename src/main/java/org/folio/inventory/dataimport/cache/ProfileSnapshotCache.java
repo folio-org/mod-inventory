@@ -1,6 +1,5 @@
 package org.folio.inventory.dataimport.cache;
 
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -8,10 +7,10 @@ import java.util.concurrent.TimeUnit;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.exceptions.CacheLoadingException;
 import org.folio.rest.client.DataImportProfilesClient;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
-import org.folio.rest.util.OkapiConnectionParams;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -38,7 +37,7 @@ public class ProfileSnapshotCache {
       .buildAsync();
   }
 
-  public Future<Optional<ProfileSnapshotWrapper>> get(String profileSnapshotId, Map<String, String> context) {
+  public Future<Optional<ProfileSnapshotWrapper>> get(String profileSnapshotId, Context context) {
     try {
       return Future.fromCompletionStage(cache.get(profileSnapshotId, (key, executor) -> loadJobProfileSnapshot(key, context)));
     } catch (Exception e) {
@@ -47,10 +46,10 @@ public class ProfileSnapshotCache {
     }
   }
 
-  private CompletableFuture<Optional<ProfileSnapshotWrapper>> loadJobProfileSnapshot(String profileSnapshotId, Map<String, String> context) {
-    LOGGER.debug("Trying to load jobProfileSnapshot by id  '{}' for cache, okapi url: {}, tenantId: {}", profileSnapshotId, context.get(OkapiConnectionParams.OKAPI_URL_HEADER), context.get(OkapiConnectionParams.OKAPI_TENANT_HEADER));
+  private CompletableFuture<Optional<ProfileSnapshotWrapper>> loadJobProfileSnapshot(String profileSnapshotId, Context context) {
+    LOGGER.debug("Trying to load jobProfileSnapshot by id  '{}' for cache, okapi url: {}, tenantId: {}", profileSnapshotId, context.getOkapiLocation(), context.getTenantId());
 
-    DataImportProfilesClient client = new DataImportProfilesClient(context.get(OkapiConnectionParams.OKAPI_URL_HEADER), context.get(OkapiConnectionParams.OKAPI_TENANT_HEADER), context.get(OkapiConnectionParams.OKAPI_TOKEN_HEADER), httpClient);
+    DataImportProfilesClient client = new DataImportProfilesClient(context.getOkapiLocation(), context.getTenantId(), context.getToken(), httpClient);
 
     return client.getDataImportProfilesJobProfileSnapshotsById(profileSnapshotId)
       .toCompletionStage()

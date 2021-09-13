@@ -27,6 +27,7 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -36,10 +37,12 @@ import org.mockito.MockitoAnnotations;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
 import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.useDefaults;
 import static org.folio.ActionProfile.Action.CREATE;
@@ -60,11 +63,19 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.common.Slf4jNotifier;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.github.tomakehurst.wiremock.junit.WireMockRule;
+import com.github.tomakehurst.wiremock.matching.RegexPattern;
+import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
+
 @RunWith(VertxUnitRunner.class)
 public class DataImportConsumerVerticleTest {
 
   private static final String TENANT_ID = "diku";
   private static final String KAFKA_ENV_NAME = "test-env";
+  private static final String JOB_PROFILE_URL = "/data-import-profiles/jobProfileSnapshots";
 
   private static Vertx vertx;
 
@@ -76,6 +87,12 @@ public class DataImportConsumerVerticleTest {
 
   @Mock
   private KafkaInternalCache kafkaInternalCache;
+
+  @Rule
+  public WireMockRule mockServer = new WireMockRule(
+    WireMockConfiguration.wireMockConfig()
+      .dynamicPort()
+      .notifier(new Slf4jNotifier(true)));
 
 
   private JobProfile jobProfile = new JobProfile()
@@ -143,6 +160,10 @@ public class DataImportConsumerVerticleTest {
       return CompletableFuture.completedFuture(eventPayload);
     }).when(mockedEventHandler).handle(any(DataImportEventPayload.class));
 
+    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(JOB_PROFILE_URL + "/.*"), true))
+      .willReturn(WireMock.ok().withBody(Json.encode(new ProfileSnapshotWrapper()
+        .withId(UUID.randomUUID().toString())))));
+
     EventManager.clearEventHandlers();
     EventManager.registerEventHandler(mockedEventHandler);
   }
@@ -153,9 +174,10 @@ public class DataImportConsumerVerticleTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
       .withTenant(TENANT_ID)
-      .withOkapiUrl("localhost")
+      .withOkapiUrl(mockServer.baseUrl())
       .withToken("test-token")
-      .withContext(new HashMap<>())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(new HashMap<>(Map.of("JOB_PROFILE_SNAPSHOT_ID", "b6698d38-149f-11ec-82a8-0242ac130003")))
       .withProfileSnapshot(profileSnapshotWrapper);
 
     String topic = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_NAME, getDefaultNameSpace(), TENANT_ID, dataImportEventPayload.getEventType());

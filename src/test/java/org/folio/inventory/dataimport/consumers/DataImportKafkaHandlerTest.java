@@ -1,40 +1,6 @@
 package org.folio.inventory.dataimport.consumers;
 
-import io.vertx.core.Future;
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
-import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
-import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
-import org.folio.ActionProfile;
-import org.folio.DataImportEventPayload;
-import org.folio.JobProfile;
-import org.folio.MappingProfile;
-import org.folio.inventory.storage.Storage;
-import org.folio.kafka.KafkaConfig;
-import org.folio.kafka.cache.KafkaInternalCache;
-import org.folio.processing.events.EventManager;
-import org.folio.processing.events.services.handler.EventHandler;
-import org.folio.rest.jaxrs.model.Event;
-import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.MockitoAnnotations;
-
-import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
 import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.useDefaults;
 import static org.folio.ActionProfile.Action.CREATE;
@@ -48,10 +14,60 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+
+import org.folio.ActionProfile;
+import org.folio.DataImportEventPayload;
+import org.folio.JobProfile;
+import org.folio.MappingProfile;
+import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
+import org.folio.inventory.storage.Storage;
+import org.folio.kafka.KafkaConfig;
+import org.folio.kafka.cache.KafkaInternalCache;
+import org.folio.processing.events.EventManager;
+import org.folio.processing.events.services.handler.EventHandler;
+import org.folio.rest.jaxrs.model.Event;
+import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
+
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.common.Slf4jNotifier;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.github.tomakehurst.wiremock.junit.WireMockRule;
+import com.github.tomakehurst.wiremock.matching.RegexPattern;
+import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
+
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpClientOptions;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.unit.Async;
+import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
+import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
+
 @RunWith(VertxUnitRunner.class)
 public class DataImportKafkaHandlerTest {
 
   private static final String TENANT_ID = "diku";
+  private static final String JOB_PROFILE_URL = "/data-import-profiles/jobProfileSnapshots";
+
 
   @ClassRule
   public static EmbeddedKafkaCluster cluster = provisionWith(useDefaults());
@@ -64,6 +80,12 @@ public class DataImportKafkaHandlerTest {
 
   @Mock
   private KafkaConsumerRecord<String, String> kafkaRecord;
+
+  @Rule
+  public WireMockRule mockServer = new WireMockRule(
+    WireMockConfiguration.wireMockConfig()
+      .dynamicPort()
+      .notifier(new Slf4jNotifier(true)));
 
   private Vertx vertx = Vertx.vertx();
   private DataImportKafkaHandler dataImportKafkaHandler;
@@ -101,10 +123,16 @@ public class DataImportKafkaHandlerTest {
             .withProfileId(mappingProfile.getId())
             .withContentType(MAPPING_PROFILE)
             .withContent(JsonObject.mapFrom(mappingProfile).getMap())))));
+
   @Before
   public void setUp() {
     MockitoAnnotations.initMocks(this);
     String[] hostAndPort = cluster.getBrokerList().split(":");
+
+    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(JOB_PROFILE_URL + "/.*"), true))
+      .willReturn(WireMock.ok().withBody(Json.encode(new ProfileSnapshotWrapper()
+          .withId(UUID.randomUUID().toString())))));
+
     KafkaConfig kafkaConfig = KafkaConfig.builder()
       .kafkaHost(hostAndPort[0])
       .kafkaPort(hostAndPort[1])
@@ -112,7 +140,11 @@ public class DataImportKafkaHandlerTest {
       .build();
 
     HttpClient client = vertx.createHttpClient();
-    dataImportKafkaHandler = new DataImportKafkaHandler(vertx, mockedStorage, client, kafkaInternalCache, null, null);
+    dataImportKafkaHandler = new DataImportKafkaHandler(vertx, mockedStorage, client, kafkaInternalCache,
+      new ProfileSnapshotCache(vertx,
+      vertx.createHttpClient(new HttpClientOptions().setConnectTimeout(3000)), 3600),
+      new MappingMetadataCache(vertx,
+      vertx.createHttpClient(new HttpClientOptions().setConnectTimeout(3000)), 3600));
     EventManager.clearEventHandlers();
     EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, 1);
   }
@@ -123,9 +155,9 @@ public class DataImportKafkaHandlerTest {
     Async async = context.async();
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withTenant(TENANT_ID)
-      .withOkapiUrl("localhost")
+      .withOkapiUrl(mockServer.baseUrl())
       .withToken("test-token")
-      .withContext(new HashMap<>())
+      .withContext(new HashMap<>(Map.of("JOB_PROFILE_SNAPSHOT_ID", "b6698d38-149f-11ec-82a8-0242ac130003")))
       .withProfileSnapshot(profileSnapshotWrapper);
 
     Event event = new Event().withId("01").withEventPayload(Json.encode(dataImportEventPayload));
@@ -153,15 +185,15 @@ public class DataImportKafkaHandlerTest {
   }
 
   @Test
-  public void shouldReturnFailedFutureWhenProcessingCoreHandlerFailed(TestContext context) throws IOException {
+  public void shouldReturnFailedFutureWhenProcessingCoreHandlerFailed(TestContext context) {
     // given
     Async async = context.async();
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
       .withTenant("diku")
-      .withOkapiUrl("localhost")
+      .withOkapiUrl(mockServer.baseUrl())
       .withToken("test-token")
-      .withContext(new HashMap<>())
+      .withContext(new HashMap<>(Map.of("JOB_PROFILE_SNAPSHOT_ID", "b6698d38-149f-11ec-82a8-0242ac130003")))
       .withProfileSnapshot(profileSnapshotWrapper);
 
     Event event = new Event().withId("01").withEventPayload(Json.encode(dataImportEventPayload));
@@ -186,14 +218,14 @@ public class DataImportKafkaHandlerTest {
   }
 
   @Test
-  public void shouldNotHandleIfCacheAlreadyContainsThisEvent(TestContext context) throws IOException {
+  public void shouldNotHandleIfCacheAlreadyContainsThisEvent(TestContext context) {
     // given
     Async async = context.async();
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withTenant(TENANT_ID)
-      .withOkapiUrl("localhost")
+      .withOkapiUrl(mockServer.baseUrl())
       .withToken("test-token")
-      .withContext(new HashMap<>())
+      .withContext(new HashMap<>(Map.of("JOB_PROFILE_SNAPSHOT_ID", "b6698d38-149f-11ec-82a8-0242ac130003")))
       .withProfileSnapshot(profileSnapshotWrapper);
 
     Event event = new Event().withId("01").withEventPayload(Json.encode(dataImportEventPayload));
