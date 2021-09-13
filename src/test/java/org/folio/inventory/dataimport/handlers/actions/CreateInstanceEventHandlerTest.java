@@ -213,7 +213,7 @@ public class CreateInstanceEventHandlerTest {
       .withOkapiUrl(mockServer.baseUrl());
 
     CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
-    DataImportEventPayload actualDataImportEventPayload = future.get(10000, TimeUnit.SECONDS);
+    DataImportEventPayload actualDataImportEventPayload = future.get(20, TimeUnit.SECONDS);
 
     assertEquals(DI_INVENTORY_INSTANCE_CREATED.value(), actualDataImportEventPayload.getEventType());
     assertNotNull(actualDataImportEventPayload.getContext().get(INSTANCE.value()));

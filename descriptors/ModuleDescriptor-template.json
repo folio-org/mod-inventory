@@ -577,6 +577,14 @@
     {
       "id": "bound-with-parts-storage",
       "version": "1.0"
+    },
+    {
+      "id": "mapping-metadata-provider",
+      "version": "1.0"
+    },
+    {
+      "id": "data-import-converter-storage",
+      "version": "1.2"
     }
   ],
   "permissionSets": [

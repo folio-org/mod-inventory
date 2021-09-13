@@ -148,7 +148,7 @@ public class DataImportConsumerVerticleTest {
   }
 
   @Test
-  public void shouldSendEventWithProcessedEventPayloadWhenProcessingCoreHandlerSucceeded() throws InterruptedException, IOException {
+  public void shouldSendEventWithProcessedEventPayloadWhenProcessingCoreHandlerSucceeded() throws InterruptedException {
     // given
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
