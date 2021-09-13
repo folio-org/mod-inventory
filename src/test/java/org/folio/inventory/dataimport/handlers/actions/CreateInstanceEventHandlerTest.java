@@ -131,7 +131,7 @@ public class CreateInstanceEventHandlerTest {
     MappingManager.clearReaderFactories();
 
     createInstanceEventHandler = new CreateInstanceEventHandler(storage,
-      new PrecedingSucceedingTitlesHelper(context -> mockedClient));
+      new PrecedingSucceedingTitlesHelper(context -> mockedClient), null);
 
     mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
 
