@@ -5,6 +5,7 @@ import io.vertx.core.json.JsonObject;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
@@ -38,10 +39,12 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to update an Instance requires a mapping profile";
 
   private PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
+  private MappingMetadataCache mappingMetadataCache;
 
-  public ReplaceInstanceEventHandler(Storage storage, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper) {
+  public ReplaceInstanceEventHandler(Storage storage, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper, MappingMetadataCache mappingMetadataCache) {
     super(storage);
     this.precedingSucceedingTitlesHelper = precedingSucceedingTitlesHelper;
+    this.mappingMetadataCache = mappingMetadataCache;
   }
 
   @Override

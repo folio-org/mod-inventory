@@ -4,17 +4,20 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
+import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Record;
 
@@ -39,11 +42,15 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload - event payload context does not contain MARC_BIBLIOGRAPHIC data";
   static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create an Instance requires a mapping profile";
+  private static final String MAPPING_PARAMETERS_NOT_FOUND_MSG = "MappingParameters snapshot was not found by jobExecutionId '%s'";
 
   private PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
+  private MappingMetadataCache mappingMetadataCache;
 
-  public CreateInstanceEventHandler(Storage storage, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper) {
+
+  public CreateInstanceEventHandler(Storage storage, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper, MappingMetadataCache mappingMetadataCache) {
     super(storage);
+    this.mappingMetadataCache = mappingMetadataCache;
     this.precedingSucceedingTitlesHelper = precedingSucceedingTitlesHelper;
   }
 
@@ -71,43 +78,51 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
       Record record = new JsonObject(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()))
         .mapTo(Record.class);
 
-      prepareEvent(dataImportEventPayload);
-      defaultMapRecordToInstance(dataImportEventPayload);
-      MappingManager.map(dataImportEventPayload);
-      JsonObject instanceAsJson = new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value()));
-      if (instanceAsJson.getJsonObject(INSTANCE_PATH) != null) {
-        instanceAsJson = instanceAsJson.getJsonObject(INSTANCE_PATH);
-      }
-      instanceAsJson.put("id", record.getId());
-      instanceAsJson.put(SOURCE_KEY, MARC_FORMAT);
-      instanceAsJson.remove(HRID_KEY);
-
-      LOGGER.debug("Creating instance with id: {}", record.getId());
-
-      InstanceCollection instanceCollection = storage.getInstanceCollection(context);
-      List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
-      if (errors.isEmpty()) {
-        Instance mappedInstance = Instance.fromJson(instanceAsJson);
-        addInstance(mappedInstance, instanceCollection)
-          .compose(createdInstance -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(mappedInstance, context).map(createdInstance))
-          .onSuccess(ar -> {
-            dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(ar));
-            future.complete(dataImportEventPayload);
-          })
-          .onFailure(ar -> {
-            LOGGER.error("Error creating inventory Instance", ar);
-            future.completeExceptionally(ar);
-          });
-      } else {
-        String msg = format("Mapped Instance is invalid: %s", errors.toString());
-        LOGGER.error(msg);
-        future.completeExceptionally(new EventProcessingException(msg));
-      }
+      mappingMetadataCache.get(dataImportEventPayload.getJobExecutionId(), payloadContext)
+        .compose(parametersOptional -> parametersOptional
+          .map(mappingMetadata -> prepare(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()), new JsonObject(mappingMetadata.getMappingParams())
+            .mapTo(MappingParameters.class)))
+          .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, dataImportEventPayload.getJobExecutionId()))))
+        .onComplete(e -> {
+          InstanceCollection instanceCollection = storage.getInstanceCollection(context);
+          JsonObject instanceAsJson = prepareInstance(dataImportEventPayload, record);
+          List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
+          if (errors.isEmpty()) {
+            Instance mappedInstance = Instance.fromJson(instanceAsJson);
+            addInstance(mappedInstance, instanceCollection)
+              .compose(createdInstance -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(mappedInstance, context).map(createdInstance))
+              .onSuccess(ar -> {
+                dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(ar));
+                future.complete(dataImportEventPayload);
+              })
+              .onFailure(ar -> {
+                LOGGER.error("Error creating inventory Instance", ar);
+                future.completeExceptionally(ar);
+              });
+          } else {
+            String msg = format("Mapped Instance is invalid: %s", errors.toString());
+            LOGGER.error(msg);
+            future.completeExceptionally(new EventProcessingException(msg));
+          }
+        });
     } catch (Exception e) {
       LOGGER.error("Error creating inventory Instance", e);
       future.completeExceptionally(e);
     }
     return future;
+  }
+
+  private JsonObject prepareInstance(DataImportEventPayload dataImportEventPayload, Record record) {
+    JsonObject instanceAsJson = new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value()));
+    if (instanceAsJson.getJsonObject(INSTANCE_PATH) != null) {
+      instanceAsJson = instanceAsJson.getJsonObject(INSTANCE_PATH);
+    }
+    instanceAsJson.put("id", record.getId());
+    instanceAsJson.put(SOURCE_KEY, MARC_FORMAT);
+    instanceAsJson.remove(HRID_KEY);
+
+    LOGGER.debug("Creating instance with id: {}", record.getId());
+    return instanceAsJson;
   }
 
   @Override
@@ -127,6 +142,16 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
   @Override
   public String getPostProcessingInitializationEventType() {
     return DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING.value();
+  }
+
+  private Future<Void> prepare(DataImportEventPayload dataImportEventPayload, JsonObject mappingRules, MappingParameters mappingParameters) {
+    try {
+      defaultMapRecordToInstance(dataImportEventPayload, mappingRules, mappingParameters);
+      MappingManager.map(dataImportEventPayload, new MappingContext(mappingRules, mappingParameters));
+      return Future.succeededFuture();
+    } catch (Exception e) {
+      return Future.failedFuture(e);
+    }
   }
 
   private Future<Instance> addInstance(Instance instance, InstanceCollection instanceCollection) {

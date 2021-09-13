@@ -8,9 +8,12 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.json.JsonObject;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventTypes;
+import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
 import org.folio.inventory.dataimport.consumers.DataImportKafkaHandler;
 import org.folio.inventory.dataimport.util.ConsumerWrapperUtil;
 import org.folio.inventory.storage.Storage;
@@ -99,7 +102,20 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
       .build();
     kafkaInternalCache.initKafkaCache();
 
-    DataImportKafkaHandler dataImportKafkaHandler = new DataImportKafkaHandler(vertx, storage, client, kafkaInternalCache);
+    String profileSnapshotCacheExpirationTime = config.getString("inventory.profile-snapshot-cache.expiration.time.seconds");
+    if (StringUtils.isBlank(profileSnapshotCacheExpirationTime)){
+      profileSnapshotCacheExpirationTime = "3600";
+    }
+
+    String mappingMetadataCacheExpirationTime = config.getString("inventory.profile-snapshot-cache.expiration.time.seconds");
+    if (StringUtils.isBlank(mappingMetadataCacheExpirationTime)){
+      mappingMetadataCacheExpirationTime = "3600";
+    }
+    ProfileSnapshotCache profileSnapshotCache = new ProfileSnapshotCache(vertx, client, Long.parseLong(profileSnapshotCacheExpirationTime));
+    MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, client, Long.parseLong(mappingMetadataCacheExpirationTime));
+
+
+    DataImportKafkaHandler dataImportKafkaHandler = new DataImportKafkaHandler(vertx, storage, client, kafkaInternalCache, profileSnapshotCache, mappingMetadataCache);
 
     List<Future> futures = EVENT_TYPES.stream()
       .map(eventType -> createKafkaConsumerWrapper(kafkaConfig, eventType, dataImportKafkaHandler))

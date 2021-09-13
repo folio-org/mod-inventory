@@ -112,7 +112,7 @@ public class DataImportKafkaHandlerTest {
       .build();
 
     HttpClient client = vertx.createHttpClient();
-    dataImportKafkaHandler = new DataImportKafkaHandler(vertx, mockedStorage, client, kafkaInternalCache);
+    dataImportKafkaHandler = new DataImportKafkaHandler(vertx, mockedStorage, client, kafkaInternalCache, null, null);
     EventManager.clearEventHandlers();
     EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, 1);
   }
