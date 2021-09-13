@@ -62,9 +62,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
       if (payloadContext == null || payloadContext.isEmpty() ||
-        isEmpty(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value())) ||
-        isEmpty(dataImportEventPayload.getContext().get(MAPPING_RULES_KEY)) ||
-        isEmpty(dataImportEventPayload.getContext().get(MAPPING_PARAMS_KEY))
+        isEmpty(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()))
       ) {
         LOGGER.error(PAYLOAD_HAS_NO_DATA_MSG);
         return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
@@ -96,12 +94,12 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
                 future.complete(dataImportEventPayload);
               })
               .onFailure(ar -> {
-                LOGGER.error("Error creating inventory Instance", ar);
+                LOGGER.warn("Error creating inventory Instance", ar);
                 future.completeExceptionally(ar);
               });
           } else {
             String msg = format("Mapped Instance is invalid: %s", errors);
-            LOGGER.error(msg);
+            LOGGER.warn(msg);
             future.completeExceptionally(new EventProcessingException(msg));
           }
         });

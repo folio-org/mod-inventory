@@ -87,7 +87,7 @@ import static org.mockito.Mockito.when;
 
 public class CreateInstanceEventHandlerTest {
 
-  private static final String PARSED_CONTENT = "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"780\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"Houston oil directory\"}]}},{\"785\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"SAIS review of international affairs\"},{\"x\":\"1945-4724\"}]}},{\"500\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Adaptation of Xi xiang ji by Wang Shifu.\"}]}},{\"520\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\"}]}}]}\n";
+  private static final String PARSED_CONTENT = "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"245\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"a\":\"titleValue\"}]}},{\"336\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"b\":\"b6698d38-149f-11ec-82a8-0242ac130003\"}]}},{\"780\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"Houston oil directory\"}]}},{\"785\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"SAIS review of international affairs\"},{\"x\":\"1945-4724\"}]}},{\"500\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Adaptation of Xi xiang ji by Wang Shifu.\"}]}},{\"520\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\"}]}}]}";
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/rules.json";
   public static final String OKAPI_URL = "http://localhost";
   private static final String MAPPING_METADATA_URL = "/mapping-metadata";
@@ -147,16 +147,18 @@ public class CreateInstanceEventHandlerTest {
             .withContent(JsonObject.mapFrom(mappingProfile).getMap())))));
 
   private CreateInstanceEventHandler createInstanceEventHandler;
-  private JsonObject mappingRules;
 
   @Before
   public void setUp() throws IOException {
     MockitoAnnotations.initMocks(this);
     MappingManager.clearReaderFactories();
 
+    JsonObject mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
+
     WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true))
       .willReturn(WireMock.ok().withBody(Json.encode(new MappingMetadataDto()
-        .withMappingParams(Json.encode(new MappingParameters()))))));
+        .withMappingParams(Json.encode(new MappingParameters()))
+        .withMappingRules(mappingRules.toString())))));
 
 
     Vertx vertx = Vertx.vertx();
@@ -164,7 +166,6 @@ public class CreateInstanceEventHandlerTest {
       new PrecedingSucceedingTitlesHelper(context -> mockedClient), new MappingMetadataCache(vertx,
       vertx.createHttpClient(new HttpClientOptions().setConnectTimeout(3000)), 3600));
 
-    mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
 
     doAnswer(invocationOnMock -> {
       Instance instanceRecord = invocationOnMock.getArgument(0);
@@ -181,7 +182,7 @@ public class CreateInstanceEventHandlerTest {
   public void shouldProcessEvent() throws InterruptedException, ExecutionException, TimeoutException {
     Reader fakeReader = Mockito.mock(Reader.class);
 
-    String instanceTypeId = UUID.randomUUID().toString();
+    String instanceTypeId = "fe19bae4-da28-472b-be90-d442e2428ead";
     String title = "titleValue";
 
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId), StringValue.of(title));
@@ -198,8 +199,6 @@ public class CreateInstanceEventHandlerTest {
     record.setId("567859ad-505a-400d-a699-0028a1fdbf84");
 
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
-    context.put("MAPPING_RULES", mappingRules.encode());
-    context.put("MAPPING_PARAMS", new JsonObject().encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
@@ -214,7 +213,7 @@ public class CreateInstanceEventHandlerTest {
       .withOkapiUrl(mockServer.baseUrl());
 
     CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
-    DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
+    DataImportEventPayload actualDataImportEventPayload = future.get(10000, TimeUnit.SECONDS);
 
     assertEquals(DI_INVENTORY_INSTANCE_CREATED.value(), actualDataImportEventPayload.getEventType());
     assertNotNull(actualDataImportEventPayload.getContext().get(INSTANCE.value()));

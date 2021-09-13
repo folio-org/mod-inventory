@@ -62,8 +62,6 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       if (payloadContext == null
         || payloadContext.isEmpty()
         || isEmpty(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()))
-        || isEmpty(dataImportEventPayload.getContext().get(MAPPING_RULES_KEY))
-        || isEmpty(dataImportEventPayload.getContext().get(MAPPING_PARAMS_KEY))
         || isEmpty(dataImportEventPayload.getContext().get(INSTANCE.value()))
       ) {
         LOGGER.error(PAYLOAD_HAS_NO_DATA_MSG);

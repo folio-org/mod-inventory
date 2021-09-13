@@ -1,6 +1,5 @@
 package org.folio.inventory.dataimport.cache;
 
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -12,7 +11,6 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.exceptions.CacheLoadingException;
 import org.folio.rest.client.MappingMetadataClient;
 import org.folio.rest.jaxrs.model.MappingMetadataDto;
-import org.folio.rest.util.OkapiConnectionParams;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
 import com.github.benmanes.caffeine.cache.Caffeine;

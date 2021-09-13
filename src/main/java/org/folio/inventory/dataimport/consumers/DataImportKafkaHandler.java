@@ -60,7 +60,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
 
   private static final Logger LOGGER = LogManager.getLogger(DataImportKafkaHandler.class);
   private static final String CORRELATION_ID_HEADER = "correlationId";
-  private static final String PROFILE_SNAPSHOT_ID_KEY = "profileSnapshotId";
+  private static final String PROFILE_SNAPSHOT_ID_KEY = "JOB_PROFILE_SNAPSHOT_ID";
 
   private KafkaInternalCache kafkaInternalCache;
   private Vertx vertx;
