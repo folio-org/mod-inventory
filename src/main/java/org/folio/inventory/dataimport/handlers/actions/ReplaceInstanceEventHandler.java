@@ -167,7 +167,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       org.folio.Instance mapped = defaultMapRecordToInstance(dataImportEventPayload, mappingRules, mappingParameters);
       Instance mergedInstance = InstanceUtil.mergeFieldsWhichAreNotControlled(instanceToUpdate, mapped);
       dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(new JsonObject().put(INSTANCE_PATH, JsonObject.mapFrom(mergedInstance))));
-      MappingManager.map(dataImportEventPayload/*, new MappingContext(mappingParameters)*/);
+      MappingManager.map(dataImportEventPayload, new MappingContext(mappingParameters));
       return Future.succeededFuture();
     } catch (Exception e) {
       return Future.failedFuture(e);
