@@ -2,10 +2,13 @@ package org.folio.inventory.dataimport.cache;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.folio.inventory.common.Context;
+import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.rest.jaxrs.model.MappingMetadataDto;
 import org.folio.rest.util.OkapiConnectionParams;
 import org.junit.Before;
@@ -50,17 +53,14 @@ public class MappingMetadataCacheTest {
     .withMappingParams("params")
     .withMappingRules("rules");
 
-  private Map<String, String> context;
+  private Context context;
 
   @Before
   public void setUp() {
     WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true))
       .willReturn(WireMock.ok().withBody(Json.encode(mappingMetadata))));
 
-    this.context = Map.of(OkapiConnectionParams.OKAPI_TENANT_HEADER, TENANT_ID,
-      OkapiConnectionParams.OKAPI_TOKEN_HEADER, "token",
-      OkapiConnectionParams.OKAPI_URL_HEADER, mockServer.baseUrl());
-
+    context = EventHandlingUtil.constructContext(TENANT_ID, "token", mockServer.baseUrl());
   }
 
   @Test

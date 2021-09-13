@@ -8,6 +8,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.exceptions.CacheLoadingException;
 import org.folio.rest.client.MappingMetadataClient;
 import org.folio.rest.jaxrs.model.MappingMetadataDto;
@@ -38,7 +39,7 @@ public class MappingMetadataCache {
       .buildAsync();
   }
 
-  public Future<Optional<MappingMetadataDto>> get(String jobExecutionId, Map<String, String> context) {
+  public Future<Optional<MappingMetadataDto>> get(String jobExecutionId, Context context) {
     try {
       return Future.fromCompletionStage(cache.get(jobExecutionId, (key, executor) -> loadJobProfileSnapshot(key, context)));
     } catch (Exception e) {
@@ -47,10 +48,10 @@ public class MappingMetadataCache {
     }
   }
 
-  private CompletableFuture<Optional<MappingMetadataDto>> loadJobProfileSnapshot(String jobExecutionId, Map<String, String> context) {
-    LOGGER.debug("Trying to load MappingMetadata by jobExecutionId  '{}' for cache, okapi url: {}, tenantId: {}", jobExecutionId, context.get(OkapiConnectionParams.OKAPI_URL_HEADER), context.get(OkapiConnectionParams.OKAPI_TENANT_HEADER));
+  private CompletableFuture<Optional<MappingMetadataDto>> loadJobProfileSnapshot(String jobExecutionId, Context context) {
+    LOGGER.debug("Trying to load MappingMetadata by jobExecutionId  '{}' for cache, okapi url: {}, tenantId: {}", jobExecutionId, context.getOkapiLocation(), context.getTenantId());
 
-    MappingMetadataClient client = new MappingMetadataClient(context.get(OkapiConnectionParams.OKAPI_URL_HEADER), context.get(OkapiConnectionParams.OKAPI_TENANT_HEADER), context.get(OkapiConnectionParams.OKAPI_TOKEN_HEADER), httpClient);
+    MappingMetadataClient client = new MappingMetadataClient(context.getOkapiLocation(), context.getTenantId(), context.getToken(), httpClient);
 
     return client.getMappingMetadataByJobExecutionId(jobExecutionId)
       .toCompletionStage()
@@ -63,7 +64,7 @@ public class MappingMetadataCache {
           LOGGER.warn("MappingMetadata was not found by jobExecutionId '{}'", jobExecutionId);
           return CompletableFuture.completedFuture(Optional.empty());
         } else {
-          String message = String.format("Error loading jobProfileSnapshot by id: '%s', status code: %s, response message: %s",
+          String message = String.format("Error loading MappingMetadata by id: '%s', status code: %s, response message: %s",
             jobExecutionId, httpResponse.statusCode(), httpResponse.bodyAsString());
           LOGGER.warn(message);
           return CompletableFuture.failedFuture(new CacheLoadingException(message));

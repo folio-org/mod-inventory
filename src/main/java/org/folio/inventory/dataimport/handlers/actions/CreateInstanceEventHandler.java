@@ -78,7 +78,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
       Record record = new JsonObject(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()))
         .mapTo(Record.class);
 
-      mappingMetadataCache.get(dataImportEventPayload.getJobExecutionId(), payloadContext)
+      mappingMetadataCache.get(dataImportEventPayload.getJobExecutionId(), context)
         .compose(parametersOptional -> parametersOptional
           .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()), new JsonObject(mappingMetadata.getMappingParams())
             .mapTo(MappingParameters.class)))
