@@ -91,10 +91,10 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
       }
       holdingAsJson.put("id", UUID.randomUUID().toString());
       var holdingJson = holdingAsJson;
+      checkIfPermanentLocationIdExists(holdingJson);
 
       findInstanceIdByHrid(dataImportEventPayload, holdingAsJson).thenCompose(instanceId -> {
         fillInstanceId(dataImportEventPayload, holdingJson, instanceId);
-        checkIfPermanentLocationIdExists(holdingJson);
         var context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
         var holdingsRecords = storage.getHoldingsRecordCollection(context);
         HoldingsRecord holding = null;
