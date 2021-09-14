@@ -32,11 +32,9 @@ import org.folio.DataImportEventPayload;
 import org.folio.Holdings;
 import org.folio.HoldingsRecord;
 import org.folio.dbschema.ObjectMapperTool;
-import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.HoldingsRecordCollection;
-import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
 import org.folio.processing.events.services.handler.EventHandler;
@@ -182,7 +180,7 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
 
   @Override
   public boolean isEligible(DataImportEventPayload dataImportEventPayload) {
-    if (dataImportEventPayload.getContext().get(MARC_HOLDINGS.value()) != null && dataImportEventPayload.getCurrentNode() != null && ACTION_PROFILE == dataImportEventPayload.getCurrentNode().getContentType()) {
+    if (dataImportEventPayload.getCurrentNode() != null && dataImportEventPayload.getContext().get(MARC_HOLDINGS.value()) != null && ACTION_PROFILE == dataImportEventPayload.getCurrentNode().getContentType()) {
       var actionProfile = JsonObject.mapFrom(dataImportEventPayload.getCurrentNode().getContent()).mapTo(ActionProfile.class);
       return actionProfile.getAction() == ActionProfile.Action.CREATE && actionProfile.getFolioRecord() == ActionProfile.FolioRecord.HOLDINGS;
     }
