@@ -3,8 +3,16 @@ package org.folio.inventory.dataimport.util;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.folio.rest.jaxrs.model.ParsedRecord;
+import org.folio.rest.jaxrs.model.Record;
 
 import static org.apache.commons.lang3.StringUtils.EMPTY;
+
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
+
+import org.marc4j.MarcJsonReader;
+import org.marc4j.MarcReader;
+import org.marc4j.marc.ControlField;
 
 public final class ParsedRecordUtil {
 
@@ -38,6 +46,36 @@ public final class ParsedRecordUtil {
     return (content instanceof String)
       ? new JsonObject((String) content)
       : JsonObject.mapFrom(content);
+  }
+
+  /**
+   * Extracts value from specified field
+   *
+   * @param record record
+   * @param tag    tag of data field
+   * @return value from the specified field, or null
+   */
+  public static String getControlFieldValue(Record record, String tag) {
+    if (record != null && record.getParsedRecord() != null && record.getParsedRecord().getContent() != null) {
+      MarcReader reader = buildMarcReader(record);
+      try {
+        if (reader.hasNext()) {
+          org.marc4j.marc.Record marcRecord = reader.next();
+          return marcRecord.getControlFields().stream()
+            .filter(controlField -> controlField.getTag().equals(tag))
+            .findFirst()
+            .map(ControlField::getData)
+            .orElse(null);
+        }
+      } catch (Exception e) {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  private static MarcReader buildMarcReader(Record record) {
+    return new MarcJsonReader(new ByteArrayInputStream(record.getParsedRecord().getContent().toString().getBytes(StandardCharsets.UTF_8)));
   }
 
   public enum AdditionalSubfields {
