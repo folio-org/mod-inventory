@@ -12,6 +12,7 @@ import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.ITEM;
 import static org.folio.ActionProfile.FolioRecord.MARC_HOLDINGS;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDINGS_CREATED_READY_FOR_POST_PROCESSING;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_HOLDING_RECORD_CREATED;
 import static org.folio.inventory.dataimport.handlers.actions.CreateHoldingEventHandler.ACTION_HAS_NO_MAPPING_MSG;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
@@ -172,7 +173,7 @@ public class CreateMarcHoldingsEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = createMarcHoldingsEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
 
-    Assert.assertEquals(DI_SRS_MARC_HOLDING_RECORD_CREATED.value(), actualDataImportEventPayload.getEventType());
+    Assert.assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
     Assert.assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("id"));
     Assert.assertEquals(instanceId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("instanceId"));
@@ -298,7 +299,6 @@ public class CreateMarcHoldingsEventHandlerTest {
     Assert.assertEquals("Can`t create Holding entity: 'permanentLocationId' is empty", exception.getCause().getMessage());
   }
 
-
   @Test
   public void shouldProcessEventIfInstanceFoundButTotalRecordsIsNotEqualOne() throws InterruptedException, ExecutionException, TimeoutException, IOException {
     doAnswer(invocationOnMock -> {
@@ -340,7 +340,7 @@ public class CreateMarcHoldingsEventHandlerTest {
 
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
 
-    Assert.assertEquals(DI_SRS_MARC_HOLDING_RECORD_CREATED.value(), actualDataImportEventPayload.getEventType());
+    Assert.assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
     Assert.assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("id"));
     Assert.assertNull(new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("instanceId"));
@@ -368,7 +368,7 @@ public class CreateMarcHoldingsEventHandlerTest {
     context.put("MAPPING_PARAMS", new JsonObject().encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_SRS_MARC_HOLDING_RECORD_CREATED.value())
+      .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
@@ -425,7 +425,7 @@ public class CreateMarcHoldingsEventHandlerTest {
     context.put(MARC_HOLDINGS.value(), Json.encode(record));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_SRS_MARC_HOLDING_RECORD_CREATED.value())
+      .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
@@ -442,7 +442,7 @@ public class CreateMarcHoldingsEventHandlerTest {
     context.put(MARC_HOLDINGS.value(), Json.encode(record));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_SRS_MARC_HOLDING_RECORD_CREATED.value())
+      .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(new ProfileSnapshotWrapper()
@@ -463,7 +463,7 @@ public class CreateMarcHoldingsEventHandlerTest {
     context.put(MARC_HOLDINGS.value(), Json.encode(record));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_SRS_MARC_HOLDING_RECORD_CREATED.value())
+      .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
@@ -473,7 +473,7 @@ public class CreateMarcHoldingsEventHandlerTest {
   @Test
   public void isEligibleShouldReturnFalseIfCurrentNodeIsEmpty() {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_SRS_MARC_HOLDING_RECORD_CREATED.value())
+      .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper);
     assertFalse(createMarcHoldingsEventHandler.isEligible(dataImportEventPayload));
@@ -487,7 +487,7 @@ public class CreateMarcHoldingsEventHandlerTest {
       .withContentType(JOB_PROFILE)
       .withContent(jobProfile);
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_SRS_MARC_HOLDING_RECORD_CREATED.value())
+      .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper);
     assertFalse(createMarcHoldingsEventHandler.isEligible(dataImportEventPayload));
@@ -506,7 +506,7 @@ public class CreateMarcHoldingsEventHandlerTest {
       .withContentType(JOB_PROFILE)
       .withContent(actionProfile);
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_SRS_MARC_HOLDING_RECORD_CREATED.value())
+      .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper);
     assertFalse(createMarcHoldingsEventHandler.isEligible(dataImportEventPayload));
@@ -525,7 +525,7 @@ public class CreateMarcHoldingsEventHandlerTest {
       .withContentType(JOB_PROFILE)
       .withContent(actionProfile);
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_SRS_MARC_HOLDING_RECORD_CREATED.value())
+      .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper);
     assertFalse(createMarcHoldingsEventHandler.isEligible(dataImportEventPayload));
