@@ -99,12 +99,7 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
           fillInstanceId(dataImportEventPayload, holdingJson, instanceId);
           var holdingsRecords = storage.getHoldingsRecordCollection(context);
           HoldingsRecord holding = null;
-          try {
-            holding = ObjectMapperTool.getMapper().readValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), HoldingsRecord.class);
-          } catch (JsonProcessingException e) {
-            LOGGER.error("Failed to parse Holdings", e);
-            future.completeExceptionally(e);
-          }
+          holding = Json.decodeValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), HoldingsRecord.class);
           return addHoldings(holding, holdingsRecords)
             .onSuccess(createdHoldings -> {
               LOGGER.info("Created Holding record");
