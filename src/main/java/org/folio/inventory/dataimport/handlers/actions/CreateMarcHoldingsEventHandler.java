@@ -98,8 +98,7 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
         .compose(instanceId -> {
           fillInstanceId(dataImportEventPayload, holdingJson, instanceId);
           var holdingsRecords = storage.getHoldingsRecordCollection(context);
-          HoldingsRecord holding = null;
-          holding = Json.decodeValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), HoldingsRecord.class);
+          HoldingsRecord holding = Json.decodeValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), HoldingsRecord.class);
           return addHoldings(holding, holdingsRecords)
             .onSuccess(createdHoldings -> {
               LOGGER.info("Created Holding record");
