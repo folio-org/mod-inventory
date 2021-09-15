@@ -100,7 +100,7 @@ public class CreateHoldingEventHandler implements EventHandler {
 
   @Override
   public boolean isEligible(DataImportEventPayload dataImportEventPayload) {
-    if (dataImportEventPayload.getCurrentNode() != null && ACTION_PROFILE == dataImportEventPayload.getCurrentNode().getContentType()) {
+    if (dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()) != null && dataImportEventPayload.getCurrentNode() != null && ACTION_PROFILE == dataImportEventPayload.getCurrentNode().getContentType()) {
       ActionProfile actionProfile = JsonObject.mapFrom(dataImportEventPayload.getCurrentNode().getContent()).mapTo(ActionProfile.class);
       return actionProfile.getAction() == ActionProfile.Action.CREATE && actionProfile.getFolioRecord() == ActionProfile.FolioRecord.HOLDINGS;
     }
