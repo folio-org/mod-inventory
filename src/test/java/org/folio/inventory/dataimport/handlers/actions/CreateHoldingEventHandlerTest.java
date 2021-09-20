@@ -499,9 +499,13 @@ public class CreateHoldingEventHandlerTest {
 
   @Test
   public void isEligibleShouldReturnTrue() {
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    HashMap<String, String> context = new HashMap<>();
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
-      .withContext(new HashMap<>())
+      .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
     assertTrue(createHoldingEventHandler.isEligible(dataImportEventPayload));

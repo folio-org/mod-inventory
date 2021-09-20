@@ -51,8 +51,8 @@ import static org.mockito.Mockito.when;
 @RunWith(MockitoJUnitRunner.class)
 public class MarcBibModifiedPostProcessingEventHandlerTest {
 
-  private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/rules.json";
-  private static final String RECORD_PATH = "src/test/resources/handlers/record.json";
+  private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/bib-rules.json";
+  private static final String RECORD_PATH = "src/test/resources/handlers/bib-record.json";
   private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
   private static final String PRECEDING_SUCCEEDING_TITLES_KEY = "precedingSucceedingTitles";
   private static final String OKAPI_URL = "http://localhost";

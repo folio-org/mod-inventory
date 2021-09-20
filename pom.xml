@@ -185,6 +185,16 @@
       <artifactId>mod-source-record-storage-client</artifactId>
       <version>5.2.0-SNAPSHOT</version>
       <type>jar</type>
+      <exclusions>
+        <!-- This is provided by JDK >= 9 causing a compile error (Eclipse doesn't suppress this compile error):
+             "The package org.xml.sax is accessible from more than one module: <unnamed>, java.xml"
+             https://stackoverflow.com/questions/55571046/eclipse-is-confused-by-imports-accessible-from-more-than-one-module
+        -->
+        <exclusion>
+          <groupId>xerces</groupId>
+          <artifactId>xmlParserAPIs</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.folio</groupId>
