@@ -15,6 +15,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
 
   private final UUID id;
   private final UUID holdingId;
+  private final UUID inTransitDestinationServicePointId;
   private final String readOnlyTitle;
   private final String readOnlyCallNumber;
   private final String barcode;
@@ -36,7 +37,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
   private final String copyNumber;
 
   public ItemRequestBuilder() {
-    this(UUID.randomUUID(), null, null, null, "645398607547",
+    this(UUID.randomUUID(), null, null, null, null, "645398607547",
       AVAILABLE_STATUS, bookMaterialType(), null, null, null,
       canCirculateLoanType(), null, null, null, null,
       null, null, null,
@@ -47,6 +48,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
   private ItemRequestBuilder(
     UUID id,
     UUID holdingId,
+    UUID inTransitDestinationServicePointId,
     String readOnlyTitle,
     String readOnlyCallNumber,
     String barcode,
@@ -69,6 +71,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
 
     this.id = id;
     this.holdingId = holdingId;
+    this.inTransitDestinationServicePointId = inTransitDestinationServicePointId;
     this.readOnlyTitle = readOnlyTitle;
     this.readOnlyCallNumber = readOnlyCallNumber;
     this.barcode = barcode;
@@ -123,6 +126,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
     includeWhenPresent(itemRequest, "itemLevelCallNumberPrefix", itemLevelCallNumberPrefix);
     includeWhenPresent(itemRequest, "itemLevelCallNumberTypeId", itemLevelCallNumberTypeId);
     includeWhenPresent(itemRequest, "hrid", hrid);
+    includeWhenPresent(itemRequest, "inTransitDestinationServicePointId", inTransitDestinationServicePointId);
     includeWhenPresent(itemRequest, "lastCheckIn", lastCheckIn);
     includeWhenPresent(itemRequest, Item.COPY_NUMBER_KEY, copyNumber);
 
@@ -133,6 +137,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
     return new ItemRequestBuilder(
       id,
       this.holdingId,
+      this.inTransitDestinationServicePointId,
       this.readOnlyTitle,
       this.readOnlyCallNumber,
       this.barcode,
@@ -158,6 +163,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
     return new ItemRequestBuilder(
       this.id,
       holdingId,
+      this.inTransitDestinationServicePointId,
       this.readOnlyTitle,
       this.readOnlyCallNumber,
       this.barcode,
@@ -179,10 +185,37 @@ public class ItemRequestBuilder extends AbstractBuilder {
       this.copyNumber);
   }
 
+  public ItemRequestBuilder withInTransitDestinationServicePointId(UUID inTransitDestinationServicePointId) {
+    return new ItemRequestBuilder(
+            this.id,
+            this.holdingId,
+            inTransitDestinationServicePointId,
+            this.readOnlyTitle,
+            this.readOnlyCallNumber,
+            this.barcode,
+            this.status,
+            this.materialType,
+            this.readOnlyEffectiveLocation,
+            this.permanentLocation,
+            this.temporaryLocation,
+            this.permanentLoanType,
+            this.temporaryLoanType,
+            this.circulationNotes,
+            this.tags,
+            this.lastCheckIn,
+            this.itemLevelCallNumber,
+            this.itemLevelCallNumberPrefix,
+            this.itemLevelCallNumberSuffix,
+            this.itemLevelCallNumberTypeId,
+            this.hrid,
+            this.copyNumber);
+  }
+
   public ItemRequestBuilder withReadOnlyTitle(String title) {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
+      this.inTransitDestinationServicePointId,
       title,
       this.readOnlyCallNumber,
       this.barcode,
@@ -208,6 +241,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
+      this.inTransitDestinationServicePointId,
       this.readOnlyTitle,
       callNumber,
       this.barcode,
@@ -233,6 +267,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
+      this.inTransitDestinationServicePointId,
       this.readOnlyTitle,
       this.readOnlyCallNumber,
       barcode,
@@ -262,6 +297,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
+      this.inTransitDestinationServicePointId,
       this.readOnlyTitle,
       this.readOnlyCallNumber,
       this.barcode,
@@ -299,6 +335,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
+      this.inTransitDestinationServicePointId,
       this.readOnlyTitle,
       this.readOnlyCallNumber,
       this.barcode,
@@ -324,6 +361,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
+      this.inTransitDestinationServicePointId,
       this.readOnlyTitle,
       this.readOnlyCallNumber,
       this.barcode,
@@ -349,6 +387,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
+      this.inTransitDestinationServicePointId,
       this.readOnlyTitle,
       this.readOnlyCallNumber,
       this.barcode,
@@ -390,6 +429,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
+      this.inTransitDestinationServicePointId,
       this.readOnlyTitle,
       this.readOnlyCallNumber,
       this.barcode,
@@ -427,6 +467,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
+      this.inTransitDestinationServicePointId,
       this.readOnlyTitle,
       this.readOnlyCallNumber,
       this.barcode,
@@ -452,6 +493,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
+      this.inTransitDestinationServicePointId,
       this.readOnlyTitle,
       this.readOnlyCallNumber,
       this.barcode,
@@ -477,6 +519,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
+      this.inTransitDestinationServicePointId,
       this.readOnlyTitle,
       this.readOnlyCallNumber,
       this.barcode,
@@ -517,6 +560,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
+      this.inTransitDestinationServicePointId,
       this.readOnlyTitle,
       this.readOnlyCallNumber,
       this.barcode,
@@ -578,6 +622,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
+      this.inTransitDestinationServicePointId,
       this.readOnlyTitle,
       this.readOnlyCallNumber,
       this.barcode,
@@ -603,6 +648,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
     return new ItemRequestBuilder(
       id,
       this.holdingId,
+      this.inTransitDestinationServicePointId,
       this.readOnlyTitle,
       this.readOnlyCallNumber,
       this.barcode,
@@ -628,6 +674,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
     return new ItemRequestBuilder(
       id,
       this.holdingId,
+      this.inTransitDestinationServicePointId,
       this.readOnlyTitle,
       this.readOnlyCallNumber,
       this.barcode,
@@ -653,6 +700,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
+      this.inTransitDestinationServicePointId,
       this.readOnlyTitle,
       this.readOnlyCallNumber,
       this.barcode,
@@ -678,6 +726,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
+      this.inTransitDestinationServicePointId,
       this.readOnlyTitle,
       this.readOnlyCallNumber,
       this.barcode,
@@ -703,6 +752,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
+      this.inTransitDestinationServicePointId,
       this.readOnlyTitle,
       this.readOnlyCallNumber,
       this.barcode,
@@ -728,6 +778,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
+      this.inTransitDestinationServicePointId,
       this.readOnlyTitle,
       this.readOnlyCallNumber,
       this.barcode,

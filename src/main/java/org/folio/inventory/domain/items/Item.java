@@ -12,6 +12,7 @@ import io.vertx.core.json.JsonObject;
 public class Item {
 
   public static final String HRID_KEY = "hrid";
+  public static final String TRANSIT_DESTINATION_SERVICE_POINT_KEY = "inTransitDestinationServicePointId";
   public static final String FORMER_IDS_KEY = "formerIds";
   public static final String DISCOVERY_SUPPRESS_KEY = "discoverySuppress";
   public static final String STATUS_KEY = "status";
@@ -46,6 +47,7 @@ public class Item {
 
   public final String id;
   private String hrid;
+  private String inTransitDestinationServicePointId;
   private Boolean discoverySuppress;
   private List<String> formerIds = new ArrayList<>();
 
@@ -107,6 +109,23 @@ public class Item {
     this.metadata = metadata;
   }
 
+  public Item(String id,
+              String holdingId,
+              String inTransitDestinationServicePointId,
+              Status status,
+              String materialTypeId,
+              String permanentLoanTypeId,
+              JsonObject metadata) {
+
+    this.id = id;
+    this.holdingId = holdingId;
+    this.inTransitDestinationServicePointId = inTransitDestinationServicePointId;
+    this.status = Objects.requireNonNull(status, "Status is required");
+    this.materialTypeId = materialTypeId;
+    this.permanentLoanTypeId = permanentLoanTypeId;
+    this.metadata = metadata;
+  }
+
   public String getId() {
     return id;
   }
@@ -126,6 +145,13 @@ public class Item {
 
   public Item withHrid(String hrid) {
     this.hrid = hrid;
+    return this;
+  }
+
+  public String getInTransitDestinationServicePointId() { return inTransitDestinationServicePointId; }
+
+  public Item withInTransitDestinationServicePointId(String inTransitDestinationServicePointId) {
+    this.inTransitDestinationServicePointId = inTransitDestinationServicePointId;
     return this;
   }
 
@@ -473,7 +499,7 @@ public class Item {
 
   public Item copyWithNewId(String newId) {
     return new Item(newId,
-      holdingId, this.status, this.materialTypeId,
+      holdingId, inTransitDestinationServicePointId, this.status, this.materialTypeId,
       this.permanentLoanTypeId, this.metadata)
             .withHrid(this.hrid)
             .withFormerIds(this.formerIds)
@@ -510,7 +536,7 @@ public class Item {
 
   public Item changeStatus(ItemStatusName newStatus) {
     return new Item(this.id,
-      holdingId, new Status(newStatus), this.materialTypeId,
+      holdingId, inTransitDestinationServicePointId, new Status(newStatus), this.materialTypeId,
       this.permanentLoanTypeId, this.metadata)
       .withHrid(this.hrid)
       .withFormerIds(this.formerIds)
