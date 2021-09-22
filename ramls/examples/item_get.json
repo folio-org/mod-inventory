@@ -23,6 +23,7 @@
     "id": "d9cd0bed-1b49-4b5e-a7bd-064b8d177231",
     "name": "Main Library"
   },
+  "inTransitDestinationServicePointId": "5b31ec8c-95a7-4b91-95cc-b551a74b91ca",
   "tags" : {
     "tagList" : [
       "important"

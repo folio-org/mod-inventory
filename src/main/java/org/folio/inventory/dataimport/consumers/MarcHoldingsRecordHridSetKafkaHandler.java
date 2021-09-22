@@ -1,33 +1,32 @@
 package org.folio.inventory.dataimport.consumers;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.json.JsonObject;
-import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.folio.DataImportEventPayload;
-import org.folio.HoldingsRecord;
-import org.folio.dbschema.ObjectMapperTool;
-import org.folio.inventory.common.Context;
-import org.folio.inventory.dataimport.handlers.actions.HoldingsRecordUpdateDelegate;
-import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
-import org.folio.kafka.AsyncRecordHandler;
-import org.folio.kafka.KafkaHeaderUtils;
-import org.folio.kafka.cache.KafkaInternalCache;
-import org.folio.processing.mapping.MappingManager;
-import org.folio.processing.mapping.mapper.MappingContext;
-import org.folio.rest.jaxrs.model.Event;
-
-import java.util.Map;
-
 import static java.lang.String.format;
-import static org.folio.rest.jaxrs.model.EntityType.HOLDINGS;
-import static org.folio.rest.jaxrs.model.EntityType.MARC_HOLDINGS;
+import static org.apache.commons.lang3.StringUtils.isAnyEmpty;
+
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.json.Json;
+import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import org.folio.dbschema.ObjectMapperTool;
+import org.folio.inventory.common.Context;
+import org.folio.inventory.dataimport.handlers.actions.HoldingsUpdateDelegate;
+import org.folio.kafka.AsyncRecordHandler;
+import org.folio.kafka.KafkaHeaderUtils;
+import org.folio.kafka.cache.KafkaInternalCache;
+import org.folio.rest.jaxrs.model.Event;
+import org.folio.rest.jaxrs.model.Record;
 
 /**
  * This handler is a part of post-processing logic that is intended for handling the creation of Holdings record.
@@ -39,15 +38,19 @@ import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
  * 4. Update an existing record (from step 2) with a result of merge (from step 3);
  */
 public class MarcHoldingsRecordHridSetKafkaHandler implements AsyncRecordHandler<String, String> {
+
   private static final Logger LOGGER = LogManager.getLogger(MarcHoldingsRecordHridSetKafkaHandler.class);
   private static final String CORRELATION_ID_HEADER = "correlationId";
-  private static final String HOLDINGS_ID = "holdingsId";
+  private static final String MARC_KEY = "MARC_HOLDINGS";
+  private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
+  private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
   private static final ObjectMapper OBJECT_MAPPER = ObjectMapperTool.getMapper();
 
-  private final HoldingsRecordUpdateDelegate holdingsRecordUpdateDelegate;
+  private final HoldingsUpdateDelegate holdingsRecordUpdateDelegate;
   private final KafkaInternalCache kafkaInternalCache;
 
-  public MarcHoldingsRecordHridSetKafkaHandler(HoldingsRecordUpdateDelegate holdingsRecordUpdateDelegate, KafkaInternalCache kafkaInternalCache) {
+  public MarcHoldingsRecordHridSetKafkaHandler(HoldingsUpdateDelegate holdingsRecordUpdateDelegate,
+                                               KafkaInternalCache kafkaInternalCache) {
     this.holdingsRecordUpdateDelegate = holdingsRecordUpdateDelegate;
     this.kafkaInternalCache = kafkaInternalCache;
   }
@@ -60,19 +63,24 @@ public class MarcHoldingsRecordHridSetKafkaHandler implements AsyncRecordHandler
       if (!kafkaInternalCache.containsByKey(event.getId())) {
         kafkaInternalCache.putToCache(event.getId());
         @SuppressWarnings("unchecked")
+        HashMap<String, String> eventPayload =
+          OBJECT_MAPPER.readValue(event.getEventPayload(), HashMap.class);
         Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(record.headers());
         String correlationId = headersMap.get(CORRELATION_ID_HEADER);
-        LOGGER.info(format("Event payload has been received with event type: %s and correlationId: %s", event.getEventType(), correlationId));
-        DataImportEventPayload eventPayload = new JsonObject(event.getEventPayload()).mapTo(DataImportEventPayload.class);
+        LOGGER.info(format("Event payload has been received with event type: %s and correlationId: %s", event.getEventType(),
+          correlationId));
 
-        Context context = EventHandlingUtil.constructContext(headersMap.get(OKAPI_TENANT_HEADER), headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER));
-        if (!(eventPayload.getContext().containsKey(HOLDINGS_ID) && eventPayload.getContext().containsKey(HOLDINGS.value()) && eventPayload.getContext().containsKey(MARC_HOLDINGS.value()))) {
-          throw new IllegalArgumentException(format("The event payload does not contain all the %s, %s, %s", HOLDINGS_ID, HOLDINGS.value(), MARC_HOLDINGS.value()));
+        if (isAnyEmpty(eventPayload.get(MARC_KEY), eventPayload.get(MAPPING_RULES_KEY),
+          eventPayload.get(MAPPING_PARAMS_KEY))) {
+          String message = "Event payload does not contain required data to update Instance";
+          LOGGER.error(message);
+          return Future.failedFuture(message);
         }
-        String existingRecordId = eventPayload.getContext().get(HOLDINGS_ID);
-        MappingManager.map(eventPayload, new MappingContext());
-        HoldingsRecord mappedRecord = new JsonObject(eventPayload.getContext().get(HOLDINGS.value())).mapTo(HoldingsRecord.class);
-        holdingsRecordUpdateDelegate.handle(mappedRecord, existingRecordId, context).onComplete(ar -> {
+
+        Context context = constructContext(headersMap.get(OKAPI_TENANT_HEADER), headersMap.get(OKAPI_TOKEN_HEADER),
+          headersMap.get(OKAPI_URL_HEADER));
+        Record marcRecord = Json.decodeValue(eventPayload.get(MARC_KEY), Record.class);
+        holdingsRecordUpdateDelegate.handle(eventPayload, marcRecord, context).onComplete(ar -> {
           if (ar.succeeded()) {
             promise.complete(record.key());
           } else {

@@ -18,6 +18,7 @@ import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
 import org.folio.inventory.dataimport.handlers.actions.CreateHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler;
+import org.folio.inventory.dataimport.handlers.actions.CreateMarcHoldingsEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.actions.MarcBibMatchedPostProcessingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.MarcBibModifiedPostProcessingEventHandler;
@@ -51,7 +52,6 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
@@ -64,7 +64,6 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
 
   private KafkaInternalCache kafkaInternalCache;
   private Vertx vertx;
-  private Object ProfileSnapshotWrapper;
   private ProfileSnapshotCache profileSnapshotCache;
   private MappingMetadataCache mappingMetadataCache;
 
@@ -84,7 +83,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     Event event = Json.decodeValue(record.value(), Event.class);
     if (!kafkaInternalCache.containsByKey(event.getId())) {
       kafkaInternalCache.putToCache(event.getId());
-      DataImportEventPayload eventPayload = new JsonObject(event.getEventPayload()).mapTo(DataImportEventPayload.class);
+      DataImportEventPayload eventPayload = Json.decodeValue(event.getEventPayload(), DataImportEventPayload.class);
       String correlationId = extractCorrelationId(record.headers());
       LOGGER.info(format("Data import event payload has been received with event type: %s correlationId: %s", eventPayload.getEventType(), correlationId));
       eventPayload.getContext().put(CORRELATION_ID_HEADER, correlationId);
@@ -131,6 +130,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     EventManager.registerEventHandler(new CreateItemEventHandler(storage));
     EventManager.registerEventHandler(new CreateHoldingEventHandler(storage));
     EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache));
+    EventManager.registerEventHandler(new CreateMarcHoldingsEventHandler(storage));
     EventManager.registerEventHandler(new UpdateItemEventHandler(storage));
     EventManager.registerEventHandler(new UpdateHoldingEventHandler(storage));
     EventManager.registerEventHandler(new ReplaceInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache));

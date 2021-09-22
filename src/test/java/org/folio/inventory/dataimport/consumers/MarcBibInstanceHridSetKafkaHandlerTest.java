@@ -17,6 +17,8 @@ import org.folio.inventory.storage.Storage;
 import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.Record;
+
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -36,8 +38,8 @@ import static org.mockito.Mockito.when;
 @RunWith(VertxUnitRunner.class)
 public class MarcBibInstanceHridSetKafkaHandlerTest {
 
-  private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/rules.json";
-  private static final String RECORD_PATH = "src/test/resources/handlers/record.json";
+  private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/bib-rules.json";
+  private static final String RECORD_PATH = "src/test/resources/handlers/bib-record.json";
   private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
 
   @Mock
@@ -53,6 +55,7 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
   private Record record;
   private Instance existingInstance;
   private MarcBibInstanceHridSetKafkaHandler marcBibInstanceHridSetKafkaHandler;
+  private AutoCloseable mocks;
 
   @Before
   public void setUp() throws IOException {
@@ -61,7 +64,7 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
     record = Json.decodeValue(TestUtil.readFileFromPath(RECORD_PATH), Record.class);
     record.getParsedRecord().withContent(JsonObject.mapFrom(record.getParsedRecord().getContent()).encode());
 
-    MockitoAnnotations.initMocks(this);
+    mocks = MockitoAnnotations.openMocks(this);
     when(mockedStorage.getInstanceCollection(any(Context.class))).thenReturn(mockedInstanceCollection);
 
     doAnswer(invocationOnMock -> {
@@ -78,6 +81,11 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
     }).when(mockedInstanceCollection).update(any(Instance.class), any(), any());
 
     marcBibInstanceHridSetKafkaHandler = new MarcBibInstanceHridSetKafkaHandler(new InstanceUpdateDelegate(mockedStorage), kafkaInternalCache);
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    mocks.close();
   }
 
   @Test

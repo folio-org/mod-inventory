@@ -49,6 +49,7 @@ import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MATCHED_READ
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_NOT_MATCHED;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_HOLDING_RECORD_CREATED;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX_REQUEST_SIZE;
@@ -64,7 +65,8 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
   private static final int EVENT_TIMEOUT_VALUE_HOURS = 3;
   private static final int DEFAULT_HTTP_TIMEOUT_IN_MILLISECONDS = 3000;
 
-  private static final List<DataImportEventTypes> EVENT_TYPES = List.of(DI_SRS_MARC_BIB_RECORD_CREATED,
+  private static final List<DataImportEventTypes> EVENT_TYPES = List.of(
+    DI_SRS_MARC_BIB_RECORD_CREATED, DI_SRS_MARC_HOLDING_RECORD_CREATED,
     DI_SRS_MARC_BIB_RECORD_MODIFIED, DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING,
     DI_SRS_MARC_BIB_RECORD_MATCHED, DI_SRS_MARC_BIB_RECORD_NOT_MATCHED,
     DI_SRS_MARC_BIB_RECORD_MATCHED_READY_FOR_POST_PROCESSING,
