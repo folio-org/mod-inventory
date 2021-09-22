@@ -141,7 +141,8 @@ public final class ItemUtil {
       itemToSend.put(Item.LAST_CHECK_IN, item.getLastCheckIn().toJson());
     }
     includeIfPresent(itemToSend, Item.HRID_KEY, item.getHrid());
-    includeIfPresent(itemToSend, Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY, item.getInTransitDestinationServicePointId());
+    includeIfPresent(itemToSend, Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY,
+      item.getInTransitDestinationServicePointId());
     itemToSend.put(Item.FORMER_IDS_KEY, item.getFormerIds());
     itemToSend.put(Item.DISCOVERY_SUPPRESS_KEY, item.getDiscoverySuppress());
     includeIfPresent(itemToSend, COPY_NUMBER, item.getCopyNumber());
@@ -282,7 +283,8 @@ public final class ItemUtil {
     }
 
     includeIfPresent(itemJson, Item.HRID_KEY, item.getHrid());
-    includeIfPresent(itemJson, Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY, item.getInTransitDestinationServicePointId());
+    includeIfPresent(itemJson, Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY,
+      item.getInTransitDestinationServicePointId());
     itemJson.put(Item.FORMER_IDS_KEY, item.getFormerIds());
     itemJson.put(Item.DISCOVERY_SUPPRESS_KEY, item.getDiscoverySuppress());
     includeIfPresent(itemJson, COPY_NUMBER, item.getCopyNumber());

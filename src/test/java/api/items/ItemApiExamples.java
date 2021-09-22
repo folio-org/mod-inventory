@@ -425,7 +425,8 @@ public class ItemApiExamples extends ApiTests {
     TimeoutException,
     ExecutionException {
 
-    String TRANSIT_DESTINATION_SERVICE_POINT_ID = "12115888-d7c8-54e7-8287-22e97f7250a4";
+    UUID TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_CREATE = UUID.randomUUID();
+    UUID TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_UPDATE = UUID.randomUUID();
 
     JsonObject createdInstance = createInstance(
       smallAngryPlanet(UUID.randomUUID()));
@@ -446,7 +447,7 @@ public class ItemApiExamples extends ApiTests {
     JsonObject newItemRequest = new ItemRequestBuilder()
       .withId(itemId)
       .forHolding(holdingId)
-      .withInTransitDestinationServicePointId(UUID.randomUUID())
+      .withInTransitDestinationServicePointId(TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_CREATE)
       .withBarcode("645398607547")
       .canCirculate()
       .temporarilyInReadingRoom()
@@ -458,12 +459,14 @@ public class ItemApiExamples extends ApiTests {
     newItemRequest = itemsClient.create(newItemRequest).getJson();
 
     assertThat(newItemRequest.getString("copyNumber"), is("cp"));
-    assertThat(newItemRequest.getString(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY), notNullValue());
+    assertThat(newItemRequest.getString(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY),
+      is(TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_CREATE.toString()));
 
     JsonObject updateItemRequest = newItemRequest.copy()
       .put("status", new JsonObject().put("name", "Checked out"))
       .put("copyNumber", "updatedCp")
-      .put(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY, TRANSIT_DESTINATION_SERVICE_POINT_ID)
+      .put(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY,
+         TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_UPDATE)
       .put("tags", new JsonObject().put("tagList", new JsonArray().add("")));
 
     itemsClient.replace(itemId, updateItemRequest);
@@ -504,7 +507,8 @@ public class ItemApiExamples extends ApiTests {
     selfLinkRespectsWayResourceWasReached(updatedItem);
     selfLinkShouldBeReachable(updatedItem);
     assertThat(updatedItem.getString("copyNumber"), is("updatedCp"));
-    assertThat(updatedItem.getString(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY), is(TRANSIT_DESTINATION_SERVICE_POINT_ID));
+    assertThat(updatedItem.getString(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY),
+      is(TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_UPDATE.toString()));
   }
 
   @Test
