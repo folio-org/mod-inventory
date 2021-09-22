@@ -17,6 +17,7 @@ import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaHeaderUtils;
 import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.processing.mapping.MappingManager;
+import org.folio.processing.mapping.mapper.MappingContext;
 import org.folio.rest.jaxrs.model.Event;
 
 import java.util.Map;
@@ -69,7 +70,7 @@ public class MarcHoldingsRecordHridSetKafkaHandler implements AsyncRecordHandler
           throw new IllegalArgumentException(format("The event payload does not contain all the %s, %s, %s", HOLDINGS_ID, HOLDINGS.value(), MARC_HOLDINGS.value()));
         }
         String existingRecordId = eventPayload.getContext().get(HOLDINGS_ID);
-        MappingManager.map(eventPayload);
+        MappingManager.map(eventPayload, new MappingContext());
         HoldingsRecord mappedRecord = new JsonObject(eventPayload.getContext().get(HOLDINGS.value())).mapTo(HoldingsRecord.class);
         holdingsRecordUpdateDelegate.handle(mappedRecord, existingRecordId, context).onComplete(ar -> {
           if (ar.succeeded()) {

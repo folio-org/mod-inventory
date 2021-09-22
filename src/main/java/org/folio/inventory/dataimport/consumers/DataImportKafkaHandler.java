@@ -80,33 +80,33 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
 
   @Override
   public Future<String> handle(KafkaConsumerRecord<String, String> record) {
-      Promise<String> promise = Promise.promise();
-      Event event = Json.decodeValue(record.value(), Event.class);
-      if (!kafkaInternalCache.containsByKey(event.getId())) {
-        kafkaInternalCache.putToCache(event.getId());
-        DataImportEventPayload eventPayload = new JsonObject(event.getEventPayload()).mapTo(DataImportEventPayload.class);
-        String correlationId = extractCorrelationId(record.headers());
-        LOGGER.info(format("Data import event payload has been received with event type: %s correlationId: %s", eventPayload.getEventType(), correlationId));
-        eventPayload.getContext().put(CORRELATION_ID_HEADER, correlationId);
+    Promise<String> promise = Promise.promise();
+    Event event = Json.decodeValue(record.value(), Event.class);
+    if (!kafkaInternalCache.containsByKey(event.getId())) {
+      kafkaInternalCache.putToCache(event.getId());
+      DataImportEventPayload eventPayload = new JsonObject(event.getEventPayload()).mapTo(DataImportEventPayload.class);
+      String correlationId = extractCorrelationId(record.headers());
+      LOGGER.info(format("Data import event payload has been received with event type: %s correlationId: %s", eventPayload.getEventType(), correlationId));
+      eventPayload.getContext().put(CORRELATION_ID_HEADER, correlationId);
 
-        Context context = EventHandlingUtil.constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl());
-        String jobProfileSnapshotId = eventPayload.getContext().get(PROFILE_SNAPSHOT_ID_KEY);
-        profileSnapshotCache.get(jobProfileSnapshotId, context)
-          .toCompletionStage()
-          .thenCompose(snapshotOptional -> snapshotOptional
-            .map(profileSnapshot -> EventManager.handleEvent(eventPayload))
-            .orElse(CompletableFuture.failedFuture(new EventProcessingException(format("Job profile snapshot with id '%s' does not exist", jobProfileSnapshotId)))))
-          .whenComplete((processedPayload, throwable) -> {
-            if (throwable != null) {
-              promise.fail(throwable);
-            } else if (DI_ERROR.value().equals(processedPayload.getEventType())) {
-              promise.fail("Failed to process data import event payload");
-            } else {
-              promise.complete(record.key());
-            }
-          });
-        return promise.future();
-      }
+      Context context = EventHandlingUtil.constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl());
+      String jobProfileSnapshotId = eventPayload.getContext().get(PROFILE_SNAPSHOT_ID_KEY);
+      profileSnapshotCache.get(jobProfileSnapshotId, context)
+        .toCompletionStage()
+        .thenCompose(snapshotOptional -> snapshotOptional
+          .map(profileSnapshot -> EventManager.handleEvent(eventPayload, profileSnapshot))
+          .orElse(CompletableFuture.failedFuture(new EventProcessingException(format("Job profile snapshot with id '%s' does not exist", jobProfileSnapshotId)))))
+        .whenComplete((processedPayload, throwable) -> {
+          if (throwable != null) {
+            promise.fail(throwable);
+          } else if (DI_ERROR.value().equals(processedPayload.getEventType())) {
+            promise.fail("Failed to process data import event payload");
+          } else {
+            promise.complete(record.key());
+          }
+        });
+      return promise.future();
+    }
     return Future.succeededFuture();
   }
 

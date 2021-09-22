@@ -15,6 +15,7 @@ import org.folio.inventory.storage.Storage;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
+import org.folio.processing.mapping.mapper.MappingContext;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -72,7 +73,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
       }
       prepareEvent(dataImportEventPayload);
 
-      MappingManager.map(dataImportEventPayload);
+      MappingManager.map(dataImportEventPayload, new MappingContext());
 
       Context context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       HoldingsRecordCollection holdingsRecords = storage.getHoldingsRecordCollection(context);

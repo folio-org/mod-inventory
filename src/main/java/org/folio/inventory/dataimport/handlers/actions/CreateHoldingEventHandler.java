@@ -18,6 +18,7 @@ import org.folio.inventory.storage.Storage;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
+import org.folio.processing.mapping.mapper.MappingContext;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Record;
 
@@ -69,7 +70,7 @@ public class CreateHoldingEventHandler implements EventHandler {
       }
 
       prepareEvent(dataImportEventPayload);
-      MappingManager.map(dataImportEventPayload);
+      MappingManager.map(dataImportEventPayload, new MappingContext());
       JsonObject holdingAsJson = new JsonObject(dataImportEventPayload.getContext().get(HOLDINGS.value()));
       if (holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD) != null) {
         holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD);

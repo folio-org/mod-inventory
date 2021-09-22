@@ -18,6 +18,7 @@ import org.folio.inventory.storage.Storage;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
+import org.folio.processing.mapping.mapper.MappingContext;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Record;
 
@@ -61,8 +62,8 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
       dataImportEventPayload.setEventType(DI_INVENTORY_INSTANCE_CREATED.value());
 
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
-      if (payloadContext == null || payloadContext.isEmpty() ||
-        isEmpty(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()))
+      if (payloadContext == null || payloadContext.isEmpty()
+        || isEmpty(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()))
       ) {
         LOGGER.error(PAYLOAD_HAS_NO_DATA_MSG);
         return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
@@ -73,13 +74,12 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
       }
 
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
-      Record record = new JsonObject(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()))
-        .mapTo(Record.class);
+      Record record = Json.decodeValue(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()), Record.class);
 
       mappingMetadataCache.get(dataImportEventPayload.getJobExecutionId(), context)
         .compose(parametersOptional -> parametersOptional
-          .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()), new JsonObject(mappingMetadata.getMappingParams())
-            .mapTo(MappingParameters.class)))
+          .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()),
+            Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class)))
           .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, dataImportEventPayload.getJobExecutionId()))))
         .onComplete(e -> {
           InstanceCollection instanceCollection = storage.getInstanceCollection(context);
@@ -145,7 +145,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
   private Future<Void> prepareAndExecuteMapping(DataImportEventPayload dataImportEventPayload, JsonObject mappingRules, MappingParameters mappingParameters) {
     try {
       defaultMapRecordToInstance(dataImportEventPayload, mappingRules, mappingParameters);
-      MappingManager.map(dataImportEventPayload, new MappingContext(mappingParameters));
+      MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
       return Future.succeededFuture();
     } catch (Exception e) {
       return Future.failedFuture(e);

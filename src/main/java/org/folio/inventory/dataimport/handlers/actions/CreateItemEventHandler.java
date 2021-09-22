@@ -25,6 +25,7 @@ import org.folio.inventory.support.JsonHelper;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
+import org.folio.processing.mapping.mapper.MappingContext;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Record;
 
@@ -91,7 +92,7 @@ public class CreateItemEventHandler implements EventHandler {
       dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
       dataImportEventPayload.getContext().put(ITEM.value(), new JsonObject().encode());
 
-      MappingManager.map(dataImportEventPayload);
+      MappingManager.map(dataImportEventPayload, new MappingContext());
       JsonObject itemAsJson = new JsonObject(dataImportEventPayload.getContext().get(ITEM.value()));
       if (itemAsJson.getJsonObject(ITEM_PATH_FIELD) != null) {
         itemAsJson = itemAsJson.getJsonObject(ITEM_PATH_FIELD);

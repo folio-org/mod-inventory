@@ -21,6 +21,7 @@ import org.folio.inventory.support.JsonHelper;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
+import org.folio.processing.mapping.mapper.MappingContext;
 
 import java.io.UnsupportedEncodingException;
 import java.time.ZoneOffset;
@@ -83,7 +84,7 @@ public class UpdateItemEventHandler implements EventHandler {
       JsonObject itemAsJson = new JsonObject(payloadContext.get(ITEM.value()));
       String oldItemStatus = itemAsJson.getJsonObject(STATUS_KEY).getString("name");
       preparePayloadForMappingManager(dataImportEventPayload);
-      MappingManager.map(dataImportEventPayload);
+      MappingManager.map(dataImportEventPayload, new MappingContext());
       JsonObject mappedItemAsJson = new JsonObject(payloadContext.get(ITEM.value()));
       mappedItemAsJson = mappedItemAsJson.containsKey(ITEM_PATH_FIELD) ? mappedItemAsJson.getJsonObject(ITEM_PATH_FIELD) : mappedItemAsJson;
 
