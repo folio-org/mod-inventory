@@ -466,6 +466,11 @@
         ]
       }
     },
+    "inTransitDestinationServicePointId": {
+      "description": "Service point an item is intended to be transited to (should only be present when in transit)",
+      "type": "string",
+      "$ref": "uuid.json"
+    },
     "statisticalCodeIds": {
       "type": "array",
       "description": "Statistical code Id, refers to a Statistical code reference record",

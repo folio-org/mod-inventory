@@ -84,6 +84,7 @@ public final class ItemUtil {
       itemFromServer.getString(ID),
       itemFromServer.getString(Item.VERSION_KEY),
       itemFromServer.getString(HOLDINGS_RECORD_ID),
+      itemFromServer.getString(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY),
       converterForClass(Status.class).fromJson(itemFromServer.getJsonObject(STATUS)),
       itemFromServer.getString(MATERIAL_TYPE_ID_KEY),
       itemFromServer.getString(PERMANENT_LOAN_TYPE_ID_KEY),
@@ -143,6 +144,8 @@ public final class ItemUtil {
       itemToSend.put(Item.LAST_CHECK_IN, item.getLastCheckIn().toJson());
     }
     includeIfPresent(itemToSend, Item.HRID_KEY, item.getHrid());
+    includeIfPresent(itemToSend, Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY,
+      item.getInTransitDestinationServicePointId());
     itemToSend.put(Item.FORMER_IDS_KEY, item.getFormerIds());
     itemToSend.put(Item.DISCOVERY_SUPPRESS_KEY, item.getDiscoverySuppress());
     includeIfPresent(itemToSend, COPY_NUMBER, item.getCopyNumber());
@@ -225,6 +228,7 @@ public final class ItemUtil {
       itemRequest.getString(ID),
       itemRequest.getString(Item.VERSION_KEY),
       itemRequest.getString(HOLDINGS_RECORD_ID),
+      itemRequest.getString(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY),
       status,
       materialTypeId,
       permanentLoanTypeId,
@@ -284,6 +288,8 @@ public final class ItemUtil {
     }
 
     includeIfPresent(itemJson, Item.HRID_KEY, item.getHrid());
+    includeIfPresent(itemJson, Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY,
+      item.getInTransitDestinationServicePointId());
     itemJson.put(Item.FORMER_IDS_KEY, item.getFormerIds());
     itemJson.put(Item.DISCOVERY_SUPPRESS_KEY, item.getDiscoverySuppress());
     includeIfPresent(itemJson, COPY_NUMBER, item.getCopyNumber());
