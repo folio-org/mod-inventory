@@ -425,6 +425,8 @@ public class ItemApiExamples extends ApiTests {
     TimeoutException,
     ExecutionException {
 
+    String TRANSIT_DESTINATION_SERVICE_POINT_ID = "12115888-d7c8-54e7-8287-22e97f7250a4";
+
     JsonObject createdInstance = createInstance(
       smallAngryPlanet(UUID.randomUUID()));
 
@@ -456,12 +458,12 @@ public class ItemApiExamples extends ApiTests {
     newItemRequest = itemsClient.create(newItemRequest).getJson();
 
     assertThat(newItemRequest.getString("copyNumber"), is("cp"));
-    assertThat(newItemRequest.getString(Item.TRANSIT_DESTINATION_SERVICE_POINT_KEY), notNullValue());
+    assertThat(newItemRequest.getString(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY), notNullValue());
 
     JsonObject updateItemRequest = newItemRequest.copy()
       .put("status", new JsonObject().put("name", "Checked out"))
       .put("copyNumber", "updatedCp")
-      .put(Item.TRANSIT_DESTINATION_SERVICE_POINT_KEY, "12115888-d7c8-54e7-8287-22e97f7250a4")
+      .put(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY, TRANSIT_DESTINATION_SERVICE_POINT_ID)
       .put("tags", new JsonObject().put("tagList", new JsonArray().add("")));
 
     itemsClient.replace(itemId, updateItemRequest);
@@ -502,7 +504,7 @@ public class ItemApiExamples extends ApiTests {
     selfLinkRespectsWayResourceWasReached(updatedItem);
     selfLinkShouldBeReachable(updatedItem);
     assertThat(updatedItem.getString("copyNumber"), is("updatedCp"));
-    assertThat(updatedItem.getString(Item.TRANSIT_DESTINATION_SERVICE_POINT_KEY), is("12115888-d7c8-54e7-8287-22e97f7250a4"));
+    assertThat(updatedItem.getString(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY), is(TRANSIT_DESTINATION_SERVICE_POINT_ID));
   }
 
   @Test

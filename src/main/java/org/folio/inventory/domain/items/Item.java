@@ -12,7 +12,7 @@ import io.vertx.core.json.JsonObject;
 public class Item {
 
   public static final String HRID_KEY = "hrid";
-  public static final String TRANSIT_DESTINATION_SERVICE_POINT_KEY = "inTransitDestinationServicePointId";
+  public static final String TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY = "inTransitDestinationServicePointId";
   public static final String FORMER_IDS_KEY = "formerIds";
   public static final String DISCOVERY_SUPPRESS_KEY = "discoverySuppress";
   public static final String STATUS_KEY = "status";
@@ -109,13 +109,8 @@ public class Item {
     this.metadata = metadata;
   }
 
-  public Item(String id,
-              String holdingId,
-              String inTransitDestinationServicePointId,
-              Status status,
-              String materialTypeId,
-              String permanentLoanTypeId,
-              JsonObject metadata) {
+  public Item(String id,String holdingId, String inTransitDestinationServicePointId, Status status,
+              String materialTypeId, String permanentLoanTypeId, JsonObject metadata) {
 
     this.id = id;
     this.holdingId = holdingId;

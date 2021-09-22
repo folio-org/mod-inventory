@@ -160,10 +160,19 @@ public class ItemRequestBuilder extends AbstractBuilder {
   }
 
   public ItemRequestBuilder forHolding(UUID holdingId) {
+    return new ItemRequestBuilder(this.id, holdingId, this.inTransitDestinationServicePointId,
+      this.readOnlyTitle, this.readOnlyCallNumber, this.barcode, this.status, this.materialType,
+      this.readOnlyEffectiveLocation, this.permanentLocation, this.temporaryLocation,
+      this.permanentLoanType, this.temporaryLoanType, this.circulationNotes, this.tags,
+      this.lastCheckIn, this.itemLevelCallNumber, this.itemLevelCallNumberPrefix,
+      this.itemLevelCallNumberSuffix, this.itemLevelCallNumberTypeId, this.hrid, this.copyNumber);
+  }
+
+  public ItemRequestBuilder withInTransitDestinationServicePointId(UUID inTransitDestinationServicePointId) {
     return new ItemRequestBuilder(
       this.id,
-      holdingId,
-      this.inTransitDestinationServicePointId,
+      this.holdingId,
+      inTransitDestinationServicePointId,
       this.readOnlyTitle,
       this.readOnlyCallNumber,
       this.barcode,
@@ -183,32 +192,6 @@ public class ItemRequestBuilder extends AbstractBuilder {
       this.itemLevelCallNumberTypeId,
       this.hrid,
       this.copyNumber);
-  }
-
-  public ItemRequestBuilder withInTransitDestinationServicePointId(UUID inTransitDestinationServicePointId) {
-    return new ItemRequestBuilder(
-            this.id,
-            this.holdingId,
-            inTransitDestinationServicePointId,
-            this.readOnlyTitle,
-            this.readOnlyCallNumber,
-            this.barcode,
-            this.status,
-            this.materialType,
-            this.readOnlyEffectiveLocation,
-            this.permanentLocation,
-            this.temporaryLocation,
-            this.permanentLoanType,
-            this.temporaryLoanType,
-            this.circulationNotes,
-            this.tags,
-            this.lastCheckIn,
-            this.itemLevelCallNumber,
-            this.itemLevelCallNumberPrefix,
-            this.itemLevelCallNumberSuffix,
-            this.itemLevelCallNumberTypeId,
-            this.hrid,
-            this.copyNumber);
   }
 
   public ItemRequestBuilder withReadOnlyTitle(String title) {
