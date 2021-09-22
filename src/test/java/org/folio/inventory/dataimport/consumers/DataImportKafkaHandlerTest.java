@@ -1,26 +1,22 @@
 package org.folio.inventory.dataimport.consumers;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
-import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.useDefaults;
-import static org.folio.ActionProfile.Action.CREATE;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
-import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
-import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
-import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.common.Slf4jNotifier;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.github.tomakehurst.wiremock.junit.WireMockRule;
+import com.github.tomakehurst.wiremock.matching.RegexPattern;
+import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpClientOptions;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.unit.Async;
+import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
+import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.JobProfile;
@@ -43,24 +39,26 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
-import com.github.tomakehurst.wiremock.client.WireMock;
-import com.github.tomakehurst.wiremock.common.Slf4jNotifier;
-import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
-import com.github.tomakehurst.wiremock.junit.WireMockRule;
-import com.github.tomakehurst.wiremock.matching.RegexPattern;
-import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
-import io.vertx.core.Future;
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.http.HttpClientOptions;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
-import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
-import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
+import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.useDefaults;
+import static org.folio.ActionProfile.Action.CREATE;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
+import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
+import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @RunWith(VertxUnitRunner.class)
 public class DataImportKafkaHandlerTest {
@@ -126,12 +124,11 @@ public class DataImportKafkaHandlerTest {
 
   @Before
   public void setUp() {
-    MockitoAnnotations.initMocks(this);
+    MockitoAnnotations.openMocks(this);
     String[] hostAndPort = cluster.getBrokerList().split(":");
 
     WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(JOB_PROFILE_URL + "/.*"), true))
-      .willReturn(WireMock.ok().withBody(Json.encode(new ProfileSnapshotWrapper()
-          .withId(UUID.randomUUID().toString())))));
+      .willReturn(WireMock.ok().withBody(Json.encode(profileSnapshotWrapper))));
 
     KafkaConfig kafkaConfig = KafkaConfig.builder()
       .kafkaHost(hostAndPort[0])
@@ -150,15 +147,14 @@ public class DataImportKafkaHandlerTest {
   }
 
   @Test
-  public void shouldReturnSucceededFutureWhenProcessingCoreHandlerSucceeded(TestContext context) throws IOException {
+  public void shouldReturnSucceededFutureWhenProcessingCoreHandlerSucceeded(TestContext context) {
     // given
     Async async = context.async();
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
       .withToken("test-token")
-      .withContext(new HashMap<>(Map.of("JOB_PROFILE_SNAPSHOT_ID", "b6698d38-149f-11ec-82a8-0242ac130003")))
-      .withProfileSnapshot(profileSnapshotWrapper);
+      .withContext(new HashMap<>(Map.of("JOB_PROFILE_SNAPSHOT_ID", profileSnapshotWrapper.getId())));
 
     Event event = new Event().withId("01").withEventPayload(Json.encode(dataImportEventPayload));
     String expectedKafkaRecordKey = "test_key";
@@ -193,8 +189,7 @@ public class DataImportKafkaHandlerTest {
       .withTenant("diku")
       .withOkapiUrl(mockServer.baseUrl())
       .withToken("test-token")
-      .withContext(new HashMap<>(Map.of("JOB_PROFILE_SNAPSHOT_ID", "b6698d38-149f-11ec-82a8-0242ac130003")))
-      .withProfileSnapshot(profileSnapshotWrapper);
+      .withContext(new HashMap<>(Map.of("JOB_PROFILE_SNAPSHOT_ID", profileSnapshotWrapper.getId())));
 
     Event event = new Event().withId("01").withEventPayload(Json.encode(dataImportEventPayload));
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
@@ -225,8 +220,7 @@ public class DataImportKafkaHandlerTest {
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
       .withToken("test-token")
-      .withContext(new HashMap<>(Map.of("JOB_PROFILE_SNAPSHOT_ID", "b6698d38-149f-11ec-82a8-0242ac130003")))
-      .withProfileSnapshot(profileSnapshotWrapper);
+      .withContext(new HashMap<>(Map.of("JOB_PROFILE_SNAPSHOT_ID", profileSnapshotWrapper.getId())));
 
     Event event = new Event().withId("01").withEventPayload(Json.encode(dataImportEventPayload));
     String expectedKafkaRecordKey = "test_key";

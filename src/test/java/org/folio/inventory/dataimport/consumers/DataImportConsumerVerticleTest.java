@@ -1,5 +1,11 @@
 package org.folio.inventory.dataimport.consumers;
 
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.common.Slf4jNotifier;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.github.tomakehurst.wiremock.junit.WireMockRule;
+import com.github.tomakehurst.wiremock.matching.RegexPattern;
+import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
@@ -34,7 +40,6 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -62,13 +67,6 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPP
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
-
-import com.github.tomakehurst.wiremock.client.WireMock;
-import com.github.tomakehurst.wiremock.common.Slf4jNotifier;
-import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
-import com.github.tomakehurst.wiremock.junit.WireMockRule;
-import com.github.tomakehurst.wiremock.matching.RegexPattern;
-import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
 
 @RunWith(VertxUnitRunner.class)
 public class DataImportConsumerVerticleTest {
@@ -152,7 +150,7 @@ public class DataImportConsumerVerticleTest {
 
   @Before
   public void setUp() {
-    MockitoAnnotations.initMocks(this);
+    MockitoAnnotations.openMocks(this);
     when(mockedEventHandler.isEligible(any(DataImportEventPayload.class))).thenReturn(true);
     doAnswer(invocationOnMock -> {
       DataImportEventPayload eventPayload = invocationOnMock.getArgument(0);
@@ -161,8 +159,7 @@ public class DataImportConsumerVerticleTest {
     }).when(mockedEventHandler).handle(any(DataImportEventPayload.class));
 
     WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(JOB_PROFILE_URL + "/.*"), true))
-      .willReturn(WireMock.ok().withBody(Json.encode(new ProfileSnapshotWrapper()
-        .withId(UUID.randomUUID().toString())))));
+      .willReturn(WireMock.ok().withBody(Json.encode(profileSnapshotWrapper))));
 
     EventManager.clearEventHandlers();
     EventManager.registerEventHandler(mockedEventHandler);
@@ -177,8 +174,7 @@ public class DataImportConsumerVerticleTest {
       .withOkapiUrl(mockServer.baseUrl())
       .withToken("test-token")
       .withJobExecutionId(UUID.randomUUID().toString())
-      .withContext(new HashMap<>(Map.of("JOB_PROFILE_SNAPSHOT_ID", "b6698d38-149f-11ec-82a8-0242ac130003")))
-      .withProfileSnapshot(profileSnapshotWrapper);
+      .withContext(new HashMap<>(Map.of("JOB_PROFILE_SNAPSHOT_ID", profileSnapshotWrapper.getId())));
 
     String topic = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_NAME, getDefaultNameSpace(), TENANT_ID, dataImportEventPayload.getEventType());
     Event event = new Event().withId("01").withEventPayload(Json.encode(dataImportEventPayload));
