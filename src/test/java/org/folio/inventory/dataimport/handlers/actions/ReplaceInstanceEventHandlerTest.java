@@ -65,7 +65,6 @@ import java.util.function.Consumer;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static java.util.concurrent.CompletableFuture.completedStage;
-import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
@@ -158,7 +157,7 @@ public class ReplaceInstanceEventHandlerTest {
 
   @Before
   public void setUp() throws IOException {
-    MockitoAnnotations.initMocks(this);
+    MockitoAnnotations.openMocks(this);
     MappingManager.clearReaderFactories();
 
     JsonObject mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
@@ -217,7 +216,6 @@ public class ReplaceInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
@@ -274,7 +272,6 @@ public class ReplaceInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
@@ -316,7 +313,6 @@ public class ReplaceInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(null)
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
@@ -342,7 +338,6 @@ public class ReplaceInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(new HashMap<>())
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
@@ -375,7 +370,6 @@ public class ReplaceInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
@@ -408,7 +402,6 @@ public class ReplaceInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
@@ -436,13 +429,10 @@ public class ReplaceInstanceEventHandlerTest {
 
     HashMap<String, String> context = new HashMap<>();
     context.put(MARC_BIBLIOGRAPHIC.value(), JsonObject.mapFrom(new Record().withParsedRecord(new ParsedRecord().withContent(new JsonObject()))).encode());
-    context.put("MAPPING_RULES", new JsonObject().encode());
-    context.put("MAPPING_PARAMS", new JsonObject().encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
@@ -458,13 +448,10 @@ public class ReplaceInstanceEventHandlerTest {
     HashMap<String, String> context = new HashMap<>();
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT))));
     context.put(INSTANCE.value(), new JsonObject().encode());
-    context.put("MAPPING_RULES", new JsonObject().encode());
-    context.put("MAPPING_PARAMS", new JsonObject().encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_MATCHED.value())
       .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode( new ProfileSnapshotWrapper()
         .withContentType(ACTION_PROFILE)
         .withContent(actionProfile))
@@ -484,7 +471,6 @@ public class ReplaceInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_UPDATED.value())
       .withContext(new HashMap<>())
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
     assertTrue(replaceInstanceEventHandler.isEligible(dataImportEventPayload));
   }
@@ -493,60 +479,31 @@ public class ReplaceInstanceEventHandlerTest {
   public void isEligibleShouldReturnFalseIfCurrentNodeIsEmpty() {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
-      .withContext(new HashMap<>())
-      .withProfileSnapshot(profileSnapshotWrapper);
+      .withContext(new HashMap<>());
     assertFalse(replaceInstanceEventHandler.isEligible(dataImportEventPayload));
   }
 
   @Test
   public void isEligibleShouldReturnFalseIfCurrentNodeIsNotActionProfile() {
-    ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
-      .withId(UUID.randomUUID().toString())
-      .withProfileId(jobProfile.getId())
-      .withContentType(JOB_PROFILE)
-      .withContent(jobProfile);
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
-      .withContext(new HashMap<>())
-      .withProfileSnapshot(profileSnapshotWrapper);
+      .withContext(new HashMap<>());
     assertFalse(replaceInstanceEventHandler.isEligible(dataImportEventPayload));
   }
 
   @Test
   public void isEligibleShouldReturnFalseIfActionIsNotCreate() {
-    ActionProfile actionProfile = new ActionProfile()
-      .withId(UUID.randomUUID().toString())
-      .withName("Create preliminary Instance")
-      .withAction(ActionProfile.Action.DELETE)
-      .withFolioRecord(INSTANCE);
-    ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
-      .withId(UUID.randomUUID().toString())
-      .withProfileId(actionProfile.getId())
-      .withContentType(JOB_PROFILE)
-      .withContent(actionProfile);
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
-      .withContext(new HashMap<>())
-      .withProfileSnapshot(profileSnapshotWrapper);
+      .withContext(new HashMap<>());
     assertFalse(replaceInstanceEventHandler.isEligible(dataImportEventPayload));
   }
 
   @Test
   public void isEligibleShouldReturnFalseIfRecordIsNotInstance() {
-    ActionProfile actionProfile = new ActionProfile()
-      .withId(UUID.randomUUID().toString())
-      .withName("Create preliminary Instance")
-      .withAction(ActionProfile.Action.CREATE)
-      .withFolioRecord(HOLDINGS);
-    ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
-      .withId(UUID.randomUUID().toString())
-      .withProfileId(actionProfile.getId())
-      .withContentType(JOB_PROFILE)
-      .withContent(actionProfile);
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
-      .withContext(new HashMap<>())
-      .withProfileSnapshot(profileSnapshotWrapper);
+      .withContext(new HashMap<>());
     assertFalse(replaceInstanceEventHandler.isEligible(dataImportEventPayload));
   }
 

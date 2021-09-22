@@ -61,7 +61,6 @@ import java.util.function.Consumer;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static java.util.concurrent.CompletableFuture.completedStage;
-import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
@@ -149,7 +148,7 @@ public class CreateInstanceEventHandlerTest {
 
   @Before
   public void setUp() throws IOException {
-    MockitoAnnotations.initMocks(this);
+    MockitoAnnotations.openMocks(this);
     MappingManager.clearReaderFactories();
 
     JsonObject mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
@@ -202,7 +201,6 @@ public class CreateInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
       .withOkapiUrl(OKAPI_URL)
       .withTenant(TENANT_ID)
@@ -248,7 +246,6 @@ public class CreateInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(null)
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
@@ -278,7 +275,6 @@ public class CreateInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(new HashMap<>())
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
@@ -311,7 +307,6 @@ public class CreateInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
@@ -344,7 +339,6 @@ public class CreateInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
@@ -372,7 +366,6 @@ public class CreateInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
@@ -387,7 +380,6 @@ public class CreateInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
       .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withContentType(ACTION_PROFILE)
         .withContent(actionProfile));
@@ -403,7 +395,6 @@ public class CreateInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(new HashMap<>())
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
     assertTrue(createInstanceEventHandler.isEligible(dataImportEventPayload));
   }
@@ -412,60 +403,31 @@ public class CreateInstanceEventHandlerTest {
   public void isEligibleShouldReturnFalseIfCurrentNodeIsEmpty() {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
-      .withContext(new HashMap<>())
-      .withProfileSnapshot(profileSnapshotWrapper);
+      .withContext(new HashMap<>());
     assertFalse(createInstanceEventHandler.isEligible(dataImportEventPayload));
   }
 
   @Test
   public void isEligibleShouldReturnFalseIfCurrentNodeIsNotActionProfile() {
-    ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
-      .withId(UUID.randomUUID().toString())
-      .withProfileId(jobProfile.getId())
-      .withContentType(JOB_PROFILE)
-      .withContent(jobProfile);
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
-      .withContext(new HashMap<>())
-      .withProfileSnapshot(profileSnapshotWrapper);
+      .withContext(new HashMap<>());
     assertFalse(createInstanceEventHandler.isEligible(dataImportEventPayload));
   }
 
   @Test
   public void isEligibleShouldReturnFalseIfActionIsNotCreate() {
-    ActionProfile actionProfile = new ActionProfile()
-      .withId(UUID.randomUUID().toString())
-      .withName("Create preliminary Instance")
-      .withAction(ActionProfile.Action.DELETE)
-      .withFolioRecord(INSTANCE);
-    ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
-      .withId(UUID.randomUUID().toString())
-      .withProfileId(actionProfile.getId())
-      .withContentType(JOB_PROFILE)
-      .withContent(actionProfile);
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
-      .withContext(new HashMap<>())
-      .withProfileSnapshot(profileSnapshotWrapper);
+      .withContext(new HashMap<>());
     assertFalse(createInstanceEventHandler.isEligible(dataImportEventPayload));
   }
 
   @Test
   public void isEligibleShouldReturnFalseIfRecordIsNotInstance() {
-    ActionProfile actionProfile = new ActionProfile()
-      .withId(UUID.randomUUID().toString())
-      .withName("Create preliminary Instance")
-      .withAction(ActionProfile.Action.CREATE)
-      .withFolioRecord(HOLDINGS);
-    ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
-      .withId(UUID.randomUUID().toString())
-      .withProfileId(actionProfile.getId())
-      .withContentType(JOB_PROFILE)
-      .withContent(actionProfile);
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
-      .withContext(new HashMap<>())
-      .withProfileSnapshot(profileSnapshotWrapper);
+      .withContext(new HashMap<>());
     assertFalse(createInstanceEventHandler.isEligible(dataImportEventPayload));
   }
 
