@@ -1,5 +1,9 @@
 package org.folio.inventory.dataimport.consumers;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static org.folio.inventory.dataimport.consumers.MarcHoldingsRecordHridSetKafkaHandler.JOB_EXECUTION_ID_KEY;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -7,18 +11,32 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Consumer;
 
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.common.Slf4jNotifier;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.github.tomakehurst.wiremock.junit.WireMockRule;
+import com.github.tomakehurst.wiremock.matching.RegexPattern;
+import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
+import io.vertx.kafka.client.producer.KafkaHeader;
+import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
+import org.folio.rest.jaxrs.model.MappingMetadataDto;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -41,6 +59,7 @@ public class MarcHoldingsRecordHridSetKafkaHandlerTest {
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/holdings-rules.json";
   private static final String RECORD_PATH = "src/test/resources/handlers/holdings-record.json";
   private static final String HOLDINGS_PATH = "src/test/resources/handlers/holdings.json";
+  private static final String MAPPING_METADATA_URL = "/mapping-metadata";
 
   @Mock
   private Storage mockedStorage;
@@ -51,11 +70,19 @@ public class MarcHoldingsRecordHridSetKafkaHandlerTest {
   @Mock
   private KafkaInternalCache kafkaInternalCache;
 
+  @Rule
+  public WireMockRule mockServer = new WireMockRule(
+    WireMockConfiguration.wireMockConfig()
+      .dynamicPort()
+      .notifier(new Slf4jNotifier(true)));
+
   private JsonObject mappingRules;
   private org.folio.rest.jaxrs.model.Record record;
   private HoldingsRecord existingHoldingsRecord;
   private MarcHoldingsRecordHridSetKafkaHandler marcHoldingsRecordHridSetKafkaHandler;
   private AutoCloseable mocks;
+  private Vertx vertx = Vertx.vertx();
+  private List<KafkaHeader> okapiHeaders;
 
   @Before
   public void setUp() throws IOException {
@@ -80,8 +107,18 @@ public class MarcHoldingsRecordHridSetKafkaHandlerTest {
       return null;
     }).when(mockedHoldingsCollection).update(any(HoldingsRecord.class), any(), any());
 
+    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true))
+      .willReturn(WireMock.ok().withBody(Json.encode(new MappingMetadataDto()
+        .withMappingParams(Json.encode(new MappingParameters()))
+        .withMappingRules(mappingRules.encode())))));
+
+    MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, vertx.createHttpClient(), 3600);
     marcHoldingsRecordHridSetKafkaHandler =
-      new MarcHoldingsRecordHridSetKafkaHandler(new HoldingsUpdateDelegate(mockedStorage), kafkaInternalCache);
+      new MarcHoldingsRecordHridSetKafkaHandler(new HoldingsUpdateDelegate(mockedStorage), kafkaInternalCache, mappingMetadataCache);
+
+    this.okapiHeaders = List.of(
+      KafkaHeader.header(OKAPI_TENANT_HEADER, "diku"),
+      KafkaHeader.header(OKAPI_URL_HEADER, mockServer.baseUrl()));
   }
 
   @After
@@ -94,14 +131,14 @@ public class MarcHoldingsRecordHridSetKafkaHandlerTest {
     // given
     Async async = context.async();
     Map<String, String> payload = new HashMap<>();
+    payload.put(JOB_EXECUTION_ID_KEY, UUID.randomUUID().toString());
     payload.put("MARC_HOLDINGS", Json.encode(record));
-    payload.put("MAPPING_RULES", mappingRules.encode());
-    payload.put("MAPPING_PARAMS", new JsonObject().encode());
 
     Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
     String expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
+    when(kafkaRecord.headers()).thenReturn(okapiHeaders);
 
     when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
 
@@ -121,8 +158,7 @@ public class MarcHoldingsRecordHridSetKafkaHandlerTest {
     // given
     Async async = context.async();
     Map<String, String> payload = new HashMap<>();
-    payload.put("MAPPING_RULES", mappingRules.encode());
-    payload.put("MAPPING_PARAMS", new JsonObject().encode());
+    payload.put(JOB_EXECUTION_ID_KEY, UUID.randomUUID().toString());
 
     Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
     when(kafkaRecord.value()).thenReturn(Json.encode(event));

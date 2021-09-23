@@ -1,5 +1,6 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -32,11 +33,22 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.common.Slf4jNotifier;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.github.tomakehurst.wiremock.junit.WireMockRule;
+import com.github.tomakehurst.wiremock.matching.RegexPattern;
+import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
 import com.google.common.collect.Lists;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
+import org.folio.rest.jaxrs.model.MappingMetadataDto;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -69,6 +81,7 @@ public class CreateMarcHoldingsEventHandlerTest {
   private static final String PARSED_HOLDINGS_RECORD = "src/test/resources/marc/parsed-holdings-record.json";
   private static final String PERMANENT_LOCATION_ID = "fe19bae4-da28-472b-be90-d442e2428ead";
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/marc-holdings-rules.json";
+  private static final String MAPPING_METADATA_URL = "/mapping-metadata";
 
   @Mock
   private Storage storage;
@@ -76,9 +89,17 @@ public class CreateMarcHoldingsEventHandlerTest {
   HoldingsRecordCollection holdingsRecordsCollection;
   @Mock
   InstanceCollection instanceRecordCollection;
+
+  @Rule
+  public WireMockRule mockServer = new WireMockRule(
+    WireMockConfiguration.wireMockConfig()
+      .dynamicPort()
+      .notifier(new Slf4jNotifier(true)));
+
   private JsonObject mappingRules;
   private CreateMarcHoldingsEventHandler createMarcHoldingsEventHandler;
   private String instanceId;
+  private Vertx vertx = Vertx.vertx();
 
   private final JobProfile jobProfile = new JobProfile()
     .withId(UUID.randomUUID().toString())
@@ -119,9 +140,10 @@ public class CreateMarcHoldingsEventHandlerTest {
 
   @Before
   public void setUp() throws IOException {
-    MockitoAnnotations.initMocks(this);
+    MockitoAnnotations.openMocks(this);
     MappingManager.clearReaderFactories();
-    createMarcHoldingsEventHandler = new CreateMarcHoldingsEventHandler(storage);
+    MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, vertx.createHttpClient(), 3600);
+    createMarcHoldingsEventHandler = new CreateMarcHoldingsEventHandler(storage, mappingMetadataCache);
     mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
 
     doAnswer(invocationOnMock -> {
@@ -141,6 +163,11 @@ public class CreateMarcHoldingsEventHandlerTest {
       successHandler.accept(new Success<>(holdingsRecord));
       return null;
     }).when(holdingsRecordsCollection).add(any(), any(Consumer.class), any(Consumer.class));
+
+    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true))
+      .willReturn(WireMock.ok().withBody(Json.encode(new MappingMetadataDto()
+        .withMappingParams(Json.encode(new MappingParameters()))
+        .withMappingRules(mappingRules.encode())))));
   }
 
   @Test
@@ -161,17 +188,16 @@ public class CreateMarcHoldingsEventHandlerTest {
     HashMap<String, String> context = new HashMap<>();
     context.put("HOLDINGS", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(holdings)).encode());
     context.put(MARC_HOLDINGS.value(), Json.encode(record));
-    context.put("MAPPING_RULES", mappingRules.encode());
-    context.put("MAPPING_PARAMS", new JsonObject().encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_HOLDING_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl())
       .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = createMarcHoldingsEventHandler.handle(dataImportEventPayload);
-    DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
+    DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.SECONDS);
 
     Assert.assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
@@ -221,15 +247,14 @@ public class CreateMarcHoldingsEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_HOLDING_RECORD_CREATED.value())
       .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper);
 
     CompletableFuture<DataImportEventPayload> future = createMarcHoldingsEventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.MILLISECONDS);
+    future.get(10000, TimeUnit.MILLISECONDS);
   }
 
   @Test
-  public void shouldNotProcessEventIfInstanceNotFoundByMarcHoldingsHrid() throws InterruptedException, ExecutionException, TimeoutException, IOException {
+  public void shouldNotProcessEventIfInstanceNotFoundByMarcHoldingsHrid() throws IOException {
     doAnswer(invocationOnMock -> {
       MultipleRecords<Instance> result = new MultipleRecords<>(new ArrayList<>(), 1);
       Consumer<Success<MultipleRecords<Instance>>> successHandler = invocationOnMock.getArgument(2);
@@ -253,11 +278,11 @@ public class CreateMarcHoldingsEventHandlerTest {
     HashMap<String, String> context = new HashMap<>();
     context.put("HOLDINGS", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(holdings)).encode());
     context.put(MARC_HOLDINGS.value(), Json.encode(record));
-    context.put("MAPPING_RULES", mappingRules.encode());
-    context.put("MAPPING_PARAMS", new JsonObject().encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_HOLDING_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
@@ -269,7 +294,7 @@ public class CreateMarcHoldingsEventHandlerTest {
   }
 
   @Test
-  public void shouldThrowExceptionIfPermanentLocationIdIsNull() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+  public void shouldThrowExceptionIfPermanentLocationIdIsNull() throws IOException {
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
 
@@ -284,11 +309,11 @@ public class CreateMarcHoldingsEventHandlerTest {
     HashMap<String, String> context = new HashMap<>();
     context.put("HOLDINGS", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(holdings)).encode());
     context.put(MARC_HOLDINGS.value(), Json.encode(record));
-    context.put("MAPPING_RULES", mappingRules.encode());
-    context.put("MAPPING_PARAMS", new JsonObject().encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_HOLDING_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
@@ -327,18 +352,18 @@ public class CreateMarcHoldingsEventHandlerTest {
     HashMap<String, String> context = new HashMap<>();
     context.put("HOLDINGS", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(holdings)).encode());
     context.put(MARC_HOLDINGS.value(), Json.encode(record));
-    context.put("MAPPING_RULES", mappingRules.encode());
-    context.put("MAPPING_PARAMS", new JsonObject().encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_HOLDING_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = createMarcHoldingsEventHandler.handle(dataImportEventPayload);
 
-    DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
+    DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.SECONDS);
 
     Assert.assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
@@ -348,7 +373,7 @@ public class CreateMarcHoldingsEventHandlerTest {
   }
 
   @Test
-  public void shouldNotProcessEventIfMarcHoldingDoesNotHave004Field() throws ExecutionException, InterruptedException, TimeoutException, IOException {
+  public void shouldNotProcessEventIfMarcHoldingDoesNotHave004Field() throws IOException {
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
 
@@ -369,6 +394,8 @@ public class CreateMarcHoldingsEventHandlerTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
@@ -427,7 +454,6 @@ public class CreateMarcHoldingsEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
       .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = createMarcHoldingsEventHandler.handle(dataImportEventPayload);
@@ -465,7 +491,6 @@ public class CreateMarcHoldingsEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
       .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
     assertTrue(createMarcHoldingsEventHandler.isEligible(dataImportEventPayload));
   }
@@ -474,8 +499,7 @@ public class CreateMarcHoldingsEventHandlerTest {
   public void isEligibleShouldReturnFalseIfCurrentNodeIsEmpty() {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
-      .withContext(new HashMap<>())
-      .withProfileSnapshot(profileSnapshotWrapper);
+      .withContext(new HashMap<>());
     assertFalse(createMarcHoldingsEventHandler.isEligible(dataImportEventPayload));
   }
 
@@ -489,7 +513,7 @@ public class CreateMarcHoldingsEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
       .withContext(new HashMap<>())
-      .withProfileSnapshot(profileSnapshotWrapper);
+      .withCurrentNode(profileSnapshotWrapper);
     assertFalse(createMarcHoldingsEventHandler.isEligible(dataImportEventPayload));
   }
 
@@ -500,15 +524,15 @@ public class CreateMarcHoldingsEventHandlerTest {
       .withName("Create preliminary Item")
       .withAction(ActionProfile.Action.DELETE)
       .withFolioRecord(HOLDINGS);
-    ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
+    ProfileSnapshotWrapper actionProfileSnapshotWrapper = new ProfileSnapshotWrapper()
       .withId(UUID.randomUUID().toString())
       .withProfileId(actionProfile.getId())
-      .withContentType(JOB_PROFILE)
+      .withContentType(ACTION_PROFILE)
       .withContent(actionProfile);
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
       .withContext(new HashMap<>())
-      .withProfileSnapshot(profileSnapshotWrapper);
+      .withCurrentNode(actionProfileSnapshotWrapper);
     assertFalse(createMarcHoldingsEventHandler.isEligible(dataImportEventPayload));
   }
 
@@ -530,7 +554,6 @@ public class CreateMarcHoldingsEventHandlerTest {
       .withProfileSnapshot(profileSnapshotWrapper);
     assertFalse(createMarcHoldingsEventHandler.isEligible(dataImportEventPayload));
   }
-
 
   @Test
   public void isPostProcessingNeededShouldReturnTrue() {

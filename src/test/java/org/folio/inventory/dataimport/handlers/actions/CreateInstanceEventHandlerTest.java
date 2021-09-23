@@ -202,7 +202,6 @@ public class CreateInstanceEventHandlerTest {
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
-      .withOkapiUrl(OKAPI_URL)
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
       .withToken(TOKEN)
