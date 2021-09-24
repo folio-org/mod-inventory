@@ -2,6 +2,7 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
@@ -33,6 +34,7 @@ public class MarcBibMatchedPostProcessingEventHandler implements EventHandler {
   private static final Logger LOGGER = LogManager.getLogger(MarcBibMatchedPostProcessingEventHandler.class);
 
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Event does not contain required data to load Instance";
+  private static final String MATCHED_RECORD_NOT_EXISTS_MSG = "Record by MATCHED_MARC_BIBLIOGRAPHIC-key doesn't exist in the payload";
   private static final String ERROR_INSTANCE_MSG = "Error loading inventory instance for MARC BIB";
   private static final String ERROR_HOLDING_MSG = "Error loading inventory holdings for MARC BIB";
   private final Storage storage;
@@ -46,13 +48,19 @@ public class MarcBibMatchedPostProcessingEventHandler implements EventHandler {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
-      if (isNull(payloadContext) || isBlank(payloadContext.get(MATCHED_MARC_BIB_KEY))) {
+      if (isNull(payloadContext)) {
         LOGGER.error(PAYLOAD_HAS_NO_DATA_MSG);
         future.completeExceptionally(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
         return future;
       }
-      Record record = new JsonObject(payloadContext.get(MATCHED_MARC_BIB_KEY)).mapTo(Record.class);
-      String instanceId = ParsedRecordUtil.getAdditionalSubfieldValue(record.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.I);
+      if (isBlank(payloadContext.get(MATCHED_MARC_BIB_KEY))) {
+        LOGGER.info(MATCHED_RECORD_NOT_EXISTS_MSG);
+        future.complete(dataImportEventPayload);
+        return future;
+      }
+
+      Record matchedRecord = new JsonObject(payloadContext.get(MATCHED_MARC_BIB_KEY)).mapTo(Record.class);
+      String instanceId = ParsedRecordUtil.getAdditionalSubfieldValue(matchedRecord.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.I);
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
       HoldingCollection holdingCollection = storage.getHoldingCollection(context);
