@@ -10,7 +10,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventTypes;
 import org.folio.inventory.dataimport.consumers.MarcBibInstanceHridSetKafkaHandler;
 import org.folio.inventory.dataimport.consumers.MarcHoldingsRecordHridSetKafkaHandler;
-import org.folio.inventory.dataimport.handlers.actions.HoldingsRecordUpdateDelegate;
+import org.folio.inventory.dataimport.handlers.actions.HoldingsUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.GlobalLoadSensor;
@@ -61,7 +61,7 @@ public class MarcHridSetConsumerVerticle extends AbstractVerticle {
     HttpClient client = vertx.createHttpClient();
     Storage storage = Storage.basedUpon(vertx, config, client);
     InstanceUpdateDelegate instanceUpdateDelegate = new InstanceUpdateDelegate(storage);
-    HoldingsRecordUpdateDelegate holdingsRecordUpdateDelegate = new HoldingsRecordUpdateDelegate(storage);
+    HoldingsUpdateDelegate holdingsRecordUpdateDelegate = new HoldingsUpdateDelegate(storage);
 
     KafkaInternalCache kafkaInternalCache = KafkaInternalCache.builder()
       .kafkaConfig(kafkaConfig).build();
