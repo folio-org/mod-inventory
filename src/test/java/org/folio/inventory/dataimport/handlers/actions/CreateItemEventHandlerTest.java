@@ -1,5 +1,6 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import io.vertx.core.Future;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.folio.ActionProfile;
@@ -11,16 +12,19 @@ import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.ItemWriterFactory;
+import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.Status;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.mapping.MappingManager;
+import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.processing.mapping.mapper.reader.Reader;
 import org.folio.processing.mapping.mapper.reader.record.marc.MarcBibReaderFactory;
 import org.folio.processing.value.StringValue;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.MappingDetail;
+import org.folio.rest.jaxrs.model.MappingMetadataDto;
 import org.folio.rest.jaxrs.model.MappingRule;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
@@ -41,6 +45,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -58,6 +63,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 
 public class CreateItemEventHandlerTest {
 
@@ -70,6 +76,8 @@ public class CreateItemEventHandlerTest {
   private ItemCollection mockedItemCollection;
   @Mock
   private Reader fakeReader;
+  @Mock
+  private MappingMetadataCache mappingMetadataCache;
   @Spy
   private MarcBibReaderFactory fakeReaderFactory = new MarcBibReaderFactory();
 
@@ -120,7 +128,12 @@ public class CreateItemEventHandlerTest {
     Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(AVAILABLE.value()), StringValue.of(UUID.randomUUID().toString()), StringValue.of(UUID.randomUUID().toString()));
     Mockito.when(mockedStorage.getItemCollection(ArgumentMatchers.any(Context.class))).thenReturn(mockedItemCollection);
 
-    createItemHandler = new CreateItemEventHandler(mockedStorage);
+    Mockito.when(mappingMetadataCache.get(anyString(), any(Context.class)))
+      .thenReturn(Future.succeededFuture(Optional.of(new MappingMetadataDto()
+        .withMappingRules(new JsonObject().encode())
+        .withMappingParams(Json.encode(new MappingParameters())))));
+
+    createItemHandler = new CreateItemEventHandler(mockedStorage, mappingMetadataCache);
     MappingManager.clearReaderFactories();
   }
 
@@ -156,6 +169,7 @@ public class CreateItemEventHandlerTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
@@ -205,6 +219,7 @@ public class CreateItemEventHandlerTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
@@ -241,6 +256,7 @@ public class CreateItemEventHandlerTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
@@ -263,13 +279,14 @@ public class CreateItemEventHandlerTest {
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new ItemWriterFactory());
 
-    CreateItemEventHandler createItemHandler = new CreateItemEventHandler(mockedStorage);
+    CreateItemEventHandler createItemHandler = new CreateItemEventHandler(mockedStorage, mappingMetadataCache);
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_HOLDING_ID));
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
@@ -306,6 +323,7 @@ public class CreateItemEventHandlerTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
@@ -335,6 +353,7 @@ public class CreateItemEventHandlerTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
@@ -382,6 +401,7 @@ public class CreateItemEventHandlerTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
@@ -398,7 +418,7 @@ public class CreateItemEventHandlerTest {
   @Test
   public void shouldReturnFailedFutureWhenCurrentActionProfileHasNoMappingProfile() {
     // given
-    CreateItemEventHandler createItemHandler = new CreateItemEventHandler(mockedStorage);
+    CreateItemEventHandler createItemHandler = new CreateItemEventHandler(mockedStorage, mappingMetadataCache);
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_HOLDING_ID));
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
@@ -406,7 +426,6 @@ public class CreateItemEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
       .withContext(payloadContext)
-      .withProfileSnapshot(this.profileSnapshotWrapper)
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withContent(JsonObject.mapFrom(actionProfile).getMap())
         .withContentType(ACTION_PROFILE));

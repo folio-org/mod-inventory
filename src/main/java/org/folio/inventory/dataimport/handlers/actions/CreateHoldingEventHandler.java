@@ -10,19 +10,19 @@ import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
-import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
+import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.processing.mapping.mapper.MappingContext;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Record;
 
-import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -46,12 +46,15 @@ public class CreateHoldingEventHandler implements EventHandler {
   private static final String SAVE_HOLDING_ERROR_MESSAGE = "Can`t save new holding";
   private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t create Holding entity: context is empty or doesn`t exists";
   private static final String PAYLOAD_DATA_HAS_NO_INSTANCE_ID_ERROR_MSG = "Failed to extract instanceId from instance entity or parsed record";
+  private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingMetadata snapshot was not found by jobExecutionId '%s'";
   static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create a Holding entity requires a mapping profile";
 
   private final Storage storage;
+  private final MappingMetadataCache mappingMetadataCache;
 
-  public CreateHoldingEventHandler(Storage storage) {
+  public CreateHoldingEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache) {
     this.storage = storage;
+    this.mappingMetadataCache = mappingMetadataCache;
   }
 
   @Override
@@ -69,20 +72,25 @@ public class CreateHoldingEventHandler implements EventHandler {
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
 
-      prepareEvent(dataImportEventPayload);
-      MappingManager.map(dataImportEventPayload, new MappingContext());
-      JsonObject holdingAsJson = new JsonObject(dataImportEventPayload.getContext().get(HOLDINGS.value()));
-      if (holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD) != null) {
-        holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD);
-      }
-      holdingAsJson.put("id", UUID.randomUUID().toString());
-      fillInstanceIdIfNeeded(dataImportEventPayload, holdingAsJson);
-      checkIfPermanentLocationIdExists(holdingAsJson);
-
       Context context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
-      HoldingsRecordCollection holdingsRecords = storage.getHoldingsRecordCollection(context);
-      HoldingsRecord holding = ObjectMapperTool.getMapper().readValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), HoldingsRecord.class);
-      addHoldings(holding, holdingsRecords)
+      mappingMetadataCache.get(dataImportEventPayload.getJobExecutionId(), context)
+        .map(parametersOptional -> parametersOptional.orElseThrow(() ->
+          new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, dataImportEventPayload.getJobExecutionId()))))
+        .map(mappingMetadataDto -> {
+          prepareEvent(dataImportEventPayload);
+          MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
+          MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
+
+          JsonObject holdingAsJson = new JsonObject(dataImportEventPayload.getContext().get(HOLDINGS.value()));
+          if (holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD) != null) {
+            holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD);
+          }
+          holdingAsJson.put("id", UUID.randomUUID().toString());
+          fillInstanceIdIfNeeded(dataImportEventPayload, holdingAsJson);
+          checkIfPermanentLocationIdExists(holdingAsJson);
+          return Json.decodeValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), HoldingsRecord.class);
+        })
+        .compose(holdingToCreate -> addHoldings(holdingToCreate, context))
         .onSuccess(createdHoldings -> {
           LOGGER.info("Created Holding record");
           dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encodePrettily(createdHoldings));
@@ -114,7 +122,7 @@ public class CreateHoldingEventHandler implements EventHandler {
     dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
   }
 
-  private void fillInstanceIdIfNeeded(DataImportEventPayload dataImportEventPayload, JsonObject holdingAsJson) throws IOException {
+  private void fillInstanceIdIfNeeded(DataImportEventPayload dataImportEventPayload, JsonObject holdingAsJson) {
     if (isBlank(holdingAsJson.getString(INSTANCE_ID_FIELD))) {
       String instanceId = null;
       String instanceAsString = dataImportEventPayload.getContext().get(EntityType.INSTANCE.value());
@@ -125,7 +133,7 @@ public class CreateHoldingEventHandler implements EventHandler {
       }
       if (isBlank(instanceId)) {
         String recordAsString = dataImportEventPayload.getContext().get(EntityType.MARC_BIBLIOGRAPHIC.value());
-        Record record = ObjectMapperTool.getMapper().readValue(recordAsString, Record.class);
+        Record record = Json.decodeValue(recordAsString, Record.class);
         instanceId = ParsedRecordUtil.getAdditionalSubfieldValue(record.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.I);
       }
       if (isBlank(instanceId)) {
@@ -146,8 +154,9 @@ public class CreateHoldingEventHandler implements EventHandler {
     dataImportEventPayload.getContext().put(HOLDINGS.value(), holdingAsJson.encode());
   }
 
-  private Future<HoldingsRecord> addHoldings(HoldingsRecord holdings, HoldingsRecordCollection holdingsRecordCollection) {
+  private Future<HoldingsRecord> addHoldings(HoldingsRecord holdings, Context context) {
     Promise<HoldingsRecord> promise = Promise.promise();
+    HoldingsRecordCollection holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
     holdingsRecordCollection.add(holdings,
       success -> promise.complete(success.getResult()),
       failure -> {

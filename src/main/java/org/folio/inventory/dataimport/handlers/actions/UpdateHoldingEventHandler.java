@@ -1,5 +1,6 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import io.vertx.core.Future;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
@@ -8,19 +9,20 @@ import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
-import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
+import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.processing.mapping.mapper.MappingContext;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 
+import static java.lang.String.format;
 import static java.util.Objects.isNull;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.ActionProfile.Action.UPDATE;
@@ -37,13 +39,16 @@ public class UpdateHoldingEventHandler implements EventHandler {
   private static final String UPDATE_HOLDING_ERROR_MESSAGE = "Can`t update  holding";
   private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t update Holding entity: context or Holding-entity are empty or doesn`t exist!";
   private static final String EMPTY_REQUIRED_FIELDS_ERROR_MESSAGE = "Can`t update Holding entity: one of required fields(hrid, permanentLocationId, instanceId) are empty!";
+  private static final String MAPPING_METADATA_NOT_FOUND_MESSAGE = "MappingMetadata snapshot was not found by jobExecutionId '%s'";
   private static final String HOLDINGS_PATH_FIELD = "holdings";
   static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to update a Holding entity has no a mapping profile";
 
   private final Storage storage;
+  private final MappingMetadataCache mappingMetadataCache;
 
-  public UpdateHoldingEventHandler(Storage storage) {
+  public UpdateHoldingEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache) {
     this.storage = storage;
+    this.mappingMetadataCache = mappingMetadataCache;
   }
 
   @Override
@@ -71,18 +76,28 @@ public class UpdateHoldingEventHandler implements EventHandler {
       if (StringUtils.isAnyBlank(hrid, instanceId, permanentLocationId, holdingId)) {
         throw new EventProcessingException(EMPTY_REQUIRED_FIELDS_ERROR_MESSAGE);
       }
-      prepareEvent(dataImportEventPayload);
-
-      MappingManager.map(dataImportEventPayload, new MappingContext());
 
       Context context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
-      HoldingsRecordCollection holdingsRecords = storage.getHoldingsRecordCollection(context);
-      HoldingsRecord holding = retrieveHolding(dataImportEventPayload.getContext());
+      mappingMetadataCache.get(dataImportEventPayload.getJobExecutionId(), context)
+        .map(parametersOptional -> parametersOptional
+          .orElseThrow(() -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MESSAGE, dataImportEventPayload.getJobExecutionId()))))
+        .onSuccess(mappingMetadataDto -> {
+          prepareEvent(dataImportEventPayload);
+          MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
+          MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
 
-      holdingsRecords.update(holding, holdingSuccess -> constructDataImportEventPayload(future, dataImportEventPayload, holding),
-        failure -> {
-          LOGGER.error(UPDATE_HOLDING_ERROR_MESSAGE);
-          future.completeExceptionally(new EventProcessingException(UPDATE_HOLDING_ERROR_MESSAGE));
+          HoldingsRecordCollection holdingsRecords = storage.getHoldingsRecordCollection(context);
+          HoldingsRecord holding = retrieveHolding(dataImportEventPayload.getContext());
+
+          holdingsRecords.update(holding, holdingSuccess -> constructDataImportEventPayload(future, dataImportEventPayload, holding),
+            failure -> {
+              LOGGER.error(UPDATE_HOLDING_ERROR_MESSAGE);
+              future.completeExceptionally(new EventProcessingException(UPDATE_HOLDING_ERROR_MESSAGE));
+            });
+        })
+        .onFailure(e -> {
+          LOGGER.error("Error updating inventory Holdings", e);
+          future.completeExceptionally(e);
         });
     } catch (Exception e) {
       LOGGER.error("Failed to update Holdings", e);
@@ -100,10 +115,10 @@ public class UpdateHoldingEventHandler implements EventHandler {
     return false;
   }
 
-  private HoldingsRecord retrieveHolding(HashMap<String, String> context) throws IOException {
+  private HoldingsRecord retrieveHolding(HashMap<String, String> context) {
     return (isNull(new JsonObject(context.get(HOLDINGS.value())).getJsonObject(HOLDINGS_PATH_FIELD))) ?
-      ObjectMapperTool.getMapper().readValue(context.get(HOLDINGS.value()), HoldingsRecord.class) :
-      ObjectMapperTool.getMapper().readValue(String.valueOf(new JsonObject(context.get(HOLDINGS.value())).getJsonObject(HOLDINGS_PATH_FIELD)), HoldingsRecord.class);
+      Json.decodeValue(context.get(HOLDINGS.value()), HoldingsRecord.class) :
+      Json.decodeValue(String.valueOf(new JsonObject(context.get(HOLDINGS.value())).getJsonObject(HOLDINGS_PATH_FIELD)), HoldingsRecord.class);
   }
 
   private void prepareEvent(DataImportEventPayload dataImportEventPayload) {

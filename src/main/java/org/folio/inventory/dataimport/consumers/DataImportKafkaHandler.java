@@ -79,32 +79,37 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
 
   @Override
   public Future<String> handle(KafkaConsumerRecord<String, String> record) {
-    Promise<String> promise = Promise.promise();
-    Event event = Json.decodeValue(record.value(), Event.class);
-    if (!kafkaInternalCache.containsByKey(event.getId())) {
-      kafkaInternalCache.putToCache(event.getId());
-      DataImportEventPayload eventPayload = Json.decodeValue(event.getEventPayload(), DataImportEventPayload.class);
-      String correlationId = extractCorrelationId(record.headers());
-      LOGGER.info(format("Data import event payload has been received with event type: %s correlationId: %s", eventPayload.getEventType(), correlationId));
-      eventPayload.getContext().put(CORRELATION_ID_HEADER, correlationId);
+    try {
+      Promise<String> promise = Promise.promise();
+      Event event = Json.decodeValue(record.value(), Event.class);
+      if (!kafkaInternalCache.containsByKey(event.getId())) {
+        kafkaInternalCache.putToCache(event.getId());
+        DataImportEventPayload eventPayload = Json.decodeValue(event.getEventPayload(), DataImportEventPayload.class);
+        String correlationId = extractCorrelationId(record.headers());
+        LOGGER.info(format("Data import event payload has been received with event type: %s correlationId: %s", eventPayload.getEventType(), correlationId));
+        eventPayload.getContext().put(CORRELATION_ID_HEADER, correlationId);
 
-      Context context = EventHandlingUtil.constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl());
-      String jobProfileSnapshotId = eventPayload.getContext().get(PROFILE_SNAPSHOT_ID_KEY);
-      profileSnapshotCache.get(jobProfileSnapshotId, context)
-        .toCompletionStage()
-        .thenCompose(snapshotOptional -> snapshotOptional
-          .map(profileSnapshot -> EventManager.handleEvent(eventPayload, profileSnapshot))
-          .orElse(CompletableFuture.failedFuture(new EventProcessingException(format("Job profile snapshot with id '%s' does not exist", jobProfileSnapshotId)))))
-        .whenComplete((processedPayload, throwable) -> {
-          if (throwable != null) {
-            promise.fail(throwable);
-          } else if (DI_ERROR.value().equals(processedPayload.getEventType())) {
-            promise.fail("Failed to process data import event payload");
-          } else {
-            promise.complete(record.key());
-          }
-        });
-      return promise.future();
+        Context context = EventHandlingUtil.constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl());
+        String jobProfileSnapshotId = eventPayload.getContext().get(PROFILE_SNAPSHOT_ID_KEY);
+        profileSnapshotCache.get(jobProfileSnapshotId, context)
+          .toCompletionStage()
+          .thenCompose(snapshotOptional -> snapshotOptional
+            .map(profileSnapshot -> EventManager.handleEvent(eventPayload, profileSnapshot))
+            .orElse(CompletableFuture.failedFuture(new EventProcessingException(format("Job profile snapshot with id '%s' does not exist", jobProfileSnapshotId)))))
+          .whenComplete((processedPayload, throwable) -> {
+            if (throwable != null) {
+              promise.fail(throwable);
+            } else if (DI_ERROR.value().equals(processedPayload.getEventType())) {
+              promise.fail("Failed to process data import event payload");
+            } else {
+              promise.complete(record.key());
+            }
+          });
+        return promise.future();
+      }
+    } catch (Exception e) {
+      LOGGER.error(format("Failed to process data import kafka record from topic %s", record.topic()), e);
+      return Future.failedFuture(e);
     }
     return Future.succeededFuture();
   }
@@ -127,12 +132,12 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     EventManager.registerEventHandler(new MatchInstanceEventHandler());
     EventManager.registerEventHandler(new MatchItemEventHandler());
     EventManager.registerEventHandler(new MatchHoldingEventHandler());
-    EventManager.registerEventHandler(new CreateItemEventHandler(storage));
-    EventManager.registerEventHandler(new CreateHoldingEventHandler(storage));
+    EventManager.registerEventHandler(new CreateItemEventHandler(storage, mappingMetadataCache));
+    EventManager.registerEventHandler(new CreateHoldingEventHandler(storage, mappingMetadataCache));
     EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache));
     EventManager.registerEventHandler(new CreateMarcHoldingsEventHandler(storage, mappingMetadataCache));
-    EventManager.registerEventHandler(new UpdateItemEventHandler(storage));
-    EventManager.registerEventHandler(new UpdateHoldingEventHandler(storage));
+    EventManager.registerEventHandler(new UpdateItemEventHandler(storage, mappingMetadataCache));
+    EventManager.registerEventHandler(new UpdateHoldingEventHandler(storage, mappingMetadataCache));
     EventManager.registerEventHandler(new ReplaceInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache));
     EventManager.registerEventHandler(new MarcBibModifiedPostProcessingEventHandler(new InstanceUpdateDelegate(storage), precedingSucceedingTitlesHelper));
     EventManager.registerEventHandler(new MarcBibMatchedPostProcessingEventHandler(storage));
