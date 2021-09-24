@@ -10,26 +10,32 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.cache.KafkaInternalCache;
+import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.Event;
+import org.folio.rest.jaxrs.model.MappingMetadataDto;
 import org.folio.rest.jaxrs.model.Record;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Consumer;
 
+import static org.folio.inventory.dataimport.consumers.MarcHoldingsRecordHridSetKafkaHandler.JOB_EXECUTION_ID_KEY;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -50,6 +56,8 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
   private KafkaConsumerRecord<String, String> kafkaRecord;
   @Mock
   private KafkaInternalCache kafkaInternalCache;
+  @Mock
+  private MappingMetadataCache mappingMetadataCache;
 
   private JsonObject mappingRules;
   private Record record;
@@ -80,7 +88,12 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
       return null;
     }).when(mockedInstanceCollection).update(any(Instance.class), any(), any());
 
-    marcBibInstanceHridSetKafkaHandler = new MarcBibInstanceHridSetKafkaHandler(new InstanceUpdateDelegate(mockedStorage), kafkaInternalCache);
+    Mockito.when(mappingMetadataCache.get(anyString(), any(Context.class)))
+      .thenReturn(Future.succeededFuture(Optional.of(new MappingMetadataDto()
+        .withMappingRules(mappingRules.encode())
+        .withMappingParams(Json.encode(new MappingParameters())))));
+
+    marcBibInstanceHridSetKafkaHandler = new MarcBibInstanceHridSetKafkaHandler(new InstanceUpdateDelegate(mockedStorage), kafkaInternalCache, mappingMetadataCache);
   }
 
   @After
@@ -94,8 +107,9 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
     Async async = context.async();
     Map<String, String> payload = new HashMap<>();
     payload.put("MARC_BIB", Json.encode(record));
-    payload.put("MAPPING_RULES", mappingRules.encode());
-    payload.put("MAPPING_PARAMS", new JsonObject().encode());
+    payload.put(JOB_EXECUTION_ID_KEY, UUID.randomUUID().toString());
+//    payload.put("MAPPING_RULES", mappingRules.encode());
+//    payload.put("MAPPING_PARAMS", new JsonObject().encode());
 
     Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
     String expectedKafkaRecordKey = "test_key";
@@ -120,8 +134,7 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
     // given
     Async async = context.async();
     Map<String, String> payload = new HashMap<>();
-    payload.put("MAPPING_RULES", mappingRules.encode());
-    payload.put("MAPPING_PARAMS", new JsonObject().encode());
+    payload.put(JOB_EXECUTION_ID_KEY, UUID.randomUUID().toString());
 
     Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
@@ -163,8 +176,7 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
     Async async = context.async();
     Map<String, String> payload = new HashMap<>();
     payload.put("MARC_BIB", Json.encode(record));
-    payload.put("MAPPING_RULES", mappingRules.encode());
-    payload.put("MAPPING_PARAMS", new JsonObject().encode());
+    payload.put(JOB_EXECUTION_ID_KEY, UUID.randomUUID().toString());
 
     Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
     String expectedKafkaRecordKey = "test_key";
