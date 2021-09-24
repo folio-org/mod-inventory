@@ -144,6 +144,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
   private Future<Void> prepareAndExecuteMapping(DataImportEventPayload dataImportEventPayload, JsonObject mappingRules, MappingParameters mappingParameters) {
     try {
+      prepareEvent(dataImportEventPayload);
       defaultMapRecordToInstance(dataImportEventPayload, mappingRules, mappingParameters);
       MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
       return Future.succeededFuture();
