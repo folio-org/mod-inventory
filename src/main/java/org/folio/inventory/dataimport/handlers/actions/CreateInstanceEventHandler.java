@@ -81,27 +81,27 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
           .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()),
             Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class)))
           .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, dataImportEventPayload.getJobExecutionId()))))
-        .onComplete(e -> {
+        .compose(v -> {
           InstanceCollection instanceCollection = storage.getInstanceCollection(context);
           JsonObject instanceAsJson = prepareInstance(dataImportEventPayload, record);
           List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
-          if (errors.isEmpty()) {
-            Instance mappedInstance = Instance.fromJson(instanceAsJson);
-            addInstance(mappedInstance, instanceCollection)
-              .compose(createdInstance -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(mappedInstance, context).map(createdInstance))
-              .onSuccess(ar -> {
-                dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(ar));
-                future.complete(dataImportEventPayload);
-              })
-              .onFailure(ar -> {
-                LOGGER.warn("Error creating inventory Instance", ar);
-                future.completeExceptionally(ar);
-              });
-          } else {
+          if (!errors.isEmpty()) {
             String msg = format("Mapped Instance is invalid: %s", errors);
             LOGGER.warn(msg);
-            future.completeExceptionally(new EventProcessingException(msg));
+            return Future.failedFuture(msg);
           }
+
+          Instance mappedInstance = Instance.fromJson(instanceAsJson);
+          return addInstance(mappedInstance, instanceCollection)
+            .compose(createdInstance -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(mappedInstance, context).map(createdInstance));
+        })
+        .onSuccess(ar -> {
+          dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(ar));
+          future.complete(dataImportEventPayload);
+        })
+        .onFailure(e -> {
+          LOGGER.warn("Error creating inventory Instance", e);
+          future.completeExceptionally(e);
         });
     } catch (Exception e) {
       LOGGER.error("Error creating inventory Instance", e);
