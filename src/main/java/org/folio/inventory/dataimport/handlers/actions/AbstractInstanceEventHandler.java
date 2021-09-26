@@ -29,8 +29,6 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   protected static final Logger LOGGER = LogManager.getLogger(AbstractInstanceEventHandler.class);
   protected static final String MARC_FORMAT = "MARC";
   protected static final String MARC_BIB_RECORD_FORMAT = "MARC_BIB";
-  protected static final String MAPPING_RULES_KEY = "MAPPING_RULES";
-  protected static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
   protected static final String INSTANCE_PATH = "instance";
   protected static final List<String> requiredFields = Arrays.asList("source", "title", "instanceTypeId");
 
