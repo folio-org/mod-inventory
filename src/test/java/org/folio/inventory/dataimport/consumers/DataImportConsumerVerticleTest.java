@@ -1,5 +1,11 @@
 package org.folio.inventory.dataimport.consumers;
 
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.common.Slf4jNotifier;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.github.tomakehurst.wiremock.junit.WireMockRule;
+import com.github.tomakehurst.wiremock.matching.RegexPattern;
+import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
@@ -21,26 +27,27 @@ import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.processing.events.EventManager;
 import org.folio.processing.events.services.handler.EventHandler;
-import org.folio.processing.events.utils.ZIPArchiver;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
 import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.useDefaults;
 import static org.folio.ActionProfile.Action.CREATE;
@@ -66,6 +73,7 @@ public class DataImportConsumerVerticleTest {
 
   private static final String TENANT_ID = "diku";
   private static final String KAFKA_ENV_NAME = "test-env";
+  private static final String JOB_PROFILE_URL = "/data-import-profiles/jobProfileSnapshots";
 
   private static Vertx vertx;
 
@@ -77,6 +85,12 @@ public class DataImportConsumerVerticleTest {
 
   @Mock
   private KafkaInternalCache kafkaInternalCache;
+
+  @Rule
+  public WireMockRule mockServer = new WireMockRule(
+    WireMockConfiguration.wireMockConfig()
+      .dynamicPort()
+      .notifier(new Slf4jNotifier(true)));
 
 
   private JobProfile jobProfile = new JobProfile()
@@ -136,7 +150,7 @@ public class DataImportConsumerVerticleTest {
 
   @Before
   public void setUp() {
-    MockitoAnnotations.initMocks(this);
+    MockitoAnnotations.openMocks(this);
     when(mockedEventHandler.isEligible(any(DataImportEventPayload.class))).thenReturn(true);
     doAnswer(invocationOnMock -> {
       DataImportEventPayload eventPayload = invocationOnMock.getArgument(0);
@@ -144,23 +158,26 @@ public class DataImportConsumerVerticleTest {
       return CompletableFuture.completedFuture(eventPayload);
     }).when(mockedEventHandler).handle(any(DataImportEventPayload.class));
 
+    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(JOB_PROFILE_URL + "/.*"), true))
+      .willReturn(WireMock.ok().withBody(Json.encode(profileSnapshotWrapper))));
+
     EventManager.clearEventHandlers();
     EventManager.registerEventHandler(mockedEventHandler);
   }
 
   @Test
-  public void shouldSendEventWithProcessedEventPayloadWhenProcessingCoreHandlerSucceeded() throws InterruptedException, IOException {
+  public void shouldSendEventWithProcessedEventPayloadWhenProcessingCoreHandlerSucceeded() throws InterruptedException {
     // given
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
       .withTenant(TENANT_ID)
-      .withOkapiUrl("localhost")
+      .withOkapiUrl(mockServer.baseUrl())
       .withToken("test-token")
-      .withContext(new HashMap<>())
-      .withProfileSnapshot(profileSnapshotWrapper);
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(new HashMap<>(Map.of("JOB_PROFILE_SNAPSHOT_ID", profileSnapshotWrapper.getId())));
 
     String topic = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_NAME, getDefaultNameSpace(), TENANT_ID, dataImportEventPayload.getEventType());
-    Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(dataImportEventPayload)));
+    Event event = new Event().withId("01").withEventPayload(Json.encode(dataImportEventPayload));
     KeyValue<String, String> record = new KeyValue<>("test-key", Json.encode(event));
     SendKeyValues<String, String> request = SendKeyValues.to(topic, Collections.singletonList(record)).useDefaults();
 

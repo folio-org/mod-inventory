@@ -2,6 +2,7 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -10,6 +11,7 @@ import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
@@ -21,6 +23,8 @@ import org.folio.inventory.support.JsonHelper;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
+import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
+import org.folio.processing.mapping.mapper.MappingContext;
 
 import java.io.UnsupportedEncodingException;
 import java.time.ZoneOffset;
@@ -33,6 +37,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static java.lang.String.format;
 import static java.util.Objects.isNull;
@@ -51,6 +56,7 @@ public class UpdateItemEventHandler implements EventHandler {
   static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to update an Item requires a mapping profile";
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data or ITEM to update";
   private static final String STATUS_UPDATE_ERROR_MSG = "Could not change item status '%s' to '%s'";
+  private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingMetadata snapshot was not found by jobExecutionId '%s'";
   private static final String ITEM_PATH_FIELD = "item";
   private static final Set<String> PROTECTED_STATUSES_FROM_UPDATE = new HashSet<>(Arrays.asList("Aged to lost", "Awaiting delivery", "Awaiting pickup", "Checked out", "Claimed returned", "Declared lost", "Paged", "Recently returned"));
 
@@ -58,9 +64,11 @@ public class UpdateItemEventHandler implements EventHandler {
   private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").withZone(ZoneOffset.UTC);
 
   private final Storage storage;
+  private final MappingMetadataCache mappingMetadataCache;
 
-  public UpdateItemEventHandler(Storage storage) {
+  public UpdateItemEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache) {
     this.storage = storage;
+    this.mappingMetadataCache = mappingMetadataCache;
   }
 
   @Override
@@ -80,47 +88,54 @@ public class UpdateItemEventHandler implements EventHandler {
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
 
-      JsonObject itemAsJson = new JsonObject(payloadContext.get(ITEM.value()));
-      String oldItemStatus = itemAsJson.getJsonObject(STATUS_KEY).getString("name");
-      preparePayloadForMappingManager(dataImportEventPayload);
-      MappingManager.map(dataImportEventPayload);
-      JsonObject mappedItemAsJson = new JsonObject(payloadContext.get(ITEM.value()));
-      mappedItemAsJson = mappedItemAsJson.containsKey(ITEM_PATH_FIELD) ? mappedItemAsJson.getJsonObject(ITEM_PATH_FIELD) : mappedItemAsJson;
-
-      List<String> errors = validateItem(mappedItemAsJson, requiredFields);
-      if (!errors.isEmpty()) {
-        String msg = format("Mapped Item is invalid: %s", errors.toString());
-        LOG.error(msg);
-        future.completeExceptionally(new EventProcessingException(msg));
-        return future;
-      }
-
-      String newItemStatus = mappedItemAsJson.getJsonObject(STATUS_KEY).getString("name");
-      boolean protectedStatusChanged = isProtectedStatusChanged(oldItemStatus, newItemStatus);
-      if(protectedStatusChanged) {
-        mappedItemAsJson.getJsonObject(STATUS_KEY).put("name", oldItemStatus);
-      }
-
+      AtomicBoolean isProtectedStatusChanged = new AtomicBoolean();
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
-      ItemCollection itemCollection = storage.getItemCollection(context);
-      Item itemToUpdate = ItemUtil.jsonToItem(mappedItemAsJson);
-      verifyItemBarcodeUniqueness(itemToUpdate, itemCollection)
-        .compose(v -> updateItem(itemToUpdate, itemCollection))
-        .onComplete(updateAr -> {
-          if (updateAr.succeeded()) {
-            if(protectedStatusChanged) {
-              String msg = String.format(STATUS_UPDATE_ERROR_MSG, oldItemStatus, newItemStatus);
-              LOG.warn(msg);
-              dataImportEventPayload.getContext().put(ITEM.value(), ItemUtil.mapToJson(updateAr.result()).encode());
-              future.completeExceptionally(new EventProcessingException(msg));
-            } else {
-              dataImportEventPayload.getContext().put(ITEM.value(), ItemUtil.mapToJson(updateAr.result()).encode());
-              future.complete(dataImportEventPayload);
-            }
-          } else {
-            LOG.error("Error updating inventory Item", updateAr.cause());
-            future.completeExceptionally(updateAr.cause());
+
+      mappingMetadataCache.get(dataImportEventPayload.getJobExecutionId(), context)
+        .map(parametersOptional -> parametersOptional
+          .orElseThrow(() -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, dataImportEventPayload.getJobExecutionId()))))
+        .compose(mappingMetadataDto -> {
+          JsonObject itemAsJson = new JsonObject(payloadContext.get(ITEM.value()));
+          String oldItemStatus = itemAsJson.getJsonObject(STATUS_KEY).getString("name");
+          preparePayloadForMappingManager(dataImportEventPayload);
+          MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
+          MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
+
+          JsonObject mappedItemAsJson = new JsonObject(payloadContext.get(ITEM.value()));
+          mappedItemAsJson = mappedItemAsJson.containsKey(ITEM_PATH_FIELD) ? mappedItemAsJson.getJsonObject(ITEM_PATH_FIELD) : mappedItemAsJson;
+
+          List<String> errors = validateItem(mappedItemAsJson, requiredFields);
+          if (!errors.isEmpty()) {
+            String msg = format("Mapped Item is invalid: %s", errors.toString());
+            LOG.error(msg);
+            return Future.failedFuture(msg);
           }
+
+          String newItemStatus = mappedItemAsJson.getJsonObject(STATUS_KEY).getString("name");
+          isProtectedStatusChanged.set(isProtectedStatusChanged(oldItemStatus, newItemStatus));
+          if (isProtectedStatusChanged.get()) {
+            mappedItemAsJson.getJsonObject(STATUS_KEY).put("name", oldItemStatus);
+          }
+
+          ItemCollection itemCollection = storage.getItemCollection(context);
+          Item itemToUpdate = ItemUtil.jsonToItem(mappedItemAsJson);
+          return verifyItemBarcodeUniqueness(itemToUpdate, itemCollection)
+            .compose(v -> updateItem(itemToUpdate, itemCollection))
+            .onSuccess(updatedItem -> {
+              if (isProtectedStatusChanged.get()) {
+                String msg = String.format(STATUS_UPDATE_ERROR_MSG, oldItemStatus, newItemStatus);
+                LOG.warn(msg);
+                dataImportEventPayload.getContext().put(ITEM.value(), ItemUtil.mapToJson(updatedItem).encode());
+                future.completeExceptionally(new EventProcessingException(msg));
+              } else {
+                dataImportEventPayload.getContext().put(ITEM.value(), ItemUtil.mapToJson(updatedItem).encode());
+                future.complete(dataImportEventPayload);
+              }
+            });
+        })
+        .onFailure(e -> {
+          LOG.error("Failed to update inventory Item", e);
+          future.completeExceptionally(e);
         });
     } catch (Exception e) {
       LOG.error("Error updating inventory Item", e);
@@ -162,17 +177,23 @@ public class UpdateItemEventHandler implements EventHandler {
     }
   }
 
-  private Future<Boolean> verifyItemBarcodeUniqueness(Item item, ItemCollection itemCollection) throws UnsupportedEncodingException {
+  private Future<Boolean> verifyItemBarcodeUniqueness(Item item, ItemCollection itemCollection) {
     Promise<Boolean> promise = Promise.promise();
-    itemCollection.findByCql(CqlHelper.barcodeIs(item.getBarcode()) + " AND id <> " + item.id, PagingParameters.defaults(),
-      findResult -> {
-        if (findResult.getResult().records.isEmpty()) {
-          promise.complete(findResult.getResult().records.isEmpty());
-        } else {
-          promise.fail(format("Barcode must be unique, %s is already assigned to another item", item.getBarcode()));
-        }
-      },
-      failure -> promise.fail(failure.getReason()));
+    try {
+      itemCollection.findByCql(CqlHelper.barcodeIs(item.getBarcode()) + " AND id <> " + item.id, PagingParameters.defaults(),
+        findResult -> {
+          if (findResult.getResult().records.isEmpty()) {
+            promise.complete(findResult.getResult().records.isEmpty());
+          } else {
+            promise.fail(format("Barcode must be unique, %s is already assigned to another item", item.getBarcode()));
+          }
+        },
+        failure -> promise.fail(failure.getReason()));
+    } catch (UnsupportedEncodingException e) {
+      String msg = format("Failed to find items by barcode '%s'", item.getBarcode());
+      LOG.error(msg, e);
+      promise.fail(msg);
+    }
     return promise.future();
   }
 

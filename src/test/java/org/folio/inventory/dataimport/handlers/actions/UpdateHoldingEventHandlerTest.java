@@ -1,5 +1,6 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import io.vertx.core.Future;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.folio.ActionProfile;
@@ -7,17 +8,21 @@ import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
 import org.folio.JobProfile;
 import org.folio.MappingProfile;
+import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.HoldingWriterFactory;
+import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.mapping.MappingManager;
+import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.processing.mapping.mapper.reader.Reader;
 import org.folio.processing.mapping.mapper.reader.record.marc.MarcBibReaderFactory;
 import org.folio.processing.value.StringValue;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.MappingDetail;
+import org.folio.rest.jaxrs.model.MappingMetadataDto;
 import org.folio.rest.jaxrs.model.MappingRule;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
@@ -33,6 +38,7 @@ import org.mockito.Spy;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -51,6 +57,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPP
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
@@ -62,6 +69,8 @@ public class UpdateHoldingEventHandlerTest {
   private Storage storage;
   @Mock
   HoldingsRecordCollection holdingsRecordsCollection;
+  @Mock
+  private MappingMetadataCache mappingMetadataCache;
   @Spy
   private MarcBibReaderFactory fakeReaderFactory = new MarcBibReaderFactory();
 
@@ -107,7 +116,7 @@ public class UpdateHoldingEventHandlerTest {
   public void setUp() {
     MockitoAnnotations.initMocks(this);
     MappingManager.clearReaderFactories();
-    updateHoldingEventHandler = new UpdateHoldingEventHandler(storage);
+    updateHoldingEventHandler = new UpdateHoldingEventHandler(storage, mappingMetadataCache);
 
     doAnswer(invocationOnMock -> {
       HoldingsRecord holdingsRecord = invocationOnMock.getArgument(0);
@@ -115,6 +124,11 @@ public class UpdateHoldingEventHandlerTest {
       successHandler.accept(new Success<>(holdingsRecord));
       return null;
     }).when(holdingsRecordsCollection).update(any(), any(Consumer.class), any(Consumer.class));
+
+    when(mappingMetadataCache.get(anyString(), any(Context.class)))
+      .thenReturn(Future.succeededFuture(Optional.of(new MappingMetadataDto()
+        .withMappingRules(new JsonObject().encode())
+        .withMappingParams(Json.encode(new MappingParameters())))));
   }
 
   @Test
@@ -149,6 +163,7 @@ public class UpdateHoldingEventHandlerTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
@@ -282,7 +297,7 @@ public class UpdateHoldingEventHandlerTest {
   }
 
   @Test(expected = ExecutionException.class)
-  public void shouldNotProcessEventIfNoHoldingInContext() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+  public void shouldNotProcessEventIfNoHoldingInContext() throws InterruptedException, ExecutionException, TimeoutException {
     Reader fakeReader = Mockito.mock(Reader.class);
 
     String permanentLocationId = UUID.randomUUID().toString();
@@ -374,7 +389,6 @@ public class UpdateHoldingEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
       .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withContent(JsonObject.mapFrom(actionProfile).getMap())
         .withContentType(ACTION_PROFILE));
@@ -390,7 +404,6 @@ public class UpdateHoldingEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
       .withContext(new HashMap<>())
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
     assertTrue(updateHoldingEventHandler.isEligible(dataImportEventPayload));
   }
@@ -400,8 +413,7 @@ public class UpdateHoldingEventHandlerTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
-      .withContext(new HashMap<>())
-      .withProfileSnapshot(profileSnapshotWrapper);
+      .withContext(new HashMap<>());
     assertFalse(updateHoldingEventHandler.isEligible(dataImportEventPayload));
   }
 
@@ -415,7 +427,7 @@ public class UpdateHoldingEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
       .withContext(new HashMap<>())
-      .withProfileSnapshot(profileSnapshotWrapper);
+      .withCurrentNode(profileSnapshotWrapper);
     assertFalse(updateHoldingEventHandler.isEligible(dataImportEventPayload));
   }
 
@@ -434,7 +446,7 @@ public class UpdateHoldingEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
       .withContext(new HashMap<>())
-      .withProfileSnapshot(profileSnapshotWrapper);
+      .withCurrentNode(profileSnapshotWrapper);
     assertFalse(updateHoldingEventHandler.isEligible(dataImportEventPayload));
   }
 
@@ -453,7 +465,7 @@ public class UpdateHoldingEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
       .withContext(new HashMap<>())
-      .withProfileSnapshot(profileSnapshotWrapper);
+      .withCurrentNode(profileSnapshotWrapper);
     assertFalse(updateHoldingEventHandler.isEligible(dataImportEventPayload));
   }
 }
