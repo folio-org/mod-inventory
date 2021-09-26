@@ -129,9 +129,9 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
 
     PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper = new PrecedingSucceedingTitlesHelper(WebClient.wrap(client));
-    EventManager.registerEventHandler(new MatchInstanceEventHandler());
-    EventManager.registerEventHandler(new MatchItemEventHandler());
-    EventManager.registerEventHandler(new MatchHoldingEventHandler());
+    EventManager.registerEventHandler(new MatchInstanceEventHandler(mappingMetadataCache));
+    EventManager.registerEventHandler(new MatchItemEventHandler(mappingMetadataCache));
+    EventManager.registerEventHandler(new MatchHoldingEventHandler(mappingMetadataCache));
     EventManager.registerEventHandler(new CreateItemEventHandler(storage, mappingMetadataCache));
     EventManager.registerEventHandler(new CreateHoldingEventHandler(storage, mappingMetadataCache));
     EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache));
