@@ -82,36 +82,37 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         .compose(parametersOptional -> parametersOptional
           .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()), new JsonObject(mappingMetadata.getMappingParams())
             .mapTo(MappingParameters.class), instanceToUpdate))
-          .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, dataImportEventPayload.getJobExecutionId())))
-          .onComplete(e -> {
-            JsonObject instanceAsJson = prepareTargetInstance(dataImportEventPayload, instanceToUpdate);
-            InstanceCollection instanceCollection = storage.getInstanceCollection(context);
-            List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
-            if (errors.isEmpty()) {
-              Instance mappedInstance = Instance.fromJson(instanceAsJson);
-              updateInstance(mappedInstance, instanceCollection)
-                .compose(updatedInstance -> precedingSucceedingTitlesHelper.getExistingPrecedingSucceedingTitles(mappedInstance, context))
-                .map(precedingSucceedingTitles -> precedingSucceedingTitles.stream()
-                  .map(titleJson -> titleJson.getString("id"))
-                  .collect(Collectors.toSet()))
-                .compose(titlesIds -> precedingSucceedingTitlesHelper.deletePrecedingSucceedingTitles(titlesIds, context))
-                .compose(ar -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(mappedInstance, context))
-                .onComplete(ar -> {
-                  if (ar.succeeded()) {
-                    dataImportEventPayload.getContext().put(INSTANCE.value(), instanceAsJson.encode());
-                    future.complete(dataImportEventPayload);
-                  } else {
-                    LOGGER.error("Error updating inventory Instance", ar.cause());
-                    future.completeExceptionally(ar.cause());
-                  }
-                });
-            } else {
-              String msg = String.format("Mapped Instance is invalid: %s", errors.toString());
-              LOGGER.error(msg);
-              future.completeExceptionally(new EventProcessingException(msg));
-            }
+          .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, dataImportEventPayload.getJobExecutionId()))))
+        .compose(e -> {
+          JsonObject instanceAsJson = prepareTargetInstance(dataImportEventPayload, instanceToUpdate);
+          InstanceCollection instanceCollection = storage.getInstanceCollection(context);
+          List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
 
-          }));
+          if (!errors.isEmpty()) {
+            String msg = String.format("Mapped Instance is invalid: %s", errors.toString());
+            LOGGER.warn(msg);
+            return Future.failedFuture(msg);
+          }
+
+          Instance mappedInstance = Instance.fromJson(instanceAsJson);
+          return updateInstance(mappedInstance, instanceCollection)
+            .compose(updatedInstance -> precedingSucceedingTitlesHelper.getExistingPrecedingSucceedingTitles(mappedInstance, context))
+            .map(precedingSucceedingTitles -> precedingSucceedingTitles.stream()
+              .map(titleJson -> titleJson.getString("id"))
+              .collect(Collectors.toSet()))
+            .compose(titlesIds -> precedingSucceedingTitlesHelper.deletePrecedingSucceedingTitles(titlesIds, context))
+            .compose(ar -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(mappedInstance, context))
+            .map(instanceAsJson);
+        })
+        .onComplete(ar -> {
+          if (ar.succeeded()) {
+            dataImportEventPayload.getContext().put(INSTANCE.value(), ar.result().encode());
+            future.complete(dataImportEventPayload);
+          } else {
+            LOGGER.error("Error updating inventory Instance", ar.cause());
+            future.completeExceptionally(ar.cause());
+          }
+        });
     } catch (Exception e) {
       LOGGER.error("Error updating inventory Instance", e);
       future.completeExceptionally(e);
