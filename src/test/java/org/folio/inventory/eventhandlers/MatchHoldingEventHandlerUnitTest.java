@@ -148,8 +148,7 @@ public class MatchHoldingEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback =
-        (Consumer<Success<MultipleRecords<HoldingsRecord>>>) ans.getArguments()[2];
+      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback = ans.getArgument(2);
       Success<MultipleRecords<HoldingsRecord>> result =
         new Success<>(new MultipleRecords<>(new ArrayList<>(), 0));
       callback.accept(result);
@@ -177,8 +176,7 @@ public class MatchHoldingEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback =
-        (Consumer<Success<MultipleRecords<HoldingsRecord>>>) ans.getArguments()[2];
+      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback = ans.getArgument(2);
       Success<MultipleRecords<HoldingsRecord>> result =
         new Success<>(new MultipleRecords<>(asList(createHolding(), createHolding()), 2));
       callback.accept(result);
@@ -200,8 +198,7 @@ public class MatchHoldingEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Failure> callback =
-        (Consumer<Failure>) ans.getArguments()[3];
+      Consumer<Failure> callback = ans.getArgument(3);
       Failure result =
         new Failure("Internal Server Error", 500);
       callback.accept(result);
@@ -299,8 +296,7 @@ public class MatchHoldingEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback =
-        (Consumer<Success<MultipleRecords<HoldingsRecord>>>) ans.getArguments()[2];
+      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback = ans.getArgument(2);
       Success<MultipleRecords<HoldingsRecord>> result =
         new Success<>(new MultipleRecords<>(singletonList(createHolding()), 1));
       callback.accept(result);
@@ -332,8 +328,7 @@ public class MatchHoldingEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback =
-        (Consumer<Success<MultipleRecords<HoldingsRecord>>>) ans.getArguments()[2];
+      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback = ans.getArgument(2);
       Success<MultipleRecords<HoldingsRecord>> result =
         new Success<>(new MultipleRecords<>(singletonList(createHolding()), 1));
       callback.accept(result);

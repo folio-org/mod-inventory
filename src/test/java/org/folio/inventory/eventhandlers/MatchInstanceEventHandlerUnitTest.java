@@ -114,8 +114,7 @@ public class MatchInstanceEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback =
-        (Consumer<Success<MultipleRecords<Instance>>>) ans.getArguments()[2];
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
       Success<MultipleRecords<Instance>> result =
         new Success<>(new MultipleRecords<>(singletonList(createInstance()), 1));
       callback.accept(result);
@@ -148,8 +147,7 @@ public class MatchInstanceEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback =
-        (Consumer<Success<MultipleRecords<Instance>>>) ans.getArguments()[2];
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
       Success<MultipleRecords<Instance>> result =
         new Success<>(new MultipleRecords<>(new ArrayList<>(), 0));
       callback.accept(result);
@@ -177,8 +175,7 @@ public class MatchInstanceEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback =
-        (Consumer<Success<MultipleRecords<Instance>>>) ans.getArguments()[2];
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
       Success<MultipleRecords<Instance>> result =
         new Success<>(new MultipleRecords<>(asList(createInstance(), createInstance()), 2));
       callback.accept(result);
@@ -200,8 +197,7 @@ public class MatchInstanceEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Failure> callback =
-        (Consumer<Failure>) ans.getArguments()[3];
+      Consumer<Failure> callback = ans.getArgument(3);
       Failure result =
         new Failure("Internal Server Error", 500);
       callback.accept(result);
@@ -299,8 +295,7 @@ public class MatchInstanceEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback =
-        (Consumer<Success<MultipleRecords<Instance>>>) ans.getArguments()[2];
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
       Success<MultipleRecords<Instance>> result =
         new Success<>(new MultipleRecords<>(singletonList(createInstance()), 1));
       callback.accept(result);

@@ -115,8 +115,7 @@ public class MatchItemEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Item>>> callback =
-        (Consumer<Success<MultipleRecords<Item>>>) ans.getArguments()[2];
+      Consumer<Success<MultipleRecords<Item>>> callback = ans.getArgument(2);
       Success<MultipleRecords<Item>> result =
         new Success<>(new MultipleRecords<>(singletonList(createItem()), 1));
       callback.accept(result);
@@ -144,8 +143,7 @@ public class MatchItemEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Item>>> callback =
-        (Consumer<Success<MultipleRecords<Item>>>) ans.getArguments()[2];
+      Consumer<Success<MultipleRecords<Item>>> callback = ans.getArgument(2);
       Success<MultipleRecords<Item>> result =
         new Success<>(new MultipleRecords<>(new ArrayList<>(), 0));
       callback.accept(result);
@@ -173,8 +171,7 @@ public class MatchItemEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Item>>> callback =
-        (Consumer<Success<MultipleRecords<Item>>>) ans.getArguments()[2];
+      Consumer<Success<MultipleRecords<Item>>> callback = ans.getArgument(2);
       Success<MultipleRecords<Item>> result =
         new Success<>(new MultipleRecords<>(asList(createItem(), createItem()), 2));
       callback.accept(result);
@@ -196,8 +193,7 @@ public class MatchItemEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Failure> callback =
-        (Consumer<Failure>) ans.getArguments()[3];
+      Consumer<Failure> callback = ans.getArgument(3);
       Failure result =
         new Failure("Internal Server Error", 500);
       callback.accept(result);
@@ -295,8 +291,7 @@ public class MatchItemEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Item>>> callback =
-        (Consumer<Success<MultipleRecords<Item>>>) ans.getArguments()[2];
+      Consumer<Success<MultipleRecords<Item>>> callback = ans.getArgument(2);
       Success<MultipleRecords<Item>> result =
         new Success<>(new MultipleRecords<>(singletonList(createItem()), 1));
       callback.accept(result);
@@ -329,8 +324,7 @@ public class MatchItemEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Item>>> callback =
-        (Consumer<Success<MultipleRecords<Item>>>) ans.getArguments()[2];
+      Consumer<Success<MultipleRecords<Item>>> callback = ans.getArgument(2);
       Success<MultipleRecords<Item>> result =
         new Success<>(new MultipleRecords<>(singletonList(createItem()), 1));
       callback.accept(result);
@@ -359,17 +353,14 @@ public class MatchItemEventHandlerUnitTest {
   }
 
   private DataImportEventPayload createEventPayload() {
-    HashMap<String, String> context = new HashMap<>();
-//    context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
-//    context.put(RELATIONS, MATCHING_RELATIONS);
-
     return new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withEventsChain(new ArrayList<>())
       .withOkapiUrl("http://localhost:9493")
       .withTenant("diku")
       .withToken("token")
-      .withContext(context)
+      .withContext(new HashMap<>())
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withId(UUID.randomUUID().toString())
         .withContentType(MATCH_PROFILE)
