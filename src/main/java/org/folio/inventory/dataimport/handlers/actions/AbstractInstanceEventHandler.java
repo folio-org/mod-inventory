@@ -29,8 +29,6 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   protected static final Logger LOGGER = LogManager.getLogger(AbstractInstanceEventHandler.class);
   protected static final String MARC_FORMAT = "MARC";
   protected static final String MARC_BIB_RECORD_FORMAT = "MARC_BIB";
-  protected static final String MAPPING_RULES_KEY = "MAPPING_RULES";
-  protected static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
   protected static final String INSTANCE_PATH = "instance";
   protected static final List<String> requiredFields = Arrays.asList("source", "title", "instanceTypeId");
 
@@ -46,13 +44,12 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     dataImportEventPayload.getContext().put(INSTANCE.value(), new JsonObject().encode());
   }
 
-  protected org.folio.Instance defaultMapRecordToInstance(DataImportEventPayload dataImportEventPayload) {
+  protected org.folio.Instance defaultMapRecordToInstance(DataImportEventPayload dataImportEventPayload,
+                                                          JsonObject mappingRules, MappingParameters mappingParameters) {
     try {
       HashMap<String, String> context = dataImportEventPayload.getContext();
-      JsonObject mappingRules = new JsonObject(context.get(MAPPING_RULES_KEY));
       JsonObject parsedRecord = new JsonObject((String) new JsonObject(context.get(MARC_BIBLIOGRAPHIC.value()))
         .mapTo(Record.class).getParsedRecord().getContent());
-      MappingParameters mappingParameters = new JsonObject(context.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
       RecordMapper<org.folio.Instance> recordMapper = RecordMapperBuilder.buildMapper(MARC_BIB_RECORD_FORMAT);
       var instance = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
       dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(new JsonObject().put(INSTANCE_PATH, JsonObject.mapFrom(instance))));

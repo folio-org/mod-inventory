@@ -1,5 +1,6 @@
 package org.folio.inventory.eventhandlers;
 
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
@@ -15,6 +16,7 @@ import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.MatchHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchItemEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.loaders.HoldingLoader;
@@ -28,6 +30,7 @@ import org.folio.processing.value.MissingValue;
 import org.folio.processing.value.StringValue;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Field;
+import org.folio.rest.jaxrs.model.MappingMetadataDto;
 import org.folio.rest.jaxrs.model.MatchExpression;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.junit.Before;
@@ -40,6 +43,7 @@ import org.mockito.MockitoAnnotations;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -83,6 +87,8 @@ public class MatchHoldingEventHandlerUnitTest {
   private HoldingsRecordCollection holdingCollection;
   @Mock
   private MarcValueReaderImpl marcValueReader;
+  @Mock
+  private MappingMetadataCache mappingMetadataCache;
   @InjectMocks
   private HoldingLoader holdingLoader = new HoldingLoader(storage, Vertx.vertx());
 
@@ -97,6 +103,11 @@ public class MatchHoldingEventHandlerUnitTest {
       .thenReturn(StringValue.of(HOLDING_HRID));
     MatchValueReaderFactory.register(marcValueReader);
     MatchValueLoaderFactory.register(holdingLoader);
+
+    when(mappingMetadataCache.get(anyString(), any(Context.class)))
+      .thenReturn(Future.succeededFuture(Optional.of(new MappingMetadataDto()
+        .withMappingRules(new JsonObject().encode())
+        .withMappingParams(LOCATIONS_PARAMS))));
   }
 
   @Test
@@ -104,8 +115,7 @@ public class MatchHoldingEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback =
-        (Consumer<Success<MultipleRecords<HoldingsRecord>>>) ans.getArguments()[2];
+      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback = ans.getArgument(2);
       Success<MultipleRecords<HoldingsRecord>> result =
         new Success<>(new MultipleRecords<>(singletonList(createHolding()), 1));
       callback.accept(result);
@@ -113,7 +123,12 @@ public class MatchHoldingEventHandlerUnitTest {
     }).when(holdingCollection)
       .findByCql(eq(format("hrid == \"%s\"", HOLDING_HRID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchHoldingEventHandler();
+    when(mappingMetadataCache.get(anyString(), any(Context.class)))
+      .thenReturn(Future.succeededFuture(Optional.of(new MappingMetadataDto()
+        .withMappingRules(new JsonObject().encode())
+        .withMappingParams(LOCATIONS_PARAMS))));
+
+    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -133,8 +148,7 @@ public class MatchHoldingEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback =
-        (Consumer<Success<MultipleRecords<HoldingsRecord>>>) ans.getArguments()[2];
+      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback = ans.getArgument(2);
       Success<MultipleRecords<HoldingsRecord>> result =
         new Success<>(new MultipleRecords<>(new ArrayList<>(), 0));
       callback.accept(result);
@@ -142,7 +156,7 @@ public class MatchHoldingEventHandlerUnitTest {
     }).when(holdingCollection)
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchHoldingEventHandler();
+    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -162,8 +176,7 @@ public class MatchHoldingEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback =
-        (Consumer<Success<MultipleRecords<HoldingsRecord>>>) ans.getArguments()[2];
+      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback = ans.getArgument(2);
       Success<MultipleRecords<HoldingsRecord>> result =
         new Success<>(new MultipleRecords<>(asList(createHolding(), createHolding()), 2));
       callback.accept(result);
@@ -171,7 +184,7 @@ public class MatchHoldingEventHandlerUnitTest {
     }).when(holdingCollection)
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchHoldingEventHandler();
+    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -185,8 +198,7 @@ public class MatchHoldingEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Failure> callback =
-        (Consumer<Failure>) ans.getArguments()[3];
+      Consumer<Failure> callback = ans.getArgument(3);
       Failure result =
         new Failure("Internal Server Error", 500);
       callback.accept(result);
@@ -194,7 +206,7 @@ public class MatchHoldingEventHandlerUnitTest {
     }).when(holdingCollection)
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchHoldingEventHandler();
+    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -210,7 +222,7 @@ public class MatchHoldingEventHandlerUnitTest {
     doThrow(new UnsupportedEncodingException()).when(holdingCollection)
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchHoldingEventHandler();
+    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -226,7 +238,7 @@ public class MatchHoldingEventHandlerUnitTest {
     when(marcValueReader.read(any(DataImportEventPayload.class), any(MatchDetail.class)))
       .thenReturn(MissingValue.getInstance());
 
-    EventHandler eventHandler = new MatchHoldingEventHandler();
+    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -243,14 +255,14 @@ public class MatchHoldingEventHandlerUnitTest {
 
   @Test
   public void shouldReturnFalseOnIsEligibleIfNullCurrentNode() {
-    EventHandler eventHandler = new MatchItemEventHandler();
+    EventHandler eventHandler = new MatchItemEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = new DataImportEventPayload();
     assertFalse(eventHandler.isEligible(eventPayload));
   }
 
   @Test
   public void shouldReturnFalseOnIsEligibleIfCurrentNodeTypeIsNotMatchProfile() {
-    EventHandler eventHandler = new MatchItemEventHandler();
+    EventHandler eventHandler = new MatchItemEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withContentType(MAPPING_PROFILE));
@@ -259,7 +271,7 @@ public class MatchHoldingEventHandlerUnitTest {
 
   @Test
   public void shouldReturnFalseOnIsEligibleForNotItemMatchProfile() {
-    EventHandler eventHandler = new MatchItemEventHandler();
+    EventHandler eventHandler = new MatchItemEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withContentType(MATCH_PROFILE)
@@ -270,7 +282,7 @@ public class MatchHoldingEventHandlerUnitTest {
 
   @Test
   public void shouldReturnTrueOnIsEligibleForItemMatchProfile() {
-    EventHandler eventHandler = new MatchItemEventHandler();
+    EventHandler eventHandler = new MatchItemEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withContentType(MATCH_PROFILE)
@@ -284,8 +296,7 @@ public class MatchHoldingEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback =
-        (Consumer<Success<MultipleRecords<HoldingsRecord>>>) ans.getArguments()[2];
+      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback = ans.getArgument(2);
       Success<MultipleRecords<HoldingsRecord>> result =
         new Success<>(new MultipleRecords<>(singletonList(createHolding()), 1));
       callback.accept(result);
@@ -293,7 +304,7 @@ public class MatchHoldingEventHandlerUnitTest {
     }).when(holdingCollection)
       .findByCql(eq(format("hrid == \"%s\" AND id == \"%s\"", HOLDING_HRID, HOLDING_ID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchHoldingEventHandler();
+    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache);
     HashMap<String, String> context = new HashMap<>();
     context.put(EntityType.HOLDINGS.value(), JsonObject.mapFrom(new HoldingsRecord().withId(HOLDING_ID)).encode());
     context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
@@ -317,8 +328,7 @@ public class MatchHoldingEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback =
-        (Consumer<Success<MultipleRecords<HoldingsRecord>>>) ans.getArguments()[2];
+      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback = ans.getArgument(2);
       Success<MultipleRecords<HoldingsRecord>> result =
         new Success<>(new MultipleRecords<>(singletonList(createHolding()), 1));
       callback.accept(result);
@@ -326,7 +336,7 @@ public class MatchHoldingEventHandlerUnitTest {
     }).when(holdingCollection)
       .findByCql(eq(format("hrid == \"%s\" AND instanceId == \"%s\"", HOLDING_HRID, INSTANCE_ID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchHoldingEventHandler();
+    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache);
     HashMap<String, String> context = new HashMap<>();
     context.put(EntityType.INSTANCE.value(), JsonObject.mapFrom(new Instance().withId(INSTANCE_ID)).encode());
     context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
@@ -346,17 +356,14 @@ public class MatchHoldingEventHandlerUnitTest {
   }
 
   private DataImportEventPayload createEventPayload() {
-    HashMap<String, String> context = new HashMap<>();
-    context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
-    context.put(RELATIONS, MATCHING_RELATIONS);
-
     return new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withEventsChain(new ArrayList<>())
       .withOkapiUrl("http://localhost:9493")
       .withTenant("diku")
       .withToken("token")
-      .withContext(context)
+      .withContext(new HashMap<>())
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withId(UUID.randomUUID().toString())
         .withContentType(MATCH_PROFILE)
