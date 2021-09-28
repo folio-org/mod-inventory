@@ -19,7 +19,7 @@ public class ItemUtilTest {
   @Test
   public void shouldReturnItemAsMappingResultRepresentation() {
     // given
-    Item item = new Item(UUID.randomUUID().toString(), UUID.randomUUID().toString(),
+    Item item = new Item(UUID.randomUUID().toString(), "2", UUID.randomUUID().toString(),
       new Status(AVAILABLE), UUID.randomUUID().toString(), UUID.randomUUID().toString(), null)
       .withTemporaryLoanTypeId(UUID.randomUUID().toString())
       .withPermanentLocationId(UUID.randomUUID().toString())
@@ -31,6 +31,7 @@ public class ItemUtilTest {
 
     // then
     Assert.assertEquals(item.id, actualItemJson.getString("id"));
+    Assert.assertEquals(item.getVersion(), actualItemJson.getString("_version"));
     Assert.assertEquals(item.getHoldingId(), actualItemJson.getString("holdingsRecordId"));
     Assert.assertEquals(item.getStatus().getName().value(), getNestedProperty(actualItemJson, "status", "name"));
     Assert.assertEquals(item.getMaterialTypeId(), getNestedProperty(actualItemJson, "materialType", "id"));

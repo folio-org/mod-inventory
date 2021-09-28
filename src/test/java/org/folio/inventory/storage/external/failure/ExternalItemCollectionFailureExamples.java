@@ -154,6 +154,7 @@ public abstract class ExternalItemCollectionFailureExamples {
   private static Item createItem() {
     return new Item(null,
       null,
+      null,
       new Status(ItemStatusName.CHECKED_OUT), UUID.randomUUID().toString(),
       UUID.randomUUID().toString(),  null)
             .withBarcode(UUID.randomUUID().toString())

@@ -60,7 +60,8 @@ public class InstanceUtilTest {
     tagList.add("Tag2");
 
     org.folio.inventory.domain.instances.Instance existing =
-      new org.folio.inventory.domain.instances.Instance("30773a27-b485-4dab-aeb6-b8c04fa3cb17", "in000000001", "source", "title", "30773a27-b485-4dab-aeb6-b8c04fa3cb19");
+      new org.folio.inventory.domain.instances.Instance("30773a27-b485-4dab-aeb6-b8c04fa3cb17", "7", "in000000001",
+          "source", "title", "30773a27-b485-4dab-aeb6-b8c04fa3cb19");
     existing.setStatisticalCodeIds(statisticalCodeIds);
     existing.setDiscoverySuppress(true);
     existing.setStaffSuppress(true);

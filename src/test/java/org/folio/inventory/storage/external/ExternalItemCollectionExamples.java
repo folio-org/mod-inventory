@@ -343,6 +343,7 @@ public class ExternalItemCollectionExamples {
   private Item smallAngryPlanet() {
     return new Item(null,
       null,
+      null,
       new Status(ItemStatusName.AVAILABLE), bookMaterialTypeId, canCirculateLoanTypeId, null)
       .withBarcode("036000291452")
       .withTemporaryLocationId(annexLibraryLocationId)
@@ -357,6 +358,7 @@ public class ExternalItemCollectionExamples {
   private Item nod() {
     return new Item(null,
       null,
+      null,
       new Status(ItemStatusName.AVAILABLE), bookMaterialTypeId, canCirculateLoanTypeId, null)
       .withBarcode("565578437802")
       .withTemporaryLocationId(annexLibraryLocationId)
@@ -368,6 +370,7 @@ public class ExternalItemCollectionExamples {
 
   private Item uprooted() {
     return new Item(null,
+      null,
       null,
       new Status(ItemStatusName.AVAILABLE), bookMaterialTypeId, canCirculateLoanTypeId, null)
       .withBarcode("657670342075")
@@ -381,6 +384,7 @@ public class ExternalItemCollectionExamples {
   private Item temeraire() {
     return new Item(null,
       null,
+      null,
       new Status(ItemStatusName.AVAILABLE), bookMaterialTypeId,
       canCirculateLoanTypeId, null)
       .withBarcode("232142443432")
@@ -393,6 +397,7 @@ public class ExternalItemCollectionExamples {
 
   private Item interestingTimes() {
     return new Item(null,
+      null,
       null,
       new Status(ItemStatusName.AVAILABLE), bookMaterialTypeId, canCirculateLoanTypeId, null)
       .withBarcode("56454543534")

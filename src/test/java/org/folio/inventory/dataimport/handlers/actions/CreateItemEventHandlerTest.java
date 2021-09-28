@@ -306,7 +306,7 @@ public class CreateItemEventHandlerTest {
 
     // given
     Mockito.doAnswer(invocationOnMock -> {
-      Item itemByCql = new Item(null, null, new Status(AVAILABLE), null, null, null);
+      Item itemByCql = new Item(null, null, null, new Status(AVAILABLE), null, null, null);
       MultipleRecords<Item> result = new MultipleRecords<>(Collections.singletonList(itemByCql), 0);
       Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
       successHandler.accept(new Success<>(result));
