@@ -1,3 +1,7 @@
+## 17.0.6 2021-09-28
+
+* Fix Instance overlay with source=FOLIO (MODINV-505)
+
 ## 17.0.5 2021-09-10
 
 * Fix update of Inventory record triggered by data import with match on SRS record (MODINV-487)
