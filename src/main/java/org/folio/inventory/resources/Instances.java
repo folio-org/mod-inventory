@@ -1,23 +1,12 @@
 package org.folio.inventory.resources;
 
-import static io.netty.util.internal.StringUtil.COMMA;
-import static java.lang.String.format;
-import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.folio.inventory.support.CompletableFutures.failedFuture;
-import static org.folio.inventory.support.EndpointFailureHandler.doExceptionally;
-import static org.folio.inventory.support.EndpointFailureHandler.getKnownException;
-import static org.folio.inventory.support.EndpointFailureHandler.handleFailure;
-import static org.folio.inventory.support.http.server.SuccessResponse.noContent;
-import static org.folio.inventory.validation.InstancesValidators.refuseWhenHridChanged;
-
-import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import java.util.stream.Collectors;
-
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
@@ -31,6 +20,7 @@ import org.folio.inventory.domain.instances.InstanceRelationship;
 import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
 import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
+import org.folio.inventory.exceptions.UnprocessableEntityException;
 import org.folio.inventory.services.InstanceRelationshipsService;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
@@ -45,22 +35,38 @@ import org.folio.inventory.support.http.server.RedirectResponse;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
 import org.folio.inventory.validation.InstancePrecedingSucceedingTitleValidators;
 import org.folio.inventory.validation.InstancesValidators;
-import org.folio.inventory.exceptions.UnprocessableEntityException;
 import org.folio.rest.client.SourceStorageRecordsClient;
 
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.BodyHandler;
+import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.stream.Collectors;
+
+import static io.netty.util.internal.StringUtil.COMMA;
+import static java.lang.String.format;
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.folio.inventory.support.CompletableFutures.failedFuture;
+import static org.folio.inventory.support.EndpointFailureHandler.doExceptionally;
+import static org.folio.inventory.support.EndpointFailureHandler.getKnownException;
+import static org.folio.inventory.support.EndpointFailureHandler.handleFailure;
+import static org.folio.inventory.support.http.server.SuccessResponse.noContent;
+import static org.folio.inventory.validation.InstancesValidators.refuseWhenHridChanged;
 
 public class Instances extends AbstractInstances {
   private static final String INSTANCES_CONTEXT_PATH = INSTANCES_PATH + "/context";
-  private static final String BLOCKED_FIELDS_CONFIG_PATH = INVENTORY_PATH + "/config/instances/blocked-fields";
-  private static final String BLOCKED_FIELDS_UPDATE_ERROR_MESSAGE = "Instance is controlled by MARC record, "
+  private static final String INSTANCE_BLOCKED_FIELDS_CONFIG_PATH = INVENTORY_PATH + "/config/instances/blocked-fields";
+  private static final String INSTANCE_BLOCKED_FIELDS_UPDATE_ERROR_MESSAGE = "Instance is controlled by MARC record, "
     + "these fields are blocked and can not be updated: ";
+  private static final String HOLDINGS_BLOCKED_FIELDS_CONFIG_PATH = INVENTORY_PATH + "/config/holdings/blocked-fields";
+
   private static final String ID = "id";
 
   public Instances(final Storage storage, final HttpClient client) {
@@ -72,7 +78,8 @@ public class Instances extends AbstractInstances {
     router.put(INSTANCES_PATH + "*").handler(BodyHandler.create());
 
     router.get(INSTANCES_CONTEXT_PATH).handler(this::getMetadataContext);
-    router.get(BLOCKED_FIELDS_CONFIG_PATH).handler(this::getBlockedFieldsConfig);
+    router.get(INSTANCE_BLOCKED_FIELDS_CONFIG_PATH).handler(this::getInstanceBlockedFields);
+    router.get(HOLDINGS_BLOCKED_FIELDS_CONFIG_PATH).handler(this::getHoldingsBlockedFields);
 
     router.get(INSTANCES_PATH).handler(this::getAll);
     router.post(INSTANCES_PATH).handler(this::create);
@@ -93,9 +100,15 @@ public class Instances extends AbstractInstances {
     JsonResponse.success(routingContext.response(), representation);
   }
 
-  private void getBlockedFieldsConfig(RoutingContext routingContext) {
+  private void getInstanceBlockedFields(RoutingContext routingContext) {
     JsonObject response = new JsonObject();
     response.put("blockedFields", new JsonArray(Json.encode(config.getInstanceBlockedFields())));
+    JsonResponse.success(routingContext.response(), response);
+  }
+
+  private void getHoldingsBlockedFields(RoutingContext routingContext) {
+    JsonObject response = new JsonObject();
+    response.put("blockedFields", new JsonArray(Json.encode(config.getHoldingsBlockedFields())));
     JsonResponse.success(routingContext.response(), response);
   }
 
@@ -797,7 +810,7 @@ public class Instances extends AbstractInstances {
     if (isInstanceControlledByRecord(existingInstance)
       && areInstanceBlockedFieldsChanged(existingInstance, updatedInstance)) {
 
-      String errorMessage = BLOCKED_FIELDS_UPDATE_ERROR_MESSAGE + StringUtils
+      String errorMessage = INSTANCE_BLOCKED_FIELDS_UPDATE_ERROR_MESSAGE + StringUtils
         .join(config.getInstanceBlockedFields(), COMMA);
 
       log.error(errorMessage);

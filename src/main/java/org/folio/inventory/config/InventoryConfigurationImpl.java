@@ -35,10 +35,31 @@ public class InventoryConfigurationImpl implements InventoryConfiguration {
     Instance.SUCCEEDING_TITLES_KEY
     );
 
+  private static final Set<String> HOLDINGS_BLOCKED_FIELDS = Sets.newHashSet(
+    "formerIds",
+    "holdingsTypeId",
+    "permanentLocationId",
+    "shelvingTitle",
+    "copyNumber",
+    "callNumberTypeId",
+    "callNumberPrefix",
+    "callNumber",
+    "callNumberSuffix",
+    "holdingsStatements",
+    "holdingsStatementsForIndexes",
+    "holdingsStatementsForSupplements",
+    "notes",
+    "electronicAccess"
+  );
+
   public InventoryConfigurationImpl() {
   }
 
   public Set<String> getInstanceBlockedFields() {
     return INSTANCE_BLOCKED_FIELDS;
+  }
+
+  public Set<String> getHoldingsBlockedFields() {
+    return HOLDINGS_BLOCKED_FIELDS;
   }
 }

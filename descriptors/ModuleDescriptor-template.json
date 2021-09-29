@@ -456,12 +456,18 @@
     },
     {
       "id": "inventory-config",
-      "version": "0.1",
+      "version": "0.2",
       "handlers": [
         {
           "methods": ["GET"],
           "pathPattern": "/inventory/config/instances/blocked-fields",
           "permissionsRequired": ["inventory.config.instances.blocked-fields.get"],
+          "modulePermissions": []
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/inventory/config/holdings/blocked-fields",
+          "permissionsRequired": ["inventory.config.holdings.blocked-fields.get"],
           "modulePermissions": []
         }
       ]
@@ -725,6 +731,11 @@
       "description": "Get configuration for blocked fields of instances"
     },
     {
+      "permissionName": "inventory.config.holdings.blocked-fields.get",
+      "displayName": "Inventory - get configuration for blocked fields of holdings",
+      "description": "Get configuration for blocked fields of holdings"
+    },
+    {
       "permissionName": "inventory.all",
       "displayName": "Inventory - all permissions",
       "description": "Entire set of permissions needed to use the inventory",
@@ -745,6 +756,7 @@
         "inventory.ingest.mods.post",
         "inventory.ingest.mods.status.get",
         "inventory.config.instances.blocked-fields.get",
+        "inventory.config.holdings.blocked-fields.get",
         "inventory.items.item.mark-withdrawn.post",
         "inventory.items.item.mark-in-process.post",
         "inventory.items.item.mark-in-process-non-requestable.post",

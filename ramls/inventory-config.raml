@@ -29,3 +29,19 @@ types:
             body:
               text/plain:
                 example: "Internal server error, contact administrator"
+  /holdings:
+    /blocked-fields:
+      get:
+        description: "Provides configuration with blocked fields of holdings"
+        responses:
+          200:
+            description: "Array of blocked fields of holdings"
+              body:
+                application/json:
+                  example: !include examples/blocked_fields_get.json
+                  schema: blocked-fields
+          500:
+            description: "Internal server error"
+            body:
+              text/plain:
+                example: "Internal server error, contact administrator"
