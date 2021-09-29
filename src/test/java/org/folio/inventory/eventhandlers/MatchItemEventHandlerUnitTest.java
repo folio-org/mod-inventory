@@ -377,7 +377,7 @@ public class MatchItemEventHandlerUnitTest {
   }
 
   private Item createItem() {
-    return new Item(ITEM_ID, HOLDING_ID,
+    return new Item(ITEM_ID, "3", HOLDING_ID,
       new Status(ItemStatusName.AVAILABLE), UUID.randomUUID().toString(), UUID.randomUUID().toString(), new JsonObject());
   }
 

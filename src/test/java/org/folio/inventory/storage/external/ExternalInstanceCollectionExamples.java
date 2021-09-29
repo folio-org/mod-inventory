@@ -331,6 +331,7 @@ public class ExternalInstanceCollectionExamples {
     return new Instance(
             UUID.randomUUID().toString(),
             null,
+            null,
             "local",
             title,
             BOOKS_INSTANCE_TYPE)

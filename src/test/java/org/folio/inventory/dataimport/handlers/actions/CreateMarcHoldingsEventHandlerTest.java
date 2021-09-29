@@ -148,7 +148,7 @@ public class CreateMarcHoldingsEventHandlerTest {
 
     doAnswer(invocationOnMock -> {
       instanceId = String.valueOf(UUID.randomUUID());
-      Instance instance = new Instance(instanceId, String.valueOf(UUID.randomUUID()),
+      Instance instance = new Instance(instanceId, "2", String.valueOf(UUID.randomUUID()),
         String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
       List<Instance> instanceList = Collections.singletonList(instance);
       MultipleRecords<Instance> result = new MultipleRecords<>(instanceList, 1);
@@ -328,7 +328,7 @@ public class CreateMarcHoldingsEventHandlerTest {
   public void shouldProcessEventIfInstanceFoundButTotalRecordsIsNotEqualOne() throws InterruptedException, ExecutionException, TimeoutException, IOException {
     doAnswer(invocationOnMock -> {
       instanceId = String.valueOf(UUID.randomUUID());
-      Instance instance = new Instance(instanceId, String.valueOf(UUID.randomUUID()),
+      Instance instance = new Instance(instanceId, "2", String.valueOf(UUID.randomUUID()),
         String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
       MultipleRecords<Instance> result = new MultipleRecords<>(Collections.singletonList(instance), 0);
       Consumer<Success<MultipleRecords<Instance>>> successHandler = invocationOnMock.getArgument(2);

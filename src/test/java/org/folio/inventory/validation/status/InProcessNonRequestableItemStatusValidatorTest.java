@@ -52,7 +52,7 @@ public class InProcessNonRequestableItemStatusValidatorTest {
   public void itemCanBeMarkedAsInProcessNonRequestableWhenInAcceptableSourceStatus(String sourceStatus) {
     final var targetValidator = validators.getValidator(IN_PROCESS_NON_REQUESTABLE);
 
-    final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
+    final var item = new Item(null, null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
 
     final var validationFuture = targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item);
 
@@ -69,7 +69,7 @@ public class InProcessNonRequestableItemStatusValidatorTest {
   @Test
   public void itemCannotBeMarkedAsInProcessNonRequestableWhenNotInAcceptableSourceStatus(String sourceStatus) {
     final var targetValidator = validators.getValidator(IN_PROCESS_NON_REQUESTABLE);
-    final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
+    final var item = new Item(null, null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
     final var validationFuture = targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item);
 
     Exception e = assertThrows(
