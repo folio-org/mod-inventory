@@ -51,7 +51,7 @@ public class InProcessItemStatusValidatorTest {
   @Test
   public void itemCanBeMarkedAsInProcessWhenInAcceptableSourceStatus(String sourceStatus) {
     final var targetValidator = validators.getValidator(IN_PROCESS);
-    final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
+    final var item = new Item(null, null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
     final var validationFuture = targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item);
 
     validationFuture.get(1, TimeUnit.SECONDS);
@@ -66,7 +66,7 @@ public class InProcessItemStatusValidatorTest {
   @Test
   public void itemCannotBeMarkedAsInProcessWhenNotInAcceptableSourceStatus(String sourceStatus) {
     final var targetValidator = validators.getValidator(IN_PROCESS);
-    final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
+    final var item = new Item(null, null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
     final var validationFuture = targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item);
 
     Exception e = assertThrows(

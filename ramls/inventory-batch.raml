@@ -1,6 +1,6 @@
 #%RAML 1.0
 title: Inventory API
-version: v0.5
+version: v1.0
 protocols: [ HTTP, HTTPS ]
 baseUri: http://localhost
 
@@ -26,6 +26,11 @@ types:
         body:
           application/json:
             type: instancesBatchResponse
+      409:
+        description: "Optimistic locking version conflict"
+        body:
+          text/plain:
+            example: "version conflict"
       500:
         description: "Internal server error"
         body:

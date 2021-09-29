@@ -103,6 +103,7 @@ public class IngestMessageProcessor {
 
         return new Instance(
                 UUID.randomUUID().toString(),
+                "3",
                 null,
                 "Local: MODS",
                 record.getString(TITLE_PROPERTY),
@@ -138,6 +139,7 @@ public class IngestMessageProcessor {
             String holdingId = possibleHolding.map(holding -> holding.id).orElse(null);
 
             return new Item(null,
+              null,
               holdingId,
               new Status(ItemStatusName.AVAILABLE),
               materialTypes.getString("Book") != null

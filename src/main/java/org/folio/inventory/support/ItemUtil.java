@@ -82,6 +82,7 @@ public final class ItemUtil {
 
     return new Item(
       itemFromServer.getString(ID),
+      itemFromServer.getString(Item.VERSION_KEY),
       itemFromServer.getString(HOLDINGS_RECORD_ID),
       itemFromServer.getString(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY),
       converterForClass(Status.class).fromJson(itemFromServer.getJsonObject(STATUS)),
@@ -134,6 +135,8 @@ public final class ItemUtil {
     itemToSend.put(ID, item.id != null
       ? item.id
       : UUID.randomUUID().toString());
+
+    includeIfPresent(itemToSend, Item.VERSION_KEY, item.getVersion());
 
     itemToSend.put(STATUS, converterForClass(Status.class).toJson(item.getStatus()));
 
@@ -223,6 +226,7 @@ public final class ItemUtil {
 
     return new Item(
       itemRequest.getString(ID),
+      itemRequest.getString(Item.VERSION_KEY),
       itemRequest.getString(HOLDINGS_RECORD_ID),
       itemRequest.getString(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY),
       status,
@@ -276,6 +280,7 @@ public final class ItemUtil {
       ? item.id
       : UUID.randomUUID().toString());
 
+    includeIfPresent(itemJson, Item.VERSION_KEY, item.getVersion());
     itemJson.put(STATUS, converterForClass(Status.class).toJson(item.getStatus()));
 
     if(item.getLastCheckIn() != null) {
