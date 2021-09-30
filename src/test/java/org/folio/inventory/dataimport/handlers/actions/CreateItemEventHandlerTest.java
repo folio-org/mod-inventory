@@ -41,12 +41,7 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -63,7 +58,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class CreateItemEventHandlerTest {
 
@@ -101,7 +96,9 @@ public class CreateItemEventHandlerTest {
       .withMappingFields(Arrays.asList(
         new MappingRule().withPath("item.status.name").withValue("\"statusExpression\"").withEnabled("true"),
         new MappingRule().withPath("item.permanentLoanType.id").withValue("\"permanentLoanTypeExpression\"").withEnabled("true"),
-        new MappingRule().withPath("item.materialType.id").withValue("\"materialTypeExpression\"").withEnabled("true"))));
+        new MappingRule().withPath("item.materialType.id").withValue("\"materialTypeExpression\"").withEnabled("true"),
+        new MappingRule().withPath("item.barcode").withValue("\"statusExpression\"").withEnabled("true")
+      )));
 
   private ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
     .withId(UUID.randomUUID().toString())
@@ -125,7 +122,8 @@ public class CreateItemEventHandlerTest {
   public void setUp() {
     MockitoAnnotations.initMocks(this);
     Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-    Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(AVAILABLE.value()), StringValue.of(UUID.randomUUID().toString()), StringValue.of(UUID.randomUUID().toString()));
+    Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(AVAILABLE.value()), StringValue.of(UUID.randomUUID().toString()),
+      StringValue.of(UUID.randomUUID().toString()), StringValue.of("645398607547"));
     Mockito.when(mockedStorage.getItemCollection(ArgumentMatchers.any(Context.class))).thenReturn(mockedItemCollection);
 
     Mockito.when(mappingMetadataCache.get(anyString(), any(Context.class)))
@@ -263,7 +261,7 @@ public class CreateItemEventHandlerTest {
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
 
-    // then
+    // thenitem.getBarcode()
     future.get(5, TimeUnit.SECONDS);
   }
 
@@ -332,6 +330,61 @@ public class CreateItemEventHandlerTest {
 
     // then
     future.get(5, TimeUnit.SECONDS);
+  }
+
+  @Test
+  public void shouldNotRequestWhenCreatedItemHasEmptyBarcode()
+    throws UnsupportedEncodingException {
+
+    // given
+    Mockito.doAnswer(invocationOnMock -> {
+      Item itemByCql = new Item(null, null, null, new Status(AVAILABLE), null, null, null);
+      MultipleRecords<Item> result = new MultipleRecords<>(Collections.singletonList(itemByCql), 0);
+      Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
+      return null;
+    }).when(mockedItemCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new ItemWriterFactory());
+
+    JsonObject holdingAsJson = new JsonObject().put("id", UUID.randomUUID().toString());
+    HashMap<String, String> payloadContext = new HashMap<>();
+    payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+    payloadContext.put(EntityType.HOLDINGS.value(), holdingAsJson.encode());
+
+    MappingProfile mappingProfile = new MappingProfile()
+      .withId(UUID.randomUUID().toString())
+      .withName("Prelim item from MARC")
+      .withIncomingRecordType(EntityType.MARC_BIBLIOGRAPHIC)
+      .withExistingRecordType(ITEM)
+      .withMappingDetails(new MappingDetail()
+        .withMappingFields(Arrays.asList(
+          new MappingRule().withPath("item.status.name").withValue("\"statusExpression\"").withEnabled("true"),
+          new MappingRule().withPath("item.permanentLoanType.id").withValue("\"permanentLoanTypeExpression\"").withEnabled("true"),
+          new MappingRule().withPath("item.materialType.id").withValue("\"materialTypeExpression\"").withEnabled("true")
+        )));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withCurrentNode(new ProfileSnapshotWrapper()
+        .withProfileId(actionProfile.getId())
+        .withContentType(ACTION_PROFILE)
+        .withContent(JsonObject.mapFrom(actionProfile).getMap())
+        .withChildSnapshotWrappers(Collections.singletonList(
+          new ProfileSnapshotWrapper()
+            .withProfileId(mappingProfile.getId())
+            .withContentType(MAPPING_PROFILE)
+            .withContent(JsonObject.mapFrom(mappingProfile).getMap()))));
+
+    // when
+    createItemHandler.handle(dataImportEventPayload);
+
+    // then
+    verify(mockedItemCollection, Mockito.times(0))
+      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
   }
 
   @Test(expected = ExecutionException.class)
