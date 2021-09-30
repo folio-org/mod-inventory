@@ -28,7 +28,7 @@ import org.folio.kafka.KafkaHeaderUtils;
 import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.Event;
-import org.folio.rest.jaxrs.model.MappingMetadataDto;
+import org.folio.MappingMetadataDto;
 import org.folio.rest.jaxrs.model.Record;
 
 /**

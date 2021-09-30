@@ -26,6 +26,10 @@ import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingPa
 import org.folio.processing.mapping.mapper.reader.Reader;
 import org.folio.processing.mapping.mapper.reader.record.marc.MarcBibReaderFactory;
 import org.folio.processing.value.StringValue;
+import org.folio.rest.jaxrs.model.MappingDetail;
+import org.folio.MappingMetadataDto;
+import org.folio.rest.jaxrs.model.MappingRule;
+import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
 import org.folio.rest.jaxrs.model.*;
 import org.junit.Assert;

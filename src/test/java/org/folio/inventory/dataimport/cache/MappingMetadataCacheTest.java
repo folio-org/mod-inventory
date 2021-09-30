@@ -2,15 +2,12 @@ package org.folio.inventory.dataimport.cache;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
-import org.folio.rest.jaxrs.model.MappingMetadataDto;
-import org.folio.rest.util.OkapiConnectionParams;
+import org.folio.MappingMetadataDto;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;

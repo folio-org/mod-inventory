@@ -45,7 +45,7 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
-import org.folio.rest.jaxrs.model.MappingMetadataDto;
+import org.folio.MappingMetadataDto;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;

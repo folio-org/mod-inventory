@@ -577,7 +577,9 @@
     {
       "id": "bound-with-parts-storage",
       "version": "1.0"
-    },
+    }
+  ],
+  "optional": [
     {
       "id": "mapping-metadata-provider",
       "version": "1.0"
