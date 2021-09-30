@@ -30,18 +30,14 @@ import java.io.UnsupportedEncodingException;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static java.lang.String.format;
 import static java.util.Objects.isNull;
 import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.ActionProfile.Action.UPDATE;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_UPDATED;
 import static org.folio.inventory.domain.items.Item.STATUS_KEY;
@@ -178,6 +174,11 @@ public class UpdateItemEventHandler implements EventHandler {
   }
 
   private Future<Boolean> verifyItemBarcodeUniqueness(Item item, ItemCollection itemCollection) {
+
+    if (isEmpty(item.getBarcode())) {
+      return Future.succeededFuture(true);
+    }
+
     Promise<Boolean> promise = Promise.promise();
     try {
       itemCollection.findByCql(CqlHelper.barcodeIs(item.getBarcode()) + " AND id <> " + item.id, PagingParameters.defaults(),
