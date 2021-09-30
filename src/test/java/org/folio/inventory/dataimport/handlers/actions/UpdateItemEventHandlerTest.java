@@ -234,7 +234,7 @@ public class UpdateItemEventHandlerTest {
     future.get(5, TimeUnit.SECONDS);
   }
 
-  @Test(expected = ExecutionException.class)
+  @Test
   public void shouldNotRequestWhenUpdatedItemHasEmptyBarcode()
     throws UnsupportedEncodingException {
     // given
