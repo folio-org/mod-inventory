@@ -240,16 +240,6 @@
       <artifactId>caffeine</artifactId>
       <version>2.8.5</version>
     </dependency>
-    <dependency>
-      <groupId>org.folio</groupId>
-      <artifactId>mod-data-import-converter-storage-client</artifactId>
-      <version>1.12.0-SNAPSHOT</version>
-    </dependency>
-    <dependency>
-      <groupId>org.folio</groupId>
-      <artifactId>mod-source-record-manager-client</artifactId>
-      <version>3.2.0-SNAPSHOT</version>
-    </dependency>
   </dependencies>
 
   <properties>
@@ -379,6 +369,7 @@
             <configuration>
               <sourcePaths>
                 <path>${basedir}/ramls/holdings-record.json</path>
+                <path>${basedir}/ramls/mappingMetadataDto.json</path>
               </sourcePaths>
               <targetPackage>org.folio</targetPackage>
               <generateBuilders>true</generateBuilders>
