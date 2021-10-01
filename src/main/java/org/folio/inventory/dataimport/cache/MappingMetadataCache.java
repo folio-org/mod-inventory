@@ -1,16 +1,19 @@
 package org.folio.inventory.dataimport.cache;
 
+import java.net.URL;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+import io.vertx.core.json.Json;
+import io.vertx.ext.web.client.WebClient;
+import lombok.SneakyThrows;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.MappingMetadataDto;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.exceptions.CacheLoadingException;
-import org.folio.rest.client.MappingMetadataClient;
-import org.folio.rest.jaxrs.model.MappingMetadataDto;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -18,6 +21,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
+import org.folio.inventory.support.http.client.OkapiHttpClient;
 
 /**
  * Cache for storing MappingMetadataDto entities by jobExecutionId
@@ -46,24 +50,24 @@ public class MappingMetadataCache {
     }
   }
 
+  @SneakyThrows
   private CompletableFuture<Optional<MappingMetadataDto>> loadJobProfileSnapshot(String jobExecutionId, Context context) {
     LOGGER.debug("Trying to load MappingMetadata by jobExecutionId  '{}' for cache, okapi url: {}, tenantId: {}", jobExecutionId, context.getOkapiLocation(), context.getTenantId());
 
-    MappingMetadataClient client = new MappingMetadataClient(context.getOkapiLocation(), context.getTenantId(), context.getToken(), httpClient);
+    OkapiHttpClient client = new OkapiHttpClient(WebClient.wrap(httpClient), new URL(context.getOkapiLocation()), context.getTenantId(), context.getToken(), null, null, null);
 
-    return client.getMappingMetadataByJobExecutionId(jobExecutionId)
-      .toCompletionStage()
+    return client.get(context.getOkapiLocation() + "/mapping-metadata/" + jobExecutionId)
       .toCompletableFuture()
       .thenCompose(httpResponse -> {
-        if (httpResponse.statusCode() == HttpStatus.SC_OK) {
+        if (httpResponse.getStatusCode() == HttpStatus.SC_OK) {
           LOGGER.info("MappingMetadata was loaded by jobExecutionId '{}'", jobExecutionId);
-          return CompletableFuture.completedFuture(Optional.of(httpResponse.bodyAsJson(MappingMetadataDto.class)));
-        } else if (httpResponse.statusCode() == HttpStatus.SC_NOT_FOUND) {
-          LOGGER.warn("MappingMetadata was not found by jobExecutionId '{}'", jobExecutionId);
+          return CompletableFuture.completedFuture(Optional.of(Json.decodeValue(httpResponse.getBody(), MappingMetadataDto.class)));
+        } else if (httpResponse.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
+         LOGGER.warn("MappingMetadata was not found by jobExecutionId '{}'", jobExecutionId);
           return CompletableFuture.completedFuture(Optional.empty());
         } else {
           String message = String.format("Error loading MappingMetadata by id: '%s', status code: %s, response message: %s",
-            jobExecutionId, httpResponse.statusCode(), httpResponse.bodyAsString());
+            jobExecutionId, httpResponse.getStatusCode(), httpResponse.getBody());
           LOGGER.warn(message);
           return CompletableFuture.failedFuture(new CacheLoadingException(message));
         }
