@@ -18,7 +18,7 @@ import org.folio.inventory.storage.Storage;
 import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.Event;
-import org.folio.rest.jaxrs.model.MappingMetadataDto;
+import org.folio.MappingMetadataDto;
 import org.folio.rest.jaxrs.model.Record;
 import org.junit.After;
 import org.junit.Before;
