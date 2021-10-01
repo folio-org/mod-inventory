@@ -1,7 +1,6 @@
 package org.folio.inventory.resources;
 
 import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
@@ -62,11 +61,7 @@ import static org.folio.inventory.validation.InstancesValidators.refuseWhenHridC
 
 public class Instances extends AbstractInstances {
   private static final String INSTANCES_CONTEXT_PATH = INSTANCES_PATH + "/context";
-  private static final String INSTANCE_BLOCKED_FIELDS_CONFIG_PATH = INVENTORY_PATH + "/config/instances/blocked-fields";
-  private static final String INSTANCE_BLOCKED_FIELDS_UPDATE_ERROR_MESSAGE = "Instance is controlled by MARC record, "
-    + "these fields are blocked and can not be updated: ";
-  private static final String HOLDINGS_BLOCKED_FIELDS_CONFIG_PATH = INVENTORY_PATH + "/config/holdings/blocked-fields";
-
+  private static final String BLOCKED_FIELDS_UPDATE_ERROR_MESSAGE = "Instance is controlled by MARC record, these fields are blocked and can not be updated: ";
   private static final String ID = "id";
 
   public Instances(final Storage storage, final HttpClient client) {
@@ -76,15 +71,10 @@ public class Instances extends AbstractInstances {
   public void register(Router router) {
     router.post(INSTANCES_PATH + "*").handler(BodyHandler.create());
     router.put(INSTANCES_PATH + "*").handler(BodyHandler.create());
-
     router.get(INSTANCES_CONTEXT_PATH).handler(this::getMetadataContext);
-    router.get(INSTANCE_BLOCKED_FIELDS_CONFIG_PATH).handler(this::getInstanceBlockedFields);
-    router.get(HOLDINGS_BLOCKED_FIELDS_CONFIG_PATH).handler(this::getHoldingsBlockedFields);
-
     router.get(INSTANCES_PATH).handler(this::getAll);
     router.post(INSTANCES_PATH).handler(this::create);
     router.delete(INSTANCES_PATH).handler(this::deleteAll);
-
     router.get(INSTANCES_PATH + "/:id").handler(this::getById);
     router.put(INSTANCES_PATH + "/:id").handler(this::update);
     router.delete(INSTANCES_PATH + "/:id").handler(this::deleteById);
@@ -98,18 +88,6 @@ public class Instances extends AbstractInstances {
       .put(Instance.TITLE_KEY, "dcterms:title"));
 
     JsonResponse.success(routingContext.response(), representation);
-  }
-
-  private void getInstanceBlockedFields(RoutingContext routingContext) {
-    JsonObject response = new JsonObject();
-    response.put("blockedFields", new JsonArray(Json.encode(config.getInstanceBlockedFields())));
-    JsonResponse.success(routingContext.response(), response);
-  }
-
-  private void getHoldingsBlockedFields(RoutingContext routingContext) {
-    JsonObject response = new JsonObject();
-    response.put("blockedFields", new JsonArray(Json.encode(config.getHoldingsBlockedFields())));
-    JsonResponse.success(routingContext.response(), response);
   }
 
   private void getAll(RoutingContext routingContext) {
@@ -810,7 +788,7 @@ public class Instances extends AbstractInstances {
     if (isInstanceControlledByRecord(existingInstance)
       && areInstanceBlockedFieldsChanged(existingInstance, updatedInstance)) {
 
-      String errorMessage = INSTANCE_BLOCKED_FIELDS_UPDATE_ERROR_MESSAGE + StringUtils
+      String errorMessage = BLOCKED_FIELDS_UPDATE_ERROR_MESSAGE + StringUtils
         .join(config.getInstanceBlockedFields(), COMMA);
 
       log.error(errorMessage);
