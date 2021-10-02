@@ -26,6 +26,7 @@ public class InstanceUpdateDelegate {
 
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
+  private static final String QM_RECORD_VERSION_KEY = "QM_RECORD_VERSION";
   private static final String MARC_FORMAT = "MARC_BIB";
 
   private final Storage storage;
@@ -46,11 +47,18 @@ public class InstanceUpdateDelegate {
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
 
       return getInstanceById(instanceId, instanceCollection)
+        .onSuccess(existingInstance -> fillVersion(existingInstance, eventPayload))
         .compose(existingInstance -> updateInstance(existingInstance, mappedInstance))
         .compose(updatedInstance -> updateInstanceInStorage(updatedInstance, instanceCollection));
     } catch (Exception e) {
       LOGGER.error("Error updating inventory instance", e);
       return Future.failedFuture(e);
+    }
+  }
+
+  private void fillVersion(Instance existingInstance, Map<String, String> eventPayload) {
+    if (eventPayload.containsKey(QM_RECORD_VERSION_KEY)) {
+      existingInstance.setVersion(eventPayload.get(QM_RECORD_VERSION_KEY));
     }
   }
 

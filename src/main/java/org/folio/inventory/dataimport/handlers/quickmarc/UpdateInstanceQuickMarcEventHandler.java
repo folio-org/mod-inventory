@@ -4,8 +4,6 @@ import java.util.Map;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
