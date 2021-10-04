@@ -18,7 +18,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertTrue;
 
-public class InventoryConfigApiExamples extends ApiTests {
+public class InventoryConfigApTest extends ApiTests {
   private static final InventoryConfiguration config = new InventoryConfigurationImpl();
 
   @Test
