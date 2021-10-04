@@ -83,7 +83,7 @@ public class InstanceUpdateDelegate {
     try {
       mappedInstance.setId(existingInstance.getId());
       JsonObject existing = JsonObject.mapFrom(existingInstance);
-      existing.put(VERSION_KEY, existing.remove("version"));
+      adjustVersionField(existing);
       JsonObject mapped = JsonObject.mapFrom(mappedInstance);
       JsonObject mergedInstanceAsJson = InstanceUtil.mergeInstances(existing, mapped);
       Instance mergedInstance = Instance.fromJson(mergedInstanceAsJson);
@@ -92,6 +92,11 @@ public class InstanceUpdateDelegate {
       LOGGER.error("Error updating instance", e);
       return Future.failedFuture(e);
     }
+  }
+
+  private void adjustVersionField(JsonObject existing) {
+    existing.put(VERSION_KEY, existing.getString("version"));
+    existing.remove("version");
   }
 
   private Future<Instance> updateInstanceInStorage(Instance instance, InstanceCollection instanceCollection) {
