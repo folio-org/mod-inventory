@@ -5,7 +5,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
 import static org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle.TITLE_KEY;
 
 import java.io.IOException;
@@ -49,6 +48,7 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
   private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
   private static final String RECORD_PATH = "src/test/resources/handlers/bib-record.json";
   private static final String INSTANCE_ID = "ddd266ef-07ac-4117-be13-d418b8cd6902";
+  private static final String INSTANCE_VERSION = "1";
 
   @Mock
   private Storage storage;
@@ -106,12 +106,14 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
     eventPayload.put("MARC_BIB", record.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
+    eventPayload.put("QM_RECORD_VERSION", INSTANCE_VERSION);
 
     Future<Instance> future = updateInstanceEventHandler.handle(eventPayload);
     Instance updatedInstance = future.result();
 
     Assert.assertNotNull(updatedInstance);
     Assert.assertEquals(INSTANCE_ID, updatedInstance.getId());
+    Assert.assertEquals(INSTANCE_VERSION, updatedInstance.getVersion());
     Assert.assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
     Assert.assertNotNull(
       updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value)).findFirst().orElse(null));
@@ -142,12 +144,14 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
     eventPayload.put("MARC_BIB", Json.encode(record));
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
+    eventPayload.put("QM_RECORD_VERSION", INSTANCE_VERSION);
 
     Future<Instance> future = updateInstanceEventHandler.handle(eventPayload);
     Instance updatedInstance = future.result();
 
     Assert.assertNotNull(updatedInstance);
     Assert.assertEquals(INSTANCE_ID, updatedInstance.getId());
+    Assert.assertEquals(INSTANCE_VERSION, updatedInstance.getVersion());
     Assert.assertTrue(existingInstance.getPrecedingTitles().isEmpty());
     Assert.assertTrue(existingInstance.getSucceedingTitles().isEmpty());
     Assert.assertEquals(1, updatedInstance.getPrecedingTitles().size());

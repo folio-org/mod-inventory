@@ -40,6 +40,7 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
   private static final String INSTANCE_PATH = "src/test/resources/handlers/holdings.json";
   private static final String RECORD_PATH = "src/test/resources/handlers/holdings-record.json";
   private static final String HOLDINGS_ID = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d61";
+  private static final Integer HOLDINGS_VERSION = 1;
 
   @Mock
   private Storage storage;
@@ -91,12 +92,14 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
     eventPayload.put("MARC_HOLDING", record.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
+    eventPayload.put("QM_RECORD_VERSION", HOLDINGS_VERSION.toString());
 
     Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(eventPayload);
     HoldingsRecord updatedHoldings = future.result();
 
     Assert.assertNotNull(updatedHoldings);
     Assert.assertEquals(HOLDINGS_ID, updatedHoldings.getId());
+    Assert.assertEquals(HOLDINGS_VERSION, updatedHoldings.getVersion());
 
     Assert.assertEquals("fe19bae4-da28-472b-be90-d442e2428ead", updatedHoldings.getHoldingsTypeId());
     Assert.assertNotNull(updatedHoldings.getHoldingsStatements());

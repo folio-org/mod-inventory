@@ -19,6 +19,7 @@ import org.folio.rest.jaxrs.model.Record;
 import java.util.Map;
 
 import static java.lang.String.format;
+import static org.folio.inventory.domain.instances.Instance.VERSION_KEY;
 
 public class InstanceUpdateDelegate {
 
@@ -82,6 +83,7 @@ public class InstanceUpdateDelegate {
     try {
       mappedInstance.setId(existingInstance.getId());
       JsonObject existing = JsonObject.mapFrom(existingInstance);
+      existing.put(VERSION_KEY, existing.remove("version"));
       JsonObject mapped = JsonObject.mapFrom(mappedInstance);
       JsonObject mergedInstanceAsJson = InstanceUtil.mergeInstances(existing, mapped);
       Instance mergedInstance = Instance.fromJson(mergedInstanceAsJson);
