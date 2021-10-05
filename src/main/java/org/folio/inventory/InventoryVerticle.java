@@ -14,6 +14,7 @@ import org.folio.inventory.common.WebRequestDiagnostics;
 import org.folio.inventory.domain.ingest.IngestMessageProcessor;
 import org.folio.inventory.resources.Instances;
 import org.folio.inventory.resources.InstancesBatch;
+import org.folio.inventory.resources.InventoryConfigApi;
 import org.folio.inventory.resources.IsbnUtilsApi;
 import org.folio.inventory.resources.Items;
 import org.folio.inventory.resources.ItemsByHoldingsRecordId;
@@ -58,6 +59,7 @@ public class InventoryVerticle extends AbstractVerticle {
     new InstancesBatch(storage, client).register(router);
     new IsbnUtilsApi().register(router);
     new ItemsByHoldingsRecordId(storage, client).register(router);
+    new InventoryConfigApi().register(router);
 
     Handler<AsyncResult<HttpServer>> onHttpServerStart = result -> {
       if (result.succeeded()) {
