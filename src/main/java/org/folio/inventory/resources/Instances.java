@@ -1,5 +1,15 @@
 package org.folio.inventory.resources;
 
+import static io.netty.util.internal.StringUtil.COMMA;
+import static java.lang.String.format;
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.folio.inventory.support.CompletableFutures.failedFuture;
+import static org.folio.inventory.support.EndpointFailureHandler.doExceptionally;
+import static org.folio.inventory.support.EndpointFailureHandler.getKnownException;
+import static org.folio.inventory.support.EndpointFailureHandler.handleFailure;
+import static org.folio.inventory.support.http.server.SuccessResponse.noContent;
+import static org.folio.inventory.validation.InstancesValidators.refuseWhenHridChanged;
+
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -49,15 +59,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 
-import static io.netty.util.internal.StringUtil.COMMA;
-import static java.lang.String.format;
-import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.folio.inventory.support.CompletableFutures.failedFuture;
-import static org.folio.inventory.support.EndpointFailureHandler.doExceptionally;
-import static org.folio.inventory.support.EndpointFailureHandler.getKnownException;
-import static org.folio.inventory.support.EndpointFailureHandler.handleFailure;
-import static org.folio.inventory.support.http.server.SuccessResponse.noContent;
-import static org.folio.inventory.validation.InstancesValidators.refuseWhenHridChanged;
 
 public class Instances extends AbstractInstances {
   private static final String INSTANCES_CONTEXT_PATH = INSTANCES_PATH + "/context";
