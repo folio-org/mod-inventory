@@ -70,8 +70,12 @@ public class ApiRoot {
     return new URL(String.format("%s/convertTo13?%s", isbn(), query));
   }
 
-  public static URL blockedFieldsConfig() throws MalformedURLException {
+  public static URL instanceBlockedFieldsConfig() throws MalformedURLException {
     return new URL(String.format("%s/inventory/config/instances/blocked-fields", ApiTestSuite.apiRoot()));
+  }
+
+  public static URL holdingsBlockedFieldsConfig() throws MalformedURLException {
+    return new URL(String.format("%s/inventory/config/holdings/blocked-fields", ApiTestSuite.apiRoot()));
   }
 
   public static URL tenant()
