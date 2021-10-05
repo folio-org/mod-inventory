@@ -4,10 +4,12 @@ import api.support.ApiRoot;
 import api.support.ApiTests;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.json.JsonObject;
+import junitparams.JUnitParamsRunner;
 import org.folio.inventory.config.InventoryConfiguration;
 import org.folio.inventory.config.InventoryConfigurationImpl;
 import org.folio.inventory.support.http.client.Response;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import java.net.MalformedURLException;
 import java.util.concurrent.ExecutionException;
@@ -18,6 +20,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertTrue;
 
+@RunWith(JUnitParamsRunner.class)
 public class InventoryConfigApiTest extends ApiTests {
   private static final InventoryConfiguration config = new InventoryConfigurationImpl();
 
