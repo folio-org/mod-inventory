@@ -1,4 +1,4 @@
-## 18.0.0 IN-PROGRESS
+## 18.0.0 2021-10-06
 
 * Adds `boundWithTitles` property to individual bound-with item (MODINV-443)
 * Removed explicit dependencies on mod-source-record-manager and mod-data-import-converter-storage clients (MODINV-541)
