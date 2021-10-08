@@ -1,0 +1,177 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "An authority record",
+  "type": "object",
+  "properties": {
+    "uuid": {
+      "type": "string",
+      "description": "Authority UUID, comes from 999 field",
+      "$ref": "uuid.json"
+    },
+    "hPersonalName": {
+      "type": "string",
+      "description": "HEADING PERSONAL NAME, comes from 100 field"
+    },
+    "sftPersonalName": {
+      "type": "array",
+      "description": "SEE FROM TRACING PERSONAL NAME, comes from 400 field",
+      "items": {
+        "type": "string"
+      }
+    },
+    "saftPersonalName": {
+      "type": "array",
+      "description": "SEE ALSO FROM TRACING PERSONAL NAME, comes from 500 field",
+      "items": {
+        "type": "string"
+      }
+    },
+    "hCorporateName": {
+      "type": "string",
+      "description": "HEADING CORPORATE NAME, comes from 110 field"
+    },
+    "sftCorporateName": {
+      "type": "array",
+      "description": "SEE FROM TRACING CORPORATE NAME, comes from 410 field",
+      "items": {
+        "type": "string"
+      }
+    },
+    "saftCorporateName": {
+      "type": "array",
+      "description": "SEE ALSO FROM TRACING CORPORATE NAME, comes from 510 field",
+      "items": {
+        "type": "string"
+      }
+    },
+    "hMeetingName": {
+      "type": "array",
+      "description": "HEADING MEETING NAME, comes from 111 field"
+    },
+    "sftMeetingName": {
+      "type": "array",
+      "description": "SEE FROM TRACING MEETING NAME, comes from 411 field",
+      "items": {
+        "type": "string"
+      }
+    },
+    "saftMeetingName": {
+      "type": "array",
+      "description": "SEE ALSO FROM TRACING MEETING NAME, comes from 511 field",
+      "items": {
+        "type": "string"
+      }
+    },
+    "hUniformTitle": {
+      "type": "string",
+      "description": "HEADING UNIFORM TITLE, comes from 130 field"
+    },
+    "sftUniformTitle": {
+      "type": "array",
+      "description": "SEE FROM TRACING UNIFORM TITLE, comes from 430 field",
+      "items": {
+        "type": "string"
+      }
+    },
+    "saftUniformTitle": {
+      "type": "array",
+      "description": "SEE ALSO FROM TRACING UNIFORM TITLE, comes from 530 field",
+      "items": {
+        "type": "string"
+      }
+    },
+    "hTopicalTerm": {
+      "type": "string",
+      "description": "HEADING TOPICAL TERM, comes from 150 field"
+    },
+    "sftTopicalTerm": {
+      "type": "array",
+      "description": "SEE FROM TRACING TOPICAL TERM, comes from 450 field",
+      "items": {
+        "type": "string"
+      }
+    },
+    "saftTopicalTerm": {
+      "type": "array",
+      "description": "SEE ALSO FROM TRACING TOPICAL TERM, comes from 550 field",
+      "items": {
+        "type": "string"
+      }
+    },
+    "cSubjectHeadings": {
+      "type": "string",
+      "description": "CHILDREN'S SUBJECT HEADINGS"
+    },
+    "hGeographicName": {
+      "type": "string",
+      "description": "HEADING GEOGRAPHIC NAME, comes from 151 field"
+    },
+    "sftGeographicTerm": {
+      "type": "array",
+      "description": "SEE FROM TRACING GEOGRAPHIC NAME, comes from 451 field",
+      "items": {
+        "type": "string"
+      }
+    },
+    "saftGeographicTerm": {
+      "type": "array",
+      "description": "SEE ALSO FROM TRACING GEOGRAPHIC NAME, comes from 551 field",
+      "items": {
+        "type": "string"
+      }
+    },
+    "hGenreTerm": {
+      "type": "string",
+      "description": "HEADING GENRE/FORM TERM, comes from 155 field"
+    },
+    "sftGenreTerm": {
+      "type": "array",
+      "description": "SEE FROM TRACING GENRE/FORM TERM, comes from 455 field",
+      "items": {
+        "type": "string"
+      }
+    },
+    "saftGenreTerm": {
+      "type": "array",
+      "description": "SEE AlSO FROM TRACING GENRE/FORM TERM, comes from 555 field",
+      "items": {
+        "type": "string"
+      }
+    },
+    "identifiers": {
+      "type": "object",
+      "description": "Identifiers",
+      "properties": {
+        "controlNumber": {
+          "type": "string",
+          "description": "CONTROL NUMBER, comes from 001 field"
+        },
+        "lcControlNumber": {
+          "type": "string",
+          "description": "LIBRARY OF CONGRESS CONTROL NUMBER, comes from 010 field"
+        },
+        "oStandardIdentifier": {
+          "type": "array",
+          "description": "OTHER STANDARD IDENTIFIER, comes from 024 field",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sControlNumber": {
+          "type": "array",
+          "description": "SYSTEM CONTROL NUMBER, comes from 035 field",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "array",
+      "description": "NONPUBLIC GENERAL NOTE, comes from 667 field",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}
