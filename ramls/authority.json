@@ -5,137 +5,179 @@
   "properties": {
     "uuid": {
       "type": "string",
-      "description": "Authority UUID, comes from 999 field",
+      "description": "Authority UUID",
       "$ref": "uuid.json"
     },
-    "hPersonalName": {
+    "personalName": {
+      "type": "object",
+      "description": "Personal name",
+      "properties": {
+        "hPersonalName": {
+          "type": "string",
+          "description": "Heading personal name"
+        },
+        "sftPersonalName": {
+          "type": "array",
+          "description": "See from tracing personal name",
+          "items": {
+            "type": "string"
+          }
+        },
+        "saftPersonalName": {
+          "type": "array",
+          "description": "See also from tracing personal name",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "corporateName": {
+      "type": "object",
+      "description": "Corporate name",
+      "properties": {
+        "hCorporateName": {
+          "type": "string",
+          "description": "Heading corporate name"
+        },
+        "sftCorporateName": {
+          "type": "array",
+          "description": "See from tracing corporate name",
+          "items": {
+            "type": "string"
+          }
+        },
+        "saftCorporateName": {
+          "type": "array",
+          "description": "See also from tracing corporate name",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "meetingName": {
+      "type": "object",
+      "description": "Meeting name",
+      "properties": {
+        "hMeetingName": {
+          "type": "array",
+          "description": "Heading meeting name"
+        },
+        "sftMeetingName": {
+          "type": "array",
+          "description": "See from tracing meeting name",
+          "items": {
+            "type": "string"
+          }
+        },
+        "saftMeetingName": {
+          "type": "array",
+          "description": "See also from tracing meeting name",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "uniformTitle": {
+      "type": "object",
+      "description": "Uniform title",
+      "properties": {
+        "hUniformTitle": {
+          "type": "string",
+          "description": "Heading uniform title"
+        },
+        "sftUniformTitle": {
+          "type": "array",
+          "description": "See from tracing uniform title",
+          "items": {
+            "type": "string"
+          }
+        },
+        "saftUniformTitle": {
+          "type": "array",
+          "description": "See also from tracing uniform title",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "topicalTerm": {
+      "type": "object",
+      "description": "Topical term",
+      "properties": {
+        "hTopicalTerm": {
+          "type": "string",
+          "description": "Heading topical term"
+        },
+        "sftTopicalTerm": {
+          "type": "array",
+          "description": "See from tracing topical term",
+          "items": {
+            "type": "string"
+          }
+        },
+        "saftTopicalTerm": {
+          "type": "array",
+          "description": "See also from tracing topical term",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "subjectHeadings": {
       "type": "string",
-      "description": "HEADING PERSONAL NAME, comes from 100 field"
+      "description": "Children's subject headings"
     },
-    "sftPersonalName": {
-      "type": "array",
-      "description": "SEE FROM TRACING PERSONAL NAME, comes from 400 field",
-      "items": {
-        "type": "string"
+    "geographicName": {
+      "type": "object",
+      "description": "Geographic name",
+      "properties": {
+        "hGeographicName": {
+          "type": "string",
+          "description": "Heading geographic name"
+        },
+        "sftGeographicTerm": {
+          "type": "array",
+          "description": "See from tracing geographic name",
+          "items": {
+            "type": "string"
+          }
+        },
+        "saftGeographicTerm": {
+          "type": "array",
+          "description": "See also from tracing geographic name",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     },
-    "saftPersonalName": {
-      "type": "array",
-      "description": "SEE ALSO FROM TRACING PERSONAL NAME, comes from 500 field",
-      "items": {
-        "type": "string"
-      }
-    },
-    "hCorporateName": {
-      "type": "string",
-      "description": "HEADING CORPORATE NAME, comes from 110 field"
-    },
-    "sftCorporateName": {
-      "type": "array",
-      "description": "SEE FROM TRACING CORPORATE NAME, comes from 410 field",
-      "items": {
-        "type": "string"
-      }
-    },
-    "saftCorporateName": {
-      "type": "array",
-      "description": "SEE ALSO FROM TRACING CORPORATE NAME, comes from 510 field",
-      "items": {
-        "type": "string"
-      }
-    },
-    "hMeetingName": {
-      "type": "array",
-      "description": "HEADING MEETING NAME, comes from 111 field"
-    },
-    "sftMeetingName": {
-      "type": "array",
-      "description": "SEE FROM TRACING MEETING NAME, comes from 411 field",
-      "items": {
-        "type": "string"
-      }
-    },
-    "saftMeetingName": {
-      "type": "array",
-      "description": "SEE ALSO FROM TRACING MEETING NAME, comes from 511 field",
-      "items": {
-        "type": "string"
-      }
-    },
-    "hUniformTitle": {
-      "type": "string",
-      "description": "HEADING UNIFORM TITLE, comes from 130 field"
-    },
-    "sftUniformTitle": {
-      "type": "array",
-      "description": "SEE FROM TRACING UNIFORM TITLE, comes from 430 field",
-      "items": {
-        "type": "string"
-      }
-    },
-    "saftUniformTitle": {
-      "type": "array",
-      "description": "SEE ALSO FROM TRACING UNIFORM TITLE, comes from 530 field",
-      "items": {
-        "type": "string"
-      }
-    },
-    "hTopicalTerm": {
-      "type": "string",
-      "description": "HEADING TOPICAL TERM, comes from 150 field"
-    },
-    "sftTopicalTerm": {
-      "type": "array",
-      "description": "SEE FROM TRACING TOPICAL TERM, comes from 450 field",
-      "items": {
-        "type": "string"
-      }
-    },
-    "saftTopicalTerm": {
-      "type": "array",
-      "description": "SEE ALSO FROM TRACING TOPICAL TERM, comes from 550 field",
-      "items": {
-        "type": "string"
-      }
-    },
-    "cSubjectHeadings": {
-      "type": "string",
-      "description": "CHILDREN'S SUBJECT HEADINGS"
-    },
-    "hGeographicName": {
-      "type": "string",
-      "description": "HEADING GEOGRAPHIC NAME, comes from 151 field"
-    },
-    "sftGeographicTerm": {
-      "type": "array",
-      "description": "SEE FROM TRACING GEOGRAPHIC NAME, comes from 451 field",
-      "items": {
-        "type": "string"
-      }
-    },
-    "saftGeographicTerm": {
-      "type": "array",
-      "description": "SEE ALSO FROM TRACING GEOGRAPHIC NAME, comes from 551 field",
-      "items": {
-        "type": "string"
-      }
-    },
-    "hGenreTerm": {
-      "type": "string",
-      "description": "HEADING GENRE/FORM TERM, comes from 155 field"
-    },
-    "sftGenreTerm": {
-      "type": "array",
-      "description": "SEE FROM TRACING GENRE/FORM TERM, comes from 455 field",
-      "items": {
-        "type": "string"
-      }
-    },
-    "saftGenreTerm": {
-      "type": "array",
-      "description": "SEE AlSO FROM TRACING GENRE/FORM TERM, comes from 555 field",
-      "items": {
-        "type": "string"
+    "genreTerm": {
+      "type": "object",
+      "description": "Genre/form term",
+      "properties": {
+        "hGenreTerm": {
+          "type": "string",
+          "description": "Heading genre/form term"
+        },
+        "sftGenreTerm": {
+          "type": "array",
+          "description": "See from tracing genre/form term",
+          "items": {
+            "type": "string"
+          }
+        },
+        "saftGenreTerm": {
+          "type": "array",
+          "description": "See also from tracing genre/form term",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     },
     "identifiers": {
@@ -144,22 +186,22 @@
       "properties": {
         "controlNumber": {
           "type": "string",
-          "description": "CONTROL NUMBER, comes from 001 field"
+          "description": "Control number identifier"
         },
         "lcControlNumber": {
           "type": "string",
-          "description": "LIBRARY OF CONGRESS CONTROL NUMBER, comes from 010 field"
+          "description": "Library of Congress control number identifier"
         },
         "oStandardIdentifier": {
           "type": "array",
-          "description": "OTHER STANDARD IDENTIFIER, comes from 024 field",
+          "description": "Other standard identifier",
           "items": {
             "type": "string"
           }
         },
         "sControlNumber": {
           "type": "array",
-          "description": "SYSTEM CONTROL NUMBER, comes from 035 field",
+          "description": "System control number",
           "items": {
             "type": "string"
           }
@@ -168,7 +210,7 @@
     },
     "notes": {
       "type": "array",
-      "description": "NONPUBLIC GENERAL NOTE, comes from 667 field",
+      "description": "Nonpublic general note",
       "items": {
         "type": "string"
       }
