@@ -1,0 +1,32 @@
+{
+  "id": "0c45bb50-7c9b-48b0-86eb-178a494e25fe",
+  "_version": 2,
+  "hrid": "hold000000000002",
+  "holdingsTypeId": "03c9c400-b9e3-4a07-ac0e-05ab470233ed",
+  "formerIds": [],
+  "instanceId": "69640328-788e-43fc-9c3c-af39e243f3b7",
+  "permanentLocationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+  "effectiveLocationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+  "electronicAccess": [],
+  "notes": [],
+  "holdingsStatements": [
+    {
+      "statement": "Line 1b"
+    },
+    {
+      "statement": "Line 2b"
+    }
+  ],
+  "holdingsStatementsForIndexes": [],
+  "holdingsStatementsForSupplements": [],
+  "statisticalCodeIds": [],
+  "holdingsItems": [],
+  "bareHoldingsItems": [],
+  "metadata": {
+    "createdDate": "2021-09-17T09:43:23.885+00:00",
+    "createdByUserId": "098321d1-b9cd-5f1c-a004-ffa2bac61f90",
+    "updatedDate": "2021-09-17T09:43:23.885+00:00",
+    "updatedByUserId": "098321d1-b9cd-5f1c-a004-ffa2bac61f90"
+  },
+  "sourceId": "036ee84a-6afd-4c3c-9ad3-4a12ab875f59"
+}
