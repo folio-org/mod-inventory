@@ -104,9 +104,9 @@
         }
       }
     },
-    "topicalTerm": {
+    "subject": {
       "type": "object",
-      "description": "Topical term",
+      "description": "Subject",
       "properties": {
         "hTopicalTerm": {
           "type": "string",
@@ -132,9 +132,9 @@
       "type": "string",
       "description": "Children's subject headings"
     },
-    "geographicName": {
+    "geographicPlace": {
       "type": "object",
-      "description": "Geographic name",
+      "description": "Geographic place",
       "properties": {
         "hGeographicName": {
           "type": "string",
@@ -156,7 +156,7 @@
         }
       }
     },
-    "genreTerm": {
+    "genre": {
       "type": "object",
       "description": "Genre/form term",
       "properties": {
