@@ -183,7 +183,6 @@
     "identifiers": {
       "type": "array",
       "description": "An extensible set of name-value pairs of identifiers associated with the resource",
-      "minItems": 0,
       "items": {
         "type": "object",
         "properties": {
@@ -193,7 +192,7 @@
           },
           "identifierTypeId": {
             "type": "string",
-            "description": "Resource identifier type (e.g. ISBN, ISSN, LCCN, CODEN, Locally defined identifiers)",
+            "description": "Resource identifier type (e.g. Control number, LCCN, Other standard identifier, System control number)",
             "$ref": "uuid.json"
           }
         },
@@ -205,7 +204,7 @@
     },
     "notes": {
       "type": "array",
-      "description": "Bibliographic notes (e.g. general notes, specialized notes), and administrative notes",
+      "description": "Notes (e.g. nonpublic general note)",
       "items": {
         "type": "object",
         "properties": {
