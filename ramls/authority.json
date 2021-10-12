@@ -181,39 +181,50 @@
       }
     },
     "identifiers": {
-      "type": "object",
-      "description": "Identifiers",
-      "properties": {
-        "controlNumber": {
-          "type": "string",
-          "description": "Control number identifier"
-        },
-        "lcControlNumber": {
-          "type": "string",
-          "description": "Library of Congress control number identifier"
-        },
-        "oStandardIdentifier": {
-          "type": "array",
-          "description": "Other standard identifier",
-          "items": {
-            "type": "string"
+      "type": "array",
+      "description": "An extensible set of name-value pairs of identifiers associated with the resource",
+      "minItems": 0,
+      "items": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Resource identifier value"
+          },
+          "identifierTypeId": {
+            "type": "string",
+            "description": "Resource identifier type (e.g. ISBN, ISSN, LCCN, CODEN, Locally defined identifiers)",
+            "$ref": "uuid.json"
           }
         },
-        "sControlNumber": {
-          "type": "array",
-          "description": "System control number",
-          "items": {
-            "type": "string"
-          }
-        }
+        "additionalProperties": false,
+        "required": [
+          "value",
+          "identifierTypeId"
+        ]
       }
     },
     "notes": {
       "type": "array",
-      "description": "Nonpublic general note",
+      "description": "Bibliographic notes (e.g. general notes, specialized notes), and administrative notes",
       "items": {
-        "type": "string"
+        "type": "object",
+        "properties": {
+          "noteTypeId": {
+            "description": "ID of the type of note",
+            "$ref": "uuid.json"
+          },
+          "note": {
+            "type": "string",
+            "description": "Text content of the note"
+          }
+        }
       }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Creater, updater, creation date, last updated date",
+      "$ref": "./raml-util/schemas/metadata.schema"
     }
   }
 }
