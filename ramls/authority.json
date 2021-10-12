@@ -197,7 +197,6 @@
             "$ref": "uuid.json"
           }
         },
-        "additionalProperties": false,
         "required": [
           "value",
           "identifierTypeId"
@@ -218,7 +217,11 @@
             "type": "string",
             "description": "Text content of the note"
           }
-        }
+        },
+        "required": [
+          "note",
+          "noteTypeId"
+        ]
       }
     },
     "metadata": {
