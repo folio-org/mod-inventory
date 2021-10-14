@@ -46,6 +46,7 @@ import support.fakes.FakeOkapi;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
   InstancesApiExamples.class,
+  HoldingsApiExamples.class,
   ItemApiExamples.class,
   ItemApiTitleExamples.class,
   ModsIngestExamples.class,
