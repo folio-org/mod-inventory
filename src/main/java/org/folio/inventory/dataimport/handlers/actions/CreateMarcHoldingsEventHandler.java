@@ -120,6 +120,8 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
     }
     holdingAsJson.put("id", UUID.randomUUID().toString());
     holdingAsJson.remove("hrid");
+    LOGGER.info("PAYLOAD: " + holdingAsJson);
+    LOGGER.info("PAYLOAD 2: " + holdingAsJson.encodePrettily());
     checkIfPermanentLocationIdExists(holdingAsJson);
 
     return holdingAsJson;
