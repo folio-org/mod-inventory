@@ -99,6 +99,7 @@ public class ReplaceInstanceEventHandlerTest {
   private static final String PRECEDING_SUCCEEDING_TITLES_KEY = "precedingSucceedingTitles";
   private static final String TENANT_ID = "diku";
   private static final String TOKEN = "dummy";
+  private static final Integer INSTANCE_VERSION = 1;
 
   @Mock
   private Storage storage;
@@ -211,6 +212,7 @@ public class ReplaceInstanceEventHandlerTest {
     context.put(INSTANCE.value(), new JsonObject()
       .put("id", UUID.randomUUID().toString())
       .put("hrid", UUID.randomUUID().toString())
+      .put("_version", INSTANCE_VERSION)
       .encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
@@ -267,6 +269,7 @@ public class ReplaceInstanceEventHandlerTest {
     context.put(INSTANCE.value(), new JsonObject()
       .put("id", UUID.randomUUID().toString())
       .put("hrid", UUID.randomUUID().toString())
+      .put("_version", INSTANCE_VERSION)
       .encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
