@@ -7,6 +7,9 @@ import java.util.UUID;
 
 public class HoldingRequestBuilder extends AbstractBuilder {
 
+  private static final UUID MARC_SOURCE_HOLDINGS_ID = UUID.fromString("036ee84a-6afd-4c3c-9ad3-4a12ab875f59");
+  private static final UUID FOLIO_SOURCE_HOLDINGS_ID = UUID.fromString("f32d531e-df79-46b3-8932-cdd35f7a2264");
+
   private final UUID instanceId;
   private final UUID permanentLocationId;
   private final UUID temporaryLocationId;
@@ -14,6 +17,7 @@ public class HoldingRequestBuilder extends AbstractBuilder {
   private final String callNumberSuffix;
   private final String callNumberPrefix;
   private final String callNumberTypeId;
+  private final UUID sourceId;
 
   public HoldingRequestBuilder() {
     this(
@@ -23,7 +27,8 @@ public class HoldingRequestBuilder extends AbstractBuilder {
       null,
       null,
       null,
-      null);
+      null,
+      FOLIO_SOURCE_HOLDINGS_ID);
   }
 
   private HoldingRequestBuilder(
@@ -33,7 +38,8 @@ public class HoldingRequestBuilder extends AbstractBuilder {
     String callNumber,
     String callNumberSuffix,
     String callNumberPrefix,
-    String callNumberTypeId) {
+    String callNumberTypeId,
+    UUID sourceId) {
 
     this.instanceId = instanceId;
     this.permanentLocationId = permanentLocationId;
@@ -42,6 +48,7 @@ public class HoldingRequestBuilder extends AbstractBuilder {
     this.callNumberSuffix = callNumberSuffix;
     this.callNumberPrefix = callNumberPrefix;
     this.callNumberTypeId = callNumberTypeId;
+    this.sourceId = sourceId;
   }
 
   @Override
@@ -59,7 +66,7 @@ public class HoldingRequestBuilder extends AbstractBuilder {
     holding.put("callNumberPrefix", callNumberPrefix);
     holding.put("callNumberSuffix", callNumberSuffix);
     holding.put("callNumberTypeId", callNumberTypeId);
-
+    holding.put("sourceId", sourceId);
     return holding;
   }
 
@@ -71,7 +78,8 @@ public class HoldingRequestBuilder extends AbstractBuilder {
       callNumber,
       this.callNumberSuffix,
       this.callNumberPrefix,
-      this.callNumberTypeId);
+      this.callNumberTypeId,
+      this.sourceId);
   }
 
   private HoldingRequestBuilder withTemporaryLocation(UUID temporaryLocationId) {
@@ -82,7 +90,8 @@ public class HoldingRequestBuilder extends AbstractBuilder {
       this.callNumber,
       this.callNumberSuffix,
       this.callNumberPrefix,
-      this.callNumberTypeId);
+      this.callNumberTypeId,
+      this.sourceId);
   }
 
   public HoldingRequestBuilder permanentlyInMainLibrary() {
@@ -105,7 +114,8 @@ public class HoldingRequestBuilder extends AbstractBuilder {
       this.callNumber,
       this.callNumberSuffix,
       this.callNumberPrefix,
-      this.callNumberTypeId);
+      this.callNumberTypeId,
+      this.sourceId);
   }
 
   public HoldingRequestBuilder withCallNumber(String callNumber) {
@@ -116,7 +126,8 @@ public class HoldingRequestBuilder extends AbstractBuilder {
       callNumber,
       this.callNumberSuffix,
       this.callNumberPrefix,
-      this.callNumberTypeId);
+      this.callNumberTypeId,
+      this.sourceId);
   }
 
   public HoldingRequestBuilder withCallNumberSuffix(String suffix) {
@@ -127,7 +138,8 @@ public class HoldingRequestBuilder extends AbstractBuilder {
       this.callNumber,
       suffix,
       this.callNumberPrefix,
-      this.callNumberTypeId);
+      this.callNumberTypeId,
+      this.sourceId);
   }
 
   public HoldingRequestBuilder withCallNumberPrefix(String prefix) {
@@ -138,7 +150,8 @@ public class HoldingRequestBuilder extends AbstractBuilder {
       this.callNumber,
       this.callNumberSuffix,
       prefix,
-      this.callNumberTypeId);
+      this.callNumberTypeId,
+      this.sourceId);
   }
 
   public HoldingRequestBuilder withCallNumberTypeId(String callNumberTypeId) {
@@ -149,6 +162,19 @@ public class HoldingRequestBuilder extends AbstractBuilder {
       this.callNumber,
       this.callNumberSuffix,
       this.callNumberPrefix,
-      callNumberTypeId);
+      callNumberTypeId,
+      this.sourceId);
+  }
+
+  public HoldingRequestBuilder withMarcSource() {
+    return new HoldingRequestBuilder(
+      this.instanceId,
+      this.permanentLocationId,
+      this.temporaryLocationId,
+      this.callNumber,
+      this.callNumberSuffix,
+      this.callNumberPrefix,
+      this.callNumberTypeId,
+      MARC_SOURCE_HOLDINGS_ID);
   }
 }

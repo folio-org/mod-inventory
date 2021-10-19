@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "inventory",
-      "version": "11.0",
+      "version": "11.1",
       "handlers": [
         {
           "methods": ["GET"],
@@ -318,6 +318,14 @@
           "pathPattern": "/inventory/items",
           "permissionsRequired": ["inventory.items.collection.delete"],
           "modulePermissions": ["inventory-storage.items.collection.delete"]
+        }, {
+          "methods": ["PUT"],
+          "pathPattern": "/inventory/holdings/{id}",
+          "permissionsRequired": ["inventory.holdings.item.put"],
+          "modulePermissions": [
+            "inventory-storage.holdings.item.get",
+            "inventory-storage.holdings.item.put"
+          ]
         }, {
           "methods": ["GET"],
           "pathPattern": "/inventory/instances",
@@ -694,6 +702,11 @@
       "description": "Delete entire instance collection"
     },
     {
+      "permissionName": "inventory.holdings.item.put",
+      "displayName": "Inventory - modify holdings",
+      "description": "Modify individual instance"
+    },
+    {
       "permissionName": "inventory.instances.item.get",
       "displayName": "Inventory - get individual instance",
       "description": "Get individual instance"
@@ -750,6 +763,7 @@
         "inventory.items.item.delete",
         "inventory.items.collection.delete",
         "inventory.instances.collection.get",
+        "inventory.holdings.item.put",
         "inventory.instances.item.get",
         "inventory.instances.item.post",
         "inventory.instances.batch.post",
