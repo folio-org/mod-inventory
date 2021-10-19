@@ -9,151 +9,115 @@
       "$ref": "uuid.json"
     },
     "personalName": {
-      "type": "object",
-      "description": "Personal name",
-      "properties": {
-        "hPersonalName": {
-          "type": "string",
-          "description": "Heading personal name"
-        },
-        "sftPersonalName": {
-          "type": "array",
-          "description": "See from tracing personal name",
-          "items": {
-            "type": "string"
-          }
-        },
-        "saftPersonalName": {
-          "type": "array",
-          "description": "See also from tracing personal name",
-          "items": {
-            "type": "string"
-          }
-        }
+      "type": "string",
+      "description": "Heading personal name"
+    },
+    "sftPersonalName": {
+      "type": "array",
+      "description": "See from tracing personal name",
+      "items": {
+        "type": "string"
+      }
+    },
+    "saftPersonalName": {
+      "type": "array",
+      "description": "See also from tracing personal name",
+      "items": {
+        "type": "string"
       }
     },
     "corporateName": {
-      "type": "object",
-      "description": "Corporate name",
-      "properties": {
-        "hCorporateName": {
-          "type": "string",
-          "description": "Heading corporate name"
-        },
-        "sftCorporateName": {
-          "type": "array",
-          "description": "See from tracing corporate name",
-          "items": {
-            "type": "string"
-          }
-        },
-        "saftCorporateName": {
-          "type": "array",
-          "description": "See also from tracing corporate name",
-          "items": {
-            "type": "string"
-          }
-        }
+      "type": "string",
+      "description": "Heading corporate name"
+    },
+    "sftCorporateName": {
+      "type": "array",
+      "description": "See from tracing corporate name",
+      "items": {
+        "type": "string"
+      }
+    },
+    "saftCorporateName": {
+      "type": "array",
+      "description": "See also from tracing corporate name",
+      "items": {
+        "type": "string"
       }
     },
     "meetingName": {
-      "type": "object",
-      "description": "Meeting name",
-      "properties": {
-        "hMeetingName": {
-          "type": "array",
-          "description": "Heading meeting name"
-        },
-        "sftMeetingName": {
-          "type": "array",
-          "description": "See from tracing meeting name",
-          "items": {
-            "type": "string"
-          }
-        },
-        "saftMeetingName": {
-          "type": "array",
-          "description": "See also from tracing meeting name",
-          "items": {
-            "type": "string"
-          }
-        }
+      "type": "array",
+      "description": "Heading meeting name"
+    },
+    "sftMeetingName": {
+      "type": "array",
+      "description": "See from tracing meeting name",
+      "items": {
+        "type": "string"
+      }
+    },
+    "saftMeetingName": {
+      "type": "array",
+      "description": "See also from tracing meeting name",
+      "items": {
+        "type": "string"
       }
     },
     "uniformTitle": {
-      "type": "object",
-      "description": "Uniform title",
-      "properties": {
-        "hUniformTitle": {
-          "type": "string",
-          "description": "Heading uniform title"
-        },
-        "sftUniformTitle": {
-          "type": "array",
-          "description": "See from tracing uniform title",
-          "items": {
-            "type": "string"
-          }
-        },
-        "saftUniformTitle": {
-          "type": "array",
-          "description": "See also from tracing uniform title",
-          "items": {
-            "type": "string"
-          }
-        }
+      "type": "string",
+      "description": "Heading uniform title"
+    },
+    "sftUniformTitle": {
+      "type": "array",
+      "description": "See from tracing uniform title",
+      "items": {
+        "type": "string"
       }
     },
-    "subject": {
-      "type": "object",
-      "description": "Subject",
-      "properties": {
-        "hTopicalTerm": {
-          "type": "string",
-          "description": "Heading topical term"
-        },
-        "sftTopicalTerm": {
-          "type": "array",
-          "description": "See from tracing topical term",
-          "items": {
-            "type": "string"
-          }
-        },
-        "saftTopicalTerm": {
-          "type": "array",
-          "description": "See also from tracing topical term",
-          "items": {
-            "type": "string"
-          }
-        }
+    "saftUniformTitle": {
+      "type": "array",
+      "description": "See also from tracing uniform title",
+      "items": {
+        "type": "string"
+      }
+    },
+    "topicalTerm": {
+      "type": "string",
+      "description": "Heading topical term"
+    },
+    "sftTopicalTerm": {
+      "type": "array",
+      "description": "See from tracing topical term",
+      "items": {
+        "type": "string"
+      }
+    },
+    "saftTopicalTerm": {
+      "type": "array",
+      "description": "See also from tracing topical term",
+      "items": {
+        "type": "string"
       }
     },
     "subjectHeadings": {
       "type": "string",
       "description": "Children's subject headings"
     },
-    "geographicPlace": {
-      "type": "object",
-      "description": "Geographic place",
-      "properties": {
-        "hGeographicName": {
-          "type": "string",
-          "description": "Heading geographic name"
-        },
-        "sftGeographicTerm": {
-          "type": "array",
-          "description": "See from tracing geographic name",
-          "items": {
-            "type": "string"
-          }
-        },
-        "saftGeographicTerm": {
-          "type": "array",
-          "description": "See also from tracing geographic name",
-          "items": {
-            "type": "string"
-          }
-        }
+    "geographicName": {
+      "type": "string",
+      "description": "Heading geographic name"
+    },
+    "sftGeographicTerm": {
+      "type": "array",
+      "description": "See from tracing geographic name",
+      "items": {
+        "type": "string"
+      }
+    },
+    "saftGeographicTerm": {
+      "type": "array",
+      "description": "See also from tracing geographic name",
+      "items": {
+        "type": "string"
       }
     },
     "genre": {
