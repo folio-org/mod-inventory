@@ -100,6 +100,7 @@ public class ReplaceInstanceEventHandlerTest {
   private static final String TENANT_ID = "diku";
   private static final String TOKEN = "dummy";
   private static final Integer INSTANCE_VERSION = 1;
+  private static final String INSTANCE_VERSION_AS_STRING = "1";
 
   @Mock
   private Storage storage;
@@ -239,6 +240,7 @@ public class ReplaceInstanceEventHandlerTest {
     assertThat(createdInstance.getJsonArray("notes").size(), is(2));
     assertThat(createdInstance.getJsonArray("notes").getJsonObject(0).getString("instanceNoteTypeId"), notNullValue());
     assertThat(createdInstance.getJsonArray("notes").getJsonObject(1).getString("instanceNoteTypeId"), notNullValue());
+    assertThat(createdInstance.getString("_version"), is(INSTANCE_VERSION_AS_STRING));
     verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
   }
 
@@ -291,6 +293,7 @@ public class ReplaceInstanceEventHandlerTest {
     assertEquals(title, updatedInstance.getString("title"));
     assertThat(updatedInstance.getJsonArray("precedingTitles").size(), is(1));
     assertNotEquals(existingPrecedingTitle.getString(TITLE_KEY), updatedInstance.getJsonArray("precedingTitles").getJsonObject(0).getString(TITLE_KEY));
+    assertThat(updatedInstance.getString("_version"), is(INSTANCE_VERSION_AS_STRING));
 
     ArgumentCaptor<Set<String>> titleIdCaptor = ArgumentCaptor.forClass(Set.class);
     verify(precedingSucceedingTitlesHelper).deletePrecedingSucceedingTitles(titleIdCaptor.capture(), any(Context.class));
