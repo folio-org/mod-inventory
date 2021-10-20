@@ -56,7 +56,7 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
   private static final AtomicLong indexer = new AtomicLong();
   private static final String RECORD_TYPE_KEY = "RECORD_TYPE";
   private static final String PARSED_RECORD_DTO_KEY = "PARSED_RECORD_DTO";
-  private static final String QM_RECORD_VERSION_KEY = "QM_RECORD_VERSION";
+  private static final String QM_RELATED_RECORD_VERSION_KEY = "RELATED_RECORD_VERSION";
 
   private final InstanceUpdateDelegate instanceUpdateDelegate;
   private final HoldingsUpdateDelegate holdingsUpdateDelegate;
@@ -119,7 +119,7 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
     try {
       var recordType = Record.RecordType.fromValue(eventPayload.get(RECORD_TYPE_KEY));
       var parsedRecordDto = Json.decodeValue(eventPayload.get(PARSED_RECORD_DTO_KEY), ParsedRecordDto.class);
-      eventPayload.put(QM_RECORD_VERSION_KEY, parsedRecordDto.getQmRecordVersion());
+      eventPayload.put(QM_RELATED_RECORD_VERSION_KEY, parsedRecordDto.getRelatedRecordVersion());
       return getQuickMarcEventHandler(context, recordType).handle(eventPayload).map(recordType);
     } catch (Exception e) {
       return Future.failedFuture(e);

@@ -178,7 +178,7 @@ public class QuickMarcKafkaHandlerTest {
     payload.put("MAPPING_PARAMS", new JsonObject().encode());
     payload.put("PARSED_RECORD_DTO", Json.encode(new ParsedRecordDto()
       .withRecordType(ParsedRecordDto.RecordType.MARC_BIB)
-      .withQmRecordVersion("1")));
+      .withRelatedRecordVersion("1")));
 
     Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(payload)));
     String expectedKafkaRecordKey = "test_key";
@@ -214,7 +214,7 @@ public class QuickMarcKafkaHandlerTest {
     payload.put("MAPPING_PARAMS", new JsonObject().encode());
     payload.put("PARSED_RECORD_DTO", Json.encode(new ParsedRecordDto()
       .withRecordType(ParsedRecordDto.RecordType.MARC_HOLDING)
-      .withQmRecordVersion("1")));
+      .withRelatedRecordVersion("1")));
 
     Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(payload)));
     String expectedKafkaRecordKey = "test_key";
