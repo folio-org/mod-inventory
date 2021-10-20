@@ -1,85 +1,72 @@
 {
-   "uuid":"5f671674-229a-48e9-804e-d2814cddd321",
-   "personalName":{
-      "hPersonalName":"Twain, Mark, 1835-1910",
-      "sftPersonalName":[
-         "Tuėĭn, Mark, 1835-1910",
-         "Tuwayn, Mārk, 1835-1910",
-         "Tʻu-wen, Ma-kʻo, 1835-1910",
-         "Твен, Марк, 1835-1910"
-      ],
-      "saftPersonalName":[
-         "nnn, Clemens, Samuel Langhorne, 1835-1910",
-         "nnn, Snodgrass, Quintus Curtius, 1835-1910"
-      ]
-   },
-   "corporateName":{
-      "hCorporateName":"International Business Machines Corporation",
-      "sftCorporateName":[
-         "Oklahoma. Council on Juvenile Delinquency",
-         "Oklahoma. Oklahoma Council on Juvenile Delinquency"
-      ],
-      "saftCorporateName":[
-         "Oklahoma Council on Juvenile Delinquency Planning",
-         "Oklahoma Council on Juvenile Justice"
-      ]
-   },
-   "meetingName":{
-      "hMeetingName":"Olympic Winter Games (21st : 2010 : Vancouver, B.C.)",
-      "sftMeetingName":[
-         "Vancouver Winter Games (2010 : Vancouver, B.C.)"
-      ],
-      "saftMeetingName":[
+   "id":"5f671674-229a-48e9-804e-d2814cddd321",
+   "_version": 0,
+   "personalName":"Twain, Mark, 1835-1910",
+   "sftPersonalName":[
+      "Tuėĭn, Mark, 1835-1910",
+      "Tuwayn, Mārk, 1835-1910",
+      "Tʻu-wen, Ma-kʻo, 1835-1910",
+      "Твен, Марк, 1835-1910"
+   ],
+   "saftPersonalName":[
+      "nnn, Clemens, Samuel Langhorne, 1835-1910",
+      "nnn, Snodgrass, Quintus Curtius, 1835-1910"
+   ],
+   "corporateName":"International Business Machines Corporation",
+   "sftCorporateName":[
+      "Oklahoma. Council on Juvenile Delinquency",
+      "Oklahoma. Oklahoma Council on Juvenile Delinquency"
+   ],
+   "saftCorporateName":[
+      "Oklahoma Council on Juvenile Delinquency Planning",
+      "Oklahoma Council on Juvenile Justice"
+   ],
+   "meetingName":"Olympic Winter Games (21st : 2010 : Vancouver, B.C.)",
+   "sftMeetingName":[
+      "Vancouver Winter Games (2010 : Vancouver, B.C.)"
+   ],
+   "saftMeetingName":[
 
-      ]
-   },
-   "uniformTitle":{
-      "hUniformTitle":"Monograph (Institute of Applied Social and Economic Research)",
-      "sftUniformTitle":[
-         "Monographs (Institute of Applied Social and Economic Research)",
-         "Monograph series (Institute of Applied Social and Economic Research)",
-         "IASER monograph"
-      ],
-      "saftUniformTitle":[
-         "Continues (work): New Guinea research bulletin",
-         "Continued by (work): Monograph (National Research Institute (Papua New Guinea))"
-      ]
-   },
-   "subject":{
-      "hTopicalTerm":"Optical disks",
-      "sftTopicalTerm":[
-         "Discs, Optical",
-         "Optical discs",
-         "Laser discs",
-         "Laser disks",
-         "Laserdiscs",
-         "Laserdisks"
-      ],
-      "saftTopicalTerm":[
-         "Optical storage devices"
-      ]
-   },
+   ],
+   "uniformTitle":"Monograph (Institute of Applied Social and Economic Research)",
+   "sftUniformTitle":[
+      "Monographs (Institute of Applied Social and Economic Research)",
+      "Monograph series (Institute of Applied Social and Economic Research)",
+      "IASER monograph"
+   ],
+   "saftUniformTitle":[
+      "Continues (work): New Guinea research bulletin",
+      "Continued by (work): Monograph (National Research Institute (Papua New Guinea))"
+   ],
+   "topicalTerm":"Optical disks",
+   "sftTopicalTerm":[
+      "Discs, Optical",
+      "Optical discs",
+      "Laser discs",
+      "Laser disks",
+      "Laserdiscs",
+      "Laserdisks"
+   ],
+   "saftTopicalTerm":[
+      "Optical storage devices"
+   ],
    "subjectHeadings":"z",
-   "geographicPlace":{
-      "hGeographicName":"Great Lakes",
-      "sftGeographicName":[
-         "Great Lakes",
-         "Lakes Great",
-         "Regions of the United States"
-      ],
-      "saftGeographicName":[
-         "Superior, Michigan, Huron, Erie, and Ontario"
-      ]
-   },
-   "genre":{
-      "hGenreTerm":"Panoramas",
-      "sftGenreTerm":[
-         "Panoramic views"
-      ],
-      "saftGenreTerm":[
+   "geographicName":"Great Lakes",
+   "sftGeographicName":[
+      "Great Lakes",
+      "Lakes Great",
+      "Regions of the United States"
+   ],
+   "saftGeographicName":[
+      "Superior, Michigan, Huron, Erie, and Ontario"
+   ],
+   "genreTerm":"Panoramas",
+   "sftGenreTerm":[
+      "Panoramic views"
+   ],
+   "saftGenreTerm":[
 
-      ]
-   },
+   ],
    "identifiers":[
       {
          "identifierTypeId":"11bf5f7c-30e1-4308-8170-1fbb5b817cf2",
