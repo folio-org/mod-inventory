@@ -1,8 +1,9 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.json.JsonObject;
+import static java.lang.String.format;
+
+import java.util.Map;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
@@ -16,10 +17,9 @@ import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingPa
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.Record;
 
-import java.util.Map;
-
-import static java.lang.String.format;
-import static org.folio.inventory.domain.instances.Instance.VERSION_KEY;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.json.JsonObject;
 
 public class InstanceUpdateDelegate {
 
@@ -83,7 +83,6 @@ public class InstanceUpdateDelegate {
     try {
       mappedInstance.setId(existingInstance.getId());
       JsonObject existing = JsonObject.mapFrom(existingInstance);
-      adjustVersionField(existing);
       JsonObject mapped = JsonObject.mapFrom(mappedInstance);
       JsonObject mergedInstanceAsJson = InstanceUtil.mergeInstances(existing, mapped);
       Instance mergedInstance = Instance.fromJson(mergedInstanceAsJson);
@@ -92,11 +91,6 @@ public class InstanceUpdateDelegate {
       LOGGER.error("Error updating instance", e);
       return Future.failedFuture(e);
     }
-  }
-
-  private void adjustVersionField(JsonObject existing) {
-    existing.put(VERSION_KEY, existing.getString("version"));
-    existing.remove("version");
   }
 
   private Future<Instance> updateInstanceInStorage(Instance instance, InstanceCollection instanceCollection) {
