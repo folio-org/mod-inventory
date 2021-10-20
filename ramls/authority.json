@@ -3,10 +3,14 @@
   "description": "An authority record",
   "type": "object",
   "properties": {
-    "uuid": {
+    "id": {
       "type": "string",
       "description": "Authority UUID",
       "$ref": "uuid.json"
+    },
+    "_version": {
+      "type": "integer",
+      "description": "Record version for optimistic locking"
     },
     "personalName": {
       "type": "string",
