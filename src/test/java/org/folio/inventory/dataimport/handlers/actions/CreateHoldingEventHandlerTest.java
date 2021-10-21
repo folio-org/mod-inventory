@@ -71,6 +71,7 @@ public class CreateHoldingEventHandlerTest {
 
   private static final String PARSED_CONTENT_WITH_INSTANCE_ID = "{ \"leader\": \"01314nam  22003851a 4500\", \"fields\":[ {\"001\":\"ybp7406411\"}, {\"999\": {\"ind1\":\"f\", \"ind2\":\"f\", \"subfields\":[ { \"i\": \"957985c6-97e3-4038-b0e7-343ecd0b8120\"} ] } } ] }";
   private static final String PARSED_CONTENT_WITHOUT_INSTANCE_ID = "{ \"leader\":\"01314nam  22003851a 4500\", \"fields\":[ { \"001\":\"ybp7406411\" } ] }";
+  private static final String FOLIO_SOURCE_ID = "f32d531e-df79-46b3-8932-cdd35f7a2264";
 
   @Mock
   private Storage storage;
@@ -182,6 +183,7 @@ public class CreateHoldingEventHandlerTest {
     Assert.assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("id"));
     Assert.assertEquals(instanceId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("instanceId"));
     Assert.assertEquals(permanentLocationId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("permanentLocationId"));
+    Assert.assertEquals(FOLIO_SOURCE_ID, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("sourceId"));
   }
 
   @Test
@@ -223,6 +225,7 @@ public class CreateHoldingEventHandlerTest {
     Assert.assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("id"));
     Assert.assertEquals(expectedInstanceId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("instanceId"));
     Assert.assertEquals(permanentLocationId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("permanentLocationId"));
+    Assert.assertEquals(FOLIO_SOURCE_ID, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("sourceId"));
   }
 
   @Test
@@ -259,6 +262,7 @@ public class CreateHoldingEventHandlerTest {
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
     Assert.assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("id"));
     Assert.assertEquals(permanentLocationId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("permanentLocationId"));
+    Assert.assertEquals(FOLIO_SOURCE_ID, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("sourceId"));
   }
 
 
