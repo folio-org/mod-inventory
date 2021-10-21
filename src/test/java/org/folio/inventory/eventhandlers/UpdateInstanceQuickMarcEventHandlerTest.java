@@ -144,7 +144,7 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
     eventPayload.put("MARC_BIB", Json.encode(record));
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
-    eventPayload.put("QM_RECORD_VERSION", INSTANCE_VERSION);
+    eventPayload.put("RELATED_RECORD_VERSION", INSTANCE_VERSION);
 
     Future<Instance> future = updateInstanceEventHandler.handle(eventPayload);
     Instance updatedInstance = future.result();

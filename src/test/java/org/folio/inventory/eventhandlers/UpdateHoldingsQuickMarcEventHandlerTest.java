@@ -92,7 +92,7 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
     eventPayload.put("MARC_HOLDING", record.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
-    eventPayload.put("QM_RECORD_VERSION", HOLDINGS_VERSION.toString());
+    eventPayload.put("RELATED_RECORD_VERSION", HOLDINGS_VERSION.toString());
 
     Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(eventPayload);
     HoldingsRecord updatedHoldings = future.result();
