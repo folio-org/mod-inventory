@@ -41,6 +41,7 @@ public class InstanceUtil {
     //Fields which are not affects by default mapping.
     org.folio.Instance tmp = new org.folio.Instance()
       .withId(existing.getId())
+      .withVersion(Integer.parseInt(existing.getVersion()))
       .withDiscoverySuppress(existing.getDiscoverySuppress())
       .withStaffSuppress(existing.getStaffSuppress())
       .withPreviouslyHeld(existing.getPreviouslyHeld())

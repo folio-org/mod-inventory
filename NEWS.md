@@ -1,3 +1,7 @@
+## 18.1.0 2021-10-18
+
+* Fixed incorrect optimistic locking behavior for instance update when uploading file via data import (MODINV-546)
+
 ## 18.0.0 2021-10-06
 
 * Adds `boundWithTitles` property to individual bound-with item (MODINV-443)
