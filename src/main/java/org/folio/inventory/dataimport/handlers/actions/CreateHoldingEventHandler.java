@@ -48,6 +48,7 @@ public class CreateHoldingEventHandler implements EventHandler {
   private static final String PAYLOAD_DATA_HAS_NO_INSTANCE_ID_ERROR_MSG = "Failed to extract instanceId from instance entity or parsed record";
   private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingMetadata snapshot was not found by jobExecutionId '%s'";
   static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create a Holding entity requires a mapping profile";
+  private static final String FOLIO_SOURCE_ID = "f32d531e-df79-46b3-8932-cdd35f7a2264";
 
   private final Storage storage;
   private final MappingMetadataCache mappingMetadataCache;
@@ -86,6 +87,7 @@ public class CreateHoldingEventHandler implements EventHandler {
             holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD);
           }
           holdingAsJson.put("id", UUID.randomUUID().toString());
+          holdingAsJson.put("sourceId", FOLIO_SOURCE_ID);
           fillInstanceIdIfNeeded(dataImportEventPayload, holdingAsJson);
           checkIfPermanentLocationIdExists(holdingAsJson);
           return Json.decodeValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), HoldingsRecord.class);
