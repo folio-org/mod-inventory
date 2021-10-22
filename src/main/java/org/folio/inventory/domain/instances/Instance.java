@@ -72,7 +72,7 @@ public class Instance {
 
   private final String id;
   @JsonProperty("_version")
-  private final String version;
+  private String version;
   private final String hrid;
   private String matchKey;
   private final String source;
@@ -572,6 +572,11 @@ public class Instance {
 
   public Instance setStatusUpdatedDate(String statusUpdatedDate) {
     this.statusUpdatedDate = statusUpdatedDate;
+    return this;
+  }
+
+  public Instance setVersion(String version) {
+    this.version = version;
     return this;
   }
 
