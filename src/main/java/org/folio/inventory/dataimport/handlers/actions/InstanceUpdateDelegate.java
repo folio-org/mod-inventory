@@ -1,8 +1,9 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.json.JsonObject;
+import static java.lang.String.format;
+
+import java.util.Map;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
@@ -16,9 +17,9 @@ import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingPa
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.Record;
 
-import java.util.Map;
-
-import static java.lang.String.format;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.json.JsonObject;
 
 public class InstanceUpdateDelegate {
 
@@ -26,6 +27,7 @@ public class InstanceUpdateDelegate {
 
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
+  private static final String QM_RELATED_RECORD_VERSION_KEY = "RELATED_RECORD_VERSION";
   private static final String MARC_FORMAT = "MARC_BIB";
 
   private final Storage storage;
@@ -46,11 +48,18 @@ public class InstanceUpdateDelegate {
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
 
       return getInstanceById(instanceId, instanceCollection)
+        .onSuccess(existingInstance -> fillVersion(existingInstance, eventPayload))
         .compose(existingInstance -> updateInstance(existingInstance, mappedInstance))
         .compose(updatedInstance -> updateInstanceInStorage(updatedInstance, instanceCollection));
     } catch (Exception e) {
       LOGGER.error("Error updating inventory instance", e);
       return Future.failedFuture(e);
+    }
+  }
+
+  private void fillVersion(Instance existingInstance, Map<String, String> eventPayload) {
+    if (eventPayload.containsKey(QM_RELATED_RECORD_VERSION_KEY)) {
+      existingInstance.setVersion(eventPayload.get(QM_RELATED_RECORD_VERSION_KEY));
     }
   }
 
