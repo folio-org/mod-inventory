@@ -42,7 +42,7 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
   public static final String JOB_EXECUTION_ID_KEY = "JOB_EXECUTION_ID";
   private static final ObjectMapper OBJECT_MAPPER = ObjectMapperTool.getMapper();
-  private static final String CORRELATION_ID_HEADER = "correlationId";
+  private static final String RECORD_ID_HEADER = "recordId";
 
   private final InstanceUpdateDelegate instanceUpdateDelegate;
   private final KafkaInternalCache kafkaInternalCache;
@@ -64,8 +64,8 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
         @SuppressWarnings("unchecked")
         HashMap<String, String> eventPayload = OBJECT_MAPPER.readValue(event.getEventPayload(), HashMap.class);
         Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(record.headers());
-        String correlationId = headersMap.get(CORRELATION_ID_HEADER);
-        LOGGER.info(format("Event payload has been received with event type: %s and correlationId: %s", event.getEventType(), correlationId));
+        String recordId = headersMap.get(RECORD_ID_HEADER);
+        LOGGER.info("Event payload has been received with event type: {} and recordId: {}", event.getEventType(), recordId);
 
         if (isEmpty(eventPayload.get(MARC_KEY))) {
           String message = "Event payload does not contain required data to update Instance";

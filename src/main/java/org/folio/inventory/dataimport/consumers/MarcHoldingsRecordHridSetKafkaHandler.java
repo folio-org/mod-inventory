@@ -44,7 +44,7 @@ public class MarcHoldingsRecordHridSetKafkaHandler implements AsyncRecordHandler
 
   private static final Logger LOGGER = LogManager.getLogger(MarcHoldingsRecordHridSetKafkaHandler.class);
   private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingParameters and mapping rules snapshots were not found by jobExecutionId '%s'";
-  private static final String CORRELATION_ID_HEADER = "correlationId";
+  private static final String RECORD_ID_HEADER = "recordId";
   private static final String MARC_KEY = "MARC_HOLDINGS";
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
@@ -74,9 +74,9 @@ public class MarcHoldingsRecordHridSetKafkaHandler implements AsyncRecordHandler
         HashMap<String, String> eventPayload =
           OBJECT_MAPPER.readValue(event.getEventPayload(), HashMap.class);
         Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(record.headers());
-        String correlationId = headersMap.get(CORRELATION_ID_HEADER);
-        LOGGER.info(format("Event payload has been received with event type: %s and correlationId: %s", event.getEventType(),
-          correlationId));
+        String recordId = headersMap.get(RECORD_ID_HEADER);
+        LOGGER.info("Event payload has been received with event type: {} and recordId: {}", event.getEventType(),
+          recordId);
 
         if (isEmpty(eventPayload.get(MARC_KEY))) {
           String message = "Event payload does not contain required data to update Holdings";

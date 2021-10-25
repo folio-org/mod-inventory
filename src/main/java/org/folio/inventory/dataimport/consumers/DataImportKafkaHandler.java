@@ -59,7 +59,7 @@ import io.vertx.kafka.client.producer.KafkaHeader;
 public class DataImportKafkaHandler implements AsyncRecordHandler<String, String> {
 
   private static final Logger LOGGER = LogManager.getLogger(DataImportKafkaHandler.class);
-  private static final String CORRELATION_ID_HEADER = "correlationId";
+  private static final String RECORD_ID_HEADER = "recordId";
   private static final String PROFILE_SNAPSHOT_ID_KEY = "JOB_PROFILE_SNAPSHOT_ID";
 
   private KafkaInternalCache kafkaInternalCache;
@@ -85,9 +85,9 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       if (!kafkaInternalCache.containsByKey(event.getId())) {
         kafkaInternalCache.putToCache(event.getId());
         DataImportEventPayload eventPayload = Json.decodeValue(event.getEventPayload(), DataImportEventPayload.class);
-        String correlationId = extractCorrelationId(record.headers());
-        LOGGER.info(format("Data import event payload has been received with event type: %s correlationId: %s", eventPayload.getEventType(), correlationId));
-        eventPayload.getContext().put(CORRELATION_ID_HEADER, correlationId);
+        String recordId = extractRecordId(record.headers());
+        LOGGER.info("Data import event payload has been received with event type: {}, recordId: {}", eventPayload.getEventType(), recordId);
+        eventPayload.getContext().put(RECORD_ID_HEADER, recordId);
 
         Context context = EventHandlingUtil.constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl());
         String jobProfileSnapshotId = eventPayload.getContext().get(PROFILE_SNAPSHOT_ID_KEY);
@@ -143,9 +143,9 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     EventManager.registerEventHandler(new MarcBibMatchedPostProcessingEventHandler(storage));
   }
 
-  private String extractCorrelationId(List<KafkaHeader> headers) {
+  private String extractRecordId(List<KafkaHeader> headers) {
     return headers.stream()
-      .filter(header -> header.key().equals(CORRELATION_ID_HEADER))
+      .filter(header -> header.key().equals(RECORD_ID_HEADER))
       .findFirst()
       .map(header -> header.value().toString())
       .orElse(null);
