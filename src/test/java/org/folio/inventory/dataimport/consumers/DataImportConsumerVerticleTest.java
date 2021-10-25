@@ -42,12 +42,14 @@ import org.mockito.MockitoAnnotations;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
 import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.useDefaults;
 import static org.folio.ActionProfile.Action.CREATE;
@@ -64,6 +66,8 @@ import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
@@ -74,6 +78,7 @@ public class DataImportConsumerVerticleTest {
   private static final String TENANT_ID = "diku";
   private static final String KAFKA_ENV_NAME = "test-env";
   private static final String JOB_PROFILE_URL = "/data-import-profiles/jobProfileSnapshots";
+  private static final String RECORD_ID_HEADER = "recordId";
 
   private static Vertx vertx;
 
@@ -179,6 +184,7 @@ public class DataImportConsumerVerticleTest {
     String topic = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_NAME, getDefaultNameSpace(), TENANT_ID, dataImportEventPayload.getEventType());
     Event event = new Event().withId("01").withEventPayload(Json.encode(dataImportEventPayload));
     KeyValue<String, String> record = new KeyValue<>("test-key", Json.encode(event));
+    record.addHeader(RECORD_ID_HEADER, UUID.randomUUID().toString(), UTF_8);
     SendKeyValues<String, String> request = SendKeyValues.to(topic, Collections.singletonList(record)).useDefaults();
 
     Mockito.when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
@@ -188,9 +194,12 @@ public class DataImportConsumerVerticleTest {
 
     // then
     String observeTopic = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_NAME, getDefaultNameSpace(), TENANT_ID, DI_COMPLETED.value());
-    cluster.observeValues(ObserveKeyValues.on(observeTopic, 1)
-      .observeFor(30, TimeUnit.SECONDS)
+    List<KeyValue<String, String>> observedValues = cluster.observe(ObserveKeyValues.on(observeTopic, 1)
+      .observeFor(120, TimeUnit.SECONDS)
       .build());
+
+    assertEquals(1, observedValues.size());
+    assertNotNull(observedValues.get(0).getHeaders().lastHeader(RECORD_ID_HEADER));
   }
 
   @AfterClass
