@@ -16,6 +16,7 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
+import io.vertx.kafka.client.producer.KafkaHeader;
 import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
@@ -42,6 +43,7 @@ import org.mockito.MockitoAnnotations;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -65,6 +67,7 @@ public class DataImportKafkaHandlerTest {
 
   private static final String TENANT_ID = "diku";
   private static final String JOB_PROFILE_URL = "/data-import-profiles/jobProfileSnapshots";
+  private static final String RECORD_ID_HEADER = "recordId";
 
 
   @ClassRule
@@ -160,6 +163,7 @@ public class DataImportKafkaHandlerTest {
     String expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
+    when(kafkaRecord.headers()).thenReturn(List.of(KafkaHeader.header(RECORD_ID_HEADER, UUID.randomUUID().toString())));
 
     EventHandler mockedEventHandler = mock(EventHandler.class);
     when(mockedEventHandler.isEligible(any(DataImportEventPayload.class))).thenReturn(true);
