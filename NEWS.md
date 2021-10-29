@@ -1,3 +1,9 @@
+## 18.0.1 2021-10-29
+
+* Fixed holdings record created via MARC Bib Data Import shows incorrect source (MODINV-549)
+* Fix the effect of DI_ERROR messages when trying to duplicate records on the import job progress bar (MODINV-553)
+* Updated data-import-processing-core to v3.2.2
+
 ## 18.0.0 2021-10-06
 
 * Adds `boundWithTitles` property to individual bound-with item (MODINV-443)
