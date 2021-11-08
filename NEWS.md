@@ -1,3 +1,7 @@
+## 18.0.2 2021-11-08
+
+* Fixed incorrect behavior for instance update when uploading file via data import (MODINV-546)
+
 ## 18.0.1 2021-10-29
 
 * Fixed holdings record created via MARC Bib Data Import shows incorrect source (MODINV-549)
