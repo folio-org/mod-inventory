@@ -53,7 +53,7 @@ import java.util.function.Consumer;
 import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
 import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.useDefaults;
 import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_ERROR;
-import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_AUTHORITIES_UPDATED;
+import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_AUTHORITY_UPDATED;
 import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_HOLDINGS_UPDATED;
 import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_INSTANCE_UPDATED;
 import static org.folio.kafka.KafkaTopicNameHelper.formatTopicName;
@@ -299,7 +299,7 @@ public class QuickMarcKafkaHandlerTest {
 
     // then
     String observeTopic =
-      formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), TENANT_ID, QM_INVENTORY_AUTHORITIES_UPDATED.name());
+      formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), TENANT_ID, QM_INVENTORY_AUTHORITY_UPDATED.name());
     cluster.observeValues(ObserveKeyValues.on(observeTopic, 1)
       .observeFor(30, TimeUnit.SECONDS)
       .build());

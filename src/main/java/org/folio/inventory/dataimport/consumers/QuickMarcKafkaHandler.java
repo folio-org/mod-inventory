@@ -4,7 +4,7 @@ import static io.vertx.kafka.client.producer.KafkaProducer.createShared;
 import static java.lang.String.format;
 
 import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_ERROR;
-import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_AUTHORITIES_UPDATED;
+import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_AUTHORITY_UPDATED;
 import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_HOLDINGS_UPDATED;
 import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_INSTANCE_UPDATED;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
@@ -84,7 +84,7 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
     this.precedingSucceedingTitlesHelper = precedingSucceedingTitlesHelper;
     createProducer(kafkaConfig, QM_INVENTORY_INSTANCE_UPDATED);
     createProducer(kafkaConfig, QM_INVENTORY_HOLDINGS_UPDATED);
-    createProducer(kafkaConfig, QM_INVENTORY_AUTHORITIES_UPDATED);
+    createProducer(kafkaConfig, QM_INVENTORY_AUTHORITY_UPDATED);
     createProducer(kafkaConfig, QM_ERROR);
   }
 
@@ -111,7 +111,7 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
     if (recordType == Record.RecordType.MARC_BIB) {
       return QM_INVENTORY_INSTANCE_UPDATED;
     } else if (recordType == Record.RecordType.MARC_AUTHORITY) {
-      return QM_INVENTORY_AUTHORITIES_UPDATED;
+      return QM_INVENTORY_AUTHORITY_UPDATED;
     } else {
       return QM_INVENTORY_HOLDINGS_UPDATED;
     }
