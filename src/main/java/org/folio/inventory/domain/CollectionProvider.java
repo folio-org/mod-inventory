@@ -11,5 +11,6 @@ public interface CollectionProvider {
   HoldingsRecordCollection getHoldingsRecordCollection(String tenantId, String token);
   InstanceCollection getInstanceCollection(String tenantId, String token);
   IngestJobCollection getIngestJobCollection(String tenantId, String token);
+  AuthorityRecordCollection getAuthorityRecordCollection(String tenantId, String token);
   UserCollection getUserCollection(String tenantId, String token);
 }
