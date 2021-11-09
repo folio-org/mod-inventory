@@ -51,7 +51,7 @@ public class ExternalStorageCollections implements CollectionProvider {
 
   @Override
   public AuthorityRecordCollection getAuthorityRecordCollection(String tenantId, String token) {
-    return new ExternalStorageModuleAuthorityRecordCollection(vertx, baseAddress,
+    return new ExternalStorageModuleAuthorityRecordCollection(baseAddress,
       tenantId, token, client);
   }
 

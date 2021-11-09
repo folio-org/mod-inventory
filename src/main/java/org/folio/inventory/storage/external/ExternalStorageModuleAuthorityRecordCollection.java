@@ -2,7 +2,6 @@ package org.folio.inventory.storage.external;
 
 import java.io.IOException;
 
-import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
@@ -20,7 +19,6 @@ public class ExternalStorageModuleAuthorityRecordCollection
   private static final Logger LOGGER = LogManager.getLogger(ExternalStorageModuleAuthorityRecordCollection.class);
 
   ExternalStorageModuleAuthorityRecordCollection(
-    Vertx vertx,
     String baseAddress,
     String tenant,
     String token,
