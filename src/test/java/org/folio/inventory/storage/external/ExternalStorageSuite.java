@@ -26,8 +26,8 @@ import java.util.function.Function;
 @Suite.SuiteClasses({
   ExternalItemCollectionExamples.class,
   ExternalInstanceCollectionExamples.class,
-  ExternalStorageModuleHoldingsRecordCollectionTest.class,
-  ExternalStorageModuleAuthorityRecordCollectionTest.class,
+  ExternalStorageModuleHoldingsRecordCollectionExamples.class,
+  ExternalStorageModuleAuthorityRecordCollectionExamples.class,
   ReferenceRecordClientExamples.class
 })
 public class ExternalStorageSuite {

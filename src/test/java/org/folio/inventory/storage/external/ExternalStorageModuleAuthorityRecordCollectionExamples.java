@@ -14,7 +14,7 @@ import org.junit.Test;
 import org.folio.Authority;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
 
-public class ExternalStorageModuleAuthorityRecordCollectionTest {
+public class ExternalStorageModuleAuthorityRecordCollectionExamples {
   private static final String AUTHORITY_ID = UUID.randomUUID().toString();
   private static final String CORPORATE_NAME = UUID.randomUUID().toString();
   private static final Integer VERSION = 3;

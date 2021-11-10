@@ -12,7 +12,7 @@ import static org.folio.inventory.storage.external.ExternalStorageSuite.getStora
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-public class ExternalStorageModuleHoldingsRecordCollectionTest {
+public class ExternalStorageModuleHoldingsRecordCollectionExamples {
   private final ExternalStorageModuleHoldingsRecordCollection storage =
     ExternalStorageSuite.useVertx(
       it -> new ExternalStorageModuleHoldingsRecordCollection(it, getStorageAddress(),
