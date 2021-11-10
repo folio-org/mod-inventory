@@ -10,8 +10,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventTypes;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.consumers.MarcAuthorityRecordHridSetKafkaHandler;
 import org.folio.inventory.dataimport.consumers.MarcBibInstanceHridSetKafkaHandler;
 import org.folio.inventory.dataimport.consumers.MarcHoldingsRecordHridSetKafkaHandler;
+import org.folio.inventory.dataimport.handlers.actions.AuthorityUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.actions.HoldingsUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.storage.Storage;
@@ -43,6 +45,7 @@ public class MarcHridSetConsumerVerticle extends AbstractVerticle {
   private final int loadLimit = getLoadLimit();
   private KafkaConsumerWrapper<String, String> marcBibConsumerWrapper;
   private KafkaConsumerWrapper<String, String> marcHoldingsConsumerWrapper;
+  private KafkaConsumerWrapper<String, String> marcAuthorityConsumerWrapper;
 
   @Override
   public void start(Promise<Void> startPromise) {
@@ -64,6 +67,7 @@ public class MarcHridSetConsumerVerticle extends AbstractVerticle {
     Storage storage = Storage.basedUpon(vertx, config, client);
     InstanceUpdateDelegate instanceUpdateDelegate = new InstanceUpdateDelegate(storage);
     HoldingsUpdateDelegate holdingsRecordUpdateDelegate = new HoldingsUpdateDelegate(storage);
+    AuthorityUpdateDelegate authorityUpdateDelegate = new AuthorityUpdateDelegate(storage);
 
     KafkaInternalCache kafkaInternalCache = KafkaInternalCache.builder()
       .kafkaConfig(kafkaConfig).build();
@@ -74,10 +78,12 @@ public class MarcHridSetConsumerVerticle extends AbstractVerticle {
 
     MarcBibInstanceHridSetKafkaHandler marcBibInstanceHridSetKafkaHandler = new MarcBibInstanceHridSetKafkaHandler(instanceUpdateDelegate, kafkaInternalCache, mappingMetadataCache);
     MarcHoldingsRecordHridSetKafkaHandler marcHoldingsRecordHridSetKafkaHandler = new MarcHoldingsRecordHridSetKafkaHandler(holdingsRecordUpdateDelegate, kafkaInternalCache, mappingMetadataCache);
+    MarcAuthorityRecordHridSetKafkaHandler marcAuthorityRecordHridSetKafkaHandler = new MarcAuthorityRecordHridSetKafkaHandler(authorityUpdateDelegate, kafkaInternalCache, mappingMetadataCache);
 
     CompositeFuture.all(
         marcBibConsumerWrapper.start(marcBibInstanceHridSetKafkaHandler, constructModuleName()),
-        marcHoldingsConsumerWrapper.start(marcHoldingsRecordHridSetKafkaHandler, constructModuleName())
+        marcHoldingsConsumerWrapper.start(marcHoldingsRecordHridSetKafkaHandler, constructModuleName()),
+        marcAuthorityConsumerWrapper.start(marcAuthorityRecordHridSetKafkaHandler, constructModuleName())
       )
       .onFailure(startPromise::fail)
       .onSuccess(ar -> startPromise.complete());
@@ -87,7 +93,7 @@ public class MarcHridSetConsumerVerticle extends AbstractVerticle {
 
   @Override
   public void stop(Promise<Void> stopPromise) {
-    CompositeFuture.join(marcBibConsumerWrapper.stop(), marcHoldingsConsumerWrapper.stop())
+    CompositeFuture.join(marcBibConsumerWrapper.stop(), marcHoldingsConsumerWrapper.stop(), marcAuthorityConsumerWrapper.stop())
       .onComplete(ar -> stopPromise.complete());
   }
 
