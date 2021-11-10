@@ -27,6 +27,7 @@ import java.util.function.Function;
   ExternalItemCollectionExamples.class,
   ExternalInstanceCollectionExamples.class,
   ExternalStorageModuleHoldingsRecordCollectionTest.class,
+  ExternalStorageModuleAuthorityRecordCollectionTest.class,
   ReferenceRecordClientExamples.class
 })
 public class ExternalStorageSuite {

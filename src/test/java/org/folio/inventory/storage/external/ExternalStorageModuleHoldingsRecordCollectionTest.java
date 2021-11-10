@@ -12,7 +12,6 @@ import static org.folio.inventory.storage.external.ExternalStorageSuite.getStora
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-@Ignore("These tests fail during maven builds for an unknown reason")
 public class ExternalStorageModuleHoldingsRecordCollectionTest {
   private final ExternalStorageModuleHoldingsRecordCollection storage =
     ExternalStorageSuite.useVertx(
