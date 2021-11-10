@@ -24,8 +24,8 @@ public class ExternalStorageModuleAuthorityRecordCollection
     String token,
     HttpClient client) {
 
-    super(String.format("%s/%s", baseAddress, "holdings-storage/holdings"),
-      tenant, token, "holdingsRecords", client);
+    super(String.format("%s/%s", baseAddress, "authority-storage/authorities"),
+      tenant, token, "authorities", client);
   }
 
   @Override

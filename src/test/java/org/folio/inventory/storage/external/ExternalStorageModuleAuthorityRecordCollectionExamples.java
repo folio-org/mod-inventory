@@ -46,6 +46,14 @@ public class ExternalStorageModuleAuthorityRecordCollectionExamples {
     assertEquals(authorityId, storage.getId(authority));
   }
 
+  @Test(expected = JsonMappingException.class)
+  public void shouldNotMapFromJsonAndThrowException() {
+    JsonObject holdingsRecord = new JsonObject()
+      .put("_version", "wrongFormat");
+
+    storage.mapFromJson(holdingsRecord);
+  }
+
   @Test
   public void shouldMapToRequest() {
     Authority authority = new Authority()
