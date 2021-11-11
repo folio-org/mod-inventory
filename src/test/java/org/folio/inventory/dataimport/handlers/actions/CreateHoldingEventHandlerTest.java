@@ -55,7 +55,6 @@ import java.util.function.Consumer;
 
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
-import static org.folio.ActionProfile.FolioRecord.MARC_HOLDINGS;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
 import static org.folio.inventory.dataimport.handlers.actions.CreateHoldingEventHandler.ACTION_HAS_NO_MAPPING_MSG;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
@@ -164,11 +163,8 @@ public class CreateHoldingEventHandlerTest {
     String instanceId = String.valueOf(UUID.randomUUID());
     Instance instance = new Instance(instanceId, "5", String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
-
-    HashMap<String, String> context = new HashMap<>();
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
-    record.setId("a0eb738a-c631-48cb-b36e-41cdcc83e2a4");
-
+    HashMap<String, String> context = new HashMap<>();
     context.put("INSTANCE", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
 
@@ -209,7 +205,6 @@ public class CreateHoldingEventHandlerTest {
     JsonObject instanceAsJson = new JsonObject().put("id", expectedInstanceId);
 
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
-    record.setId("a0eb738a-c631-48cb-b36e-41cdcc83e2a4");
 
     HashMap<String, String> context = new HashMap<>();
     context.put("INSTANCE", instanceAsJson.encode());
@@ -249,7 +244,6 @@ public class CreateHoldingEventHandlerTest {
     MappingManager.registerWriterFactory(new HoldingWriterFactory());
 
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
-    record.setId("a0eb738a-c631-48cb-b36e-41cdcc83e2a4");
 
     HashMap<String, String> context = new HashMap<>();
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
