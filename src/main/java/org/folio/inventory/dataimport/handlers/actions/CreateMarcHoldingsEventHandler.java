@@ -14,7 +14,6 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTI
 
 import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import io.vertx.core.Future;
@@ -41,6 +40,7 @@ import org.folio.processing.mapping.defaultmapper.RecordMapper;
 import org.folio.processing.mapping.defaultmapper.RecordMapperBuilder;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.MappingMetadataDto;
+import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Record;
 
 public class CreateMarcHoldingsEventHandler implements EventHandler {
@@ -73,7 +73,8 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
     try {
         dataImportEventPayload.setEventType(DI_INVENTORY_HOLDING_CREATED.value());
 
-      if (dataImportEventPayload.getContext() == null
+      HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
+      if (payloadContext == null || payloadContext.isEmpty()
         || StringUtils.isEmpty(dataImportEventPayload.getContext().get(MARC_HOLDINGS.value()))) {
         return CompletableFuture.failedFuture(new EventProcessingException(CONTEXT_EMPTY_ERROR_MESSAGE));
       }
@@ -82,14 +83,17 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
 
-      var context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+      var context = constructContext(dataImportEventPayload.getTenant(),
+        dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+      Record record = new JsonObject(payloadContext.get(EntityType.MARC_HOLDINGS.value()))
+        .mapTo(Record.class);
       prepareEvent(dataImportEventPayload);
 
       mappingMetadataCache.get(dataImportEventPayload.getJobExecutionId(), context)
         .map(parametersOptional -> parametersOptional.orElseThrow(() ->
           new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, dataImportEventPayload.getJobExecutionId()))))
         .onSuccess(mappingMetadata -> defaultMapRecordToHoldings(dataImportEventPayload, mappingMetadata))
-        .map(v -> processMappingResult(dataImportEventPayload))
+        .map(v -> processMappingResult(dataImportEventPayload, record))
         .compose(holdingJson -> findInstanceIdByHrid(dataImportEventPayload, holdingJson, context)
           .compose(instanceId -> {
             fillInstanceId(dataImportEventPayload, holdingJson, instanceId);
@@ -113,14 +117,16 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
     return future;
   }
 
-  private JsonObject processMappingResult(DataImportEventPayload dataImportEventPayload) {
+  private JsonObject processMappingResult(DataImportEventPayload dataImportEventPayload, Record record) {
     var holdingAsJson = new JsonObject(dataImportEventPayload.getContext().get(HOLDINGS.value()));
     if (holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD) != null) {
       holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD);
     }
-    holdingAsJson.put("id", UUID.randomUUID().toString());
+    holdingAsJson.put("id", record.getId());
     holdingAsJson.remove("hrid");
     checkIfPermanentLocationIdExists(holdingAsJson);
+
+    LOGGER.debug("Creating holdings with id: {}", record.getId());
 
     return holdingAsJson;
   }
