@@ -23,7 +23,7 @@ import org.folio.processing.mapping.mapper.MappingContext;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Record;
 
-import java.util.UUID;
+import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 
 import static java.lang.String.format;
@@ -32,6 +32,7 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.logging.log4j.util.Strings.isNotEmpty;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
+import static org.folio.ActionProfile.FolioRecord.MARC_HOLDINGS;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
@@ -64,7 +65,8 @@ public class CreateHoldingEventHandler implements EventHandler {
     try {
       dataImportEventPayload.setEventType(DI_INVENTORY_HOLDING_CREATED.value());
 
-      if (dataImportEventPayload.getContext() == null
+      HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
+      if (payloadContext == null || payloadContext.isEmpty()
         || StringUtils.isEmpty(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()))) {
         throw new EventProcessingException(CONTEXT_EMPTY_ERROR_MESSAGE);
       }
@@ -73,7 +75,11 @@ public class CreateHoldingEventHandler implements EventHandler {
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
 
-      Context context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+      Context context = constructContext(dataImportEventPayload.getTenant(),
+        dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+      Record record = new JsonObject(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()))
+        .mapTo(Record.class);
+
       mappingMetadataCache.get(dataImportEventPayload.getJobExecutionId(), context)
         .map(parametersOptional -> parametersOptional.orElseThrow(() ->
           new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, dataImportEventPayload.getJobExecutionId()))))
@@ -86,10 +92,13 @@ public class CreateHoldingEventHandler implements EventHandler {
           if (holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD) != null) {
             holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD);
           }
-          holdingAsJson.put("id", UUID.randomUUID().toString());
+          holdingAsJson.put("id", record.getId());
           holdingAsJson.put("sourceId", FOLIO_SOURCE_ID);
           fillInstanceIdIfNeeded(dataImportEventPayload, holdingAsJson);
           checkIfPermanentLocationIdExists(holdingAsJson);
+
+          LOGGER.debug("Creating holdings with id: {}", record.getId());
+
           return Json.decodeValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), HoldingsRecord.class);
         })
         .compose(holdingToCreate -> addHoldings(holdingToCreate, context))
