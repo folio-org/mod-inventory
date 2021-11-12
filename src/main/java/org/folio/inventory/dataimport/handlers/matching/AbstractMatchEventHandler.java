@@ -59,7 +59,7 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
 
   private CompletableFuture<Boolean> doMatching(DataImportEventPayload dataImportEventPayload, MappingMetadataDto mappingMetadataDto,
                                                 MatchingParametersRelations matchingParametersRelations) {
-    dataImportEventPayload.getContext().put(MAPPING_PARAMS, Json.encode(mappingMetadataDto));
+    dataImportEventPayload.getContext().put(MAPPING_PARAMS, mappingMetadataDto.getMappingParams());
     dataImportEventPayload.getContext().put(MATCHING_RELATIONS,
       Json.encode(matchingParametersRelations.getMatchingRelations()));
 
