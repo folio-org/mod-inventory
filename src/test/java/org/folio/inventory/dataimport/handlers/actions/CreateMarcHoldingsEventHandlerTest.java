@@ -185,6 +185,7 @@ public class CreateMarcHoldingsEventHandlerTest {
 
     var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
+    record.setId("a0eb738a-c631-48cb-b36e-41cdcc83e2a4");
     HashMap<String, String> context = new HashMap<>();
     context.put("HOLDINGS", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(holdings)).encode());
     context.put(MARC_HOLDINGS.value(), Json.encode(record));
@@ -349,6 +350,7 @@ public class CreateMarcHoldingsEventHandlerTest {
 
     var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
+    record.setId("a0eb738a-c631-48cb-b36e-41cdcc83e2a4");
     HashMap<String, String> context = new HashMap<>();
     context.put("HOLDINGS", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(holdings)).encode());
     context.put(MARC_HOLDINGS.value(), Json.encode(record));
