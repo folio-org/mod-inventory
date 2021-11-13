@@ -1,6 +1,7 @@
 ## 18.0.2 2021-11-08
 
 * Fixed incorrect behavior for instance update when uploading file via data import (MODINV-546)
+* Fixed put for mappingParams into dataImportEventPayload BF (MODINV-571)
 
 ## 18.0.1 2021-10-29
 
