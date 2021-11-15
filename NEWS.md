@@ -2,6 +2,7 @@
 
 * Fixed incorrect optimistic locking behavior for instance update when uploading file via data import (MODINV-546)
 * Fixed holdings record created via MARC Bib Data Import shows incorrect source (MODINV-549)
+* Fixed put for mappingParams into dataImportEventPayload (MODINV-571)
 
 ## 18.0.0 2021-10-06
 
