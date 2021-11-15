@@ -3,7 +3,6 @@ package org.folio.inventory.dataimport.handlers.actions;
 import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.MARC_HOLDINGS;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDINGS_CREATED_READY_FOR_POST_PROCESSING;
@@ -16,18 +15,14 @@ import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.Holdings;
 import org.folio.HoldingsRecord;
+import org.folio.MappingMetadataDto;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
@@ -43,13 +38,17 @@ import org.folio.MappingMetadataDto;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Record;
 
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
+
 public class CreateMarcHoldingsEventHandler implements EventHandler {
 
   private static final Logger LOGGER = LogManager.getLogger(CreateMarcHoldingsEventHandler.class);
   private static final String ERROR_HOLDING_MSG = "Error loading inventory holdings for MARC BIB";
   private static final String MARC_FORMAT = "MARC_HOLDINGS";
   private static final String HOLDINGS_PATH = "holdings";
-  private static final String HOLDINGS_PATH_FIELD = "holdings";
   private static final String INSTANCE_ID_FIELD = "instanceId";
   private static final String PERMANENT_LOCATION_ID_FIELD = "permanentLocationId";
   private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingParameters and mapping rules snapshots were not found by jobExecutionId '%s'";
@@ -119,8 +118,8 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
 
   private JsonObject processMappingResult(DataImportEventPayload dataImportEventPayload, Record record) {
     var holdingAsJson = new JsonObject(dataImportEventPayload.getContext().get(HOLDINGS.value()));
-    if (holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD) != null) {
-      holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD);
+    if (holdingAsJson.getJsonObject(HOLDINGS_PATH) != null) {
+      holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_PATH);
     }
     holdingAsJson.put("id", record.getId());
     holdingAsJson.remove("hrid");

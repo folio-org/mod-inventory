@@ -1,3 +1,7 @@
+## 18.x.x 2021-xx-xx
+
+* added Marc Authority handler for entities created via MARC Authority Data Import (MODINV-501)
+
 ## 18.1.0 2021-10-18
 
 * Edit MARC Authorities via quickMARC | Update Inventory Authorities (MODINV-503)

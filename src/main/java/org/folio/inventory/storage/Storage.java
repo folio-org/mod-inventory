@@ -11,6 +11,7 @@ import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.domain.CollectionProvider;
 import org.folio.inventory.domain.HoldingCollection;
 import org.folio.inventory.domain.HoldingsRecordCollection;
+import org.folio.inventory.domain.authority.AuthorityCollection;
 import org.folio.inventory.domain.ingest.IngestJobCollection;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.domain.items.ItemCollection;
@@ -65,6 +66,11 @@ public class Storage {
   public HoldingCollection getHoldingCollection(Context context) {
     return providerFactory.apply(context).getHoldingCollection(
       context.getTenantId(), context.getToken());
+  }
+
+  public AuthorityCollection getAuthorityCollection(Context context) {
+    return providerFactory.apply(context).getAuthorityCollection(
+        context.getTenantId(), context.getToken());
   }
 
   public HoldingsRecordCollection getHoldingsRecordCollection(Context context) {
