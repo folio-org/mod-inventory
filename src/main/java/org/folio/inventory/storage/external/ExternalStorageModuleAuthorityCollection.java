@@ -29,7 +29,7 @@ public class ExternalStorageModuleAuthorityCollection extends ExternalStorageMod
   }
 
   @Override
-  protected String getId(Authority record) {
-    return record.getId();
+  protected String getId(Authority authorityRecord) {
+    return authorityRecord.getId();
   }
 }
