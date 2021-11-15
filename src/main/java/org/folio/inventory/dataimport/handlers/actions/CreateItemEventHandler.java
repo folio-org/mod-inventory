@@ -42,6 +42,7 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.ITEM;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_CREATED;
@@ -174,6 +175,10 @@ public class CreateItemEventHandler implements EventHandler {
   }
 
   private Future<Boolean> isItemBarcodeUnique(String barcode, ItemCollection itemCollection) throws UnsupportedEncodingException {
+    if (isEmpty(barcode)) {
+      return Future.succeededFuture(Boolean.TRUE);
+    }
+
     Promise<Boolean> promise = Promise.promise();
     itemCollection.findByCql(CqlHelper.barcodeIs(barcode), PagingParameters.defaults(),
       findResult -> promise.complete(findResult.getResult().records.isEmpty()),
