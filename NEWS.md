@@ -1,3 +1,7 @@
+## 17.0.7 2021-11-15
+
+* Prevent sending a requests with an empty barcode (MODINV-572)
+
 ## 17.0.6 2021-09-28
 
 * Fix Instance overlay with source=FOLIO (MODINV-505)
