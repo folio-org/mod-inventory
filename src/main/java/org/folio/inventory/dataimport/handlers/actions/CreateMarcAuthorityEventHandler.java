@@ -33,9 +33,9 @@ import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
-public class CreateMarcAuthoritiesEventHandler implements EventHandler {
+public class CreateMarcAuthorityEventHandler implements EventHandler {
 
-  private static final Logger LOGGER = LogManager.getLogger(CreateMarcAuthoritiesEventHandler.class);
+  private static final Logger LOGGER = LogManager.getLogger(CreateMarcAuthorityEventHandler.class);
 
   private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t create Authority entity: context is empty or doesn`t exists";
   static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create a Authority entity requires a mapping profile";
@@ -45,7 +45,7 @@ public class CreateMarcAuthoritiesEventHandler implements EventHandler {
   private final Storage storage;
   private final MappingMetadataCache mappingMetadataCache;
 
-  public CreateMarcAuthoritiesEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache) {
+  public CreateMarcAuthorityEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache) {
     this.storage = storage;
     this.mappingMetadataCache = mappingMetadataCache;
   }
@@ -141,7 +141,7 @@ public class CreateMarcAuthoritiesEventHandler implements EventHandler {
     if (authorityAsJson.getJsonObject(AUTHORITY_PATH) != null) {
       authorityAsJson = authorityAsJson.getJsonObject(AUTHORITY_PATH);
     }
-    //Uncomment when
+    //Uncomment when MODINVSTOR-825 ready
 //    authorityAsJson.put(SOURCE_KEY, MARC_FORMAT);
 
     return authorityAsJson;
