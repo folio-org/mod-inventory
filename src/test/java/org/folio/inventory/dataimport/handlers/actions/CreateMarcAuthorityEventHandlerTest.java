@@ -7,7 +7,7 @@ import static org.folio.ActionProfile.FolioRecord.ITEM;
 import static org.folio.ActionProfile.FolioRecord.MARC_AUTHORITY;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_CREATED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_AUTHORITY_RECORD_CREATED;
-import static org.folio.inventory.dataimport.handlers.actions.CreateMarcAuthoritiesEventHandler.ACTION_HAS_NO_MAPPING_MSG;
+import static org.folio.inventory.dataimport.handlers.actions.CreateMarcAuthorityEventHandler.ACTION_HAS_NO_MAPPING_MSG;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
@@ -39,7 +39,7 @@ import org.folio.MappingProfile;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
-import org.folio.inventory.domain.authority.AuthorityCollection;
+import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
@@ -69,7 +69,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
-public class CreateMarcAuthoritiesEventHandlerTest {
+public class CreateMarcAuthorityEventHandlerTest {
 
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/marc-authority-rules.json";
   private static final String PARSED_AUTHORITY_RECORD = "src/test/resources/marc/authority/parsed-authority-record.json";
@@ -78,7 +78,7 @@ public class CreateMarcAuthoritiesEventHandlerTest {
   @Mock
   private Storage storage;
   @Mock
-  AuthorityCollection authorityCollection;
+  AuthorityRecordCollection authorityCollection;
   @Mock
   OkapiHttpClient mockedClient;
 
@@ -89,7 +89,7 @@ public class CreateMarcAuthoritiesEventHandlerTest {
           .notifier(new Slf4jNotifier(true)));
 
   private JsonObject mappingRules;
-  private CreateMarcAuthoritiesEventHandler createMarcAuthoritiesEventHandler;
+  private CreateMarcAuthorityEventHandler createMarcAuthoritiesEventHandler;
   private Vertx vertx = Vertx.vertx();
 
   private final JobProfile jobProfile = new JobProfile()
@@ -133,7 +133,7 @@ public class CreateMarcAuthoritiesEventHandlerTest {
     MockitoAnnotations.openMocks(this);
     MappingManager.clearReaderFactories();
     MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, vertx.createHttpClient(), 3600);
-    createMarcAuthoritiesEventHandler = new CreateMarcAuthoritiesEventHandler(storage, mappingMetadataCache);
+    createMarcAuthoritiesEventHandler = new CreateMarcAuthorityEventHandler(storage, mappingMetadataCache);
     mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
 
     doAnswer(invocationOnMock -> {
@@ -154,7 +154,7 @@ public class CreateMarcAuthoritiesEventHandlerTest {
 
   @Test
   public void shouldProcessEvent() throws IOException, InterruptedException, ExecutionException, TimeoutException {
-    when(storage.getAuthorityCollection(any())).thenReturn(authorityCollection);
+    when(storage.getAuthorityRecordCollection(any())).thenReturn(authorityCollection);
 
     var parsedAuthorityRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_AUTHORITY_RECORD));
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedAuthorityRecord.encode()));

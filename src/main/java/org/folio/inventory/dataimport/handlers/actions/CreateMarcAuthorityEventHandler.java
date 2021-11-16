@@ -18,7 +18,7 @@ import org.folio.Authority;
 import org.folio.DataImportEventPayload;
 import org.folio.MappingMetadataDto;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
-import org.folio.inventory.domain.authority.AuthorityCollection;
+import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
 import org.folio.processing.events.services.handler.EventHandler;
@@ -74,7 +74,7 @@ public class CreateMarcAuthoritiesEventHandler implements EventHandler {
             new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, dataImportEventPayload.getJobExecutionId()))))
         .onSuccess(mappingMetadata -> defaultMapRecordToAuthority(dataImportEventPayload, mappingMetadata))
         .compose(v -> {
-          var authorityCollection = storage.getAuthorityCollection(context);
+          var authorityCollection = storage.getAuthorityRecordCollection(context);
           final var authorityAsJson = prepareAuthority(dataImportEventPayload);
           var authority = Json.decodeValue(authorityAsJson.encodePrettily(), Authority.class);
           return addAuthority(authority, authorityCollection);
@@ -95,7 +95,7 @@ public class CreateMarcAuthoritiesEventHandler implements EventHandler {
     return future;
   }
 
-  private Future<Authority> addAuthority(Authority authority, AuthorityCollection authorityCollection) {
+  private Future<Authority> addAuthority(Authority authority, AuthorityRecordCollection authorityCollection) {
     Promise<Authority> promise = Promise.promise();
     authorityCollection.add(authority, success -> promise.complete(success.getResult()),
         failure -> {

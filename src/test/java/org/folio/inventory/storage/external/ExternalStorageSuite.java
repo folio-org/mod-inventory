@@ -28,7 +28,6 @@ import support.fakes.FakeOkapi;
   ExternalInstanceCollectionExamples.class,
   ExternalStorageModuleHoldingsRecordCollectionExamples.class,
   ExternalStorageModuleAuthorityRecordCollectionExamples.class,
-  ExternalAuthorityCollectionExamples.class,
   ReferenceRecordClientExamples.class
 })
 public class ExternalStorageSuite {
