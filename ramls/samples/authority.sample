@@ -13,6 +13,9 @@
       "nnn, Clemens, Samuel Langhorne, 1835-1910",
       "nnn, Snodgrass, Quintus Curtius, 1835-1910"
    ],
+   "personalNameTitle": "",
+   "sftPersonalNameTitle":[],
+   "saftPersonalNameTitle":[],
    "corporateName":"International Business Machines Corporation",
    "sftCorporateName":[
       "Oklahoma. Council on Juvenile Delinquency",
@@ -22,6 +25,9 @@
       "Oklahoma Council on Juvenile Delinquency Planning",
       "Oklahoma Council on Juvenile Justice"
    ],
+   "corporateNameTitle":"",
+   "sftCorporateNameTitle":[],
+   "saftCorporateNameTitle":[],
    "meetingName":"Olympic Winter Games (21st : 2010 : Vancouver, B.C.)",
    "sftMeetingName":[
       "Vancouver Winter Games (2010 : Vancouver, B.C.)"
@@ -29,6 +35,9 @@
    "saftMeetingName":[
 
    ],
+   "meetingNameTitle":"",
+   "sftMeetingNameTitle":[],
+   "saftMeetingNameTitle":[],
    "uniformTitle":"Monograph (Institute of Applied Social and Economic Research)",
    "sftUniformTitle":[
       "Monographs (Institute of Applied Social and Economic Research)",
