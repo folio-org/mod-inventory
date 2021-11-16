@@ -1,7 +1,14 @@
+## 18.0.4 2021-11-16
+
+* Fixed put for mappingParams into dataImportEventPayload BF (MODINV-571)
+
+## 18.0.3 2021-11-13
+
+* Import of MARC Holdings might create more Holdings than were in the file (MODINV-564)
+
 ## 18.0.2 2021-11-08
 
 * Fixed incorrect behavior for instance update when uploading file via data import (MODINV-546)
-* Fixed put for mappingParams into dataImportEventPayload BF (MODINV-571)
 
 ## 18.0.1 2021-10-29
 
