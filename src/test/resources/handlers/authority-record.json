@@ -1,0 +1,510 @@
+{
+  "id": "4ce19d38-9f8b-4faa-89c0-aa7a7b41e8a7",
+  "snapshotId": "a32de245-aa4f-4e24-aa36-ff2370beb083",
+  "matchedId": "69afc410-ea05-4530-9847-e8f3b2b734d3",
+  "generation": 3,
+  "recordType": "MARC_AUTHORITY",
+  "parsedRecord": {
+    "id": "64deac7f-b6b4-46c9-a357-3e80dc8f52c8",
+    "content": {
+      "leader": "01012cz  a2200241n  4500",
+      "fields": [
+        {
+          "001": "1000649"
+        },
+        {
+          "005": "20171119085041.0"
+        },
+        {
+          "008": "201001 n acanaaabn           n aaa     d"
+        },
+        {
+          "010": {
+            "subfields": [
+              {
+                "a": "n   58020553 "
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        },
+        {
+          "024": {
+            "subfields": [
+              {
+                "a": "0022-0469"
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        },
+        {
+          "035": {
+            "subfields": [
+              {
+                "a": "(CStRLIN)NYCX1604275S"
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        },
+        {
+          "100": {
+            "subfields": [
+              {
+                "a": "Eimermacher, Karl"
+              },
+              {
+                "d": "CtY"
+              },
+              {
+                "d": "MBTI"
+              },
+              {
+                "d": "CtY"
+              },
+              {
+                "d": "MBTI"
+              },
+              {
+                "d": "NIC"
+              },
+              {
+                "d": "CStRLIN"
+              },
+              {
+                "d": "NIC"
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        },
+        {
+          "110": {
+            "subfields": [
+              {
+                "a": "BR140"
+              },
+              {
+                "b": ".J6"
+              }
+            ],
+            "ind1": "0",
+            "ind2": " "
+          }
+        },
+        {
+          "111": {
+            "subfields": [
+              {
+                "a": "270.05"
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        },
+        {
+          "130": {
+            "subfields": [
+              {
+                "a": "The Journal of ecclesiastical history"
+              }
+            ],
+            "ind1": "0",
+            "ind2": "4"
+          }
+        },
+        {
+          "150": {
+            "subfields": [
+              {
+                "a": "The Journal of ecclesiastical history."
+              }
+            ],
+            "ind1": "0",
+            "ind2": "4"
+          }
+        },
+        {
+          "151": {
+            "subfields": [
+              {
+                "a": "London,"
+              },
+              {
+                "b": "Cambridge University Press [etc.]"
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        },
+        {
+          "155": {
+            "subfields": [
+              {
+                "a": "32 East 57th St., New York, 10022"
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        },
+        {
+          "375": {
+            "subfields": [
+              {
+                "a": "male"
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        },
+        {
+          "377": {
+            "subfields": [
+              {
+                "a": "ger"
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        },
+        {
+          "400": {
+            "subfields": [
+              {
+                "a": "v."
+              },
+              {
+                "b": "25 cm."
+              }
+            ],
+            "ind1": "1",
+            "ind2": " "
+          }
+        },
+        {
+          "410": {
+            "subfields": [
+              {
+                "a": "Quarterly,"
+              },
+              {
+                "b": "1970-"
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        },
+        {
+          "411": {
+            "subfields": [
+              {
+                "a": "Semiannual,"
+              },
+              {
+                "b": "1950-69"
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        },
+        {
+          "430": {
+            "subfields": [
+              {
+                "a": "v. 1-   Apr. 1950-"
+              }
+            ],
+            "ind1": "0",
+            "ind2": " "
+          }
+        },
+        {
+          "450": {
+            "subfields": [
+              {
+                "a": "note$a"
+              },
+              {
+                "u": "note$u"
+              },
+              {
+                "3": "note$3"
+              },
+              {
+                "5": "note$5"
+              },
+              {
+                "6": "note$6"
+              },
+              {
+                "8": "note$8"
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        },
+        {
+          "451": {
+            "subfields": [
+              {
+                "a": "note$a"
+              },
+              {
+                "b": "note$b"
+              },
+              {
+                "c": "note$c"
+              },
+              {
+                "d": "note$d"
+              },
+              {
+                "e": "note$e"
+              },
+              {
+                "3": "note$3"
+              },
+              {
+                "5": "note$5"
+              },
+              {
+                "6": "note$6"
+              },
+              {
+                "8": "note$8"
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        },
+        {
+          "455": {
+            "subfields": [
+              {
+                "a": "note$a"
+              },
+              {
+                "b": "note$b"
+              },
+              {
+                "c": "note$c"
+              },
+              {
+                "d": "note$d"
+              },
+              {
+                "e": "note$e"
+              },
+              {
+                "f": "note$f"
+              },
+              {
+                "h": "note$h"
+              },
+              {
+                "i": "note$i"
+              },
+              {
+                "j": "note$j"
+              },
+              {
+                "k": "note$k"
+              },
+              {
+                "l": "note$l"
+              },
+              {
+                "n": "note$n"
+              },
+              {
+                "o": "note$o"
+              },
+              {
+                "u": "note$u"
+              },
+              {
+                "x": "note$x"
+              },
+              {
+                "z": "note$z"
+              },
+              {
+                "2": "note$2"
+              },
+              {
+                "3": "note$3"
+              },
+              {
+                "5": "note$5"
+              },
+              {
+                "8": "note$8"
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        },
+        {
+          "500": {
+            "subfields": [
+              {
+                "a": "Editor:   C. W. Dugmore."
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        },
+        {
+          "510": {
+            "subfields": [
+              {
+                "a": "Church history"
+              },
+              {
+                "x": "Periodicals."
+              }
+            ],
+            "ind1": " ",
+            "ind2": "0"
+          }
+        },
+        {
+          "511": {
+            "subfields": [
+              {
+                "a": "Church history"
+              },
+              {
+                "2": "fast"
+              },
+              {
+                "0": "(OCoLC)fst00860740"
+              }
+            ],
+            "ind1": " ",
+            "ind2": "7"
+          }
+        },
+        {
+          "530": {
+            "subfields": [
+              {
+                "a": "Periodicals"
+              },
+              {
+                "2": "fast"
+              },
+              {
+                "0": "(OCoLC)fst01411641"
+              }
+            ],
+            "ind1": " ",
+            "ind2": "7"
+          }
+        },
+        {
+          "550": {
+            "subfields": [
+              {
+                "a": "Dugmore, C. W."
+              },
+              {
+                "q": "(Clifford William),"
+              },
+              {
+                "e": "ed."
+              }
+            ],
+            "ind1": "1",
+            "ind2": " "
+          }
+        },
+        {
+          "551": {
+            "subfields": [
+              {
+                "k": "callNumberPrefix"
+              },
+              {
+                "h": "callNumber1"
+              },
+              {
+                "i": "callNumber2"
+              },
+              {
+                "m": "callNumberSuffix"
+              },
+              {
+                "t": "copyNumber"
+              }
+            ],
+            "ind1": "0",
+            "ind2": "3"
+          }
+        },
+        {
+          "555": {
+            "subfields": [
+              {
+                "u": "uri"
+              },
+              {
+                "y": "linkText"
+              },
+              {
+                "3": "materialsSpecification"
+              },
+              {
+                "z": "publicNote"
+              }
+            ],
+            "ind1": "0",
+            "ind2": "3"
+          }
+        },
+        {
+          "999": {
+            "ind1": "f",
+            "ind2": "f",
+            "subfields": [
+              {
+                "s": "b90cb1bc-601f-45d7-b99e-b11efd281dcd"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "deleted": false,
+  "order": 2,
+  "externalIdsHolder": {
+    "instanceId": "ddd266ef-07ac-4117-be13-d418b8cd6902"
+  },
+  "additionalInfo": {
+    "suppressDiscovery": false
+  },
+  "state": "ACTUAL",
+  "metadata": {
+    "createdDate": "2020-05-18T14:42:50.229+0000",
+    "createdByUserId": "85de4107-9988-5ae8-972a-0df5295d5af8",
+    "updatedDate": "2020-05-18T14:42:50.229+0000",
+    "updatedByUserId": "85de4107-9988-5ae8-972a-0df5295d5af8"
+  }
+}

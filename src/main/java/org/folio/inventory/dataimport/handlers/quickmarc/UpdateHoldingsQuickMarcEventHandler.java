@@ -7,7 +7,6 @@ import io.vertx.core.Promise;
 import org.folio.HoldingsRecord;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.handlers.actions.HoldingsUpdateDelegate;
-import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
 import org.folio.rest.jaxrs.model.Record;
 
 public class UpdateHoldingsQuickMarcEventHandler extends AbstractQuickMarcEventHandler<HoldingsRecord> {
