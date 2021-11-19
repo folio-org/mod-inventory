@@ -50,9 +50,9 @@ public class ExternalStorageCollections implements CollectionProvider {
   }
 
   @Override
-  public AuthorityRecordCollection getAuthorityRecordCollection(String tenantId, String token) {
+  public AuthorityRecordCollection getAuthorityCollection(String tenantId, String token) {
     return new ExternalStorageModuleAuthorityRecordCollection(baseAddress,
-      tenantId, token, client);
+        tenantId, token, client);
   }
 
   @Override

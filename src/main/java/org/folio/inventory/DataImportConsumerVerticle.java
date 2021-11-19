@@ -1,12 +1,35 @@
 package org.folio.inventory;
 
-import io.vertx.core.AbstractVerticle;
-import io.vertx.core.CompositeFuture;
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.http.HttpClientOptions;
-import io.vertx.core.json.JsonObject;
+import static java.lang.String.format;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_MATCHED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_NOT_MATCHED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_UPDATED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_NOT_MATCHED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_CREATED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_MATCHED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_NOT_MATCHED;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_AUTHORITY_RECORD_CREATED;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MATCHED;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MATCHED_READY_FOR_POST_PROCESSING;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_NOT_MATCHED;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_HOLDING_RECORD_CREATED;
+import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
+import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
+import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX_REQUEST_SIZE;
+import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_PORT;
+import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_REPLICATION_FACTOR;
+import static org.folio.inventory.dataimport.util.KafkaConfigConstants.OKAPI_URL;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -27,35 +50,13 @@ import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.kafka.cache.util.CacheUtil;
 import org.folio.processing.events.EventManager;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
-
-import static java.lang.String.format;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_MATCHED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_NOT_MATCHED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_UPDATED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_NOT_MATCHED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_CREATED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_MATCHED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_NOT_MATCHED;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MATCHED;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MATCHED_READY_FOR_POST_PROCESSING;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_NOT_MATCHED;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_HOLDING_RECORD_CREATED;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX_REQUEST_SIZE;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_PORT;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_REPLICATION_FACTOR;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.OKAPI_URL;
+import io.vertx.core.AbstractVerticle;
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpClientOptions;
+import io.vertx.core.json.JsonObject;
 
 public class DataImportConsumerVerticle extends AbstractVerticle {
 
@@ -75,7 +76,8 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
     DI_INVENTORY_HOLDING_CREATED, DI_INVENTORY_HOLDING_UPDATED,
     DI_INVENTORY_HOLDING_MATCHED, DI_INVENTORY_HOLDING_NOT_MATCHED,
     DI_INVENTORY_ITEM_CREATED, DI_INVENTORY_ITEM_MATCHED,
-    DI_INVENTORY_ITEM_NOT_MATCHED, DI_INVENTORY_ITEM_CREATED);
+    DI_INVENTORY_ITEM_NOT_MATCHED, DI_INVENTORY_ITEM_CREATED,
+    DI_SRS_MARC_AUTHORITY_RECORD_CREATED);
 
   private final int loadLimit = getLoadLimit();
   private final int maxDistributionNumber = getMaxDistributionNumber();

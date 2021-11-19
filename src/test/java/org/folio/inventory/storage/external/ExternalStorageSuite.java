@@ -2,17 +2,6 @@ package org.folio.inventory.storage.external;
 
 import static api.ApiTestSuite.USER_ID;
 
-import io.vertx.core.Vertx;
-import org.folio.inventory.common.VertxAssistant;
-import org.folio.inventory.support.http.client.OkapiHttpClient;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
-
-import io.vertx.ext.web.client.WebClient;
-import support.fakes.FakeOkapi;
-
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
@@ -21,6 +10,17 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
+
+import org.folio.inventory.common.VertxAssistant;
+import org.folio.inventory.support.http.client.OkapiHttpClient;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
+
+import io.vertx.core.Vertx;
+import io.vertx.ext.web.client.WebClient;
+import support.fakes.FakeOkapi;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({

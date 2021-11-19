@@ -2,10 +2,6 @@ package org.folio.inventory.storage;
 
 import java.util.function.Function;
 
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.JsonObject;
-
 import org.folio.inventory.common.Context;
 import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.domain.CollectionProvider;
@@ -16,6 +12,10 @@ import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.user.UserCollection;
 import org.folio.inventory.storage.external.ExternalStorageCollections;
+
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.JsonObject;
 
 public class Storage {
   private final Function<Context, CollectionProvider> providerFactory;
@@ -73,7 +73,7 @@ public class Storage {
   }
 
   public AuthorityRecordCollection getAuthorityRecordCollection(Context context) {
-    return providerFactory.apply(context).getAuthorityRecordCollection(
+    return providerFactory.apply(context).getAuthorityCollection(
       context.getTenantId(), context.getToken());
   }
 
