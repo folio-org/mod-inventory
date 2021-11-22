@@ -1,5 +1,6 @@
 package org.folio.inventory.eventhandlers;
 
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
@@ -13,6 +14,7 @@ import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.MatchInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.loaders.InstanceLoader;
 import org.folio.inventory.domain.instances.Instance;
@@ -26,6 +28,7 @@ import org.folio.processing.value.MissingValue;
 import org.folio.processing.value.StringValue;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Field;
+import org.folio.MappingMetadataDto;
 import org.folio.rest.jaxrs.model.MatchExpression;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.junit.Before;
@@ -38,6 +41,7 @@ import org.mockito.MockitoAnnotations;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -80,6 +84,8 @@ public class MatchInstanceEventHandlerUnitTest {
   private InstanceCollection instanceCollection;
   @Mock
   private MarcValueReaderImpl marcValueReader;
+  @Mock
+  private MappingMetadataCache mappingMetadataCache;
   @InjectMocks
   private final InstanceLoader instanceLoader = new InstanceLoader(storage, Vertx.vertx());
 
@@ -94,6 +100,11 @@ public class MatchInstanceEventHandlerUnitTest {
       .thenReturn(StringValue.of(INSTANCE_HRID));
     MatchValueReaderFactory.register(marcValueReader);
     MatchValueLoaderFactory.register(instanceLoader);
+
+    when(mappingMetadataCache.get(anyString(), any(Context.class)))
+      .thenReturn(Future.succeededFuture(Optional.of(new MappingMetadataDto()
+        .withMappingRules(new JsonObject().encode())
+        .withMappingParams(LOCATIONS_PARAMS))));
   }
 
   @Test
@@ -101,8 +112,7 @@ public class MatchInstanceEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback =
-        (Consumer<Success<MultipleRecords<Instance>>>) ans.getArguments()[2];
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
       Success<MultipleRecords<Instance>> result =
         new Success<>(new MultipleRecords<>(singletonList(createInstance()), 1));
       callback.accept(result);
@@ -110,7 +120,12 @@ public class MatchInstanceEventHandlerUnitTest {
     }).when(instanceCollection)
       .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchInstanceEventHandler();
+    when(mappingMetadataCache.get(anyString(), any(Context.class)))
+      .thenReturn(Future.succeededFuture(Optional.of(new MappingMetadataDto()
+        .withMappingRules(new JsonObject().encode())
+        .withMappingParams(LOCATIONS_PARAMS))));
+
+    EventHandler eventHandler = new MatchInstanceEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -130,8 +145,7 @@ public class MatchInstanceEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback =
-        (Consumer<Success<MultipleRecords<Instance>>>) ans.getArguments()[2];
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
       Success<MultipleRecords<Instance>> result =
         new Success<>(new MultipleRecords<>(new ArrayList<>(), 0));
       callback.accept(result);
@@ -139,7 +153,7 @@ public class MatchInstanceEventHandlerUnitTest {
     }).when(instanceCollection)
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchInstanceEventHandler();
+    EventHandler eventHandler = new MatchInstanceEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -159,8 +173,7 @@ public class MatchInstanceEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback =
-        (Consumer<Success<MultipleRecords<Instance>>>) ans.getArguments()[2];
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
       Success<MultipleRecords<Instance>> result =
         new Success<>(new MultipleRecords<>(asList(createInstance(), createInstance()), 2));
       callback.accept(result);
@@ -168,7 +181,7 @@ public class MatchInstanceEventHandlerUnitTest {
     }).when(instanceCollection)
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchInstanceEventHandler();
+    EventHandler eventHandler = new MatchInstanceEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -182,8 +195,7 @@ public class MatchInstanceEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Failure> callback =
-        (Consumer<Failure>) ans.getArguments()[3];
+      Consumer<Failure> callback = ans.getArgument(3);
       Failure result =
         new Failure("Internal Server Error", 500);
       callback.accept(result);
@@ -191,7 +203,7 @@ public class MatchInstanceEventHandlerUnitTest {
     }).when(instanceCollection)
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchInstanceEventHandler();
+    EventHandler eventHandler = new MatchInstanceEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -207,7 +219,7 @@ public class MatchInstanceEventHandlerUnitTest {
     doThrow(new UnsupportedEncodingException()).when(instanceCollection)
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchInstanceEventHandler();
+    EventHandler eventHandler = new MatchInstanceEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -223,7 +235,7 @@ public class MatchInstanceEventHandlerUnitTest {
     when(marcValueReader.read(any(DataImportEventPayload.class), any(MatchDetail.class)))
       .thenReturn(MissingValue.getInstance());
 
-    EventHandler eventHandler = new MatchInstanceEventHandler();
+    EventHandler eventHandler = new MatchInstanceEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -240,14 +252,14 @@ public class MatchInstanceEventHandlerUnitTest {
 
   @Test
   public void shouldReturnFalseOnIsEligibleIfNullCurrentNode() {
-    EventHandler eventHandler = new MatchInstanceEventHandler();
+    EventHandler eventHandler = new MatchInstanceEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = new DataImportEventPayload();
     assertFalse(eventHandler.isEligible(eventPayload));
   }
 
   @Test
   public void shouldReturnFalseOnIsEligibleIfCurrentNodeTypeIsNotMatchProfile() {
-    EventHandler eventHandler = new MatchInstanceEventHandler();
+    EventHandler eventHandler = new MatchInstanceEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withContentType(MAPPING_PROFILE));
@@ -256,7 +268,7 @@ public class MatchInstanceEventHandlerUnitTest {
 
   @Test
   public void shouldReturnFalseOnIsEligibleForNotInstanceMatchProfile() {
-    EventHandler eventHandler = new MatchInstanceEventHandler();
+    EventHandler eventHandler = new MatchInstanceEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withContentType(MATCH_PROFILE)
@@ -267,7 +279,7 @@ public class MatchInstanceEventHandlerUnitTest {
 
   @Test
   public void shouldReturnTrueOnIsEligibleForInstanceMatchProfile() {
-    EventHandler eventHandler = new MatchInstanceEventHandler();
+    EventHandler eventHandler = new MatchInstanceEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withContentType(MATCH_PROFILE)
@@ -281,8 +293,7 @@ public class MatchInstanceEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback =
-        (Consumer<Success<MultipleRecords<Instance>>>) ans.getArguments()[2];
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
       Success<MultipleRecords<Instance>> result =
         new Success<>(new MultipleRecords<>(singletonList(createInstance()), 1));
       callback.accept(result);
@@ -291,7 +302,7 @@ public class MatchInstanceEventHandlerUnitTest {
       .findByCql(eq(format("hrid == \"%s\" AND id == \"%s\"", INSTANCE_HRID, INSTANCE_ID)),
         any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchInstanceEventHandler();
+    EventHandler eventHandler = new MatchInstanceEventHandler(mappingMetadataCache);
     HashMap<String, String> context = new HashMap<>();
     context.put(EntityType.INSTANCE.value(), JsonObject.mapFrom(createInstance()).encode());
     context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
@@ -311,17 +322,14 @@ public class MatchInstanceEventHandlerUnitTest {
   }
 
   private DataImportEventPayload createEventPayload() {
-    HashMap<String, String> context = new HashMap<>();
-    context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
-    context.put(RELATIONS, MATCHING_RELATIONS);
-
     return new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withEventsChain(new ArrayList<>())
       .withOkapiUrl("http://localhost:9493")
       .withTenant("diku")
       .withToken("token")
-      .withContext(context)
+      .withContext(new HashMap<>())
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withId(UUID.randomUUID().toString())
         .withContentType(MATCH_PROFILE)
@@ -338,7 +346,7 @@ public class MatchInstanceEventHandlerUnitTest {
   }
 
   private Instance createInstance() {
-    return new Instance(INSTANCE_ID, INSTANCE_HRID, "MARC", "Wonderful", "12334");
+    return new Instance(INSTANCE_ID, "5", INSTANCE_HRID, "MARC", "Wonderful", "12334");
   }
 
 }

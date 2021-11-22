@@ -45,7 +45,7 @@ public class MissingItemStatusValidatorTest {
   public void itemCanBeMarkedAsMissingWhenInAcceptableSourceStatus(String sourceStatus) {
     final var targetValidator = validator.getValidator(MISSING);
 
-    final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
+    final var item = new Item(null, null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
 
     final var validationFuture = targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item);
 
@@ -68,7 +68,7 @@ public class MissingItemStatusValidatorTest {
   @Test
   public void itemCannotBeMarkedAsMissingWhenNotInAcceptableSourceStatus(String sourceStatus) {
     final var targetValidator = validator.getValidator(MISSING);
-    final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
+    final var item = new Item(null, null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
     final var validationFuture = targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item);
 
     Exception e = assertThrows(

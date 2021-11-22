@@ -1,5 +1,6 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import io.vertx.core.Future;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.folio.ActionProfile;
@@ -11,16 +12,19 @@ import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.ItemWriterFactory;
+import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.Status;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.mapping.MappingManager;
+import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.processing.mapping.mapper.reader.Reader;
 import org.folio.processing.mapping.mapper.reader.record.marc.MarcBibReaderFactory;
 import org.folio.processing.value.StringValue;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.MappingDetail;
+import org.folio.MappingMetadataDto;
 import org.folio.rest.jaxrs.model.MappingRule;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
@@ -37,11 +41,7 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -58,6 +58,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
 
 public class CreateItemEventHandlerTest {
 
@@ -70,6 +71,8 @@ public class CreateItemEventHandlerTest {
   private ItemCollection mockedItemCollection;
   @Mock
   private Reader fakeReader;
+  @Mock
+  private MappingMetadataCache mappingMetadataCache;
   @Spy
   private MarcBibReaderFactory fakeReaderFactory = new MarcBibReaderFactory();
 
@@ -93,7 +96,9 @@ public class CreateItemEventHandlerTest {
       .withMappingFields(Arrays.asList(
         new MappingRule().withPath("item.status.name").withValue("\"statusExpression\"").withEnabled("true"),
         new MappingRule().withPath("item.permanentLoanType.id").withValue("\"permanentLoanTypeExpression\"").withEnabled("true"),
-        new MappingRule().withPath("item.materialType.id").withValue("\"materialTypeExpression\"").withEnabled("true"))));
+        new MappingRule().withPath("item.materialType.id").withValue("\"materialTypeExpression\"").withEnabled("true"),
+        new MappingRule().withPath("item.barcode").withValue("\"statusExpression\"").withEnabled("true")
+      )));
 
   private ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
     .withId(UUID.randomUUID().toString())
@@ -117,10 +122,16 @@ public class CreateItemEventHandlerTest {
   public void setUp() {
     MockitoAnnotations.initMocks(this);
     Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-    Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(AVAILABLE.value()), StringValue.of(UUID.randomUUID().toString()), StringValue.of(UUID.randomUUID().toString()));
+    Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(AVAILABLE.value()), StringValue.of(UUID.randomUUID().toString()),
+      StringValue.of(UUID.randomUUID().toString()), StringValue.of("645398607547"));
     Mockito.when(mockedStorage.getItemCollection(ArgumentMatchers.any(Context.class))).thenReturn(mockedItemCollection);
 
-    createItemHandler = new CreateItemEventHandler(mockedStorage);
+    Mockito.when(mappingMetadataCache.get(anyString(), any(Context.class)))
+      .thenReturn(Future.succeededFuture(Optional.of(new MappingMetadataDto()
+        .withMappingRules(new JsonObject().encode())
+        .withMappingParams(Json.encode(new MappingParameters())))));
+
+    createItemHandler = new CreateItemEventHandler(mockedStorage, mappingMetadataCache);
     MappingManager.clearReaderFactories();
   }
 
@@ -156,8 +167,8 @@ public class CreateItemEventHandlerTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     // when
@@ -206,8 +217,8 @@ public class CreateItemEventHandlerTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     // when
@@ -243,14 +254,14 @@ public class CreateItemEventHandlerTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
 
-    // then
+    // thenitem.getBarcode()
     future.get(5, TimeUnit.SECONDS);
   }
 
@@ -266,15 +277,15 @@ public class CreateItemEventHandlerTest {
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new ItemWriterFactory());
 
-    CreateItemEventHandler createItemHandler = new CreateItemEventHandler(mockedStorage);
+    CreateItemEventHandler createItemHandler = new CreateItemEventHandler(mockedStorage, mappingMetadataCache);
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_HOLDING_ID));
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     // when
@@ -293,7 +304,7 @@ public class CreateItemEventHandlerTest {
 
     // given
     Mockito.doAnswer(invocationOnMock -> {
-      Item itemByCql = new Item(null, null, new Status(AVAILABLE), null, null, null);
+      Item itemByCql = new Item(null, null, null, new Status(AVAILABLE), null, null, null);
       MultipleRecords<Item> result = new MultipleRecords<>(Collections.singletonList(itemByCql), 0);
       Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
       successHandler.accept(new Success<>(result));
@@ -310,8 +321,8 @@ public class CreateItemEventHandlerTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     // when
@@ -319,6 +330,61 @@ public class CreateItemEventHandlerTest {
 
     // then
     future.get(5, TimeUnit.SECONDS);
+  }
+
+  @Test
+  public void shouldNotRequestWhenCreatedItemHasEmptyBarcode()
+    throws UnsupportedEncodingException {
+
+    // given
+    Mockito.doAnswer(invocationOnMock -> {
+      Item itemByCql = new Item(null, null, null, new Status(AVAILABLE), null, null, null);
+      MultipleRecords<Item> result = new MultipleRecords<>(Collections.singletonList(itemByCql), 0);
+      Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
+      return null;
+    }).when(mockedItemCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new ItemWriterFactory());
+
+    JsonObject holdingAsJson = new JsonObject().put("id", UUID.randomUUID().toString());
+    HashMap<String, String> payloadContext = new HashMap<>();
+    payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+    payloadContext.put(EntityType.HOLDINGS.value(), holdingAsJson.encode());
+
+    MappingProfile mappingProfile = new MappingProfile()
+      .withId(UUID.randomUUID().toString())
+      .withName("Prelim item from MARC")
+      .withIncomingRecordType(EntityType.MARC_BIBLIOGRAPHIC)
+      .withExistingRecordType(ITEM)
+      .withMappingDetails(new MappingDetail()
+        .withMappingFields(Arrays.asList(
+          new MappingRule().withPath("item.status.name").withValue("\"statusExpression\"").withEnabled("true"),
+          new MappingRule().withPath("item.permanentLoanType.id").withValue("\"permanentLoanTypeExpression\"").withEnabled("true"),
+          new MappingRule().withPath("item.materialType.id").withValue("\"materialTypeExpression\"").withEnabled("true")
+        )));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withCurrentNode(new ProfileSnapshotWrapper()
+        .withProfileId(actionProfile.getId())
+        .withContentType(ACTION_PROFILE)
+        .withContent(JsonObject.mapFrom(actionProfile).getMap())
+        .withChildSnapshotWrappers(Collections.singletonList(
+          new ProfileSnapshotWrapper()
+            .withProfileId(mappingProfile.getId())
+            .withContentType(MAPPING_PROFILE)
+            .withContent(JsonObject.mapFrom(mappingProfile).getMap()))));
+
+    // when
+    createItemHandler.handle(dataImportEventPayload);
+
+    // then
+    verify(mockedItemCollection, Mockito.times(0))
+      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
   }
 
   @Test(expected = ExecutionException.class)
@@ -340,8 +406,8 @@ public class CreateItemEventHandlerTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     // when
@@ -361,7 +427,6 @@ public class CreateItemEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
       .withContext(new HashMap<>())
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     // when
@@ -373,7 +438,7 @@ public class CreateItemEventHandlerTest {
 
   @Test(expected = ExecutionException.class)
   public void shouldReturnFailedFutureWhenCouldNotFindHoldingsRecordIdInEventPayload()
-    throws UnsupportedEncodingException,
+    throws
     InterruptedException,
     ExecutionException,
     TimeoutException {
@@ -389,8 +454,8 @@ public class CreateItemEventHandlerTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     // when
@@ -406,7 +471,7 @@ public class CreateItemEventHandlerTest {
   @Test
   public void shouldReturnFailedFutureWhenCurrentActionProfileHasNoMappingProfile() {
     // given
-    CreateItemEventHandler createItemHandler = new CreateItemEventHandler(mockedStorage);
+    CreateItemEventHandler createItemHandler = new CreateItemEventHandler(mockedStorage, mappingMetadataCache);
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_HOLDING_ID));
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
@@ -414,7 +479,6 @@ public class CreateItemEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
       .withContext(payloadContext)
-      .withProfileSnapshot(this.profileSnapshotWrapper)
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withContent(JsonObject.mapFrom(actionProfile).getMap())
         .withContentType(ACTION_PROFILE));
@@ -432,7 +496,6 @@ public class CreateItemEventHandlerTest {
     // given
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     // when
@@ -459,7 +522,6 @@ public class CreateItemEventHandlerTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper);
 
     // when

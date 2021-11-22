@@ -51,7 +51,7 @@ public class LongMissingItemStatusValidatorTest {
   public void itemCanBeMarkedAsLongMissingWhenInAcceptableSourceStatus(String sourceStatus) {
     final var targetValidator = validator.getValidator(LONG_MISSING);
 
-    final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
+    final var item = new Item(null, null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
 
     final var validationFuture = targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item);
 
@@ -68,7 +68,7 @@ public class LongMissingItemStatusValidatorTest {
   @Test
   public void itemCannotBeMarkedAsLongMissingWhenNotInAcceptableSourceStatus(String sourceStatus) {
     final var targetValidator = validator.getValidator(LONG_MISSING);
-    final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
+    final var item = new Item(null, null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
     final var validationFuture = targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item);
 
     Exception e = assertThrows(

@@ -51,7 +51,7 @@ public class RestrictedItemStatusValidatorTest {
   public void itemCanBeMarkedAsRestrictedWhenInAcceptableSourceStatus(String sourceStatus) {
     final var targetValidator = validator.getValidator(RESTRICTED);
 
-    final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
+    final var item = new Item(null, null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
 
     final var validationFuture = targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item);
 
@@ -68,7 +68,7 @@ public class RestrictedItemStatusValidatorTest {
   @Test
   public void itemCannotBeMarkedAsRestrictedWhenNotInAcceptableSourceStatus(String sourceStatus) {
     final var targetValidator = validator.getValidator(RESTRICTED);
-    final var item = new Item(null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
+    final var item = new Item(null, null, null, new Status(ItemStatusName.forName(sourceStatus)), null, null, null);
     final var validationFuture = targetValidator.refuseItemWhenNotInAcceptableSourceStatus(item);
 
     Exception e = assertThrows(

@@ -1,6 +1,6 @@
 #%RAML 1.0
 title: Inventory API
-version: v10.11
+version: v11.0
 protocols: [ HTTP, HTTPS ]
 baseUri: http://localhost
 
@@ -12,6 +12,7 @@ types:
   errors: !include raml-util/schemas/errors.schema
   item: !include item.json
   items: !include items.json
+  holdings: !include holdings-record.json
   instance: !include instance.json
   instances: !include instances.json
   context: !include instance-context.json
@@ -283,7 +284,41 @@ resourceTypes:
        Possible values of the 'relations' parameter are: 'onlyBoundWiths', 'onlyBoundWithsSkipDirectlyLinkedItem'",
             example: "holdingsRecordId==\"[UUID]\""}
           ]
-
+  /holdings/{holdingsId}:
+    put:
+      description: Update Holdings by holdingsId
+      is: [validate]
+      body:
+        application/json:
+          type: holdings
+          example:
+            strict: false
+            value: !include examples/holdings_put.json
+      responses:
+        204:
+          description: "Holdings successfully updated"
+        404:
+          description: "Holdings with a given ID not found"
+          body:
+            text/plain:
+              example: |
+                "Holdings not found"
+        400:
+          description: "Bad request, e.g. malformed request body or query parameter. Details of the error (e.g. name of the parameter or line/character number with malformed data) provided in the response."
+          body:
+            text/plain:
+              example: |
+                "unable to update Holdings -- malformed JSON at 13:4"
+        409:
+          description: "Optimistic locking version conflict"
+          body:
+            text/plain:
+              example: "version conflict"
+        500:
+          description: "Internal server error, e.g. due to misconfiguration"
+          body:
+            text/plain:
+              example: "internal server error, contact administrator"
   /instances:
     displayName: Instances
     type:

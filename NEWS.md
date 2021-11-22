@@ -1,6 +1,27 @@
-## 17.1.0 IN-PROGRESS
+## 18.x.x 2021-xx-xx
+
+* added Marc Authority handler for entities created via MARC Authority Data Import (MODINV-501)
+
+## 18.1.0 2021-10-18
+
+* Edit MARC Authorities via quickMARC | Update Inventory Authorities (MODINV-503)
+* Fixed incorrect optimistic locking behavior for instance update when uploading file via data import (MODINV-546)
+* Fixed holdings record created via MARC Bib Data Import shows incorrect source (MODINV-549)
+* Fixed put for mappingParams into dataImportEventPayload (MODINV-571)
+
+## 18.0.0 2021-10-06
 
 * Adds `boundWithTitles` property to individual bound-with item (MODINV-443)
+* Removed explicit dependencies on mod-source-record-manager and mod-data-import-converter-storage clients (MODINV-541)
+* Provides `inventory 11.0`
+* Provides `inventory-batch 1.0`
+* Provides `inventory-config 0.2`
+* Requires `item-storage 8.0 or 9.0`
+* Requires `instance-storage 7.8 or 8.0`
+* Requires `instance-storage-batch 0.2 or 1.0`
+* Requires `holdings-storage 2.0, 3.0, 4.0 or 5.0`
+* Optionally requires `mapping-metadata-provider 1.0`
+* Optionally requires `data-import-converter-storage 1.2`
 
 ## 17.0.0 2021-06-15
 

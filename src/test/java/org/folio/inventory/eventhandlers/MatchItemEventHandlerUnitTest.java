@@ -1,5 +1,6 @@
 package org.folio.inventory.eventhandlers;
 
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
@@ -14,6 +15,7 @@ import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.MatchItemEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.loaders.ItemLoader;
 import org.folio.inventory.domain.items.Item;
@@ -29,6 +31,7 @@ import org.folio.processing.value.MissingValue;
 import org.folio.processing.value.StringValue;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Field;
+import org.folio.MappingMetadataDto;
 import org.folio.rest.jaxrs.model.MatchExpression;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.junit.Before;
@@ -41,6 +44,7 @@ import org.mockito.MockitoAnnotations;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -83,6 +87,8 @@ public class MatchItemEventHandlerUnitTest {
   private ItemCollection itemCollection;
   @Mock
   private MarcValueReaderImpl marcValueReader;
+  @Mock
+  private MappingMetadataCache mappingMetadataCache;
   @InjectMocks
   private ItemLoader itemLoader = new ItemLoader(storage, Vertx.vertx());
 
@@ -97,6 +103,11 @@ public class MatchItemEventHandlerUnitTest {
       .thenReturn(StringValue.of(ITEM_HRID));
     MatchValueReaderFactory.register(marcValueReader);
     MatchValueLoaderFactory.register(itemLoader);
+
+    when(mappingMetadataCache.get(anyString(), any(Context.class)))
+      .thenReturn(Future.succeededFuture(Optional.of(new MappingMetadataDto()
+        .withMappingRules(new JsonObject().encode())
+        .withMappingParams(LOCATIONS_PARAMS))));
   }
 
   @Test
@@ -104,8 +115,7 @@ public class MatchItemEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Item>>> callback =
-        (Consumer<Success<MultipleRecords<Item>>>) ans.getArguments()[2];
+      Consumer<Success<MultipleRecords<Item>>> callback = ans.getArgument(2);
       Success<MultipleRecords<Item>> result =
         new Success<>(new MultipleRecords<>(singletonList(createItem()), 1));
       callback.accept(result);
@@ -113,7 +123,7 @@ public class MatchItemEventHandlerUnitTest {
     }).when(itemCollection)
       .findByCql(eq(format("hrid == \"%s\"", ITEM_HRID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchItemEventHandler();
+    EventHandler eventHandler = new MatchItemEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -133,8 +143,7 @@ public class MatchItemEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Item>>> callback =
-        (Consumer<Success<MultipleRecords<Item>>>) ans.getArguments()[2];
+      Consumer<Success<MultipleRecords<Item>>> callback = ans.getArgument(2);
       Success<MultipleRecords<Item>> result =
         new Success<>(new MultipleRecords<>(new ArrayList<>(), 0));
       callback.accept(result);
@@ -142,7 +151,7 @@ public class MatchItemEventHandlerUnitTest {
     }).when(itemCollection)
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchItemEventHandler();
+    EventHandler eventHandler = new MatchItemEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -162,8 +171,7 @@ public class MatchItemEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Item>>> callback =
-        (Consumer<Success<MultipleRecords<Item>>>) ans.getArguments()[2];
+      Consumer<Success<MultipleRecords<Item>>> callback = ans.getArgument(2);
       Success<MultipleRecords<Item>> result =
         new Success<>(new MultipleRecords<>(asList(createItem(), createItem()), 2));
       callback.accept(result);
@@ -171,7 +179,7 @@ public class MatchItemEventHandlerUnitTest {
     }).when(itemCollection)
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchItemEventHandler();
+    EventHandler eventHandler = new MatchItemEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -185,8 +193,7 @@ public class MatchItemEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Failure> callback =
-        (Consumer<Failure>) ans.getArguments()[3];
+      Consumer<Failure> callback = ans.getArgument(3);
       Failure result =
         new Failure("Internal Server Error", 500);
       callback.accept(result);
@@ -194,7 +201,7 @@ public class MatchItemEventHandlerUnitTest {
     }).when(itemCollection)
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchItemEventHandler();
+    EventHandler eventHandler = new MatchItemEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -210,7 +217,7 @@ public class MatchItemEventHandlerUnitTest {
     doThrow(new UnsupportedEncodingException()).when(itemCollection)
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchItemEventHandler();
+    EventHandler eventHandler = new MatchItemEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -226,7 +233,7 @@ public class MatchItemEventHandlerUnitTest {
     when(marcValueReader.read(any(DataImportEventPayload.class), any(MatchDetail.class)))
       .thenReturn(MissingValue.getInstance());
 
-    EventHandler eventHandler = new MatchItemEventHandler();
+    EventHandler eventHandler = new MatchItemEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -243,14 +250,14 @@ public class MatchItemEventHandlerUnitTest {
 
   @Test
   public void shouldReturnFalseOnIsEligibleIfNullCurrentNode() {
-    EventHandler eventHandler = new MatchItemEventHandler();
+    EventHandler eventHandler = new MatchItemEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = new DataImportEventPayload();
     assertFalse(eventHandler.isEligible(eventPayload));
   }
 
   @Test
   public void shouldReturnFalseOnIsEligibleIfCurrentNodeTypeIsNotMatchProfile() {
-    EventHandler eventHandler = new MatchItemEventHandler();
+    EventHandler eventHandler = new MatchItemEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withContentType(MAPPING_PROFILE));
@@ -259,7 +266,7 @@ public class MatchItemEventHandlerUnitTest {
 
   @Test
   public void shouldReturnFalseOnIsEligibleForNotItemMatchProfile() {
-    EventHandler eventHandler = new MatchItemEventHandler();
+    EventHandler eventHandler = new MatchItemEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withContentType(MATCH_PROFILE)
@@ -270,7 +277,7 @@ public class MatchItemEventHandlerUnitTest {
 
   @Test
   public void shouldReturnTrueOnIsEligibleForItemMatchProfile() {
-    EventHandler eventHandler = new MatchItemEventHandler();
+    EventHandler eventHandler = new MatchItemEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withContentType(MATCH_PROFILE)
@@ -284,8 +291,7 @@ public class MatchItemEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Item>>> callback =
-        (Consumer<Success<MultipleRecords<Item>>>) ans.getArguments()[2];
+      Consumer<Success<MultipleRecords<Item>>> callback = ans.getArgument(2);
       Success<MultipleRecords<Item>> result =
         new Success<>(new MultipleRecords<>(singletonList(createItem()), 1));
       callback.accept(result);
@@ -294,7 +300,7 @@ public class MatchItemEventHandlerUnitTest {
       .findByCql(eq(format("hrid == \"%s\" AND id == \"%s\"", ITEM_HRID, ITEM_ID)),
         any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchItemEventHandler();
+    EventHandler eventHandler = new MatchItemEventHandler(mappingMetadataCache);
     HashMap<String, String> context = new HashMap<>();
     context.put(EntityType.ITEM.value(), JsonObject.mapFrom(createItem()).encode());
     context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
@@ -318,8 +324,7 @@ public class MatchItemEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Item>>> callback =
-        (Consumer<Success<MultipleRecords<Item>>>) ans.getArguments()[2];
+      Consumer<Success<MultipleRecords<Item>>> callback = ans.getArgument(2);
       Success<MultipleRecords<Item>> result =
         new Success<>(new MultipleRecords<>(singletonList(createItem()), 1));
       callback.accept(result);
@@ -328,7 +333,7 @@ public class MatchItemEventHandlerUnitTest {
       .findByCql(eq(format("hrid == \"%s\" AND holdingsRecordId == \"%s\"", ITEM_HRID, HOLDING_ID)),
         any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchItemEventHandler();
+    EventHandler eventHandler = new MatchItemEventHandler(mappingMetadataCache);
     HashMap<String, String> context = new HashMap<>();
     context.put(EntityType.HOLDINGS.value(), JsonObject.mapFrom(new HoldingsRecord().withId(HOLDING_ID)).encode());
     context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
@@ -348,17 +353,14 @@ public class MatchItemEventHandlerUnitTest {
   }
 
   private DataImportEventPayload createEventPayload() {
-    HashMap<String, String> context = new HashMap<>();
-    context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
-    context.put(RELATIONS, MATCHING_RELATIONS);
-
     return new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withEventsChain(new ArrayList<>())
       .withOkapiUrl("http://localhost:9493")
       .withTenant("diku")
       .withToken("token")
-      .withContext(context)
+      .withContext(new HashMap<>())
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withId(UUID.randomUUID().toString())
         .withContentType(MATCH_PROFILE)
@@ -375,7 +377,7 @@ public class MatchItemEventHandlerUnitTest {
   }
 
   private Item createItem() {
-    return new Item(ITEM_ID, HOLDING_ID,
+    return new Item(ITEM_ID, "3", HOLDING_ID,
       new Status(ItemStatusName.AVAILABLE), UUID.randomUUID().toString(), UUID.randomUUID().toString(), new JsonObject());
   }
 

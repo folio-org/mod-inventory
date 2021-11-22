@@ -4,6 +4,7 @@ import static io.vertx.kafka.client.producer.KafkaProducer.createShared;
 import static java.lang.String.format;
 
 import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_ERROR;
+import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_AUTHORITY_UPDATED;
 import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_HOLDINGS_UPDATED;
 import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_INSTANCE_UPDATED;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
@@ -30,10 +31,12 @@ import org.apache.logging.log4j.Logger;
 
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.handlers.QMEventTypes;
+import org.folio.inventory.dataimport.handlers.actions.AuthorityUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.actions.HoldingsUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
 import org.folio.inventory.dataimport.handlers.quickmarc.AbstractQuickMarcEventHandler;
+import org.folio.inventory.dataimport.handlers.quickmarc.UpdateAuthorityQuickMarcEventHandler;
 import org.folio.inventory.dataimport.handlers.quickmarc.UpdateHoldingsQuickMarcEventHandler;
 import org.folio.inventory.dataimport.handlers.quickmarc.UpdateInstanceQuickMarcEventHandler;
 import org.folio.inventory.dataimport.util.ConsumerWrapperUtil;
@@ -45,6 +48,7 @@ import org.folio.processing.events.utils.ZIPArchiver;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.EventMetadata;
+import org.folio.rest.jaxrs.model.ParsedRecordDto;
 import org.folio.rest.jaxrs.model.Record;
 import org.folio.rest.util.OkapiConnectionParams;
 
@@ -54,9 +58,12 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
 
   private static final AtomicLong indexer = new AtomicLong();
   private static final String RECORD_TYPE_KEY = "RECORD_TYPE";
+  private static final String PARSED_RECORD_DTO_KEY = "PARSED_RECORD_DTO";
+  private static final String QM_RELATED_RECORD_VERSION_KEY = "RELATED_RECORD_VERSION";
 
   private final InstanceUpdateDelegate instanceUpdateDelegate;
   private final HoldingsUpdateDelegate holdingsUpdateDelegate;
+  private final AuthorityUpdateDelegate authorityUpdateDelegate;
   private final PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
   private final int maxDistributionNumber;
   private final KafkaConfig kafkaConfig;
@@ -73,9 +80,11 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
     this.kafkaInternalCache = kafkaInternalCache;
     this.instanceUpdateDelegate = new InstanceUpdateDelegate(storage);
     this.holdingsUpdateDelegate = new HoldingsUpdateDelegate(storage);
+    this.authorityUpdateDelegate = new AuthorityUpdateDelegate(storage);
     this.precedingSucceedingTitlesHelper = precedingSucceedingTitlesHelper;
     createProducer(kafkaConfig, QM_INVENTORY_INSTANCE_UPDATED);
     createProducer(kafkaConfig, QM_INVENTORY_HOLDINGS_UPDATED);
+    createProducer(kafkaConfig, QM_INVENTORY_AUTHORITY_UPDATED);
     createProducer(kafkaConfig, QM_ERROR);
   }
 
@@ -101,6 +110,8 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
   private QMEventTypes getReplyEventType(Record.RecordType recordType) {
     if (recordType == Record.RecordType.MARC_BIB) {
       return QM_INVENTORY_INSTANCE_UPDATED;
+    } else if (recordType == Record.RecordType.MARC_AUTHORITY) {
+      return QM_INVENTORY_AUTHORITY_UPDATED;
     } else {
       return QM_INVENTORY_HOLDINGS_UPDATED;
     }
@@ -115,6 +126,8 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
   private Future<Record.RecordType> processPayload(Map<String, String> eventPayload, Context context) {
     try {
       var recordType = Record.RecordType.fromValue(eventPayload.get(RECORD_TYPE_KEY));
+      var parsedRecordDto = Json.decodeValue(eventPayload.get(PARSED_RECORD_DTO_KEY), ParsedRecordDto.class);
+      eventPayload.put(QM_RELATED_RECORD_VERSION_KEY, parsedRecordDto.getRelatedRecordVersion());
       return getQuickMarcEventHandler(context, recordType).handle(eventPayload).map(recordType);
     } catch (Exception e) {
       return Future.failedFuture(e);
@@ -126,6 +139,8 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
       return new UpdateInstanceQuickMarcEventHandler(instanceUpdateDelegate, context, precedingSucceedingTitlesHelper);
     } else if (Record.RecordType.MARC_HOLDING == recordType) {
       return new UpdateHoldingsQuickMarcEventHandler(holdingsUpdateDelegate, context);
+    } else if (Record.RecordType.MARC_AUTHORITY == recordType){
+      return new UpdateAuthorityQuickMarcEventHandler(authorityUpdateDelegate, context);
     } else {
       throw new EventProcessingException("Can't process record type " + recordType);
     }

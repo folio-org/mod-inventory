@@ -11,6 +11,7 @@ import io.vertx.core.json.JsonObject;
 
 public class Item {
 
+  public static final String VERSION_KEY = "_version";
   public static final String HRID_KEY = "hrid";
   public static final String TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY
     = "inTransitDestinationServicePointId";
@@ -47,6 +48,7 @@ public class Item {
   public static final String BOUND_WITH_TITLES_KEY = "boundWithTitles";
 
   public final String id;
+  private final String version;
   private String hrid;
   private String inTransitDestinationServicePointId;
   private Boolean discoverySuppress;
@@ -96,6 +98,7 @@ public class Item {
   private final JsonObject metadata;
 
   public Item(String id,
+              String version,
               String holdingId,
               Status status,
               String materialTypeId,
@@ -103,6 +106,7 @@ public class Item {
               JsonObject metadata) {
 
     this.id = id;
+    this.version = version;
     this.holdingId = holdingId;
     this.status = Objects.requireNonNull(status, "Status is required");
     this.materialTypeId = materialTypeId;
@@ -110,10 +114,11 @@ public class Item {
     this.metadata = metadata;
   }
 
-  public Item(String id, String holdingId, String inTransitDestinationServicePointId,
-    Status status, String materialTypeId, String permanentLoanTypeId, JsonObject metadata) {
+  public Item(String id, String version, String holdingId, String inTransitDestinationServicePointId,
+      Status status, String materialTypeId, String permanentLoanTypeId, JsonObject metadata) {
 
     this.id = id;
+    this.version = version;
     this.holdingId = holdingId;
     this.inTransitDestinationServicePointId = inTransitDestinationServicePointId;
     this.status = Objects.requireNonNull(status, "Status is required");
@@ -124,6 +129,10 @@ public class Item {
 
   public String getId() {
     return id;
+  }
+
+  public String getVersion() {
+    return version;
   }
 
   public String getEffectiveShelvingOrder() {
@@ -496,7 +505,7 @@ public class Item {
   }
 
   public Item copyWithNewId(String newId) {
-    return new Item(newId, holdingId, inTransitDestinationServicePointId, this.status,
+    return new Item(newId, null, holdingId, inTransitDestinationServicePointId, this.status,
        this.materialTypeId, this.permanentLoanTypeId, this.metadata)
             .withHrid(this.hrid)
             .withFormerIds(this.formerIds)
@@ -532,8 +541,8 @@ public class Item {
   }
 
   public Item changeStatus(ItemStatusName newStatus) {
-    return new Item(this.id, holdingId, inTransitDestinationServicePointId, new Status(newStatus),
-       this.materialTypeId, this.permanentLoanTypeId, this.metadata)
+    return new Item(this.id, this.version, holdingId, inTransitDestinationServicePointId,
+       new Status(newStatus), this.materialTypeId, this.permanentLoanTypeId, this.metadata)
       .withHrid(this.hrid)
       .withFormerIds(this.formerIds)
       .withDiscoverySuppress(this.discoverySuppress)
