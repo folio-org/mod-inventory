@@ -386,7 +386,7 @@ public class CreateInstanceEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
 
     ExecutionException exception = Assert.assertThrows(ExecutionException.class, future::get);
-    Assert.assertEquals(ACTION_HAS_NO_MAPPING_MSG, exception.getCause().getMessage());
+    Assert.assertEquals("Action profile to create an Instance requires a mapping profile by jobExecutionId: 'null' and recordId: 'null'", exception.getCause().getMessage());
   }
 
   @Test

@@ -80,7 +80,7 @@ public class MarcHoldingsRecordHridSetKafkaHandler implements AsyncRecordHandler
         Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(record.headers());
         String recordId = headersMap.get(RECORD_ID_HEADER);
         String chunkId = headersMap.get(CHUNK_ID_HEADER);
-        String jobExecutionId = headersMap.get(JOB_EXECUTION_ID_HEADER);
+        String jobExecutionId = eventPayload.get(JOB_EXECUTION_ID_HEADER);
         LOGGER.info("Event payload has been received with event type: {}, recordId: {} by jobExecution: {} and chunkId: {}", event.getEventType(), recordId, jobExecutionId, chunkId);
 
         if (isEmpty(eventPayload.get(MARC_KEY))) {
