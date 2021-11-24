@@ -43,7 +43,7 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
   private static final ObjectMapper OBJECT_MAPPER = ObjectMapperTool.getMapper();
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
-  private static final String JOB_EXECUTION_ID_HEADER = "jobExecutionId";
+  private static final String JOB_EXECUTION_ID_HEADER = "JOB_EXECUTION_ID";
 
   private final InstanceUpdateDelegate instanceUpdateDelegate;
   private final KafkaInternalCache kafkaInternalCache;

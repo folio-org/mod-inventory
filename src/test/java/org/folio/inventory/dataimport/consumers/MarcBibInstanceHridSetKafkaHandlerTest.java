@@ -108,8 +108,6 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
     Map<String, String> payload = new HashMap<>();
     payload.put("MARC_BIB", Json.encode(record));
     payload.put(JOB_EXECUTION_ID_KEY, UUID.randomUUID().toString());
-//    payload.put("MAPPING_RULES", mappingRules.encode());
-//    payload.put("MAPPING_PARAMS", new JsonObject().encode());
 
     Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
     String expectedKafkaRecordKey = "test_key";

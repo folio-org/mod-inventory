@@ -52,7 +52,7 @@ public class MarcHoldingsRecordHridSetKafkaHandler implements AsyncRecordHandler
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
   public static final String JOB_EXECUTION_ID_KEY = "JOB_EXECUTION_ID";
   private static final String CHUNK_ID_HEADER = "chunkId";
-  private static final String JOB_EXECUTION_ID_HEADER = "jobExecutionId";
+  private static final String JOB_EXECUTION_ID_HEADER = "JOB_EXECUTION_ID";
   private static final ObjectMapper OBJECT_MAPPER = ObjectMapperTool.getMapper();
 
   private final HoldingsUpdateDelegate holdingsRecordUpdateDelegate;
