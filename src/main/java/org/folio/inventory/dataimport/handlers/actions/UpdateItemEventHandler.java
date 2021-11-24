@@ -53,9 +53,10 @@ public class UpdateItemEventHandler implements EventHandler {
   static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to update an Item requires a mapping profile";
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data or ITEM to update";
   private static final String STATUS_UPDATE_ERROR_MSG = "Could not change item status '%s' to '%s'";
-  private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingMetadata snapshot was not found by jobExecutionId '%s'.RecordId: '%s'";
+  private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingMetadata snapshot was not found by jobExecutionId '%s'.RecordId: '%s', chunkId: '%s'";
   private static final String ITEM_PATH_FIELD = "item";
   private static final String RECORD_ID_HEADER = "recordId";
+  private static final String CHUNK_ID_HEADER = "chunkId";
   private static final Set<String> PROTECTED_STATUSES_FROM_UPDATE = new HashSet<>(Arrays.asList("Aged to lost", "Awaiting delivery", "Awaiting pickup", "Checked out", "Claimed returned", "Declared lost", "Paged", "Recently returned"));
 
   private final List<String> requiredFields = Arrays.asList("status.name", "materialType.id", "permanentLoanType.id", "holdingsRecordId");
@@ -92,7 +93,8 @@ public class UpdateItemEventHandler implements EventHandler {
 
       mappingMetadataCache.get(jobExecutionId, context)
         .map(parametersOptional -> parametersOptional
-          .orElseThrow(() -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId, dataImportEventPayload.getContext().get(RECORD_ID_HEADER)))))
+          .orElseThrow(() -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId,
+            dataImportEventPayload.getContext().get(RECORD_ID_HEADER),dataImportEventPayload.getContext().get(CHUNK_ID_HEADER)))))
         .compose(mappingMetadataDto -> {
           JsonObject itemAsJson = new JsonObject(payloadContext.get(ITEM.value()));
           String oldItemStatus = itemAsJson.getJsonObject(STATUS_KEY).getString("name");
@@ -133,8 +135,8 @@ public class UpdateItemEventHandler implements EventHandler {
             });
         })
         .onFailure(e -> {
-          LOG.error("Failed to update inventory Item by jobExecutionId: {} and recordId: {}", jobExecutionId,
-            dataImportEventPayload.getContext().get(RECORD_ID_HEADER), e);
+          LOG.error("Failed to update inventory Item by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
+            dataImportEventPayload.getContext().get(RECORD_ID_HEADER), dataImportEventPayload.getContext().get(CHUNK_ID_HEADER), e);
           future.completeExceptionally(e);
         });
     } catch (Exception e) {

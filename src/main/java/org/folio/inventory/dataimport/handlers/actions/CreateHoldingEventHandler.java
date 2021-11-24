@@ -42,13 +42,14 @@ public class CreateHoldingEventHandler implements EventHandler {
   private static final Logger LOGGER = LogManager.getLogger(CreateHoldingEventHandler.class);
   private static final String INSTANCE_ID_FIELD = "instanceId";
   private static final String RECORD_ID_HEADER = "recordId";
+  private static final String CHUNK_ID_HEADER = "chunkId";
   private static final String HOLDINGS_PATH_FIELD = "holdings";
   private static final String PERMANENT_LOCATION_ID_FIELD = "permanentLocationId";
   private static final String PERMANENT_LOCATION_ID_ERROR_MESSAGE = "Can`t create Holding entity: 'permanentLocationId' is empty";
   private static final String SAVE_HOLDING_ERROR_MESSAGE = "Can`t save new holding";
   private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t create Holding entity: context is empty or doesn`t exists";
   private static final String PAYLOAD_DATA_HAS_NO_INSTANCE_ID_ERROR_MSG = "Failed to extract instanceId from instance entity or parsed record";
-  private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingMetadata snapshot was not found by jobExecutionId '%s'.RecordId: '%s'";
+  private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingMetadata snapshot was not found by jobExecutionId '%s'.RecordId: '%s', chunkId: '%s'";
   static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create a Holding entity requires a mapping profile";
   private static final String FOLIO_SOURCE_ID = "f32d531e-df79-46b3-8932-cdd35f7a2264";
 
@@ -97,7 +98,8 @@ public class CreateHoldingEventHandler implements EventHandler {
         })
         .compose(holdingToCreate -> addHoldings(holdingToCreate, context))
         .onSuccess(createdHoldings -> {
-          LOGGER.info("Created Holding record by jobExecutionId: '{}' and recordId: '{}': ", jobExecutionId, dataImportEventPayload.getContext().get(RECORD_ID_HEADER));
+          LOGGER.info("Created Holding record by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
+            dataImportEventPayload.getContext().get(RECORD_ID_HEADER), dataImportEventPayload.getContext().get(CHUNK_ID_HEADER));
           dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encodePrettily(createdHoldings));
           future.complete(dataImportEventPayload);
         })

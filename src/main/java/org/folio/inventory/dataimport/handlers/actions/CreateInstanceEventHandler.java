@@ -43,8 +43,10 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload - event payload context does not contain MARC_BIBLIOGRAPHIC data";
   static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create an Instance requires a mapping profile by jobExecutionId: '%s' and recordId: '%s'";
-  private static final String MAPPING_PARAMETERS_NOT_FOUND_MSG = "MappingParameters snapshot was not found by jobExecutionId: '%s'.RecordId: '%s'";
+  private static final String MAPPING_PARAMETERS_NOT_FOUND_MSG = "MappingParameters snapshot was not found by jobExecutionId: '%s'.RecordId: '%s', chunkId: '%s'";
   private static final String RECORD_ID_HEADER = "recordId";
+  private static final String CHUNK_ID_HEADER = "chunkId";
+
 
   private PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
   private MappingMetadataCache mappingMetadataCache;
@@ -82,7 +84,8 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
         .compose(parametersOptional -> parametersOptional
           .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()),
             Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class)))
-          .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, jobExecutionId, dataImportEventPayload.getContext().get(RECORD_ID_HEADER)))))
+          .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, jobExecutionId, dataImportEventPayload.getContext().get(RECORD_ID_HEADER),
+            dataImportEventPayload.getContext().get(CHUNK_ID_HEADER)))))
         .compose(v -> {
           InstanceCollection instanceCollection = storage.getInstanceCollection(context);
           JsonObject instanceAsJson = prepareInstance(dataImportEventPayload, targetRecord, jobExecutionId);
@@ -102,7 +105,8 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
           future.complete(dataImportEventPayload);
         })
         .onFailure(e -> {
-          LOGGER.error("Error creating inventory Instance by jobExecutionId: '{}' and recordId: '{}': ", jobExecutionId, dataImportEventPayload.getContext().get(RECORD_ID_HEADER), e);
+          LOGGER.error("Error creating inventory Instance by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId, dataImportEventPayload.getContext().get(RECORD_ID_HEADER),
+            dataImportEventPayload.getContext().get(CHUNK_ID_HEADER), e);
           future.completeExceptionally(e);
         });
     } catch (Exception e) {
