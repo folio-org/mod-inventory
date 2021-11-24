@@ -4,8 +4,9 @@ import static java.lang.String.format;
 import static org.folio.ActionProfile.FolioRecord.AUTHORITY;
 import static org.folio.ActionProfile.FolioRecord.MARC_AUTHORITY;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_CREATED;
+import static org.folio.inventory.dataimport.handlers.actions.AbstractInstanceEventHandler.MARC_FORMAT;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
-import static org.folio.processing.events.services.publisher.KafkaEventPublisher.RECORD_ID_HEADER;
+import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 import java.util.HashMap;
@@ -127,7 +128,7 @@ public class CreateMarcAuthorityEventHandler implements EventHandler {
   @Override
   public boolean isEligible(DataImportEventPayload dataImportEventPayload) {
     if (dataImportEventPayload.getCurrentNode() != null && dataImportEventPayload.getContext().get(MARC_AUTHORITY.value()) != null
-      && ACTION_PROFILE == dataImportEventPayload.getCurrentNode().getContentType()) {
+        && ACTION_PROFILE == dataImportEventPayload.getCurrentNode().getContentType()) {
       var actionProfile = JsonObject.mapFrom(dataImportEventPayload.getCurrentNode().getContent()).mapTo(ActionProfile.class);
       return ActionProfile.Action.CREATE == actionProfile.getAction() && AUTHORITY == actionProfile.getFolioRecord();
     }
@@ -144,8 +145,7 @@ public class CreateMarcAuthorityEventHandler implements EventHandler {
     if (authorityAsJson.getJsonObject(AUTHORITY_PATH) != null) {
       authorityAsJson = authorityAsJson.getJsonObject(AUTHORITY_PATH);
     }
-    //Uncomment when MODINVSTOR-825 ready
-//    authorityAsJson.put(SOURCE_KEY, MARC_FORMAT);
+    authorityAsJson.put(SOURCE_KEY, MARC_FORMAT);
 
     return authorityAsJson;
   }
