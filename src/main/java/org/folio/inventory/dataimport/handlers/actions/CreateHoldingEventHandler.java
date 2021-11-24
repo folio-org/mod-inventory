@@ -79,8 +79,7 @@ public class CreateHoldingEventHandler implements EventHandler {
       String jobExecutionId = dataImportEventPayload.getJobExecutionId();
       mappingMetadataCache.get(jobExecutionId, context)
         .map(parametersOptional -> parametersOptional.orElseThrow(() ->
-          new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, dataImportEventPayload.getJobExecutionId(),
-            dataImportEventPayload.getContext().get(RECORD_ID_HEADER)))))
+          new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId, dataImportEventPayload.getContext().get(RECORD_ID_HEADER)))))
         .map(mappingMetadataDto -> {
           prepareEvent(dataImportEventPayload);
           MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
