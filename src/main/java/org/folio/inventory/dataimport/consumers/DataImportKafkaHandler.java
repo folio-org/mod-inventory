@@ -4,6 +4,7 @@ import static java.lang.String.format;
 import static org.folio.DataImportEventTypes.DI_ERROR;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.logging.log4j.LogManager;
@@ -36,6 +37,7 @@ import org.folio.inventory.dataimport.handlers.matching.loaders.ItemLoader;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.AsyncRecordHandler;
+import org.folio.kafka.KafkaHeaderUtils;
 import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.processing.events.EventManager;
 import org.folio.processing.exceptions.EventProcessingException;
@@ -61,6 +63,8 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
 
   private static final Logger LOGGER = LogManager.getLogger(DataImportKafkaHandler.class);
   private static final String RECORD_ID_HEADER = "recordId";
+  private static final String CHUNK_ID_HEADER = "chunkId";
+  private static final String JOB_EXECUTION_ID_HEADER = "jobExecutionId";
   private static final String PROFILE_SNAPSHOT_ID_KEY = "JOB_PROFILE_SNAPSHOT_ID";
 
   private KafkaInternalCache kafkaInternalCache;
@@ -86,8 +90,11 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       if (!kafkaInternalCache.containsByKey(event.getId())) {
         kafkaInternalCache.putToCache(event.getId());
         DataImportEventPayload eventPayload = Json.decodeValue(event.getEventPayload(), DataImportEventPayload.class);
-        String recordId = extractRecordId(record.headers());
-        LOGGER.info("Data import event payload has been received with event type: {}, recordId: {}", eventPayload.getEventType(), recordId);
+        Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(record.headers());
+        String recordId = headersMap.get(RECORD_ID_HEADER);
+        String chunkId = headersMap.get(CHUNK_ID_HEADER);
+        String jobExecutionId = headersMap.get(JOB_EXECUTION_ID_HEADER);
+        LOGGER.info("Data import event payload has been received with event type: {}, recordId: {} by jobExecution: {} and chunkId: {}", eventPayload.getEventType(), recordId, jobExecutionId, chunkId);
         eventPayload.getContext().put(RECORD_ID_HEADER, recordId);
 
         Context context = EventHandlingUtil.constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl());
@@ -143,13 +150,5 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     EventManager.registerEventHandler(new ReplaceInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache));
     EventManager.registerEventHandler(new MarcBibModifiedPostProcessingEventHandler(new InstanceUpdateDelegate(storage), precedingSucceedingTitlesHelper, mappingMetadataCache));
     EventManager.registerEventHandler(new MarcBibMatchedPostProcessingEventHandler(storage));
-  }
-
-  private String extractRecordId(List<KafkaHeader> headers) {
-    return headers.stream()
-      .filter(header -> header.key().equals(RECORD_ID_HEADER))
-      .findFirst()
-      .map(header -> header.value().toString())
-      .orElse(null);
   }
 }

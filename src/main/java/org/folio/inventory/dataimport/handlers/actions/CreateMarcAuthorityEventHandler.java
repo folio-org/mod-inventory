@@ -5,6 +5,7 @@ import static org.folio.ActionProfile.FolioRecord.AUTHORITY;
 import static org.folio.ActionProfile.FolioRecord.MARC_AUTHORITY;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_CREATED;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
+import static org.folio.processing.events.services.publisher.KafkaEventPublisher.RECORD_ID_HEADER;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 import java.util.HashMap;
@@ -39,8 +40,9 @@ public class CreateMarcAuthorityEventHandler implements EventHandler {
 
   private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t create Authority entity: context is empty or doesn`t exists";
   static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create a Authority entity requires a mapping profile";
-  private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingParameters and mapping rules snapshots were not found by jobExecutionId '%s'";
+  private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingParameters and mapping rules snapshots were not found by jobExecutionId '%s'.RecordId: '%s'";
   private static final String AUTHORITY_PATH = "authority";
+  private static final String RECORD_ID_HEADER = "recordId";
 
   private final Storage storage;
   private final MappingMetadataCache mappingMetadataCache;
@@ -58,7 +60,7 @@ public class CreateMarcAuthorityEventHandler implements EventHandler {
 
       final var payloadContext = dataImportEventPayload.getContext();
       if (payloadContext == null || payloadContext.isEmpty()
-          || StringUtils.isEmpty(payloadContext.get(MARC_AUTHORITY.value()))) {
+        || StringUtils.isEmpty(payloadContext.get(MARC_AUTHORITY.value()))) {
         return CompletableFuture.failedFuture(new EventProcessingException(CONTEXT_EMPTY_ERROR_MESSAGE));
       }
       if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
@@ -68,10 +70,11 @@ public class CreateMarcAuthorityEventHandler implements EventHandler {
 
       var context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       prepareEvent(dataImportEventPayload);
-
-      mappingMetadataCache.get(dataImportEventPayload.getJobExecutionId(), context)
+      String jobExecutionId = dataImportEventPayload.getJobExecutionId();
+      mappingMetadataCache.get(jobExecutionId, context)
         .map(parametersOptional -> parametersOptional.orElseThrow(() ->
-            new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, dataImportEventPayload.getJobExecutionId()))))
+          new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId,
+            dataImportEventPayload.getContext().get(RECORD_ID_HEADER)))))
         .onSuccess(mappingMetadata -> defaultMapRecordToAuthority(dataImportEventPayload, mappingMetadata))
         .compose(v -> {
           var authorityCollection = storage.getAuthorityRecordCollection(context);
@@ -80,12 +83,12 @@ public class CreateMarcAuthorityEventHandler implements EventHandler {
           return addAuthority(authority, authorityCollection);
         })
         .onSuccess(createdAuthority -> {
-          LOGGER.info("Created an Authority record");
+          LOGGER.info("Created an Authority record by jobExecutionId: '{}' and recordId: '{}'", jobExecutionId, dataImportEventPayload.getContext().get(RECORD_ID_HEADER));
           payloadContext.put(AUTHORITY.value(), Json.encodePrettily(createdAuthority));
           future.complete(dataImportEventPayload);
         })
         .onFailure(e -> {
-          LOGGER.error("Failed to save new Authority", e);
+          LOGGER.error("Failed to save new Authority by jobExecutionId: '{}' and recordId: '{}': ",jobExecutionId, dataImportEventPayload.getContext().get(RECORD_ID_HEADER), e);
           future.completeExceptionally(e);
         });
     } catch (Exception e) {
@@ -98,10 +101,10 @@ public class CreateMarcAuthorityEventHandler implements EventHandler {
   private Future<Authority> addAuthority(Authority authority, AuthorityRecordCollection authorityCollection) {
     Promise<Authority> promise = Promise.promise();
     authorityCollection.add(authority, success -> promise.complete(success.getResult()),
-        failure -> {
-          LOGGER.error(format("Error posting an Authority cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
-          promise.fail(failure.getReason());
-        });
+      failure -> {
+        LOGGER.error("Error posting an Authority cause {}, status code {}", failure.getReason(), failure.getStatusCode());
+        promise.fail(failure.getReason());
+      });
     return promise.future();
   }
 
@@ -110,13 +113,13 @@ public class CreateMarcAuthorityEventHandler implements EventHandler {
       HashMap<String, String> context = dataImportEventPayload.getContext();
       var mappingRules = new JsonObject(mappingMetadata.getMappingRules());
       var parsedRecord = new JsonObject((String) new JsonObject(context.get(MARC_AUTHORITY.value()))
-          .mapTo(Record.class).getParsedRecord().getContent());
+        .mapTo(Record.class).getParsedRecord().getContent());
       var mappingParameters = Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class);
       RecordMapper<Authority> recordMapper = RecordMapperBuilder.buildMapper(MARC_AUTHORITY.value());
       var authority = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
       dataImportEventPayload.getContext().put(AUTHORITY.value(), Json.encode(JsonObject.mapFrom(authority)));
     } catch (Exception e) {
-      LOGGER.error("Failed to map Record to Authority", e);
+      LOGGER.error("Failed to map Record to Authority by jobExecutionId: '{}'.Cause: {}",dataImportEventPayload.getJobExecutionId(), e);
       throw new JsonMappingException("Error in default mapper.", e);
     }
   }
@@ -124,7 +127,7 @@ public class CreateMarcAuthorityEventHandler implements EventHandler {
   @Override
   public boolean isEligible(DataImportEventPayload dataImportEventPayload) {
     if (dataImportEventPayload.getCurrentNode() != null && dataImportEventPayload.getContext().get(MARC_AUTHORITY.value()) != null
-        && ACTION_PROFILE == dataImportEventPayload.getCurrentNode().getContentType()) {
+      && ACTION_PROFILE == dataImportEventPayload.getCurrentNode().getContentType()) {
       var actionProfile = JsonObject.mapFrom(dataImportEventPayload.getCurrentNode().getContent()).mapTo(ActionProfile.class);
       return ActionProfile.Action.CREATE == actionProfile.getAction() && AUTHORITY == actionProfile.getFolioRecord();
     }

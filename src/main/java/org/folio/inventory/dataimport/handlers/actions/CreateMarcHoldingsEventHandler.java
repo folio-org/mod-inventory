@@ -51,12 +51,13 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
   private static final String HOLDINGS_PATH = "holdings";
   private static final String INSTANCE_ID_FIELD = "instanceId";
   private static final String PERMANENT_LOCATION_ID_FIELD = "permanentLocationId";
-  private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingParameters and mapping rules snapshots were not found by jobExecutionId '%s'";
+  private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingParameters and mapping rules snapshots were not found by jobExecutionId '%s'.RecordId: '%s'";
   private static final String PERMANENT_LOCATION_ID_ERROR_MESSAGE = "Can`t create Holding entity: 'permanentLocationId' is empty";
   private static final String SAVE_HOLDING_ERROR_MESSAGE = "Can`t save new holding";
   private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t create Holding entity: context is empty or doesn`t exists";
   private static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create a Holding entity requires a mapping profile";
   private static final String FIELD_004_MARC_HOLDINGS_NOT_NULL = "The field 004 for marc holdings must be not null";
+  private static final String RECORD_ID_HEADER = "recordId";
 
   private final Storage storage;
   private final MappingMetadataCache mappingMetadataCache;
@@ -70,7 +71,7 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
-        dataImportEventPayload.setEventType(DI_INVENTORY_HOLDING_CREATED.value());
+      dataImportEventPayload.setEventType(DI_INVENTORY_HOLDING_CREATED.value());
 
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
       if (payloadContext == null || payloadContext.isEmpty()
@@ -87,10 +88,12 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
       Record record = new JsonObject(payloadContext.get(EntityType.MARC_HOLDINGS.value()))
         .mapTo(Record.class);
       prepareEvent(dataImportEventPayload);
+      String jobExecutionId = dataImportEventPayload.getJobExecutionId();
 
       mappingMetadataCache.get(dataImportEventPayload.getJobExecutionId(), context)
         .map(parametersOptional -> parametersOptional.orElseThrow(() ->
-          new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, dataImportEventPayload.getJobExecutionId()))))
+          new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId,
+            dataImportEventPayload.getContext().get(RECORD_ID_HEADER)))))
         .onSuccess(mappingMetadata -> defaultMapRecordToHoldings(dataImportEventPayload, mappingMetadata))
         .map(v -> processMappingResult(dataImportEventPayload, record))
         .compose(holdingJson -> findInstanceIdByHrid(dataImportEventPayload, holdingJson, context)
@@ -101,7 +104,8 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
             return addHoldings(holding, holdingsRecords);
           }))
         .onSuccess(createdHoldings -> {
-          LOGGER.info("Created Holding record");
+          LOGGER.info("Created Holding record by jobExecutionId: '{}' and recordId: '{}'", jobExecutionId,
+            dataImportEventPayload.getContext().get(RECORD_ID_HEADER));
           dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encodePrettily(createdHoldings));
           future.complete(dataImportEventPayload);
         })

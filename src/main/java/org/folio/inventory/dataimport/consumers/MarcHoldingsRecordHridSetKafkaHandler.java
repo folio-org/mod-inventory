@@ -12,10 +12,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -49,6 +51,8 @@ public class MarcHoldingsRecordHridSetKafkaHandler implements AsyncRecordHandler
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
   public static final String JOB_EXECUTION_ID_KEY = "JOB_EXECUTION_ID";
+  private static final String CHUNK_ID_HEADER = "chunkId";
+  private static final String JOB_EXECUTION_ID_HEADER = "jobExecutionId";
   private static final ObjectMapper OBJECT_MAPPER = ObjectMapperTool.getMapper();
 
   private final HoldingsUpdateDelegate holdingsRecordUpdateDelegate;
@@ -75,18 +79,18 @@ public class MarcHoldingsRecordHridSetKafkaHandler implements AsyncRecordHandler
           OBJECT_MAPPER.readValue(event.getEventPayload(), HashMap.class);
         Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(record.headers());
         String recordId = headersMap.get(RECORD_ID_HEADER);
-        LOGGER.info("Event payload has been received with event type: {} and recordId: {}", event.getEventType(),
-          recordId);
+        String chunkId = headersMap.get(CHUNK_ID_HEADER);
+        String jobExecutionId = headersMap.get(JOB_EXECUTION_ID_HEADER);
+        LOGGER.info("Event payload has been received with event type: {}, recordId: {} by jobExecution: {} and chunkId: {}", event.getEventType(), recordId, jobExecutionId, chunkId);
 
         if (isEmpty(eventPayload.get(MARC_KEY))) {
-          String message = "Event payload does not contain required data to update Holdings";
+          String message = String.format("Event payload does not contain required data to update Holdings with event type: '%s', recordId: '%s' by jobExecution: '%s' and chunkId: '%s'", event.getEventType(), recordId, jobExecutionId, chunkId);
           LOGGER.error(message);
           return Future.failedFuture(message);
         }
 
         Context context = constructContext(headersMap.get(OKAPI_TENANT_HEADER), headersMap.get(OKAPI_TOKEN_HEADER),
           headersMap.get(OKAPI_URL_HEADER));
-        String jobExecutionId = eventPayload.get(JOB_EXECUTION_ID_KEY);
         Record marcRecord = Json.decodeValue(eventPayload.get(MARC_KEY), Record.class);
 
         mappingMetadataCache.get(jobExecutionId, context)
