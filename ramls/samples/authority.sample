@@ -1,7 +1,7 @@
 {
    "id":"5f671674-229a-48e9-804e-d2814cddd321",
-   "_version": 0,
-   "source": "MARC",
+   "_version":0,
+   "source":"MARC",
    "personalName":"Twain, Mark, 1835-1910",
    "sftPersonalName":[
       "Tuėĭn, Mark, 1835-1910",
@@ -13,6 +13,15 @@
       "nnn, Clemens, Samuel Langhorne, 1835-1910",
       "nnn, Snodgrass, Quintus Curtius, 1835-1910"
    ],
+   "personalNameTitle":"Mozart, Wolfgang Amadeus,1756-1791.Selections",
+   "sftPersonalNameTitle":[
+      "Mozart, Wolfgang Amadeus,1756-1791.10 celebrated string quartets",
+      "Mozart, Wolfgang Amadeus,1756-1791.10 berühmten Streichquartette"
+   ],
+   "saftPersonalNameTitle":[
+      "Long, Robert Alexander,1850-1934",
+      "Fauré, Gabriel,$d1845-1924"
+   ],
    "corporateName":"International Business Machines Corporation",
    "sftCorporateName":[
       "Oklahoma. Council on Juvenile Delinquency",
@@ -22,12 +31,30 @@
       "Oklahoma Council on Juvenile Delinquency Planning",
       "Oklahoma Council on Juvenile Justice"
    ],
+   "corporateNameTitle":"Corinthian Hall (Kansas City, Mo.)",
+   "sftCorporateNameTitle":[
+      "Venezuela.$tAmendment of exchange agreement no. 2",
+      "San Francisco (Calif.).Chinatown"
+   ],
+   "saftCorporateNameTitle":[
+      "Oklahoma Council on Juvenile Delinquency",
+      "Association for Computing Machinery.Special Interest Group on Small and Personal Computing Systems and Applications"
+   ],
    "meetingName":"Olympic Winter Games (21st : 2010 : Vancouver, B.C.)",
    "sftMeetingName":[
       "Vancouver Winter Games (2010 : Vancouver, B.C.)"
    ],
    "saftMeetingName":[
 
+   ],
+   "meetingNameTitle":"Workshop on Nuclear Physics with Stored, Cooled Beams(1984 :Spencer, Ind.)",
+   "sftMeetingNameTitle":[
+      "Symposium on Laser Anemometry, International",
+      "Jakob-Stainer-Symposium(1983 :Innsbruck, Austria)"
+   ],
+   "saftMeetingNameTitle":[
+      "International Drip Irrigation Meeting",
+      "Colloque européen de droit rural"
    ],
    "uniformTitle":"Monograph (Institute of Applied Social and Economic Research)",
    "sftUniformTitle":[

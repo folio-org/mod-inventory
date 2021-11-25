@@ -3,6 +3,7 @@ package org.folio.inventory.storage;
 import java.util.function.Function;
 
 import org.folio.inventory.common.Context;
+import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.domain.CollectionProvider;
 import org.folio.inventory.domain.HoldingCollection;
 import org.folio.inventory.domain.HoldingsRecordCollection;
@@ -68,6 +69,11 @@ public class Storage {
 
   public HoldingsRecordCollection getHoldingsRecordCollection(Context context) {
     return providerFactory.apply(context).getHoldingsRecordCollection(
+      context.getTenantId(), context.getToken());
+  }
+
+  public AuthorityRecordCollection getAuthorityRecordCollection(Context context) {
+    return providerFactory.apply(context).getAuthorityCollection(
       context.getTenantId(), context.getToken());
   }
 

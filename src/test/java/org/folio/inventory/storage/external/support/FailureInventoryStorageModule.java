@@ -1,13 +1,14 @@
 package org.folio.inventory.storage.external.support;
 
+import org.folio.inventory.common.WebRequestDiagnostics;
+import org.folio.inventory.support.http.server.ClientErrorResponse;
+import org.folio.inventory.support.http.server.ServerErrorResponse;
+
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
-import org.folio.inventory.common.WebRequestDiagnostics;
-import org.folio.inventory.support.http.server.ClientErrorResponse;
-import org.folio.inventory.support.http.server.ServerErrorResponse;
 
 public class FailureInventoryStorageModule extends AbstractVerticle {
   private static final int PORT_TO_USE = 9493;
@@ -44,8 +45,11 @@ public class FailureInventoryStorageModule extends AbstractVerticle {
 
     router.route("/server-error/item-storage/items*").handler(this::serverError);
     router.route("/server-error/instance-storage/instances*").handler(this::serverError);
+    router.route("/server-error/authority-storage/authorities*").handler(this::serverError);
     router.route("/bad-request/item-storage/items*").handler(this::badRequest);
     router.route("/bad-request/instance-storage/instances*").handler(this::badRequest);
+    router.route("/bad-request/instance-storage/instances*").handler(this::badRequest);
+    router.route("/bad-request/authority-storage/authorities*").handler(this::badRequest);
   }
 
   @Override

@@ -1,5 +1,10 @@
+## 18.x.x 2021-xx-xx
+
+* added Marc Authority handler for entities created via MARC Authority Data Import (MODINV-501)
+
 ## 18.1.0 2021-10-18
 
+* Edit MARC Authorities via quickMARC | Update Inventory Authorities (MODINV-503)
 * Fixed incorrect optimistic locking behavior for instance update when uploading file via data import (MODINV-546)
 * Fixed holdings record created via MARC Bib Data Import shows incorrect source (MODINV-549)
 * Fixed put for mappingParams into dataImportEventPayload (MODINV-571)
