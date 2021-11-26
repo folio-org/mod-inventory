@@ -94,7 +94,8 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
 
           if (!errors.isEmpty()) {
-            String msg = String.format("Mapped Instance is invalid: %s", errors);
+            String msg = format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", errors,
+              jobExecutionId, dataImportEventPayload.getContext().get(RECORD_ID_HEADER), dataImportEventPayload.getContext().get(CHUNK_ID_HEADER));
             LOGGER.warn(msg);
             return Future.failedFuture(msg);
           }

@@ -107,7 +107,8 @@ public class UpdateItemEventHandler implements EventHandler {
 
           List<String> errors = validateItem(mappedItemAsJson, requiredFields);
           if (!errors.isEmpty()) {
-            String msg = format("Mapped Item is invalid: %s", errors.toString());
+            String msg = format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", errors,
+              jobExecutionId, dataImportEventPayload.getContext().get(RECORD_ID_HEADER), dataImportEventPayload.getContext().get(CHUNK_ID_HEADER));
             LOG.error(msg);
             return Future.failedFuture(msg);
           }

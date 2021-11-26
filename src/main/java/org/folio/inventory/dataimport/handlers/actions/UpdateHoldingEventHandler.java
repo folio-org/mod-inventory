@@ -103,7 +103,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
             });
         })
         .onFailure(e -> {
-          LOGGER.error("Error updating inventory Holdings", e);
+          LOGGER.error("Error updating inventory Holdings by jobExecutionId: '{}'", jobExecutionId, e);
           future.completeExceptionally(e);
         });
     } catch (Exception e) {
