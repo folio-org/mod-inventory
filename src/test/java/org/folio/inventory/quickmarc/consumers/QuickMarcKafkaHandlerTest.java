@@ -14,6 +14,7 @@ import net.mguenther.kafka.junit.ObserveKeyValues;
 
 import org.folio.Authority;
 import org.folio.HoldingsRecord;
+import org.folio.HoldingsType;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Success;
@@ -30,6 +31,7 @@ import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.processing.events.utils.ZIPArchiver;
+import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.ParsedRecordDto;
 import org.folio.rest.jaxrs.model.Record;
@@ -43,6 +45,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -241,13 +244,18 @@ public class QuickMarcKafkaHandlerTest {
   @Test
   public void shouldSendHoldingsUpdatedEvent(TestContext context) throws IOException,
     InterruptedException {
+
+    List<HoldingsType> holdings = new ArrayList<>();
+    holdings.add(new HoldingsType().withName("testingnote$a"));
+    MappingParameters mappingParameters = new MappingParameters();
+    mappingParameters.withHoldingsTypes(holdings);
     // given
     Async async = context.async();
     Map<String, String> payload = new HashMap<>();
     payload.put("RECORD_TYPE", "MARC_HOLDING");
     payload.put("MARC_HOLDING", Json.encode(holdingsRecord));
     payload.put("MAPPING_RULES", holdingsMappingRules.encode());
-    payload.put("MAPPING_PARAMS", new JsonObject().encode());
+    payload.put("MAPPING_PARAMS", Json.encode(mappingParameters));
     payload.put("PARSED_RECORD_DTO", Json.encode(new ParsedRecordDto()
       .withRecordType(ParsedRecordDto.RecordType.MARC_HOLDING)
       .withRelatedRecordVersion("1")));

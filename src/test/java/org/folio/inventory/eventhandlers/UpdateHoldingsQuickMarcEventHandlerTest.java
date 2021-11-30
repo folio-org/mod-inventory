@@ -7,11 +7,17 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.function.Consumer;
 
 import io.vertx.core.Future;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+
+import org.folio.HoldingsType;
+import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -87,11 +93,17 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
 
   @Test
   public void shouldProcessEvent() {
+
+    List<HoldingsType> holdings = new ArrayList<>();
+    holdings.add(new HoldingsType().withName("testingnote$a").withId("fe19bae4-da28-472b-be90-d442e2428eadx"));
+    MappingParameters mappingParameters = new MappingParameters();
+    mappingParameters.withHoldingsTypes(holdings);
+
     HashMap<String, String> eventPayload = new HashMap<>();
     eventPayload.put("RECORD_TYPE", "MARC_HOLDING");
     eventPayload.put("MARC_HOLDING", record.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
-    eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
+    eventPayload.put("MAPPING_PARAMS", Json.encode(mappingParameters));
     eventPayload.put("RELATED_RECORD_VERSION", HOLDINGS_VERSION.toString());
 
     Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(eventPayload);
@@ -105,7 +117,7 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
     Assert.assertNotNull(updatedHoldings.getHoldingsStatements());
     Assert.assertEquals(21, updatedHoldings.getHoldingsStatements().size());
     Assert.assertNotNull(updatedHoldings.getNotes());
-    Assert.assertEquals("note$a ; note$u ; note$3 ; note$5 ; note$6 ; note$8", updatedHoldings.getNotes().get(0).getNote());
+    Assert.assertEquals("testingnote$a ; testingnote$u ; testingnote$3 ; testingnote$5 ; testingnote$6 ; testingnote$8", updatedHoldings.getNotes().get(0).getNote());
 
     ArgumentCaptor<Context> argument = ArgumentCaptor.forClass(Context.class);
     verify(holdingsUpdateDelegate).handle(any(), any(), argument.capture());
@@ -136,11 +148,17 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
       return null;
     }).when(holdingsRecordCollection).update(any(), any(), any());
 
+
+    List<HoldingsType> holdings = new ArrayList<>();
+    holdings.add(new HoldingsType().withName("testingnote$a").withId("fe19bae4-da28-472b-be90-d442e2428eadx"));
+    MappingParameters mappingParameters = new MappingParameters();
+    mappingParameters.withHoldingsTypes(holdings);
+
     HashMap<String, String> eventPayload = new HashMap<>();
     eventPayload.put("RECORD_TYPE", "MARC_HOLDING");
     eventPayload.put("MARC_HOLDING", record.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
-    eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
+    eventPayload.put("MAPPING_PARAMS", Json.encode(mappingParameters));
 
     Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(eventPayload);
 
