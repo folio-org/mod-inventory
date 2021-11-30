@@ -113,7 +113,7 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
     Assert.assertEquals(HOLDINGS_ID, updatedHoldings.getId());
     Assert.assertEquals(HOLDINGS_VERSION, updatedHoldings.getVersion());
 
-    Assert.assertEquals("fe19bae4-da28-472b-be90-d442e2428ead", updatedHoldings.getHoldingsTypeId());
+    Assert.assertEquals("null", updatedHoldings.getHoldingsTypeId());
     Assert.assertNotNull(updatedHoldings.getHoldingsStatements());
     Assert.assertEquals(21, updatedHoldings.getHoldingsStatements().size());
     Assert.assertNotNull(updatedHoldings.getNotes());
