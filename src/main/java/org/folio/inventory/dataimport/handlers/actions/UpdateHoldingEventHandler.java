@@ -40,7 +40,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
   private static final String UPDATE_HOLDING_ERROR_MESSAGE = "Can`t update  holding by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s'";
   private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t update Holding entity: context or Holding-entity are empty or doesn`t exist!";
   private static final String EMPTY_REQUIRED_FIELDS_ERROR_MESSAGE = "Can`t update Holding entity: one of required fields(hrid, permanentLocationId, instanceId) are empty!";
-  private static final String MAPPING_METADATA_NOT_FOUND_MESSAGE = "MappingMetadata snapshot was not found by jobExecutionId '%s'.Record: '%s', chunkId: '%s' ";
+  private static final String MAPPING_METADATA_NOT_FOUND_MESSAGE = "MappingMetadata snapshot was not found by jobExecutionId '%s'. Record: '%s', chunkId: '%s' ";
   private static final String HOLDINGS_PATH_FIELD = "holdings";
   static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to update a Holding entity has no a mapping profile";
   private static final String RECORD_ID_HEADER = "recordId";
@@ -83,10 +83,12 @@ public class UpdateHoldingEventHandler implements EventHandler {
       Context context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       String jobExecutionId = dataImportEventPayload.getJobExecutionId();
 
+      String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
+      String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
       mappingMetadataCache.get(jobExecutionId, context)
         .map(parametersOptional -> parametersOptional
           .orElseThrow(() -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MESSAGE, jobExecutionId,
-            dataImportEventPayload.getContext().get(RECORD_ID_HEADER), dataImportEventPayload.getContext().get(CHUNK_ID_HEADER)))))
+            recordId, chunkId))))
         .onSuccess(mappingMetadataDto -> {
           prepareEvent(dataImportEventPayload);
           MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
@@ -97,9 +99,9 @@ public class UpdateHoldingEventHandler implements EventHandler {
 
           holdingsRecords.update(holding, holdingSuccess -> constructDataImportEventPayload(future, dataImportEventPayload, holding),
             failure -> {
-              LOGGER.error(format(UPDATE_HOLDING_ERROR_MESSAGE, jobExecutionId, dataImportEventPayload.getContext().get(RECORD_ID_HEADER)));
+              LOGGER.error(format(UPDATE_HOLDING_ERROR_MESSAGE, jobExecutionId, recordId, chunkId));
               future.completeExceptionally(new EventProcessingException(format(UPDATE_HOLDING_ERROR_MESSAGE, jobExecutionId,
-                dataImportEventPayload.getContext().get(RECORD_ID_HEADER), dataImportEventPayload.getContext().get(CHUNK_ID_HEADER))));
+                recordId, chunkId)));
             });
         })
         .onFailure(e -> {

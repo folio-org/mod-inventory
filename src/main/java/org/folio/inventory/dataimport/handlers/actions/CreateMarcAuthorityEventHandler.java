@@ -41,7 +41,7 @@ public class CreateMarcAuthorityEventHandler implements EventHandler {
 
   private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t create Authority entity: context is empty or doesn't exist";
   static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create an Authority entity requires a mapping profile";
-  private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingParameters and mapping rules snapshots were not found by jobExecutionId '%s'.RecordId: '%s', chunkId: '%s'";
+  private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingParameters and mapping rules snapshots were not found by jobExecutionId '%s'. RecordId: '%s', chunkId: '%s' ";
   private static final String AUTHORITY_PATH = "authority";
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
@@ -73,10 +73,12 @@ public class CreateMarcAuthorityEventHandler implements EventHandler {
       var context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       prepareEvent(dataImportEventPayload);
       String jobExecutionId = dataImportEventPayload.getJobExecutionId();
+      String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
+      String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
       mappingMetadataCache.get(jobExecutionId, context)
         .map(parametersOptional -> parametersOptional.orElseThrow(() ->
           new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId,
-            dataImportEventPayload.getContext().get(RECORD_ID_HEADER), dataImportEventPayload.getContext().get(CHUNK_ID_HEADER)))))
+            recordId, chunkId))))
         .onSuccess(mappingMetadata -> defaultMapRecordToAuthority(dataImportEventPayload, mappingMetadata))
         .compose(v -> {
           var authorityCollection = storage.getAuthorityRecordCollection(context);
@@ -86,13 +88,13 @@ public class CreateMarcAuthorityEventHandler implements EventHandler {
         })
         .onSuccess(createdAuthority -> {
           LOGGER.info("Created an Authority record by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
-            dataImportEventPayload.getContext().get(RECORD_ID_HEADER), dataImportEventPayload.getContext().get(CHUNK_ID_HEADER));
+            recordId, chunkId);
           payloadContext.put(AUTHORITY.value(), Json.encodePrettily(createdAuthority));
           future.complete(dataImportEventPayload);
         })
         .onFailure(e -> {
           LOGGER.error("Failed to save new Authority by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ",jobExecutionId,
-            dataImportEventPayload.getContext().get(RECORD_ID_HEADER), dataImportEventPayload.getContext().get(CHUNK_ID_HEADER), e);
+            recordId, chunkId, e);
           future.completeExceptionally(e);
         });
     } catch (Exception e) {

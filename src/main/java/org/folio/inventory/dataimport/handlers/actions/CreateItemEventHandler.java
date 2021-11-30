@@ -55,7 +55,7 @@ public class CreateItemEventHandler implements EventHandler {
 
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
   private static final String PAYLOAD_DATA_HAS_NO_HOLDING_ID_MSG = "Failed to extract holdingsRecordId from holdingsRecord entity or parsed record";
-  private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingMetadata snapshot was not found by jobExecutionId '%s'.RecordId: '%s', chunkId: '%s'";
+  private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingMetadata snapshot was not found by jobExecutionId '%s'. RecordId: '%s', chunkId: '%s' ";
   static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create an Item requires a mapping profile";
   public static final String HOLDINGS_RECORD_ID_FIELD = "holdingsRecordId";
   public static final String ITEM_PATH_FIELD = "item";
@@ -105,10 +105,12 @@ public class CreateItemEventHandler implements EventHandler {
       String jobExecutionId = dataImportEventPayload.getJobExecutionId();
 
 
+      String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
+      String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
       mappingMetadataCache.get(jobExecutionId, context)
         .map(parametersOptional -> parametersOptional
           .orElseThrow(() -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId,
-            dataImportEventPayload.getContext().get(RECORD_ID_HEADER), dataImportEventPayload.getContext().get(CHUNK_ID_HEADER)))))
+            recordId, chunkId))))
         .map(mappingMetadataDto -> {
           MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
           MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
@@ -118,7 +120,7 @@ public class CreateItemEventHandler implements EventHandler {
           List<String> errors = validateItem(mappedItemJson, requiredFields);
           if (!errors.isEmpty()) {
             String msg = format("Mapped Item is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", errors,
-              jobExecutionId, dataImportEventPayload.getContext().get(RECORD_ID_HEADER), dataImportEventPayload.getContext().get(CHUNK_ID_HEADER));
+              jobExecutionId, recordId, chunkId);
             LOG.error(msg);
             return Future.failedFuture(msg);
           }
@@ -135,7 +137,7 @@ public class CreateItemEventHandler implements EventHandler {
             future.complete(dataImportEventPayload);
           } else {
             LOG.error("Error creating inventory Item by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
-              dataImportEventPayload.getContext().get(RECORD_ID_HEADER), dataImportEventPayload.getContext().get(CHUNK_ID_HEADER), ar.cause());
+              recordId, chunkId, ar.cause());
             future.completeExceptionally(ar.cause());
           }
         });

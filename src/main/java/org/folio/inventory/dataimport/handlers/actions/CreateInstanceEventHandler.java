@@ -43,7 +43,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload - event payload context does not contain MARC_BIBLIOGRAPHIC data";
   static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create an Instance requires a mapping profile by jobExecutionId: '%s' and recordId: '%s'";
-  private static final String MAPPING_PARAMETERS_NOT_FOUND_MSG = "MappingParameters snapshot was not found by jobExecutionId: '%s'.RecordId: '%s', chunkId: '%s'";
+  private static final String MAPPING_PARAMETERS_NOT_FOUND_MSG = "MappingParameters snapshot was not found by jobExecutionId: '%s'. RecordId: '%s', chunkId: '%s' ";
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
 
@@ -72,27 +72,28 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
         return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
       }
       String jobExecutionId = dataImportEventPayload.getJobExecutionId();
+      String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
       if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
         LOGGER.error(ACTION_HAS_NO_MAPPING_MSG);
-        return CompletableFuture.failedFuture(new EventProcessingException(format(ACTION_HAS_NO_MAPPING_MSG, jobExecutionId, dataImportEventPayload.getContext().get(RECORD_ID_HEADER))));
+        return CompletableFuture.failedFuture(new EventProcessingException(format(ACTION_HAS_NO_MAPPING_MSG, jobExecutionId, recordId)));
       }
 
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       Record targetRecord = Json.decodeValue(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()), Record.class);
 
+      String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
       mappingMetadataCache.get(jobExecutionId, context)
         .compose(parametersOptional -> parametersOptional
           .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()),
             Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class)))
-          .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, jobExecutionId, dataImportEventPayload.getContext().get(RECORD_ID_HEADER),
-            dataImportEventPayload.getContext().get(CHUNK_ID_HEADER)))))
+          .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, jobExecutionId, recordId, chunkId))))
         .compose(v -> {
           InstanceCollection instanceCollection = storage.getInstanceCollection(context);
           JsonObject instanceAsJson = prepareInstance(dataImportEventPayload, targetRecord, jobExecutionId);
           List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
           if (!errors.isEmpty()) {
             String msg = format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", errors,
-              jobExecutionId, dataImportEventPayload.getContext().get(RECORD_ID_HEADER), dataImportEventPayload.getContext().get(CHUNK_ID_HEADER));
+              jobExecutionId, recordId, chunkId);
             LOGGER.warn(msg);
             return Future.failedFuture(msg);
           }
@@ -106,8 +107,8 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
           future.complete(dataImportEventPayload);
         })
         .onFailure(e -> {
-          LOGGER.error("Error creating inventory Instance by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId, dataImportEventPayload.getContext().get(RECORD_ID_HEADER),
-            dataImportEventPayload.getContext().get(CHUNK_ID_HEADER), e);
+          LOGGER.error("Error creating inventory Instance by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId, recordId,
+            chunkId, e);
           future.completeExceptionally(e);
         });
     } catch (Exception e) {

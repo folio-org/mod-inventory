@@ -50,7 +50,7 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
   private static final String HOLDINGS_PATH = "holdings";
   private static final String INSTANCE_ID_FIELD = "instanceId";
   private static final String PERMANENT_LOCATION_ID_FIELD = "permanentLocationId";
-  private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingParameters and mapping rules snapshots were not found by jobExecutionId '%s'.RecordId: '%s', chunkId: '%s'";
+  private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingParameters and mapping rules snapshots were not found by jobExecutionId '%s'. RecordId: '%s', chunkId: '%s' ";
   private static final String PERMANENT_LOCATION_ID_ERROR_MESSAGE = "Can`t create Holding entity: 'permanentLocationId' is empty";
   private static final String SAVE_HOLDING_ERROR_MESSAGE = "Can`t save new holding";
   private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t create Holding entity: context is empty or doesn't exist";
@@ -90,10 +90,12 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
       prepareEvent(dataImportEventPayload);
       String jobExecutionId = dataImportEventPayload.getJobExecutionId();
 
+      String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
+      String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
       mappingMetadataCache.get(dataImportEventPayload.getJobExecutionId(), context)
         .map(parametersOptional -> parametersOptional.orElseThrow(() ->
           new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId,
-            dataImportEventPayload.getContext().get(RECORD_ID_HEADER), dataImportEventPayload.getContext().get(CHUNK_ID_HEADER)))))
+            recordId, chunkId))))
         .onSuccess(mappingMetadata -> defaultMapRecordToHoldings(dataImportEventPayload, mappingMetadata))
         .map(v -> processMappingResult(dataImportEventPayload, record))
         .compose(holdingJson -> findInstanceIdByHrid(dataImportEventPayload, holdingJson, context)
@@ -105,7 +107,7 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
           }))
         .onSuccess(createdHoldings -> {
           LOGGER.info("Created Holding record by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
-            dataImportEventPayload.getContext().get(RECORD_ID_HEADER), dataImportEventPayload.getContext().get(CHUNK_ID_HEADER));
+            recordId, chunkId);
           dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encodePrettily(createdHoldings));
           future.complete(dataImportEventPayload);
         })
