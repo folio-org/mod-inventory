@@ -127,10 +127,8 @@
          "value":"Pseudonym not established: Jean François Alden"
       }
    ],
-   "metadata":{
-      "createdDate":"2020-10-09T16:47:22.072+0000",
-      "updatedDate":"2020-10-09T16:47:49.703+0000",
-      "createdByUserId":"39720b69-3141-5eb8-95c8-d3bf17eb99d2",
-      "updatedByUserId":"39720b69-3141-5eb8-95c8-d3bf17eb99d2"
-   }
+   "createdDate":"2020-10-09T16:47:22.072+0000",
+   "updatedDate":"2020-10-09T16:47:49.703+0000",
+   "createdBy":"39720b69-3141-5eb8-95c8-d3bf17eb99d2",
+   "updatedBy":"39720b69-3141-5eb8-95c8-d3bf17eb99d2"
 }
