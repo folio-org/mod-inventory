@@ -89,7 +89,7 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
             dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(instanceUpdatePromise.future().result()));
             future.complete(dataImportEventPayload);
           } else {
-            LOGGER.error("Error updating inventory instance", updateAr.cause());
+            LOGGER.error("Error updating inventory instance by id: '{}' by jobExecutionId: '{}'", instanceId, dataImportEventPayload.getJobExecutionId(), updateAr.cause());
             future.completeExceptionally(updateAr.cause());
           }
         });

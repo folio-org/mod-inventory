@@ -42,8 +42,11 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
   private static final Logger LOGGER = LogManager.getLogger(CreateInstanceEventHandler.class);
 
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload - event payload context does not contain MARC_BIBLIOGRAPHIC data";
-  static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create an Instance requires a mapping profile";
-  private static final String MAPPING_PARAMETERS_NOT_FOUND_MSG = "MappingParameters snapshot was not found by jobExecutionId '%s'";
+  static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create an Instance requires a mapping profile by jobExecutionId: '%s' and recordId: '%s'";
+  private static final String MAPPING_PARAMETERS_NOT_FOUND_MSG = "MappingParameters snapshot was not found by jobExecutionId: '%s'. RecordId: '%s', chunkId: '%s' ";
+  private static final String RECORD_ID_HEADER = "recordId";
+  private static final String CHUNK_ID_HEADER = "chunkId";
+
 
   private PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
   private MappingMetadataCache mappingMetadataCache;
@@ -68,25 +71,29 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
         LOGGER.error(PAYLOAD_HAS_NO_DATA_MSG);
         return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
       }
+      String jobExecutionId = dataImportEventPayload.getJobExecutionId();
+      String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
       if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
         LOGGER.error(ACTION_HAS_NO_MAPPING_MSG);
-        return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
+        return CompletableFuture.failedFuture(new EventProcessingException(format(ACTION_HAS_NO_MAPPING_MSG, jobExecutionId, recordId)));
       }
 
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
-      Record record = Json.decodeValue(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()), Record.class);
+      Record targetRecord = Json.decodeValue(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()), Record.class);
 
-      mappingMetadataCache.get(dataImportEventPayload.getJobExecutionId(), context)
+      String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
+      mappingMetadataCache.get(jobExecutionId, context)
         .compose(parametersOptional -> parametersOptional
           .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()),
             Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class)))
-          .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, dataImportEventPayload.getJobExecutionId()))))
+          .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, jobExecutionId, recordId, chunkId))))
         .compose(v -> {
           InstanceCollection instanceCollection = storage.getInstanceCollection(context);
-          JsonObject instanceAsJson = prepareInstance(dataImportEventPayload, record);
+          JsonObject instanceAsJson = prepareInstance(dataImportEventPayload, targetRecord, jobExecutionId);
           List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
           if (!errors.isEmpty()) {
-            String msg = format("Mapped Instance is invalid: %s", errors);
+            String msg = format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", errors,
+              jobExecutionId, recordId, chunkId);
             LOGGER.warn(msg);
             return Future.failedFuture(msg);
           }
@@ -100,7 +107,8 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
           future.complete(dataImportEventPayload);
         })
         .onFailure(e -> {
-          LOGGER.warn("Error creating inventory Instance", e);
+          LOGGER.error("Error creating inventory Instance by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId, recordId,
+            chunkId, e);
           future.completeExceptionally(e);
         });
     } catch (Exception e) {
@@ -110,16 +118,16 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
     return future;
   }
 
-  private JsonObject prepareInstance(DataImportEventPayload dataImportEventPayload, Record record) {
+  private JsonObject prepareInstance(DataImportEventPayload dataImportEventPayload, Record targetRecord, String jobExecutionId) {
     JsonObject instanceAsJson = new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value()));
     if (instanceAsJson.getJsonObject(INSTANCE_PATH) != null) {
       instanceAsJson = instanceAsJson.getJsonObject(INSTANCE_PATH);
     }
-    instanceAsJson.put("id", record.getId());
+    instanceAsJson.put("id", targetRecord.getId());
     instanceAsJson.put(SOURCE_KEY, MARC_FORMAT);
     instanceAsJson.remove(HRID_KEY);
 
-    LOGGER.debug("Creating instance with id: {}", record.getId());
+    LOGGER.debug("Creating instance with id: {} by jobExecutionId: {} and recordId:{} ", targetRecord.getId(), jobExecutionId, targetRecord.getId());
     return instanceAsJson;
   }
 
@@ -157,7 +165,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
     Promise<Instance> promise = Promise.promise();
     instanceCollection.add(instance, success -> promise.complete(success.getResult()),
       failure -> {
-        LOGGER.error(format("Error posting Instance cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
+        LOGGER.error(format("Error posting Instance by instanceId:'%s' cause %s, status code %s", instance.getId(), failure.getReason(), failure.getStatusCode()));
         promise.fail(failure.getReason());
       });
     return promise.future();

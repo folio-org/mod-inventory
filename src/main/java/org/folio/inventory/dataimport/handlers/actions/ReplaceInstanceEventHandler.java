@@ -42,10 +42,12 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC or INSTANCE data";
   static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to update an Instance requires a mapping profile";
-  private static final String MAPPING_PARAMETERS_NOT_FOUND_MSG = "MappingParameters snapshot was not found by jobExecutionId '%s'";
+  private static final String MAPPING_PARAMETERS_NOT_FOUND_MSG = "MappingParameters snapshot was not found by jobExecutionId '%s'. RecordId: '%s', chunkId: '%s' ";
+  private static final String RECORD_ID_HEADER = "recordId";
+  private static final String CHUNK_ID_HEADER = "chunkId";
 
-  private PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
-  private MappingMetadataCache mappingMetadataCache;
+  private final PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
+  private final MappingMetadataCache mappingMetadataCache;
 
   public ReplaceInstanceEventHandler(Storage storage, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper, MappingMetadataCache mappingMetadataCache) {
     super(storage);
@@ -78,18 +80,24 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
       prepareEvent(dataImportEventPayload);
 
-      mappingMetadataCache.get(dataImportEventPayload.getJobExecutionId(), context)
+      String jobExecutionId = dataImportEventPayload.getJobExecutionId();
+
+      String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
+      String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
+      mappingMetadataCache.get(jobExecutionId, context)
         .compose(parametersOptional -> parametersOptional
           .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()), new JsonObject(mappingMetadata.getMappingParams())
             .mapTo(MappingParameters.class), instanceToUpdate))
-          .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, dataImportEventPayload.getJobExecutionId()))))
+          .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, jobExecutionId,
+            recordId, chunkId))))
         .compose(e -> {
           JsonObject instanceAsJson = prepareTargetInstance(dataImportEventPayload, instanceToUpdate);
           InstanceCollection instanceCollection = storage.getInstanceCollection(context);
           List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
 
           if (!errors.isEmpty()) {
-            String msg = String.format("Mapped Instance is invalid: %s", errors.toString());
+            String msg = format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", errors,
+              jobExecutionId, recordId, chunkId);
             LOGGER.warn(msg);
             return Future.failedFuture(msg);
           }
@@ -109,7 +117,8 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
             dataImportEventPayload.getContext().put(INSTANCE.value(), ar.result().encode());
             future.complete(dataImportEventPayload);
           } else {
-            LOGGER.error("Error updating inventory Instance", ar.cause());
+            LOGGER.error("Error updating inventory Instance by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
+              recordId, chunkId, ar.cause());
             future.completeExceptionally(ar.cause());
           }
         });
