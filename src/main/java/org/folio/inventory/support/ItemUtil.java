@@ -64,6 +64,9 @@ public final class ItemUtil {
     List<JsonObject> circulationNotes = toList(
       itemFromServer.getJsonArray(Item.CIRCULATION_NOTES_KEY, new JsonArray()));
 
+    List<String> administrativeNotes = JsonArrayHelper
+      .toListOfStrings(itemFromServer.getJsonArray(Item.ADMINISTRATIVE_NOTES_KEY));
+
     List<CirculationNote> mappedCirculationNotes = circulationNotes.stream()
       .map(CirculationNote::new)
       .collect(Collectors.toList());
@@ -109,6 +112,7 @@ public final class ItemUtil {
       .withMissingPiecesDate(itemFromServer.getString(Item.MISSING_PIECES_DATE_KEY))
       .withItemDamagedStatusId(itemFromServer.getString(Item.ITEM_DAMAGED_STATUS_ID_KEY))
       .withItemDamagedStatusDate(itemFromServer.getString(Item.ITEM_DAMAGED_STATUS_DATE_KEY))
+      .withAdministrativeNotes(administrativeNotes)
       .withNotes(mappedNotes)
       .withCirculationNotes(mappedCirculationNotes)
       .withPermanentLocationId(itemFromServer.getString(PERMANENT_LOCATION_ID_KEY))
@@ -149,6 +153,7 @@ public final class ItemUtil {
     itemToSend.put(Item.FORMER_IDS_KEY, item.getFormerIds());
     itemToSend.put(Item.DISCOVERY_SUPPRESS_KEY, item.getDiscoverySuppress());
     includeIfPresent(itemToSend, COPY_NUMBER, item.getCopyNumber());
+    itemToSend.put(Item.ADMINISTRATIVE_NOTES_KEY, item.getAdministrativeNotes());
     itemToSend.put(NOTES, item.getNotes());
     itemToSend.put(Item.CIRCULATION_NOTES_KEY, item.getCirculationNotes());
     includeIfPresent(itemToSend, BARCODE, item.getBarcode());
@@ -195,6 +200,9 @@ public final class ItemUtil {
 
     Status status = converterForClass(Status.class)
       .fromJson(itemRequest.getJsonObject(Item.STATUS_KEY));
+
+    List<String> administrativeNotes = toListOfStrings(
+      itemRequest.getJsonArray(Item.ADMINISTRATIVE_NOTES_KEY));
 
     List<Note> notes = itemRequest.containsKey(Item.NOTES_KEY)
       ? JsonArrayHelper.toList(itemRequest.getJsonArray(Item.NOTES_KEY)).stream()
@@ -256,6 +264,7 @@ public final class ItemUtil {
       .withTemporaryLocationId(temporaryLocationId)
       .withTemporaryLoanTypeId(temporaryLoanTypeId)
       .withCopyNumber(itemRequest.getString(Item.COPY_NUMBER_KEY))
+      .withAdministrativeNotes(administrativeNotes)
       .withNotes(notes)
       .withCirculationNotes(circulationNotes)
       .withAccessionNumber(itemRequest.getString(Item.ACCESSION_NUMBER_KEY))
@@ -293,6 +302,7 @@ public final class ItemUtil {
     itemJson.put(Item.FORMER_IDS_KEY, item.getFormerIds());
     itemJson.put(Item.DISCOVERY_SUPPRESS_KEY, item.getDiscoverySuppress());
     includeIfPresent(itemJson, COPY_NUMBER, item.getCopyNumber());
+    itemJson.put(Item.ADMINISTRATIVE_NOTES_KEY, item.getAdministrativeNotes());
     itemJson.put(NOTES, item.getNotes());
     itemJson.put(Item.CIRCULATION_NOTES_KEY, item.getCirculationNotes());
     includeIfPresent(itemJson, BARCODE, item.getBarcode());

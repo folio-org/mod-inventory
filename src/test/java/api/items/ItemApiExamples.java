@@ -93,12 +93,15 @@ public class ItemApiExamples extends ApiTests {
       new HoldingRequestBuilder()
         .forInstance(UUID.fromString(createdInstance.getString("id"))))
       .getId();
-
+    String testNote = "this is a note";
+    JsonArray adminNote = new JsonArray();
+    adminNote.add(testNote);
     IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)
       .withBarcode("645398607547")
       .temporarilyInReadingRoom()
       .canCirculate()
+      .withAdministrativeNotes(adminNote)
       .withItemLevelCallNumber(CALL_NUMBER)
       .withItemLevelCallNumberSuffix(CALL_NUMBER_SUFFIX)
       .withItemLevelCallNumberPrefix(CALL_NUMBER_PREFIX)
@@ -113,6 +116,12 @@ public class ItemApiExamples extends ApiTests {
     JsonObject createdItem = itemsClient.getById(postResponse.getId()).getJson();
 
     assertThat(createdItem.containsKey("id"), is(true));
+
+    assertThat(createdItem.containsKey("administrativeNotes"), is(true));
+
+    JsonArray createdNotes = createdItem.getJsonArray("administrativeNotes");
+
+    assertThat(createdNotes.getString(0), is(testNote));
 
     assertThat(createdItem.containsKey(Item.TAGS_KEY), is(true));
 
