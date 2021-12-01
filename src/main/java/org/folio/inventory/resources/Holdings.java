@@ -4,7 +4,7 @@ import static io.netty.util.internal.StringUtil.COMMA;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import static org.folio.inventory.support.CompletableFutures.failedFuture;
-import static org.folio.inventory.support.EndpointFailureHandler.doExceptionally;
+import static org.folio.inventory.support.EndpointFailureHandler.handleFailure;
 import static org.folio.inventory.support.http.server.SuccessResponse.noContent;
 
 import java.lang.invoke.MethodHandles;
@@ -61,7 +61,31 @@ public class Holdings {
     router.put(HOLDINGS_PATH + "/:id").handler(this::update);
   }
 
-  private CompletableFuture<HoldingsRecord> refuseWhenInstanceNotFound(HoldingsRecord holdingsRecord) {
+  private void update(RoutingContext rContext) {
+    try {
+      var wContext = new WebContext(rContext);
+      var holdingsRequest = rContext.getBodyAsJson();
+      var updatedHoldings = holdingsRequest.mapTo(HoldingsRecord.class);
+      var holdingsRecordCollection = storage.getHoldingsRecordCollection(wContext);
+
+      completedFuture(updatedHoldings)
+        .thenCompose(holdingsRecord -> holdingsRecordCollection.findById(rContext.request().getParam(ID_FIELD)))
+        .thenCompose(this::refuseWhenHoldingsNotFound)
+        .thenCompose(existingHoldings -> refuseWhenBlockedFieldsChanged(existingHoldings, updatedHoldings))
+        .thenCompose(existingHoldings -> refuseWhenHridChanged(existingHoldings, updatedHoldings))
+        .thenAccept(existingHoldings -> updateHoldings(updatedHoldings, holdingsRecordCollection, rContext))
+        .exceptionally(throwable -> {
+          LOGGER.error(throwable);
+          handleFailure(throwable, rContext);
+          return null;
+        });
+    } catch (Exception e) {
+      LOGGER.error(e);
+      handleFailure(e, rContext);
+    }
+  }
+
+  private CompletableFuture<HoldingsRecord> refuseWhenHoldingsNotFound(HoldingsRecord holdingsRecord) {
     return holdingsRecord == null
       ? failedFuture(new NotFoundException(HOLDINGS_NOT_FOUND_ERROR_MSG))
       : completedFuture(holdingsRecord);
@@ -73,21 +97,6 @@ public class Holdings {
     return Objects.equals(existingHoldings.getHrid(), updatedHoldings.getHrid())
       ? completedFuture(existingHoldings)
       : failedFuture(new UnprocessableEntityException(HRID_UPDATED_ERROR_MSG, HRID_FIELD, updatedHoldings.getHrid()));
-  }
-
-  private void update(RoutingContext rContext) {
-    var wContext = new WebContext(rContext);
-    var holdingsRequest = rContext.getBodyAsJson();
-    var updatedHoldings = holdingsRequest.mapTo(HoldingsRecord.class);
-    var holdingsRecordCollection = storage.getHoldingsRecordCollection(wContext);
-
-    completedFuture(updatedHoldings)
-      .thenCompose(holdingsRecord -> holdingsRecordCollection.findById(rContext.request().getParam(ID_FIELD)))
-      .thenCompose(this::refuseWhenInstanceNotFound)
-      .thenCompose(existingHoldings -> refuseWhenBlockedFieldsChanged(existingHoldings, updatedHoldings))
-      .thenCompose(existingHoldings -> refuseWhenHridChanged(existingHoldings, updatedHoldings))
-      .thenAccept(existingHoldings -> updateHoldings(updatedHoldings, rContext, wContext))
-      .exceptionally(doExceptionally(rContext));
   }
 
   private CompletionStage<HoldingsRecord> refuseWhenBlockedFieldsChanged(HoldingsRecord existingHoldings,
@@ -120,9 +129,9 @@ public class Holdings {
     return ObjectUtils.notEqual(existingBlockedFields, updatedBlockedFields);
   }
 
-  private void updateHoldings(HoldingsRecord holdingsRecord, RoutingContext rContext, WebContext wContext) {
-    HoldingsRecordCollection instanceCollection = storage.getHoldingsRecordCollection(wContext);
-    instanceCollection.update(holdingsRecord,
+  private void updateHoldings(HoldingsRecord holdingsRecord, HoldingsRecordCollection holdingsRecordCollection,
+                              RoutingContext rContext) {
+    holdingsRecordCollection.update(holdingsRecord,
       voidSuccess -> noContent(rContext.response()),
       FailureResponseConsumer.serverError(rContext.response())
     );
