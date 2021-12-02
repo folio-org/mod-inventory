@@ -1,6 +1,7 @@
 ## 18.x.x 2021-xx-xx
 
 * added Marc Authority handler for entities created via MARC Authority Data Import (MODINV-501)
+* added support for new administrative notes field (MODINV-580, MODINV-581, MODINV-582)
 
 ## 18.1.0 2021-10-18
 
