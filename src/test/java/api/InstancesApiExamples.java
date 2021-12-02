@@ -84,6 +84,10 @@ public class InstancesApiExamples extends ApiTests {
     ExecutionException,
     JsonLdError {
 
+    String testNote = "this is a note";
+    JsonArray adminNote = new JsonArray();
+    adminNote.add(testNote);
+
     JsonObject newInstanceRequest = new JsonObject()
       .put("title", "Long Way to a Small Angry Planet")
       .put("identifiers", new JsonArray().add(new JsonObject()
@@ -93,6 +97,7 @@ public class InstancesApiExamples extends ApiTests {
         .put("contributorNameTypeId", ApiTestSuite.getPersonalContributorNameType())
         .put("name", "Chambers, Becky")))
       .put("source", "Local")
+      .put("administrativeNotes", adminNote)
       .put("instanceTypeId", ApiTestSuite.getTextInstanceType())
       .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameOne)))
       .put(PUBLICATION_PERIOD_KEY, publicationPeriodToJson(new PublicationPeriod(1000, 2000)))
@@ -120,6 +125,12 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(getResponse.getStatusCode(), is(200));
 
     JsonObject createdInstance = getResponse.getJson();
+
+    assertThat(createdInstance.containsKey("administrativeNotes"), is(true));
+
+    JsonArray createdNotes = createdInstance.getJsonArray("administrativeNotes");
+
+    assertThat(createdNotes.getString(0), is(testNote));
 
     assertThat(createdInstance.containsKey("id"), is(true));
     assertThat(createdInstance.getString("title"), is("Long Way to a Small Angry Planet"));
