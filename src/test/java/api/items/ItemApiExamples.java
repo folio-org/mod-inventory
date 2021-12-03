@@ -120,9 +120,9 @@ public class ItemApiExamples extends ApiTests {
 
     assertThat(createdItem.containsKey("administrativeNotes"), is(true));
 
-    List<String> createdNotes = createdItem.getJsonArray("administrativeNotes")
-      .stream().map(arrayItem -> arrayItem.toString()).collect(Collectors.toList());
-
+    List<String> createdNotes = JsonArrayHelper
+      .toListOfStrings(createdItem.getJsonArray("administrativeNotes"));
+      
     assertThat(createdNotes, contains(testNote));
 
     assertThat(createdItem.containsKey(Item.TAGS_KEY), is(true));
