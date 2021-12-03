@@ -365,7 +365,7 @@ public class CreateMarcHoldingsEventHandlerTest {
 
     CompletableFuture<DataImportEventPayload> future = createMarcHoldingsEventHandler.handle(dataImportEventPayload);
 
-    DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.SECONDS);
+    DataImportEventPayload actualDataImportEventPayload = future.get(10, TimeUnit.SECONDS);
 
     Assert.assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));

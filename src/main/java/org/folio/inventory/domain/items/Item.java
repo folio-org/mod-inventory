@@ -39,6 +39,7 @@ public class Item {
   public static final String ITEM_DAMAGED_STATUS_ID_KEY = "itemDamagedStatusId";
   public static final String ITEM_DAMAGED_STATUS_DATE_KEY = "itemDamagedStatusDate";
 
+  public static final String ADMINISTRATIVE_NOTES_KEY = "administrativeNotes";
   public static final String NOTES_KEY = "notes";
   public static final String CIRCULATION_NOTES_KEY = "circulationNotes";
   public static final String PURCHASE_ORDER_LINE_IDENTIFIER = "purchaseOrderLineIdentifier";
@@ -74,6 +75,7 @@ public class Item {
   private String missingPiecesDate;
   private String itemDamagedStatusId;
   private String itemDamagedStatusDate;
+  private List<String> administrativeNotes = new ArrayList<>();
   private List<Note> notes = new ArrayList<>();
   private List<CirculationNote> circulationNotes = new ArrayList<>();
   private final Status status;
@@ -324,6 +326,15 @@ public class Item {
     return this;
   }
 
+  public Item withAdministrativeNotes(List<String> notes) {
+    this.administrativeNotes = notes;
+    return this;
+  }
+
+  public List<String> getAdministrativeNotes() {
+    return this.administrativeNotes;
+  }
+
   public Item withNotes(List<Note> notes) {
     this.notes = notes;
     return this;
@@ -526,6 +537,7 @@ public class Item {
             .withMissingPiecesDate(this.missingPiecesDate)
             .withItemDamagedStatusId(this.itemDamagedStatusId)
             .withItemDamagedStatusDate(this.itemDamagedStatusDate)
+            .withAdministrativeNotes(this.administrativeNotes)
             .withNotes(this.notes)
             .withPermanentLocationId(this.permanentLocationId)
             .withTemporaryLocationId(this.temporaryLocationId)
@@ -562,6 +574,7 @@ public class Item {
       .withMissingPiecesDate(this.missingPiecesDate)
       .withItemDamagedStatusId(this.itemDamagedStatusId)
       .withItemDamagedStatusDate(this.itemDamagedStatusDate)
+      .withAdministrativeNotes(this.administrativeNotes)
       .withNotes(this.notes)
       .withPermanentLocationId(this.permanentLocationId)
       .withTemporaryLocationId(this.temporaryLocationId)

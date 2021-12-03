@@ -27,6 +27,7 @@ import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.notNullValue;
@@ -88,12 +89,15 @@ public class ItemApiExamples extends ApiTests {
     ExecutionException {
 
     UUID holdingId = createInstanceAndHolding();
-
+    String testNote = "this is a note";
+    JsonArray adminNote = new JsonArray();
+    adminNote.add(testNote);
     IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)
       .withBarcode("645398607547")
       .temporarilyInReadingRoom()
       .canCirculate()
+      .withAdministrativeNotes(adminNote)
       .withItemLevelCallNumber(CALL_NUMBER)
       .withItemLevelCallNumberSuffix(CALL_NUMBER_SUFFIX)
       .withItemLevelCallNumberPrefix(CALL_NUMBER_PREFIX)
@@ -108,6 +112,13 @@ public class ItemApiExamples extends ApiTests {
     JsonObject createdItem = itemsClient.getById(postResponse.getId()).getJson();
 
     assertThat(createdItem.containsKey("id"), is(true));
+
+    assertThat(createdItem.containsKey("administrativeNotes"), is(true));
+
+    List<String> createdNotes = JsonArrayHelper
+      .toListOfStrings(createdItem.getJsonArray("administrativeNotes"));
+
+    assertThat(createdNotes, contains(testNote));
 
     assertThat(createdItem.containsKey(Item.TAGS_KEY), is(true));
 
