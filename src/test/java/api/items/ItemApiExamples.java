@@ -27,6 +27,7 @@ import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.notNullValue;
@@ -119,9 +120,10 @@ public class ItemApiExamples extends ApiTests {
 
     assertThat(createdItem.containsKey("administrativeNotes"), is(true));
 
-    JsonArray createdNotes = createdItem.getJsonArray("administrativeNotes");
+    List<String> createdNotes = createdItem.getJsonArray("administrativeNotes")
+      .stream().map(arrayItem -> arrayItem.toString()).collect(Collectors.toList());
 
-    assertThat(createdNotes.getString(0), is(testNote));
+    assertThat(createdNotes, contains(testNote));
 
     assertThat(createdItem.containsKey(Item.TAGS_KEY), is(true));
 
