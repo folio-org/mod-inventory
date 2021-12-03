@@ -58,11 +58,13 @@ import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.joda.time.DateTimeZone.UTC;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+
 import static support.matchers.ResponseMatchers.hasValidationError;
 
 public class InstancesApiExamples extends ApiTests {
@@ -128,9 +130,9 @@ public class InstancesApiExamples extends ApiTests {
 
     assertThat(createdInstance.containsKey("administrativeNotes"), is(true));
 
-    JsonArray createdNotes = createdInstance.getJsonArray("administrativeNotes");
+    List<String> createdNotes = JsonArrayHelper.toListOfStrings(createdInstance.getJsonArray("administrativeNotes"));
 
-    assertThat(createdNotes.getString(0), is(testNote));
+    assertThat(createdNotes, contains(testNote));
 
     assertThat(createdInstance.containsKey("id"), is(true));
     assertThat(createdInstance.getString("title"), is("Long Way to a Small Angry Planet"));
