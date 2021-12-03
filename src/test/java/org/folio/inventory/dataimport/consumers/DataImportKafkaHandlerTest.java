@@ -68,6 +68,7 @@ public class DataImportKafkaHandlerTest {
   private static final String TENANT_ID = "diku";
   private static final String JOB_PROFILE_URL = "/data-import-profiles/jobProfileSnapshots";
   private static final String RECORD_ID_HEADER = "recordId";
+  private static final String CHUNK_ID_HEADER = "chunkId";
 
 
   @ClassRule
@@ -163,7 +164,7 @@ public class DataImportKafkaHandlerTest {
     String expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
-    when(kafkaRecord.headers()).thenReturn(List.of(KafkaHeader.header(RECORD_ID_HEADER, UUID.randomUUID().toString())));
+    when(kafkaRecord.headers()).thenReturn(List.of(KafkaHeader.header(RECORD_ID_HEADER, UUID.randomUUID().toString()), KafkaHeader.header(CHUNK_ID_HEADER, UUID.randomUUID().toString())));
 
     EventHandler mockedEventHandler = mock(EventHandler.class);
     when(mockedEventHandler.isEligible(any(DataImportEventPayload.class))).thenReturn(true);
