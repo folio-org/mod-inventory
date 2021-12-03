@@ -109,7 +109,7 @@ class ItemRepresentation {
       contributorName.put("name", ((JsonObject)contributor).getString("name"));
       contributorNames.add(contributorName);
     });
-
+    representation.put(Item.ADMINISTRATIVE_NOTES_KEY, item.getAdministrativeNotes());
     includeIfPresent(representation, "title", instance, i -> i.getString("title"));
     includeIfPresent(representation, "callNumber", holding, h -> h.getString("callNumber"));
     includeIfPresent(representation, Item.HRID_KEY, item.getHrid());
