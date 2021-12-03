@@ -79,6 +79,8 @@ public class DataImportConsumerVerticleTest {
   private static final String KAFKA_ENV_NAME = "test-env";
   private static final String JOB_PROFILE_URL = "/data-import-profiles/jobProfileSnapshots";
   private static final String RECORD_ID_HEADER = "recordId";
+  private static final String CHUNK_ID_HEADER = "chunkId";
+
 
   private static Vertx vertx;
 
@@ -185,6 +187,8 @@ public class DataImportConsumerVerticleTest {
     Event event = new Event().withId("01").withEventPayload(Json.encode(dataImportEventPayload));
     KeyValue<String, String> record = new KeyValue<>("test-key", Json.encode(event));
     record.addHeader(RECORD_ID_HEADER, UUID.randomUUID().toString(), UTF_8);
+    record.addHeader(CHUNK_ID_HEADER, UUID.randomUUID().toString(), UTF_8);
+
     SendKeyValues<String, String> request = SendKeyValues.to(topic, Collections.singletonList(record)).useDefaults();
 
     Mockito.when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
