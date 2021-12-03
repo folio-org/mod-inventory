@@ -1,5 +1,6 @@
 package api.holdings;
 
+import api.ApiTestSuite;
 import api.support.ApiTests;
 import api.support.InstanceApiClient;
 import api.support.builders.HoldingRequestBuilder;
@@ -60,11 +61,7 @@ public class HoldingApiExample extends ApiTests {
 
     holdingAsJson.remove("permanentLocationId");
 
-    final var postCompleted = okapiClient.post(new URL(HOLDINGS_URL), holdingAsJson);
-
-    Response postResponse = postCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
-
-    assertThat(postResponse.getStatusCode(), is(422));
+    assertThat(createHolding(holdingAsJson).getStatusCode(), is(422));
   }
 
   @Test
@@ -81,11 +78,21 @@ public class HoldingApiExample extends ApiTests {
 
     holdingAsJson.remove("instanceId");
 
-    final var postCompleted = okapiClient.post(new URL(HOLDINGS_URL), holdingAsJson);
+    assertThat(createHolding(holdingAsJson).getStatusCode(), is(422));
+  }
 
-    Response postResponse = postCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
+  @Test
+  public void cannotUpdateAHoldingWithOptimisticLockingFailure() throws Exception {
 
-    assertThat(postResponse.getStatusCode(), is(422));
+    JsonObject instance = createInstance(smallAngryPlanet(UUID.randomUUID()));
+    JsonObject holding = new HoldingRequestBuilder()
+      .forInstance(UUID.fromString(instance.getString("id")))
+      .permanentlyInMainLibrary()
+      .create()
+      .put("id", ApiTestSuite.ID_FOR_OPTIMISTIC_LOCKING_FAILURE);
+    assertThat(createHolding(holding).getStatusCode(), is(201));
+
+    assertThat(updateHolding(holding).getStatusCode(), is(409));
   }
 
   private JsonObject createInstance(JsonObject newInstanceRequest)
@@ -95,5 +102,19 @@ public class HoldingApiExample extends ApiTests {
     ExecutionException {
 
     return InstanceApiClient.createInstance(okapiClient, newInstanceRequest);
+  }
+
+  private Response createHolding(JsonObject newHoldingRequest)
+      throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+
+    final var postCompleted = okapiClient.post(new URL(HOLDINGS_URL), newHoldingRequest);
+    return postCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
+  }
+
+  private Response updateHolding(JsonObject holding)
+      throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+
+    final var putCompleted = okapiClient.put(new URL(HOLDINGS_URL + "/" + holding.getString("id")), holding);
+    return putCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
   }
 }

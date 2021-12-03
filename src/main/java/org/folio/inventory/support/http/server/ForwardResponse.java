@@ -4,6 +4,8 @@ import static io.vertx.core.http.HttpHeaders.CONTENT_LENGTH;
 import static io.vertx.core.http.HttpHeaders.CONTENT_TYPE;
 
 import org.apache.commons.lang3.StringUtils;
+import org.folio.inventory.common.domain.Failure;
+import org.folio.inventory.support.http.ContentType;
 import org.folio.inventory.support.http.client.Response;
 
 import io.vertx.core.buffer.Buffer;
@@ -15,6 +17,11 @@ public class ForwardResponse {
   public static void forward(HttpServerResponse forwardTo, Response forwardFrom) {
     forward(forwardTo, forwardFrom.getBody(), forwardFrom.getStatusCode(),
       forwardFrom.getContentType());
+  }
+
+  public static void forward(HttpServerResponse forwardTo, Failure forwardFrom) {
+    forward(forwardTo, forwardFrom.getReason(), forwardFrom.getStatusCode(),
+        ContentType.TEXT_PLAIN);
   }
 
   public static void forward(HttpServerResponse forwardTo,

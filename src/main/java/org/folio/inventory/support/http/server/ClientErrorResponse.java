@@ -26,4 +26,10 @@ public class ClientErrorResponse {
     response.setStatusCode(403);
     response.end();
   }
+
+  public static void optimisticLocking(HttpServerResponse response, String reason) {
+    response.setStatusCode(409);
+    response.putHeader(HttpHeaders.CONTENT_TYPE, ContentType.TEXT_PLAIN);
+    response.end(reason);
+  }
 }

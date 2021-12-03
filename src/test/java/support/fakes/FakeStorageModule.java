@@ -29,6 +29,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static api.ApiTestSuite.ID_FOR_FAILURE;
+import static api.ApiTestSuite.ID_FOR_OPTIMISTIC_LOCKING_FAILURE;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
 class FakeStorageModule extends AbstractVerticle {
@@ -198,6 +199,8 @@ class FakeStorageModule extends AbstractVerticle {
 
       if (ID_FOR_FAILURE.toString().equals(id)) {
         ServerErrorResponse.internalError(routingContext.response(), "Test Internal Server Error");
+      } else if (ID_FOR_OPTIMISTIC_LOCKING_FAILURE.toString().equals(id)) {
+        ClientErrorResponse.optimisticLocking(routingContext.response(), "Optimistic Locking");
       } else if (resourcesForTenant.containsKey(id)) {
         System.out.printf("Replaced %s resource: %s%n", recordTypeName, id);
 
