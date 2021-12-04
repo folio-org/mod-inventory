@@ -502,6 +502,17 @@ public class InstancesApiExamples extends ApiTests {
   }
 
   @Test
+  public void cannotUpdateAnInstanceWithOptimisticLockingFailure() throws Exception {
+
+    JsonObject instance = createInstance(smallAngryPlanet(ApiTestSuite.ID_FOR_OPTIMISTIC_LOCKING_FAILURE));
+
+    Response putResponse = updateInstance(instance);
+    assertThat(putResponse.getStatusCode(), is(409));
+    assertThat(putResponse.getBody(), is("Optimistic Locking"));
+    assertThat(putResponse.getContentType(), is(ContentType.TEXT_PLAIN));
+  }
+
+  @Test
   public void canUpdateAnExistingMARCInstanceIfNoChanges()
     throws InterruptedException,
     MalformedURLException,
