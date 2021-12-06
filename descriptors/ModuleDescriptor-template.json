@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "inventory",
-      "version": "11.3",
+      "version": "11.4",
       "handlers": [
         {
           "methods": ["GET"],
