@@ -67,7 +67,7 @@ public class HoldingsApiExamples extends ApiTests {
     assertThat(updatedHoldings.containsKey("administrativeNotes"), is(true));
 
     List<String> retrievedNotes = JsonArrayHelper
-    .toListOfStrings(updatedHoldings.getJsonArray("administrativeNotes"));
+      .toListOfStrings(updatedHoldings.getJsonArray("administrativeNotes"));
 
     assertThat(retrievedNotes, contains(adminNote));
 
