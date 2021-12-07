@@ -244,7 +244,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <vertx.version>4.0.2</vertx.version>
+    <vertx.version>4.2.1</vertx.version>
     <jsonschema2pojo_output_dir>${project.build.directory}/generated-sources/jsonschema2pojo</jsonschema2pojo_output_dir>
     <lombok.version>1.18.16</lombok.version>
   </properties>
