@@ -61,6 +61,7 @@ public class Instance {
   public static final String STAFF_SUPPRESS_KEY = "staffSuppress";
   public static final String DISCOVERY_SUPPRESS_KEY = "discoverySuppress";
   public static final String STATISTICAL_CODE_IDS_KEY = "statisticalCodeIds";
+  public static final String ADMININSTRATIVE_NOTES_KEY = "administrativeNotes";
   public static final String SOURCE_RECORD_FORMAT_KEY = "sourceRecordFormat";
   public static final String STATUS_ID_KEY = "statusId";
   public static final String STATUS_UPDATED_DATE_KEY = "statusUpdatedDate";
@@ -93,6 +94,7 @@ public class Instance {
   private List<Publication> publication = new ArrayList();
   private List<String> publicationFrequency = new ArrayList();
   private List<String> publicationRange = new ArrayList();
+  private List<String> administrativeNotes = new ArrayList();
   private List<ElectronicAccess> electronicAccess = new ArrayList();
   private final String instanceTypeId;
   private List<String> instanceFormatIds;
@@ -159,6 +161,7 @@ public class Instance {
       .setAlternativeTitles(instanceJson.getJsonArray(ALTERNATIVE_TITLES_KEY))
       .setEditions(toListOfStrings(instanceJson.getJsonArray(EDITIONS_KEY)))
       .setSeries(toListOfStrings(instanceJson.getJsonArray(SERIES_KEY)))
+      .setAdministrativeNotes(toListOfStrings(instanceJson.getJsonArray(ADMININSTRATIVE_NOTES_KEY)))
       .setIdentifiers(instanceJson.getJsonArray(IDENTIFIERS_KEY))
       .setContributors(instanceJson.getJsonArray(CONTRIBUTORS_KEY))
       .setSubjects(toListOfStrings(instanceJson.getJsonArray(SUBJECTS_KEY)))
@@ -206,6 +209,7 @@ public class Instance {
     json.put(EDITIONS_KEY, editions);
     json.put(SERIES_KEY, series);
     json.put(IDENTIFIERS_KEY, identifiers);
+    json.put(ADMININSTRATIVE_NOTES_KEY, administrativeNotes);
     json.put(CONTRIBUTORS_KEY, contributors);
     json.put(SUBJECTS_KEY, subjects);
     json.put(CLASSIFICATIONS_KEY, classifications);
@@ -256,6 +260,7 @@ public class Instance {
     json.put("hrid", getHrid());
     json.put(SOURCE_KEY, getSource());
     json.put(TITLE_KEY, getTitle());
+    json.put(ADMININSTRATIVE_NOTES_KEY, getAdministrativeNotes());
     putIfNotNull(json, MATCH_KEY_KEY, getMatchKey());
     putIfNotNull(json, INDEX_TITLE_KEY, getIndexTitle());
     putIfNotNull(json, PARENT_INSTANCES_KEY, parentInstances);
@@ -486,6 +491,11 @@ public class Instance {
     return this;
   }
 
+  public Instance setAdministrativeNotes(List<String> administrativeNotes) {
+    this.administrativeNotes = administrativeNotes;
+    return this;
+  }
+
   public Instance setElectronicAccess(List<ElectronicAccess> electronicAccess) {
     this.electronicAccess = electronicAccess;
     return this;
@@ -617,6 +627,10 @@ public class Instance {
 
   public String getSource() {
     return source;
+  }
+
+  public List<String> getAdministrativeNotes() {
+    return administrativeNotes;
   }
 
   public List<InstanceRelationshipToParent> getParentInstances() {
@@ -778,6 +792,7 @@ public class Instance {
             .setPhysicalDescriptions(physicalDescriptions)
             .setLanguages(languages)
             .setNotes(notes)
+            .setAdministrativeNotes(administrativeNotes)
             .setModeOfIssuanceId(modeOfIssuanceId)
             .setCatalogedDate(catalogedDate)
             .setPreviouslyHeld(previouslyHeld)
@@ -811,6 +826,7 @@ public class Instance {
             .setPhysicalDescriptions(physicalDescriptions)
             .setLanguages(languages)
             .setNotes(notes)
+            .setAdministrativeNotes(administrativeNotes)
             .setModeOfIssuanceId(modeOfIssuanceId)
             .setCatalogedDate(catalogedDate)
             .setPreviouslyHeld(previouslyHeld)
