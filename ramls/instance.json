@@ -347,6 +347,14 @@
         }
       }
     },
+    "administrativeNotes":{
+      "type": "array",
+      "description": "Administrative notes",
+      "minItems": 0,
+      "items": {
+        "type": "string"
+      }
+    },
     "modeOfIssuanceId": {
       "type": "string",
       "description": "RDA mode of issuance is a categorization reflecting whether a resource is issued in one or more parts, the way it is updated, and whether its termination is predetermined or not (e.g. monograph,  sequential monograph, serial; integrating Resource, other)"
