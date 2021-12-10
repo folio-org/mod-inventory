@@ -10,6 +10,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,8 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
+
+import org.folio.HoldingsType;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.MappingMetadataDto;
@@ -107,9 +110,16 @@ public class MarcHoldingsRecordHridSetKafkaHandlerTest {
       return null;
     }).when(mockedHoldingsCollection).update(any(HoldingsRecord.class), any(), any());
 
+    List<HoldingsType> holdings = new ArrayList<>();
+    holdings.add(new HoldingsType()
+      .withName("testingnote$a")
+      .withId("5f694a63-1bd4-4002-9f38-09170eb7aa62"));
+    MappingParameters mappingParameters = new MappingParameters();
+    mappingParameters.withHoldingsTypes(holdings);
+
     WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true))
       .willReturn(WireMock.ok().withBody(Json.encode(new MappingMetadataDto()
-        .withMappingParams(Json.encode(new MappingParameters()))
+        .withMappingParams(Json.encode(mappingParameters))
         .withMappingRules(mappingRules.encode())))));
 
     MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, vertx.createHttpClient(), 3600);

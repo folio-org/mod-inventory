@@ -243,60 +243,44 @@
         },
         {
           "561": {
-            "subfields": [
-              {
-                "a": "note$a"
-              },
-              {
-                "u": "note$u"
-              },
-              {
-                "3": "note$3"
-              },
-              {
-                "5": "note$5"
-              },
-              {
-                "6": "note$6"
-              },
-              {
-                "8": "note$8"
-              }
+            "subfields": [{
+              "a": "testingnote$a"
+            }, {
+              "u": "testingnote$u"
+            }, {
+              "3": "testingnote$3"
+            }, {
+              "5": "testingnote$5"
+            }, {
+              "6": "testingnote$6"
+            }, {
+              "8": "testingnote$8"
+            }
             ],
             "ind1": " ",
             "ind2": " "
           }
-        },
-        {
+        }, {
           "562": {
-            "subfields": [
-              {
-                "a": "note$a"
-              },
-              {
-                "b": "note$b"
-              },
-              {
-                "c": "note$c"
-              },
-              {
-                "d": "note$d"
-              },
-              {
-                "e": "note$e"
-              },
-              {
-                "3": "note$3"
-              },
-              {
-                "5": "note$5"
-              },
-              {
-                "6": "note$6"
-              },
-              {
-                "8": "note$8"
-              }
+            "subfields": [{
+              "a": "testingnote$a"
+            }, {
+              "b": "testingnote$b"
+            }, {
+              "c": "testingnote$c"
+            }, {
+              "d": "testingnote$d"
+            }, {
+              "e": "testingnote$e"
+            }, {
+              "3": "testingnote$3"
+            }, {
+              "5": "testingnote$5"
+            }, {
+              "6": "testingnote$6"
+            }, {
+              "8": "testingnote$8"
+            }
             ],
             "ind1": " ",
             "ind2": " "

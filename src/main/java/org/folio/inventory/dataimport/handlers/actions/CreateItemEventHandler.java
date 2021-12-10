@@ -4,6 +4,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -47,18 +48,21 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.ITEM;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_CREATED;
+import static org.folio.processing.events.services.publisher.KafkaEventPublisher.RECORD_ID_HEADER;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 public class CreateItemEventHandler implements EventHandler {
 
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
   private static final String PAYLOAD_DATA_HAS_NO_HOLDING_ID_MSG = "Failed to extract holdingsRecordId from holdingsRecord entity or parsed record";
-  private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingMetadata snapshot was not found by jobExecutionId '%s'";
+  private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingMetadata snapshot was not found by jobExecutionId '%s'. RecordId: '%s', chunkId: '%s' ";
   static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create an Item requires a mapping profile";
   public static final String HOLDINGS_RECORD_ID_FIELD = "holdingsRecordId";
   public static final String ITEM_PATH_FIELD = "item";
   public static final String HOLDING_ID_FIELD = "id";
   public static final String ITEM_ID_FIELD = "id";
+  private static final String RECORD_ID_HEADER = "recordId";
+  private static final String CHUNK_ID_HEADER = "chunkId";
 
   private static final Logger LOG = LogManager.getLogger(CreateItemEventHandler.class);
 
@@ -98,9 +102,15 @@ public class CreateItemEventHandler implements EventHandler {
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       ItemCollection itemCollection = storage.getItemCollection(context);
 
-      mappingMetadataCache.get(dataImportEventPayload.getJobExecutionId(), context)
+      String jobExecutionId = dataImportEventPayload.getJobExecutionId();
+
+
+      String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
+      String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
+      mappingMetadataCache.get(jobExecutionId, context)
         .map(parametersOptional -> parametersOptional
-          .orElseThrow(() -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, dataImportEventPayload.getJobExecutionId()))))
+          .orElseThrow(() -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId,
+            recordId, chunkId))))
         .map(mappingMetadataDto -> {
           MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
           MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
@@ -109,7 +119,8 @@ public class CreateItemEventHandler implements EventHandler {
         .compose(mappedItemJson -> {
           List<String> errors = validateItem(mappedItemJson, requiredFields);
           if (!errors.isEmpty()) {
-            String msg = format("Mapped Item is invalid: %s", errors.toString());
+            String msg = format("Mapped Item is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", errors,
+              jobExecutionId, recordId, chunkId);
             LOG.error(msg);
             return Future.failedFuture(msg);
           }
@@ -125,7 +136,8 @@ public class CreateItemEventHandler implements EventHandler {
             dataImportEventPayload.getContext().put(ITEM.value(), Json.encode(ar.result()));
             future.complete(dataImportEventPayload);
           } else {
-            LOG.error("Error creating inventory Item", ar.cause());
+            LOG.error("Error creating inventory Item by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
+              recordId, chunkId, ar.cause());
             future.completeExceptionally(ar.cause());
           }
         });

@@ -27,6 +27,7 @@ import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.notNullValue;
@@ -87,18 +88,16 @@ public class ItemApiExamples extends ApiTests {
     TimeoutException,
     ExecutionException {
 
-    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
-
-    UUID holdingId = holdingsStorageClient.create(
-      new HoldingRequestBuilder()
-        .forInstance(UUID.fromString(createdInstance.getString("id"))))
-      .getId();
-
+    UUID holdingId = createInstanceAndHolding();
+    String testNote = "this is a note";
+    JsonArray adminNote = new JsonArray();
+    adminNote.add(testNote);
     IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)
       .withBarcode("645398607547")
       .temporarilyInReadingRoom()
       .canCirculate()
+      .withAdministrativeNotes(adminNote)
       .withItemLevelCallNumber(CALL_NUMBER)
       .withItemLevelCallNumberSuffix(CALL_NUMBER_SUFFIX)
       .withItemLevelCallNumberPrefix(CALL_NUMBER_PREFIX)
@@ -113,6 +112,13 @@ public class ItemApiExamples extends ApiTests {
     JsonObject createdItem = itemsClient.getById(postResponse.getId()).getJson();
 
     assertThat(createdItem.containsKey("id"), is(true));
+
+    assertThat(createdItem.containsKey("administrativeNotes"), is(true));
+
+    List<String> createdNotes = JsonArrayHelper
+      .toListOfStrings(createdItem.getJsonArray("administrativeNotes"));
+
+    assertThat(createdNotes, contains(testNote));
 
     assertThat(createdItem.containsKey(Item.TAGS_KEY), is(true));
 
@@ -163,12 +169,7 @@ public class ItemApiExamples extends ApiTests {
     UUID itemId = UUID.randomUUID();
     final String hrid = "it777";
 
-    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
-
-    UUID holdingId = holdingsStorageClient.create(
-      new HoldingRequestBuilder()
-        .forInstance(UUID.fromString(createdInstance.getString("id"))))
-      .getId();
+    UUID holdingId = createInstanceAndHolding();
 
     IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
       .withId(itemId)
@@ -221,12 +222,7 @@ public class ItemApiExamples extends ApiTests {
     TimeoutException,
     ExecutionException {
 
-    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
-
-    UUID holdingId = holdingsStorageClient.create(
-      new HoldingRequestBuilder()
-        .forInstance(UUID.fromString(createdInstance.getString("id"))))
-      .getId();
+    UUID holdingId = createInstanceAndHolding();
 
     IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)
@@ -244,12 +240,7 @@ public class ItemApiExamples extends ApiTests {
     TimeoutException,
     ExecutionException {
 
-    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
-
-    UUID holdingId = holdingsStorageClient.create(
-      new HoldingRequestBuilder()
-        .forInstance(UUID.fromString(createdInstance.getString("id"))))
-      .getId();
+    UUID holdingId = createInstanceAndHolding();
 
     itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)
@@ -271,12 +262,7 @@ public class ItemApiExamples extends ApiTests {
     TimeoutException,
     ExecutionException {
 
-    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
-
-    UUID holdingId = holdingsStorageClient.create(
-      new HoldingRequestBuilder()
-        .forInstance(UUID.fromString(createdInstance.getString("id"))))
-      .getId();
+    UUID holdingId = createInstanceAndHolding();
 
     JsonObject newItemRequest = new ItemRequestBuilder()
       .forHolding(holdingId)
@@ -297,13 +283,7 @@ public class ItemApiExamples extends ApiTests {
     TimeoutException,
     ExecutionException {
 
-    JsonObject createdInstance = createInstance(
-      smallAngryPlanet(UUID.randomUUID()));
-
-    UUID holdingId = holdingsStorageClient.create(
-      new HoldingRequestBuilder()
-        .forInstance(UUID.fromString(createdInstance.getString("id"))))
-      .getId();
+    UUID holdingId = createInstanceAndHolding();
 
     JsonObject newItemRequest = new ItemRequestBuilder()
       .forHolding(holdingId)
@@ -324,13 +304,7 @@ public class ItemApiExamples extends ApiTests {
     TimeoutException,
     ExecutionException {
 
-    JsonObject createdInstance = createInstance(
-      smallAngryPlanet(UUID.randomUUID()));
-
-    UUID holdingId = holdingsStorageClient.create(
-      new HoldingRequestBuilder()
-        .forInstance(UUID.fromString(createdInstance.getString("id"))))
-      .getId();
+    UUID holdingId = createInstanceAndHolding();
 
     IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)
@@ -369,14 +343,7 @@ public class ItemApiExamples extends ApiTests {
     TimeoutException,
     ExecutionException {
 
-    JsonObject createdInstance = createInstance(
-      smallAngryPlanet(UUID.randomUUID()));
-
-    UUID holdingId = holdingsStorageClient.create(
-      new HoldingRequestBuilder()
-        .forInstance(UUID.fromString(createdInstance.getString("id"))))
-      .getId();
-
+    UUID holdingId = createInstanceAndHolding();
     JsonObject item = new ItemRequestBuilder()
       .forHolding(holdingId)
       .create();
@@ -397,13 +364,7 @@ public class ItemApiExamples extends ApiTests {
     TimeoutException,
     ExecutionException {
 
-    JsonObject createdInstance = createInstance(
-      smallAngryPlanet(UUID.randomUUID()));
-
-    UUID holdingId = holdingsStorageClient.create(
-      new HoldingRequestBuilder()
-        .forInstance(UUID.fromString(createdInstance.getString("id"))))
-      .getId();
+    UUID holdingId = createInstanceAndHolding();
 
     JsonObject item = new ItemRequestBuilder()
       .forHolding(holdingId)
@@ -427,15 +388,7 @@ public class ItemApiExamples extends ApiTests {
 
     UUID TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_CREATE = UUID.randomUUID();
     UUID TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_UPDATE = UUID.randomUUID();
-
-    JsonObject createdInstance = createInstance(
-      smallAngryPlanet(UUID.randomUUID()));
-
-    UUID holdingId = holdingsStorageClient.create(
-      new HoldingRequestBuilder()
-        .forInstance(UUID.fromString(createdInstance.getString("id"))))
-      .getId();
-
+    UUID holdingId = createInstanceAndHolding();
     UUID itemId = UUID.randomUUID();
 
     JsonObject lastCheckIn = new JsonObject()
@@ -518,14 +471,7 @@ public class ItemApiExamples extends ApiTests {
     TimeoutException,
     ExecutionException {
 
-    JsonObject createdInstance = createInstance(
-      smallAngryPlanet(UUID.randomUUID()));
-
-    UUID holdingId = holdingsStorageClient.create(
-      new HoldingRequestBuilder()
-        .forInstance(UUID.fromString(createdInstance.getString("id"))))
-      .getId();
-
+    UUID holdingId = createInstanceAndHolding();
     UUID itemId = UUID.randomUUID();
 
     JsonObject updateItemRequest = new ItemRequestBuilder()
@@ -542,6 +488,21 @@ public class ItemApiExamples extends ApiTests {
     Response putResponse = putCompleted.toCompletableFuture().get(5, SECONDS);
 
     assertThat(putResponse.getStatusCode(), is(404));
+  }
+
+  @Test
+  public void cannotUpdateItemWithOptimisticLockingFailure() throws Exception {
+
+    UUID holdingId = createInstanceAndHolding();
+    JsonObject item = new ItemRequestBuilder()
+      .withId(ApiTestSuite.ID_FOR_OPTIMISTIC_LOCKING_FAILURE)
+      .forHolding(holdingId)
+      .canCirculate()
+      .temporarilyInReadingRoom()
+      .create();
+    item = itemsClient.create(item).getJson();
+
+    assertThat(updateItem(item).getStatusCode(), is(409));
   }
 
   @Test
@@ -1404,12 +1365,8 @@ public class ItemApiExamples extends ApiTests {
 
   @Test
   public void cannotChangeHRID() throws Exception {
-    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
-    UUID holdingId = holdingsStorageClient.create(
-      new HoldingRequestBuilder()
-        .forInstance(UUID.fromString(createdInstance.getString("id"))))
-      .getId();
+    UUID holdingId = createInstanceAndHolding();
 
     IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)
@@ -1436,12 +1393,8 @@ public class ItemApiExamples extends ApiTests {
 
   @Test
   public void cannotRemoveHRID() throws Exception {
-    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
-    UUID holdingId = holdingsStorageClient.create(
-      new HoldingRequestBuilder()
-        .forInstance(UUID.fromString(createdInstance.getString("id"))))
-      .getId();
+    UUID holdingId = createInstanceAndHolding();
 
     IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)
@@ -1493,12 +1446,7 @@ public class ItemApiExamples extends ApiTests {
   public void cannotUpdateItemWithUnrecognisedStatusName()
     throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
 
-    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
-
-    UUID holdingId = holdingsStorageClient.create(
-      new HoldingRequestBuilder()
-        .forInstance(UUID.fromString(createdInstance.getString("id"))))
-      .getId();
+    UUID holdingId = createInstanceAndHolding();
 
     IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)
@@ -1522,12 +1470,7 @@ public class ItemApiExamples extends ApiTests {
   public void cannotRemoveStatusFromItem()
     throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
 
-    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
-
-    UUID holdingId = holdingsStorageClient.create(
-      new HoldingRequestBuilder()
-        .forInstance(UUID.fromString(createdInstance.getString("id"))))
-      .getId();
+    UUID holdingId = createInstanceAndHolding();
 
     IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)
@@ -1549,12 +1492,7 @@ public class ItemApiExamples extends ApiTests {
   public void cannotRemoveStatusNameFromItem()
     throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
 
-    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
-
-    UUID holdingId = holdingsStorageClient.create(
-      new HoldingRequestBuilder()
-        .forInstance(UUID.fromString(createdInstance.getString("id"))))
-      .getId();
+    UUID holdingId = createInstanceAndHolding();
 
     IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)
@@ -1576,12 +1514,7 @@ public class ItemApiExamples extends ApiTests {
   public void statusDatePropertyPresentOnStatusUpdated()
     throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
 
-    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
-
-    UUID holdingId = holdingsStorageClient.create(
-      new HoldingRequestBuilder()
-        .forInstance(UUID.fromString(createdInstance.getString("id"))))
-      .getId();
+    UUID holdingId = createInstanceAndHolding();
 
     IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)
@@ -1611,11 +1544,7 @@ public class ItemApiExamples extends ApiTests {
   public void cannotMarkClaimedReturnedItemAsMissing()
     throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
 
-    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
-    UUID holdingId = holdingsStorageClient.create(
-      new HoldingRequestBuilder()
-        .forInstance(UUID.fromString(createdInstance.getString("id"))))
-      .getId();
+    UUID holdingId = createInstanceAndHolding();
 
     IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)
@@ -1641,11 +1570,7 @@ public class ItemApiExamples extends ApiTests {
   public void canMarkClaimedReturnedItemAsAvailable()
     throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
 
-    JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
-    UUID holdingId = holdingsStorageClient.create(
-      new HoldingRequestBuilder()
-        .forInstance(UUID.fromString(createdInstance.getString("id"))))
-      .getId();
+    UUID holdingId = createInstanceAndHolding();
 
     IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)

@@ -7,8 +7,11 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
+import static org.hamcrest.Matchers.contains;
 
 import java.net.MalformedURLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -25,6 +28,7 @@ import org.junit.Test;
 
 import org.folio.inventory.config.InventoryConfiguration;
 import org.folio.inventory.config.InventoryConfigurationImpl;
+import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.Response;
 
 public class HoldingsApiExamples extends ApiTests {
@@ -39,8 +43,13 @@ public class HoldingsApiExamples extends ApiTests {
   @Test
   public void canUpdateAnExistingHoldings() throws Exception {
     UUID instanceId = instancesClient.create(InstanceRequestExamples.smallAngryPlanet()).getId();
-
-    JsonObject newHoldings = holdingsStorageClient.create(new HoldingRequestBuilder().forInstance(instanceId)).getJson();
+    String adminNote = "This is a note.";
+    List<String> administrativeNotes = new ArrayList<String>();
+    administrativeNotes.add(adminNote);
+    JsonObject newHoldings = holdingsStorageClient.create(new HoldingRequestBuilder()
+      .forInstance(instanceId)
+      .withAdministrativeNotes(administrativeNotes))
+      .getJson();
 
     JsonObject updateHoldingsRequest = newHoldings.copy()
       .put("permanentLocationId", "fcd64ce1-6995-48f0-840e-89ffa2288371");
@@ -54,6 +63,13 @@ public class HoldingsApiExamples extends ApiTests {
     assertThat(getResponse.getStatusCode(), is(OK.code()));
 
     JsonObject updatedHoldings = getResponse.getJson();
+
+    assertThat(updatedHoldings.containsKey("administrativeNotes"), is(true));
+
+    List<String> retrievedNotes = JsonArrayHelper
+      .toListOfStrings(updatedHoldings.getJsonArray("administrativeNotes"));
+
+    assertThat(retrievedNotes, contains(adminNote));
 
     assertThat(updatedHoldings.getString("id"), is(newHoldings.getString("id")));
     assertThat(updatedHoldings.getString("permanentLocationId"), is("fcd64ce1-6995-48f0-840e-89ffa2288371"));

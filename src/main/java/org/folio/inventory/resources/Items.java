@@ -799,8 +799,7 @@ public class Items extends AbstractInventoryResource {
 
     itemCollection.update(newItem.withCirculationNotes(updatedNotes),
       v -> SuccessResponse.noContent(routingContext.response()),
-      failure -> ServerErrorResponse.internalError(
-        routingContext.response(), failure.getReason()));
+      failure -> ForwardResponse.forward(routingContext.response(), failure));
   }
 
   private void checkForNonUniqueBarcode(
