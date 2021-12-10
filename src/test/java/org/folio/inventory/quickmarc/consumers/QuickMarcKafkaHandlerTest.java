@@ -47,6 +47,7 @@ import org.folio.HoldingsRecord;
 import org.folio.HoldingsType;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.consumers.QuickMarcKafkaHandler;
 import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
@@ -344,6 +345,48 @@ public class QuickMarcKafkaHandlerTest {
     doAnswer(invocationOnMock -> {
       Consumer<Success<Authority>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(null));
+      return null;
+    }).when(mockedAuthorityRecordCollection).findById(anyString(), any(), any());
+
+    // when
+    Future<String> future = handler.handle(kafkaRecord);
+
+    // then
+    String observeTopic =
+      formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), TENANT_ID, QM_ERROR.name());
+    cluster.observeValues(ObserveKeyValues.on(observeTopic, 1)
+      .observeFor(30, TimeUnit.SECONDS)
+      .build());
+    future.onComplete(ar -> {
+      context.assertTrue(ar.succeeded());
+      context.assertEquals(expectedKafkaRecordKey, ar.result());
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldSendErrorEventWhenFailedToFetchRecordFromStorage(TestContext context) throws IOException,
+    InterruptedException {
+    // given
+    Async async = context.async();
+    Map<String, String> payload = new HashMap<>();
+    payload.put("RECORD_TYPE", "MARC_AUTHORITY");
+    payload.put("MARC_AUTHORITY", Json.encode(authorityRecord));
+    payload.put("MAPPING_RULES", authorityMappingRules.encode());
+    payload.put("MAPPING_PARAMS", new JsonObject().encode());
+    payload.put("PARSED_RECORD_DTO", Json.encode(new ParsedRecordDto()
+      .withRecordType(ParsedRecordDto.RecordType.MARC_AUTHORITY)
+      .withRelatedRecordVersion("1")));
+
+    Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(payload)));
+    String expectedKafkaRecordKey = "test_key";
+    when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
+    when(kafkaRecord.value()).thenReturn(Json.encode(event));
+    when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure("Unexpected failure", 500));
       return null;
     }).when(mockedAuthorityRecordCollection).findById(anyString(), any(), any());
 
