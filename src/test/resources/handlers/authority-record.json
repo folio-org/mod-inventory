@@ -495,7 +495,7 @@
   "deleted": false,
   "order": 2,
   "externalIdsHolder": {
-    "instanceId": "ddd266ef-07ac-4117-be13-d418b8cd6902"
+    "authorityId": "ddd266ef-07ac-4117-be13-d418b8cd6902"
   },
   "additionalInfo": {
     "suppressDiscovery": false

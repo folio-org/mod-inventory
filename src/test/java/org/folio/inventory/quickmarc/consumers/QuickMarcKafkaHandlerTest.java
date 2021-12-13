@@ -1,5 +1,28 @@
 package org.folio.inventory.quickmarc.consumers;
 
+import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
+import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.useDefaults;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.when;
+
+import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_ERROR;
+import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_AUTHORITY_UPDATED;
+import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_HOLDINGS_UPDATED;
+import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_INSTANCE_UPDATED;
+import static org.folio.kafka.KafkaTopicNameHelper.formatTopicName;
+import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
@@ -11,12 +34,20 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
 import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
 import net.mguenther.kafka.junit.ObserveKeyValues;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 import org.folio.Authority;
 import org.folio.HoldingsRecord;
 import org.folio.HoldingsType;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.consumers.QuickMarcKafkaHandler;
 import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
@@ -35,36 +66,6 @@ import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingPa
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.ParsedRecordDto;
 import org.folio.rest.jaxrs.model.Record;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
-
-import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
-import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.useDefaults;
-import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_ERROR;
-import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_AUTHORITY_UPDATED;
-import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_HOLDINGS_UPDATED;
-import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_INSTANCE_UPDATED;
-import static org.folio.kafka.KafkaTopicNameHelper.formatTopicName;
-import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.when;
 
 @RunWith(VertxUnitRunner.class)
 public class QuickMarcKafkaHandlerTest {
@@ -133,7 +134,8 @@ public class QuickMarcKafkaHandlerTest {
     holdingsRecord.getParsedRecord().withContent(JsonObject.mapFrom(holdingsRecord.getParsedRecord().getContent()).encode());
 
     authorityRecord = Json.decodeValue(TestUtil.readFileFromPath(AUTHORITY_RECORD_PATH), Record.class);
-    authorityRecord.getParsedRecord().withContent(JsonObject.mapFrom(authorityRecord.getParsedRecord().getContent()).encode());
+    authorityRecord.getParsedRecord()
+      .withContent(JsonObject.mapFrom(authorityRecord.getParsedRecord().getContent()).encode());
 
     mocks = MockitoAnnotations.openMocks(this);
     when(mockedStorage.getInstanceCollection(any(Context.class))).thenReturn(mockedInstanceCollection);
@@ -151,12 +153,6 @@ public class QuickMarcKafkaHandlerTest {
       successHandler.accept(new Success<>(existingHoldings));
       return null;
     }).when(mockedHoldingsRecordCollection).findById(anyString(), any(), any());
-
-    doAnswer(invocationOnMock -> {
-      Consumer<Success<Authority>> successHandler = invocationOnMock.getArgument(1);
-      successHandler.accept(new Success<>(existingAuthority));
-      return null;
-    }).when(mockedAuthorityRecordCollection).findById(anyString(), any(), any());
 
     doAnswer(invocationOnMock -> {
       Instance instance = invocationOnMock.getArgument(0);
@@ -192,8 +188,10 @@ public class QuickMarcKafkaHandlerTest {
       .maxRequestSize(1048576)
       .build();
 
-    PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper = new PrecedingSucceedingTitlesHelper(context -> okapiHttpClient);
-    handler = new QuickMarcKafkaHandler(vertx, mockedStorage, 100, kafkaConfig, kafkaInternalCache, precedingSucceedingTitlesHelper);
+    PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper =
+      new PrecedingSucceedingTitlesHelper(context -> okapiHttpClient);
+    handler =
+      new QuickMarcKafkaHandler(vertx, mockedStorage, 100, kafkaConfig, kafkaInternalCache, precedingSucceedingTitlesHelper);
 
     when(kafkaRecord.headers()).thenReturn(List.of(
       KafkaHeader.header(XOkapiHeaders.TENANT.toLowerCase(), TENANT_ID),
@@ -302,12 +300,102 @@ public class QuickMarcKafkaHandlerTest {
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
     when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
 
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Authority>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(existingAuthority));
+      return null;
+    }).when(mockedAuthorityRecordCollection).findById(anyString(), any(), any());
+
     // when
     Future<String> future = handler.handle(kafkaRecord);
 
     // then
     String observeTopic =
       formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), TENANT_ID, QM_INVENTORY_AUTHORITY_UPDATED.name());
+    cluster.observeValues(ObserveKeyValues.on(observeTopic, 1)
+      .observeFor(30, TimeUnit.SECONDS)
+      .build());
+    future.onComplete(ar -> {
+      context.assertTrue(ar.succeeded());
+      context.assertEquals(expectedKafkaRecordKey, ar.result());
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldSendErrorEventWhenRecordIsNotExistInStorage(TestContext context) throws IOException,
+    InterruptedException {
+    // given
+    Async async = context.async();
+    Map<String, String> payload = new HashMap<>();
+    payload.put("RECORD_TYPE", "MARC_AUTHORITY");
+    payload.put("MARC_AUTHORITY", Json.encode(authorityRecord));
+    payload.put("MAPPING_RULES", authorityMappingRules.encode());
+    payload.put("MAPPING_PARAMS", new JsonObject().encode());
+    payload.put("PARSED_RECORD_DTO", Json.encode(new ParsedRecordDto()
+      .withRecordType(ParsedRecordDto.RecordType.MARC_AUTHORITY)
+      .withRelatedRecordVersion("1")));
+
+    Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(payload)));
+    String expectedKafkaRecordKey = "test_key";
+    when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
+    when(kafkaRecord.value()).thenReturn(Json.encode(event));
+    when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Authority>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(null));
+      return null;
+    }).when(mockedAuthorityRecordCollection).findById(anyString(), any(), any());
+
+    // when
+    Future<String> future = handler.handle(kafkaRecord);
+
+    // then
+    String observeTopic =
+      formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), TENANT_ID, QM_ERROR.name());
+    cluster.observeValues(ObserveKeyValues.on(observeTopic, 1)
+      .observeFor(30, TimeUnit.SECONDS)
+      .build());
+    future.onComplete(ar -> {
+      context.assertTrue(ar.succeeded());
+      context.assertEquals(expectedKafkaRecordKey, ar.result());
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldSendErrorEventWhenFailedToFetchRecordFromStorage(TestContext context) throws IOException,
+    InterruptedException {
+    // given
+    Async async = context.async();
+    Map<String, String> payload = new HashMap<>();
+    payload.put("RECORD_TYPE", "MARC_AUTHORITY");
+    payload.put("MARC_AUTHORITY", Json.encode(authorityRecord));
+    payload.put("MAPPING_RULES", authorityMappingRules.encode());
+    payload.put("MAPPING_PARAMS", new JsonObject().encode());
+    payload.put("PARSED_RECORD_DTO", Json.encode(new ParsedRecordDto()
+      .withRecordType(ParsedRecordDto.RecordType.MARC_AUTHORITY)
+      .withRelatedRecordVersion("1")));
+
+    Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(payload)));
+    String expectedKafkaRecordKey = "test_key";
+    when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
+    when(kafkaRecord.value()).thenReturn(Json.encode(event));
+    when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure("Unexpected failure", 500));
+      return null;
+    }).when(mockedAuthorityRecordCollection).findById(anyString(), any(), any());
+
+    // when
+    Future<String> future = handler.handle(kafkaRecord);
+
+    // then
+    String observeTopic =
+      formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), TENANT_ID, QM_ERROR.name());
     cluster.observeValues(ObserveKeyValues.on(observeTopic, 1)
       .observeFor(30, TimeUnit.SECONDS)
       .build());
