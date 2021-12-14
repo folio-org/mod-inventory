@@ -1,3 +1,7 @@
+## 17.0.8 2021-12-15
+
+* Update Log4j to 2.16.0. (CVE-2021-44228) (MODINV-599)
+
 ## 17.0.7 2021-11-15
 
 * Prevent sending a requests with an empty barcode (MODINV-572)
