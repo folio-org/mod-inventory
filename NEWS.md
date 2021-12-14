@@ -1,9 +1,12 @@
+## 16.3.5 2021-12-15
+
+* Update Log4j to 2.16.0. (CVE-2021-44228) (MODINV-599)
+
 ## 16.3.4 2021-07-15
 * Includes fix of editing an instance field not controlled by MARC (MODINV-432)
 * Includes fix of Instances duplication when imported via data-import (MODINV-455)
 * Includes fix of Inventory instance record not updating although quickMARC/SRS updates (MODINV-451, MODINV-445)
 * Includes upgrade to data-import-processing-core v3.0.4
-
 
 ## 16.3.3 2021-06-18
 * Includes fix of Instance tags deletion when the instance is updated by an imported MARC record (MODINV-419)
