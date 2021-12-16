@@ -1,3 +1,7 @@
+## 18.0.5 IN-PROGRESS
+
+* Update Log4j to 2.16.0. (CVE-2021-44228) (MODINV-599)
+
 ## 18.0.4 2021-11-16
 
 * Fixed put for mappingParams into dataImportEventPayload BF (MODINV-571)
