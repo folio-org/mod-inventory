@@ -1,4 +1,4 @@
-## 17.0.8 IN-PROGRESS
+## 17.0.8 2021-12-17
 
 * Update Log4j to 2.16.0. (CVE-2021-44228) (MODINV-601)
 
