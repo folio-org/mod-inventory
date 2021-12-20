@@ -3,7 +3,6 @@ package org.folio.inventory.dataimport.consumers;
 import static java.lang.String.format;
 import static org.folio.DataImportEventTypes.DI_ERROR;
 
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -11,6 +10,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.common.dao.EntityIdStorageDaoImpl;
+import org.folio.inventory.common.dao.PostgresClientFactory;
 import org.folio.inventory.dataimport.HoldingWriterFactory;
 import org.folio.inventory.dataimport.InstanceWriterFactory;
 import org.folio.inventory.dataimport.ItemWriterFactory;
@@ -35,6 +36,7 @@ import org.folio.inventory.dataimport.handlers.matching.loaders.HoldingLoader;
 import org.folio.inventory.dataimport.handlers.matching.loaders.InstanceLoader;
 import org.folio.inventory.dataimport.handlers.matching.loaders.ItemLoader;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
+import org.folio.inventory.services.InstanceIdStorageService;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaHeaderUtils;
@@ -69,7 +71,6 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
   private Vertx vertx;
   private ProfileSnapshotCache profileSnapshotCache;
   private MappingMetadataCache mappingMetadataCache;
-
 
   public DataImportKafkaHandler(Vertx vertx, Storage storage, HttpClient client, KafkaInternalCache kafkaInternalCache,
                                 ProfileSnapshotCache profileSnapshotCache, MappingMetadataCache mappingMetadataCache) {
@@ -141,7 +142,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     EventManager.registerEventHandler(new MatchHoldingEventHandler(mappingMetadataCache));
     EventManager.registerEventHandler(new CreateItemEventHandler(storage, mappingMetadataCache));
     EventManager.registerEventHandler(new CreateHoldingEventHandler(storage, mappingMetadataCache));
-    EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache));
+    EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, new InstanceIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx)))));
     EventManager.registerEventHandler(new CreateMarcHoldingsEventHandler(storage, mappingMetadataCache));
     EventManager.registerEventHandler(new CreateMarcAuthorityEventHandler(storage, mappingMetadataCache));
     EventManager.registerEventHandler(new UpdateItemEventHandler(storage, mappingMetadataCache));
