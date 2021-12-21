@@ -90,7 +90,7 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
             Instance resultedInstance = instanceUpdatePromise.future().result();
             if (resultedInstance.getVersion() != null) {
               int currentVersion = Integer.parseInt(resultedInstance.getVersion());
-              Integer incrementedVersion = currentVersion + 1;
+              int incrementedVersion = currentVersion + 1;
               resultedInstance.setVersion(String.valueOf(incrementedVersion));
             }
             dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(resultedInstance));
