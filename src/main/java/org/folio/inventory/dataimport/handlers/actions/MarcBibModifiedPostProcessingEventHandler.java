@@ -3,6 +3,7 @@ package org.folio.inventory.dataimport.handlers.actions;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
@@ -86,7 +87,13 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
         .compose(ar -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(instanceUpdatePromise.future().result(), context))
         .onComplete(updateAr -> {
           if (updateAr.succeeded()) {
-            dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(instanceUpdatePromise.future().result()));
+            Instance resultedInstance = instanceUpdatePromise.future().result();
+            if (resultedInstance.getVersion() != null) {
+              int currentVersion = Integer.parseInt(resultedInstance.getVersion());
+              int incrementedVersion = currentVersion + 1;
+              resultedInstance.setVersion(String.valueOf(incrementedVersion));
+            }
+            dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(resultedInstance));
             future.complete(dataImportEventPayload);
           } else {
             LOGGER.error("Error updating inventory instance by id: '{}' by jobExecutionId: '{}'", instanceId, dataImportEventPayload.getJobExecutionId(), updateAr.cause());
