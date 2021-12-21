@@ -86,7 +86,11 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
         .compose(ar -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(instanceUpdatePromise.future().result(), context))
         .onComplete(updateAr -> {
           if (updateAr.succeeded()) {
-            dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(instanceUpdatePromise.future().result()));
+            Instance resultedInstance = instanceUpdatePromise.future().result();
+            int currentVersion = Integer.parseInt(resultedInstance.getVersion());
+            Integer incrementedVersion = currentVersion + 1;
+            resultedInstance.setVersion(String.valueOf(incrementedVersion));
+            dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(resultedInstance));
             future.complete(dataImportEventPayload);
           } else {
             LOGGER.error("Error updating inventory instance by id: '{}' by jobExecutionId: '{}'", instanceId, dataImportEventPayload.getJobExecutionId(), updateAr.cause());
