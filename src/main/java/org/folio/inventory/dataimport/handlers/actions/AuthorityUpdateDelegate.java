@@ -12,6 +12,7 @@ import org.apache.logging.log4j.Logger;
 
 import org.folio.Authority;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.dataimport.exceptions.DataImportException;
 import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.mapping.defaultmapper.RecordMapper;
@@ -42,7 +43,7 @@ public class AuthorityUpdateDelegate {
         new JsonObject(eventPayload.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
 
       JsonObject parsedRecord = retrieveParsedContent(marcRecord.getParsedRecord());
-      String authorityId = marcRecord.getId();
+      String authorityId = marcRecord.getExternalIdsHolder().getAuthorityId();
       RecordMapper<Authority> recordMapper = RecordMapperBuilder.buildMapper(MARC_FORMAT);
       var mappedAuthority = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
       AuthorityRecordCollection authorityRecordCollection = storage.getAuthorityRecordCollection(context);
@@ -52,7 +53,7 @@ public class AuthorityUpdateDelegate {
         .compose(existingAuthorityRecord -> mergeRecords(existingAuthorityRecord, mappedAuthority))
         .compose(updatedAuthorityRecord -> updateAuthorityRecord(updatedAuthorityRecord, authorityRecordCollection));
     } catch (Exception e) {
-      LOGGER.error("Error updating inventory authority", e);
+      LOGGER.error("Error updating Authority", e);
       return Future.failedFuture(e);
     }
   }
@@ -66,13 +67,27 @@ public class AuthorityUpdateDelegate {
   private Future<Authority> getAuthorityRecordById(String authorityId,
                                                    AuthorityRecordCollection authorityRecordCollection) {
     Promise<Authority> promise = Promise.promise();
-    authorityRecordCollection.findById(authorityId, success -> promise.complete(success.getResult()),
-      failure -> {
-        LOGGER.error(format("Error retrieving Authority by id %s - %s, status code %s", authorityId, failure.getReason(),
-          failure.getStatusCode()));
-        promise.fail(failure.getReason());
-      });
+    authorityRecordCollection.findById(authorityId, success -> {
+        var result = success.getResult();
+        if (result == null) {
+          completeExceptionally(promise, format("Error retrieving Authority by id %s - Record was not found", authorityId));
+        } else {
+          promise.complete(result);
+        }
+      },
+      failure -> completeExceptionally(promise,
+        format("Error retrieving Authority by id %s - %s, status code %s",
+          authorityId,
+          failure.getReason(),
+          failure.getStatusCode()
+        )
+      ));
     return promise.future();
+  }
+
+  private void completeExceptionally(Promise<?> promise, String message) {
+    LOGGER.error(message);
+    promise.fail(new DataImportException(message));
   }
 
   private void fillVersion(Authority existingAuthorityRecord, Map<String, String> eventPayload) {
@@ -99,10 +114,11 @@ public class AuthorityUpdateDelegate {
                                                   AuthorityRecordCollection authorityRecordCollection) {
     Promise<Authority> promise = Promise.promise();
     authorityRecordCollection.update(authorityRecord, success -> promise.complete(authorityRecord),
-      failure -> {
-        LOGGER.error(format("Error updating Authority - %s, status code %s", failure.getReason(), failure.getStatusCode()));
-        promise.fail(failure.getReason());
-      });
+      failure -> completeExceptionally(promise, format("Error updating Authority - %s, status code %s",
+          failure.getReason(),
+          failure.getStatusCode()
+        )
+      ));
     return promise.future();
   }
 }

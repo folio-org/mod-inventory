@@ -2,6 +2,7 @@
 
 * added Marc Authority handler for entities created via MARC Authority Data Import (MODINV-501)
 * added support for new administrative notes field (MODINV-580, MODINV-581, MODINV-582)
+* Update Log4j to 2.16.0. (CVE-2021-44228) (MODINV-599)
 
 ## 18.1.0 2021-10-18
 
