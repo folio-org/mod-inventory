@@ -1,3 +1,8 @@
+## 18.0.6 2021-12-21
+
+* Update data-import-processing-core to v3.2.7 to enable matching on Instance identifier type and value (MODDICORE-231)
+* Update Log4j to 2.17.0
+
 ## 18.0.5 2021-12-16
 
 * Update Log4j to 2.16.0. (CVE-2021-44228) (MODINV-599)
