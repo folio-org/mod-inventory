@@ -19,8 +19,8 @@ public class EntityIdStorageDaoImpl implements EntityIdStorageDao {
   }
 
   @Override
-  public Future<Optional<RecordToEntity>> saveRecordToEntityRelationship(RecordToEntity entity, String tenantId) {
-    return EntityIdStorageDaoUtil.save(postgresClientFactory, entity, tenantId);
+  public Future<Optional<RecordToEntity>> saveRecordToEntityRelationship(RecordToEntity recordToEntity, String tenantId) {
+    return EntityIdStorageDaoUtil.save(postgresClientFactory, recordToEntity, tenantId);
   }
 
 }

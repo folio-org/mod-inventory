@@ -42,14 +42,14 @@ public final class EntityIdStorageDaoUtil {
    * Searches for {@link RecordToEntity}
    *
    * @param postgresClientFactory postgres client factory for query execution
-   * @param entity      entity to save
+   * @param recordToEntity      entity to save
    * @param tenantId tenant id
    * @return future with optional RecordToEntity
    */
-  public static Future<Optional<RecordToEntity>> save(PostgresClientFactory postgresClientFactory, RecordToEntity entity, String tenantId) {
-    EntityTable entityTable = entity.getTable();
-    UUID recordId = UUID.fromString(entity.getRecordId());
-    UUID entityId = UUID.fromString(entity.getEntityId());
+  public static Future<Optional<RecordToEntity>> save(PostgresClientFactory postgresClientFactory, RecordToEntity recordToEntity, String tenantId) {
+    EntityTable entityTable = recordToEntity.getTable();
+    UUID recordId = UUID.fromString(recordToEntity.getRecordId());
+    UUID entityId = UUID.fromString(recordToEntity.getEntityId());
     String tableName = entityTable.getTableName();
 
     LOGGER.info("Trying to save entity to {} with recordId = {} and instanceId = {}", tableName, recordId, entityId);

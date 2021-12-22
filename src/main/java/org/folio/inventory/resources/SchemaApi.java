@@ -15,6 +15,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.WebContext;
 
 import java.sql.Connection;
+import java.sql.SQLException;
 
 import static java.lang.String.format;
 import static org.folio.inventory.rest.util.ModuleUtil.convertToPsqlStandard;
@@ -51,22 +52,27 @@ public class SchemaApi {
 
   public static void initializeSchemaForTenant(String tenant) {
     String schemaName = convertToPsqlStandard(tenant);
-    LOGGER.info(format("Initializing schema %s for tenant %s", schemaName, tenant));
+    LOGGER.info("Initializing schema {} for tenant {}", schemaName, tenant);
     try (Connection connection = getConnection(tenant)) {
-      runScripts(schemaName, connection, CHANGELOG_TENANT_PATH);
-      LOGGER.info("Schema is initialized for tenant " + tenant);
+      boolean schemaIsNotExecuted = connection.prepareStatement(format("CREATE SCHEMA IF NOT EXISTS %s", schemaName)).execute();
+      if (schemaIsNotExecuted) {
+        throw new SQLException(String.format("Cannot create schema %s", schemaName));
+      } else {
+        LOGGER.info("Schema {} created or already exists", schemaName);
+        runScripts(schemaName, connection);
+        LOGGER.info("Schema is initialized for tenant {}", tenant);
+      }
     } catch (Exception e) {
       LOGGER.error(format("Error while initializing schema %s for tenant %s", schemaName, tenant), e);
     }
   }
 
-  private static void runScripts(String schemaName, Connection connection, String changelogPath) throws LiquibaseException {
+  private static void runScripts(String schemaName, Connection connection) throws LiquibaseException {
     Liquibase liquibase = null;
-    LOGGER.info("Schema name {} " + schemaName);
     try {
       Database database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(connection));
       database.setDefaultSchemaName(schemaName);
-      liquibase = new Liquibase(changelogPath, new ClassLoaderResourceAccessor(), database);
+      liquibase = new Liquibase(CHANGELOG_TENANT_PATH, new ClassLoaderResourceAccessor(), database);
       liquibase.update(new Contexts());
     } finally {
       if (liquibase != null && liquibase.getDatabase() != null) {

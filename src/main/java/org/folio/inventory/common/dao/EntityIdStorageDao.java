@@ -13,10 +13,10 @@ public interface EntityIdStorageDao {
   /**
    * Saves Entity to database
    *
-   * @param record  to save
+   * @param recordToEntity  to save
    * @param tenantId tenant id
    * @return future with saved entity
    */
-  Future<Optional<RecordToEntity>> saveRecordToEntityRelationship(RecordToEntity record, String tenantId);
+  Future<Optional<RecordToEntity>> saveRecordToEntityRelationship(RecordToEntity recordToEntity, String tenantId);
 
 }

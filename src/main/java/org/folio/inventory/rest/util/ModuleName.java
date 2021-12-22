@@ -4,6 +4,9 @@ public class ModuleName {
   private static final String MODULE_NAME = "mod_inventory";
   private static final String MODULE_VERSION = "99.99.99";
 
+  private ModuleName() {
+  }
+
   /**
    * The module name with underscore.
    */

@@ -6,6 +6,9 @@ public class ModuleUtil {
 
   private static final String MODULE_NAME = ModuleName.getModuleName();
 
+  private ModuleUtil() {
+  }
+
   /**
    * RMB convention driven tenant to schema name
    *
