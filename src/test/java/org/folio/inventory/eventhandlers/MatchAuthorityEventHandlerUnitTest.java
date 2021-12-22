@@ -6,7 +6,9 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+import org.folio.Authority;
 import org.folio.DataImportEventPayload;
+import org.folio.MappingMetadataDto;
 import org.folio.MatchDetail;
 import org.folio.MatchProfile;
 import org.folio.inventory.common.Context;
@@ -15,10 +17,9 @@ import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
-import org.folio.inventory.dataimport.handlers.matching.MatchInstanceEventHandler;
-import org.folio.inventory.dataimport.handlers.matching.loaders.InstanceLoader;
-import org.folio.inventory.domain.instances.Instance;
-import org.folio.inventory.domain.instances.InstanceCollection;
+import org.folio.inventory.dataimport.handlers.matching.MatchAuthorityEventHandler;
+import org.folio.inventory.dataimport.handlers.matching.loaders.AuthorityLoader;
+import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.matching.loader.MatchValueLoaderFactory;
@@ -26,9 +27,7 @@ import org.folio.processing.matching.reader.MarcValueReaderImpl;
 import org.folio.processing.matching.reader.MatchValueReaderFactory;
 import org.folio.processing.value.MissingValue;
 import org.folio.processing.value.StringValue;
-import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Field;
-import org.folio.MappingMetadataDto;
 import org.folio.rest.jaxrs.model.MatchExpression;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.junit.Before;
@@ -48,12 +47,12 @@ import java.util.function.Consumer;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_NOT_MATCHED;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_MATCHED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_NOT_MATCHED;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_AUTHORITY_RECORD_CREATED;
 import static org.folio.MatchDetail.MatchCriterion.EXACTLY_MATCHES;
-import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
-import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
+import static org.folio.rest.jaxrs.model.EntityType.AUTHORITY;
+import static org.folio.rest.jaxrs.model.EntityType.MARC_AUTHORITY;
 import static org.folio.rest.jaxrs.model.MatchExpression.DataValueType.VALUE_FROM_RECORD;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MATCH_PROFILE;
@@ -67,44 +66,38 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
 @RunWith(VertxUnitRunner.class)
-public class MatchInstanceEventHandlerUnitTest {
+public class MatchAuthorityEventHandlerUnitTest {
 
-  private static final String INSTANCE_HRID = "in0001234";
-  private static final String INSTANCE_ID = "ddd266ef-07ac-4117-be13-d418b8cd6902";
-
-  private static final String MAPPING_PARAMS = "MAPPING_PARAMS";
-  private static final String RELATIONS = "MATCHING_PARAMETERS_RELATIONS";
-  private static final String MATCHING_RELATIONS = "{\"item.statisticalCodeIds[]\":\"statisticalCode\",\"instance.classifications[].classificationTypeId\":\"classificationTypes\",\"instance.electronicAccess[].relationshipId\":\"electronicAccessRelationships\",\"item.permanentLoanTypeId\":\"loantypes\",\"holdingsrecord.temporaryLocationId\":\"locations\",\"holdingsrecord.statisticalCodeIds[]\":\"statisticalCode\",\"instance.statusId\":\"instanceStatuses\",\"instance.natureOfContentTermIds\":\"natureOfContentTerms\",\"item.notes[].itemNoteTypeId\":\"itemNoteTypes\",\"holdingsrecord.permanentLocationId\":\"locations\",\"instance.alternativeTitles[].alternativeTitleTypeId\":\"alternativeTitleTypes\",\"holdingsrecord.illPolicyId\":\"illPolicies\",\"item.electronicAccess[].relationshipId\":\"electronicAccessRelationships\",\"instance.identifiers[].identifierTypeId\":\"identifierTypes\",\"holdingsrecord.holdingsTypeId\":\"holdingsTypes\",\"item.permanentLocationId\":\"locations\",\"instance.modeOfIssuanceId\":\"issuanceModes\",\"item.itemLevelCallNumberTypeId\":\"callNumberTypes\",\"instance.notes[].instanceNoteTypeId\":\"instanceNoteTypes\",\"instance.instanceFormatIds\":\"instanceFormats\",\"holdingsrecord.callNumberTypeId\":\"callNumberTypes\",\"holdingsrecord.electronicAccess[].relationshipId\":\"electronicAccessRelationships\",\"instance.instanceTypeId\":\"instanceTypes\",\"instance.statisticalCodeIds[]\":\"statisticalCode\",\"instancerelationship.instanceRelationshipTypeId\":\"instanceRelationshipTypes\",\"item.temporaryLoanTypeId\":\"loantypes\",\"item.temporaryLocationId\":\"locations\",\"item.materialTypeId\":\"materialTypes\",\"holdingsrecord.notes[].holdingsNoteTypeId\":\"holdingsNoteTypes\",\"instance.contributors[].contributorNameTypeId\":\"contributorNameTypes\",\"item.itemDamagedStatusId\":\"itemDamageStatuses\",\"instance.contributors[].contributorTypeId\":\"contributorTypes\"}";
-  private static final String LOCATIONS_PARAMS = "{\"initialized\":true,\"locations\":[{\"id\":\"53cf956f-c1df-410b-8bea-27f712cca7c0\",\"name\":\"Annex\",\"code\":\"KU/CC/DI/A\",\"isActive\":true,\"institutionId\":\"40ee00ca-a518-4b49-be01-0638d0a4ac57\",\"campusId\":\"62cf76b7-cca5-4d33-9217-edf42ce1a848\",\"libraryId\":\"5d78803e-ca04-4b4a-aeae-2c63b924518b\",\"primaryServicePoint\":\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\",\"servicePointIds\":[\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\"],\"servicePoints\":[],\"metadata\":{\"createdDate\":1592219257690,\"updatedDate\":1592219257690}},{\"id\":\"b241764c-1466-4e1d-a028-1a3684a5da87\",\"name\":\"Popular Reading Collection\",\"code\":\"KU/CC/DI/P\",\"isActive\":true,\"institutionId\":\"40ee00ca-a518-4b49-be01-0638d0a4ac57\",\"campusId\":\"62cf76b7-cca5-4d33-9217-edf42ce1a848\",\"libraryId\":\"5d78803e-ca04-4b4a-aeae-2c63b924518b\",\"primaryServicePoint\":\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\",\"servicePointIds\":[\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\"],\"servicePoints\":[],\"metadata\":{\"createdDate\":1592219257711,\"updatedDate\":1592219257711}}]}";
-
-
+  private static final String AUTHORITY_ID = "3217f3f2-6a7b-467a-b421-4e9fe0643cd7";
+  private static final String PERSONAL_NAME = "Twain, Mark, 1835-1910";
+  private static final String NOTES_PARAMS = "{ \"id\": \"76c74801-afec-45a0-aad7-3ff23591e147\", \"name\": \"Nonpublic general note\", \"source\": \"folio\" }\n";
   @Mock
   private Storage storage;
+  @InjectMocks
+  private final AuthorityLoader loader = new AuthorityLoader(storage, Vertx.vertx());
   @Mock
-  private InstanceCollection instanceCollection;
+  private AuthorityRecordCollection collection;
   @Mock
   private MarcValueReaderImpl marcValueReader;
   @Mock
   private MappingMetadataCache mappingMetadataCache;
-  @InjectMocks
-  private final InstanceLoader instanceLoader = new InstanceLoader(storage, Vertx.vertx());
 
   @Before
   public void setUp() {
     MatchValueReaderFactory.clearReaderFactory();
     MatchValueLoaderFactory.clearLoaderFactory();
     MockitoAnnotations.initMocks(this);
-    when(marcValueReader.isEligibleForEntityType(MARC_BIBLIOGRAPHIC)).thenReturn(true);
-    when(storage.getInstanceCollection(any(Context.class))).thenReturn(instanceCollection);
+    when(marcValueReader.isEligibleForEntityType(MARC_AUTHORITY)).thenReturn(true);
+    when(storage.getAuthorityRecordCollection(any(Context.class))).thenReturn(collection);
     when(marcValueReader.read(any(DataImportEventPayload.class), any(MatchDetail.class)))
-      .thenReturn(StringValue.of(INSTANCE_HRID));
+      .thenReturn(StringValue.of(PERSONAL_NAME));
     MatchValueReaderFactory.register(marcValueReader);
-    MatchValueLoaderFactory.register(instanceLoader);
+    MatchValueLoaderFactory.register(loader);
 
     when(mappingMetadataCache.get(anyString(), any(Context.class)))
       .thenReturn(Future.succeededFuture(Optional.of(new MappingMetadataDto()
         .withMappingRules(new JsonObject().encode())
-        .withMappingParams(LOCATIONS_PARAMS))));
+        .withMappingParams(NOTES_PARAMS))));
   }
 
   @Test
@@ -112,15 +105,15 @@ public class MatchInstanceEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
-      Success<MultipleRecords<Instance>> result =
-        new Success<>(new MultipleRecords<>(singletonList(createInstance()), 1));
+      Consumer<Success<MultipleRecords<Authority>>> callback = ans.getArgument(2);
+      Success<MultipleRecords<Authority>> result =
+        new Success<>(new MultipleRecords<>(singletonList(createAuthority()), 1));
       callback.accept(result);
       return null;
-    }).when(instanceCollection)
-      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+    }).when(collection)
+      .findByCql(eq(format("personalName == \"%s\"", PERSONAL_NAME)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchInstanceEventHandler(mappingMetadataCache);
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -128,11 +121,12 @@ public class MatchInstanceEventHandlerUnitTest {
       testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
       testContext.assertEquals(
         updatedEventPayload.getEventsChain(),
-        singletonList(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+        singletonList(DI_SRS_MARC_AUTHORITY_RECORD_CREATED.value())
       );
-      testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
+      testContext.assertEquals(DI_INVENTORY_AUTHORITY_MATCHED.value(), updatedEventPayload.getEventType());
       async.complete();
     });
+
   }
 
   @Test
@@ -140,15 +134,15 @@ public class MatchInstanceEventHandlerUnitTest {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
-      Success<MultipleRecords<Instance>> result =
+      Consumer<Success<MultipleRecords<Authority>>> callback = ans.getArgument(2);
+      Success<MultipleRecords<Authority>> result =
         new Success<>(new MultipleRecords<>(new ArrayList<>(), 0));
       callback.accept(result);
       return null;
-    }).when(instanceCollection)
+    }).when(collection)
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchInstanceEventHandler(mappingMetadataCache);
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -156,27 +150,27 @@ public class MatchInstanceEventHandlerUnitTest {
       testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
       testContext.assertEquals(
         updatedEventPayload.getEventsChain(),
-        singletonList(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+        singletonList(DI_SRS_MARC_AUTHORITY_RECORD_CREATED.value())
       );
-      testContext.assertEquals(DI_INVENTORY_INSTANCE_NOT_MATCHED.value(), updatedEventPayload.getEventType());
+      testContext.assertEquals(DI_INVENTORY_AUTHORITY_NOT_MATCHED.value(), updatedEventPayload.getEventType());
       async.complete();
     });
   }
 
   @Test
-  public void shouldFailOnHandleEventPayloadIfMatchedMultipleInstances(TestContext testContext) throws UnsupportedEncodingException {
+  public void shouldFailOnHandleEventPayloadIfMatchedMultipleAuthorityRecords(TestContext testContext) throws UnsupportedEncodingException {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
-      Success<MultipleRecords<Instance>> result =
-        new Success<>(new MultipleRecords<>(asList(createInstance(), createInstance()), 2));
+      Consumer<Success<MultipleRecords<Authority>>> callback = ans.getArgument(2);
+      Success<MultipleRecords<Authority>> result =
+        new Success<>(new MultipleRecords<>(asList(createAuthority(), createAuthority()), 2));
       callback.accept(result);
       return null;
-    }).when(instanceCollection)
+    }).when(collection)
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchInstanceEventHandler(mappingMetadataCache);
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -195,10 +189,10 @@ public class MatchInstanceEventHandlerUnitTest {
         new Failure("Internal Server Error", 500);
       callback.accept(result);
       return null;
-    }).when(instanceCollection)
+    }).when(collection)
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchInstanceEventHandler(mappingMetadataCache);
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -211,10 +205,10 @@ public class MatchInstanceEventHandlerUnitTest {
   public void shouldFailOnHandleEventPayloadIfExceptionThrown(TestContext testContext) throws UnsupportedEncodingException {
     Async async = testContext.async();
 
-    doThrow(new UnsupportedEncodingException()).when(instanceCollection)
+    doThrow(new UnsupportedEncodingException()).when(collection)
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchInstanceEventHandler(mappingMetadataCache);
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -230,7 +224,7 @@ public class MatchInstanceEventHandlerUnitTest {
     when(marcValueReader.read(any(DataImportEventPayload.class), any(MatchDetail.class)))
       .thenReturn(MissingValue.getInstance());
 
-    EventHandler eventHandler = new MatchInstanceEventHandler(mappingMetadataCache);
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -238,23 +232,23 @@ public class MatchInstanceEventHandlerUnitTest {
       testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
       testContext.assertEquals(
         updatedEventPayload.getEventsChain(),
-        singletonList(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+        singletonList(DI_SRS_MARC_AUTHORITY_RECORD_CREATED.value())
       );
-      testContext.assertEquals(DI_INVENTORY_INSTANCE_NOT_MATCHED.value(), updatedEventPayload.getEventType());
+      testContext.assertEquals(DI_INVENTORY_AUTHORITY_NOT_MATCHED.value(), updatedEventPayload.getEventType());
       async.complete();
     });
   }
 
   @Test
   public void shouldReturnFalseOnIsEligibleIfNullCurrentNode() {
-    EventHandler eventHandler = new MatchInstanceEventHandler(mappingMetadataCache);
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = new DataImportEventPayload();
     assertFalse(eventHandler.isEligible(eventPayload));
   }
 
   @Test
   public void shouldReturnFalseOnIsEligibleIfCurrentNodeTypeIsNotMatchProfile() {
-    EventHandler eventHandler = new MatchInstanceEventHandler(mappingMetadataCache);
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withContentType(MAPPING_PROFILE));
@@ -262,46 +256,45 @@ public class MatchInstanceEventHandlerUnitTest {
   }
 
   @Test
-  public void shouldReturnFalseOnIsEligibleForNotInstanceMatchProfile() {
-    EventHandler eventHandler = new MatchInstanceEventHandler(mappingMetadataCache);
+  public void shouldReturnFalseOnIsEligibleForNotAuthorityMatchProfile() {
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withContentType(MATCH_PROFILE)
         .withContent(JsonObject.mapFrom(new MatchProfile()
-          .withExistingRecordType(MARC_BIBLIOGRAPHIC))));
+          .withExistingRecordType(MARC_AUTHORITY))));
     assertFalse(eventHandler.isEligible(eventPayload));
   }
 
   @Test
-  public void shouldReturnTrueOnIsEligibleForInstanceMatchProfile() {
-    EventHandler eventHandler = new MatchInstanceEventHandler(mappingMetadataCache);
+  public void shouldReturnTrueOnIsEligibleForAuthorityMatchProfile() {
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withContentType(MATCH_PROFILE)
         .withContent(JsonObject.mapFrom(new MatchProfile()
-          .withExistingRecordType(INSTANCE))));
+          .withExistingRecordType(AUTHORITY))));
     assertTrue(eventHandler.isEligible(eventPayload));
   }
 
   @Test
-  public void shouldMatchWithSubMatchByInstanceOnHandleEventPayload(TestContext testContext) throws UnsupportedEncodingException {
+  public void shouldMatchWithSubMatchByAuthorityOnHandleEventPayload(TestContext testContext) throws UnsupportedEncodingException {
     Async async = testContext.async();
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
-      Success<MultipleRecords<Instance>> result =
-        new Success<>(new MultipleRecords<>(singletonList(createInstance()), 1));
+      Consumer<Success<MultipleRecords<Authority>>> callback = ans.getArgument(2);
+      Success<MultipleRecords<Authority>> result =
+        new Success<>(new MultipleRecords<>(singletonList(createAuthority()), 1));
       callback.accept(result);
       return null;
-    }).when(instanceCollection)
-      .findByCql(eq(format("personalName == \"%s\" AND id == \"%s\"", INSTANCE_HRID, INSTANCE_ID)),
+    }).when(collection)
+      .findByCql(eq(format("personalName == \"%s\" AND id == \"%s\"", PERSONAL_NAME, AUTHORITY_ID)),
         any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchInstanceEventHandler(mappingMetadataCache);
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
     HashMap<String, String> context = new HashMap<>();
-    context.put(EntityType.INSTANCE.value(), JsonObject.mapFrom(createInstance()).encode());
-    context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
-    context.put(RELATIONS, MATCHING_RELATIONS);
+    context.put(AUTHORITY.value(), JsonObject.mapFrom(createAuthority()).encode());
+    context.put("MAPPING_PARAMS", NOTES_PARAMS);
     DataImportEventPayload eventPayload = createEventPayload().withContext(context);
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -309,19 +302,24 @@ public class MatchInstanceEventHandlerUnitTest {
       testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
       testContext.assertEquals(
         updatedEventPayload.getEventsChain(),
-        singletonList(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+        singletonList(DI_SRS_MARC_AUTHORITY_RECORD_CREATED.value())
       );
-      testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
+      testContext.assertEquals(DI_INVENTORY_AUTHORITY_MATCHED.value(), updatedEventPayload.getEventType());
       async.complete();
     });
+
+  }
+
+  private Authority createAuthority() {
+    return new Authority().withId(AUTHORITY_ID).withPersonalName(PERSONAL_NAME);
   }
 
   private DataImportEventPayload createEventPayload() {
     return new DataImportEventPayload()
-      .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withEventType(DI_SRS_MARC_AUTHORITY_RECORD_CREATED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withEventsChain(new ArrayList<>())
-      .withOkapiUrl("http://localhost:9493")
+      .withOkapiUrl("http://localhost:00001")
       .withTenant("diku")
       .withToken("token")
       .withContext(new HashMap<>())
@@ -329,19 +327,14 @@ public class MatchInstanceEventHandlerUnitTest {
         .withId(UUID.randomUUID().toString())
         .withContentType(MATCH_PROFILE)
         .withContent(new MatchProfile()
-          .withExistingRecordType(INSTANCE)
-          .withIncomingRecordType(MARC_BIBLIOGRAPHIC)
+          .withExistingRecordType(AUTHORITY)
+          .withIncomingRecordType(MARC_AUTHORITY)
           .withMatchDetails(singletonList(new MatchDetail()
             .withMatchCriterion(EXACTLY_MATCHES)
             .withExistingMatchExpression(new MatchExpression()
               .withDataValueType(VALUE_FROM_RECORD)
               .withFields(singletonList(
-                new Field().withLabel("field").withValue("instance.hrid"))
+                new Field().withLabel("field").withValue("authority.personalName"))
               ))))));
   }
-
-  private Instance createInstance() {
-    return new Instance(INSTANCE_ID, "5", INSTANCE_HRID, "MARC", "Wonderful", "12334");
-  }
-
 }
