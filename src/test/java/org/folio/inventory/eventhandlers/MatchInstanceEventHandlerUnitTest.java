@@ -294,7 +294,7 @@ public class MatchInstanceEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(eq(format("personalName == \"%s\" AND id == \"%s\"", INSTANCE_HRID, INSTANCE_ID)),
+      .findByCql(eq(format("hrid == \"%s\" AND id == \"%s\"", INSTANCE_HRID, INSTANCE_ID)),
         any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
     EventHandler eventHandler = new MatchInstanceEventHandler(mappingMetadataCache);
