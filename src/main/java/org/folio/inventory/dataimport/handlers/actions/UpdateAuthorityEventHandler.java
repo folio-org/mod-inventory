@@ -19,9 +19,6 @@ import org.folio.inventory.storage.Storage;
 
 public class UpdateAuthorityEventHandler extends AbstractAuthorityEventHandler {
 
-  protected static final String FAILED_RETRIEVING_MSG_TEMPLATE =
-    "Failed retrieving Authority by id '%s'. Cause: %s, status: '%s'";
-  protected static final String NOT_FOUND_MSG_TEMPLATE = "Failed retrieving Authority by id '%s'. Cause: Not found";
   protected static final String ERROR_UPDATING_AUTHORITY_MSG_TEMPLATE = "Failed updating Authority. Cause: %s, status: '%s'";
 
   public UpdateAuthorityEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache) {
@@ -51,22 +48,6 @@ public class UpdateAuthorityEventHandler extends AbstractAuthorityEventHandler {
   @Override
   protected ActionProfile.FolioRecord targetRecordType() {
     return AUTHORITY;
-  }
-
-  private Future<Authority> getAuthorityById(String authorityId, AuthorityRecordCollection authorityRecordCollection) {
-    Promise<Authority> promise = Promise.promise();
-    authorityRecordCollection.findById(authorityId, success -> {
-        var result = success.getResult();
-        if (result == null) {
-          promise.fail(new DataImportException(format(NOT_FOUND_MSG_TEMPLATE, authorityId)));
-        } else {
-          promise.complete(result);
-        }
-      },
-      failure -> promise.fail(new DataImportException(format(FAILED_RETRIEVING_MSG_TEMPLATE, authorityId,
-        failure.getReason(), failure.getStatusCode()))
-      ));
-    return promise.future();
   }
 
   private Future<Authority> updateAuthority(Authority authority, AuthorityRecordCollection authorityRecordCollection) {
