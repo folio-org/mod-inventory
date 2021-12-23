@@ -70,7 +70,6 @@ public class MatchAuthorityEventHandlerUnitTest {
 
   private static final String AUTHORITY_ID = "3217f3f2-6a7b-467a-b421-4e9fe0643cd7";
   private static final String PERSONAL_NAME = "Twain, Mark, 1835-1910";
-  private static final String NOTES_PARAMS = "{ \"id\": \"76c74801-afec-45a0-aad7-3ff23591e147\", \"name\": \"Nonpublic general note\", \"source\": \"folio\" }\n";
   @Mock
   private Storage storage;
   @InjectMocks
@@ -97,7 +96,7 @@ public class MatchAuthorityEventHandlerUnitTest {
     when(mappingMetadataCache.get(anyString(), any(Context.class)))
       .thenReturn(Future.succeededFuture(Optional.of(new MappingMetadataDto()
         .withMappingRules(new JsonObject().encode())
-        .withMappingParams(NOTES_PARAMS))));
+        .withMappingParams(new JsonObject().encode()))));
   }
 
   @Test
@@ -294,7 +293,7 @@ public class MatchAuthorityEventHandlerUnitTest {
     EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
     HashMap<String, String> context = new HashMap<>();
     context.put(AUTHORITY.value(), JsonObject.mapFrom(createAuthority()).encode());
-    context.put("MAPPING_PARAMS", NOTES_PARAMS);
+    context.put("MAPPING_PARAMS", new JsonObject().encode());
     DataImportEventPayload eventPayload = createEventPayload().withContext(context);
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
