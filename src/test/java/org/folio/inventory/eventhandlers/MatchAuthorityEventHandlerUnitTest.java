@@ -8,6 +8,7 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.folio.Authority;
 import org.folio.DataImportEventPayload;
+import org.folio.Identifier___;
 import org.folio.MappingMetadataDto;
 import org.folio.MatchDetail;
 import org.folio.MatchProfile;
@@ -25,6 +26,7 @@ import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.matching.loader.MatchValueLoaderFactory;
 import org.folio.processing.matching.reader.MarcValueReaderImpl;
 import org.folio.processing.matching.reader.MatchValueReaderFactory;
+import org.folio.processing.value.ListValue;
 import org.folio.processing.value.MissingValue;
 import org.folio.processing.value.StringValue;
 import org.folio.rest.jaxrs.model.Field;
@@ -35,6 +37,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import java.io.UnsupportedEncodingException;
@@ -70,6 +73,8 @@ public class MatchAuthorityEventHandlerUnitTest {
 
   private static final String AUTHORITY_ID = "3217f3f2-6a7b-467a-b421-4e9fe0643cd7";
   private static final String PERSONAL_NAME = "Twain, Mark, 1835-1910";
+  private static final Identifier___ IDENTIFIER = new Identifier___().withValue("955335").withIdentifierTypeId("11bf5f7c-30e1-4308-8170-1fbb5b817cf2");
+
   @Mock
   private Storage storage;
   @InjectMocks
@@ -103,6 +108,15 @@ public class MatchAuthorityEventHandlerUnitTest {
   public void shouldMatchOnHandleEventPayload(TestContext testContext) throws UnsupportedEncodingException {
     Async async = testContext.async();
 
+    MatchDetail personalNameMatchDetail = new MatchDetail()
+      .withMatchCriterion(EXACTLY_MATCHES)
+      .withExistingMatchExpression(new MatchExpression()
+        .withDataValueType(VALUE_FROM_RECORD)
+        .withFields(singletonList(
+          new Field().withLabel("personalName").withValue("authority.personalName"))
+        )
+      );
+
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Authority>>> callback = ans.getArgument(2);
       Success<MultipleRecords<Authority>> result =
@@ -113,7 +127,90 @@ public class MatchAuthorityEventHandlerUnitTest {
       .findByCql(eq(format("personalName == \"%s\"", PERSONAL_NAME)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
     EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
-    DataImportEventPayload eventPayload = createEventPayload();
+    DataImportEventPayload eventPayload = createEventPayload(personalNameMatchDetail);
+
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
+      testContext.assertNull(throwable);
+      testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
+      testContext.assertEquals(
+        updatedEventPayload.getEventsChain(),
+        singletonList(DI_SRS_MARC_AUTHORITY_RECORD_CREATED.value())
+      );
+      testContext.assertEquals(DI_INVENTORY_AUTHORITY_MATCHED.value(), updatedEventPayload.getEventType());
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldMatchOnHandleEventPayloadFor001(TestContext testContext) throws UnsupportedEncodingException {
+    Async async = testContext.async();
+
+    MatchValueReaderFactory.clearReaderFactory();
+    MatchDetail matchDetail001 = new MatchDetail()
+      .withMatchCriterion(EXACTLY_MATCHES)
+      .withExistingMatchExpression(new MatchExpression()
+        .withDataValueType(VALUE_FROM_RECORD)
+        .withFields(singletonList(new Field().withLabel("identifiersField").withValue("authority.identifiers[]")))
+      );
+    DataImportEventPayload eventPayload = createEventPayload(matchDetail001);
+    MarcValueReaderImpl marcValueReaderMock = Mockito.mock(MarcValueReaderImpl.class);
+    when(marcValueReaderMock.isEligibleForEntityType(MARC_AUTHORITY)).thenReturn(true);
+    when(marcValueReaderMock.read(eventPayload, matchDetail001)).thenReturn(ListValue.of(singletonList(JsonObject.mapFrom(IDENTIFIER).toString())));
+
+    MatchValueReaderFactory.register(marcValueReaderMock);
+
+    doAnswer(ans -> {
+      Consumer<Success<MultipleRecords<Authority>>> callback = ans.getArgument(2);
+      Success<MultipleRecords<Authority>> result =
+        new Success<>(new MultipleRecords<>(singletonList(createAuthority()), 1));
+      callback.accept(result);
+      return null;
+    }).when(collection)
+      .findByCql(eq("identifiers=\\\"[{\\\"value\\\":\\\"955335\\\",\\\"identifierTypeId\\\":\\\"11bf5f7c-30e1-4308-8170-1fbb5b817cf2\\\"}]\\\""), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
+
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
+      testContext.assertNull(throwable);
+      testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
+      testContext.assertEquals(
+        updatedEventPayload.getEventsChain(),
+        singletonList(DI_SRS_MARC_AUTHORITY_RECORD_CREATED.value())
+      );
+      testContext.assertEquals(DI_INVENTORY_AUTHORITY_MATCHED.value(), updatedEventPayload.getEventType());
+      async.complete();
+    });
+
+  }
+
+  @Test
+  public void shouldMatchOnHandleEventPayloadFor999s(TestContext testContext) throws UnsupportedEncodingException {
+    Async async = testContext.async();
+
+    MatchValueReaderFactory.clearReaderFactory();
+    MatchDetail matchDetail999s = new MatchDetail()
+      .withMatchCriterion(EXACTLY_MATCHES)
+      .withExistingMatchExpression(new MatchExpression()
+        .withDataValueType(VALUE_FROM_RECORD)
+        .withFields(singletonList(new Field().withLabel("idField").withValue("authority.id")))
+      );
+
+    DataImportEventPayload eventPayload = createEventPayload(matchDetail999s);
+    MarcValueReaderImpl marcValueReaderMock = Mockito.mock(MarcValueReaderImpl.class);
+    when(marcValueReaderMock.isEligibleForEntityType(MARC_AUTHORITY)).thenReturn(true);
+    when(marcValueReaderMock.read(eventPayload, matchDetail999s)).thenReturn(StringValue.of(AUTHORITY_ID));
+    MatchValueReaderFactory.register(marcValueReaderMock);
+
+    doAnswer(ans -> {
+      Consumer<Success<MultipleRecords<Authority>>> callback = ans.getArgument(2);
+      Success<MultipleRecords<Authority>> result =
+        new Success<>(new MultipleRecords<>(singletonList(createAuthority()), 1));
+      callback.accept(result);
+      return null;
+    }).when(collection)
+      .findByCql(eq(format("id == \"%s\"", AUTHORITY_ID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
       testContext.assertNull(throwable);
@@ -132,6 +229,16 @@ public class MatchAuthorityEventHandlerUnitTest {
   public void shouldNotMatchOnHandleEventPayload(TestContext testContext) throws UnsupportedEncodingException {
     Async async = testContext.async();
 
+    MatchDetail personalNameMatchDetail = new MatchDetail()
+      .withMatchCriterion(EXACTLY_MATCHES)
+      .withExistingMatchExpression(new MatchExpression()
+        .withDataValueType(VALUE_FROM_RECORD)
+        .withFields(singletonList(
+          new Field().withLabel("personalName").withValue("authority.personalName"))
+        )
+      );
+    DataImportEventPayload eventPayload = createEventPayload(personalNameMatchDetail);
+
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Authority>>> callback = ans.getArgument(2);
       Success<MultipleRecords<Authority>> result =
@@ -142,8 +249,6 @@ public class MatchAuthorityEventHandlerUnitTest {
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
     EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
-    DataImportEventPayload eventPayload = createEventPayload();
-
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
       testContext.assertNull(throwable);
       testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
@@ -160,6 +265,16 @@ public class MatchAuthorityEventHandlerUnitTest {
   public void shouldFailOnHandleEventPayloadIfMatchedMultipleAuthorityRecords(TestContext testContext) throws UnsupportedEncodingException {
     Async async = testContext.async();
 
+    MatchDetail personalNameMatchDetail = new MatchDetail()
+      .withMatchCriterion(EXACTLY_MATCHES)
+      .withExistingMatchExpression(new MatchExpression()
+        .withDataValueType(VALUE_FROM_RECORD)
+        .withFields(singletonList(
+          new Field().withLabel("personalName").withValue("authority.personalName"))
+        )
+      );
+    DataImportEventPayload eventPayload = createEventPayload(personalNameMatchDetail);
+
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Authority>>> callback = ans.getArgument(2);
       Success<MultipleRecords<Authority>> result =
@@ -170,7 +285,6 @@ public class MatchAuthorityEventHandlerUnitTest {
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
     EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
-    DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
       testContext.assertNotNull(throwable);
@@ -182,6 +296,16 @@ public class MatchAuthorityEventHandlerUnitTest {
   public void shouldFailOnHandleEventPayloadIfFailedCallToInventoryStorage(TestContext testContext) throws UnsupportedEncodingException {
     Async async = testContext.async();
 
+    MatchDetail personalNameMatchDetail = new MatchDetail()
+      .withMatchCriterion(EXACTLY_MATCHES)
+      .withExistingMatchExpression(new MatchExpression()
+        .withDataValueType(VALUE_FROM_RECORD)
+        .withFields(singletonList(
+          new Field().withLabel("personalName").withValue("authority.personalName"))
+        )
+      );
+    DataImportEventPayload eventPayload = createEventPayload(personalNameMatchDetail);
+
     doAnswer(ans -> {
       Consumer<Failure> callback = ans.getArgument(3);
       Failure result =
@@ -192,7 +316,6 @@ public class MatchAuthorityEventHandlerUnitTest {
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
     EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
-    DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
       testContext.assertNotNull(throwable);
@@ -204,11 +327,20 @@ public class MatchAuthorityEventHandlerUnitTest {
   public void shouldFailOnHandleEventPayloadIfExceptionThrown(TestContext testContext) throws UnsupportedEncodingException {
     Async async = testContext.async();
 
+    MatchDetail personalNameMatchDetail = new MatchDetail()
+      .withMatchCriterion(EXACTLY_MATCHES)
+      .withExistingMatchExpression(new MatchExpression()
+        .withDataValueType(VALUE_FROM_RECORD)
+        .withFields(singletonList(
+          new Field().withLabel("personalName").withValue("authority.personalName"))
+        )
+      );
+    DataImportEventPayload eventPayload = createEventPayload(personalNameMatchDetail);
+
     doThrow(new UnsupportedEncodingException()).when(collection)
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
     EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
-    DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
       testContext.assertNotNull(throwable);
@@ -220,11 +352,20 @@ public class MatchAuthorityEventHandlerUnitTest {
   public void shouldNotMatchOnHandleEventPayloadIfValueIsMissing(TestContext testContext) {
     Async async = testContext.async();
 
+    MatchDetail personalNameMatchDetail = new MatchDetail()
+      .withMatchCriterion(EXACTLY_MATCHES)
+      .withExistingMatchExpression(new MatchExpression()
+        .withDataValueType(VALUE_FROM_RECORD)
+        .withFields(singletonList(
+          new Field().withLabel("personalName").withValue("authority.personalName"))
+        )
+      );
+    DataImportEventPayload eventPayload = createEventPayload(personalNameMatchDetail);
+
     when(marcValueReader.read(any(DataImportEventPayload.class), any(MatchDetail.class)))
       .thenReturn(MissingValue.getInstance());
 
     EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
-    DataImportEventPayload eventPayload = createEventPayload();
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
       testContext.assertNull(throwable);
@@ -280,6 +421,15 @@ public class MatchAuthorityEventHandlerUnitTest {
   public void shouldMatchWithSubMatchByAuthorityOnHandleEventPayload(TestContext testContext) throws UnsupportedEncodingException {
     Async async = testContext.async();
 
+    MatchDetail personalNameMatchDetail = new MatchDetail()
+      .withMatchCriterion(EXACTLY_MATCHES)
+      .withExistingMatchExpression(new MatchExpression()
+        .withDataValueType(VALUE_FROM_RECORD)
+        .withFields(singletonList(
+          new Field().withLabel("personalName").withValue("authority.personalName"))
+        )
+      );
+
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Authority>>> callback = ans.getArgument(2);
       Success<MultipleRecords<Authority>> result =
@@ -294,7 +444,7 @@ public class MatchAuthorityEventHandlerUnitTest {
     HashMap<String, String> context = new HashMap<>();
     context.put(AUTHORITY.value(), JsonObject.mapFrom(createAuthority()).encode());
     context.put("MAPPING_PARAMS", new JsonObject().encode());
-    DataImportEventPayload eventPayload = createEventPayload().withContext(context);
+    DataImportEventPayload eventPayload = createEventPayload(personalNameMatchDetail).withContext(context);
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
       testContext.assertNull(throwable);
@@ -306,14 +456,13 @@ public class MatchAuthorityEventHandlerUnitTest {
       testContext.assertEquals(DI_INVENTORY_AUTHORITY_MATCHED.value(), updatedEventPayload.getEventType());
       async.complete();
     });
-
   }
 
   private Authority createAuthority() {
-    return new Authority().withId(AUTHORITY_ID).withPersonalName(PERSONAL_NAME);
+    return new Authority().withId(AUTHORITY_ID).withPersonalName(PERSONAL_NAME).withIdentifiers(singletonList(IDENTIFIER));
   }
 
-  private DataImportEventPayload createEventPayload() {
+  private DataImportEventPayload createEventPayload(MatchDetail matchDetail) {
     return new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_AUTHORITY_RECORD_CREATED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
@@ -328,12 +477,7 @@ public class MatchAuthorityEventHandlerUnitTest {
         .withContent(new MatchProfile()
           .withExistingRecordType(AUTHORITY)
           .withIncomingRecordType(MARC_AUTHORITY)
-          .withMatchDetails(singletonList(new MatchDetail()
-            .withMatchCriterion(EXACTLY_MATCHES)
-            .withExistingMatchExpression(new MatchExpression()
-              .withDataValueType(VALUE_FROM_RECORD)
-              .withFields(singletonList(
-                new Field().withLabel("field").withValue("authority.personalName"))
-              ))))));
+          .withMatchDetails(singletonList(matchDetail)))
+      );
   }
 }
