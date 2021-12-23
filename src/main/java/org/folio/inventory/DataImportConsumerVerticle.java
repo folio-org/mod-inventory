@@ -1,6 +1,8 @@
 package org.folio.inventory;
 
 import static java.lang.String.format;
+
+import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_MATCHED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_MATCHED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_NOT_MATCHED;
@@ -77,7 +79,7 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
     DI_INVENTORY_HOLDING_MATCHED, DI_INVENTORY_HOLDING_NOT_MATCHED,
     DI_INVENTORY_ITEM_CREATED, DI_INVENTORY_ITEM_MATCHED,
     DI_INVENTORY_ITEM_NOT_MATCHED, DI_INVENTORY_ITEM_CREATED,
-    DI_SRS_MARC_AUTHORITY_RECORD_CREATED);
+    DI_INVENTORY_AUTHORITY_MATCHED, DI_SRS_MARC_AUTHORITY_RECORD_CREATED);
 
   private final int loadLimit = getLoadLimit();
   private final int maxDistributionNumber = getMaxDistributionNumber();

@@ -3,7 +3,6 @@ package org.folio.inventory.dataimport.consumers;
 import static java.lang.String.format;
 import static org.folio.DataImportEventTypes.DI_ERROR;
 
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -19,7 +18,7 @@ import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
 import org.folio.inventory.dataimport.handlers.actions.CreateHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler;
-import org.folio.inventory.dataimport.handlers.actions.CreateMarcAuthorityEventHandler;
+import org.folio.inventory.dataimport.handlers.actions.CreateAuthorityEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateMarcHoldingsEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.actions.MarcBibMatchedPostProcessingEventHandler;
@@ -28,6 +27,7 @@ import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitles
 import org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.UpdateHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler;
+import org.folio.inventory.dataimport.handlers.actions.UpdateAuthorityEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchItemEventHandler;
@@ -143,7 +143,8 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     EventManager.registerEventHandler(new CreateHoldingEventHandler(storage, mappingMetadataCache));
     EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache));
     EventManager.registerEventHandler(new CreateMarcHoldingsEventHandler(storage, mappingMetadataCache));
-    EventManager.registerEventHandler(new CreateMarcAuthorityEventHandler(storage, mappingMetadataCache));
+    EventManager.registerEventHandler(new CreateAuthorityEventHandler(storage, mappingMetadataCache));
+    EventManager.registerEventHandler(new UpdateAuthorityEventHandler(storage, mappingMetadataCache));
     EventManager.registerEventHandler(new UpdateItemEventHandler(storage, mappingMetadataCache));
     EventManager.registerEventHandler(new UpdateHoldingEventHandler(storage, mappingMetadataCache));
     EventManager.registerEventHandler(new ReplaceInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache));
