@@ -15,8 +15,6 @@ import io.vertx.sqlclient.Tuple;
 import io.vertx.sqlclient.PoolOptions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
 import javax.annotation.PreDestroy;
 import java.util.Collections;
@@ -26,24 +24,26 @@ import java.util.Map;
 import static org.folio.inventory.rest.util.ModuleUtil.convertToPsqlStandard;
 import static org.folio.inventory.rest.util.ModuleName.getModuleName;
 
-@Component
 public class PostgresClientFactory {
 
   private static final Logger LOGGER = LogManager.getLogger(PostgresClientFactory.class);
 
+  public static final String DB_HOST = "DB_HOST";
+  public static final String DB_PORT = "DB_PORT";
+  public static final String DB_DATABASE = "DB_DATABASE";
+  public static final String DB_USERNAME = "DB_USERNAME";
+  public static final String DB_PASSWORD = "DB_PASSWORD";
+  public static final String DB_MAXPOOLSIZE = "DB_MAXPOOLSIZE";
+  public static final String DB_SERVER_PEM = "DB_SERVER_PEM";
+  public static final String DB_QUERYTIMEOUT = "DB_QUERYTIMEOUT";
+
   private static final Map<String, PgPool> POOL_CACHE = new HashMap<>();
   private static final String MODULE_NAME = getModuleName();
   private static final String DEFAULT_SCHEMA_PROPERTY = "search_path";
-  private static final Integer DEFAULT_IDLE_TIMEOUT = 60000;
+  private static final String DEFAULT_IDLE_TIMEOUT = "60000";
+  private static final String DEFAULT_MAX_POOL_SIZE = "5";
 
-  static String host = System.getenv("DB_HOST");
-  static String port = System.getenv("DB_PORT");
-  static String user = System.getenv("DB_USERNAME");
-  static String password = System.getenv("DB_PASSWORD");
-  static String database = System.getenv("DB_DATABASE");
-  static String maxPoolSize = System.getenv("DB_MAXPOOLSIZE");
-  static String serverPem = System.getenv("DB_SERVER_PEM");
-  static String queryTimeout = System.getenv("DB_QUERYTIMEOUT");
+  private static Map<String, String> properties = System.getenv();
 
   static PgConnectOptions pgConnectOptions = new PgConnectOptions();
 
@@ -54,7 +54,6 @@ public class PostgresClientFactory {
 
   private Vertx vertx;
 
-  @Autowired
   public PostgresClientFactory(Vertx vertx) {
     this.vertx = vertx;
   }
@@ -73,7 +72,7 @@ public class PostgresClientFactory {
     // assumes a single thread Vert.x model so no synchronized needed
     if (POOL_CACHE.containsKey(tenantId) && !shouldResetPool) {
       LOGGER.debug("Using existing database connection pool for tenant {}.", tenantId);
-      return POOL_CACHE.get(tenantId);
+      return getPgPoolFromCache(tenantId);
     }
     if (shouldResetPool) {
       POOL_CACHE.remove(tenantId);
@@ -81,11 +80,19 @@ public class PostgresClientFactory {
     }
     LOGGER.info("Creating new database connection pool for tenant {}.", tenantId);
     PgConnectOptions connectOptions = getConnectionOptions(tenantId);
-    PoolOptions poolOptions = new PoolOptions().setMaxSize(Integer.parseInt(maxPoolSize));
-    PgPool client = PgPool.pool(vertx, connectOptions, poolOptions);
-    POOL_CACHE.put(tenantId, client);
+    PoolOptions poolOptions = new PoolOptions().setMaxSize(Integer.parseInt(getProperty(DB_MAXPOOLSIZE) != null ? getProperty(DB_MAXPOOLSIZE) : DEFAULT_MAX_POOL_SIZE));
+    PgPool pgPool = PgPool.pool(vertx, connectOptions, poolOptions);
+    putPgPoolToCache(tenantId, pgPool);
 
-    return client;
+    return pgPool;
+  }
+
+  public static PgPool getPgPoolFromCache(String tenantId) {
+    return POOL_CACHE.get(tenantId);
+  }
+
+  public static void putPgPoolToCache(String tenantId, PgPool pgPool) {
+    POOL_CACHE.put(tenantId, pgPool);
   }
 
   /**
@@ -98,7 +105,7 @@ public class PostgresClientFactory {
     return getCachedPool(this.vertx, tenantId);
   }
 
-  public static void setDefaultConnectOptions(PgConnectOptions connectOptions) {
+  public static void setDefaultConnectionOptions(PgConnectOptions connectOptions) {
     PostgresClientFactory.pgConnectOptions = connectOptions;
   }
 
@@ -109,45 +116,51 @@ public class PostgresClientFactory {
    * @return postgres connection options
    */
   public static PgConnectOptions getConnectionOptions(String tenantId) {
-    PgConnectOptions connectOptions = pgConnectOptions;
-
-    fillPgConnectOptions(connectOptions);
-
+    fillPgConnectOptions();
     if (tenantId != null) {
-      connectOptions.addProperty(DEFAULT_SCHEMA_PROPERTY, convertToPsqlStandard(tenantId));
+      pgConnectOptions.addProperty(DEFAULT_SCHEMA_PROPERTY, convertToPsqlStandard(tenantId));
     }
-
-    return connectOptions;
+    return pgConnectOptions;
   }
 
-  public static void fillPgConnectOptions(PgConnectOptions connectOptions) {
+  public static void fillPgConnectOptions() {
+    pgConnectOptions.getProperties().put("application_name", MODULE_NAME);
+    if (getProperty(DB_HOST) != null) {
+      pgConnectOptions.setHost(getProperty(DB_HOST));
+    }
+    if (getProperty(DB_PORT) != null) {
+      pgConnectOptions.setPort(Integer.parseInt(getProperty(DB_PORT)));
+    }
+    if (getProperty(DB_DATABASE) != null) {
+      pgConnectOptions.setDatabase(getProperty(DB_DATABASE));
+    }
+    if (getProperty(DB_USERNAME) != null) {
+      pgConnectOptions.setUser(getProperty(DB_USERNAME));
+    }
+    if (getProperty(DB_PASSWORD) != null) {
+      pgConnectOptions.setPassword(getProperty(DB_PASSWORD));
+    }
+    if (getProperty(DB_SERVER_PEM) != null) {
+      pgConnectOptions.setSslMode(SslMode.VERIFY_FULL);
+      pgConnectOptions.setHostnameVerificationAlgorithm("HTTPS");
+      pgConnectOptions.setPemTrustOptions(
+        new PemTrustOptions().addCertValue(Buffer.buffer(getProperty(DB_SERVER_PEM))));
+      pgConnectOptions.setEnabledSecureTransportProtocols(Collections.singleton("TLSv1.3"));
+      pgConnectOptions.setOpenSslEngineOptions(new OpenSSLEngineOptions());
+    }
+    pgConnectOptions.setIdleTimeout(Integer.parseInt(getProperty(DB_QUERYTIMEOUT) != null ? getProperty(DB_QUERYTIMEOUT) : DEFAULT_IDLE_TIMEOUT));
+  }
 
-    connectOptions.getProperties().put("application_name", MODULE_NAME);
+  public static String getProperty(String key) {
+    return properties.get(key);
+  }
 
-    if (host != null) {
-      connectOptions.setHost(host);
-    }
-    if (port != null) {
-      connectOptions.setPort(Integer.parseInt(port));
-    }
-    if (database != null) {
-      connectOptions.setDatabase(database);
-    }
-    if (user != null) {
-      connectOptions.setUser(user);
-    }
-    if (password != null) {
-      connectOptions.setPassword(password);
-    }
-    if (serverPem != null) {
-      connectOptions.setSslMode(SslMode.VERIFY_FULL);
-      connectOptions.setHostnameVerificationAlgorithm("HTTPS");
-      connectOptions.setPemTrustOptions(
-        new PemTrustOptions().addCertValue(Buffer.buffer(serverPem)));
-      connectOptions.setEnabledSecureTransportProtocols(Collections.singleton("TLSv1.3"));
-      connectOptions.setOpenSslEngineOptions(new OpenSSLEngineOptions());
-    }
-    connectOptions.setIdleTimeout(queryTimeout != null ? Integer.parseInt(queryTimeout) : DEFAULT_IDLE_TIMEOUT);
+  public static void setProperties(Map<String, String> props) {
+    properties = props;
+  }
+
+  public static Map<String, String> getProperties() {
+    return properties;
   }
 
   /**
@@ -179,7 +192,7 @@ public class PostgresClientFactory {
     client.close();
   }
 
-  public static void setShouldResetPool(boolean shouldResetPool) {
+  public void setShouldResetPool(boolean shouldResetPool) {
     PostgresClientFactory.shouldResetPool = shouldResetPool;
   }
 

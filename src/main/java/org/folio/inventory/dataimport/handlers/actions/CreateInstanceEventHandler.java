@@ -15,7 +15,7 @@ import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.domain.relationship.RecordToEntity;
-import org.folio.inventory.services.InstanceIdStorageService;
+import org.folio.inventory.services.IdStorageService;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
@@ -53,13 +53,13 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
   private PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
   private MappingMetadataCache mappingMetadataCache;
-  private InstanceIdStorageService instanceIdStorageService;
+  private org.folio.inventory.services.IdStorageService idStorageService;
 
-  public CreateInstanceEventHandler(Storage storage, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper, MappingMetadataCache mappingMetadataCache, InstanceIdStorageService instanceIdStorageService) {
+  public CreateInstanceEventHandler(Storage storage, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper, MappingMetadataCache mappingMetadataCache, IdStorageService idStorageService) {
     super(storage);
     this.mappingMetadataCache = mappingMetadataCache;
     this.precedingSucceedingTitlesHelper = precedingSucceedingTitlesHelper;
-    this.instanceIdStorageService = instanceIdStorageService;
+    this.idStorageService = idStorageService;
   }
 
   @Override
@@ -84,7 +84,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       Record targetRecord = Json.decodeValue(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()), Record.class);
-      Future<Optional<RecordToEntity>> recordToInstanceFuture = instanceIdStorageService.store(targetRecord.getId(), UUID.randomUUID().toString(), dataImportEventPayload.getTenant());
+      Future<Optional<RecordToEntity>> recordToInstanceFuture = idStorageService.store(targetRecord.getId(), UUID.randomUUID().toString(), dataImportEventPayload.getTenant());
       String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
 
       recordToInstanceFuture.onSuccess(res -> {

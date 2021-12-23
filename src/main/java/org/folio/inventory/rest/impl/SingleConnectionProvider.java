@@ -19,8 +19,7 @@ public class SingleConnectionProvider {
 
   public static Connection getConnection(String tenant) throws SQLException {
     LOGGER.info("Attempting to get connection for tenant {}", tenant);
-    PgConnectOptions connectOptions = new PgConnectOptions();
-    PostgresClientFactory.fillPgConnectOptions(connectOptions);
+    PgConnectOptions connectOptions = PostgresClientFactory.getConnectionOptions(tenant);
     return getConnectionInternal(connectOptions);
   }
 
