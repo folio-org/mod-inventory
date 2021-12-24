@@ -45,7 +45,7 @@ public class EntityIdStorageDaoImpl implements EntityIdStorageDao {
     UUID entityId = UUID.fromString(recordToEntity.getEntityId());
     String tableName = entityTable.getTableName();
 
-    LOGGER.info("Trying to save entity to {} with recordId = {} and instanceId = {}", tableName, recordId, entityId);
+    LOGGER.info("Trying to save entity to {} with recordId = {} and entityId = {}", tableName, recordId, entityId);
     String sql = prepareQuery(entityTable);
     Tuple tuple = Tuple.of(recordId, entityId);
 
