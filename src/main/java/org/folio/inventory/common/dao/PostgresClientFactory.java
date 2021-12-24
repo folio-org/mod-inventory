@@ -13,6 +13,7 @@ import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowSet;
 import io.vertx.sqlclient.Tuple;
 import io.vertx.sqlclient.PoolOptions;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -87,11 +88,11 @@ public class PostgresClientFactory {
     return pgPool;
   }
 
-  public static PgPool getPgPoolFromCache(String tenantId) {
+  private static PgPool getPgPoolFromCache(String tenantId) {
     return POOL_CACHE.get(tenantId);
   }
 
-  public static void putPgPoolToCache(String tenantId, PgPool pgPool) {
+  private static void putPgPoolToCache(String tenantId, PgPool pgPool) {
     POOL_CACHE.put(tenantId, pgPool);
   }
 
@@ -117,7 +118,7 @@ public class PostgresClientFactory {
    */
   public static PgConnectOptions getConnectionOptions(String tenantId) {
     fillPgConnectOptions();
-    if (tenantId != null) {
+    if (StringUtils.isNotBlank(tenantId)) {
       pgConnectOptions.addProperty(DEFAULT_SCHEMA_PROPERTY, convertToPsqlStandard(tenantId));
     }
     return pgConnectOptions;
@@ -125,22 +126,22 @@ public class PostgresClientFactory {
 
   public static void fillPgConnectOptions() {
     pgConnectOptions.getProperties().put("application_name", MODULE_NAME);
-    if (getProperty(DB_HOST) != null) {
+    if (StringUtils.isNotBlank(getProperty(DB_HOST))) {
       pgConnectOptions.setHost(getProperty(DB_HOST));
     }
-    if (getProperty(DB_PORT) != null) {
+    if (StringUtils.isNotBlank(getProperty(DB_PORT))) {
       pgConnectOptions.setPort(Integer.parseInt(getProperty(DB_PORT)));
     }
-    if (getProperty(DB_DATABASE) != null) {
+    if (StringUtils.isNotBlank(getProperty(DB_DATABASE))) {
       pgConnectOptions.setDatabase(getProperty(DB_DATABASE));
     }
-    if (getProperty(DB_USERNAME) != null) {
+    if (StringUtils.isNotBlank(getProperty(DB_USERNAME))) {
       pgConnectOptions.setUser(getProperty(DB_USERNAME));
     }
-    if (getProperty(DB_PASSWORD) != null) {
+    if (StringUtils.isNotBlank(getProperty(DB_PASSWORD))) {
       pgConnectOptions.setPassword(getProperty(DB_PASSWORD));
     }
-    if (getProperty(DB_SERVER_PEM) != null) {
+    if (StringUtils.isNotBlank(getProperty(DB_SERVER_PEM))) {
       pgConnectOptions.setSslMode(SslMode.VERIFY_FULL);
       pgConnectOptions.setHostnameVerificationAlgorithm("HTTPS");
       pgConnectOptions.setPemTrustOptions(

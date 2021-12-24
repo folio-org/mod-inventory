@@ -53,7 +53,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
   private PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
   private MappingMetadataCache mappingMetadataCache;
-  private org.folio.inventory.services.IdStorageService idStorageService;
+  private IdStorageService idStorageService;
 
   public CreateInstanceEventHandler(Storage storage, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper, MappingMetadataCache mappingMetadataCache, IdStorageService idStorageService) {
     super(storage);
