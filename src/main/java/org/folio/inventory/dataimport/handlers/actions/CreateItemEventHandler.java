@@ -4,12 +4,17 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-
+import static java.lang.String.format;
 import org.apache.commons.lang3.StringUtils;
+import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile;
+import static org.folio.ActionProfile.Action.CREATE;
+import static org.folio.ActionProfile.FolioRecord.ITEM;
 import org.folio.DataImportEventPayload;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_CREATED;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
@@ -19,6 +24,8 @@ import org.folio.inventory.domain.items.CirculationNote;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.ItemStatusName;
+import org.folio.inventory.domain.relationship.RecordToEntity;
+import org.folio.inventory.services.IdStorageService;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.CqlHelper;
 import org.folio.inventory.support.ItemUtil;
@@ -29,27 +36,16 @@ import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.processing.mapping.mapper.MappingContext;
 import org.folio.rest.jaxrs.model.EntityType;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import org.folio.rest.jaxrs.model.Record;
 
 import java.io.UnsupportedEncodingException;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
-
-import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.folio.ActionProfile.Action.CREATE;
-import static org.folio.ActionProfile.FolioRecord.ITEM;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_CREATED;
-import static org.folio.processing.events.services.publisher.KafkaEventPublisher.RECORD_ID_HEADER;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 public class CreateItemEventHandler implements EventHandler {
 
@@ -73,10 +69,12 @@ public class CreateItemEventHandler implements EventHandler {
 
   private final Storage storage;
   private final MappingMetadataCache mappingMetadataCache;
+  private IdStorageService idStorageService;
 
-  public CreateItemEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache) {
+  public CreateItemEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache, IdStorageService idStorageService) {
     this.storage = storage;
     this.mappingMetadataCache = mappingMetadataCache;
+    this.idStorageService = idStorageService;
   }
 
   @Override
@@ -99,14 +97,15 @@ public class CreateItemEventHandler implements EventHandler {
       dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
       dataImportEventPayload.getContext().put(ITEM.value(), new JsonObject().encode());
 
+      String jobExecutionId = dataImportEventPayload.getJobExecutionId();
+      String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
+      String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
+
+      Future<Optional<RecordToEntity>> recordToItemFuture = idStorageService.store(recordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant());
+      // todo
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       ItemCollection itemCollection = storage.getItemCollection(context);
 
-      String jobExecutionId = dataImportEventPayload.getJobExecutionId();
-
-
-      String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
-      String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
       mappingMetadataCache.get(jobExecutionId, context)
         .map(parametersOptional -> parametersOptional
           .orElseThrow(() -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId,

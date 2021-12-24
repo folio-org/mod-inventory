@@ -16,6 +16,7 @@ import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.Status;
+import org.folio.inventory.services.InstanceIdStorageService;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
@@ -73,6 +74,8 @@ public class CreateItemEventHandlerTest {
   private Reader fakeReader;
   @Mock
   private MappingMetadataCache mappingMetadataCache;
+  @Mock
+  private InstanceIdStorageService instanceIdStorageService;
   @Spy
   private MarcBibReaderFactory fakeReaderFactory = new MarcBibReaderFactory();
 
@@ -131,7 +134,7 @@ public class CreateItemEventHandlerTest {
         .withMappingRules(new JsonObject().encode())
         .withMappingParams(Json.encode(new MappingParameters())))));
 
-    createItemHandler = new CreateItemEventHandler(mockedStorage, mappingMetadataCache);
+    createItemHandler = new CreateItemEventHandler(mockedStorage, mappingMetadataCache, instanceIdStorageService);
     MappingManager.clearReaderFactories();
   }
 
@@ -277,7 +280,7 @@ public class CreateItemEventHandlerTest {
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new ItemWriterFactory());
 
-    CreateItemEventHandler createItemHandler = new CreateItemEventHandler(mockedStorage, mappingMetadataCache);
+    CreateItemEventHandler createItemHandler = new CreateItemEventHandler(mockedStorage, mappingMetadataCache, instanceIdStorageService);
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_HOLDING_ID));
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
@@ -471,7 +474,7 @@ public class CreateItemEventHandlerTest {
   @Test
   public void shouldReturnFailedFutureWhenCurrentActionProfileHasNoMappingProfile() {
     // given
-    CreateItemEventHandler createItemHandler = new CreateItemEventHandler(mockedStorage, mappingMetadataCache);
+    CreateItemEventHandler createItemHandler = new CreateItemEventHandler(mockedStorage, mappingMetadataCache, instanceIdStorageService);
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_HOLDING_ID));
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
