@@ -95,11 +95,13 @@ public class PostgresClientFactoryTest {
     setDefaultConnectionOptions(expectedPgConnectOptions);
     PgConnectOptions connectionOptions = getConnectionOptions(null);
     assertEquals(expectedPgConnectOptions, connectionOptions);
+
+    setDefaultConnectionOptions(new PgConnectOptions());
   }
 
   @Test
   public void shouldReturnInitializedConnectionOptions() {
-    String expectedServerPem = randomAlphaString(100);
+    String serverPem = randomAlphaString(100);
     Set<String> expectedEnabledSecureTransportProtocols = Collections.singleton("TLSv1.3");
     Map<String, String> propertiesMap = new HashMap<>();
     propertiesMap.put(DB_HOST, "localhost");
@@ -108,7 +110,7 @@ public class PostgresClientFactoryTest {
     propertiesMap.put(DB_PASSWORD, "test");
     propertiesMap.put(DB_DATABASE, "test");
     propertiesMap.put(DB_MAXPOOLSIZE, String.valueOf(5));
-    propertiesMap.put(DB_SERVER_PEM, expectedServerPem);
+    propertiesMap.put(DB_SERVER_PEM, serverPem);
     propertiesMap.put(DB_QUERYTIMEOUT, String.valueOf(60000));
     setProperties(propertiesMap);
 

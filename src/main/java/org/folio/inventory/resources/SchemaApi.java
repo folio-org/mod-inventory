@@ -12,10 +12,9 @@ import liquibase.exception.LiquibaseException;
 import liquibase.resource.ClassLoaderResourceAccessor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.HttpStatus;
 import org.folio.inventory.common.WebContext;
-
 import java.sql.Connection;
-import java.sql.SQLException;
 
 import static java.lang.String.format;
 import static org.folio.inventory.rest.util.ModuleUtil.convertToPsqlStandard;
@@ -34,36 +33,30 @@ public class SchemaApi {
   }
 
   public void create(RoutingContext routingContext) {
-
     WebContext context = new WebContext(routingContext);
 
-    loadData(context.getTenantId())
-      .onComplete(res -> {
-        routingContext.response().setStatusCode(200).end();
-      });
+    initializeSchemaForTenant(context.getTenantId())
+      .onSuccess(result -> routingContext.response().setStatusCode(HttpStatus.HTTP_OK.toInt()).end())
+      .onFailure(fail -> routingContext.response().setStatusCode(HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt()).end(fail.toString()));
   }
 
-  Future<Integer> loadData(String tenantId) {
-    return Future.succeededFuture(0).compose(num -> {
-      initializeSchemaForTenant(tenantId);
-      return Future.succeededFuture(num);
-    });
-  }
-
-  public static void initializeSchemaForTenant(String tenant) {
+  public static Future<Integer> initializeSchemaForTenant(String tenant) {
     String schemaName = convertToPsqlStandard(tenant);
     LOGGER.info("Initializing schema {} for tenant {}", schemaName, tenant);
     try (Connection connection = getConnection(tenant)) {
       boolean schemaIsNotExecuted = connection.prepareStatement(format("CREATE SCHEMA IF NOT EXISTS %s", schemaName)).execute();
       if (schemaIsNotExecuted) {
-        throw new SQLException(String.format("Cannot create schema %s", schemaName));
+        return Future.failedFuture(String.format("Cannot create schema %s", schemaName));
       } else {
         LOGGER.info("Schema {} created or already exists", schemaName);
         runScripts(schemaName, connection);
         LOGGER.info("Schema is initialized for tenant {}", tenant);
+        return Future.succeededFuture(0);
       }
     } catch (Exception e) {
-      LOGGER.error(format("Error while initializing schema %s for tenant %s", schemaName, tenant), e);
+      String cause = format("Error while initializing schema %s for tenant %s", schemaName, tenant);
+      LOGGER.error(cause, e);
+      return Future.failedFuture(cause);
     }
   }
 

@@ -42,7 +42,6 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
-import org.testcontainers.containers.PostgreSQLContainer;
 import support.fakes.FakeOkapi;
 
 @RunWith(Suite.class)
@@ -115,8 +114,6 @@ public class ApiTestSuite {
 
   private static boolean initialised;
 
-  public static PostgreSQLContainer<?> postgresSQLContainer;
-
   @BeforeClass
   public static void before()
     throws InterruptedException,
@@ -131,6 +128,7 @@ public class ApiTestSuite {
       System.getProperty("use.okapi.storage.requests")));
 
     startVertx();
+    stopPostgresqlContainer();
     startPostgresqlContainer();
     startFakeModules();
     createMaterialTypes();
@@ -553,12 +551,12 @@ public class ApiTestSuite {
   }
 
   private static void startPostgresqlContainer() {
-    postgresSQLContainer = PgPoolContainer.create();
+    PgPoolContainer.create();
   }
 
   private static void stopPostgresqlContainer() {
-    if (postgresSQLContainer.isRunning()) {
-      postgresSQLContainer.stop();
+    if (PgPoolContainer.isRunning()) {
+      PgPoolContainer.stop();
     }
   }
 }
