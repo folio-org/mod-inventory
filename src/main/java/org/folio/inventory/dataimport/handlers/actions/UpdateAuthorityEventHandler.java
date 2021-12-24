@@ -6,6 +6,7 @@ import static org.folio.ActionProfile.Action.UPDATE;
 import static org.folio.ActionProfile.FolioRecord.AUTHORITY;
 import static org.folio.ActionProfile.FolioRecord.MARC_AUTHORITY;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_UPDATED;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -16,6 +17,7 @@ import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.exceptions.DataImportException;
 import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.storage.Storage;
+import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 
 public class UpdateAuthorityEventHandler extends AbstractAuthorityEventHandler {
 
@@ -48,6 +50,11 @@ public class UpdateAuthorityEventHandler extends AbstractAuthorityEventHandler {
   @Override
   protected ActionProfile.FolioRecord targetRecordType() {
     return AUTHORITY;
+  }
+
+  @Override
+  protected ProfileSnapshotWrapper.ContentType profileContentType() {
+    return MAPPING_PROFILE;
   }
 
   private Future<Authority> updateAuthority(Authority authority, AuthorityRecordCollection authorityRecordCollection) {

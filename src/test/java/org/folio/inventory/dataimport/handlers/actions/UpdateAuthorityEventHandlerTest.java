@@ -12,6 +12,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
+import static org.folio.ActionProfile.Action.MODIFY;
 import static org.folio.ActionProfile.FolioRecord.AUTHORITY;
 import static org.folio.ActionProfile.FolioRecord.ITEM;
 import static org.folio.ActionProfile.FolioRecord.MARC_AUTHORITY;
@@ -48,7 +49,6 @@ import org.mockito.MockitoAnnotations;
 
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
-import org.folio.JobProfile;
 import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
 import org.folio.inventory.TestUtil;
@@ -61,7 +61,6 @@ import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.MappingDetail;
-import org.folio.rest.jaxrs.model.MappingRule;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
@@ -73,49 +72,31 @@ public class UpdateAuthorityEventHandlerTest {
   private static final String MAPPING_METADATA_URL = "/mapping-metadata";
 
   private final Vertx vertx = Vertx.vertx();
-
-  private final JobProfile jobProfile = new JobProfile()
-    .withId(UUID.randomUUID().toString())
-    .withName("Update MARC Authority")
-    .withDataType(JobProfile.DataType.MARC);
-
-  private final ActionProfile actionProfile = new ActionProfile()
-    .withId(UUID.randomUUID().toString())
-    .withName("Update preliminary Authority")
-    .withAction(ActionProfile.Action.UPDATE)
-    .withFolioRecord(AUTHORITY);
-
-  private final MappingProfile mappingProfile = new MappingProfile()
-    .withId(UUID.randomUUID().toString())
-    .withName("preliminary Authority from MARC")
-    .withIncomingRecordType(EntityType.MARC_AUTHORITY)
-    .withExistingRecordType(EntityType.AUTHORITY)
-    .withMappingDetails(new MappingDetail()
-      .withMappingFields(Collections.singletonList(
-        new MappingRule().withPath("permanentLocationId").withValue("permanentLocationExpression").withEnabled("true"))));
-
-  private final ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
-    .withId(UUID.randomUUID().toString())
-    .withProfileId(jobProfile.getId())
-    .withContentType(JOB_PROFILE)
-    .withContent(jobProfile)
-    .withChildSnapshotWrappers(Collections.singletonList(
-      new ProfileSnapshotWrapper()
-        .withProfileId(actionProfile.getId())
-        .withContentType(ACTION_PROFILE)
-        .withContent(actionProfile)
-        .withChildSnapshotWrappers(Collections.singletonList(
-          new ProfileSnapshotWrapper()
-            .withProfileId(mappingProfile.getId())
-            .withContentType(MAPPING_PROFILE)
-            .withContent(JsonObject.mapFrom(mappingProfile).getMap())))));
-
   @Rule
   public WireMockRule mockServer = new WireMockRule(
     WireMockConfiguration.wireMockConfig()
       .dynamicPort()
       .notifier(new Slf4jNotifier(true)));
-
+  private ActionProfile actionProfile = new ActionProfile()
+    .withId(UUID.randomUUID().toString())
+    .withName("Update item-SR")
+    .withAction(MODIFY)
+    .withFolioRecord(ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC);
+  private MappingProfile mappingProfile = new MappingProfile()
+    .withId(UUID.randomUUID().toString())
+    .withName("Modify MARC bib")
+    .withIncomingRecordType(EntityType.MARC_AUTHORITY)
+    .withExistingRecordType(EntityType.MARC_AUTHORITY)
+    .withMappingDetails(new MappingDetail());
+  private ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
+    .withProfileId(actionProfile.getId())
+    .withContentType(ACTION_PROFILE)
+    .withContent(JsonObject.mapFrom(actionProfile).getMap())
+    .withChildSnapshotWrappers(Collections.singletonList(
+      new ProfileSnapshotWrapper()
+        .withProfileId(mappingProfile.getId())
+        .withContentType(MAPPING_PROFILE)
+        .withContent(JsonObject.mapFrom(mappingProfile).getMap())));
   @Mock
   private AuthorityRecordCollection authorityCollection;
 
@@ -270,20 +251,6 @@ public class UpdateAuthorityEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_AUTHORITY_MATCHED.value())
       .withContext(new HashMap<>());
-    assertFalse(eventHandler.isEligible(dataImportEventPayload));
-  }
-
-  @Test
-  public void isEligibleShouldReturnFalseIfCurrentNodeIsNotActionProfile() {
-    ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
-      .withId(UUID.randomUUID().toString())
-      .withProfileId(jobProfile.getId())
-      .withContentType(JOB_PROFILE)
-      .withContent(jobProfile);
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_AUTHORITY_MATCHED.value())
-      .withContext(new HashMap<>())
-      .withCurrentNode(profileSnapshotWrapper);
     assertFalse(eventHandler.isEligible(dataImportEventPayload));
   }
 

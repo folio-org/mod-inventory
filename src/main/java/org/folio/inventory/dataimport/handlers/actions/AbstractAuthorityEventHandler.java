@@ -1,9 +1,11 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import static io.vertx.core.json.JsonObject.mapFrom;
 import static java.lang.String.format;
 
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -21,6 +23,7 @@ import org.folio.ActionProfile;
 import org.folio.Authority;
 import org.folio.DataImportEventPayload;
 import org.folio.MappingMetadataDto;
+import org.folio.MappingProfile;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.AuthorityRecordCollection;
@@ -31,6 +34,8 @@ import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.defaultmapper.RecordMapper;
 import org.folio.processing.mapping.defaultmapper.RecordMapperBuilder;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
+import org.folio.rest.jaxrs.model.EntityType;
+import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
 
 public abstract class AbstractAuthorityEventHandler implements EventHandler {
@@ -85,8 +90,13 @@ public abstract class AbstractAuthorityEventHandler implements EventHandler {
   @Override
   public boolean isEligible(DataImportEventPayload payload) {
     if (isExpectedPayload(payload)) {
-      var actionProfile = JsonObject.mapFrom(payload.getCurrentNode().getContent()).mapTo(ActionProfile.class);
-      return isEligibleActionProfile(actionProfile);
+      if (profileContentType() == ACTION_PROFILE) {
+        var actionProfile = mapFrom(payload.getCurrentNode().getContent()).mapTo(ActionProfile.class);
+        return isEligibleActionProfile(actionProfile);
+      } else if (profileContentType() == MAPPING_PROFILE) {
+        var mappingProfile = mapFrom(payload.getCurrentNode().getContent()).mapTo(MappingProfile.class);
+        return isEligibleMappingProfile(mappingProfile);
+      }
     }
     return false;
   }
@@ -105,6 +115,16 @@ public abstract class AbstractAuthorityEventHandler implements EventHandler {
   protected abstract ActionProfile.FolioRecord sourceRecordType();
 
   protected abstract ActionProfile.FolioRecord targetRecordType();
+
+  protected abstract ProfileSnapshotWrapper.ContentType profileContentType();
+
+  private boolean isEligibleMappingProfile(MappingProfile mappingProfile) {
+    return mappingProfile.getExistingRecordType() == EntityType.fromValue(sourceRecordType().value());
+  }
+
+  private boolean isEligibleActionProfile(ActionProfile actionProfile) {
+    return profileAction() == actionProfile.getAction() && targetRecordType() == actionProfile.getFolioRecord();
+  }
 
   private Future<Authority> handleProfileAction(Authority authority, Context context) {
     var authorityCollection = storage.getAuthorityRecordCollection(context);
@@ -128,10 +148,6 @@ public abstract class AbstractAuthorityEventHandler implements EventHandler {
     };
   }
 
-  private boolean isEligibleActionProfile(ActionProfile actionProfile) {
-    return profileAction() == actionProfile.getAction() && targetRecordType() == actionProfile.getFolioRecord();
-  }
-
   private Future<Authority> mapAuthority(DataImportEventPayload payload, MappingMetadataDto mappingMetadata) {
     try {
       var mappingRules = new JsonObject(mappingMetadata.getMappingRules());
@@ -152,17 +168,15 @@ public abstract class AbstractAuthorityEventHandler implements EventHandler {
   private boolean isExpectedPayload(DataImportEventPayload payload) {
     return payload != null
       && payload.getCurrentNode() != null
-      && ACTION_PROFILE == payload.getCurrentNode().getContentType()
-      && !payload.getCurrentNode().getChildSnapshotWrappers().isEmpty()
+      && profileContentType() == payload.getCurrentNode().getContentType()
       && payload.getContext() != null
       && !payload.getContext().isEmpty()
       && StringUtils.isNotBlank(payload.getContext().get(sourceRecordType().value()));
   }
 
-  private void prepareEvent(DataImportEventPayload payload) {
+  protected void prepareEvent(DataImportEventPayload payload) {
     payload.setEventType(nextEventType());
     payload.getEventsChain().add(payload.getEventType());
-    payload.setCurrentNode(payload.getCurrentNode().getChildSnapshotWrappers().get(0));
     payload.getContext().put(targetRecordType().value(), new JsonObject().encode());
   }
 

@@ -238,27 +238,6 @@ public class CreateAuthorityEventHandlerTest {
   }
 
   @Test
-  public void shouldReturnFailedFutureIfCurrentActionProfileHasNoMappingProfile() throws IOException {
-    var parsedAuthorityRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_AUTHORITY_RECORD));
-
-    HashMap<String, String> context = new HashMap<>();
-    context.put(MARC_AUTHORITY.value(),
-      Json.encode(new Record().withParsedRecord(new ParsedRecord().withContent(parsedAuthorityRecord.encode()))));
-
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_SRS_MARC_AUTHORITY_RECORD_CREATED.value())
-      .withContext(context)
-      .withCurrentNode(new ProfileSnapshotWrapper()
-        .withContentType(ACTION_PROFILE)
-        .withContent(actionProfile));
-
-    CompletableFuture<DataImportEventPayload> future = createMarcAuthoritiesEventHandler.handle(dataImportEventPayload);
-
-    ExecutionException exception = assertThrows(ExecutionException.class, future::get);
-    assertThat(exception.getCause().getMessage(), containsString("Unexpected payload"));
-  }
-
-  @Test
   public void isEligibleShouldReturnTrue() throws IOException {
     var parsedAuthorityRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_AUTHORITY_RECORD));
 

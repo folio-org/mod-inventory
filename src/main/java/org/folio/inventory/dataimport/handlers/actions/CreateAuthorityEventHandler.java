@@ -3,15 +3,18 @@ package org.folio.inventory.dataimport.handlers.actions;
 import static org.folio.ActionProfile.FolioRecord.AUTHORITY;
 import static org.folio.ActionProfile.FolioRecord.MARC_AUTHORITY;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_CREATED;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 
 import org.folio.ActionProfile;
 import org.folio.Authority;
+import org.folio.DataImportEventPayload;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.storage.Storage;
+import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 
 public class CreateAuthorityEventHandler extends AbstractAuthorityEventHandler {
 
@@ -34,6 +37,12 @@ public class CreateAuthorityEventHandler extends AbstractAuthorityEventHandler {
   }
 
   @Override
+  protected void prepareEvent(DataImportEventPayload payload) {
+    super.prepareEvent(payload);
+    payload.setCurrentNode(payload.getCurrentNode().getChildSnapshotWrappers().get(0));
+  }
+
+  @Override
   protected String nextEventType() {
     return DI_INVENTORY_AUTHORITY_CREATED.value();
   }
@@ -51,6 +60,11 @@ public class CreateAuthorityEventHandler extends AbstractAuthorityEventHandler {
   @Override
   protected ActionProfile.FolioRecord targetRecordType() {
     return AUTHORITY;
+  }
+
+  @Override
+  protected ProfileSnapshotWrapper.ContentType profileContentType() {
+    return ACTION_PROFILE;
   }
 
 }
