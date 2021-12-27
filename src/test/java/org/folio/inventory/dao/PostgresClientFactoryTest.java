@@ -27,9 +27,9 @@ import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_PASSWO
 import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_MAXPOOLSIZE;
 import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_SERVER_PEM;
 import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_QUERYTIMEOUT;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 
 @RunWith(VertxUnitRunner.class)
 public class PostgresClientFactoryTest {
