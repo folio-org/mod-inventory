@@ -39,12 +39,12 @@ public class PostgresClientFactoryTest {
   static Vertx vertx;
 
   @BeforeClass
-  public static void setUpClass() {
+  public static void setUp() {
     vertx = Vertx.vertx();
   }
 
   @AfterClass
-  public static void tearDownClass(TestContext context) {
+  public static void tearDown(TestContext context) {
     Async async = context.async();
     vertx.close(context.asyncAssertSuccess(res -> {
       async.complete();
