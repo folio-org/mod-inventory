@@ -1,11 +1,12 @@
 package org.folio.inventory.dataimport.consumers;
 
-import static java.lang.String.format;
-import static org.folio.DataImportEventTypes.DI_ERROR;
-
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.Json;
+import io.vertx.ext.web.client.WebClient;
+import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
@@ -30,9 +31,11 @@ import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitles
 import org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.UpdateHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler;
+import org.folio.inventory.dataimport.handlers.matching.MatchAuthorityEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchItemEventHandler;
+import org.folio.inventory.dataimport.handlers.matching.loaders.AuthorityLoader;
 import org.folio.inventory.dataimport.handlers.matching.loaders.HoldingLoader;
 import org.folio.inventory.dataimport.handlers.matching.loaders.InstanceLoader;
 import org.folio.inventory.dataimport.handlers.matching.loaders.ItemLoader;
@@ -53,13 +56,11 @@ import org.folio.processing.matching.reader.MatchValueReaderFactory;
 import org.folio.processing.matching.reader.StaticValueReaderImpl;
 import org.folio.rest.jaxrs.model.Event;
 
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.Json;
-import io.vertx.ext.web.client.WebClient;
-import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
+import static java.lang.String.format;
+import static org.folio.DataImportEventTypes.DI_ERROR;
 
 public class DataImportKafkaHandler implements AsyncRecordHandler<String, String> {
 
@@ -129,6 +130,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     MatchValueLoaderFactory.register(new InstanceLoader(storage, vertx));
     MatchValueLoaderFactory.register(new ItemLoader(storage, vertx));
     MatchValueLoaderFactory.register(new HoldingLoader(storage, vertx));
+    MatchValueLoaderFactory.register(new AuthorityLoader(storage, vertx));
 
     MatchValueReaderFactory.register(new MarcValueReaderImpl());
     MatchValueReaderFactory.register(new StaticValueReaderImpl());
@@ -143,6 +145,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     EventManager.registerEventHandler(new MatchInstanceEventHandler(mappingMetadataCache));
     EventManager.registerEventHandler(new MatchItemEventHandler(mappingMetadataCache));
     EventManager.registerEventHandler(new MatchHoldingEventHandler(mappingMetadataCache));
+    EventManager.registerEventHandler(new MatchAuthorityEventHandler(mappingMetadataCache));
     EventManager.registerEventHandler(new CreateItemEventHandler(storage, mappingMetadataCache));
     EventManager.registerEventHandler(new CreateHoldingEventHandler(storage, mappingMetadataCache));
     EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, new InstanceIdStorageService(new EntityIdStorageDaoImpl(postgresClientFactory))));
