@@ -95,6 +95,8 @@ public class PostgresClientFactoryTest {
   @Test
   public void shouldSetDefaultConnectionOptions() {
     PgConnectOptions expectedPgConnectOptions = new PgConnectOptions();
+
+    PostgresConnectionOptions.setConnectionOptions(new HashMap<>());
     PgConnectOptions actualConnectionOptions = PostgresConnectionOptions.getConnectionOptions(null);
 
     assertEquals(expectedPgConnectOptions.getHost(), actualConnectionOptions.getHost());
