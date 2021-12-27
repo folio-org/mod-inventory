@@ -8,6 +8,7 @@ import io.vertx.pgclient.PgConnectOptions;
 import io.vertx.pgclient.PgPool;
 import io.vertx.pgclient.SslMode;
 import org.folio.inventory.common.dao.PostgresClientFactory;
+import org.folio.inventory.common.dao.PostgresConnectionOptions;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -18,18 +19,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import static org.folio.inventory.common.dao.PostgresClientFactory.setDefaultConnectionOptions;
-import static org.folio.inventory.common.dao.PostgresClientFactory.setProperties;
-import static org.folio.inventory.common.dao.PostgresClientFactory.getProperties;
-import static org.folio.inventory.common.dao.PostgresClientFactory.getConnectionOptions;
-import static org.folio.inventory.common.dao.PostgresClientFactory.DB_HOST;
-import static org.folio.inventory.common.dao.PostgresClientFactory.DB_PORT;
-import static org.folio.inventory.common.dao.PostgresClientFactory.DB_DATABASE;
-import static org.folio.inventory.common.dao.PostgresClientFactory.DB_USERNAME;
-import static org.folio.inventory.common.dao.PostgresClientFactory.DB_PASSWORD;
-import static org.folio.inventory.common.dao.PostgresClientFactory.DB_MAXPOOLSIZE;
-import static org.folio.inventory.common.dao.PostgresClientFactory.DB_SERVER_PEM;
-import static org.folio.inventory.common.dao.PostgresClientFactory.DB_QUERYTIMEOUT;
+import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_HOST;
+import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_PORT;
+import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_DATABASE;
+import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_USERNAME;
+import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_PASSWORD;
+import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_MAXPOOLSIZE;
+import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_SERVER_PEM;
+import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_QUERYTIMEOUT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -56,7 +53,9 @@ public class PostgresClientFactoryTest {
 
   @Test
   public void shouldCreateCachedPool() {
-    PostgresClientFactory postgresClientFactory = new PostgresClientFactory(vertx);
+    PgConnectOptions pgConnectOpts = PostgresConnectionOptions.getConnectionOptions(TENANT_ID);
+    PostgresClientFactory postgresClientFactory =
+      new PostgresClientFactory(vertx, pgConnectOpts);
     PgPool cachedPool = postgresClientFactory.getCachedPool(TENANT_ID);
 
     assertNotNull(cachedPool);
@@ -66,7 +65,9 @@ public class PostgresClientFactoryTest {
 
   @Test
   public void shouldReturnPgPoolFromCache() {
-    PostgresClientFactory postgresClientFactory = new PostgresClientFactory(vertx);
+    PgConnectOptions pgConnectOpts = PostgresConnectionOptions.getConnectionOptions(TENANT_ID);
+    PostgresClientFactory postgresClientFactory =
+      new PostgresClientFactory(vertx, pgConnectOpts);
     PgPool cachedPool = postgresClientFactory.getCachedPool(TENANT_ID);
     PgPool poolFromCache = postgresClientFactory.getCachedPool(TENANT_ID);
     assertNotNull(cachedPool);
@@ -78,7 +79,9 @@ public class PostgresClientFactoryTest {
 
   @Test
   public void shouldResetPgPoolCache() {
-    PostgresClientFactory postgresClientFactory = new PostgresClientFactory(vertx);
+    PgConnectOptions pgConnectOpts = PostgresConnectionOptions.getConnectionOptions(TENANT_ID);
+    PostgresClientFactory postgresClientFactory =
+      new PostgresClientFactory(vertx, pgConnectOpts);
     PgPool cachedPool = postgresClientFactory.getCachedPool(TENANT_ID);
     postgresClientFactory.setShouldResetPool(true);
     PgPool poolFromCache = postgresClientFactory.getCachedPool(TENANT_ID);
@@ -92,11 +95,13 @@ public class PostgresClientFactoryTest {
   @Test
   public void shouldSetDefaultConnectionOptions() {
     PgConnectOptions expectedPgConnectOptions = new PgConnectOptions();
-    setDefaultConnectionOptions(expectedPgConnectOptions);
-    PgConnectOptions connectionOptions = getConnectionOptions(null);
-    assertEquals(expectedPgConnectOptions, connectionOptions);
+    PgConnectOptions actualConnectionOptions = PostgresConnectionOptions.getConnectionOptions(null);
 
-    setDefaultConnectionOptions(new PgConnectOptions());
+    assertEquals(expectedPgConnectOptions.getHost(), actualConnectionOptions.getHost());
+    assertEquals(expectedPgConnectOptions.getUser(), actualConnectionOptions.getUser());
+    assertEquals(expectedPgConnectOptions.getPort(), actualConnectionOptions.getPort());
+    assertEquals(expectedPgConnectOptions.getPassword(), actualConnectionOptions.getPassword());
+    assertEquals(expectedPgConnectOptions.getDatabase(), actualConnectionOptions.getDatabase());
   }
 
   @Test
@@ -112,26 +117,23 @@ public class PostgresClientFactoryTest {
     propertiesMap.put(DB_MAXPOOLSIZE, String.valueOf(5));
     propertiesMap.put(DB_SERVER_PEM, serverPem);
     propertiesMap.put(DB_QUERYTIMEOUT, String.valueOf(60000));
-    setProperties(propertiesMap);
 
-    Map<String, String> properties = getProperties();
-    PgConnectOptions connectionOptions = getConnectionOptions(TENANT_ID);
+    PostgresConnectionOptions.setConnectionOptions(propertiesMap);
+    PgConnectOptions pgConnectOpts = PostgresConnectionOptions.getConnectionOptions(TENANT_ID);
 
-    assertEquals(8, properties.size());
-    assertEquals("localhost", connectionOptions.getHost());
-    assertEquals(5432, connectionOptions.getPort());
-    assertEquals("test", connectionOptions.getUser());
-    assertEquals("test", connectionOptions.getPassword());
-    assertEquals("test", connectionOptions.getDatabase());
-    assertEquals(60000, connectionOptions.getIdleTimeout());
-    assertEquals(SslMode.VERIFY_FULL, connectionOptions.getSslMode());
-    assertEquals("HTTPS", connectionOptions.getHostnameVerificationAlgorithm());
-    assertNotNull(connectionOptions.getPemTrustOptions());
-    assertEquals(expectedEnabledSecureTransportProtocols, connectionOptions.getEnabledSecureTransportProtocols());
-    assertNotNull(connectionOptions.getOpenSslEngineOptions());
+    assertEquals("localhost", pgConnectOpts.getHost());
+    assertEquals(5432, pgConnectOpts.getPort());
+    assertEquals("test", pgConnectOpts.getUser());
+    assertEquals("test", pgConnectOpts.getPassword());
+    assertEquals("test", pgConnectOpts.getDatabase());
+    assertEquals(60000, pgConnectOpts.getIdleTimeout());
+    assertEquals(SslMode.VERIFY_FULL, pgConnectOpts.getSslMode());
+    assertEquals("HTTPS", pgConnectOpts.getHostnameVerificationAlgorithm());
+    assertNotNull(pgConnectOpts.getPemTrustOptions());
+    assertEquals(expectedEnabledSecureTransportProtocols, pgConnectOpts.getEnabledSecureTransportProtocols());
+    assertNotNull(pgConnectOpts.getOpenSslEngineOptions());
 
-    setProperties(new HashMap<>());
-    setDefaultConnectionOptions(new PgConnectOptions());
+    PostgresConnectionOptions.setConnectionOptions(new HashMap<>());
   }
 
   public static String randomAlphaString(int length) {
