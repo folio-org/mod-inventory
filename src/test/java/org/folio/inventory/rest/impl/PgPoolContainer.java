@@ -1,8 +1,11 @@
 package org.folio.inventory.rest.impl;
 
-import io.vertx.pgclient.PgConnectOptions;
-import org.folio.inventory.common.dao.PostgresClientFactory;
+import org.folio.inventory.common.dao.PostgresConnectionOptions;
 import org.testcontainers.containers.PostgreSQLContainer;
+
+import java.util.Map;
+
+import static org.folio.inventory.common.dao.PostgresConnectionOptions.*;
 
 public class PgPoolContainer {
 
@@ -15,14 +18,7 @@ public class PgPoolContainer {
    */
   public static void create() {
     container.start();
-
-    PostgresClientFactory.setDefaultConnectionOptions(new PgConnectOptions()
-      .setPort(container.getFirstMappedPort())
-      .setHost(container.getHost())
-      .setDatabase(container.getDatabaseName())
-      .setUser(container.getUsername())
-      .setPassword(container.getPassword())
-    );
+    setEnv();
   }
 
   /**
@@ -30,6 +26,15 @@ public class PgPoolContainer {
    */
   public static void stop() {
     container.stop();
+  }
+
+  private static void setEnv() {
+    Map<String, String> systemProperties = Map.of(DB_HOST, container.getHost(),
+      DB_DATABASE, container.getDatabaseName(),
+      DB_USERNAME, container.getUsername(),
+      DB_PASSWORD, container.getPassword(),
+      DB_PORT, String.valueOf(container.getFirstMappedPort()));
+    PostgresConnectionOptions.setConnectionOptions(systemProperties);
   }
 
   public static boolean isRunning() {

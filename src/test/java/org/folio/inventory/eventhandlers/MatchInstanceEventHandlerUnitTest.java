@@ -120,11 +120,6 @@ public class MatchInstanceEventHandlerUnitTest {
     }).when(instanceCollection)
       .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    when(mappingMetadataCache.get(anyString(), any(Context.class)))
-      .thenReturn(Future.succeededFuture(Optional.of(new MappingMetadataDto()
-        .withMappingRules(new JsonObject().encode())
-        .withMappingParams(LOCATIONS_PARAMS))));
-
     EventHandler eventHandler = new MatchInstanceEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = createEventPayload();
 
