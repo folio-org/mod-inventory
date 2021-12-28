@@ -271,7 +271,6 @@
     <postgres.image>postgres:12-alpine</postgres.image>
     <postgres.version>42.2.23</postgres.version>
     <liquibase.version>4.6.2</liquibase.version>
-    <io.fabric.login.details>postgres</io.fabric.login.details>
     <liquibase.login.details>postgres</liquibase.login.details>
   </properties>
 
@@ -475,9 +474,9 @@
                 <privileged>true</privileged>
                 <containerNamePattern>%n-%t</containerNamePattern>
                 <env>
-                  <POSTGRES_DB>${io.fabric.pg}</POSTGRES_DB>
-                  <POSTGRES_USER>${io.fabric.pg}</POSTGRES_USER>
-                  <POSTGRES_PASSWORD>${io.fabric.pg}</POSTGRES_PASSWORD>
+                  <POSTGRES_DB>postgres</POSTGRES_DB>
+                  <POSTGRES_USER>postgres</POSTGRES_USER>
+                  <POSTGRES_PASSWORD>postgres</POSTGRES_PASSWORD>
                 </env>
                 <ports>
                   <port>${db.port}:5432</port>
@@ -518,8 +517,8 @@
           <changeLogFile>src/main/resources/liquibase/tenant/changelog.xml</changeLogFile>
           <driver>org.postgresql.Driver</driver>
           <url>jdbc:postgresql://${docker.host.address}:${db.port},${docker.container.db.ip}:5432/postgres</url>
-          <username>${liquibase.login.details}</username>
-          <password>${liquibase.login.details}</password>
+          <username>postgres</username>
+          <password>postgres</password>
           <promptOnNonLocalDatabase>false</promptOnNonLocalDatabase>
         </configuration>
         <dependencies>
