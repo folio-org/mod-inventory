@@ -271,7 +271,8 @@
     <postgres.image>postgres:12-alpine</postgres.image>
     <postgres.version>42.2.23</postgres.version>
     <liquibase.version>4.6.2</liquibase.version>
-    <io.fabric.pg>postgres</io.fabric.pg>
+    <io.fabric.login.details>postgres</io.fabric.login.details>
+    <liquibase.login.details>postgres</liquibase.login.details>
   </properties>
 
   <distributionManagement>
@@ -517,8 +518,8 @@
           <changeLogFile>src/main/resources/liquibase/tenant/changelog.xml</changeLogFile>
           <driver>org.postgresql.Driver</driver>
           <url>jdbc:postgresql://${docker.host.address}:${db.port},${docker.container.db.ip}:5432/postgres</url>
-          <username>postgres</username>
-          <password>postgres</password>
+          <username>${liquibase.login.details}</username>
+          <password>${liquibase.login.details}</password>
           <promptOnNonLocalDatabase>false</promptOnNonLocalDatabase>
         </configuration>
         <dependencies>
