@@ -14,16 +14,14 @@ public class SingleConnectionProvider {
 
   private static final String JDBC_DRIVER = "jdbc:postgresql";
 
-  private SingleConnectionProvider() {
-  }
-
-  public static Connection getConnection(String tenantId) throws SQLException {
+  public Connection getConnection(String tenantId) throws SQLException {
     LOGGER.info("Attempting to get connection for tenant {}", tenantId);
-    PgConnectOptions connectOptions = PostgresConnectionOptions.getConnectionOptions(tenantId);
+    PostgresConnectionOptions options = new PostgresConnectionOptions(System.getenv());
+    PgConnectOptions connectOptions = options.getConnectionOptions(tenantId);
     return getConnectionInternal(connectOptions);
   }
 
-  private static Connection getConnectionInternal(PgConnectOptions connectionConfig) throws SQLException {
+  private Connection getConnectionInternal(PgConnectOptions connectionConfig) throws SQLException {
     String host = connectionConfig.getHost();
     String port = String.valueOf(connectionConfig.getPort());
     String database = connectionConfig.getDatabase();

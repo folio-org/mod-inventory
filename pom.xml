@@ -271,6 +271,7 @@
     <postgres.image>postgres:12-alpine</postgres.image>
     <postgres.version>42.2.23</postgres.version>
     <liquibase.version>4.6.2</liquibase.version>
+    <io.fabric.pg>postgres</io.fabric.pg>
   </properties>
 
   <distributionManagement>
@@ -473,9 +474,9 @@
                 <privileged>true</privileged>
                 <containerNamePattern>%n-%t</containerNamePattern>
                 <env>
-                  <POSTGRES_DB>postgres</POSTGRES_DB>
-                  <POSTGRES_USER>postgres</POSTGRES_USER>
-                  <POSTGRES_PASSWORD>postgres</POSTGRES_PASSWORD>
+                  <POSTGRES_DB>${io.fabric.pg}</POSTGRES_DB>
+                  <POSTGRES_USER>${io.fabric.pg}</POSTGRES_USER>
+                  <POSTGRES_PASSWORD>${io.fabric.pg}</POSTGRES_PASSWORD>
                 </env>
                 <ports>
                   <port>${db.port}:5432</port>

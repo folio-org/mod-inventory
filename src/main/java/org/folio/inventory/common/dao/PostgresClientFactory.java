@@ -31,11 +31,9 @@ public class PostgresClientFactory {
   private static boolean shouldResetPool = false;
 
   private Vertx vertx;
-  private PgConnectOptions connectOptions;
 
-  public PostgresClientFactory(Vertx vertx, PgConnectOptions connectOptions) {
+  public PostgresClientFactory(Vertx vertx) {
     this.vertx = vertx;
-    this.connectOptions = connectOptions;
   }
 
   @PreDestroy
@@ -59,9 +57,10 @@ public class PostgresClientFactory {
       shouldResetPool = false;
     }
     LOGGER.info("Creating new database connection pool for tenant {}.", tenantId);
-    PgConnectOptions connectOptions = PostgresConnectionOptions.getConnectionOptions(tenantId);
+    PostgresConnectionOptions options = new PostgresConnectionOptions(System.getenv());
+    PgConnectOptions connectOptions = options.getConnectionOptions(tenantId);
     PoolOptions poolOptions = new PoolOptions()
-      .setMaxSize(PostgresConnectionOptions.getMaxPoolSize());
+      .setMaxSize(options.getMaxPoolSize());
     PgPool pgPool = PgPool.pool(vertx, connectOptions, poolOptions);
     POOL_CACHE.put(tenantId, pgPool);
 
