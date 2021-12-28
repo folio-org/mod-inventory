@@ -33,10 +33,7 @@ public class PostgresConnectionOptions {
   private static Map<String, String> systemProperties = System.getenv();
 
   private PostgresConnectionOptions() {
-  }
 
-  public static void setConnectionOptions(Map<String, String> newSystemProperties) {
-    systemProperties = newSystemProperties;
   }
 
   /**
@@ -87,4 +84,11 @@ public class PostgresConnectionOptions {
     return systemProperties.get(key);
   }
 
+  /**
+   * For test usage only
+   * @param newSystemProperties Map of system properties to set
+   */
+  public static void setSystemProperties(Map<String, String> newSystemProperties) {
+    systemProperties = newSystemProperties;
+  }
 }

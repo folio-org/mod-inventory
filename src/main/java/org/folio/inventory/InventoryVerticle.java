@@ -11,6 +11,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import io.vertx.ext.web.Router;
 import org.folio.inventory.common.WebRequestDiagnostics;
+import org.folio.inventory.common.dao.PostgresClientFactory;
 import org.folio.inventory.domain.ingest.IngestMessageProcessor;
 import org.folio.inventory.resources.Holdings;
 import org.folio.inventory.resources.Instances;
@@ -81,6 +82,8 @@ public class InventoryVerticle extends AbstractVerticle {
   @Override
   public void stop(Promise<Void> stopped) {
     final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
+
+    PostgresClientFactory.closeAll();
 
     log.info("Stopping inventory module");
     server.close(result -> {

@@ -18,7 +18,20 @@ public class PgPoolContainer {
    */
   public static void create() {
     container.start();
-    setEnv();
+
+    setEmbeddedPostgresOptions();
+  }
+
+  /**
+   * Set embedded container system properties.
+   */
+  public static void setEmbeddedPostgresOptions() {
+    Map<String, String> systemProperties = Map.of(DB_HOST, container.getHost(),
+      DB_DATABASE, container.getDatabaseName(),
+      DB_USERNAME, container.getUsername(),
+      DB_PASSWORD, container.getPassword(),
+      DB_PORT, String.valueOf(container.getFirstMappedPort()));
+    PostgresConnectionOptions.setSystemProperties(systemProperties);
   }
 
   /**
@@ -28,15 +41,10 @@ public class PgPoolContainer {
     container.stop();
   }
 
-  private static void setEnv() {
-    Map<String, String> systemProperties = Map.of(DB_HOST, container.getHost(),
-      DB_DATABASE, container.getDatabaseName(),
-      DB_USERNAME, container.getUsername(),
-      DB_PASSWORD, container.getPassword(),
-      DB_PORT, String.valueOf(container.getFirstMappedPort()));
-    PostgresConnectionOptions.setConnectionOptions(systemProperties);
-  }
-
+  /**
+   * Check if embedded container is already running.
+   * @return embedded container is running.
+   */
   public static boolean isRunning() {
     return container.isRunning();
   }

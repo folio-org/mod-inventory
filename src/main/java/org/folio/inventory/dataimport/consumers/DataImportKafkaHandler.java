@@ -13,7 +13,6 @@ import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.dao.EntityIdStorageDaoImpl;
 import org.folio.inventory.common.dao.PostgresClientFactory;
-import org.folio.inventory.common.dao.PostgresConnectionOptions;
 import org.folio.inventory.dataimport.HoldingWriterFactory;
 import org.folio.inventory.dataimport.InstanceWriterFactory;
 import org.folio.inventory.dataimport.ItemWriterFactory;
@@ -74,7 +73,6 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
   private Vertx vertx;
   private ProfileSnapshotCache profileSnapshotCache;
   private MappingMetadataCache mappingMetadataCache;
-  private PostgresClientFactory postgresClientFactory;
 
   public DataImportKafkaHandler(Vertx vertx, Storage storage, HttpClient client, KafkaInternalCache kafkaInternalCache,
                                 ProfileSnapshotCache profileSnapshotCache, MappingMetadataCache mappingMetadataCache) {
@@ -82,7 +80,6 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     this.kafkaInternalCache = kafkaInternalCache;
     this.profileSnapshotCache = profileSnapshotCache;
     this.mappingMetadataCache = mappingMetadataCache;
-    initializePostgresClientFactory(vertx);
     registerDataImportProcessingHandlers(storage, client);
   }
 
@@ -149,7 +146,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     EventManager.registerEventHandler(new MatchAuthorityEventHandler(mappingMetadataCache));
     EventManager.registerEventHandler(new CreateItemEventHandler(storage, mappingMetadataCache, new ItemIdStorageService(new EntityIdStorageDaoImpl(postgresClientFactory))));
     EventManager.registerEventHandler(new CreateHoldingEventHandler(storage, mappingMetadataCache));
-    EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, new InstanceIdStorageService(new EntityIdStorageDaoImpl(postgresClientFactory))));
+    EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, new InstanceIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx)))));
     EventManager.registerEventHandler(new CreateMarcHoldingsEventHandler(storage, mappingMetadataCache));
     EventManager.registerEventHandler(new CreateMarcAuthorityEventHandler(storage, mappingMetadataCache));
     EventManager.registerEventHandler(new UpdateItemEventHandler(storage, mappingMetadataCache));
@@ -157,9 +154,5 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     EventManager.registerEventHandler(new ReplaceInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache));
     EventManager.registerEventHandler(new MarcBibModifiedPostProcessingEventHandler(new InstanceUpdateDelegate(storage), precedingSucceedingTitlesHelper, mappingMetadataCache));
     EventManager.registerEventHandler(new MarcBibMatchedPostProcessingEventHandler(storage));
-  }
-
-  private void initializePostgresClientFactory(Vertx vertx) {
-    postgresClientFactory = new PostgresClientFactory(vertx, PostgresConnectionOptions.getConnectionOptions(null));
   }
 }

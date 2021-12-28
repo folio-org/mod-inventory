@@ -14,11 +14,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
 import org.folio.inventory.common.WebContext;
+import org.folio.inventory.rest.impl.SingleConnectionProvider;
+
 import java.sql.Connection;
 
 import static java.lang.String.format;
 import static org.folio.inventory.rest.util.ModuleUtil.convertToPsqlStandard;
-import static org.folio.inventory.rest.impl.SingleConnectionProvider.getConnection;
 
 
 public class SchemaApi {
@@ -40,27 +41,30 @@ public class SchemaApi {
       .onFailure(fail -> routingContext.response().setStatusCode(HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt()).end(fail.toString()));
   }
 
-  public static Future<Integer> initializeSchemaForTenant(String tenant) {
-    String schemaName = convertToPsqlStandard(tenant);
-    LOGGER.info("Initializing schema {} for tenant {}", schemaName, tenant);
-    try (Connection connection = getConnection(tenant)) {
+  public Future<Integer> initializeSchemaForTenant(String tenantId) {
+    String schemaName = convertToPsqlStandard(tenantId);
+    LOGGER.info("Initializing schema {} for tenant {}", schemaName, tenantId);
+
+    SingleConnectionProvider connectionProvider = new SingleConnectionProvider();
+
+    try (Connection connection = connectionProvider.getConnection(tenantId)) {
       boolean schemaIsNotExecuted = connection.prepareStatement(format("CREATE SCHEMA IF NOT EXISTS %s", schemaName)).execute();
       if (schemaIsNotExecuted) {
         return Future.failedFuture(String.format("Cannot create schema %s", schemaName));
       } else {
         LOGGER.info("Schema {} created or already exists", schemaName);
         runScripts(schemaName, connection);
-        LOGGER.info("Schema is initialized for tenant {}", tenant);
+        LOGGER.info("Schema is initialized for tenant {}", tenantId);
         return Future.succeededFuture(0);
       }
     } catch (Exception e) {
-      String cause = format("Error while initializing schema %s for tenant %s", schemaName, tenant);
+      String cause = format("Error while initializing schema %s for tenant %s", schemaName, tenantId);
       LOGGER.error(cause, e);
       return Future.failedFuture(cause);
     }
   }
 
-  private static void runScripts(String schemaName, Connection connection) throws LiquibaseException {
+  private void runScripts(String schemaName, Connection connection) throws LiquibaseException {
     Liquibase liquibase = null;
     try {
       Database database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(connection));
