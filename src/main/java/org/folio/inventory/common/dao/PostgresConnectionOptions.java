@@ -30,10 +30,10 @@ public class PostgresConnectionOptions {
   public static final String DB_SERVER_PEM = "DB_SERVER_PEM";
   public static final String DB_QUERYTIMEOUT = "DB_QUERYTIMEOUT";
 
-  private Map<String, String> systemProperties;
+  private static Map<String, String> systemProperties = System.getenv();
 
-  public PostgresConnectionOptions(Map<String, String> systemProperties) {
-    this.systemProperties = systemProperties;
+  private PostgresConnectionOptions() {
+
   }
 
   /**
@@ -42,7 +42,7 @@ public class PostgresConnectionOptions {
    * @param tenantId tenant id
    * @return postgres connection options
    */
-  public PgConnectOptions getConnectionOptions(String tenantId) {
+  public static PgConnectOptions getConnectionOptions(String tenantId) {
     PgConnectOptions pgConnectionOptions = new PgConnectOptions();
 
     pgConnectionOptions.getProperties().put("application_name", MODULE_NAME);
@@ -76,12 +76,19 @@ public class PostgresConnectionOptions {
     return pgConnectionOptions;
   }
 
-  public Integer getMaxPoolSize() {
+  public static Integer getMaxPoolSize() {
     return Integer.parseInt(getSystemProperty(DB_MAXPOOLSIZE) != null ? getSystemProperty(DB_MAXPOOLSIZE) : DEFAULT_MAX_POOL_SIZE);
   }
 
-  public String getSystemProperty(String key) {
+  public static String getSystemProperty(String key) {
     return systemProperties.get(key);
   }
 
+  /**
+   * For test usage only
+   * @param newSystemProperties Map of system properties to set
+   */
+  public static void setSystemProperties(Map<String, String> newSystemProperties) {
+    systemProperties = newSystemProperties;
+  }
 }

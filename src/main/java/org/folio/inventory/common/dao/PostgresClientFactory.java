@@ -12,7 +12,6 @@ import io.vertx.sqlclient.PoolOptions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import javax.annotation.PreDestroy;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -36,14 +35,26 @@ public class PostgresClientFactory {
     this.vertx = vertx;
   }
 
-  @PreDestroy
-  public void close() {
-    closeAll();
+  /**
+   * Get {@link PgPool}.
+   *
+   * @param tenantId tenant id.
+   * @return pooled database client.
+   */
+  public PgPool getCachedPool(String tenantId) {
+    return getCachedPool(this.vertx, tenantId);
   }
 
-  public void closeAll() {
-    POOL_CACHE.values().forEach(PostgresClientFactory::close);
-    POOL_CACHE.clear();
+  /**
+   * Execute prepared query.
+   *
+   * @param sql   query.
+   * @param tuple tuple.
+   * @return async result rowset.
+   */
+  public Future<RowSet<Row>> execute(String sql, Tuple tuple, String tenantId) {
+    Future<Void> future = Future.succeededFuture();
+    return future.compose(x -> preparedQuery(sql, tenantId).execute(tuple));
   }
 
   private PgPool getCachedPool(Vertx vertx, String tenantId) {
@@ -57,36 +68,13 @@ public class PostgresClientFactory {
       shouldResetPool = false;
     }
     LOGGER.info("Creating new database connection pool for tenant {}.", tenantId);
-    PostgresConnectionOptions options = new PostgresConnectionOptions(System.getenv());
-    PgConnectOptions connectOptions = options.getConnectionOptions(tenantId);
+    PgConnectOptions connectOptions = PostgresConnectionOptions.getConnectionOptions(tenantId);
     PoolOptions poolOptions = new PoolOptions()
-      .setMaxSize(options.getMaxPoolSize());
+      .setMaxSize(PostgresConnectionOptions.getMaxPoolSize());
     PgPool pgPool = PgPool.pool(vertx, connectOptions, poolOptions);
     POOL_CACHE.put(tenantId, pgPool);
 
     return pgPool;
-  }
-
-  /**
-   * Get {@link PgPool}
-   *
-   * @param tenantId tenant id
-   * @return pooled database client
-   */
-  public PgPool getCachedPool(String tenantId) {
-    return getCachedPool(this.vertx, tenantId);
-  }
-
-  /**
-   * Execute prepared query.
-   *
-   * @param sql   query
-   * @param tuple tuple
-   * @return async result rowset
-   */
-  public Future<RowSet<Row>> execute(String sql, Tuple tuple, String tenantId) {
-    Future<Void> future = Future.succeededFuture();
-    return future.compose(x -> preparedQuery(sql, tenantId).execute(tuple));
   }
 
   private PreparedQuery<RowSet<Row>> preparedQuery(String sql, String tenantId) {
@@ -102,10 +90,22 @@ public class PostgresClientFactory {
     return tenantId + "_" + MODULE_NAME;
   }
 
+  /**
+   * close all {@link PgPool} clients
+   */
+  public static void closeAll() {
+    POOL_CACHE.values().forEach(PostgresClientFactory::close);
+    POOL_CACHE.clear();
+  }
+
   private static void close(PgPool client) {
     client.close();
   }
 
+  /**
+   * For test usage only.
+   * @param shouldResetPool
+   */
   public void setShouldResetPool(boolean shouldResetPool) {
     PostgresClientFactory.shouldResetPool = shouldResetPool;
   }

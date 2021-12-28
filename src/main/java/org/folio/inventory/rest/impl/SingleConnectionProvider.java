@@ -16,8 +16,7 @@ public class SingleConnectionProvider {
 
   public Connection getConnection(String tenantId) throws SQLException {
     LOGGER.info("Attempting to get connection for tenant {}", tenantId);
-    PostgresConnectionOptions options = new PostgresConnectionOptions(System.getenv());
-    PgConnectOptions connectOptions = options.getConnectionOptions(tenantId);
+    PgConnectOptions connectOptions = PostgresConnectionOptions.getConnectionOptions(tenantId);
     return getConnectionInternal(connectOptions);
   }
 
