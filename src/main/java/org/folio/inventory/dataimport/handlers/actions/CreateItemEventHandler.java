@@ -102,44 +102,50 @@ public class CreateItemEventHandler implements EventHandler {
       String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
 
       Future<Optional<RecordToEntity>> recordToItemFuture = idStorageService.store(recordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant());
-      // todo
-      Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
-      ItemCollection itemCollection = storage.getItemCollection(context);
+      recordToItemFuture.onSuccess(res -> {
+        String itemId = res.get().getEntityId();
+        Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+        ItemCollection itemCollection = storage.getItemCollection(context);
 
-      mappingMetadataCache.get(jobExecutionId, context)
-        .map(parametersOptional -> parametersOptional
-          .orElseThrow(() -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId,
-            recordId, chunkId))))
-        .map(mappingMetadataDto -> {
-          MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
-          MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
-          return processMappingResult(dataImportEventPayload);
-        })
-        .compose(mappedItemJson -> {
-          List<String> errors = validateItem(mappedItemJson, requiredFields);
-          if (!errors.isEmpty()) {
-            String msg = format("Mapped Item is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", errors,
-              jobExecutionId, recordId, chunkId);
-            LOG.error(msg);
-            return Future.failedFuture(msg);
-          }
+        mappingMetadataCache.get(jobExecutionId, context)
+          .map(parametersOptional -> parametersOptional
+            .orElseThrow(() -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId,
+              recordId, chunkId))))
+          .map(mappingMetadataDto -> {
+            MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
+            MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
+            return processMappingResult(dataImportEventPayload, itemId);
+          })
+          .compose(mappedItemJson -> {
+            List<String> errors = validateItem(mappedItemJson, requiredFields);
+            if (!errors.isEmpty()) {
+              String msg = format("Mapped Item is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", errors,
+                jobExecutionId, recordId, chunkId);
+              LOG.error(msg);
+              return Future.failedFuture(msg);
+            }
 
-          Item mappedItem = ItemUtil.jsonToItem(mappedItemJson);
-          return isItemBarcodeUnique(mappedItemJson.getString("barcode"), itemCollection)
-            .compose(isUnique -> isUnique
-              ? addItem(mappedItem, itemCollection)
-              : Future.failedFuture(format("Barcode must be unique, %s is already assigned to another item", mappedItemJson.getString("barcode"))));
-        })
-        .onComplete(ar -> {
-          if (ar.succeeded()) {
-            dataImportEventPayload.getContext().put(ITEM.value(), Json.encode(ar.result()));
-            future.complete(dataImportEventPayload);
-          } else {
-            LOG.error("Error creating inventory Item by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
-              recordId, chunkId, ar.cause());
-            future.completeExceptionally(ar.cause());
-          }
-        });
+            Item mappedItem = ItemUtil.jsonToItem(mappedItemJson);
+            return isItemBarcodeUnique(mappedItemJson.getString("barcode"), itemCollection)
+              .compose(isUnique -> isUnique
+                ? addItem(mappedItem, itemCollection)
+                : Future.failedFuture(format("Barcode must be unique, %s is already assigned to another item", mappedItemJson.getString("barcode"))));
+          })
+          .onComplete(ar -> {
+            if (ar.succeeded()) {
+              dataImportEventPayload.getContext().put(ITEM.value(), Json.encode(ar.result()));
+              future.complete(dataImportEventPayload);
+            } else {
+              LOG.error("Error creating inventory Item by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
+                recordId, chunkId, ar.cause());
+              future.completeExceptionally(ar.cause());
+            }
+          });
+      }).onFailure(failure -> {
+        LOG.error("Error creating inventory recordId and itemId relationship by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId, recordId,
+          chunkId, failure);
+        future.completeExceptionally(failure);
+      });
     } catch (Exception e) {
       LOG.error("Error creating inventory Item", e);
       future.completeExceptionally(e);
@@ -147,13 +153,13 @@ public class CreateItemEventHandler implements EventHandler {
     return future;
   }
 
-  private JsonObject processMappingResult(DataImportEventPayload dataImportEventPayload) {
+  private JsonObject processMappingResult(DataImportEventPayload dataImportEventPayload, String itemId) {
     JsonObject itemAsJson = new JsonObject(dataImportEventPayload.getContext().get(ITEM.value()));
     if (itemAsJson.getJsonObject(ITEM_PATH_FIELD) != null) {
       itemAsJson = itemAsJson.getJsonObject(ITEM_PATH_FIELD);
     }
     fillHoldingsRecordIdIfNecessary(dataImportEventPayload, itemAsJson);
-    itemAsJson.put(ITEM_ID_FIELD, UUID.randomUUID().toString());
+    itemAsJson.put(ITEM_ID_FIELD, itemId);
     return itemAsJson;
   }
 
