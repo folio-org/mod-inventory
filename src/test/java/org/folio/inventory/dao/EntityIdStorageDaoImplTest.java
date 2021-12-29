@@ -47,6 +47,12 @@ public class EntityIdStorageDaoImplTest {
     }
   }
 
+  @Before
+  public void before() {
+    postgresClientFactory.setShouldResetPool(true);
+    PgPoolContainer.setEmbeddedPostgresOptions();
+  }
+
   @Test
   public void shouldReturnSavedRecordToEntity(TestContext context) {
     Async async = context.async();
@@ -54,27 +60,22 @@ public class EntityIdStorageDaoImplTest {
     String recordId = "567859ad-505a-400d-a699-0028a1fdbf84";
     String instanceId = "4d4545df-b5ba-4031-a031-70b1c1b2fc5d";
     RecordToEntity expectedRecordToInstance = RecordToEntity.builder().table(EntityTable.INSTANCE).recordId(recordId).entityId(instanceId).build();
-    Future<Optional<RecordToEntity>> optionalFuture = Future.succeededFuture().compose(c -> entityIdStorageDao.saveRecordToEntityRelationship(expectedRecordToInstance, TENANT_ID));
+
+    Future<Optional<RecordToEntity>> optionalFuture = entityIdStorageDao.saveRecordToEntityRelationship(expectedRecordToInstance, TENANT_ID);
 
     optionalFuture.onComplete(ar -> {
       context.assertTrue(ar.succeeded());
       if (ar.result().isPresent()) {
-        System.out.println("3");
         RecordToEntity actualRecordToEntity = ar.result().get();
-        System.out.println(actualRecordToEntity);
         context.assertEquals(expectedRecordToInstance.getRecordId(), actualRecordToEntity.getRecordId());
         context.assertEquals(expectedRecordToInstance.getEntityId(), actualRecordToEntity.getEntityId());
         context.assertEquals(expectedRecordToInstance.getTable(), actualRecordToEntity.getTable());
-        System.out.println("3333");
       }
-      System.out.println("33");
       async.complete();
-      System.out.println("333");
     });
   }
 
   @Test
-  @Ignore
   public void shouldReturnFailedFuture(TestContext context) {
     Async async = context.async();
 
@@ -82,21 +83,13 @@ public class EntityIdStorageDaoImplTest {
     String instanceId = "4d4545df-b5ba-4031-a031-70b1c1b2fc5d";
     RecordToEntity expectedRecordToInstance = RecordToEntity.builder().table(EntityTable.INSTANCE).recordId(recordId).entityId(instanceId).build();
 
-    Future<Optional<RecordToEntity>> optionalFuture = Future.succeededFuture().compose(c -> {
-      PostgresConnectionOptions.setSystemProperties(new HashMap<>());
-      return entityIdStorageDao.saveRecordToEntityRelationship(expectedRecordToInstance, TENANT_ID);
-    });
+    PostgresConnectionOptions.setSystemProperties(new HashMap<>());
+    Future<Optional<RecordToEntity>> optionalFuture = entityIdStorageDao.saveRecordToEntityRelationship(expectedRecordToInstance, TENANT_ID);
 
     optionalFuture.onComplete(ar -> {
-      System.out.println("2");
-      System.out.println(ar);
       context.assertTrue(ar.failed());
-      System.out.println("22");
-      //"Connection refused: localhost/127.0.0.1:5432"
       async.complete();
-      System.out.println("222");
     });
-    PgPoolContainer.setEmbeddedPostgresOptions();
   }
 
   @Test
@@ -109,22 +102,18 @@ public class EntityIdStorageDaoImplTest {
     RecordToEntity expectedRecordToInstance1 = RecordToEntity.builder().table(EntityTable.INSTANCE).recordId(recordId).entityId(instanceId1).build();
     RecordToEntity expectedRecordToInstance2 = RecordToEntity.builder().table(EntityTable.INSTANCE).recordId(recordId).entityId(instanceId2).build();
 
-    Future<Optional<RecordToEntity>> optionalFuture1 = entityIdStorageDao.saveRecordToEntityRelationship(expectedRecordToInstance1, TENANT_ID)
+    Future<Optional<RecordToEntity>> optionalFuture = entityIdStorageDao.saveRecordToEntityRelationship(expectedRecordToInstance1, TENANT_ID)
       .compose(ar -> entityIdStorageDao.saveRecordToEntityRelationship(expectedRecordToInstance2, TENANT_ID));
 
-    optionalFuture1.onComplete(ar -> {
+    optionalFuture.onComplete(ar -> {
       context.assertTrue(ar.succeeded());
       if (ar.result().isPresent()) {
-        System.out.println("1");
         RecordToEntity actualRecordToEntity = ar.result().get();
-        System.out.println(actualRecordToEntity);
         context.assertEquals(expectedRecordToInstance1.getRecordId(), actualRecordToEntity.getRecordId());
         context.assertEquals(expectedRecordToInstance1.getEntityId(), actualRecordToEntity.getEntityId());
         context.assertEquals(expectedRecordToInstance1.getTable(), actualRecordToEntity.getTable());
       }
-      System.out.println("11");
       async.complete();
-      System.out.println("111");
     });
   }
 }
