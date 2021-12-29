@@ -104,7 +104,6 @@ public class PostgresClientFactory {
 
   /**
    * For test usage only.
-   * @param shouldResetPool
    */
   public void setShouldResetPool(boolean shouldResetPool) {
     PostgresClientFactory.shouldResetPool = shouldResetPool;
