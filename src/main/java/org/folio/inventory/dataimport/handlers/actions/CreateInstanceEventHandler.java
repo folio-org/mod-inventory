@@ -88,8 +88,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
       String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
 
       recordToInstanceFuture.onSuccess(res -> {
-        final String[] instanceId = {null};
-        res.ifPresent(record -> instanceId[0] = record.getEntityId());
+        String instanceId = res.get().getEntityId();
         mappingMetadataCache.get(jobExecutionId, context)
           .compose(parametersOptional -> parametersOptional
             .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()),
@@ -97,7 +96,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
             .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, jobExecutionId, recordId, chunkId))))
           .compose(v -> {
             InstanceCollection instanceCollection = storage.getInstanceCollection(context);
-            JsonObject instanceAsJson = prepareInstance(dataImportEventPayload, instanceId[0], jobExecutionId);
+            JsonObject instanceAsJson = prepareInstance(dataImportEventPayload, instanceId, jobExecutionId);
             List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
             if (!errors.isEmpty()) {
               String msg = format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", errors,
@@ -121,7 +120,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
           });
       })
       .onFailure(failure -> {
-        LOGGER.error("Error creating inventory Instance by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId, recordId,
+        LOGGER.error("Error creating inventory recordId and instanceId relationship by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId, recordId,
           chunkId, failure);
         future.completeExceptionally(failure);
       });

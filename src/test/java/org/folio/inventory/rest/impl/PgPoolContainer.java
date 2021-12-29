@@ -26,12 +26,14 @@ public class PgPoolContainer {
    * Set embedded container system properties.
    */
   public static void setEmbeddedPostgresOptions() {
-    Map<String, String> systemProperties = Map.of(DB_HOST, container.getHost(),
-      DB_DATABASE, container.getDatabaseName(),
-      DB_USERNAME, container.getUsername(),
-      DB_PASSWORD, container.getPassword(),
-      DB_PORT, String.valueOf(container.getFirstMappedPort()));
-    PostgresConnectionOptions.setSystemProperties(systemProperties);
+    if (isRunning()) {
+      Map<String, String> systemProperties = Map.of(DB_HOST, container.getHost(),
+        DB_DATABASE, container.getDatabaseName(),
+        DB_USERNAME, container.getUsername(),
+        DB_PASSWORD, container.getPassword(),
+        DB_PORT, String.valueOf(container.getFirstMappedPort()));
+      PostgresConnectionOptions.setSystemProperties(systemProperties);
+    }
   }
 
   /**
