@@ -7,8 +7,6 @@ import org.folio.inventory.domain.relationship.RecordToEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Optional;
-
 public class InstanceIdStorageService implements IdStorageService{
 
   private static final Logger LOGGER = LoggerFactory.getLogger(InstanceIdStorageService.class);
@@ -20,10 +18,10 @@ public class InstanceIdStorageService implements IdStorageService{
   }
 
   @Override
-  public Future<Optional<RecordToEntity>> store(String recordId, String instanceId, String tenantId) {
+  public Future<RecordToEntity> store(String recordId, String instanceId, String tenantId) {
     RecordToEntity recordToInstance = RecordToEntity.builder().table(EntityTable.INSTANCE).recordId(recordId).entityId(instanceId).build();
     LOGGER.info("Saving RecordToInstance relationship: {}", recordToInstance);
     return entityIdStorageDao.saveRecordToEntityRelationship(recordToInstance, tenantId)
-      .map(Optional.of(recordToInstance));
+      .map(recordToInstance);
   }
 }

@@ -55,7 +55,6 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -198,7 +197,7 @@ public class CreateInstanceEventHandlerTest {
 
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
 
-    when(instanceIdStorageService.store(any(), any(), any())).thenReturn(Future.succeededFuture(Optional.of(recordToInstance)));
+    when(instanceIdStorageService.store(any(), any(), any())).thenReturn(Future.succeededFuture(recordToInstance));
 
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new InstanceWriterFactory());

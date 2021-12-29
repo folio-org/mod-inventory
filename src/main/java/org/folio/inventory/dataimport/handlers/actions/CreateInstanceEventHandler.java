@@ -26,7 +26,6 @@ import org.folio.rest.jaxrs.model.Record;
 
 import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -84,11 +83,11 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       Record targetRecord = Json.decodeValue(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()), Record.class);
-      Future<Optional<RecordToEntity>> recordToInstanceFuture = idStorageService.store(targetRecord.getId(), UUID.randomUUID().toString(), dataImportEventPayload.getTenant());
       String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
 
+      Future<RecordToEntity> recordToInstanceFuture = idStorageService.store(targetRecord.getId(), UUID.randomUUID().toString(), dataImportEventPayload.getTenant());
       recordToInstanceFuture.onSuccess(res -> {
-        String instanceId = res.get().getEntityId();
+        String instanceId = res.getEntityId();
         mappingMetadataCache.get(jobExecutionId, context)
           .compose(parametersOptional -> parametersOptional
             .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()),
