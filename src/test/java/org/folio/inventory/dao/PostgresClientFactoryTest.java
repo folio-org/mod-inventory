@@ -52,9 +52,7 @@ public class PostgresClientFactoryTest {
     vertx.close(context.asyncAssertSuccess(res -> {
       async.complete();
     }));
-    if (PgPoolContainer.isRunning()) {
-      PgPoolContainer.setEmbeddedPostgresOptions();
-    }
+    PgPoolContainer.setEmbeddedPostgresOptions();
     PostgresClientFactory.closeAll();
   }
 
