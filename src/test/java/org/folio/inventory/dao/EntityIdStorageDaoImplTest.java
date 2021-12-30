@@ -30,7 +30,6 @@ public class EntityIdStorageDaoImplTest {
   @BeforeClass
   public static void setUp() {
     if (!PgPoolContainer.isRunning()) {
-      System.out.println("Running test on own, creating PostgreSQL container manually");
       runningOnOwn = true;
       PgPoolContainer.create();
       SchemaApi schemaApi = new SchemaApi();
@@ -41,7 +40,6 @@ public class EntityIdStorageDaoImplTest {
   @AfterClass
   public static void tearDown() {
     if (PgPoolContainer.isRunning() && runningOnOwn) {
-      System.out.println("Running test on own, stopping PostgreSQL container manually");
       PgPoolContainer.stop();
     }
   }

@@ -1,19 +1,18 @@
 package org.folio.inventory.services;
 
 import io.vertx.core.Future;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.dao.EntityIdStorageDao;
 import org.folio.inventory.domain.relationship.EntityTable;
 import org.folio.inventory.domain.relationship.RecordToEntity;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-public class InstanceIdStorageService implements IdStorageService{
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(InstanceIdStorageService.class);
+public class InstanceIdStorageService implements IdStorageService {
+  private static final Logger LOGGER = LogManager.getLogger(InstanceIdStorageService.class);
 
   private final EntityIdStorageDao entityIdStorageDao;
 
-  public InstanceIdStorageService(EntityIdStorageDao entityIdStorageDao){
+  public InstanceIdStorageService(EntityIdStorageDao entityIdStorageDao) {
     this.entityIdStorageDao = entityIdStorageDao;
   }
 
