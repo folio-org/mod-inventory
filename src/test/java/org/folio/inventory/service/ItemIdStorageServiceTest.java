@@ -5,18 +5,19 @@ import org.folio.inventory.common.dao.EntityIdStorageDaoImpl;
 import org.folio.inventory.domain.relationship.EntityTable;
 import org.folio.inventory.domain.relationship.RecordToEntity;
 import org.folio.inventory.services.ItemIdStorageService;
-import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import static org.mockito.ArgumentMatchers.any;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import static org.mockito.Mockito.when;
 import org.mockito.junit.MockitoJUnitRunner;
+
+import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.junit.Assert.assertEquals;
+import static api.ApiTestSuite.TENANT_ID;
 
 @RunWith(MockitoJUnitRunner.class)
 public class ItemIdStorageServiceTest {
-  private static final String TENANT_ID = "test_tenant";
 
   @Mock
   private EntityIdStorageDaoImpl entityIdStorageDaoImpl;
