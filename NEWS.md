@@ -4,7 +4,6 @@
 * added support for new administrative notes field (MODINV-580, MODINV-581, MODINV-582)
 * Update Log4j to 2.16.0. (CVE-2021-44228) (MODINV-599)
 * Implement deduplication for Instances (MODINV-588)
-* Implement deduplication for Items (MODINV-590)
 
 ## 18.1.0 2021-10-18
 
