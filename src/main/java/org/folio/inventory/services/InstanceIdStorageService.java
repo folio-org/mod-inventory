@@ -20,7 +20,6 @@ public class InstanceIdStorageService implements IdStorageService {
   public Future<RecordToEntity> store(String recordId, String instanceId, String tenantId) {
     RecordToEntity recordToInstance = RecordToEntity.builder().table(EntityTable.INSTANCE).recordId(recordId).entityId(instanceId).build();
     LOGGER.info("Saving RecordToInstance relationship: {}", recordToInstance);
-    return entityIdStorageDao.saveRecordToEntityRelationship(recordToInstance, tenantId)
-      .map(recordToInstance);
+    return entityIdStorageDao.saveRecordToEntityRelationship(recordToInstance, tenantId);
   }
 }
