@@ -14,6 +14,8 @@ import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
+import org.folio.inventory.domain.relationship.RecordToEntity;
+import org.folio.inventory.services.IdStorageService;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
@@ -24,6 +26,7 @@ import org.folio.rest.jaxrs.model.Record;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import static java.lang.String.format;
@@ -47,15 +50,15 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
 
-
   private PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
   private MappingMetadataCache mappingMetadataCache;
+  private IdStorageService idStorageService;
 
-
-  public CreateInstanceEventHandler(Storage storage, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper, MappingMetadataCache mappingMetadataCache) {
+  public CreateInstanceEventHandler(Storage storage, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper, MappingMetadataCache mappingMetadataCache, IdStorageService idStorageService) {
     super(storage);
     this.mappingMetadataCache = mappingMetadataCache;
     this.precedingSucceedingTitlesHelper = precedingSucceedingTitlesHelper;
+    this.idStorageService = idStorageService;
   }
 
   @Override
@@ -80,37 +83,46 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       Record targetRecord = Json.decodeValue(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()), Record.class);
-
       String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
-      mappingMetadataCache.get(jobExecutionId, context)
-        .compose(parametersOptional -> parametersOptional
-          .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()),
-            Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class)))
-          .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, jobExecutionId, recordId, chunkId))))
-        .compose(v -> {
-          InstanceCollection instanceCollection = storage.getInstanceCollection(context);
-          JsonObject instanceAsJson = prepareInstance(dataImportEventPayload, targetRecord, jobExecutionId);
-          List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
-          if (!errors.isEmpty()) {
-            String msg = format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", errors,
-              jobExecutionId, recordId, chunkId);
-            LOGGER.warn(msg);
-            return Future.failedFuture(msg);
-          }
 
-          Instance mappedInstance = Instance.fromJson(instanceAsJson);
-          return addInstance(mappedInstance, instanceCollection)
-            .compose(createdInstance -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(mappedInstance, context).map(createdInstance));
-        })
-        .onSuccess(ar -> {
-          dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(ar));
-          future.complete(dataImportEventPayload);
-        })
-        .onFailure(e -> {
-          LOGGER.error("Error creating inventory Instance by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId, recordId,
-            chunkId, e);
-          future.completeExceptionally(e);
-        });
+      Future<RecordToEntity> recordToInstanceFuture = idStorageService.store(targetRecord.getId(), UUID.randomUUID().toString(), dataImportEventPayload.getTenant());
+      recordToInstanceFuture.onSuccess(res -> {
+        String instanceId = res.getEntityId();
+        mappingMetadataCache.get(jobExecutionId, context)
+          .compose(parametersOptional -> parametersOptional
+            .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()),
+              Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class)))
+            .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, jobExecutionId, recordId, chunkId))))
+          .compose(v -> {
+            InstanceCollection instanceCollection = storage.getInstanceCollection(context);
+            JsonObject instanceAsJson = prepareInstance(dataImportEventPayload, instanceId, jobExecutionId);
+            List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
+            if (!errors.isEmpty()) {
+              String msg = format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", errors,
+                jobExecutionId, recordId, chunkId);
+              LOGGER.warn(msg);
+              return Future.failedFuture(msg);
+            }
+
+            Instance mappedInstance = Instance.fromJson(instanceAsJson);
+            return addInstance(mappedInstance, instanceCollection)
+              .compose(createdInstance -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(mappedInstance, context).map(createdInstance));
+          })
+          .onSuccess(ar -> {
+            dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(ar));
+            future.complete(dataImportEventPayload);
+          })
+          .onFailure(e -> {
+            LOGGER.error("Error creating inventory Instance by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId, recordId,
+              chunkId, e);
+            future.completeExceptionally(e);
+          });
+      })
+      .onFailure(failure -> {
+        LOGGER.error("Error creating inventory recordId and instanceId relationship by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId, recordId,
+          chunkId, failure);
+        future.completeExceptionally(failure);
+      });
     } catch (Exception e) {
       LOGGER.error("Error creating inventory Instance", e);
       future.completeExceptionally(e);
@@ -118,16 +130,16 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
     return future;
   }
 
-  private JsonObject prepareInstance(DataImportEventPayload dataImportEventPayload, Record targetRecord, String jobExecutionId) {
+  private JsonObject prepareInstance(DataImportEventPayload dataImportEventPayload, String instanceId, String jobExecutionId) {
     JsonObject instanceAsJson = new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value()));
     if (instanceAsJson.getJsonObject(INSTANCE_PATH) != null) {
       instanceAsJson = instanceAsJson.getJsonObject(INSTANCE_PATH);
     }
-    instanceAsJson.put("id", targetRecord.getId());
+    instanceAsJson.put("id", instanceId);
     instanceAsJson.put(SOURCE_KEY, MARC_FORMAT);
     instanceAsJson.remove(HRID_KEY);
 
-    LOGGER.debug("Creating instance with id: {} by jobExecutionId: {} and recordId:{} ", targetRecord.getId(), jobExecutionId, targetRecord.getId());
+    LOGGER.debug("Creating instance with id: {} by jobExecutionId: {}", instanceId, jobExecutionId);
     return instanceAsJson;
   }
 

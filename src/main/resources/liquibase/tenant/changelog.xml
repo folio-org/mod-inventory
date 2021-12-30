@@ -1,0 +1,10 @@
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
+
+  <include file="scripts/v-18.1.0/2021-12-10--13-00-create-records-instances-table.xml" relativeToChangelogFile="true"/>
+  <include file="scripts/v-18.1.0/2021-12-24--13-00-create-records-items-table.xml" relativeToChangelogFile="true"/>
+
+</databaseChangeLog>
