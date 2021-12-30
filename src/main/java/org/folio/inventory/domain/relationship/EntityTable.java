@@ -1,7 +1,8 @@
 package org.folio.inventory.domain.relationship;
 
 public enum EntityTable {
-  INSTANCE("records_instances", "record_id", "instance_id");
+  INSTANCE("records_instances", "record_id", "instance_id"),
+  ITEM("records_items", "record_id", "item_id");
 
   private final String tableName;
   private final String recordIdFieldName;
