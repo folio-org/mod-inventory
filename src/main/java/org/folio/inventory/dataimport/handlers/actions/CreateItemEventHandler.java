@@ -101,9 +101,9 @@ public class CreateItemEventHandler implements EventHandler {
       String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
       String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
 
-      Future<Optional<RecordToEntity>> recordToItemFuture = idStorageService.store(recordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant());
+      Future<RecordToEntity> recordToItemFuture = idStorageService.store(recordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant());
       recordToItemFuture.onSuccess(res -> {
-        String itemId = res.get().getEntityId();
+        String itemId = res.getEntityId();
         Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
         ItemCollection itemCollection = storage.getItemCollection(context);
 
