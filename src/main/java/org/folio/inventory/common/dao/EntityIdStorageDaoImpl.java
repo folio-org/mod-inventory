@@ -4,16 +4,15 @@ import io.vertx.core.Future;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowSet;
 import io.vertx.sqlclient.Tuple;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.inventory.domain.relationship.EntityTable;
 import org.folio.inventory.domain.relationship.RecordToEntity;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.UUID;
 
 public class EntityIdStorageDaoImpl implements EntityIdStorageDao {
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(EntityIdStorageDaoImpl.class);
+  private static final Logger LOGGER = LogManager.getLogger(EntityIdStorageDaoImpl.class);
 
   private static final String INSERT_FUNCTION = "WITH input_rows({recordIdFieldName}, {entityIdFieldName}) AS (\n" +
     "   VALUES ($1,$2)\n" +
@@ -70,6 +69,7 @@ public class EntityIdStorageDaoImpl implements EntityIdStorageDao {
 
   /**
    * Prepares SQL query for Insert.
+   *
    * @param entityTable the entity table.
    * @return sql query to use.
    */

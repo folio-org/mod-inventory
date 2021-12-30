@@ -16,7 +16,7 @@ import static org.folio.inventory.common.dao.PostgresConnectionOptions.*;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
-public class SchemaApiTest extends ApiTests {
+public class TenantApiTest extends ApiTests {
 
   @Test
   public void shouldCreateSchemaWithTables() throws Exception {

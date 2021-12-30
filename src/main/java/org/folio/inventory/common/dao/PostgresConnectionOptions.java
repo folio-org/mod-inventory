@@ -6,8 +6,8 @@ import io.vertx.core.net.PemTrustOptions;
 import io.vertx.pgclient.PgConnectOptions;
 import io.vertx.pgclient.SslMode;
 import org.apache.commons.lang3.StringUtils;
-import static org.folio.inventory.rest.util.ModuleName.getModuleName;
-import static org.folio.inventory.rest.util.ModuleUtil.convertToPsqlStandard;
+
+import static java.lang.String.format;
 
 import java.util.Collections;
 import java.util.Map;
@@ -19,7 +19,7 @@ public class PostgresConnectionOptions {
   private static final String DEFAULT_SCHEMA_PROPERTY = "search_path";
   private static final String DEFAULT_IDLE_TIMEOUT = "60000";
   private static final String DEFAULT_MAX_POOL_SIZE = "5";
-  private static final String MODULE_NAME = getModuleName();
+  private static final String MODULE_NAME = "mod_inventory";
 
   public static final String DB_HOST = "DB_HOST";
   public static final String DB_PORT = "DB_PORT";
@@ -37,10 +37,10 @@ public class PostgresConnectionOptions {
   }
 
   /**
-   * Get {@link PgConnectOptions}
+   * Get {@link PgConnectOptions}.
    *
-   * @param tenantId tenant id
-   * @return postgres connection options
+   * @param tenantId tenant id.
+   * @return postgres connection options.
    */
   public static PgConnectOptions getConnectionOptions(String tenantId) {
     PgConnectOptions pgConnectionOptions = new PgConnectOptions();
@@ -85,8 +85,19 @@ public class PostgresConnectionOptions {
   }
 
   /**
-   * For test usage only
-   * @param newSystemProperties Map of system properties to set
+   * RMB convention driven tenant to schema name.
+   *
+   * @param tenantId tenant id.
+   * @return formatted schema and module name.
+   */
+  public static String convertToPsqlStandard(String tenantId) {
+    return format("%s_%s", tenantId.toLowerCase(), MODULE_NAME);
+  }
+
+  /**
+   * For test usage only.
+   *
+   * @param newSystemProperties Map of system properties to set.
    */
   public static void setSystemProperties(Map<String, String> newSystemProperties) {
     systemProperties = newSystemProperties;

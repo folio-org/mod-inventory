@@ -21,7 +21,7 @@ import org.folio.inventory.resources.IsbnUtilsApi;
 import org.folio.inventory.resources.Items;
 import org.folio.inventory.resources.ItemsByHoldingsRecordId;
 import org.folio.inventory.resources.MoveApi;
-import org.folio.inventory.resources.SchemaApi;
+import org.folio.inventory.resources.TenantApi;
 import org.folio.inventory.resources.ingest.ModsIngestion;
 import org.folio.inventory.storage.Storage;
 
@@ -64,7 +64,7 @@ public class InventoryVerticle extends AbstractVerticle {
     new IsbnUtilsApi().register(router);
     new ItemsByHoldingsRecordId(storage, client).register(router);
     new InventoryConfigApi().register(router);
-    new SchemaApi().register(router);
+    new TenantApi().register(router);
 
     Handler<AsyncResult<HttpServer>> onHttpServerStart = result -> {
       if (result.succeeded()) {
