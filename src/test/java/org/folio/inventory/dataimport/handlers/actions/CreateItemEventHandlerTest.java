@@ -5,7 +5,6 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
-import static org.folio.DataImportEventTypes.*;
 import org.folio.JobProfile;
 import org.folio.MappingProfile;
 import org.folio.inventory.common.Context;
@@ -44,13 +43,20 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 
 import java.io.UnsupportedEncodingException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
+import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_CREATED;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
 import static org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler.ACTION_HAS_NO_MAPPING_MSG;
 import static org.folio.inventory.domain.items.ItemStatusName.AVAILABLE;
 import static org.folio.rest.jaxrs.model.EntityType.ITEM;
@@ -59,7 +65,8 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class CreateItemEventHandlerTest {
 
