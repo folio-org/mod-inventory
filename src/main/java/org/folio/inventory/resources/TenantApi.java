@@ -19,12 +19,10 @@ import org.folio.inventory.rest.impl.SingleConnectionProvider;
 import java.sql.Connection;
 
 import static java.lang.String.format;
-import static org.folio.inventory.rest.util.ModuleUtil.convertToPsqlStandard;
+import static org.folio.inventory.common.dao.PostgresConnectionOptions.convertToPsqlStandard;
 
-
-public class SchemaApi {
-
-  private static final Logger LOGGER = LogManager.getLogger(SchemaApi.class);
+public class TenantApi {
+  private static final Logger LOGGER = LogManager.getLogger(TenantApi.class);
 
   private static final String CHANGELOG_TENANT_PATH = "liquibase/tenant/changelog.xml";
   private static final String TENANT_PATH = "/_/tenant";

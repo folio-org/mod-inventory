@@ -16,14 +16,12 @@ import org.apache.logging.log4j.Logger;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.folio.inventory.rest.util.ModuleName.getModuleName;
+import static org.folio.inventory.common.dao.PostgresConnectionOptions.convertToPsqlStandard;
 
 public class PostgresClientFactory {
-
   private static final Logger LOGGER = LogManager.getLogger(PostgresClientFactory.class);
 
   private static final Map<String, PgPool> POOL_CACHE = new HashMap<>();
-  private static final String MODULE_NAME = getModuleName();
 
   /**
    * Such field is temporary solution which is used to allow resetting the pool in tests.
@@ -79,7 +77,7 @@ public class PostgresClientFactory {
   }
 
   private PreparedQuery<RowSet<Row>> preparedQuery(String sql, String tenantId) {
-    String schemaName = tenantId + "_" + MODULE_NAME;
+    String schemaName = convertToPsqlStandard(tenantId);
     String preparedSql = sql.replace("{schemaName}", schemaName);
     return getCachedPool(tenantId).preparedQuery(preparedSql);
   }

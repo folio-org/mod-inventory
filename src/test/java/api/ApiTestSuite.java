@@ -68,7 +68,7 @@ import support.fakes.FakeOkapi;
   MarkItemUnknownApiTests.class,
   HoldingsApiMoveExamples.class,
   BoundWithTests.class,
-  SchemaApiTest.class
+  TenantApiTest.class
 })
 public class ApiTestSuite {
   public static final int INVENTORY_VERTICLE_TEST_PORT = 9603;
