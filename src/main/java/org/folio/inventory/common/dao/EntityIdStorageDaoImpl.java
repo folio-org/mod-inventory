@@ -9,7 +9,6 @@ import org.folio.inventory.domain.relationship.RecordToEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Optional;
 import java.util.UUID;
 
 public class EntityIdStorageDaoImpl implements EntityIdStorageDao {
@@ -39,7 +38,7 @@ public class EntityIdStorageDaoImpl implements EntityIdStorageDao {
   }
 
   @Override
-  public Future<Optional<RecordToEntity>> saveRecordToEntityRelationship(RecordToEntity recordToEntity, String tenantId) {
+  public Future<RecordToEntity> saveRecordToEntityRelationship(RecordToEntity recordToEntity, String tenantId) {
     EntityTable entityTable = recordToEntity.getTable();
     UUID recordId = UUID.fromString(recordToEntity.getRecordId());
     UUID entityId = UUID.fromString(recordToEntity.getEntityId());
@@ -50,26 +49,18 @@ public class EntityIdStorageDaoImpl implements EntityIdStorageDao {
     Tuple tuple = Tuple.of(recordId, entityId);
 
     return postgresClientFactory.execute(sql, tuple, tenantId)
-      .map(rows -> rowSetToOptionalRecordToEntity(rows, entityTable));
+      .map(rows -> mapRowToRecordToEntity(rows, entityTable));
   }
 
   /**
-   * Convert database query result {@link Row} to {@link Optional} {@link RecordToEntity}
+   * Convert database query result {@link RowSet} to {@link RecordToEntity}.
+   * There is no case when DB returns empty RowSet, so hasNext check is not needed yet.
    *
-   * @param rows query RowSet result
-   * @return optional RecordToEntity
-   */
-  private Optional<RecordToEntity> rowSetToOptionalRecordToEntity(RowSet<Row> rows, EntityTable entityTable) {
-    return rows.iterator().hasNext() ? Optional.of(mapRowToRecordToEntity(rows.iterator().next(), entityTable)) : Optional.empty();
-  }
-
-  /**
-   * Convert database query result {@link Row} to {@link RecordToEntity}
-   *
-   * @param row query result row
+   * @param rows query result RowSet.
    * @return RecordToInstance
    */
-  private RecordToEntity mapRowToRecordToEntity(Row row, EntityTable entityTable) {
+  private RecordToEntity mapRowToRecordToEntity(RowSet<Row> rows, EntityTable entityTable) {
+    Row row = rows.iterator().next();
     return RecordToEntity.builder()
       .table(entityTable)
       .recordId(row.getValue(entityTable.getRecordIdFieldName()).toString())
@@ -78,9 +69,9 @@ public class EntityIdStorageDaoImpl implements EntityIdStorageDao {
   }
 
   /**
-   * Prepares SQL query to Insert
-   * @param entityTable the entity table
-   * @return sql query to use
+   * Prepares SQL query for Insert.
+   * @param entityTable the entity table.
+   * @return sql query to use.
    */
   private String prepareQuery(EntityTable entityTable) {
     return INSERT_FUNCTION.replace("{recordIdFieldName}", entityTable.getRecordIdFieldName())

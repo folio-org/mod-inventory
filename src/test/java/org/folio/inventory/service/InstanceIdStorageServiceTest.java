@@ -11,10 +11,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
-import java.util.Optional;
-
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -33,13 +30,10 @@ public class InstanceIdStorageServiceTest {
     String recordId = "567859ad-505a-400d-a699-0028a1fdbf84";
     String instanceId = "4d4545df-b5ba-4031-a031-70b1c1b2fc5d";
     RecordToEntity expectedRecordToInstance = RecordToEntity.builder().table(EntityTable.INSTANCE).recordId(recordId).entityId(instanceId).build();
-    when(entityIdStorageDaoImpl.saveRecordToEntityRelationship(any(RecordToEntity.class), any())).thenReturn(Future.succeededFuture(Optional.of(expectedRecordToInstance)));
-    Future<Optional<RecordToEntity>> optionalFuture = instanceIdStorageService.store(recordId, instanceId, TENANT_ID);
+    when(entityIdStorageDaoImpl.saveRecordToEntityRelationship(any(RecordToEntity.class), any())).thenReturn(Future.succeededFuture(expectedRecordToInstance));
+    Future<RecordToEntity> future = instanceIdStorageService.store(recordId, instanceId, TENANT_ID);
 
-    Optional<RecordToEntity> optionalRecordToEntity = optionalFuture.result();
-    assertTrue(optionalRecordToEntity.isPresent());
-
-    RecordToEntity actualRecordToInstance = optionalRecordToEntity.get();
+    RecordToEntity actualRecordToInstance = future.result();
     assertEquals(expectedRecordToInstance.getTable().getTableName(), actualRecordToInstance.getTable().getTableName());
     assertEquals(expectedRecordToInstance.getTable().getEntityIdFieldName(), actualRecordToInstance.getTable().getEntityIdFieldName());
     assertEquals(expectedRecordToInstance.getTable().getRecordIdFieldName(), actualRecordToInstance.getTable().getRecordIdFieldName());
@@ -52,9 +46,9 @@ public class InstanceIdStorageServiceTest {
     String recordId = "567859ad-505a-400d-a699-0028a1fdbf84";
     String instanceId = "4d4545df-b5ba-4031-a031-70b1c1b2fc5d";
     when(entityIdStorageDaoImpl.saveRecordToEntityRelationship(any(RecordToEntity.class), any())).thenReturn(Future.failedFuture("failed"));
-    Future<Optional<RecordToEntity>> optionalFuture = instanceIdStorageService.store(recordId, instanceId, TENANT_ID);
+    Future<RecordToEntity> future = instanceIdStorageService.store(recordId, instanceId, TENANT_ID);
 
-    assertEquals("failed", optionalFuture.cause().getMessage());
+    assertEquals("failed", future.cause().getMessage());
   }
 
 }

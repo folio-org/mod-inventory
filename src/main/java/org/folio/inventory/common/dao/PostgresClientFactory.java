@@ -9,6 +9,7 @@ import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowSet;
 import io.vertx.sqlclient.Tuple;
 import io.vertx.sqlclient.PoolOptions;
+import io.vertx.sqlclient.SqlClient;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -78,28 +79,17 @@ public class PostgresClientFactory {
   }
 
   private PreparedQuery<RowSet<Row>> preparedQuery(String sql, String tenantId) {
-    String preparedSql = replaceSchemaName(sql, tenantId);
+    String schemaName = tenantId + "_" + MODULE_NAME;
+    String preparedSql = sql.replace("{schemaName}", schemaName);
     return getCachedPool(tenantId).preparedQuery(preparedSql);
   }
 
-  private String replaceSchemaName(String sql, String tenantId) {
-    return sql.replace("{schemaName}", getSchemaName(tenantId));
-  }
-
-  private String getSchemaName(String tenantId) {
-    return tenantId + "_" + MODULE_NAME;
-  }
-
   /**
-   * close all {@link PgPool} clients
+   * close all {@link PgPool} clients.
    */
   public static void closeAll() {
-    POOL_CACHE.values().forEach(PostgresClientFactory::close);
+    POOL_CACHE.values().forEach(SqlClient::close);
     POOL_CACHE.clear();
-  }
-
-  private static void close(PgPool client) {
-    client.close();
   }
 
   /**
@@ -108,5 +98,4 @@ public class PostgresClientFactory {
   public void setShouldResetPool(boolean shouldResetPool) {
     PostgresClientFactory.shouldResetPool = shouldResetPool;
   }
-
 }
