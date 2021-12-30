@@ -56,7 +56,7 @@ public class EntityIdStorageDaoImplTest {
   }
 
   @Test
-  public void shouldReturnSavedRecordToEntity(TestContext context) {
+  public void shouldReturnSavedRecordToInstance(TestContext context) {
     Async async = context.async();
 
     RecordToEntity expectedRecordToInstance = RecordToEntity.builder().table(EntityTable.INSTANCE).recordId(RECORD_ID).entityId(INSTANCE_ID).build();
@@ -69,6 +69,26 @@ public class EntityIdStorageDaoImplTest {
       context.assertEquals(expectedRecordToInstance.getRecordId(), actualRecordToEntity.getRecordId());
       context.assertEquals(expectedRecordToInstance.getEntityId(), actualRecordToEntity.getEntityId());
       context.assertEquals(expectedRecordToInstance.getTable(), actualRecordToEntity.getTable());
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldReturnSavedRecordToItem(TestContext context) {
+    Async async = context.async();
+
+    String recordId = "567859ad-505a-400d-a699-0028a1fdbf84";
+    String itemId = "4d4545df-b5ba-4031-a031-70b1c1b2fc5d";
+    RecordToEntity expectedRecordToItem = RecordToEntity.builder().table(EntityTable.ITEM).recordId(recordId).entityId(itemId).build();
+
+    Future<RecordToEntity> optionalFuture = entityIdStorageDao.saveRecordToEntityRelationship(expectedRecordToItem, TENANT_ID);
+    optionalFuture.onComplete(ar -> {
+      context.assertTrue(ar.succeeded());
+      RecordToEntity actualRecordToEntity = ar.result();
+      context.assertEquals(expectedRecordToItem.getRecordId(), actualRecordToEntity.getRecordId());
+      context.assertEquals(expectedRecordToItem.getEntityId(), actualRecordToEntity.getEntityId());
+      context.assertEquals(expectedRecordToItem.getTable(), actualRecordToEntity.getTable());
+
       async.complete();
     });
   }
