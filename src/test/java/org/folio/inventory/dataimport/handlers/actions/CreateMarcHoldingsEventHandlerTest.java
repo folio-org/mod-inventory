@@ -3,6 +3,7 @@ package org.folio.inventory.dataimport.handlers.actions;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -20,6 +21,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTI
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 
+import io.vertx.core.Future;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -44,6 +46,8 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.domain.relationship.RecordToEntity;
+import org.folio.inventory.services.HoldingsIdStorageService;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.MappingMetadataDto;
 import org.junit.Assert;
@@ -89,6 +93,8 @@ public class CreateMarcHoldingsEventHandlerTest {
   HoldingsRecordCollection holdingsRecordsCollection;
   @Mock
   InstanceCollection instanceRecordCollection;
+  @Mock
+  private HoldingsIdStorageService holdingsIdStorageService;
 
   @Rule
   public WireMockRule mockServer = new WireMockRule(
@@ -99,6 +105,8 @@ public class CreateMarcHoldingsEventHandlerTest {
   private JsonObject mappingRules;
   private CreateMarcHoldingsEventHandler createMarcHoldingsEventHandler;
   private String instanceId;
+  private String holdingsId;
+  private String recordId;
   private Vertx vertx = Vertx.vertx();
 
   private final JobProfile jobProfile = new JobProfile()
@@ -143,7 +151,7 @@ public class CreateMarcHoldingsEventHandlerTest {
     MockitoAnnotations.openMocks(this);
     MappingManager.clearReaderFactories();
     MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, vertx.createHttpClient(), 3600);
-    createMarcHoldingsEventHandler = new CreateMarcHoldingsEventHandler(storage, mappingMetadataCache);
+    createMarcHoldingsEventHandler = new CreateMarcHoldingsEventHandler(storage, mappingMetadataCache, holdingsIdStorageService);
     mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
 
     doAnswer(invocationOnMock -> {
@@ -163,6 +171,13 @@ public class CreateMarcHoldingsEventHandlerTest {
       successHandler.accept(new Success<>(holdingsRecord));
       return null;
     }).when(holdingsRecordsCollection).add(any(), any(Consumer.class), any(Consumer.class));
+
+    doAnswer(invocationOnMock -> {
+      recordId = String.valueOf(UUID.randomUUID());
+      holdingsId = String.valueOf(UUID.randomUUID());
+      RecordToEntity recordToHoldings = RecordToEntity.builder().recordId(recordId).entityId(holdingsId).build();
+      return Future.succeededFuture(recordToHoldings);
+    }).when(holdingsIdStorageService).store(any(), any(), any());
 
     WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true))
       .willReturn(WireMock.ok().withBody(Json.encode(new MappingMetadataDto()
@@ -185,7 +200,7 @@ public class CreateMarcHoldingsEventHandlerTest {
 
     var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
-    record.setId("a0eb738a-c631-48cb-b36e-41cdcc83e2a4");
+    record.setId(recordId);
     HashMap<String, String> context = new HashMap<>();
     context.put("HOLDINGS", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(holdings)).encode());
     context.put(MARC_HOLDINGS.value(), Json.encode(record));
@@ -199,12 +214,14 @@ public class CreateMarcHoldingsEventHandlerTest {
 
     CompletableFuture<DataImportEventPayload> future = createMarcHoldingsEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.SECONDS);
+    JsonObject createdHoldings = new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
 
-    Assert.assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
-    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
-    Assert.assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("id"));
-    Assert.assertEquals(instanceId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("instanceId"));
-    Assert.assertEquals(PERMANENT_LOCATION_ID, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("permanentLocationId"));
+    assertEquals(holdingsId, createdHoldings.getString("id"));
+    assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
+    assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
+    assertNotNull(createdHoldings.getString("id"));
+    assertEquals(instanceId, createdHoldings.getString("instanceId"));
+    assertEquals(PERMANENT_LOCATION_ID, createdHoldings.getString("permanentLocationId"));
   }
 
   @Test(expected = ExecutionException.class)
@@ -368,8 +385,8 @@ public class CreateMarcHoldingsEventHandlerTest {
     DataImportEventPayload actualDataImportEventPayload = future.get(10, TimeUnit.SECONDS);
 
     Assert.assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
-    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
-    Assert.assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("id"));
+    assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
+    assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("id"));
     Assert.assertNull(new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("instanceId"));
     Assert.assertEquals(PERMANENT_LOCATION_ID, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("permanentLocationId"));
   }
@@ -460,6 +477,29 @@ public class CreateMarcHoldingsEventHandlerTest {
 
     CompletableFuture<DataImportEventPayload> future = createMarcHoldingsEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
+  }
+
+  @Test(expected = Exception.class)
+  public void shouldNotProcessEventWhenRecordToHoldingsFutureFails() throws ExecutionException, InterruptedException, TimeoutException {
+    String recordId = "a0eb738a-c631-48cb-b36e-41cdcc83e2a4";
+
+    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+    when(holdingsIdStorageService.store(any(), any(), any())).thenReturn(Future.failedFuture(new Exception()));
+
+    HashMap<String, String> context = new HashMap<>();
+    Record record = new Record();
+    record.setId(recordId);
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_HOLDING_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = createMarcHoldingsEventHandler.handle(dataImportEventPayload);
+    future.get(5, TimeUnit.SECONDS);
   }
 
   @Test
