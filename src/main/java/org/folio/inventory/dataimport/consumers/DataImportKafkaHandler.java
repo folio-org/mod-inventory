@@ -146,7 +146,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     EventManager.registerEventHandler(new MatchHoldingEventHandler(mappingMetadataCache));
     EventManager.registerEventHandler(new MatchAuthorityEventHandler(mappingMetadataCache));
     EventManager.registerEventHandler(new CreateItemEventHandler(storage, mappingMetadataCache, new ItemIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx)))));
-    EventManager.registerEventHandler(new CreateHoldingEventHandler(storage, mappingMetadataCache));
+    EventManager.registerEventHandler(new CreateHoldingEventHandler(storage, mappingMetadataCache, new HoldingsIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx)))));
     EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, new InstanceIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx)))));
     EventManager.registerEventHandler(new CreateMarcHoldingsEventHandler(storage, mappingMetadataCache, new HoldingsIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx)))));
     EventManager.registerEventHandler(new CreateMarcAuthorityEventHandler(storage, mappingMetadataCache));

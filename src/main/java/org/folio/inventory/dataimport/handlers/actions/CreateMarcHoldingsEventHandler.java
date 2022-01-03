@@ -95,8 +95,8 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
       prepareEvent(dataImportEventPayload);
 
       String jobExecutionId = dataImportEventPayload.getJobExecutionId();
-      String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
-      String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
+      String recordId = payloadContext.get(RECORD_ID_HEADER);
+      String chunkId = payloadContext.get(CHUNK_ID_HEADER);
 
       Future<RecordToEntity> recordToHoldingsFuture = idStorageService.store(targetRecord.getId(), UUID.randomUUID().toString(), dataImportEventPayload.getTenant());
       recordToHoldingsFuture.onSuccess(res -> {
@@ -111,9 +111,9 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
             .compose(instanceId -> {
               fillInstanceId(dataImportEventPayload, holdingJson, instanceId);
               var holdingsRecords = storage.getHoldingsRecordCollection(context);
-              HoldingsRecord holding = Json.decodeValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), HoldingsRecord.class);
+              HoldingsRecord holding = Json.decodeValue(payloadContext.get(HOLDINGS.value()), HoldingsRecord.class);
               return addHoldings(holding, holdingsRecords);
-          }))
+            }))
           .onSuccess(createdHoldings -> {
             LOGGER.info("Created Holding record by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
               recordId, chunkId);
