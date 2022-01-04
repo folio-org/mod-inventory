@@ -4,7 +4,7 @@
   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
     http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
 
-  <changeSet id="2021-12-10--13-00-create-records-instances-table" author="ShansKaluhin">
+  <changeSet id="2021-12-10--13-00-create-records-holdings-table" author="ShansKaluhin">
     <createTable tableName="records_holdings">
       <column name="record_id" type="uuid">
         <constraints primaryKey="true" nullable="false"/>

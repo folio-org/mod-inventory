@@ -17,8 +17,8 @@ public class HoldingsIdStorageService implements IdStorageService{
   }
 
   @Override
-  public Future<RecordToEntity> store(String recordId, String instanceId, String tenantId) {
-    RecordToEntity recordToHoldings = RecordToEntity.builder().table(EntityTable.HOLDINGS).recordId(recordId).entityId(instanceId).build();
+  public Future<RecordToEntity> store(String recordId, String holdingsId, String tenantId) {
+    RecordToEntity recordToHoldings = RecordToEntity.builder().table(EntityTable.HOLDINGS).recordId(recordId).entityId(holdingsId).build();
     LOGGER.info("Saving RecordToHoldings relationship: {}", recordToHoldings);
     return entityIdStorageDao.saveRecordToEntityRelationship(recordToHoldings, tenantId);
   }
