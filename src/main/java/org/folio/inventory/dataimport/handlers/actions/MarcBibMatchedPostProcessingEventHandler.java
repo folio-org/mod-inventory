@@ -27,7 +27,6 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MATCHED_READY_FOR_POST_PROCESSING;
-import static org.folio.processing.mapping.mapper.writer.marc.MarcRecordModifier.MATCHED_MARC_BIB_KEY;
 
 public class MarcBibMatchedPostProcessingEventHandler implements EventHandler {
 
@@ -37,6 +36,7 @@ public class MarcBibMatchedPostProcessingEventHandler implements EventHandler {
   private static final String MATCHED_RECORD_NOT_EXISTS_MSG = "Record by MATCHED_MARC_BIBLIOGRAPHIC-key doesn't exist in the payload";
   private static final String ERROR_INSTANCE_MSG = "Error loading inventory instance for MARC BIB";
   private static final String ERROR_HOLDING_MSG = "Error loading inventory holdings for MARC BIB";
+  private static final String MATCHED_MARC_BIB_KEY = "MATCHED_MARC_BIBLIOGRAPHIC";
   private final Storage storage;
 
   public MarcBibMatchedPostProcessingEventHandler(Storage storage) {
