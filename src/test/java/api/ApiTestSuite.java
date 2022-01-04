@@ -22,6 +22,7 @@ import api.items.MarkItemUnavailableApiTests;
 import api.items.MarkItemUnknownApiTests;
 import org.folio.inventory.InventoryVerticle;
 import org.folio.inventory.common.VertxAssistant;
+import org.folio.inventory.rest.impl.PgPoolContainer;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -66,7 +67,8 @@ import support.fakes.FakeOkapi;
   MarkItemUnavailableApiTests.class,
   MarkItemUnknownApiTests.class,
   HoldingsApiMoveExamples.class,
-  BoundWithTests.class
+  BoundWithTests.class,
+  TenantApiTest.class
 })
 public class ApiTestSuite {
   public static final int INVENTORY_VERTICLE_TEST_PORT = 9603;
@@ -126,6 +128,8 @@ public class ApiTestSuite {
       System.getProperty("use.okapi.storage.requests")));
 
     startVertx();
+    stopPostgresqlContainer();
+    startPostgresqlContainer();
     startFakeModules();
     createMaterialTypes();
     createLoanTypes();
@@ -145,6 +149,7 @@ public class ApiTestSuite {
 
     stopInventoryVerticle();
     stopFakeModules();
+    stopPostgresqlContainer();
     stopVertx();
 
     initialised = false;
@@ -543,5 +548,15 @@ public class ApiTestSuite {
   private static boolean existsInList(List<JsonObject> existingRecords, String name) {
     return existingRecords.stream()
       .noneMatch(materialType -> materialType.getString("name").equals(name));
+  }
+
+  private static void startPostgresqlContainer() {
+    PgPoolContainer.create();
+  }
+
+  private static void stopPostgresqlContainer() {
+    if (PgPoolContainer.isRunning()) {
+      PgPoolContainer.stop();
+    }
   }
 }

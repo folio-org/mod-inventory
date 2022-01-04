@@ -8,6 +8,7 @@ import com.github.tomakehurst.wiremock.matching.RegexPattern;
 import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
 import com.google.common.collect.Lists;
 
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.json.Json;
@@ -17,12 +18,15 @@ import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.JobProfile;
 import org.folio.MappingProfile;
+import org.folio.MappingMetadataDto;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.InstanceWriterFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
+import org.folio.inventory.domain.relationship.RecordToEntity;
+import org.folio.inventory.services.InstanceIdStorageService;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
@@ -34,7 +38,6 @@ import org.folio.processing.value.MissingValue;
 import org.folio.processing.value.StringValue;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.MappingDetail;
-import org.folio.MappingMetadataDto;
 import org.folio.rest.jaxrs.model.MappingRule;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
@@ -66,7 +69,6 @@ import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
-import static org.folio.inventory.dataimport.handlers.actions.CreateInstanceEventHandler.ACTION_HAS_NO_MAPPING_MSG;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
@@ -98,6 +100,8 @@ public class CreateInstanceEventHandlerTest {
   InstanceCollection instanceRecordCollection;
   @Mock
   OkapiHttpClient mockedClient;
+  @Mock
+  private InstanceIdStorageService instanceIdStorageService;
   @Spy
   private MarcBibReaderFactory fakeReaderFactory = new MarcBibReaderFactory();
 
@@ -162,7 +166,8 @@ public class CreateInstanceEventHandlerTest {
     Vertx vertx = Vertx.vertx();
     createInstanceEventHandler = new CreateInstanceEventHandler(storage,
       new PrecedingSucceedingTitlesHelper(context -> mockedClient), new MappingMetadataCache(vertx,
-      vertx.createHttpClient(new HttpClientOptions().setConnectTimeout(3000)), 3600));
+      vertx.createHttpClient(new HttpClientOptions().setConnectTimeout(3000)), 3600),
+      instanceIdStorageService);
 
 
     doAnswer(invocationOnMock -> {
@@ -181,7 +186,10 @@ public class CreateInstanceEventHandlerTest {
     Reader fakeReader = Mockito.mock(Reader.class);
 
     String instanceTypeId = "fe19bae4-da28-472b-be90-d442e2428ead";
+    String recordId = "567859ad-505a-400d-a699-0028a1fdbf84";
+    String instanceId = "4d4545df-b5ba-4031-a031-70b1c1b2fc5d";
     String title = "titleValue";
+    RecordToEntity recordToInstance = RecordToEntity.builder().recordId(recordId).entityId(instanceId).build();
 
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId), StringValue.of(title));
 
@@ -189,12 +197,14 @@ public class CreateInstanceEventHandlerTest {
 
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
 
+    when(instanceIdStorageService.store(any(), any(), any())).thenReturn(Future.succeededFuture(recordToInstance));
+
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
 
     HashMap<String, String> context = new HashMap<>();
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
-    record.setId("567859ad-505a-400d-a699-0028a1fdbf84");
+    record.setId(recordId);
 
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
 
@@ -214,7 +224,9 @@ public class CreateInstanceEventHandlerTest {
     assertEquals(DI_INVENTORY_INSTANCE_CREATED.value(), actualDataImportEventPayload.getEventType());
     assertNotNull(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
     JsonObject createdInstance = new JsonObject(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
-    assertNotNull(createdInstance.getString("id"));
+    String actualInstanceId = createdInstance.getString("id");
+    assertNotNull(actualInstanceId);
+    assertEquals(instanceId, actualInstanceId);
     assertEquals(title, createdInstance.getString("title"));
     assertEquals(instanceTypeId, createdInstance.getString("instanceTypeId"));
     assertEquals("MARC", createdInstance.getString("source"));
@@ -438,6 +450,45 @@ public class CreateInstanceEventHandlerTest {
   @Test
   public void shouldReturnPostProcessingInitializationEventType() {
     assertEquals(DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING.value(), createInstanceEventHandler.getPostProcessingInitializationEventType());
+  }
+
+  @Test(expected = Exception.class)
+  public void shouldNotProcessEventWhenRecordToInstanceFutureFails() throws ExecutionException, InterruptedException, TimeoutException {
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    String instanceTypeId = "fe19bae4-da28-472b-be90-d442e2428ead";
+    String recordId = "567859ad-505a-400d-a699-0028a1fdbf84";
+    String title = "titleValue";
+
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId), StringValue.of(title));
+
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+
+    when(instanceIdStorageService.store(any(), any(), any())).thenReturn(Future.failedFuture(new Exception()));
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new InstanceWriterFactory());
+
+    HashMap<String, String> context = new HashMap<>();
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    record.setId(recordId);
+
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(mockServer.baseUrl())
+      .withToken(TOKEN)
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl());
+
+    CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
+    future.get(5, TimeUnit.SECONDS);
   }
 
   private Response createdResponse() {
