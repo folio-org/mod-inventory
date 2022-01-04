@@ -18,6 +18,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
+import io.vertx.core.Future;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Collections;
@@ -40,6 +41,8 @@ import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.AuthorityRecordCollection;
+import org.folio.inventory.domain.relationship.RecordToEntity;
+import org.folio.inventory.services.IdStorageService;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
@@ -74,6 +77,8 @@ public class CreateMarcAuthorityEventHandlerTest {
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/marc-authority-rules.json";
   private static final String PARSED_AUTHORITY_RECORD = "src/test/resources/marc/authority/parsed-authority-record.json";
   private static final String MAPPING_METADATA_URL = "/mapping-metadata";
+  private static final String AUTHORITY_ID = UUID.randomUUID().toString();
+  private static final String RECORD_ID = UUID.randomUUID().toString();
 
   @Mock
   private Storage storage;
@@ -81,6 +86,8 @@ public class CreateMarcAuthorityEventHandlerTest {
   AuthorityRecordCollection authorityCollection;
   @Mock
   OkapiHttpClient mockedClient;
+  @Mock
+  private IdStorageService authorityIdStorageService;
 
   @Rule
   public WireMockRule mockServer = new WireMockRule(
@@ -133,7 +140,7 @@ public class CreateMarcAuthorityEventHandlerTest {
     MockitoAnnotations.openMocks(this);
     MappingManager.clearReaderFactories();
     MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, vertx.createHttpClient(), 3600);
-    createMarcAuthoritiesEventHandler = new CreateMarcAuthorityEventHandler(storage, mappingMetadataCache);
+    createMarcAuthoritiesEventHandler = new CreateMarcAuthorityEventHandler(storage, mappingMetadataCache, authorityIdStorageService);
     mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
 
     doAnswer(invocationOnMock -> {
@@ -142,6 +149,11 @@ public class CreateMarcAuthorityEventHandlerTest {
       successHandler.accept(new Success<>(authority));
       return null;
     }).when(authorityCollection).add(any(), any(Consumer.class), any(Consumer.class));
+
+    doAnswer(invocationOnMock -> {
+      RecordToEntity recordToItem = RecordToEntity.builder().recordId(RECORD_ID).entityId(AUTHORITY_ID).build();
+      return Future.succeededFuture(recordToItem);
+    }).when(authorityIdStorageService).store(any(), any(), any());
 
     WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true))
       .willReturn(WireMock.ok().withBody(Json.encode(new MappingMetadataDto()
@@ -230,6 +242,26 @@ public class CreateMarcAuthorityEventHandlerTest {
 
     CompletableFuture<DataImportEventPayload> future = createMarcAuthoritiesEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
+  }
+
+  @Test(expected = ExecutionException.class)
+  public void shouldNotProcessEventWhenRecordToHoldingsFutureFails() throws ExecutionException, InterruptedException, TimeoutException {
+    when(authorityIdStorageService.store(any(), any(), any())).thenReturn(Future.failedFuture(new RuntimeException("Something wrong with database!")));
+
+    String expectedHoldingId = UUID.randomUUID().toString();
+    JsonObject holdingAsJson = new JsonObject().put("id", expectedHoldingId);
+    HashMap<String, String> payloadContext = new HashMap<>();
+    payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+    payloadContext.put(EntityType.HOLDINGS.value(), holdingAsJson.encode());
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_AUTHORITY_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = createMarcAuthoritiesEventHandler.handle(dataImportEventPayload);
+    future.get(5, TimeUnit.SECONDS);
   }
 
   @Test

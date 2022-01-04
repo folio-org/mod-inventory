@@ -10,6 +10,7 @@ import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 import java.util.HashMap;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.commons.lang3.StringUtils;
@@ -21,6 +22,8 @@ import org.folio.DataImportEventPayload;
 import org.folio.MappingMetadataDto;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.AuthorityRecordCollection;
+import org.folio.inventory.domain.relationship.RecordToEntity;
+import org.folio.inventory.services.IdStorageService;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
 import org.folio.processing.events.services.handler.EventHandler;
@@ -48,10 +51,12 @@ public class CreateMarcAuthorityEventHandler implements EventHandler {
 
   private final Storage storage;
   private final MappingMetadataCache mappingMetadataCache;
+  private final IdStorageService idStorageService;
 
-  public CreateMarcAuthorityEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache) {
+  public CreateMarcAuthorityEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache, IdStorageService idStorageService) {
     this.storage = storage;
     this.mappingMetadataCache = mappingMetadataCache;
+    this.idStorageService = idStorageService;
   }
 
   @Override
@@ -73,29 +78,36 @@ public class CreateMarcAuthorityEventHandler implements EventHandler {
       var context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       prepareEvent(dataImportEventPayload);
       String jobExecutionId = dataImportEventPayload.getJobExecutionId();
-      String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
-      String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
-      mappingMetadataCache.get(jobExecutionId, context)
-        .map(parametersOptional -> parametersOptional.orElseThrow(() ->
-          new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId,
-            recordId, chunkId))))
-        .onSuccess(mappingMetadata -> defaultMapRecordToAuthority(dataImportEventPayload, mappingMetadata))
-        .compose(v -> {
-          var authorityCollection = storage.getAuthorityRecordCollection(context);
-          final var authorityAsJson = prepareAuthority(dataImportEventPayload);
-          var authority = Json.decodeValue(authorityAsJson.encodePrettily(), Authority.class);
-          return addAuthority(authority, authorityCollection);
-        })
-        .onSuccess(createdAuthority -> {
-          LOGGER.info("Created an Authority record by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
-            recordId, chunkId);
-          payloadContext.put(AUTHORITY.value(), Json.encodePrettily(createdAuthority));
-          future.complete(dataImportEventPayload);
-        })
-        .onFailure(e -> {
-          LOGGER.error("Failed to save new Authority by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ",jobExecutionId,
-            recordId, chunkId, e);
-          future.completeExceptionally(e);
+      String recordId = payloadContext.get(RECORD_ID_HEADER);
+      String chunkId = payloadContext.get(CHUNK_ID_HEADER);
+
+      Future<RecordToEntity> recordToAuthorityFuture = idStorageService.store(recordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant());
+      recordToAuthorityFuture.onSuccess(res ->
+          mappingMetadataCache.get(jobExecutionId, context)
+            .map(parametersOptional -> parametersOptional.orElseThrow(() ->
+              new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId, recordId, chunkId))))
+            .onSuccess(mappingMetadata -> defaultMapRecordToAuthority(dataImportEventPayload, mappingMetadata))
+            .compose(v -> {
+              var authorityCollection = storage.getAuthorityRecordCollection(context);
+              final var authorityAsJson = prepareAuthority(dataImportEventPayload);
+              var authority = Json.decodeValue(authorityAsJson.encodePrettily(), Authority.class);
+              return addAuthority(authority, authorityCollection);
+            })
+            .onSuccess(createdAuthority -> {
+              LOGGER.info("Created an Authority record by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ",
+                jobExecutionId, recordId, chunkId);
+              payloadContext.put(AUTHORITY.value(), Json.encodePrettily(createdAuthority));
+              future.complete(dataImportEventPayload);
+            })
+            .onFailure(e -> {
+              LOGGER.error("Failed to save new Authority by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ",
+                jobExecutionId, recordId, chunkId, e);
+              future.completeExceptionally(e);
+            }))
+        .onFailure(failure -> {
+          LOGGER.error("Error creating inventory recordId and authorityId relationship by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ",
+            jobExecutionId, recordId, chunkId, failure);
+          future.completeExceptionally(failure);
         });
     } catch (Exception e) {
       LOGGER.error("Failed to save new Authority", e);
