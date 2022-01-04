@@ -50,6 +50,7 @@ public class CreateHoldingEventHandler implements EventHandler {
   private static final String PERMANENT_LOCATION_ID_FIELD = "permanentLocationId";
   private static final String PERMANENT_LOCATION_ID_ERROR_MESSAGE = "Can`t create Holding entity: 'permanentLocationId' is empty";
   private static final String SAVE_HOLDING_ERROR_MESSAGE = "Can`t save new holding";
+  private static final String CREATE_HOLDING_ERROR_MESSAGE = "Failed to create Holdings";
   private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t create Holding entity: context is empty or doesn`t exists";
   private static final String PAYLOAD_DATA_HAS_NO_INSTANCE_ID_ERROR_MSG = "Failed to extract instanceId from instance entity or parsed record";
   private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingMetadata snapshot was not found by jobExecutionId '%s'. RecordId: '%s', chunkId: '%s' ";
@@ -94,8 +95,8 @@ public class CreateHoldingEventHandler implements EventHandler {
           String holdingsId = res.getEntityId();
           mappingMetadataCache.get(jobExecutionId, context)
           .map(parametersOptional -> parametersOptional.orElseThrow(() ->
-            new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId,
-              recordId, chunkId))))
+            new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG,
+              jobExecutionId, recordId, chunkId))))
           .map(mappingMetadataDto -> {
             prepareEvent(dataImportEventPayload);
             MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
@@ -111,25 +112,25 @@ public class CreateHoldingEventHandler implements EventHandler {
             checkIfPermanentLocationIdExists(holdingAsJson);
             return Json.decodeValue(payloadContext.get(HOLDINGS.value()), HoldingsRecord.class);
           })
-          .compose(holdingToCreate -> addHoldings(holdingToCreate, context))
-          .onSuccess(createdHoldings -> {
-            LOGGER.info("Created Holding record by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
-              recordId, chunkId);
-            payloadContext.put(HOLDINGS.value(), Json.encodePrettily(createdHoldings));
-            future.complete(dataImportEventPayload);
-          })
-          .onFailure(e -> {
-            LOGGER.error(SAVE_HOLDING_ERROR_MESSAGE, e);
-            future.completeExceptionally(e);
-          });
-      })
-      .onFailure(failure -> {
-        LOGGER.error("Error creating inventory recordId and holdingsId relationship by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId, recordId,
-          chunkId, failure);
-        future.completeExceptionally(failure);
-      });
+            .compose(holdingToCreate -> addHoldings(holdingToCreate, context))
+            .onSuccess(createdHoldings -> {
+              LOGGER.info("Created Holding record by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}'",
+                jobExecutionId, recordId, chunkId);
+              payloadContext.put(HOLDINGS.value(), Json.encodePrettily(createdHoldings));
+              future.complete(dataImportEventPayload);
+            })
+            .onFailure(e -> {
+              LOGGER.error(SAVE_HOLDING_ERROR_MESSAGE, e);
+              future.completeExceptionally(e);
+            });
+        })
+        .onFailure(failure -> {
+          LOGGER.error("Error creating inventory recordId and holdingsId relationship by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ",
+            jobExecutionId, recordId, chunkId, failure);
+          future.completeExceptionally(failure);
+        });
     } catch (Exception e) {
-      LOGGER.error("Failed to create Holdings", e);
+      LOGGER.error(CREATE_HOLDING_ERROR_MESSAGE, e);
       future.completeExceptionally(e);
     }
     return future;
