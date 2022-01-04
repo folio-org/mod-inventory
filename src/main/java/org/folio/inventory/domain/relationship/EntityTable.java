@@ -2,7 +2,7 @@ package org.folio.inventory.domain.relationship;
 
 public enum EntityTable {
   INSTANCE("records_instances", "instance_id"),
-  HOLDINGS("records_holdings", "holdings_id"),
+  HOLDINGS("records_holdings", "holding_id"),
   ITEM("records_items", "item_id");
 
   private static final String RECORD_ID_FIELD_NAME = "record_id";

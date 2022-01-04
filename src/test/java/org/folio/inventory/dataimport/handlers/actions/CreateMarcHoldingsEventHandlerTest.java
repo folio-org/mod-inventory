@@ -105,7 +105,7 @@ public class CreateMarcHoldingsEventHandlerTest {
   private JsonObject mappingRules;
   private CreateMarcHoldingsEventHandler createMarcHoldingsEventHandler;
   private String instanceId;
-  private String holdingsId;
+  private String holdingId;
   private String recordId;
   private Vertx vertx = Vertx.vertx();
 
@@ -174,8 +174,9 @@ public class CreateMarcHoldingsEventHandlerTest {
 
     doAnswer(invocationOnMock -> {
       recordId = String.valueOf(UUID.randomUUID());
-      holdingsId = String.valueOf(UUID.randomUUID());
-      RecordToEntity recordToHoldings = RecordToEntity.builder().recordId(recordId).entityId(holdingsId).build();
+      holdingId = String.valueOf(UUID.randomUUID());
+      RecordToEntity recordToHoldings = RecordToEntity.builder().recordId(recordId).entityId(
+        holdingId).build();
       return Future.succeededFuture(recordToHoldings);
     }).when(holdingsIdStorageService).store(any(), any(), any());
 
@@ -216,7 +217,7 @@ public class CreateMarcHoldingsEventHandlerTest {
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.SECONDS);
     JsonObject createdHoldings = new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
 
-    assertEquals(holdingsId, createdHoldings.getString("id"));
+    assertEquals(holdingId, createdHoldings.getString("id"));
     assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
     assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
     assertNotNull(createdHoldings.getString("id"));

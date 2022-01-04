@@ -92,7 +92,7 @@ public class CreateHoldingEventHandler implements EventHandler {
 
       Future<RecordToEntity> recordToHoldingsFuture = idStorageService.store(recordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant());
       recordToHoldingsFuture.onSuccess(res -> {
-          String holdingsId = res.getEntityId();
+          String holdingId = res.getEntityId();
           mappingMetadataCache.get(jobExecutionId, context)
           .map(parametersOptional -> parametersOptional.orElseThrow(() ->
             new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG,
@@ -106,7 +106,7 @@ public class CreateHoldingEventHandler implements EventHandler {
             if (holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD) != null) {
               holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD);
             }
-            holdingAsJson.put("id", holdingsId);
+            holdingAsJson.put("id", holdingId);
             holdingAsJson.put("sourceId", FOLIO_SOURCE_ID);
             fillInstanceIdIfNeeded(dataImportEventPayload, holdingAsJson);
             checkIfPermanentLocationIdExists(holdingAsJson);
@@ -125,7 +125,7 @@ public class CreateHoldingEventHandler implements EventHandler {
             });
         })
         .onFailure(failure -> {
-          LOGGER.error("Error creating inventory recordId and holdingsId relationship by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ",
+          LOGGER.error("Error creating inventory recordId and holdingId relationship by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ",
             jobExecutionId, recordId, chunkId, failure);
           future.completeExceptionally(failure);
         });
