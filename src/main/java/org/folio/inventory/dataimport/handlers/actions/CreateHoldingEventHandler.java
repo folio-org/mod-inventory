@@ -61,9 +61,7 @@ public class CreateHoldingEventHandler implements EventHandler {
   private final MappingMetadataCache mappingMetadataCache;
   private final IdStorageService idStorageService;
 
-  public CreateHoldingEventHandler(Storage storage,
-                                   MappingMetadataCache mappingMetadataCache,
-                                   IdStorageService idStorageService) {
+  public CreateHoldingEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache, IdStorageService idStorageService) {
     this.storage = storage;
     this.mappingMetadataCache = mappingMetadataCache;
     this.idStorageService = idStorageService;
@@ -92,7 +90,7 @@ public class CreateHoldingEventHandler implements EventHandler {
 
       Future<RecordToEntity> recordToHoldingsFuture = idStorageService.store(recordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant());
       recordToHoldingsFuture.onSuccess(res -> {
-          String holdingId = res.getEntityId();
+          String holdingsId = res.getEntityId();
           mappingMetadataCache.get(jobExecutionId, context)
           .map(parametersOptional -> parametersOptional.orElseThrow(() ->
             new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG,
@@ -106,7 +104,7 @@ public class CreateHoldingEventHandler implements EventHandler {
             if (holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD) != null) {
               holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD);
             }
-            holdingAsJson.put("id", holdingId);
+            holdingAsJson.put("id", holdingsId);
             holdingAsJson.put("sourceId", FOLIO_SOURCE_ID);
             fillInstanceIdIfNeeded(dataImportEventPayload, holdingAsJson);
             checkIfPermanentLocationIdExists(holdingAsJson);
@@ -125,7 +123,7 @@ public class CreateHoldingEventHandler implements EventHandler {
             });
         })
         .onFailure(failure -> {
-          LOGGER.error("Error creating inventory recordId and holdingId relationship by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ",
+          LOGGER.error("Error creating inventory recordId and holdingsId relationship by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ",
             jobExecutionId, recordId, chunkId, failure);
           future.completeExceptionally(failure);
         });

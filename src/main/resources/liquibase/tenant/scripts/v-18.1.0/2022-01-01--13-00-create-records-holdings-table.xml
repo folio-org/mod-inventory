@@ -9,7 +9,7 @@
       <column name="record_id" type="uuid">
         <constraints primaryKey="true" nullable="false"/>
       </column>
-      <column name="holding_id" type="uuid">
+      <column name="holdings_id" type="uuid">
         <constraints nullable="false"/>
       </column>
     </createTable>

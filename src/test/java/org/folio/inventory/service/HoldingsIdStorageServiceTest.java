@@ -20,7 +20,7 @@ import org.mockito.junit.MockitoJUnitRunner;
 @RunWith(MockitoJUnitRunner.class)
 public class HoldingsIdStorageServiceTest {
   private static final String RECORD_ID = UUID.randomUUID().toString();
-  private static final String HOLDING_ID = UUID.randomUUID().toString();
+  private static final String HOLDINGS_ID = UUID.randomUUID().toString();
 
   @Mock
   private EntityIdStorageDaoImpl entityIdStorageDaoImpl;
@@ -29,9 +29,9 @@ public class HoldingsIdStorageServiceTest {
 
   @Test
   public void shouldReturnSavedRecordToEntity() {
-    RecordToEntity expectedRecordToHoldings = RecordToEntity.builder().table(EntityTable.HOLDINGS).recordId(RECORD_ID).entityId(HOLDING_ID).build();
+    RecordToEntity expectedRecordToHoldings = RecordToEntity.builder().table(EntityTable.HOLDINGS).recordId(RECORD_ID).entityId(HOLDINGS_ID).build();
     when(entityIdStorageDaoImpl.saveRecordToEntityRelationship(any(RecordToEntity.class), any())).thenReturn(Future.succeededFuture(expectedRecordToHoldings));
-    Future<RecordToEntity> future = holdingsIdStorageService.store(RECORD_ID, HOLDING_ID, TENANT_ID);
+    Future<RecordToEntity> future = holdingsIdStorageService.store(RECORD_ID, HOLDINGS_ID, TENANT_ID);
 
     RecordToEntity actualRecordToHoldings = future.result();
     assertEquals(expectedRecordToHoldings.getTable().getTableName(), actualRecordToHoldings.getTable().getTableName());
@@ -44,7 +44,7 @@ public class HoldingsIdStorageServiceTest {
   @Test
   public void shouldReturnFailedFuture() {
     when(entityIdStorageDaoImpl.saveRecordToEntityRelationship(any(RecordToEntity.class), any())).thenReturn(Future.failedFuture("failed"));
-    Future<RecordToEntity> future = holdingsIdStorageService.store(RECORD_ID, HOLDING_ID, TENANT_ID);
+    Future<RecordToEntity> future = holdingsIdStorageService.store(RECORD_ID, HOLDINGS_ID, TENANT_ID);
 
     assertEquals("failed", future.cause().getMessage());
   }

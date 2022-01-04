@@ -54,7 +54,7 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
   private static final String INSTANCE_ID_FIELD = "instanceId";
   private static final String PERMANENT_LOCATION_ID_FIELD = "permanentLocationId";
   private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingParameters and mapping rules snapshots were not found by jobExecutionId '%s'. RecordId: '%s', chunkId: '%s' ";
-  private static final String CREATING_INVENTORY_RELATIONSHIP_ERROR_MESSAGE = "Error creating inventory recordId and holdingId relationship by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s'";
+  private static final String CREATING_INVENTORY_RELATIONSHIP_ERROR_MESSAGE = "Error creating inventory recordId and holdingsId relationship by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s'";
   private static final String PERMANENT_LOCATION_ID_ERROR_MESSAGE = "Can`t create Holding entity: 'permanentLocationId' is empty";
   private static final String SAVE_HOLDING_ERROR_MESSAGE = "Can`t save new holding";
   private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t create Holding entity: context is empty or doesn't exist";
@@ -67,9 +67,7 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
   private final MappingMetadataCache mappingMetadataCache;
   private final IdStorageService idStorageService;
 
-  public CreateMarcHoldingsEventHandler(Storage storage,
-                                        MappingMetadataCache mappingMetadataCache,
-                                        IdStorageService idStorageService) {
+  public CreateMarcHoldingsEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache, IdStorageService idStorageService) {
     this.storage = storage;
     this.mappingMetadataCache = mappingMetadataCache;
     this.idStorageService = idStorageService;
@@ -101,13 +99,13 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
 
       Future<RecordToEntity> recordToHoldingsFuture = idStorageService.store(targetRecord.getId(), UUID.randomUUID().toString(), dataImportEventPayload.getTenant());
       recordToHoldingsFuture.onSuccess(res -> {
-        String holdingId = res.getEntityId();
+        String holdingsId = res.getEntityId();
         mappingMetadataCache.get(jobExecutionId, context)
           .map(parametersOptional -> parametersOptional.orElseThrow(() ->
             new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId,
               recordId, chunkId))))
           .onSuccess(mappingMetadata -> defaultMapRecordToHoldings(dataImportEventPayload, mappingMetadata))
-          .map(v -> processMappingResult(dataImportEventPayload, holdingId))
+          .map(v -> processMappingResult(dataImportEventPayload, holdingsId))
           .compose(holdingJson -> findInstanceIdByHrid(dataImportEventPayload, holdingJson, context)
             .compose(instanceId -> {
               fillInstanceId(dataImportEventPayload, holdingJson, instanceId);
@@ -137,16 +135,16 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
     return future;
   }
 
-  private JsonObject processMappingResult(DataImportEventPayload dataImportEventPayload, String holdingId) {
+  private JsonObject processMappingResult(DataImportEventPayload dataImportEventPayload, String holdingsId) {
     var holdingAsJson = new JsonObject(dataImportEventPayload.getContext().get(HOLDINGS.value()));
     if (holdingAsJson.getJsonObject(HOLDINGS_PATH) != null) {
       holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_PATH);
     }
-    holdingAsJson.put("id", holdingId);
+    holdingAsJson.put("id", holdingsId);
     holdingAsJson.remove("hrid");
     checkIfPermanentLocationIdExists(holdingAsJson);
 
-    LOGGER.debug("Creating holdings with id: {}", holdingId);
+    LOGGER.debug("Creating holdings with id: {}", holdingsId);
 
     return holdingAsJson;
   }
