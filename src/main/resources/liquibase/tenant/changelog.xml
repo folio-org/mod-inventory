@@ -6,5 +6,6 @@
 
   <include file="scripts/v-18.1.0/2021-12-10--13-00-create-records-instances-table.xml" relativeToChangelogFile="true"/>
   <include file="scripts/v-18.1.0/2021-12-24--13-00-create-records-items-table.xml" relativeToChangelogFile="true"/>
+  <include file="scripts/v-18.1.0/2022-01-01--13-00-create-records-holdings-table.xml" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

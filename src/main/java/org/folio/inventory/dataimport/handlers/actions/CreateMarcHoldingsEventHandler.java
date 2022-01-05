@@ -13,6 +13,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTI
 
 import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.commons.lang3.StringUtils;
@@ -27,6 +28,8 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.HoldingsRecordCollection;
+import org.folio.inventory.domain.relationship.RecordToEntity;
+import org.folio.inventory.services.IdStorageService;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
 import org.folio.processing.events.services.handler.EventHandler;
@@ -51,6 +54,7 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
   private static final String INSTANCE_ID_FIELD = "instanceId";
   private static final String PERMANENT_LOCATION_ID_FIELD = "permanentLocationId";
   private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingParameters and mapping rules snapshots were not found by jobExecutionId '%s'. RecordId: '%s', chunkId: '%s' ";
+  private static final String CREATING_INVENTORY_RELATIONSHIP_ERROR_MESSAGE = "Error creating inventory recordId and holdingsId relationship by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s'";
   private static final String PERMANENT_LOCATION_ID_ERROR_MESSAGE = "Can`t create Holding entity: 'permanentLocationId' is empty";
   private static final String SAVE_HOLDING_ERROR_MESSAGE = "Can`t save new holding";
   private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t create Holding entity: context is empty or doesn't exist";
@@ -61,10 +65,12 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
 
   private final Storage storage;
   private final MappingMetadataCache mappingMetadataCache;
+  private final IdStorageService idStorageService;
 
-  public CreateMarcHoldingsEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache) {
+  public CreateMarcHoldingsEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache, IdStorageService idStorageService) {
     this.storage = storage;
     this.mappingMetadataCache = mappingMetadataCache;
+    this.idStorageService = idStorageService;
   }
 
   @Override
@@ -75,7 +81,7 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
 
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
       if (payloadContext == null || payloadContext.isEmpty()
-        || StringUtils.isEmpty(dataImportEventPayload.getContext().get(MARC_HOLDINGS.value()))) {
+        || StringUtils.isEmpty(payloadContext.get(MARC_HOLDINGS.value()))) {
         return CompletableFuture.failedFuture(new EventProcessingException(CONTEXT_EMPTY_ERROR_MESSAGE));
       }
       if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
@@ -83,38 +89,45 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
 
-      var context = constructContext(dataImportEventPayload.getTenant(),
-        dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
-      Record record = new JsonObject(payloadContext.get(EntityType.MARC_HOLDINGS.value()))
-        .mapTo(Record.class);
+      Context context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+      Record targetRecord = new JsonObject(payloadContext.get(EntityType.MARC_HOLDINGS.value())).mapTo(Record.class);
       prepareEvent(dataImportEventPayload);
-      String jobExecutionId = dataImportEventPayload.getJobExecutionId();
 
-      String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
-      String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
-      mappingMetadataCache.get(dataImportEventPayload.getJobExecutionId(), context)
-        .map(parametersOptional -> parametersOptional.orElseThrow(() ->
-          new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId,
-            recordId, chunkId))))
-        .onSuccess(mappingMetadata -> defaultMapRecordToHoldings(dataImportEventPayload, mappingMetadata))
-        .map(v -> processMappingResult(dataImportEventPayload, record))
-        .compose(holdingJson -> findInstanceIdByHrid(dataImportEventPayload, holdingJson, context)
-          .compose(instanceId -> {
-            fillInstanceId(dataImportEventPayload, holdingJson, instanceId);
-            var holdingsRecords = storage.getHoldingsRecordCollection(context);
-            HoldingsRecord holding = Json.decodeValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), HoldingsRecord.class);
-            return addHoldings(holding, holdingsRecords);
-          }))
-        .onSuccess(createdHoldings -> {
-          LOGGER.info("Created Holding record by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
-            recordId, chunkId);
-          dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encodePrettily(createdHoldings));
-          future.complete(dataImportEventPayload);
-        })
-        .onFailure(e -> {
-          LOGGER.error(SAVE_HOLDING_ERROR_MESSAGE, e);
-          future.completeExceptionally(e);
-        });
+      String jobExecutionId = dataImportEventPayload.getJobExecutionId();
+      String recordId = payloadContext.get(RECORD_ID_HEADER);
+      String chunkId = payloadContext.get(CHUNK_ID_HEADER);
+
+      Future<RecordToEntity> recordToHoldingsFuture = idStorageService.store(targetRecord.getId(), UUID.randomUUID().toString(), dataImportEventPayload.getTenant());
+      recordToHoldingsFuture.onSuccess(res -> {
+        String holdingsId = res.getEntityId();
+        mappingMetadataCache.get(jobExecutionId, context)
+          .map(parametersOptional -> parametersOptional.orElseThrow(() ->
+            new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId,
+              recordId, chunkId))))
+          .onSuccess(mappingMetadata -> defaultMapRecordToHoldings(dataImportEventPayload, mappingMetadata))
+          .map(v -> processMappingResult(dataImportEventPayload, holdingsId))
+          .compose(holdingJson -> findInstanceIdByHrid(dataImportEventPayload, holdingJson, context)
+            .compose(instanceId -> {
+              fillInstanceId(dataImportEventPayload, holdingJson, instanceId);
+              var holdingsRecords = storage.getHoldingsRecordCollection(context);
+              HoldingsRecord holding = Json.decodeValue(payloadContext.get(HOLDINGS.value()), HoldingsRecord.class);
+              return addHoldings(holding, holdingsRecords);
+            }))
+          .onSuccess(createdHoldings -> {
+            LOGGER.info("Created Holding record by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
+              recordId, chunkId);
+            dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encodePrettily(createdHoldings));
+            future.complete(dataImportEventPayload);
+          })
+          .onFailure(e -> {
+            LOGGER.error(SAVE_HOLDING_ERROR_MESSAGE, e);
+            future.completeExceptionally(e);
+          });
+      })
+      .onFailure(failure -> {
+        LOGGER.error(format(CREATING_INVENTORY_RELATIONSHIP_ERROR_MESSAGE, jobExecutionId, recordId, chunkId), failure);
+        future.completeExceptionally(failure);
+      });
     } catch (Exception e) {
       LOGGER.error("Failed to create Holdings", e);
       future.completeExceptionally(e);
@@ -122,16 +135,16 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
     return future;
   }
 
-  private JsonObject processMappingResult(DataImportEventPayload dataImportEventPayload, Record record) {
+  private JsonObject processMappingResult(DataImportEventPayload dataImportEventPayload, String holdingsId) {
     var holdingAsJson = new JsonObject(dataImportEventPayload.getContext().get(HOLDINGS.value()));
     if (holdingAsJson.getJsonObject(HOLDINGS_PATH) != null) {
       holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_PATH);
     }
-    holdingAsJson.put("id", record.getId());
+    holdingAsJson.put("id", holdingsId);
     holdingAsJson.remove("hrid");
     checkIfPermanentLocationIdExists(holdingAsJson);
 
-    LOGGER.debug("Creating holdings with id: {}", record.getId());
+    LOGGER.debug("Creating holdings with id: {}", holdingsId);
 
     return holdingAsJson;
   }
@@ -155,7 +168,7 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
   private Future<String> findInstanceIdByHrid(DataImportEventPayload dataImportEventPayload, JsonObject holdingAsJson, Context context) {
     Promise<String> promise = Promise.promise();
     if (StringUtils.isBlank(holdingAsJson.getString(INSTANCE_ID_FIELD))) {
-      var recordAsString = dataImportEventPayload.getContext().get("MARC_HOLDINGS");
+      var recordAsString = dataImportEventPayload.getContext().get(MARC_FORMAT);
       var record = Json.decodeValue(recordAsString, Record.class);
       var instanceHrid = getControlFieldValue(record, "004");
       if (isBlank(instanceHrid)) {
@@ -176,7 +189,7 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
             promise.complete(instanceId);
           },
           failure -> {
-            LOGGER.error(ERROR_HOLDING_MSG + format(". StatusCode: %s. Message: %s", failure.getStatusCode(), failure.getReason()));
+            LOGGER.error(format(ERROR_HOLDING_MSG + ". StatusCode: %s. Message: %s", failure.getStatusCode(), failure.getReason()));
             promise.fail(new EventProcessingException(failure.getReason()));
           });
       } catch (UnsupportedEncodingException e) {

@@ -43,7 +43,7 @@ public class InstanceIdStorageServiceTest {
   }
 
   @Test
-  public void shouldReturnRFailedFuture() {
+  public void shouldReturnFailedFuture() {
     when(entityIdStorageDaoImpl.saveRecordToEntityRelationship(any(RecordToEntity.class), any())).thenReturn(Future.failedFuture("failed"));
     Future<RecordToEntity> future = instanceIdStorageService.store(RECORD_ID, INSTANCE_ID, TENANT_ID);
 
