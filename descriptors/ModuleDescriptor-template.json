@@ -532,7 +532,7 @@
       ]
     },
     {
-      "id": "tenant",
+      "id": "_tenant",
       "version": "2.0",
       "interfaceType": "system",
       "handlers": [
