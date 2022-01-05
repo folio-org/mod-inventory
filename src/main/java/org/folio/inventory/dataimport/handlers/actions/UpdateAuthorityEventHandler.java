@@ -29,16 +29,10 @@ public class UpdateAuthorityEventHandler extends AbstractAuthorityEventHandler {
   }
 
   @Override
-  protected Future<Authority> processAuthority(Authority authority, AuthorityRecordCollection authorityCollection) {
+  protected Future<Authority> processAuthority(Authority authority,
+                                               AuthorityRecordCollection authorityCollection,
+                                               DataImportEventPayload payload) {
     return updateAuthority(authority, authorityCollection);
-  }
-
-  @Override
-  protected Future<Authority> createRelationship(Authority authority,
-                                                 DataImportEventPayload payload) {
-    Promise<Authority> promise = Promise.promise();
-    promise.complete(authority);
-    return promise.future();
   }
 
   @Override

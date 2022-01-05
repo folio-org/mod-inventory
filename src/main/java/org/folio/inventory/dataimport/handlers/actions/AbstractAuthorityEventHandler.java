@@ -7,7 +7,6 @@ import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlin
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 
-import io.vertx.core.Promise;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -28,8 +27,6 @@ import org.folio.MappingProfile;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.AuthorityRecordCollection;
-import org.folio.inventory.domain.relationship.RecordToEntity;
-import org.folio.inventory.services.IdStorageService;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
 import org.folio.processing.events.services.handler.EventHandler;
@@ -80,8 +77,7 @@ public abstract class AbstractAuthorityEventHandler implements EventHandler {
       mappingMetadataCache.get(jobExecutionId, context)
         .map(mapMetadataOrFail())
         .compose(mappingMetadata -> mapAuthority(payload, mappingMetadata))
-        .compose(authority -> createRelationship(authority, payload))
-        .compose(authority -> handleProfileAction(authority, context))
+        .compose(authority -> handleProfileAction(authority, context, payload))
         .onSuccess(successHandler(payload, future))
         .onFailure(failureHandler(payload, future));
     } catch (Exception e) {
@@ -110,9 +106,7 @@ public abstract class AbstractAuthorityEventHandler implements EventHandler {
     return false;
   }
 
-  protected abstract Future<Authority> processAuthority(Authority authority, AuthorityRecordCollection authorityCollection);
-
-  protected abstract Future<Authority> createRelationship(Authority authority, DataImportEventPayload payload);
+  protected abstract Future<Authority> processAuthority(Authority authority, AuthorityRecordCollection authorityCollection, DataImportEventPayload payload);
 
   protected abstract String nextEventType();
 
@@ -132,9 +126,11 @@ public abstract class AbstractAuthorityEventHandler implements EventHandler {
     return profileAction() == actionProfile.getAction() && targetRecordType() == actionProfile.getFolioRecord();
   }
 
-  private Future<Authority> handleProfileAction(Authority authority, Context context) {
+  private Future<Authority> handleProfileAction(Authority authority,
+                                                Context context,
+                                                DataImportEventPayload payload) {
     var authorityCollection = storage.getAuthorityRecordCollection(context);
-    return processAuthority(authority, authorityCollection);
+    return processAuthority(authority, authorityCollection, payload);
   }
 
   private Handler<Throwable> failureHandler(DataImportEventPayload payload,

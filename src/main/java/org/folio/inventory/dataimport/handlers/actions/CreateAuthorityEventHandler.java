@@ -35,25 +35,15 @@ public class CreateAuthorityEventHandler extends AbstractAuthorityEventHandler {
   }
 
   @Override
-  protected Future<Authority> processAuthority(Authority authority, AuthorityRecordCollection authorityCollection) {
+  protected Future<Authority> processAuthority(Authority authority,
+                                               AuthorityRecordCollection authorityCollection,
+                                               DataImportEventPayload payload) {
     Promise<Authority> promise = Promise.promise();
+    createRelationship(promise, authority, payload);
     authorityCollection.add(authority, success -> promise.complete(success.getResult()),
       failure -> {
         LOGGER.error(String.format(FAILED_CREATING_AUTHORITY_MSG_TEMPLATE, failure.getReason(), failure.getStatusCode()));
         promise.fail(failure.getReason());
-      });
-    return promise.future();
-  }
-
-  @Override
-  protected Future<Authority> createRelationship(Authority authority, DataImportEventPayload payload) {
-    Promise<Authority> promise = Promise.promise();
-    Future<RecordToEntity> recordToAuthorityFuture = idStorageService.store(getRecordIdHeader(payload), authority.getId(), payload.getTenant());
-    recordToAuthorityFuture
-      .onSuccess(res -> promise.complete(authority))
-      .onFailure(failure -> {
-        LOGGER.error(constructMsg(CREATING_RELATIONSHIP_ERROR, payload), failure);
-        promise.fail(failure);
       });
     return promise.future();
   }
@@ -89,4 +79,12 @@ public class CreateAuthorityEventHandler extends AbstractAuthorityEventHandler {
     return ACTION_PROFILE;
   }
 
+  private void createRelationship(Promise<Authority> promise, Authority authority, DataImportEventPayload payload) {
+    Future<RecordToEntity> recordToAuthorityFuture = idStorageService.store(getRecordIdHeader(payload), authority.getId(), payload.getTenant());
+    recordToAuthorityFuture
+      .onFailure(failure -> {
+        LOGGER.error(constructMsg(CREATING_RELATIONSHIP_ERROR, payload), failure);
+        promise.fail(failure);
+      });
+  }
 }
