@@ -27,7 +27,6 @@ import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.actions.HoldingsUpdateDelegate;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaHeaderUtils;
-import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.MappingMetadataDto;
@@ -56,14 +55,11 @@ public class MarcHoldingsRecordHridSetKafkaHandler implements AsyncRecordHandler
   private static final ObjectMapper OBJECT_MAPPER = ObjectMapperTool.getMapper();
 
   private final HoldingsUpdateDelegate holdingsRecordUpdateDelegate;
-  private final KafkaInternalCache kafkaInternalCache;
   private final MappingMetadataCache mappingMetadataCache;
 
   public MarcHoldingsRecordHridSetKafkaHandler(HoldingsUpdateDelegate holdingsRecordUpdateDelegate,
-                                               KafkaInternalCache kafkaInternalCache,
                                                MappingMetadataCache mappingMetadataCache) {
     this.holdingsRecordUpdateDelegate = holdingsRecordUpdateDelegate;
-    this.kafkaInternalCache = kafkaInternalCache;
     this.mappingMetadataCache = mappingMetadataCache;
   }
 
@@ -72,8 +68,6 @@ public class MarcHoldingsRecordHridSetKafkaHandler implements AsyncRecordHandler
     try {
       Promise<String> promise = Promise.promise();
       Event event = OBJECT_MAPPER.readValue(record.value(), Event.class);
-      if (!kafkaInternalCache.containsByKey(event.getId())) {
-        kafkaInternalCache.putToCache(event.getId());
         @SuppressWarnings("unchecked")
         HashMap<String, String> eventPayload =
           OBJECT_MAPPER.readValue(event.getEventPayload(), HashMap.class);
@@ -107,12 +101,10 @@ public class MarcHoldingsRecordHridSetKafkaHandler implements AsyncRecordHandler
             }
           });
         return promise.future();
-      }
     } catch (Exception e) {
       LOGGER.error(format("Failed to process data import kafka record from topic %s ", record.topic()), e);
       return Future.failedFuture(e);
     }
-    return Future.succeededFuture();
   }
 
   private void ensureEventPayloadWithMappingMetadata(HashMap<String, String> eventPayload, MappingMetadataDto mappingMetadataDto) {

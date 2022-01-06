@@ -15,7 +15,6 @@ import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
-import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.MappingMetadataDto;
@@ -55,8 +54,6 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
   @Mock
   private KafkaConsumerRecord<String, String> kafkaRecord;
   @Mock
-  private KafkaInternalCache kafkaInternalCache;
-  @Mock
   private MappingMetadataCache mappingMetadataCache;
 
   private JsonObject mappingRules;
@@ -93,7 +90,7 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
         .withMappingRules(mappingRules.encode())
         .withMappingParams(Json.encode(new MappingParameters())))));
 
-    marcBibInstanceHridSetKafkaHandler = new MarcBibInstanceHridSetKafkaHandler(new InstanceUpdateDelegate(mockedStorage), kafkaInternalCache, mappingMetadataCache);
+    marcBibInstanceHridSetKafkaHandler = new MarcBibInstanceHridSetKafkaHandler(new InstanceUpdateDelegate(mockedStorage), mappingMetadataCache);
   }
 
   @After
@@ -113,8 +110,6 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
     String expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
-
-    when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
 
     // when
     Future<String> future = marcBibInstanceHridSetKafkaHandler.handle(kafkaRecord);
@@ -137,8 +132,6 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
     Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
 
-    when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
-
     // when
     Future<String> future = marcBibInstanceHridSetKafkaHandler.handle(kafkaRecord);
 
@@ -156,8 +149,6 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
     Event event = new Event().withId("01").withEventPayload(null);
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
 
-    when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
-
     // when
     Future<String> future = marcBibInstanceHridSetKafkaHandler.handle(kafkaRecord);
 
@@ -168,29 +159,4 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
     });
   }
 
-  @Test
-  public void shouldNotHandleIfCacheAlreadyContainsThisEvent(TestContext context) throws IOException {
-    // given
-    Async async = context.async();
-    Map<String, String> payload = new HashMap<>();
-    payload.put("MARC_BIB", Json.encode(record));
-    payload.put(JOB_EXECUTION_ID_KEY, UUID.randomUUID().toString());
-
-    Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
-    String expectedKafkaRecordKey = "test_key";
-    when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
-    when(kafkaRecord.value()).thenReturn(Json.encode(event));
-
-    when(kafkaInternalCache.containsByKey("01")).thenReturn(true);
-
-    // when
-    Future<String> future = marcBibInstanceHridSetKafkaHandler.handle(kafkaRecord);
-
-    // then
-    future.onComplete(ar -> {
-      context.assertTrue(ar.succeeded());
-      context.assertNotEquals(expectedKafkaRecordKey, ar.result());
-      async.complete();
-    });
-  }
 }
