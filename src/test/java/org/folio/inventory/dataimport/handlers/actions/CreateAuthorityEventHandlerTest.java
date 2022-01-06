@@ -2,21 +2,24 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static java.util.concurrent.CompletableFuture.completedStage;
-import static org.folio.ActionProfile.FolioRecord.AUTHORITY;
-import static org.folio.ActionProfile.FolioRecord.ITEM;
-import static org.folio.ActionProfile.FolioRecord.MARC_AUTHORITY;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_CREATED;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_AUTHORITY_RECORD_CREATED;
-import static org.folio.inventory.dataimport.handlers.actions.CreateMarcAuthorityEventHandler.ACTION_HAS_NO_MAPPING_MSG;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
+
+import static org.folio.ActionProfile.FolioRecord.AUTHORITY;
+import static org.folio.ActionProfile.FolioRecord.ITEM;
+import static org.folio.ActionProfile.FolioRecord.MARC_AUTHORITY;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_CREATED;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_AUTHORITY_RECORD_CREATED;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 
 import java.io.IOException;
 import java.net.URL;
@@ -29,7 +32,22 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.common.Slf4jNotifier;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.github.tomakehurst.wiremock.junit.WireMockRule;
+import com.github.tomakehurst.wiremock.matching.RegexPattern;
+import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
 import org.apache.http.HttpStatus;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+
 import org.folio.ActionProfile;
 import org.folio.Authority;
 import org.folio.DataImportEventPayload;
@@ -51,46 +69,14 @@ import org.folio.rest.jaxrs.model.MappingRule;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 
-import com.github.tomakehurst.wiremock.client.WireMock;
-import com.github.tomakehurst.wiremock.common.Slf4jNotifier;
-import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
-import com.github.tomakehurst.wiremock.junit.WireMockRule;
-import com.github.tomakehurst.wiremock.matching.RegexPattern;
-import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
-
-import io.vertx.core.Vertx;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
-
-public class CreateMarcAuthorityEventHandlerTest {
+public class CreateAuthorityEventHandlerTest {
 
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/marc-authority-rules.json";
   private static final String PARSED_AUTHORITY_RECORD = "src/test/resources/marc/authority/parsed-authority-record.json";
   private static final String MAPPING_METADATA_URL = "/mapping-metadata";
 
-  @Mock
-  private Storage storage;
-  @Mock
-  AuthorityRecordCollection authorityCollection;
-  @Mock
-  OkapiHttpClient mockedClient;
-
-  @Rule
-  public WireMockRule mockServer = new WireMockRule(
-      WireMockConfiguration.wireMockConfig()
-          .dynamicPort()
-          .notifier(new Slf4jNotifier(true)));
-
-  private JsonObject mappingRules;
-  private CreateMarcAuthorityEventHandler createMarcAuthoritiesEventHandler;
-  private Vertx vertx = Vertx.vertx();
+  private final Vertx vertx = Vertx.vertx();
 
   private final JobProfile jobProfile = new JobProfile()
     .withId(UUID.randomUUID().toString())
@@ -128,20 +114,37 @@ public class CreateMarcAuthorityEventHandlerTest {
             .withContentType(MAPPING_PROFILE)
             .withContent(JsonObject.mapFrom(mappingProfile).getMap())))));
 
+  @Rule
+  public WireMockRule mockServer = new WireMockRule(
+    WireMockConfiguration.wireMockConfig()
+      .dynamicPort()
+      .notifier(new Slf4jNotifier(true)));
+
+  @Mock
+  private AuthorityRecordCollection authorityCollection;
+
+  @Mock
+  private OkapiHttpClient mockedClient;
+
+  @Mock
+  private Storage storage;
+
+  private CreateAuthorityEventHandler createMarcAuthoritiesEventHandler;
+
   @Before
   public void setUp() throws IOException {
     MockitoAnnotations.openMocks(this);
     MappingManager.clearReaderFactories();
     MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, vertx.createHttpClient(), 3600);
-    createMarcAuthoritiesEventHandler = new CreateMarcAuthorityEventHandler(storage, mappingMetadataCache);
-    mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
+    createMarcAuthoritiesEventHandler = new CreateAuthorityEventHandler(storage, mappingMetadataCache);
+    JsonObject mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
 
     doAnswer(invocationOnMock -> {
       Authority authority = invocationOnMock.getArgument(0);
       Consumer<Success<Authority>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(authority));
       return null;
-    }).when(authorityCollection).add(any(), any(Consumer.class), any(Consumer.class));
+    }).when(authorityCollection).add(any(), any(), any());
 
     WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true))
       .willReturn(WireMock.ok().withBody(Json.encode(new MappingMetadataDto()
@@ -172,8 +175,8 @@ public class CreateMarcAuthorityEventHandlerTest {
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.SECONDS);
 
     assertEquals(DI_INVENTORY_AUTHORITY_CREATED.value(), actualDataImportEventPayload.getEventType());
-    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(AUTHORITY.value()));
-    Assert.assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(AUTHORITY.value())).getString("id"));
+    assertNotNull(actualDataImportEventPayload.getContext().get(AUTHORITY.value()));
+    assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(AUTHORITY.value())).getString("id"));
   }
 
   @Test(expected = ExecutionException.class)
@@ -192,7 +195,7 @@ public class CreateMarcAuthorityEventHandlerTest {
   public void shouldThrowExceptionIfContextIsEmpty() throws ExecutionException, InterruptedException, TimeoutException {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_AUTHORITY_RECORD_CREATED.value())
-      .withContext(new HashMap<>() )
+      .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
@@ -201,7 +204,8 @@ public class CreateMarcAuthorityEventHandlerTest {
   }
 
   @Test(expected = ExecutionException.class)
-  public void shouldThrowExceptionIfMarcAuthorityIsEmptyInContext() throws ExecutionException, InterruptedException, TimeoutException {
+  public void shouldThrowExceptionIfMarcAuthorityIsEmptyInContext()
+    throws ExecutionException, InterruptedException, TimeoutException {
 
     HashMap<String, String> context = new HashMap<>();
     context.put(MARC_AUTHORITY.value(), "");
@@ -217,7 +221,8 @@ public class CreateMarcAuthorityEventHandlerTest {
   }
 
   @Test(expected = ExecutionException.class)
-  public void shouldThrowExceptionIfMarcAuthorityIsNotInContext() throws ExecutionException, InterruptedException, TimeoutException {
+  public void shouldThrowExceptionIfMarcAuthorityIsNotInContext()
+    throws ExecutionException, InterruptedException, TimeoutException {
 
     HashMap<String, String> context = new HashMap<>();
     context.put("Test_Value", "");
@@ -233,32 +238,12 @@ public class CreateMarcAuthorityEventHandlerTest {
   }
 
   @Test
-  public void shouldReturnFailedFutureIfCurrentActionProfileHasNoMappingProfile() throws IOException {
-
-    var parsedAuthorityRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_AUTHORITY_RECORD));
-
-    HashMap<String, String> context = new HashMap<>();
-    context.put(MARC_AUTHORITY.value(), Json.encode(new Record().withParsedRecord(new ParsedRecord().withContent(parsedAuthorityRecord.encode()))));
-
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_SRS_MARC_AUTHORITY_RECORD_CREATED.value())
-      .withContext(context)
-      .withCurrentNode(new ProfileSnapshotWrapper()
-        .withContentType(ACTION_PROFILE)
-        .withContent(actionProfile));
-
-    CompletableFuture<DataImportEventPayload> future = createMarcAuthoritiesEventHandler.handle(dataImportEventPayload);
-
-    ExecutionException exception = Assert.assertThrows(ExecutionException.class, future::get);
-    Assert.assertEquals(ACTION_HAS_NO_MAPPING_MSG, exception.getCause().getMessage());
-  }
-
-  @Test
   public void isEligibleShouldReturnTrue() throws IOException {
     var parsedAuthorityRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_AUTHORITY_RECORD));
 
     HashMap<String, String> context = new HashMap<>();
-    context.put(MARC_AUTHORITY.value(), Json.encode(new Record().withParsedRecord(new ParsedRecord().withContent(parsedAuthorityRecord.encode()))));
+    context.put(MARC_AUTHORITY.value(),
+      Json.encode(new Record().withParsedRecord(new ParsedRecord().withContent(parsedAuthorityRecord.encode()))));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_AUTHORITY_RECORD_CREATED.value())
@@ -278,52 +263,52 @@ public class CreateMarcAuthorityEventHandlerTest {
   @Test
   public void isEligibleShouldReturnFalseIfCurrentNodeIsNotActionProfile() {
     ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
-        .withId(UUID.randomUUID().toString())
-        .withProfileId(jobProfile.getId())
-        .withContentType(JOB_PROFILE)
-        .withContent(jobProfile);
+      .withId(UUID.randomUUID().toString())
+      .withProfileId(jobProfile.getId())
+      .withContentType(JOB_PROFILE)
+      .withContent(jobProfile);
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-        .withEventType(DI_SRS_MARC_AUTHORITY_RECORD_CREATED.value())
-        .withContext(new HashMap<>())
-        .withCurrentNode(profileSnapshotWrapper);
+      .withEventType(DI_SRS_MARC_AUTHORITY_RECORD_CREATED.value())
+      .withContext(new HashMap<>())
+      .withCurrentNode(profileSnapshotWrapper);
     assertFalse(createMarcAuthoritiesEventHandler.isEligible(dataImportEventPayload));
   }
 
   @Test
   public void isEligibleShouldReturnFalseIfActionIsNotCreate() {
     ActionProfile actionProfile = new ActionProfile()
-        .withId(UUID.randomUUID().toString())
-        .withName("Create preliminary Item")
-        .withAction(ActionProfile.Action.UPDATE)
-        .withFolioRecord(AUTHORITY);
+      .withId(UUID.randomUUID().toString())
+      .withName("Create preliminary Item")
+      .withAction(ActionProfile.Action.UPDATE)
+      .withFolioRecord(AUTHORITY);
     ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
-        .withId(UUID.randomUUID().toString())
-        .withProfileId(actionProfile.getId())
-        .withContentType(JOB_PROFILE)
-        .withContent(actionProfile);
+      .withId(UUID.randomUUID().toString())
+      .withProfileId(actionProfile.getId())
+      .withContentType(JOB_PROFILE)
+      .withContent(actionProfile);
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-        .withEventType(DI_SRS_MARC_AUTHORITY_RECORD_CREATED.value())
-        .withContext(new HashMap<>())
-        .withProfileSnapshot(profileSnapshotWrapper);
+      .withEventType(DI_SRS_MARC_AUTHORITY_RECORD_CREATED.value())
+      .withContext(new HashMap<>())
+      .withProfileSnapshot(profileSnapshotWrapper);
     assertFalse(createMarcAuthoritiesEventHandler.isEligible(dataImportEventPayload));
   }
 
   @Test
   public void isEligibleShouldReturnFalseIfRecordIsNotAuthority() {
     ActionProfile actionProfile = new ActionProfile()
-        .withId(UUID.randomUUID().toString())
-        .withName("Create preliminary Item")
-        .withAction(ActionProfile.Action.CREATE)
-        .withFolioRecord(ITEM);
+      .withId(UUID.randomUUID().toString())
+      .withName("Create preliminary Item")
+      .withAction(ActionProfile.Action.CREATE)
+      .withFolioRecord(ITEM);
     ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
-        .withId(UUID.randomUUID().toString())
-        .withProfileId(actionProfile.getId())
-        .withContentType(JOB_PROFILE)
-        .withContent(actionProfile);
+      .withId(UUID.randomUUID().toString())
+      .withProfileId(actionProfile.getId())
+      .withContentType(JOB_PROFILE)
+      .withContent(actionProfile);
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-        .withEventType(DI_SRS_MARC_AUTHORITY_RECORD_CREATED.value())
-        .withContext(new HashMap<>())
-        .withProfileSnapshot(profileSnapshotWrapper);
+      .withEventType(DI_SRS_MARC_AUTHORITY_RECORD_CREATED.value())
+      .withContext(new HashMap<>())
+      .withProfileSnapshot(profileSnapshotWrapper);
     assertFalse(createMarcAuthoritiesEventHandler.isEligible(dataImportEventPayload));
   }
 
