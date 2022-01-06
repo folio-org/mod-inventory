@@ -18,7 +18,6 @@ import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaHeaderUtils;
-import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.MappingMetadataDto;
@@ -46,12 +45,10 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
   private static final String JOB_EXECUTION_ID_HEADER = "JOB_EXECUTION_ID";
 
   private final InstanceUpdateDelegate instanceUpdateDelegate;
-  private final KafkaInternalCache kafkaInternalCache;
   private final MappingMetadataCache mappingMetadataCache;
 
-  public MarcBibInstanceHridSetKafkaHandler(InstanceUpdateDelegate instanceUpdateDelegate, KafkaInternalCache kafkaInternalCache, MappingMetadataCache mappingMetadataCache) {
+  public MarcBibInstanceHridSetKafkaHandler(InstanceUpdateDelegate instanceUpdateDelegate, MappingMetadataCache mappingMetadataCache) {
     this.instanceUpdateDelegate = instanceUpdateDelegate;
-    this.kafkaInternalCache = kafkaInternalCache;
     this.mappingMetadataCache = mappingMetadataCache;
   }
 
@@ -60,8 +57,6 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
     try {
       Promise<String> promise = Promise.promise();
       Event event = OBJECT_MAPPER.readValue(record.value(), Event.class);
-      if (!kafkaInternalCache.containsByKey(event.getId())) {
-        kafkaInternalCache.putToCache(event.getId());
         @SuppressWarnings("unchecked")
         HashMap<String, String> eventPayload = OBJECT_MAPPER.readValue(event.getEventPayload(), HashMap.class);
         Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(record.headers());
@@ -93,12 +88,10 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
             }
           });
         return promise.future();
-      }
     } catch (Exception e) {
       LOGGER.error(format("Failed to process data import kafka record from topic %s", record.topic()), e);
       return Future.failedFuture(e);
     }
-    return Future.succeededFuture();
   }
 
   private void ensureEventPayloadWithMappingMetadata(HashMap<String, String> eventPayload, MappingMetadataDto mappingMetadataDto) {
