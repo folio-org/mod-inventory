@@ -133,12 +133,10 @@ public class DataImportKafkaHandlerTest {
       .maxRequestSize(1048576)
       .build();
 
-    HttpClient client = vertx.createHttpClient();
+    HttpClient client = vertx.createHttpClient(new HttpClientOptions().setConnectTimeout(3000));
     dataImportKafkaHandler = new DataImportKafkaHandler(vertx, mockedStorage, client,
-      new ProfileSnapshotCache(vertx,
-      vertx.createHttpClient(new HttpClientOptions().setConnectTimeout(3000)), 3600),
-      new MappingMetadataCache(vertx,
-      vertx.createHttpClient(new HttpClientOptions().setConnectTimeout(3000)), 3600));
+      new ProfileSnapshotCache(vertx, client, 3600),
+      new MappingMetadataCache(vertx, client, 3600));
     EventManager.clearEventHandlers();
     EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, 1);
   }

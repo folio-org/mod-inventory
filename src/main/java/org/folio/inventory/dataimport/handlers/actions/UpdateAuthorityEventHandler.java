@@ -13,6 +13,7 @@ import io.vertx.core.Promise;
 
 import org.folio.ActionProfile;
 import org.folio.Authority;
+import org.folio.DataImportEventPayload;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.exceptions.DataImportException;
 import org.folio.inventory.domain.AuthorityRecordCollection;
@@ -28,7 +29,9 @@ public class UpdateAuthorityEventHandler extends AbstractAuthorityEventHandler {
   }
 
   @Override
-  protected Future<Authority> processAuthority(Authority authority, AuthorityRecordCollection authorityCollection) {
+  protected Future<Authority> processAuthority(Authority authority,
+                                               AuthorityRecordCollection authorityCollection,
+                                               DataImportEventPayload payload) {
     return updateAuthority(authority, authorityCollection);
   }
 

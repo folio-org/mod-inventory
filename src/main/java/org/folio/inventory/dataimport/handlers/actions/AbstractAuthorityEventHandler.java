@@ -77,7 +77,7 @@ public abstract class AbstractAuthorityEventHandler implements EventHandler {
       mappingMetadataCache.get(jobExecutionId, context)
         .map(mapMetadataOrFail())
         .compose(mappingMetadata -> mapAuthority(payload, mappingMetadata))
-        .compose(authority -> handleProfileAction(authority, context))
+        .compose(authority -> handleProfileAction(authority, context, payload))
         .onSuccess(successHandler(payload, future))
         .onFailure(failureHandler(payload, future));
     } catch (Exception e) {
@@ -106,7 +106,7 @@ public abstract class AbstractAuthorityEventHandler implements EventHandler {
     return false;
   }
 
-  protected abstract Future<Authority> processAuthority(Authority authority, AuthorityRecordCollection authorityCollection);
+  protected abstract Future<Authority> processAuthority(Authority authority, AuthorityRecordCollection authorityCollection, DataImportEventPayload payload);
 
   protected abstract String nextEventType();
 
@@ -126,9 +126,11 @@ public abstract class AbstractAuthorityEventHandler implements EventHandler {
     return profileAction() == actionProfile.getAction() && targetRecordType() == actionProfile.getFolioRecord();
   }
 
-  private Future<Authority> handleProfileAction(Authority authority, Context context) {
+  private Future<Authority> handleProfileAction(Authority authority,
+                                                Context context,
+                                                DataImportEventPayload payload) {
     var authorityCollection = storage.getAuthorityRecordCollection(context);
-    return processAuthority(authority, authorityCollection);
+    return processAuthority(authority, authorityCollection, payload);
   }
 
   private Handler<Throwable> failureHandler(DataImportEventPayload payload,
@@ -180,11 +182,11 @@ public abstract class AbstractAuthorityEventHandler implements EventHandler {
     payload.getContext().put(targetRecordType().value(), new JsonObject().encode());
   }
 
-  private String getChunkIdHeader(DataImportEventPayload payload) {
+  protected String getChunkIdHeader(DataImportEventPayload payload) {
     return payload.getContext() == null ? "-" : payload.getContext().get(CHUNK_ID_HEADER);
   }
 
-  private String getRecordIdHeader(DataImportEventPayload payload) {
+  protected String getRecordIdHeader(DataImportEventPayload payload) {
     return payload.getContext() == null ? "-" : payload.getContext().get(RECORD_ID_HEADER);
   }
 
@@ -192,7 +194,7 @@ public abstract class AbstractAuthorityEventHandler implements EventHandler {
     return parameters -> parameters.orElseThrow(() -> new EventProcessingException(MAPPING_METADATA_NOT_FOUND_MSG));
   }
 
-  private String constructMsg(String message, DataImportEventPayload payload) {
+  protected String constructMsg(String message, DataImportEventPayload payload) {
     if (payload == null) {
       return message;
     } else {
