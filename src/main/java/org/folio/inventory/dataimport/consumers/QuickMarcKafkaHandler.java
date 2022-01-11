@@ -93,9 +93,10 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
       .compose(eventPayload -> processPayload(eventPayload, context)
         .compose(recordType -> sendEvent(eventPayload, getReplyEventType(recordType), params))
         .recover(throwable -> sendErrorEvent(params, eventPayload, throwable))
-        .map(ar -> record.key()),
-        th -> Future.failedFuture(th.getMessage())
-      );
+        .map(ar -> record.key()), th -> {
+        LOGGER.error("Update record state was failed while handle event, {}", th.getMessage());
+        return Future.failedFuture(th.getMessage());
+      });
   }
 
   private QMEventTypes getReplyEventType(Record.RecordType recordType) {
