@@ -36,7 +36,6 @@ import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
-import org.folio.processing.events.utils.ZIPArchiver;
 import org.folio.rest.jaxrs.model.Record;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -164,11 +163,10 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
   }
 
   @Test
-  public void shouldCompleteExceptionally() throws IOException {
-
+  public void shouldCompleteExceptionally_whenRecordIsEmpty() {
     HashMap<String, String> eventPayload = new HashMap<>();
     eventPayload.put("RECORD_TYPE", "MARC_BIB");
-    eventPayload.put("MARC_BIB", ZIPArchiver.zip(record.encode()));
+    eventPayload.put("MARC_BIB", "");
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
 
@@ -180,7 +178,6 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
 
   @Test
   public void shouldSendError() {
-
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
       failureHandler.accept(new Failure("Internal Server Error", 500));
