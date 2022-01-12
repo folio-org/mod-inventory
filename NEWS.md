@@ -1,3 +1,7 @@
+## 17.0.9 2022-01-12
+
+* Update data-import-processing-core to v3.1.7 to fix matching by identifier type and value (MODINV-621, MODDICORE-238)
+
 ## 17.0.8 2021-12-17
 
 * Update Log4j to 2.16.0. (CVE-2021-44228) (MODINV-601)
