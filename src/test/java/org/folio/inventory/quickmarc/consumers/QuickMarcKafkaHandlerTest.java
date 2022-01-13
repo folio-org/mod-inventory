@@ -59,7 +59,6 @@ import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.kafka.KafkaConfig;
-import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.processing.events.utils.ZIPArchiver;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
@@ -96,8 +95,6 @@ public class QuickMarcKafkaHandlerTest {
   private AuthorityRecordCollection mockedAuthorityRecordCollection;
   @Mock
   private KafkaConsumerRecord<String, String> kafkaRecord;
-  @Mock
-  private KafkaInternalCache kafkaInternalCache;
   @Mock
   private OkapiHttpClient okapiHttpClient;
 
@@ -191,7 +188,7 @@ public class QuickMarcKafkaHandlerTest {
     PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper =
       new PrecedingSucceedingTitlesHelper(context -> okapiHttpClient);
     handler =
-      new QuickMarcKafkaHandler(vertx, mockedStorage, 100, kafkaConfig, kafkaInternalCache, precedingSucceedingTitlesHelper);
+      new QuickMarcKafkaHandler(vertx, mockedStorage, 100, kafkaConfig, precedingSucceedingTitlesHelper);
 
     when(kafkaRecord.headers()).thenReturn(List.of(
       KafkaHeader.header(XOkapiHeaders.TENANT.toLowerCase(), TENANT_ID),
@@ -221,7 +218,6 @@ public class QuickMarcKafkaHandlerTest {
     String expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
-    when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
 
     // when
     Future<String> future = handler.handle(kafkaRecord);
@@ -262,7 +258,6 @@ public class QuickMarcKafkaHandlerTest {
     String expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
-    when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
 
     // when
     Future<String> future = handler.handle(kafkaRecord);
@@ -298,7 +293,6 @@ public class QuickMarcKafkaHandlerTest {
     String expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
-    when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
 
     doAnswer(invocationOnMock -> {
       Consumer<Success<Authority>> successHandler = invocationOnMock.getArgument(1);
@@ -340,7 +334,6 @@ public class QuickMarcKafkaHandlerTest {
     String expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
-    when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
 
     doAnswer(invocationOnMock -> {
       Consumer<Success<Authority>> successHandler = invocationOnMock.getArgument(1);
@@ -382,7 +375,6 @@ public class QuickMarcKafkaHandlerTest {
     String expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
-    when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
 
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
@@ -420,7 +412,6 @@ public class QuickMarcKafkaHandlerTest {
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
     String expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
-    when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
 
     // when
     Future<String> future = handler.handle(kafkaRecord);
@@ -445,42 +436,12 @@ public class QuickMarcKafkaHandlerTest {
     Event event = new Event().withId("01").withEventPayload(null);
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
 
-    when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
-
     // when
     Future<String> future = handler.handle(kafkaRecord);
 
     // then
     future.onComplete(ar -> {
       context.assertTrue(ar.failed());
-      async.complete();
-    });
-  }
-
-  @Test
-  public void shouldNotHandleIfCacheAlreadyContainsThisEvent(TestContext context) throws IOException {
-    // given
-    Async async = context.async();
-    Map<String, String> payload = new HashMap<>();
-    payload.put("RECORD_TYPE", "MARC_BIB");
-    payload.put(Record.RecordType.MARC_BIB.value(), Json.encode(bibRecord));
-    payload.put("MAPPING_RULES", bibMappingRules.encode());
-    payload.put("MAPPING_PARAMS", new JsonObject().encode());
-
-    Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(payload)));
-    String expectedKafkaRecordKey = "test_key";
-    when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
-    when(kafkaRecord.value()).thenReturn(Json.encode(event));
-
-    when(kafkaInternalCache.containsByKey("01")).thenReturn(true);
-
-    // when
-    Future<String> future = handler.handle(kafkaRecord);
-
-    // then
-    future.onComplete(ar -> {
-      context.assertTrue(ar.succeeded());
-      context.assertNotEquals(expectedKafkaRecordKey, ar.result());
       async.complete();
     });
   }

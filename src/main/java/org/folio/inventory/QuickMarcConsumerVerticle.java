@@ -17,8 +17,6 @@ import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.GlobalLoadSensor;
 import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaConsumerWrapper;
-import org.folio.kafka.cache.KafkaInternalCache;
-import org.folio.kafka.cache.util.CacheUtil;
 
 import static java.lang.String.format;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
@@ -34,9 +32,6 @@ public class QuickMarcConsumerVerticle extends AbstractVerticle {
 
   private static final Logger LOGGER = LogManager.getLogger(QuickMarcConsumerVerticle.class);
 
-  private static final long DELAY_TIME_BETWEEN_EVENTS_CLEANUP_VALUE_MILLIS = 3600000;
-  private static final int EVENT_TIMEOUT_VALUE_HOURS = 3;
-
   private final int loadLimit = getLoadLimit();
   private final int maxDistributionNumber = getMaxDistributionNumber();
   private KafkaConsumerWrapper<String, String> consumer;
@@ -49,13 +44,8 @@ public class QuickMarcConsumerVerticle extends AbstractVerticle {
     HttpClient client = vertx.createHttpClient();
     Storage storage = Storage.basedUpon(vertx, config, client);
 
-    KafkaInternalCache kafkaInternalCache = KafkaInternalCache.builder()
-      .kafkaConfig(kafkaConfig)
-      .build();
-    kafkaInternalCache.initKafkaCache();
-
     var precedingSucceedingTitlesHelper = new PrecedingSucceedingTitlesHelper(WebClient.wrap(client));
-    var handler = new QuickMarcKafkaHandler(vertx, storage, maxDistributionNumber, kafkaConfig, kafkaInternalCache, precedingSucceedingTitlesHelper);
+    var handler = new QuickMarcKafkaHandler(vertx, storage, maxDistributionNumber, kafkaConfig, precedingSucceedingTitlesHelper);
 
     var kafkaConsumerFuture = createKafkaConsumer(kafkaConfig, QMEventTypes.QM_SRS_MARC_RECORD_UPDATED, handler);
 
@@ -65,9 +55,6 @@ public class QuickMarcConsumerVerticle extends AbstractVerticle {
         consumer = ar;
         startPromise.complete();
       });
-
-    CacheUtil.initCacheCleanupPeriodicTask(vertx, kafkaInternalCache, DELAY_TIME_BETWEEN_EVENTS_CLEANUP_VALUE_MILLIS,
-      EVENT_TIMEOUT_VALUE_HOURS);
   }
 
   private KafkaConfig getKafkaConfig(JsonObject config) {
@@ -79,7 +66,7 @@ public class QuickMarcConsumerVerticle extends AbstractVerticle {
       .replicationFactor(Integer.parseInt(config.getString(KAFKA_REPLICATION_FACTOR)))
       .maxRequestSize(Integer.parseInt(config.getString(KAFKA_MAX_REQUEST_SIZE)))
       .build();
-    LOGGER.info(format("kafkaConfig: %s", kafkaConfig));
+    LOGGER.info("kafkaConfig: {}", kafkaConfig);
     return kafkaConfig;
   }
 
