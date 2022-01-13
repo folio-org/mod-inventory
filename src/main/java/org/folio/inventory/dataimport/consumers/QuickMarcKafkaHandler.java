@@ -21,7 +21,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
-import io.vertx.core.json.DecodeException;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaProducer;
 import io.vertx.kafka.client.producer.KafkaProducerRecord;
@@ -148,7 +147,7 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
     try {
       var eventPayload = Json.decodeValue(event.getEventPayload(), HashMap.class);
       return Future.succeededFuture(eventPayload);
-    } catch (DecodeException e) {
+    } catch (Exception e) {
       return Future.failedFuture(e);
     }
   }
