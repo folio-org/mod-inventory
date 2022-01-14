@@ -30,8 +30,6 @@ import org.folio.inventory.dataimport.handlers.actions.AuthorityUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.quickmarc.UpdateAuthorityQuickMarcEventHandler;
 import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.storage.Storage;
-import org.folio.inventory.support.http.client.OkapiHttpClient;
-import org.folio.processing.events.utils.ZIPArchiver;
 
 @RunWith(MockitoJUnitRunner.class)
 public class UpdateAuthorityQuickMarcEventHandlerTest {
@@ -48,8 +46,6 @@ public class UpdateAuthorityQuickMarcEventHandlerTest {
   private Context context;
   @Mock
   private AuthorityRecordCollection authorityRecordCollection;
-  @Mock
-  private OkapiHttpClient okapiHttpClient;
 
   private UpdateAuthorityQuickMarcEventHandler updateAuthorityQuickMarcEventHandler;
   private AuthorityUpdateDelegate authorityUpdateDelegate;
@@ -113,11 +109,10 @@ public class UpdateAuthorityQuickMarcEventHandlerTest {
   }
 
   @Test
-  public void shouldCompleteExceptionally() throws IOException {
-
+  public void shouldCompleteExceptionally_whenRecordIsEmpty() {
     HashMap<String, String> eventPayload = new HashMap<>();
     eventPayload.put("RECORD_TYPE", "MARC_AUTHORITY");
-    eventPayload.put("MARC_AUTHORITY", ZIPArchiver.zip(record.encode()));
+    eventPayload.put("MARC_AUTHORITY", "");
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
 

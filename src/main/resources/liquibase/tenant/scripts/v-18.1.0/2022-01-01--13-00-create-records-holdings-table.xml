@@ -1,0 +1,18 @@
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
+
+  <changeSet id="2022-01-01--13-00-create-records-holdings-table" author="ShansKaluhin">
+    <createTable tableName="records_holdings">
+      <column name="record_id" type="uuid">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="holdings_id" type="uuid">
+        <constraints nullable="false"/>
+      </column>
+    </createTable>
+  </changeSet>
+
+</databaseChangeLog>

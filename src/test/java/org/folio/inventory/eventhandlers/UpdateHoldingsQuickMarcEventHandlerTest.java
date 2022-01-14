@@ -36,8 +36,6 @@ import org.folio.inventory.dataimport.handlers.actions.HoldingsUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.quickmarc.UpdateHoldingsQuickMarcEventHandler;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.storage.Storage;
-import org.folio.inventory.support.http.client.OkapiHttpClient;
-import org.folio.processing.events.utils.ZIPArchiver;
 
 @RunWith(MockitoJUnitRunner.class)
 public class UpdateHoldingsQuickMarcEventHandlerTest {
@@ -54,8 +52,6 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
   private Context context;
   @Mock
   private HoldingsRecordCollection holdingsRecordCollection;
-  @Mock
-  private OkapiHttpClient okapiHttpClient;
 
   private UpdateHoldingsQuickMarcEventHandler updateHoldingsQuickMarcEventHandler;
   private HoldingsUpdateDelegate holdingsUpdateDelegate;
@@ -93,7 +89,6 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
 
   @Test
   public void shouldProcessEvent() {
-
     List<HoldingsType> holdings = new ArrayList<>();
     holdings.add(new HoldingsType().withName("testingnote$a").withId("fe19bae4-da28-472b-be90-d442e2428eadx"));
     MappingParameters mappingParameters = new MappingParameters();
@@ -127,11 +122,10 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
   }
 
   @Test
-  public void shouldCompleteExceptionally() throws IOException {
-
+  public void shouldCompleteExceptionally_whenRecordIsEmpty() {
     HashMap<String, String> eventPayload = new HashMap<>();
     eventPayload.put("RECORD_TYPE", "MARC_HOLDING");
-    eventPayload.put("MARC_HOLDING", ZIPArchiver.zip(record.encode()));
+    eventPayload.put("MARC_HOLDING", "");
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
 

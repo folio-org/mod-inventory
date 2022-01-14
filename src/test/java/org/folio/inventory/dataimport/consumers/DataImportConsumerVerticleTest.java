@@ -24,7 +24,6 @@ import org.folio.MappingProfile;
 import org.folio.inventory.DataImportConsumerVerticle;
 import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaTopicNameHelper;
-import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.processing.events.EventManager;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.rest.jaxrs.model.Event;
@@ -37,7 +36,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import java.util.Collections;
@@ -81,7 +79,6 @@ public class DataImportConsumerVerticleTest {
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
 
-
   private static Vertx vertx;
 
   @ClassRule
@@ -90,15 +87,11 @@ public class DataImportConsumerVerticleTest {
   @Mock
   private EventHandler mockedEventHandler;
 
-  @Mock
-  private KafkaInternalCache kafkaInternalCache;
-
   @Rule
   public WireMockRule mockServer = new WireMockRule(
     WireMockConfiguration.wireMockConfig()
       .dynamicPort()
       .notifier(new Slf4jNotifier(true)));
-
 
   private JobProfile jobProfile = new JobProfile()
     .withId(UUID.randomUUID().toString())
@@ -191,15 +184,13 @@ public class DataImportConsumerVerticleTest {
 
     SendKeyValues<String, String> request = SendKeyValues.to(topic, Collections.singletonList(record)).useDefaults();
 
-    Mockito.when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
-
     // when
     cluster.send(request);
 
     // then
     String observeTopic = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_NAME, getDefaultNameSpace(), TENANT_ID, DI_COMPLETED.value());
     List<KeyValue<String, String>> observedValues = cluster.observe(ObserveKeyValues.on(observeTopic, 1)
-      .observeFor(120, TimeUnit.SECONDS)
+      .observeFor(30, TimeUnit.SECONDS)
       .build());
 
     assertEquals(1, observedValues.size());

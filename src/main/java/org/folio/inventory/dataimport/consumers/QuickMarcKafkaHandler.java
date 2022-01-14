@@ -1,7 +1,6 @@
 package org.folio.inventory.dataimport.consumers;
 
 import static io.vertx.kafka.client.producer.KafkaProducer.createShared;
-import static java.lang.String.format;
 
 import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_ERROR;
 import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_AUTHORITY_UPDATED;
@@ -13,7 +12,6 @@ import static org.folio.kafka.KafkaHeaderUtils.kafkaHeadersToMap;
 import static org.folio.kafka.KafkaTopicNameHelper.formatTopicName;
 import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -43,8 +41,6 @@ import org.folio.inventory.dataimport.util.ConsumerWrapperUtil;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaConfig;
-import org.folio.kafka.cache.KafkaInternalCache;
-import org.folio.processing.events.utils.ZIPArchiver;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.EventMetadata;
@@ -67,17 +63,14 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
   private final PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
   private final int maxDistributionNumber;
   private final KafkaConfig kafkaConfig;
-  private final KafkaInternalCache kafkaInternalCache;
   private final Vertx vertx;
   private final Map<QMEventTypes, KafkaProducer<String, String>> producerMap = new HashMap<>();
 
   public QuickMarcKafkaHandler(Vertx vertx, Storage storage, int maxDistributionNumber, KafkaConfig kafkaConfig,
-                               KafkaInternalCache kafkaInternalCache,
                                PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper) {
     this.vertx = vertx;
     this.maxDistributionNumber = maxDistributionNumber;
     this.kafkaConfig = kafkaConfig;
-    this.kafkaInternalCache = kafkaInternalCache;
     this.instanceUpdateDelegate = new InstanceUpdateDelegate(storage);
     this.holdingsUpdateDelegate = new HoldingsUpdateDelegate(storage);
     this.authorityUpdateDelegate = new AuthorityUpdateDelegate(storage);
@@ -93,18 +86,15 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
     var params = new OkapiConnectionParams(kafkaHeadersToMap(record.headers()), vertx);
     var context = constructContext(params.getTenantId(), params.getToken(), params.getOkapiUrl());
     Event event = Json.decodeValue(record.value(), Event.class);
-    if (!kafkaInternalCache.containsByKey(event.getId())) {
-      LOGGER.info(format("Quick marc event payload has been received with event type: %s", event.getEventType()));
-      kafkaInternalCache.putToCache(event.getId());
-      return getEventPayload(event)
-        .compose(eventPayload -> processPayload(eventPayload, context)
-          .compose(recordType -> sendEvent(eventPayload, getReplyEventType(recordType), params))
-          .recover(throwable -> sendErrorEvent(params, eventPayload, throwable))
-          .map(ar -> record.key()),
-          th -> Future.failedFuture(th.getMessage())
-        );
-    }
-    return Future.succeededFuture();
+    LOGGER.info("Quick marc event payload has been received with event type: {}", event.getEventType());
+    return getEventPayload(event)
+      .compose(eventPayload -> processPayload(eventPayload, context)
+        .compose(recordType -> sendEvent(eventPayload, getReplyEventType(recordType), params))
+        .recover(throwable -> sendErrorEvent(params, eventPayload, throwable))
+        .map(ar -> record.key()), th -> {
+        LOGGER.error("Update record state was failed while handle event, {}", th.getMessage());
+        return Future.failedFuture(th.getMessage());
+      });
   }
 
   private QMEventTypes getReplyEventType(Record.RecordType recordType) {
@@ -155,7 +145,7 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
   @SuppressWarnings("unchecked")
   private Future<Map<String, String>> getEventPayload(Event event) {
     try {
-      var eventPayload = Json.decodeValue(ZIPArchiver.unzip(event.getEventPayload()), HashMap.class);
+      var eventPayload = Json.decodeValue(event.getEventPayload(), HashMap.class);
       return Future.succeededFuture(eventPayload);
     } catch (Exception e) {
       return Future.failedFuture(e);
@@ -172,12 +162,7 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
                                                String key, KafkaProducer<String, String> producer,
                                                OkapiConnectionParams params) {
     KafkaProducerRecord<String, String> record;
-    try {
-      record = createRecord(eventPayload, eventType, key, params);
-    } catch (IOException e) {
-      LOGGER.error("Failed to construct an event for eventType {}", eventType, e);
-      return Future.failedFuture(e);
-    }
+    record = createRecord(eventPayload, eventType, key, params);
 
     Promise<Boolean> promise = Promise.promise();
     producer.write(record, war -> {
@@ -194,11 +179,11 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
   }
 
   private KafkaProducerRecord<String, String> createRecord(String eventPayload, String eventType, String key,
-                                                           OkapiConnectionParams params) throws IOException {
+                                                           OkapiConnectionParams params) {
     Event event = new Event()
       .withId(UUID.randomUUID().toString())
       .withEventType(eventType)
-      .withEventPayload(ZIPArchiver.zip(eventPayload))
+      .withEventPayload(eventPayload)
       .withEventMetadata(new EventMetadata()
         .withTenantId(params.getTenantId())
         .withEventTTL(1)

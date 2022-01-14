@@ -52,7 +52,6 @@ import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.handlers.actions.HoldingsUpdateDelegate;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.storage.Storage;
-import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.Record;
 
@@ -70,8 +69,6 @@ public class MarcHoldingsRecordHridSetKafkaHandlerTest {
   private HoldingsRecordCollection mockedHoldingsCollection;
   @Mock
   private KafkaConsumerRecord<String, String> kafkaRecord;
-  @Mock
-  private KafkaInternalCache kafkaInternalCache;
 
   @Rule
   public WireMockRule mockServer = new WireMockRule(
@@ -124,7 +121,7 @@ public class MarcHoldingsRecordHridSetKafkaHandlerTest {
 
     MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, vertx.createHttpClient(), 3600);
     marcHoldingsRecordHridSetKafkaHandler =
-      new MarcHoldingsRecordHridSetKafkaHandler(new HoldingsUpdateDelegate(mockedStorage), kafkaInternalCache, mappingMetadataCache);
+      new MarcHoldingsRecordHridSetKafkaHandler(new HoldingsUpdateDelegate(mockedStorage), mappingMetadataCache);
 
     this.okapiHeaders = List.of(
       KafkaHeader.header(OKAPI_TENANT_HEADER, "diku"),
@@ -150,8 +147,6 @@ public class MarcHoldingsRecordHridSetKafkaHandlerTest {
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
     when(kafkaRecord.headers()).thenReturn(okapiHeaders);
 
-    when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
-
     // when
     Future<String> future = marcHoldingsRecordHridSetKafkaHandler.handle(kafkaRecord);
 
@@ -173,8 +168,6 @@ public class MarcHoldingsRecordHridSetKafkaHandlerTest {
     Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
 
-    when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
-
     // when
     Future<String> future = marcHoldingsRecordHridSetKafkaHandler.handle(kafkaRecord);
 
@@ -191,8 +184,6 @@ public class MarcHoldingsRecordHridSetKafkaHandlerTest {
     Async async = context.async();
     Event event = new Event().withId("01").withEventPayload(null);
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
-
-    when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
 
     // when
     Future<String> future = marcHoldingsRecordHridSetKafkaHandler.handle(kafkaRecord);
