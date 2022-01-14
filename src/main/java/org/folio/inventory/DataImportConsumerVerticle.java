@@ -2,7 +2,6 @@ package org.folio.inventory;
 
 import static java.lang.String.format;
 
-import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_MATCHED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_MATCHED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_NOT_MATCHED;
@@ -49,8 +48,6 @@ import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaConsumerWrapper;
 import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.kafka.SubscriptionDefinition;
-import org.folio.kafka.cache.KafkaInternalCache;
-import org.folio.kafka.cache.util.CacheUtil;
 import org.folio.processing.events.EventManager;
 
 import io.vertx.core.AbstractVerticle;
@@ -65,8 +62,6 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
 
   private static final Logger LOGGER = LogManager.getLogger(DataImportConsumerVerticle.class);
 
-  private static final long DELAY_TIME_BETWEEN_EVENTS_CLEANUP_VALUE_MILLIS = 3600000;
-  private static final int EVENT_TIMEOUT_VALUE_HOURS = 3;
   private static final int DEFAULT_HTTP_TIMEOUT_IN_MILLISECONDS = 3000;
 
   private static final List<DataImportEventTypes> EVENT_TYPES = List.of(
@@ -104,19 +99,13 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
     HttpClient client = vertx.createHttpClient(params);
     Storage storage = Storage.basedUpon(vertx, config, client);
 
-    KafkaInternalCache kafkaInternalCache = KafkaInternalCache.builder()
-      .kafkaConfig(kafkaConfig)
-      .build();
-    kafkaInternalCache.initKafkaCache();
-
     String profileSnapshotExpirationTime = getCacheEnvVariable(config, "inventory.profile-snapshot-cache.expiration.time.seconds");
     String mappingMetadataExpirationTime = getCacheEnvVariable(config, "inventory.mapping-metadata-cache.expiration.time.seconds");
 
     ProfileSnapshotCache profileSnapshotCache = new ProfileSnapshotCache(vertx, client, Long.parseLong(profileSnapshotExpirationTime));
     MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, client, Long.parseLong(mappingMetadataExpirationTime));
 
-
-    DataImportKafkaHandler dataImportKafkaHandler = new DataImportKafkaHandler(vertx, storage, client, kafkaInternalCache, profileSnapshotCache, mappingMetadataCache);
+    DataImportKafkaHandler dataImportKafkaHandler = new DataImportKafkaHandler(vertx, storage, client, profileSnapshotCache, mappingMetadataCache);
 
     List<Future> futures = EVENT_TYPES.stream()
       .map(eventType -> createKafkaConsumerWrapper(kafkaConfig, eventType, dataImportKafkaHandler))
@@ -128,10 +117,7 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
         futures.forEach(future -> consumerWrappers.add((KafkaConsumerWrapper<String, String>) future.result()));
         startPromise.complete();
       });
-
-    CacheUtil.initCacheCleanupPeriodicTask(vertx, kafkaInternalCache, DELAY_TIME_BETWEEN_EVENTS_CLEANUP_VALUE_MILLIS, EVENT_TIMEOUT_VALUE_HOURS);
   }
-
 
   @Override
   public void stop(Promise<Void> stopPromise) {

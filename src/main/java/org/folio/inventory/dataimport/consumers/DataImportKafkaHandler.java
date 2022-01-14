@@ -53,7 +53,6 @@ import org.folio.inventory.services.ItemIdStorageService;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaHeaderUtils;
-import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.processing.events.EventManager;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
@@ -72,15 +71,14 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
   private static final String CHUNK_ID_HEADER = "chunkId";
   private static final String PROFILE_SNAPSHOT_ID_KEY = "JOB_PROFILE_SNAPSHOT_ID";
 
-  private KafkaInternalCache kafkaInternalCache;
   private Vertx vertx;
   private ProfileSnapshotCache profileSnapshotCache;
   private MappingMetadataCache mappingMetadataCache;
 
-  public DataImportKafkaHandler(Vertx vertx, Storage storage, HttpClient client, KafkaInternalCache kafkaInternalCache,
-                                ProfileSnapshotCache profileSnapshotCache, MappingMetadataCache mappingMetadataCache) {
+  public DataImportKafkaHandler(Vertx vertx, Storage storage, HttpClient client,
+                                ProfileSnapshotCache profileSnapshotCache,
+                                MappingMetadataCache mappingMetadataCache) {
     this.vertx = vertx;
-    this.kafkaInternalCache = kafkaInternalCache;
     this.profileSnapshotCache = profileSnapshotCache;
     this.mappingMetadataCache = mappingMetadataCache;
     registerDataImportProcessingHandlers(storage, client);
@@ -91,40 +89,36 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     try {
       Promise<String> promise = Promise.promise();
       Event event = Json.decodeValue(record.value(), Event.class);
-      if (!kafkaInternalCache.containsByKey(event.getId())) {
-        kafkaInternalCache.putToCache(event.getId());
-        DataImportEventPayload eventPayload = Json.decodeValue(event.getEventPayload(), DataImportEventPayload.class);
-        Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(record.headers());
-        String recordId = headersMap.get(RECORD_ID_HEADER);
-        String chunkId = headersMap.get(CHUNK_ID_HEADER);
-        String jobExecutionId = eventPayload.getJobExecutionId();
-        LOGGER.info("Data import event payload has been received with event type: {}, recordId: {} by jobExecution: {} and chunkId: {}", eventPayload.getEventType(), recordId, jobExecutionId, chunkId);
-        eventPayload.getContext().put(RECORD_ID_HEADER, recordId);
-        eventPayload.getContext().put(CHUNK_ID_HEADER, chunkId);
+      DataImportEventPayload eventPayload = Json.decodeValue(event.getEventPayload(), DataImportEventPayload.class);
+      Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(record.headers());
+      String recordId = headersMap.get(RECORD_ID_HEADER);
+      String chunkId = headersMap.get(CHUNK_ID_HEADER);
+      String jobExecutionId = eventPayload.getJobExecutionId();
+      LOGGER.info("Data import event payload has been received with event type: {}, recordId: {} by jobExecution: {} and chunkId: {}", eventPayload.getEventType(), recordId, jobExecutionId, chunkId);
+      eventPayload.getContext().put(RECORD_ID_HEADER, recordId);
+      eventPayload.getContext().put(CHUNK_ID_HEADER, chunkId);
 
-        Context context = EventHandlingUtil.constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl());
-        String jobProfileSnapshotId = eventPayload.getContext().get(PROFILE_SNAPSHOT_ID_KEY);
-        profileSnapshotCache.get(jobProfileSnapshotId, context)
-          .toCompletionStage()
-          .thenCompose(snapshotOptional -> snapshotOptional
-            .map(profileSnapshot -> EventManager.handleEvent(eventPayload, profileSnapshot))
-            .orElse(CompletableFuture.failedFuture(new EventProcessingException(format("Job profile snapshot with id '%s' does not exist", jobProfileSnapshotId)))))
-          .whenComplete((processedPayload, throwable) -> {
-            if (throwable != null) {
-              promise.fail(throwable);
-            } else if (DI_ERROR.value().equals(processedPayload.getEventType())) {
-              promise.fail("Failed to process data import event payload");
-            } else {
-              promise.complete(record.key());
-            }
-          });
-        return promise.future();
-      }
+      Context context = EventHandlingUtil.constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl());
+      String jobProfileSnapshotId = eventPayload.getContext().get(PROFILE_SNAPSHOT_ID_KEY);
+      profileSnapshotCache.get(jobProfileSnapshotId, context)
+        .toCompletionStage()
+        .thenCompose(snapshotOptional -> snapshotOptional
+          .map(profileSnapshot -> EventManager.handleEvent(eventPayload, profileSnapshot))
+          .orElse(CompletableFuture.failedFuture(new EventProcessingException(format("Job profile snapshot with id '%s' does not exist", jobProfileSnapshotId)))))
+        .whenComplete((processedPayload, throwable) -> {
+          if (throwable != null) {
+            promise.fail(throwable);
+          } else if (DI_ERROR.value().equals(processedPayload.getEventType())) {
+            promise.fail("Failed to process data import event payload");
+          } else {
+            promise.complete(record.key());
+          }
+        });
+      return promise.future();
     } catch (Exception e) {
       LOGGER.error(format("Failed to process data import kafka record from topic %s", record.topic()), e);
       return Future.failedFuture(e);
     }
-    return Future.succeededFuture();
   }
 
   private void registerDataImportProcessingHandlers(Storage storage, HttpClient client) {
