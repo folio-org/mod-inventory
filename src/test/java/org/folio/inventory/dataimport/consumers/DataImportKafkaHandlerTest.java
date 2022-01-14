@@ -26,7 +26,6 @@ import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.KafkaConfig;
-import org.folio.kafka.cache.KafkaInternalCache;
 import org.folio.processing.events.EventManager;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.rest.jaxrs.model.Event;
@@ -37,10 +36,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -70,15 +67,11 @@ public class DataImportKafkaHandlerTest {
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
 
-
   @ClassRule
   public static EmbeddedKafkaCluster cluster = provisionWith(useDefaults());
 
   @Mock
   private Storage mockedStorage;
-
-  @Mock
-  private KafkaInternalCache kafkaInternalCache;
 
   @Mock
   private KafkaConsumerRecord<String, String> kafkaRecord;
@@ -140,12 +133,10 @@ public class DataImportKafkaHandlerTest {
       .maxRequestSize(1048576)
       .build();
 
-    HttpClient client = vertx.createHttpClient();
-    dataImportKafkaHandler = new DataImportKafkaHandler(vertx, mockedStorage, client, kafkaInternalCache,
-      new ProfileSnapshotCache(vertx,
-      vertx.createHttpClient(new HttpClientOptions().setConnectTimeout(3000)), 3600),
-      new MappingMetadataCache(vertx,
-      vertx.createHttpClient(new HttpClientOptions().setConnectTimeout(3000)), 3600));
+    HttpClient client = vertx.createHttpClient(new HttpClientOptions().setConnectTimeout(3000));
+    dataImportKafkaHandler = new DataImportKafkaHandler(vertx, mockedStorage, client,
+      new ProfileSnapshotCache(vertx, client, 3600),
+      new MappingMetadataCache(vertx, client, 3600));
     EventManager.clearEventHandlers();
     EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, 1);
   }
@@ -171,8 +162,6 @@ public class DataImportKafkaHandlerTest {
     when(mockedEventHandler.handle(any(DataImportEventPayload.class)))
       .thenReturn(CompletableFuture.completedFuture(new DataImportEventPayload()));
     EventManager.registerEventHandler(mockedEventHandler);
-
-    Mockito.when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
 
     // when
     Future<String> future = dataImportKafkaHandler.handle(kafkaRecord);
@@ -205,48 +194,12 @@ public class DataImportKafkaHandlerTest {
       .thenReturn(CompletableFuture.failedFuture(new RuntimeException()));
     EventManager.registerEventHandler(mockedEventHandler);
 
-    Mockito.when(kafkaInternalCache.containsByKey("01")).thenReturn(false);
-
     // when
     Future<String> future = dataImportKafkaHandler.handle(kafkaRecord);
 
     // then
     future.onComplete(ar -> {
       context.assertTrue(ar.failed());
-      async.complete();
-    });
-  }
-
-  @Test
-  public void shouldNotHandleIfCacheAlreadyContainsThisEvent(TestContext context) {
-    // given
-    Async async = context.async();
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withTenant(TENANT_ID)
-      .withOkapiUrl(mockServer.baseUrl())
-      .withToken("test-token")
-      .withContext(new HashMap<>(Map.of("JOB_PROFILE_SNAPSHOT_ID", profileSnapshotWrapper.getId())));
-
-    Event event = new Event().withId("01").withEventPayload(Json.encode(dataImportEventPayload));
-    String expectedKafkaRecordKey = "test_key";
-    when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
-    when(kafkaRecord.value()).thenReturn(Json.encode(event));
-
-    EventHandler mockedEventHandler = mock(EventHandler.class);
-    when(mockedEventHandler.isEligible(any(DataImportEventPayload.class))).thenReturn(true);
-    when(mockedEventHandler.handle(any(DataImportEventPayload.class)))
-      .thenReturn(CompletableFuture.completedFuture(new DataImportEventPayload()));
-    EventManager.registerEventHandler(mockedEventHandler);
-
-    Mockito.when(kafkaInternalCache.containsByKey("01")).thenReturn(true);
-
-    // when
-    Future<String> future = dataImportKafkaHandler.handle(kafkaRecord);
-
-    // then
-    future.onComplete(ar -> {
-      context.assertTrue(ar.succeeded());
-      context.assertNotEquals(expectedKafkaRecordKey, ar.result());
       async.complete();
     });
   }
