@@ -12,7 +12,6 @@ import static org.folio.kafka.KafkaHeaderUtils.kafkaHeadersToMap;
 import static org.folio.kafka.KafkaTopicNameHelper.formatTopicName;
 import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -42,7 +41,6 @@ import org.folio.inventory.dataimport.util.ConsumerWrapperUtil;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaConfig;
-import org.folio.processing.events.utils.ZIPArchiver;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.EventMetadata;
@@ -147,7 +145,7 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
   @SuppressWarnings("unchecked")
   private Future<Map<String, String>> getEventPayload(Event event) {
     try {
-      var eventPayload = Json.decodeValue(ZIPArchiver.unzip(event.getEventPayload()), HashMap.class);
+      var eventPayload = Json.decodeValue(event.getEventPayload(), HashMap.class);
       return Future.succeededFuture(eventPayload);
     } catch (Exception e) {
       return Future.failedFuture(e);
@@ -164,12 +162,7 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
                                                String key, KafkaProducer<String, String> producer,
                                                OkapiConnectionParams params) {
     KafkaProducerRecord<String, String> record;
-    try {
-      record = createRecord(eventPayload, eventType, key, params);
-    } catch (IOException e) {
-      LOGGER.error("Failed to construct an event for eventType {}", eventType, e);
-      return Future.failedFuture(e);
-    }
+    record = createRecord(eventPayload, eventType, key, params);
 
     Promise<Boolean> promise = Promise.promise();
     producer.write(record, war -> {
@@ -186,11 +179,11 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
   }
 
   private KafkaProducerRecord<String, String> createRecord(String eventPayload, String eventType, String key,
-                                                           OkapiConnectionParams params) throws IOException {
+                                                           OkapiConnectionParams params) {
     Event event = new Event()
       .withId(UUID.randomUUID().toString())
       .withEventType(eventType)
-      .withEventPayload(ZIPArchiver.zip(eventPayload))
+      .withEventPayload(eventPayload)
       .withEventMetadata(new EventMetadata()
         .withTenantId(params.getTenantId())
         .withEventTTL(1)

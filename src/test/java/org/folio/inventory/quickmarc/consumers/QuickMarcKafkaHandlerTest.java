@@ -60,7 +60,6 @@ import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.kafka.KafkaConfig;
 import org.folio.okapi.common.XOkapiHeaders;
-import org.folio.processing.events.utils.ZIPArchiver;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.ParsedRecordDto;
@@ -201,8 +200,7 @@ public class QuickMarcKafkaHandlerTest {
   }
 
   @Test
-  public void shouldSendInstanceUpdatedEvent(TestContext context) throws IOException,
-    InterruptedException {
+  public void shouldSendInstanceUpdatedEvent(TestContext context) throws InterruptedException {
     // given
     Async async = context.async();
     Map<String, String> payload = new HashMap<>();
@@ -214,7 +212,7 @@ public class QuickMarcKafkaHandlerTest {
       .withRecordType(ParsedRecordDto.RecordType.MARC_BIB)
       .withRelatedRecordVersion("1")));
 
-    Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(payload)));
+    Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
     String expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
@@ -236,8 +234,7 @@ public class QuickMarcKafkaHandlerTest {
   }
 
   @Test
-  public void shouldSendHoldingsUpdatedEvent(TestContext context) throws IOException,
-    InterruptedException {
+  public void shouldSendHoldingsUpdatedEvent(TestContext context) throws InterruptedException {
 
     List<HoldingsType> holdings = new ArrayList<>();
     holdings.add(new HoldingsType().withName("testingnote$a"));
@@ -254,7 +251,7 @@ public class QuickMarcKafkaHandlerTest {
       .withRecordType(ParsedRecordDto.RecordType.MARC_HOLDING)
       .withRelatedRecordVersion("1")));
 
-    Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(payload)));
+    Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
     String expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
@@ -276,8 +273,7 @@ public class QuickMarcKafkaHandlerTest {
   }
 
   @Test
-  public void shouldSendAuthorityUpdatedEvent(TestContext context) throws IOException,
-    InterruptedException {
+  public void shouldSendAuthorityUpdatedEvent(TestContext context) throws InterruptedException {
     // given
     Async async = context.async();
     Map<String, String> payload = new HashMap<>();
@@ -289,7 +285,7 @@ public class QuickMarcKafkaHandlerTest {
       .withRecordType(ParsedRecordDto.RecordType.MARC_AUTHORITY)
       .withRelatedRecordVersion("1")));
 
-    Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(payload)));
+    Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
     String expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
@@ -317,8 +313,7 @@ public class QuickMarcKafkaHandlerTest {
   }
 
   @Test
-  public void shouldSendErrorEventWhenRecordIsNotExistInStorage(TestContext context) throws IOException,
-    InterruptedException {
+  public void shouldSendErrorEventWhenRecordIsNotExistInStorage(TestContext context) throws InterruptedException {
     // given
     Async async = context.async();
     Map<String, String> payload = new HashMap<>();
@@ -330,7 +325,7 @@ public class QuickMarcKafkaHandlerTest {
       .withRecordType(ParsedRecordDto.RecordType.MARC_AUTHORITY)
       .withRelatedRecordVersion("1")));
 
-    Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(payload)));
+    Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
     String expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
@@ -358,8 +353,7 @@ public class QuickMarcKafkaHandlerTest {
   }
 
   @Test
-  public void shouldSendErrorEventWhenFailedToFetchRecordFromStorage(TestContext context) throws IOException,
-    InterruptedException {
+  public void shouldSendErrorEventWhenFailedToFetchRecordFromStorage(TestContext context) throws InterruptedException {
     // given
     Async async = context.async();
     Map<String, String> payload = new HashMap<>();
@@ -371,7 +365,7 @@ public class QuickMarcKafkaHandlerTest {
       .withRecordType(ParsedRecordDto.RecordType.MARC_AUTHORITY)
       .withRelatedRecordVersion("1")));
 
-    Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(payload)));
+    Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
     String expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
@@ -399,8 +393,7 @@ public class QuickMarcKafkaHandlerTest {
   }
 
   @Test
-  public void shouldSendErrorEventWhenPayloadHasNoMarcRecord(TestContext context)
-    throws IOException, InterruptedException {
+  public void shouldSendErrorEventWhenPayloadHasNoMarcRecord(TestContext context) throws InterruptedException {
     // given
     Async async = context.async();
     Map<String, String> payload = new HashMap<>();
@@ -408,7 +401,7 @@ public class QuickMarcKafkaHandlerTest {
     payload.put("MAPPING_RULES", bibMappingRules.encode());
     payload.put("MAPPING_PARAMS", new JsonObject().encode());
 
-    Event event = new Event().withId("01").withEventPayload(ZIPArchiver.zip(Json.encode(payload)));
+    Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
     String expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
