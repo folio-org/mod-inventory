@@ -20,8 +20,6 @@ import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaConsumerWrapper;
 import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.kafka.SubscriptionDefinition;
-import org.folio.kafka.cache.KafkaInternalCache;
-import org.folio.kafka.cache.util.CacheUtil;
 
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_INSTANCE_HRID_SET;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_HOLDINGS_HOLDING_HRID_SET;
@@ -36,8 +34,6 @@ import static org.folio.inventory.dataimport.util.KafkaConfigConstants.OKAPI_URL
 public class MarcHridSetConsumerVerticle extends AbstractVerticle {
 
   private static final Logger LOGGER = LogManager.getLogger(MarcHridSetConsumerVerticle.class);
-  private static final long DELAY_TIME_BETWEEN_EVENTS_CLEANUP_VALUE_MILLIS = 3600000;
-  private static final int EVENT_TIMEOUT_VALUE_HOURS = 3;
   private static final GlobalLoadSensor GLOBAL_LOAD_SENSOR = new GlobalLoadSensor();
 
   private final int loadLimit = getLoadLimit();
@@ -65,10 +61,6 @@ public class MarcHridSetConsumerVerticle extends AbstractVerticle {
     InstanceUpdateDelegate instanceUpdateDelegate = new InstanceUpdateDelegate(storage);
     HoldingsUpdateDelegate holdingsRecordUpdateDelegate = new HoldingsUpdateDelegate(storage);
 
-    KafkaInternalCache kafkaInternalCache = KafkaInternalCache.builder()
-      .kafkaConfig(kafkaConfig).build();
-    kafkaInternalCache.initKafkaCache();
-
     String mappingMetadataExpirationTime = getCacheEnvVariable(config, "inventory.mapping-metadata-cache.expiration.time.seconds");
     MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, client, Long.parseLong(mappingMetadataExpirationTime));
 
@@ -81,8 +73,6 @@ public class MarcHridSetConsumerVerticle extends AbstractVerticle {
       )
       .onFailure(startPromise::fail)
       .onSuccess(ar -> startPromise.complete());
-
-    CacheUtil.initCacheCleanupPeriodicTask(vertx, kafkaInternalCache, DELAY_TIME_BETWEEN_EVENTS_CLEANUP_VALUE_MILLIS, EVENT_TIMEOUT_VALUE_HOURS);
   }
 
   @Override
