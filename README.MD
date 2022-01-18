@@ -92,19 +92,17 @@ There are several properties that should be set for modules that interact with K
 After setup, it is good to check logs in all related modules for errors.
 
 **Environment variables** that can be adjusted for this module and default values:
-* "_kafkacache.topic.number.partitions_": 1
-* "_kafkacache.topic.replication.factor_": 1
-* "_kafkacache.log.retention.ms_": 18000000
-* "_kafkacache.topic_": events_cache
-* "_inventory.kafka.DataImportConsumerVerticle.instancesNumber_": 5
-* "_inventory.kafka.MarcBibInstanceHridSetConsumerVerticle.instancesNumber_": 5
-* "_inventory.kafka.DataImportConsumer.loadLimit_": 5
-* "_inventory.kafka.DataImportConsumerVerticle.maxDistributionNumber_": 100
-* "_inventory.kafka.MarcBibInstanceHridSetConsumer.loadLimit_": 5
-
-#### Note
-**These variables are relevant for the **Iris** release. Module version: 16.3.0 (16.3.1).**
-
+ * These variables are relevant from the **Iris** release. Module version from 16.3.0:
+    * "_inventory.kafka.DataImportConsumerVerticle.instancesNumber_": 5
+    * "_inventory.kafka.MarcBibInstanceHridSetConsumerVerticle.instancesNumber_": 5
+    * "_inventory.kafka.DataImportConsumer.loadLimit_": 5
+    * "_inventory.kafka.DataImportConsumerVerticle.maxDistributionNumber_": 100
+    * "_inventory.kafka.MarcBibInstanceHridSetConsumer.loadLimit_": 5
+ * These variables are relevant from the **Iris** release (module version from 16.3.0) to **Kiwi** release (module version from 18.0.0):
+    * "_kafkacache.topic.number.partitions_": 1
+    * "_kafkacache.topic.replication.factor_": 1
+    * "_kafkacache.log.retention.ms_": 18000000
+    * "_kafkacache.topic_": events_cache
 
 ## Sample Data
 
