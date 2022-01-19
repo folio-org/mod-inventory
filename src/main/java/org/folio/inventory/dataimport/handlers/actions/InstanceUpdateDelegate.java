@@ -3,7 +3,9 @@ package org.folio.inventory.dataimport.handlers.actions;
 import static java.lang.String.format;
 
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
@@ -29,6 +31,11 @@ public class InstanceUpdateDelegate {
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
   private static final String QM_RELATED_RECORD_VERSION_KEY = "RELATED_RECORD_VERSION";
   private static final String MARC_FORMAT = "MARC_BIB";
+  private static final int RETRY_NUMBER = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
+
+  private Map<String, String> eventPayload;
+  private Record marcRecord;
+  private Context context;
 
   private final Storage storage;
 
@@ -37,6 +44,9 @@ public class InstanceUpdateDelegate {
   }
 
   public Future<Instance> handle(Map<String, String> eventPayload, Record marcRecord, Context context) {
+    this.eventPayload = eventPayload;
+    this.marcRecord = marcRecord;
+    this.context = context;
     try {
       JsonObject mappingRules = new JsonObject(eventPayload.get(MAPPING_RULES_KEY));
       MappingParameters mappingParameters = new JsonObject(eventPayload.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
@@ -94,12 +104,29 @@ public class InstanceUpdateDelegate {
   }
 
   private Future<Instance> updateInstanceInStorage(Instance instance, InstanceCollection instanceCollection) {
+    return updateInstanceAndRetryIfOlExists(instance, instanceCollection);
+  }
+
+
+  public Future<Instance> updateInstanceAndRetryIfOlExists(Instance instance, InstanceCollection instanceCollection) {
+    AtomicInteger retry = new AtomicInteger(0);
     Promise<Instance> promise = Promise.promise();
-    instanceCollection.update(instance, success -> promise.complete(instance),
-      failure -> {
-        LOGGER.error(format("Error updating Instance - %s, status code %s", failure.getReason(), failure.getStatusCode()));
-        promise.fail(failure.getReason());
-      });
+    if (retry.get() <= RETRY_NUMBER) {
+      instanceCollection.update(instance, success -> promise.complete(instance),
+        failure -> {
+          if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
+            retry.incrementAndGet();
+            LOGGER.warn(format("Error updating Instance - %s, status code %s. Retry InstanceUpdateDelegate handler...", failure.getReason(), failure.getStatusCode()));
+            handle(eventPayload, marcRecord, context);
+          } else {
+            LOGGER.error(format("Error updating Instance - %s, status code %s", failure.getReason(), failure.getStatusCode()));
+            promise.fail(failure.getReason());
+          }
+        });
+    } else {
+      LOGGER.error("Retry number {} exceeded for the Instance update: {}", RETRY_NUMBER, retry.get());
+      promise.fail(format("Retry number %s exceeded for the Instance update: %s", RETRY_NUMBER, retry.get()));
+    }
     return promise.future();
   }
 }
