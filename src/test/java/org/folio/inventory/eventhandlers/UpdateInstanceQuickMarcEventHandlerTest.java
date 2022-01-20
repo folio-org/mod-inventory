@@ -19,6 +19,7 @@ import scala.concurrent.Promise;
 
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
@@ -135,6 +136,7 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
     Assert.assertEquals("http://localhost", argument.getValue().getOkapiLocation());
   }
 
+  @Ignore
   @Test
   public void shouldCompleteExceptionallyOnOLNumberExceeded() {
     HashMap<String, String> eventPayload = new HashMap<>();
