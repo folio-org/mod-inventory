@@ -854,7 +854,7 @@
         "value": "okapi_modules"
       },
       {
-        "name": "DB_QUERYTIMEOUT",
+        "name": "DB_IDLETIMEOUT",
         "value": "60000"
       },
       {

@@ -11,6 +11,7 @@ import static java.lang.String.format;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Utility class to get connection properties used to connect to Postgres DB.
@@ -28,7 +29,7 @@ public class PostgresConnectionOptions {
   public static final String DB_PASSWORD = "DB_PASSWORD";
   public static final String DB_MAXPOOLSIZE = "DB_MAXPOOLSIZE";
   public static final String DB_SERVER_PEM = "DB_SERVER_PEM";
-  public static final String DB_QUERYTIMEOUT = "DB_QUERYTIMEOUT";
+  public static final String DB_IDLETIMEOUT = "DB_IDLETIMEOUT";
 
   private static Map<String, String> systemProperties = System.getenv();
 
@@ -69,7 +70,9 @@ public class PostgresConnectionOptions {
       pgConnectionOptions.setEnabledSecureTransportProtocols(Collections.singleton("TLSv1.3"));
       pgConnectionOptions.setOpenSslEngineOptions(new OpenSSLEngineOptions());
     }
-    pgConnectionOptions.setIdleTimeout(Integer.parseInt(getSystemProperty(DB_QUERYTIMEOUT) != null ? getSystemProperty(DB_QUERYTIMEOUT) : DEFAULT_IDLE_TIMEOUT));
+    pgConnectionOptions.setIdleTimeout(Integer.parseInt(
+      StringUtils.isNotBlank(getSystemProperty(DB_IDLETIMEOUT)) ? getSystemProperty(DB_IDLETIMEOUT) : DEFAULT_IDLE_TIMEOUT));
+    pgConnectionOptions.setIdleTimeoutUnit(TimeUnit.MILLISECONDS);
     if (StringUtils.isNotBlank(tenantId)) {
       pgConnectionOptions.addProperty(DEFAULT_SCHEMA_PROPERTY, convertToPsqlStandard(tenantId));
     }
