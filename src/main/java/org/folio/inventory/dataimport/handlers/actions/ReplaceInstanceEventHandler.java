@@ -50,14 +50,8 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   private static final String MAPPING_PARAMETERS_NOT_FOUND_MSG = "MappingParameters snapshot was not found by jobExecutionId '%s'. RecordId: '%s', chunkId: '%s' ";
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
+  private static final String RETRY_KEY = "CURRENT_RETRY_NUMBER";
   private static final int RETRY_NUMBER = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
-
-  //TODO: Change retry mechanism. Move it to the payload
-  private static final AtomicInteger retry = new AtomicInteger(0);
-
-  //TODO: Think and maybe move these fields as arguments between methods, or change this mechanism.
-  // They were added as fields for limiting number of arguments between methods. But it will cause inconsistency between events now.
-  private DataImportEventPayload eventPayload;
 
   private final PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
   private final MappingMetadataCache mappingMetadataCache;
@@ -70,9 +64,9 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) { // NOSONAR
-    this.eventPayload = dataImportEventPayload;
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
+      dataImportEventPayload.getContext().put(RETRY_KEY, "0");
       dataImportEventPayload.setEventType(DI_INVENTORY_INSTANCE_UPDATED.value());
 
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
@@ -117,7 +111,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           }
 
           Instance mappedInstance = Instance.fromJson(instanceAsJson);
-          return updateInstanceAndRetryIfOlExists(mappedInstance, instanceCollection)
+          return updateInstanceAndRetryIfOlExists(mappedInstance, instanceCollection, dataImportEventPayload)
             .compose(updatedInstance -> precedingSucceedingTitlesHelper.getExistingPrecedingSucceedingTitles(mappedInstance, context))
             .map(precedingSucceedingTitles -> precedingSucceedingTitles.stream()
               .map(titleJson -> titleJson.getString("id"))
@@ -129,8 +123,10 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         .onComplete(ar -> {
           if (ar.succeeded()) {
             dataImportEventPayload.getContext().put(INSTANCE.value(), ar.result().encode());
+            dataImportEventPayload.getContext().remove(RETRY_KEY);
             future.complete(dataImportEventPayload);
           } else {
+            dataImportEventPayload.getContext().remove(RETRY_KEY);
             LOGGER.error("Error updating inventory Instance by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
               recordId, chunkId, ar.cause());
             future.completeExceptionally(ar.cause());
@@ -199,28 +195,31 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
     }
   }
 
-  public Future<Instance> updateInstanceAndRetryIfOlExists(Instance instance, InstanceCollection instanceCollection) {
+  public Future<Instance> updateInstanceAndRetryIfOlExists(Instance instance, InstanceCollection instanceCollection, DataImportEventPayload eventPayload) {
     Promise<Instance> promise = Promise.promise();
-    if (retry.get() < RETRY_NUMBER) {
+    int currentRetryNumber = Integer.parseInt(eventPayload.getContext().get(RETRY_KEY));
+    if (currentRetryNumber < RETRY_NUMBER) {
       instanceCollection.update(instance, success -> promise.complete(instance),
         failure -> {
           if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
-            retry.incrementAndGet();
+            eventPayload.getContext().put(RETRY_KEY, String.valueOf(currentRetryNumber + 1));
             LOGGER.warn(format("Error updating Instance - %s, status code %s. Retry InstanceUpdateDelegate handler...", failure.getReason(), failure.getStatusCode()));
-            getActualInstanceAndReInvokeCurrentHandler(instance, instanceCollection, promise);
+            getActualInstanceAndReInvokeCurrentHandler(instance, instanceCollection, promise, eventPayload);
           } else {
+            eventPayload.getContext().remove(RETRY_KEY);
             LOGGER.error(format("Error updating Instance - %s, status code %s", failure.getReason(), failure.getStatusCode()));
             promise.fail(failure.getReason());
           }
         });
     } else {
-      LOGGER.error("Retry number {} exceeded for the Instance update: {}", RETRY_NUMBER, retry.get());
-      promise.fail(format("Retry number %s exceeded for the Instance update: %s", RETRY_NUMBER, retry.get()));
+      eventPayload.getContext().remove(RETRY_KEY);
+      LOGGER.error("Current retry number {} exceeded given number {} for the Instance update", RETRY_NUMBER, currentRetryNumber);
+      promise.fail(format("Current retry number %s exceeded given number %s for the Instance update", RETRY_NUMBER, currentRetryNumber));
     }
     return promise.future();
   }
 
-  private void getActualInstanceAndReInvokeCurrentHandler(Instance instance, InstanceCollection instanceCollection, Promise<Instance> promise) {
+  private void getActualInstanceAndReInvokeCurrentHandler(Instance instance, InstanceCollection instanceCollection, Promise<Instance> promise, DataImportEventPayload eventPayload) {
     instanceCollection.findById(instance.getId())
       .thenAccept(actualInstance -> {
         eventPayload.getContext().put(INSTANCE.value(), Json.encode(new JsonObject().put(INSTANCE_PATH, JsonObject.mapFrom(actualInstance))));
@@ -228,6 +227,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         handle(eventPayload);
       })
       .exceptionally(e -> {
+        eventPayload.getContext().remove(RETRY_KEY);
         LOGGER.error(format("Cannot get actual Instance by id: %s", e.getCause()));
         promise.fail(format("Cannot get actual Instance by id: %s", e.getCause()));
         return null;
