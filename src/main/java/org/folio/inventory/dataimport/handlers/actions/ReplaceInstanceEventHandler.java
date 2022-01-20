@@ -1,9 +1,11 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
+import org.apache.http.HttpStatus;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
@@ -17,12 +19,15 @@ import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.processing.mapping.mapper.MappingContext;
+import org.folio.rest.jaxrs.model.Record;
 
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
@@ -45,6 +50,14 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   private static final String MAPPING_PARAMETERS_NOT_FOUND_MSG = "MappingParameters snapshot was not found by jobExecutionId '%s'. RecordId: '%s', chunkId: '%s' ";
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
+  private static final int RETRY_NUMBER = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
+
+  //TODO: Change retry mechanism. Move it to the payload
+  private static final AtomicInteger retry = new AtomicInteger(0);
+
+  //TODO: Think and maybe move these fields as arguments between methods, or change this mechanism.
+  // They were added as fields for limiting number of arguments between methods. But it will cause inconsistency between events now.
+  private DataImportEventPayload eventPayload;
 
   private final PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
   private final MappingMetadataCache mappingMetadataCache;
@@ -57,6 +70,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) { // NOSONAR
+    this.eventPayload = dataImportEventPayload;
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
       dataImportEventPayload.setEventType(DI_INVENTORY_INSTANCE_UPDATED.value());
@@ -103,7 +117,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           }
 
           Instance mappedInstance = Instance.fromJson(instanceAsJson);
-          return updateInstance(mappedInstance, instanceCollection)
+          return updateInstanceAndRetryIfOlExists(mappedInstance, instanceCollection)
             .compose(updatedInstance -> precedingSucceedingTitlesHelper.getExistingPrecedingSucceedingTitles(mappedInstance, context))
             .map(precedingSucceedingTitles -> precedingSucceedingTitles.stream()
               .map(titleJson -> titleJson.getString("id"))
@@ -183,5 +197,40 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
     } catch (Exception e) {
       return Future.failedFuture(e);
     }
+  }
+
+  public Future<Instance> updateInstanceAndRetryIfOlExists(Instance instance, InstanceCollection instanceCollection) {
+    Promise<Instance> promise = Promise.promise();
+    if (retry.get() < RETRY_NUMBER) {
+      instanceCollection.update(instance, success -> promise.complete(instance),
+        failure -> {
+          if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
+            retry.incrementAndGet();
+            LOGGER.warn(format("Error updating Instance - %s, status code %s. Retry InstanceUpdateDelegate handler...", failure.getReason(), failure.getStatusCode()));
+            getActualInstanceAndReInvokeCurrentHandler(instance, instanceCollection, promise);
+          } else {
+            LOGGER.error(format("Error updating Instance - %s, status code %s", failure.getReason(), failure.getStatusCode()));
+            promise.fail(failure.getReason());
+          }
+        });
+    } else {
+      LOGGER.error("Retry number {} exceeded for the Instance update: {}", RETRY_NUMBER, retry.get());
+      promise.fail(format("Retry number %s exceeded for the Instance update: %s", RETRY_NUMBER, retry.get()));
+    }
+    return promise.future();
+  }
+
+  private void getActualInstanceAndReInvokeCurrentHandler(Instance instance, InstanceCollection instanceCollection, Promise<Instance> promise) {
+    instanceCollection.findById(instance.getId())
+      .thenAccept(actualInstance -> {
+        eventPayload.getContext().put(INSTANCE.value(), Json.encode(new JsonObject().put(INSTANCE_PATH, JsonObject.mapFrom(actualInstance))));
+        //TODO: Un-prepare event (currentNode+eventType)
+        handle(eventPayload);
+      })
+      .exceptionally(e -> {
+        LOGGER.error(format("Cannot get actual Instance by id: %s", e.getCause()));
+        promise.fail(format("Cannot get actual Instance by id: %s", e.getCause()));
+        return null;
+      });
   }
 }

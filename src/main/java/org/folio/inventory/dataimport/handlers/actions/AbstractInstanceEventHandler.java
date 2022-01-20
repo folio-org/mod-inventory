@@ -59,14 +59,4 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
       throw new JsonMappingException("Error in default mapper.", e);
     }
   }
-
-  protected Future<Void> updateInstance(Instance instance, InstanceCollection instanceCollection) {
-    Promise<Void> promise = Promise.promise();
-    instanceCollection.update(instance, success -> promise.complete(),
-      failure -> {
-        LOGGER.error(format("Error updating Instance cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
-        promise.fail(failure.getReason());
-      });
-    return promise.future();
-  }
 }

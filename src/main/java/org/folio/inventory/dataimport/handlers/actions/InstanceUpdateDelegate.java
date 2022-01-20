@@ -32,7 +32,11 @@ public class InstanceUpdateDelegate {
   private static final String QM_RELATED_RECORD_VERSION_KEY = "RELATED_RECORD_VERSION";
   private static final String MARC_FORMAT = "MARC_BIB";
   private static final int RETRY_NUMBER = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
+  //TODO: Change retry mechanism. Move it to the payload
+  private static final AtomicInteger retry = new AtomicInteger(0);
 
+  //TODO: Think and maybe move these fields as arguments between methods, or change this mechanism.
+  // They were added as fields for limiting number of arguments between methods. But it will cause inconsistency between events now.
   private Map<String, String> eventPayload;
   private Record marcRecord;
   private Context context;
@@ -109,9 +113,8 @@ public class InstanceUpdateDelegate {
 
 
   public Future<Instance> updateInstanceAndRetryIfOlExists(Instance instance, InstanceCollection instanceCollection) {
-    AtomicInteger retry = new AtomicInteger(0);
     Promise<Instance> promise = Promise.promise();
-    if (retry.get() <= RETRY_NUMBER) {
+    if (retry.get() < RETRY_NUMBER) {
       instanceCollection.update(instance, success -> promise.complete(instance),
         failure -> {
           if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
