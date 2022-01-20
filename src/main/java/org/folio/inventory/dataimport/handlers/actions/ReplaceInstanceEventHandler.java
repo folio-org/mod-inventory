@@ -7,7 +7,9 @@ import io.vertx.core.json.JsonObject;
 
 import org.apache.http.HttpStatus;
 import org.folio.ActionProfile;
+import org.folio.Authority;
 import org.folio.DataImportEventPayload;
+import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
@@ -19,6 +21,7 @@ import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.processing.mapping.mapper.MappingContext;
+import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
 
 import java.util.HashMap;
@@ -223,7 +226,12 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
     instanceCollection.findById(instance.getId())
       .thenAccept(actualInstance -> {
         eventPayload.getContext().put(INSTANCE.value(), Json.encode(new JsonObject().put(INSTANCE_PATH, JsonObject.mapFrom(actualInstance))));
-        //TODO: Un-prepare event (currentNode+eventType)
+        eventPayload.getEventsChain().remove(eventPayload.getContext().get("CURRENT_EVENT_TYPE"));
+        eventPayload.setCurrentNode(ObjectMapperTool.getMapper().readValue(eventPayload.getContext().get("CURRENT_NODE"), ProfileSnapshotWrapper.class));
+
+        eventPayload.getContext().remove("CURRENT_EVENT_TYPE");
+        eventPayload.getContext().remove("CURRENT_NODE");
+
         handle(eventPayload);
       })
       .exceptionally(e -> {

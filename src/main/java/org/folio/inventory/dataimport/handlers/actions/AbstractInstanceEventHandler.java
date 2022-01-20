@@ -39,6 +39,9 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   }
 
   protected void prepareEvent(DataImportEventPayload dataImportEventPayload) {
+    dataImportEventPayload.getContext().put("CURRENT_EVENT_TYPE", dataImportEventPayload.getEventType());
+    dataImportEventPayload.getContext().put("CURRENT_NODE", Json.encode(dataImportEventPayload.getCurrentNode()));
+
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
     dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
     dataImportEventPayload.getContext().put(INSTANCE.value(), new JsonObject().encode());
