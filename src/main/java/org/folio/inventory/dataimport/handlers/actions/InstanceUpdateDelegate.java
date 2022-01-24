@@ -100,32 +100,39 @@ public class InstanceUpdateDelegate {
 
   public Future<Instance> updateInstanceInStorageAndRetryIfOlConflictExists(Instance instance, InstanceCollection instanceCollection, Map<String, String> eventPayload, Record marcRecord, Context context) {
     Promise<Instance> promise = Promise.promise();
-    String retry = eventPayload.get(CURRENT_RETRY_NUMBER);
-    if (retry == null) {
-      retry = "0";
-    }
-    int currentRetryNumber = Integer.parseInt(retry);
-    if (currentRetryNumber < MAX_RETRIES_COUNT) {
-      instanceCollection.update(instance, success -> {
-          eventPayload.remove(CURRENT_RETRY_NUMBER);
-          promise.complete(instance);
-        },
-        failure -> {
-          if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
+
+    instanceCollection.update(instance, success -> {
+        eventPayload.remove(CURRENT_RETRY_NUMBER);
+        promise.complete(instance);
+      },
+      failure -> {
+        if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
+          String retry = eventPayload.get(CURRENT_RETRY_NUMBER);
+          if (retry == null) {
+            retry = "0";
+          }
+          int currentRetryNumber = Integer.parseInt(retry);
+          if (currentRetryNumber < MAX_RETRIES_COUNT) {
             eventPayload.put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
             LOGGER.warn(format("Error updating Instance - %s, status code %s. Retry InstanceUpdateDelegate handler...", failure.getReason(), failure.getStatusCode()));
-            handle(eventPayload, marcRecord, context);
+            handle(eventPayload, marcRecord, context).onComplete(res -> {
+              if (res.succeeded()) {
+                promise.complete();
+              } else {
+                promise.fail(res.cause());
+              }
+            });
           } else {
             eventPayload.remove(CURRENT_RETRY_NUMBER);
-            LOGGER.error(format("Error updating Instance - %s, status code %s", failure.getReason(), failure.getStatusCode()));
-            promise.fail(failure.getReason());
+            LOGGER.error("Current retry number {} exceeded given number {} for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber);
+            promise.fail(format("Current retry number %s exceeded given number %s for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber));
           }
-        });
-    } else {
-      eventPayload.remove(CURRENT_RETRY_NUMBER);
-      LOGGER.error("Current retry number {} exceeded given number {} for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber);
-      promise.fail(format("Current retry number %s exceeded given number %s for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber));
-    }
+        } else {
+          eventPayload.remove(CURRENT_RETRY_NUMBER);
+          LOGGER.error(format("Error updating Instance - %s, status code %s", failure.getReason(), failure.getStatusCode()));
+          promise.fail(failure.getReason());
+        }
+      });
     return promise.future();
   }
 }

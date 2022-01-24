@@ -52,7 +52,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
   private static final String CURRENT_RETRY_NUMBER = "CURRENT_RETRY_NUMBER";
-  private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "5"));
+  private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
 
   private final PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
   private final MappingMetadataCache mappingMetadataCache;
@@ -197,29 +197,29 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
   public Future<Instance> updateInstanceAndRetryIfOlExists(Instance instance, InstanceCollection instanceCollection, DataImportEventPayload eventPayload) {
     Promise<Instance> promise = Promise.promise();
-    String retry = eventPayload.getContext().get(CURRENT_RETRY_NUMBER);
-    if (retry == null) {
-      retry = "0";
-    }
-    int currentRetryNumber = Integer.parseInt(retry);
-    if (currentRetryNumber < MAX_RETRIES_COUNT) {
-      instanceCollection.update(instance, success -> promise.complete(instance),
-        failure -> {
-          if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
+    instanceCollection.update(instance, success -> promise.complete(instance),
+      failure -> {
+        if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
+          String retry = eventPayload.getContext().get(CURRENT_RETRY_NUMBER);
+          if (retry == null) {
+            retry = "0";
+          }
+          int currentRetryNumber = Integer.parseInt(retry);
+          if (currentRetryNumber < MAX_RETRIES_COUNT) {
             eventPayload.getContext().put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
             LOGGER.warn(format("Error updating Instance - %s, status code %s. Retry InstanceUpdateDelegate handler...", failure.getReason(), failure.getStatusCode()));
             getActualInstanceAndReInvokeCurrentHandler(instance, instanceCollection, promise, eventPayload);
           } else {
             eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
-            LOGGER.error(format("Error updating Instance - %s, status code %s", failure.getReason(), failure.getStatusCode()));
-            promise.fail(failure.getReason());
+            LOGGER.error("Current retry number {} exceeded or equal given number {} for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber);
+            promise.fail(format("Current retry number %s exceeded or equal given number %s for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber));
           }
-        });
-    } else {
-      eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
-      LOGGER.error("Current retry number {} exceeded or equal given number {} for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber);
-      promise.fail(format("Current retry number %s exceeded or equal given number %s for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber));
-    }
+        } else {
+          eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
+          LOGGER.error(format("Error updating Instance - %s, status code %s", failure.getReason(), failure.getStatusCode()));
+          promise.fail(failure.getReason());
+        }
+      });
     return promise.future();
   }
 
@@ -233,7 +233,6 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         } catch (JsonProcessingException e) {
           LOGGER.error(format("Cannot map from CURRENT_NODE value %s", e.getCause()));
         }
-
         eventPayload.getContext().remove("CURRENT_EVENT_TYPE");
         eventPayload.getContext().remove("CURRENT_NODE");
 

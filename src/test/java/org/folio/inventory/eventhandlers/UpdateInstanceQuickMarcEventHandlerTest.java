@@ -3,6 +3,7 @@ package org.folio.inventory.eventhandlers;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle.TITLE_KEY;
@@ -136,7 +137,6 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
     Assert.assertEquals("http://localhost", argument.getValue().getOkapiLocation());
   }
 
-  @Ignore
   @Test
   public void shouldCompleteExceptionallyOnOLNumberExceeded() {
     HashMap<String, String> eventPayload = new HashMap<>();
@@ -153,7 +153,7 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
     }).when(instanceRecordCollection).update(any(), any(), any());
 
     Future<Instance> future = updateInstanceEventHandler.handle(eventPayload);
-
+    verify(instanceRecordCollection, times(2)).update(any(), any(), any());
     Assert.assertTrue(future.failed());
 
   }
