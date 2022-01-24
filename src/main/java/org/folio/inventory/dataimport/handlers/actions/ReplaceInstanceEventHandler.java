@@ -52,7 +52,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
   private static final String CURRENT_RETRY_NUMBER = "CURRENT_RETRY_NUMBER";
-  private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
+  private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "5"));
 
   private final PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
   private final MappingMetadataCache mappingMetadataCache;
@@ -67,7 +67,6 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) { // NOSONAR
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
-      dataImportEventPayload.getContext().put(CURRENT_RETRY_NUMBER, "0");
       dataImportEventPayload.setEventType(DI_INVENTORY_INSTANCE_UPDATED.value());
 
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
@@ -198,7 +197,11 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
   public Future<Instance> updateInstanceAndRetryIfOlExists(Instance instance, InstanceCollection instanceCollection, DataImportEventPayload eventPayload) {
     Promise<Instance> promise = Promise.promise();
-    int currentRetryNumber = Integer.parseInt(eventPayload.getContext().get(CURRENT_RETRY_NUMBER));
+    String retry = eventPayload.getContext().get(CURRENT_RETRY_NUMBER);
+    if (retry == null) {
+      retry = "0";
+    }
+    int currentRetryNumber = Integer.parseInt(retry);
     if (currentRetryNumber < MAX_RETRIES_COUNT) {
       instanceCollection.update(instance, success -> promise.complete(instance),
         failure -> {
@@ -214,8 +217,8 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         });
     } else {
       eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
-      LOGGER.error("Current retry number {} exceeded given number {} for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber);
-      promise.fail(format("Current retry number %s exceeded given number %s for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber));
+      LOGGER.error("Current retry number {} exceeded or equal given number {} for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber);
+      promise.fail(format("Current retry number %s exceeded or equal given number %s for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber));
     }
     return promise.future();
   }
@@ -223,18 +226,24 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   private void getActualInstanceAndReInvokeCurrentHandler(Instance instance, InstanceCollection instanceCollection, Promise<Instance> promise, DataImportEventPayload eventPayload) {
     instanceCollection.findById(instance.getId())
       .thenAccept(actualInstance -> {
-        eventPayload.getContext().put(INSTANCE.value(), Json.encode(new JsonObject().put(INSTANCE_PATH, JsonObject.mapFrom(actualInstance))));
+        eventPayload.getContext().put(INSTANCE.value(), Json.encode(JsonObject.mapFrom(actualInstance)));
         eventPayload.getEventsChain().remove(eventPayload.getContext().get("CURRENT_EVENT_TYPE"));
         try {
           eventPayload.setCurrentNode(ObjectMapperTool.getMapper().readValue(eventPayload.getContext().get("CURRENT_NODE"), ProfileSnapshotWrapper.class));
         } catch (JsonProcessingException e) {
-          LOGGER.error(format("Cannot map from CURRENT_NODE value%s", e.getCause()));
+          LOGGER.error(format("Cannot map from CURRENT_NODE value %s", e.getCause()));
         }
 
         eventPayload.getContext().remove("CURRENT_EVENT_TYPE");
         eventPayload.getContext().remove("CURRENT_NODE");
 
-        handle(eventPayload);
+        handle(eventPayload).whenComplete((res, e) -> {
+          if (e != null) {
+            promise.fail(e.getMessage());
+          } else {
+            promise.complete();
+          }
+        });
       })
       .exceptionally(e -> {
         eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);

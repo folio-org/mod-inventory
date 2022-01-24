@@ -41,7 +41,6 @@ public class InstanceUpdateDelegate {
 
   public Future<Instance> handle(Map<String, String> eventPayload, Record marcRecord, Context context) {
     try {
-      eventPayload.put(CURRENT_RETRY_NUMBER, "0");
       JsonObject mappingRules = new JsonObject(eventPayload.get(MAPPING_RULES_KEY));
       MappingParameters mappingParameters = new JsonObject(eventPayload.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
 
@@ -101,7 +100,11 @@ public class InstanceUpdateDelegate {
 
   public Future<Instance> updateInstanceInStorageAndRetryIfOlConflictExists(Instance instance, InstanceCollection instanceCollection, Map<String, String> eventPayload, Record marcRecord, Context context) {
     Promise<Instance> promise = Promise.promise();
-    int currentRetryNumber = Integer.parseInt(eventPayload.get(CURRENT_RETRY_NUMBER));
+    String retry = eventPayload.get(CURRENT_RETRY_NUMBER);
+    if (retry == null) {
+      retry = "0";
+    }
+    int currentRetryNumber = Integer.parseInt(retry);
     if (currentRetryNumber < MAX_RETRIES_COUNT) {
       instanceCollection.update(instance, success -> {
           eventPayload.remove(CURRENT_RETRY_NUMBER);
