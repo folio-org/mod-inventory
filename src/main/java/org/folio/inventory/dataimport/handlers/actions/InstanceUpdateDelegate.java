@@ -108,7 +108,7 @@ public class InstanceUpdateDelegate {
       },
       failure -> {
         if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
-          processIfOlError(eventPayload, marcRecord, context, promise, failure);
+          processIfOLErrorExists(eventPayload, marcRecord, context, promise, failure);
         } else {
           eventPayload.remove(CURRENT_RETRY_NUMBER);
           LOGGER.error(format("Error updating Instance - %s, status code %s", failure.getReason(), failure.getStatusCode()));
@@ -118,7 +118,7 @@ public class InstanceUpdateDelegate {
     return promise.future();
   }
 
-  private void processIfOlError(Map<String, String> eventPayload, Record marcRecord, Context context, Promise<Instance> promise, Failure failure) {
+  private void processIfOLErrorExists(Map<String, String> eventPayload, Record marcRecord, Context context, Promise<Instance> promise, Failure failure) {
     String retry = eventPayload.get(CURRENT_RETRY_NUMBER);
     if (retry == null) {
       retry = "0";
