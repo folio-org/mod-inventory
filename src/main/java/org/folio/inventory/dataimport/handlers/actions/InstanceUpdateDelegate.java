@@ -8,6 +8,7 @@ import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
@@ -107,26 +108,7 @@ public class InstanceUpdateDelegate {
       },
       failure -> {
         if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
-          String retry = eventPayload.get(CURRENT_RETRY_NUMBER);
-          if (retry == null) {
-            retry = "0";
-          }
-          int currentRetryNumber = Integer.parseInt(retry);
-          if (currentRetryNumber < MAX_RETRIES_COUNT) {
-            eventPayload.put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
-            LOGGER.warn(format("Error updating Instance - %s, status code %s. Retry InstanceUpdateDelegate handler...", failure.getReason(), failure.getStatusCode()));
-            handle(eventPayload, marcRecord, context).onComplete(res -> {
-              if (res.succeeded()) {
-                promise.complete();
-              } else {
-                promise.fail(res.cause());
-              }
-            });
-          } else {
-            eventPayload.remove(CURRENT_RETRY_NUMBER);
-            LOGGER.error("Current retry number {} exceeded given number {} for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber);
-            promise.fail(format("Current retry number %s exceeded given number %s for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber));
-          }
+          processIfOlError(eventPayload, marcRecord, context, promise, failure);
         } else {
           eventPayload.remove(CURRENT_RETRY_NUMBER);
           LOGGER.error(format("Error updating Instance - %s, status code %s", failure.getReason(), failure.getStatusCode()));
@@ -134,5 +116,28 @@ public class InstanceUpdateDelegate {
         }
       });
     return promise.future();
+  }
+
+  private void processIfOlError(Map<String, String> eventPayload, Record marcRecord, Context context, Promise<Instance> promise, Failure failure) {
+    String retry = eventPayload.get(CURRENT_RETRY_NUMBER);
+    if (retry == null) {
+      retry = "0";
+    }
+    int currentRetryNumber = Integer.parseInt(retry);
+    if (currentRetryNumber < MAX_RETRIES_COUNT) {
+      eventPayload.put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
+      LOGGER.warn("Error updating Instance - {}, status code {}. Retry InstanceUpdateDelegate handler...", failure.getReason(), failure.getStatusCode());
+      handle(eventPayload, marcRecord, context).onComplete(res -> {
+        if (res.succeeded()) {
+          promise.complete();
+        } else {
+          promise.fail(res.cause());
+        }
+      });
+    } else {
+      eventPayload.remove(CURRENT_RETRY_NUMBER);
+      LOGGER.error("Current retry number {} exceeded given number {} for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber);
+      promise.fail(format("Current retry number %s exceeded given number %s for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber));
+    }
   }
 }

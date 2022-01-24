@@ -10,6 +10,7 @@ import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.instances.Instance;
@@ -200,20 +201,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
     instanceCollection.update(instance, success -> promise.complete(instance),
       failure -> {
         if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
-          String retry = eventPayload.getContext().get(CURRENT_RETRY_NUMBER);
-          if (retry == null) {
-            retry = "0";
-          }
-          int currentRetryNumber = Integer.parseInt(retry);
-          if (currentRetryNumber < MAX_RETRIES_COUNT) {
-            eventPayload.getContext().put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
-            LOGGER.warn(format("Error updating Instance - %s, status code %s. Retry InstanceUpdateDelegate handler...", failure.getReason(), failure.getStatusCode()));
-            getActualInstanceAndReInvokeCurrentHandler(instance, instanceCollection, promise, eventPayload);
-          } else {
-            eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
-            LOGGER.error("Current retry number {} exceeded or equal given number {} for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber);
-            promise.fail(format("Current retry number %s exceeded or equal given number %s for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber));
-          }
+          processIfOLError(instance, instanceCollection, eventPayload, promise, failure);
         } else {
           eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
           LOGGER.error(format("Error updating Instance - %s, status code %s", failure.getReason(), failure.getStatusCode()));
@@ -221,6 +209,23 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         }
       });
     return promise.future();
+  }
+
+  private void processIfOLError(Instance instance, InstanceCollection instanceCollection, DataImportEventPayload eventPayload, Promise<Instance> promise, Failure failure) {
+    String retry = eventPayload.getContext().get(CURRENT_RETRY_NUMBER);
+    if (retry == null) {
+      retry = "0";
+    }
+    int currentRetryNumber = Integer.parseInt(retry);
+    if (currentRetryNumber < MAX_RETRIES_COUNT) {
+      eventPayload.getContext().put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
+      LOGGER.warn("Error updating Instance - {}, status code {}. Retry InstanceUpdateDelegate handler...", failure.getReason(), failure.getStatusCode());
+      getActualInstanceAndReInvokeCurrentHandler(instance, instanceCollection, promise, eventPayload);
+    } else {
+      eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
+      LOGGER.error("Current retry number {} exceeded or equal given number {} for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber);
+      promise.fail(format("Current retry number %s exceeded or equal given number %s for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber));
+    }
   }
 
   private void getActualInstanceAndReInvokeCurrentHandler(Instance instance, InstanceCollection instanceCollection, Promise<Instance> promise, DataImportEventPayload eventPayload) {
