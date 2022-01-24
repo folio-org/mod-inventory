@@ -54,7 +54,7 @@ public class InstanceUpdateDelegate {
       return getInstanceById(instanceId, instanceCollection)
         .onSuccess(existingInstance -> fillVersion(existingInstance, eventPayload))
         .compose(existingInstance -> updateInstance(existingInstance, mappedInstance))
-        .compose(updatedInstance -> updateInstanceInStorageAndRetryIfOlConflictExists(updatedInstance, instanceCollection, eventPayload, marcRecord, context));
+        .compose(updatedInstance -> updateInstanceInStorageAndRetryIfOLConflictExists(updatedInstance, instanceCollection, eventPayload, marcRecord, context));
     } catch (Exception e) {
       eventPayload.remove(CURRENT_RETRY_NUMBER);
       LOGGER.error("Error updating inventory instance", e);
@@ -99,7 +99,7 @@ public class InstanceUpdateDelegate {
   }
 
 
-  public Future<Instance> updateInstanceInStorageAndRetryIfOlConflictExists(Instance instance, InstanceCollection instanceCollection, Map<String, String> eventPayload, Record marcRecord, Context context) {
+  public Future<Instance> updateInstanceInStorageAndRetryIfOLConflictExists(Instance instance, InstanceCollection instanceCollection, Map<String, String> eventPayload, Record marcRecord, Context context) {
     Promise<Instance> promise = Promise.promise();
 
     instanceCollection.update(instance, success -> {
