@@ -34,6 +34,7 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
 
 import org.folio.HoldingsType;
+import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.MappingMetadataDto;
@@ -154,6 +155,36 @@ public class MarcHoldingsRecordHridSetKafkaHandlerTest {
     future.onComplete(ar -> {
       context.assertTrue(ar.succeeded());
       context.assertEquals(expectedKafkaRecordKey, ar.result());
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldReturnFailedFutureWhenOLError(TestContext context) {
+    // given
+    Async async = context.async();
+    Map<String, String> payload = new HashMap<>();
+    payload.put(JOB_EXECUTION_ID_KEY, UUID.randomUUID().toString());
+    payload.put("MARC_HOLDINGS", Json.encode(record));
+
+    Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
+    String expectedKafkaRecordKey = "test_key";
+    when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
+    when(kafkaRecord.value()).thenReturn(Json.encode(event));
+    when(kafkaRecord.headers()).thenReturn(okapiHeaders);
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure("Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", 409));
+      return null;
+    }).when(mockedHoldingsCollection).update(any(), any(), any());
+
+    // when
+    Future<String> future = marcHoldingsRecordHridSetKafkaHandler.handle(kafkaRecord);
+
+    // then
+    future.onComplete(ar -> {
+      context.assertTrue(ar.failed());
       async.complete();
     });
   }

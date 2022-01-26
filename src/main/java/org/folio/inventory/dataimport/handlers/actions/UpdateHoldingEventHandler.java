@@ -158,11 +158,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
   }
 
   private void processOLError(DataImportEventPayload dataImportEventPayload, CompletableFuture<DataImportEventPayload> future, HoldingsRecordCollection holdingsRecords, HoldingsRecord holding, Failure failure) {
-    String retry = dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER);
-    if (retry == null) {
-      retry = "0";
-    }
-    int currentRetryNumber = Integer.parseInt(retry);
+    int currentRetryNumber = dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER)  == null ? 0 : Integer.parseInt(dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER));
     if (currentRetryNumber < MAX_RETRIES_COUNT) {
       dataImportEventPayload.getContext().put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
       LOGGER.warn("Error updating Holding by id '{}' - '{}', status code '{}'. Retry UpdateHoldingEventHandler handler...", holding.getId(), failure.getReason(), failure.getStatusCode());
