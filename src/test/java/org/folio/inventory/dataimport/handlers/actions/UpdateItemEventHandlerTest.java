@@ -1,15 +1,45 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import io.vertx.core.Future;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
+import static org.folio.ActionProfile.Action.UPDATE;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_MATCHED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_UPDATED;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
+import static org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler.ACTION_HAS_NO_MAPPING_MSG;
+import static org.folio.inventory.domain.items.Item.HRID_KEY;
+import static org.folio.inventory.domain.items.Item.STATUS_KEY;
+import static org.folio.inventory.domain.items.ItemStatusName.AVAILABLE;
+import static org.folio.inventory.domain.items.ItemStatusName.IN_PROCESS;
+import static org.folio.inventory.support.JsonHelper.getNestedProperty;
+import static org.folio.rest.jaxrs.model.EntityType.ITEM;
+import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.DataImportEventTypes;
 import org.folio.JobProfile;
+import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
@@ -20,7 +50,6 @@ import org.folio.inventory.dataimport.ItemWriterFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
-import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.domain.items.Status;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.ItemUtil;
@@ -29,41 +58,26 @@ import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingPa
 import org.folio.processing.mapping.mapper.reader.Reader;
 import org.folio.processing.mapping.mapper.reader.record.marc.MarcBibReaderFactory;
 import org.folio.processing.value.StringValue;
+import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.MappingDetail;
-import org.folio.MappingMetadataDto;
 import org.folio.rest.jaxrs.model.MappingRule;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
-import org.folio.rest.jaxrs.model.*;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.*;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
+import org.mockito.Spy;
 
-import java.io.UnsupportedEncodingException;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.function.Consumer;
-
-import static org.folio.ActionProfile.Action.UPDATE;
-import static org.folio.DataImportEventTypes.*;
-import static org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler.ACTION_HAS_NO_MAPPING_MSG;
-import static org.folio.inventory.domain.items.Item.HRID_KEY;
-import static org.folio.inventory.domain.items.Item.STATUS_KEY;
-import static org.folio.inventory.domain.items.ItemStatusName.AVAILABLE;
-import static org.folio.inventory.domain.items.ItemStatusName.IN_PROCESS;
-import static org.folio.inventory.support.JsonHelper.getNestedProperty;
-import static org.folio.rest.jaxrs.model.EntityType.ITEM;
-import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import io.vertx.core.Future;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
 
 @RunWith(JUnitParamsRunner.class)
 public class UpdateItemEventHandlerTest {
@@ -129,6 +143,15 @@ public class UpdateItemEventHandlerTest {
       Item item = invocationOnMock.getArgument(0);
       return CompletableFuture.completedFuture(item);
     }).when(mockedItemCollection).update(any(Item.class));
+
+    Item returnedItem = new Item(UUID.randomUUID().toString(), "2", UUID.randomUUID().toString(), "test", new Status(AVAILABLE),
+      UUID.randomUUID().toString(), UUID.randomUUID().toString(), new JsonObject());
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(returnedItem));
+      return null;
+    }).when(mockedItemCollection).update(any(), any(), any());
 
     when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(IN_PROCESS.value()));
