@@ -3,15 +3,19 @@ package org.folio.inventory.dataimport.handlers.actions;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
+import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.items.Item;
@@ -26,6 +30,7 @@ import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.processing.mapping.mapper.MappingContext;
+import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 
 import java.io.UnsupportedEncodingException;
 import java.time.ZoneOffset;
@@ -46,6 +51,8 @@ import static org.folio.rest.jaxrs.model.EntityType.ITEM;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+
 public class UpdateItemEventHandler implements EventHandler {
 
   private static final Logger LOG = LogManager.getLogger(UpdateItemEventHandler.class);
@@ -58,6 +65,10 @@ public class UpdateItemEventHandler implements EventHandler {
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
   private static final Set<String> PROTECTED_STATUSES_FROM_UPDATE = new HashSet<>(Arrays.asList("Aged to lost", "Awaiting delivery", "Awaiting pickup", "Checked out", "Claimed returned", "Declared lost", "Paged", "Recently returned"));
+  private static final String CURRENT_RETRY_NUMBER = "CURRENT_RETRY_NUMBER";
+  private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
+  private static final String CURRENT_EVENT_TYPE_PROPERTY = "CURRENT_EVENT_TYPE";
+  private static final String CURRENT_NODE_PROPERTY = "CURRENT_NODE";
 
   private final List<String> requiredFields = Arrays.asList("status.name", "materialType.id", "permanentLoanType.id", "holdingsRecordId");
   private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").withZone(ZoneOffset.UTC);
@@ -124,7 +135,7 @@ public class UpdateItemEventHandler implements EventHandler {
           ItemCollection itemCollection = storage.getItemCollection(context);
           Item itemToUpdate = ItemUtil.jsonToItem(mappedItemAsJson);
           return verifyItemBarcodeUniqueness(itemToUpdate, itemCollection)
-            .compose(v -> updateItem(itemToUpdate, itemCollection))
+            .compose(v -> updateItemAndRetryIfOLExists(itemToUpdate, itemCollection, dataImportEventPayload))
             .onSuccess(updatedItem -> {
               if (isProtectedStatusChanged.get()) {
                 String msg = String.format(STATUS_UPDATE_ERROR_MSG, oldItemStatus, newItemStatus);
@@ -163,6 +174,9 @@ public class UpdateItemEventHandler implements EventHandler {
   }
 
   private void preparePayloadForMappingManager(DataImportEventPayload dataImportEventPayload) {
+    dataImportEventPayload.getContext().put(CURRENT_EVENT_TYPE_PROPERTY, dataImportEventPayload.getEventType());
+    dataImportEventPayload.getContext().put(CURRENT_NODE_PROPERTY, Json.encode(dataImportEventPayload.getCurrentNode()));
+
     JsonObject oldItemJson = new JsonObject(dataImportEventPayload.getContext().get(ITEM.value()));
     dataImportEventPayload.getContext().put(ActionProfile.FolioRecord.ITEM.value(), new JsonObject().put(ITEM_PATH_FIELD, oldItemJson).encode());
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
@@ -207,20 +221,80 @@ public class UpdateItemEventHandler implements EventHandler {
     return promise.future();
   }
 
-  private Future<Item> updateItem(Item item, ItemCollection itemCollection) {
+  private Future<Item> updateItemAndRetryIfOLExists(Item item, ItemCollection itemCollection, DataImportEventPayload eventPayload) {
     Promise<Item> promise = Promise.promise();
     item.getCirculationNotes().forEach(note -> note
       .withId(UUID.randomUUID().toString())
       .withSource(null)
       .withDate(dateTimeFormatter.format(ZonedDateTime.now())));
 
-    itemCollection.update(item).whenComplete((updatedItem, e) -> {
-      if (e != null) {
-        promise.fail(e);
-        return;
-      }
-      promise.complete(updatedItem);
-    });
+    itemCollection.update(item, success -> promise.complete(item),
+      failure -> {
+        if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
+          processOLError(item, itemCollection, eventPayload, promise, failure);
+        } else {
+          eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
+          LOG.error(format("Error updating Item - %s, status code %s", failure.getReason(), failure.getStatusCode()));
+          promise.fail(failure.getReason());
+        }
+      });
     return promise.future();
+  }
+
+
+  private void processOLError(Item instance, ItemCollection itemCollection, DataImportEventPayload eventPayload, Promise<Item> promise, Failure failure) {
+    int currentRetryNumber = eventPayload.getContext().get(CURRENT_RETRY_NUMBER) == null ? 0 : Integer.parseInt(eventPayload.getContext().get(CURRENT_RETRY_NUMBER));
+    if (currentRetryNumber < MAX_RETRIES_COUNT) {
+      eventPayload.getContext().put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
+      LOG.warn("OL error updating Instance - {}, status code {}. Retry UpdateItemEventHandler handler...", failure.getReason(), failure.getStatusCode());
+      getActualItemAndReInvokeCurrentHandler(instance, itemCollection, promise, eventPayload);
+    } else {
+      eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
+      LOG.error("Current retry number {} exceeded or equal given number {} for the Item update", MAX_RETRIES_COUNT, currentRetryNumber);
+      promise.fail(format("Current retry number %s exceeded or equal given number %s for the Item update", MAX_RETRIES_COUNT, currentRetryNumber));
+    }
+  }
+
+
+  private void getActualItemAndReInvokeCurrentHandler(Item item, ItemCollection itemCollection, Promise<Item> promise, DataImportEventPayload eventPayload) {
+    itemCollection.findById(item.getId())
+      .thenAccept(actualItem -> {
+        JsonObject itemAsJson = convertFieldsInJsonObject(actualItem);
+        eventPayload.getContext().put(ITEM.value(), Json.encode(itemAsJson));
+        eventPayload.getEventsChain().remove(eventPayload.getContext().get(CURRENT_EVENT_TYPE_PROPERTY));
+        try {
+          eventPayload.setCurrentNode(ObjectMapperTool.getMapper().readValue(eventPayload.getContext().get(CURRENT_NODE_PROPERTY), ProfileSnapshotWrapper.class));
+        } catch (JsonProcessingException e) {
+          LOG.error(format("Cannot map from CURRENT_NODE value %s", e.getCause()));
+        }
+        eventPayload.getContext().remove(CURRENT_EVENT_TYPE_PROPERTY);
+        eventPayload.getContext().remove(CURRENT_NODE_PROPERTY);
+        handle(eventPayload).whenComplete((res, e) -> {
+          if (e != null) {
+            promise.fail(e.getMessage());
+          } else {
+            promise.complete();
+          }
+        });
+      })
+      .exceptionally(e -> {
+        eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
+        LOG.error(format("Cannot get actual Item by id: %s", e.getCause()));
+        promise.fail(format("Cannot get actual Item by id: %s", e.getCause()));
+        return null;
+      });
+  }
+
+  private JsonObject convertFieldsInJsonObject(Item actualItem) {
+    JsonObject itemAsJson = JsonObject.mapFrom(actualItem);
+    String materialTypeId = itemAsJson.getString("materialTypeId");
+    String permanentLoadTypeId = itemAsJson.getString("permanentLoanTypeId");
+    String holdingId = itemAsJson.getString("holdingId");
+    JsonArray tagsAsArray = itemAsJson.getJsonArray("tags");
+    itemAsJson.put("materialType", new JsonObject().put("id", materialTypeId));
+    itemAsJson.put("permanentLoanType", new JsonObject().put("id", permanentLoadTypeId));
+    itemAsJson.put("holdingsRecordId",  holdingId);
+    itemAsJson.put("tags", new JsonObject().put("tags", new JsonObject().put("tagList", tagsAsArray)));
+    return itemAsJson;
   }
 }

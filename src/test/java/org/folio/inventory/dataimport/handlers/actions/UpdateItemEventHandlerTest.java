@@ -5,6 +5,7 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
+
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.DataImportEventTypes;
@@ -12,12 +13,14 @@ import org.folio.JobProfile;
 import org.folio.MappingProfile;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.ItemWriterFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
+import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.domain.items.Status;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.ItemUtil;
@@ -58,7 +61,9 @@ import static org.folio.rest.jaxrs.model.EntityType.ITEM;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.*;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @RunWith(JUnitParamsRunner.class)
 public class UpdateItemEventHandlerTest {
@@ -120,16 +125,16 @@ public class UpdateItemEventHandlerTest {
   public void setUp() {
     MockitoAnnotations.initMocks(this);
 
-    Mockito.doAnswer(invocationOnMock -> {
+    doAnswer(invocationOnMock -> {
       Item item = invocationOnMock.getArgument(0);
       return CompletableFuture.completedFuture(item);
     }).when(mockedItemCollection).update(any(Item.class));
 
-    Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-    Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(IN_PROCESS.value()));
-    Mockito.when(mockedStorage.getItemCollection(ArgumentMatchers.any(Context.class))).thenReturn(mockedItemCollection);
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(IN_PROCESS.value()));
+    when(mockedStorage.getItemCollection(ArgumentMatchers.any(Context.class))).thenReturn(mockedItemCollection);
 
-    Mockito.when(mappingMetadataCache.get(anyString(), any(Context.class)))
+    when(mappingMetadataCache.get(anyString(), any(Context.class)))
       .thenReturn(Future.succeededFuture(Optional.of(new MappingMetadataDto()
         .withMappingRules(new JsonObject().encode())
         .withMappingParams(Json.encode(new MappingParameters())))));
@@ -151,7 +156,7 @@ public class UpdateItemEventHandlerTest {
   public void shouldUpdateItemWithNewStatus()
     throws UnsupportedEncodingException, InterruptedException, ExecutionException, TimeoutException {
     // given
-    Mockito.doAnswer(invocationOnMock -> {
+    doAnswer(invocationOnMock -> {
       MultipleRecords<Item> result = new MultipleRecords<>(new ArrayList<>(), 0);
       Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
       successHandler.accept(new Success<>(result));
@@ -185,12 +190,52 @@ public class UpdateItemEventHandlerTest {
     Assert.assertEquals(IN_PROCESS.value(), updatedItem.getJsonObject(STATUS_KEY).getString("name"));
   }
 
+
+  @Test(expected = ExecutionException.class)
+  public void shouldReturnFailedWhenOLError()
+    throws UnsupportedEncodingException, InterruptedException, ExecutionException, TimeoutException {
+    // given
+    doAnswer(invocationOnMock -> {
+      MultipleRecords<Item> result = new MultipleRecords<>(new ArrayList<>(), 0);
+      Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
+      return null;
+    }).when(mockedItemCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure("Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", 409));
+      return null;
+    }).when(mockedItemCollection).update(any(), any(), any());
+
+    Item returnedItem = new Item(existingItemJson.getString("id"), "2", UUID.randomUUID().toString(), "test", new Status(AVAILABLE),
+      UUID.randomUUID().toString(), UUID.randomUUID().toString(), new JsonObject());
+
+    when(mockedItemCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(returnedItem));
+
+    HashMap<String, String> payloadContext = new HashMap<>();
+    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+    payloadContext.put(ITEM.value(), existingItemJson.encode());
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_ITEM_MATCHED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    // when
+    CompletableFuture<DataImportEventPayload> future = updateItemHandler.handle(dataImportEventPayload);
+
+    // then
+    future.get(5, TimeUnit.SECONDS);
+  }
+
   @Test(expected = ExecutionException.class)
   public void shouldReturnFailedFutureWhenMappedItemWithUnrecognizedStatusName()
     throws InterruptedException, ExecutionException, TimeoutException {
     // given
     MappingRule statusMappingRule = new MappingRule().withPath("item.status.name").withValue("\"statusExpression\"").withEnabled("true");
-    Mockito.when(fakeReader.read(eq(statusMappingRule))).thenReturn(StringValue.of("Invalid status"));
+    when(fakeReader.read(eq(statusMappingRule))).thenReturn(StringValue.of("Invalid status"));
 
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
@@ -213,7 +258,7 @@ public class UpdateItemEventHandlerTest {
   public void shouldReturnFailedFutureWhenBarcodeToUpdatedAssignedToAnotherItem()
     throws InterruptedException, ExecutionException, TimeoutException, UnsupportedEncodingException {
     // given
-    Mockito.doAnswer(invocationOnMock -> {
+    doAnswer(invocationOnMock -> {
       Item itemByCql = new Item(null, null, null, new Status(AVAILABLE), null, null, null);
       MultipleRecords<Item> result = new MultipleRecords<>(Collections.singletonList(itemByCql), 0);
       Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
@@ -242,7 +287,7 @@ public class UpdateItemEventHandlerTest {
   public void shouldNotRequestWhenUpdatedItemHasEmptyBarcode()
     throws UnsupportedEncodingException {
     // given
-    Mockito.doAnswer(invocationOnMock -> {
+    doAnswer(invocationOnMock -> {
       Item itemByCql = new Item(null, null, null, new Status(AVAILABLE), null, null, null);
       MultipleRecords<Item> result = new MultipleRecords<>(Collections.singletonList(itemByCql), 0);
       Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
@@ -330,7 +375,7 @@ public class UpdateItemEventHandlerTest {
   public void shouldReturnFailedFutureAndUpdateItemExceptStatusWhenStatusCanNotBeUpdated(String protectedItemStatus)
     throws UnsupportedEncodingException {
     // given
-    Mockito.doAnswer(invocationOnMock -> {
+    doAnswer(invocationOnMock -> {
       MultipleRecords<Item> result = new MultipleRecords<>(new ArrayList<>(), 0);
       Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
       successHandler.accept(new Success<>(result));
@@ -339,7 +384,7 @@ public class UpdateItemEventHandlerTest {
 
     String expectedItemBarcode = "BC-123123";
     MappingRule barcodeMappingRule = mappingProfile.getMappingDetails().getMappingFields().get(1);
-    Mockito.when(fakeReader.read(eq(barcodeMappingRule))).thenReturn(StringValue.of(expectedItemBarcode));
+    when(fakeReader.read(eq(barcodeMappingRule))).thenReturn(StringValue.of(expectedItemBarcode));
 
     existingItemJson.put(STATUS_KEY, new JsonObject().put("name", protectedItemStatus));
     HashMap<String, String> payloadContext = new HashMap<>();
