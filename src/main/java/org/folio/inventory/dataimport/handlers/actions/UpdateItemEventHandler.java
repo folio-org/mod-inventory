@@ -97,6 +97,7 @@ public class UpdateItemEventHandler implements EventHandler {
         LOG.error(ACTION_HAS_NO_MAPPING_MSG);
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
+      LOG.info("Processing UpdateItemEventHandler starting with jobExecutionId: {}.", dataImportEventPayload.getJobExecutionId());
 
       AtomicBoolean isProtectedStatusChanged = new AtomicBoolean();
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
@@ -250,8 +251,9 @@ public class UpdateItemEventHandler implements EventHandler {
       getActualItemAndReInvokeCurrentHandler(instance, itemCollection, promise, eventPayload);
     } else {
       eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
-      LOG.error("Current retry number {} exceeded or equal given number {} for the Item update", MAX_RETRIES_COUNT, currentRetryNumber);
-      promise.fail(format("Current retry number %s exceeded or equal given number %s for the Item update", MAX_RETRIES_COUNT, currentRetryNumber));
+      String errMessage = format("Current retry number %s exceeded or equal given number %s for the Item update for jobExecutionId '%s'", MAX_RETRIES_COUNT, currentRetryNumber, eventPayload.getJobExecutionId());
+      LOG.error(errMessage);
+      promise.fail(errMessage);
     }
   }
 
