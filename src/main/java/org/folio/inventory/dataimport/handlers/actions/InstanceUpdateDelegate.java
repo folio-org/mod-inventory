@@ -42,6 +42,7 @@ public class InstanceUpdateDelegate {
 
   public Future<Instance> handle(Map<String, String> eventPayload, Record marcRecord, Context context) {
     try {
+      LOGGER.info("Processing InstanceUpdateDelegate starting.");
       JsonObject mappingRules = new JsonObject(eventPayload.get(MAPPING_RULES_KEY));
       MappingParameters mappingParameters = new JsonObject(eventPayload.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
 
@@ -132,8 +133,9 @@ public class InstanceUpdateDelegate {
       });
     } else {
       eventPayload.remove(CURRENT_RETRY_NUMBER);
-      LOGGER.error("Current retry number {} exceeded given number {} for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber);
-      promise.fail(format("Current retry number %s exceeded given number %s for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber));
+      String errMessage = format("Current retry number %s exceeded given number %s for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber);
+      LOGGER.error(errMessage);
+      promise.fail(errMessage);
     }
   }
 }

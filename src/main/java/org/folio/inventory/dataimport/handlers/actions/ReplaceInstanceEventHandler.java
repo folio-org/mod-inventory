@@ -85,6 +85,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         LOGGER.error(ACTION_HAS_NO_MAPPING_MSG);
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
+      LOGGER.info("Processing ReplaceInstanceEventHandler starting with jobExecutionId: {}.", dataImportEventPayload.getJobExecutionId());
 
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       Instance instanceToUpdate = Instance.fromJson(new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value())));
@@ -130,8 +131,9 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
             future.complete(dataImportEventPayload);
           } else {
             dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
-            LOGGER.error("Error updating inventory Instance by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
+            String errMessage = format("Error updating inventory Instance by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s': %s ", jobExecutionId,
               recordId, chunkId, ar.cause());
+            LOGGER.error(errMessage);
             future.completeExceptionally(ar.cause());
           }
         });
@@ -221,8 +223,9 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       getActualInstanceAndReInvokeCurrentHandler(instance, instanceCollection, promise, eventPayload);
     } else {
       eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
-      LOGGER.error("Current retry number {} exceeded or equal given number {} for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber);
-      promise.fail(format("Current retry number %s exceeded or equal given number %s for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber));
+      String errMessage = format("Current retry number %s exceeded or equal given number %s for the Instance update for jobExecutionId '%s' ", MAX_RETRIES_COUNT, currentRetryNumber, eventPayload.getJobExecutionId());
+      LOGGER.error(errMessage);
+      promise.fail(errMessage);
     }
   }
 
