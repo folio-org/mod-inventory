@@ -3,17 +3,20 @@ package org.folio.inventory.dataimport.handlers.actions;
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
 import org.folio.JobProfile;
 import org.folio.MappingProfile;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.HoldingWriterFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.resources.Holdings;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
@@ -58,6 +61,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class UpdateHoldingEventHandlerTest {
@@ -180,6 +184,59 @@ public class UpdateHoldingEventHandlerTest {
   }
 
   @Test(expected = ExecutionException.class)
+  public void shouldNotProcessEventIfOLErrorExist() throws InterruptedException, ExecutionException, TimeoutException {
+    Reader fakeReader = mock(Reader.class);
+
+    String permanentLocationId = UUID.randomUUID().toString();
+
+    String instanceId = String.valueOf(UUID.randomUUID());
+    String holdingId = UUID.randomUUID().toString();
+    String hrid = UUID.randomUUID().toString();
+
+    HoldingsRecord holdingsRecord = new HoldingsRecord()
+      .withId(holdingId)
+      .withInstanceId(instanceId)
+      .withHrid(hrid)
+      .withPermanentLocationId(permanentLocationId);
+
+
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
+
+    HoldingsRecord returnedHoldings = new HoldingsRecord().withId(holdingId).withHrid(hrid).withInstanceId(instanceId).withPermanentLocationId(permanentLocationId).withVersion(1);
+
+    when(holdingsRecordsCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(returnedHoldings));
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure("Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", 409));
+      return null;
+    }).when(holdingsRecordsCollection).update(any(), any(), any());
+
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+
+    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new HoldingWriterFactory());
+
+
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    HashMap<String, String> context = new HashMap<>();
+    context.put(HOLDINGS.value(), Json.encode(holdingsRecord));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
+    future.get(5, TimeUnit.MILLISECONDS);
+  }
+
+  @Test(expected = ExecutionException.class)
   public void shouldNotProcessEventIfHoldingIdIsNotExistsInContext() throws InterruptedException, ExecutionException, TimeoutException {
     Reader fakeReader = Mockito.mock(Reader.class);
 
@@ -220,7 +277,7 @@ public class UpdateHoldingEventHandlerTest {
 
   @Test(expected = ExecutionException.class)
   public void shouldNotProcessEventIfInstanceIdIsNotExistsInContext() throws InterruptedException, ExecutionException, TimeoutException {
-    Reader fakeReader = Mockito.mock(Reader.class);
+    Reader fakeReader = mock(Reader.class);
 
     String permanentLocationId = UUID.randomUUID().toString();
 
@@ -258,7 +315,7 @@ public class UpdateHoldingEventHandlerTest {
 
   @Test(expected = ExecutionException.class)
   public void shouldNotProcessEventIfPermanentLocationIdIsNotExistsInContext() throws InterruptedException, ExecutionException, TimeoutException {
-    Reader fakeReader = Mockito.mock(Reader.class);
+    Reader fakeReader = mock(Reader.class);
 
     String permanentLocationId = UUID.randomUUID().toString();
 
@@ -297,7 +354,7 @@ public class UpdateHoldingEventHandlerTest {
 
   @Test(expected = ExecutionException.class)
   public void shouldNotProcessEventIfNoHoldingInContext() throws InterruptedException, ExecutionException, TimeoutException {
-    Reader fakeReader = Mockito.mock(Reader.class);
+    Reader fakeReader = mock(Reader.class);
 
     String permanentLocationId = UUID.randomUUID().toString();
 
@@ -330,7 +387,7 @@ public class UpdateHoldingEventHandlerTest {
 
   @Test(expected = ExecutionException.class)
   public void shouldNotProcessEventIfContextIsNull() throws InterruptedException, ExecutionException, TimeoutException {
-    Reader fakeReader = Mockito.mock(Reader.class);
+    Reader fakeReader = mock(Reader.class);
 
     String permanentLocationId = UUID.randomUUID().toString();
 
@@ -355,7 +412,7 @@ public class UpdateHoldingEventHandlerTest {
 
   @Test(expected = ExecutionException.class)
   public void shouldNotProcessEventIfContextIsEmpty() throws InterruptedException, ExecutionException, TimeoutException {
-    Reader fakeReader = Mockito.mock(Reader.class);
+    Reader fakeReader = mock(Reader.class);
 
     String permanentLocationId = UUID.randomUUID().toString();
 
