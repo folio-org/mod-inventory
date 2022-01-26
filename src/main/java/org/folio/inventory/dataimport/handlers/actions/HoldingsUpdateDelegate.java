@@ -43,6 +43,7 @@ public class HoldingsUpdateDelegate {
 
   public Future<HoldingsRecord> handle(Map<String, String> eventPayload, Record marcRecord, Context context) {
     try {
+      LOGGER.info("Processing HoldingsUpdateDelegate starting.");
       JsonObject mappingRules = new JsonObject(eventPayload.get(MAPPING_RULES_KEY));
       MappingParameters mappingParameters =
         new JsonObject(eventPayload.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
@@ -136,8 +137,9 @@ public class HoldingsUpdateDelegate {
       });
     } else {
       eventPayload.remove(CURRENT_RETRY_NUMBER);
-      LOGGER.error("Current retry number {} exceeded or equal given number {} for the Holding update", MAX_RETRIES_COUNT, currentRetryNumber);
-      promise.fail(format("Current retry number %s exceeded or equal given number %s for the Holding update", MAX_RETRIES_COUNT, currentRetryNumber));
+      String errMessage = format("Current retry number %s exceeded or equal given number %s for the Holding update", MAX_RETRIES_COUNT, currentRetryNumber);
+      LOGGER.error(errMessage);
+      promise.fail(errMessage);
     }
   }
 }

@@ -81,6 +81,8 @@ public class UpdateHoldingEventHandler implements EventHandler {
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
 
+      LOGGER.info("Processing UpdateHoldingEventHandler starting with jobExecutionId: {}.", dataImportEventPayload.getJobExecutionId());
+
       HoldingsRecord tmpHoldingsRecord = retrieveHolding(dataImportEventPayload.getContext());
 
       String holdingId = tmpHoldingsRecord.getId();
@@ -166,14 +168,16 @@ public class UpdateHoldingEventHandler implements EventHandler {
         .thenAccept(actualInstance -> prepareDataAndReInvokeCurrentHandler(dataImportEventPayload, future, actualInstance))
         .exceptionally(e -> {
           dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
-          LOGGER.error(format("Cannot get actual Holding by id: '%s'. Error: %s ", holding.getId(), e.getCause()));
-          future.completeExceptionally(new EventProcessingException(format("Cannot get actual Holding by id: '%s'. Error: '%s'", holding.getId(), e.getCause())));
+          String errMessage = format("Cannot get actual Holding by id: '%s' for jobExecutionId '%s'. Error: %s ", holding.getId(), dataImportEventPayload.getJobExecutionId(), e.getCause());
+          LOGGER.error(errMessage);
+          future.completeExceptionally(new EventProcessingException(errMessage));
           return null;
         });
     } else {
       dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
-      LOGGER.error("Current retry number {} exceeded or equal given number {} for the Holding update", MAX_RETRIES_COUNT, currentRetryNumber);
-      future.completeExceptionally(new EventProcessingException(format("Current retry number %s exceeded or equal given number %s for the Holding update", MAX_RETRIES_COUNT, currentRetryNumber)));
+      String errMessage = format("Current retry number %s exceeded or equal given number %s for the Holding update for jobExecutionId '%s' ", MAX_RETRIES_COUNT, currentRetryNumber, dataImportEventPayload.getJobExecutionId());
+      LOGGER.error(errMessage);
+      future.completeExceptionally(new EventProcessingException(errMessage));
     }
   }
 
