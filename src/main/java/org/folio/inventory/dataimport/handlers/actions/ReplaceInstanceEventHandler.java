@@ -214,11 +214,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   }
 
   private void processOLError(Instance instance, InstanceCollection instanceCollection, DataImportEventPayload eventPayload, Promise<Instance> promise, Failure failure) {
-    String retry = eventPayload.getContext().get(CURRENT_RETRY_NUMBER);
-    if (retry == null) {
-      retry = "0";
-    }
-    int currentRetryNumber = Integer.parseInt(retry);
+    int currentRetryNumber = eventPayload.getContext().get(CURRENT_RETRY_NUMBER) == null ? 0 : Integer.parseInt(eventPayload.getContext().get(CURRENT_RETRY_NUMBER));
     if (currentRetryNumber < MAX_RETRIES_COUNT) {
       eventPayload.getContext().put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
       LOGGER.warn("OL error updating Instance - {}, status code {}. Retry ReplaceInstanceEventHandler handler...", failure.getReason(), failure.getStatusCode());

@@ -119,11 +119,7 @@ public class InstanceUpdateDelegate {
   }
 
   private void processIfOLErrorExists(Map<String, String> eventPayload, Record marcRecord, Context context, Promise<Instance> promise, Failure failure) {
-    String retry = eventPayload.get(CURRENT_RETRY_NUMBER);
-    if (retry == null) {
-      retry = "0";
-    }
-    int currentRetryNumber = Integer.parseInt(retry);
+    int currentRetryNumber = eventPayload.get(CURRENT_RETRY_NUMBER) == null ? 0 : Integer.parseInt(eventPayload.get(CURRENT_RETRY_NUMBER));
     if (currentRetryNumber < MAX_RETRIES_COUNT) {
       eventPayload.put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
       LOGGER.warn("Error updating Instance - {}, status code {}. Retry InstanceUpdateDelegate handler...", failure.getReason(), failure.getStatusCode());
