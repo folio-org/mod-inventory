@@ -54,6 +54,8 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   private static final String CHUNK_ID_HEADER = "chunkId";
   private static final String CURRENT_RETRY_NUMBER = "CURRENT_RETRY_NUMBER";
   private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
+  private static final String CURRENT_EVENT_TYPE_PROPERTY = "CURRENT_EVENT_TYPE";
+  private static final String CURRENT_NODE_PROPERTY = "CURRENT_NODE";
 
   private final PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
   private final MappingMetadataCache mappingMetadataCache;
@@ -201,7 +203,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
     instanceCollection.update(instance, success -> promise.complete(instance),
       failure -> {
         if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
-          processIfOLError(instance, instanceCollection, eventPayload, promise, failure);
+          processOLError(instance, instanceCollection, eventPayload, promise, failure);
         } else {
           eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
           LOGGER.error(format("Error updating Instance - %s, status code %s", failure.getReason(), failure.getStatusCode()));
@@ -211,7 +213,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
     return promise.future();
   }
 
-  private void processIfOLError(Instance instance, InstanceCollection instanceCollection, DataImportEventPayload eventPayload, Promise<Instance> promise, Failure failure) {
+  private void processOLError(Instance instance, InstanceCollection instanceCollection, DataImportEventPayload eventPayload, Promise<Instance> promise, Failure failure) {
     String retry = eventPayload.getContext().get(CURRENT_RETRY_NUMBER);
     if (retry == null) {
       retry = "0";
@@ -219,7 +221,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
     int currentRetryNumber = Integer.parseInt(retry);
     if (currentRetryNumber < MAX_RETRIES_COUNT) {
       eventPayload.getContext().put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
-      LOGGER.warn("Error updating Instance - {}, status code {}. Retry InstanceUpdateDelegate handler...", failure.getReason(), failure.getStatusCode());
+      LOGGER.warn("OL error updating Instance - {}, status code {}. Retry ReplaceInstanceEventHandler handler...", failure.getReason(), failure.getStatusCode());
       getActualInstanceAndReInvokeCurrentHandler(instance, instanceCollection, promise, eventPayload);
     } else {
       eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
@@ -232,14 +234,14 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
     instanceCollection.findById(instance.getId())
       .thenAccept(actualInstance -> {
         eventPayload.getContext().put(INSTANCE.value(), Json.encode(JsonObject.mapFrom(actualInstance)));
-        eventPayload.getEventsChain().remove(eventPayload.getContext().get("CURRENT_EVENT_TYPE"));
+        eventPayload.getEventsChain().remove(eventPayload.getContext().get(CURRENT_EVENT_TYPE_PROPERTY));
         try {
-          eventPayload.setCurrentNode(ObjectMapperTool.getMapper().readValue(eventPayload.getContext().get("CURRENT_NODE"), ProfileSnapshotWrapper.class));
+          eventPayload.setCurrentNode(ObjectMapperTool.getMapper().readValue(eventPayload.getContext().get(CURRENT_NODE_PROPERTY), ProfileSnapshotWrapper.class));
         } catch (JsonProcessingException e) {
           LOGGER.error(format("Cannot map from CURRENT_NODE value %s", e.getCause()));
         }
-        eventPayload.getContext().remove("CURRENT_EVENT_TYPE");
-        eventPayload.getContext().remove("CURRENT_NODE");
+        eventPayload.getContext().remove(CURRENT_EVENT_TYPE_PROPERTY);
+        eventPayload.getContext().remove(CURRENT_NODE_PROPERTY);
 
         handle(eventPayload).whenComplete((res, e) -> {
           if (e != null) {
