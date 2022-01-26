@@ -247,7 +247,7 @@ public class UpdateItemEventHandler implements EventHandler {
     int currentRetryNumber = eventPayload.getContext().get(CURRENT_RETRY_NUMBER) == null ? 0 : Integer.parseInt(eventPayload.getContext().get(CURRENT_RETRY_NUMBER));
     if (currentRetryNumber < MAX_RETRIES_COUNT) {
       eventPayload.getContext().put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
-      LOG.warn("OL error updating Instance - {}, status code {}. Retry UpdateItemEventHandler handler...", failure.getReason(), failure.getStatusCode());
+      LOG.warn("OL error updating Item - {}, status code {}. Retry UpdateItemEventHandler handler...", failure.getReason(), failure.getStatusCode());
       getActualItemAndReInvokeCurrentHandler(instance, itemCollection, promise, eventPayload);
     } else {
       eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
@@ -261,7 +261,7 @@ public class UpdateItemEventHandler implements EventHandler {
   private void getActualItemAndReInvokeCurrentHandler(Item item, ItemCollection itemCollection, Promise<Item> promise, DataImportEventPayload eventPayload) {
     itemCollection.findById(item.getId())
       .thenAccept(actualItem -> {
-        JsonObject itemAsJson = convertFieldsInJsonObject(actualItem);
+        JsonObject itemAsJson = new JsonObject(ItemUtil.mapToMappingResultRepresentation(item));
         eventPayload.getContext().put(ITEM.value(), Json.encode(itemAsJson));
         eventPayload.getEventsChain().remove(eventPayload.getContext().get(CURRENT_EVENT_TYPE_PROPERTY));
         try {
@@ -275,7 +275,7 @@ public class UpdateItemEventHandler implements EventHandler {
           if (e != null) {
             promise.fail(e.getMessage());
           } else {
-            promise.complete();
+            promise.complete(item);
           }
         });
       })
@@ -285,18 +285,5 @@ public class UpdateItemEventHandler implements EventHandler {
         promise.fail(format("Cannot get actual Item by id: %s", e.getCause()));
         return null;
       });
-  }
-
-  private JsonObject convertFieldsInJsonObject(Item actualItem) {
-    JsonObject itemAsJson = JsonObject.mapFrom(actualItem);
-    String materialTypeId = itemAsJson.getString("materialTypeId");
-    String permanentLoadTypeId = itemAsJson.getString("permanentLoanTypeId");
-    String holdingId = itemAsJson.getString("holdingId");
-    JsonArray tagsAsArray = itemAsJson.getJsonArray("tags");
-    itemAsJson.put("materialType", new JsonObject().put("id", materialTypeId));
-    itemAsJson.put("permanentLoanType", new JsonObject().put("id", permanentLoadTypeId));
-    itemAsJson.put("holdingsRecordId",  holdingId);
-    itemAsJson.put("tags", new JsonObject().put("tags", new JsonObject().put("tagList", tagsAsArray)));
-    return itemAsJson;
   }
 }
