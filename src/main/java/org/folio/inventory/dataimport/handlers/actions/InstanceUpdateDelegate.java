@@ -8,9 +8,9 @@ import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
+import org.folio.inventory.exceptions.OptimisticLockingException;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.InstanceUtil;
 import org.folio.processing.mapping.defaultmapper.RecordMapper;
@@ -31,8 +31,6 @@ public class InstanceUpdateDelegate {
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
   private static final String QM_RELATED_RECORD_VERSION_KEY = "RELATED_RECORD_VERSION";
   private static final String MARC_FORMAT = "MARC_BIB";
-  private static final String CURRENT_RETRY_NUMBER = "CURRENT_RETRY_NUMBER";
-  private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
 
   private final Storage storage;
 
@@ -42,7 +40,6 @@ public class InstanceUpdateDelegate {
 
   public Future<Instance> handle(Map<String, String> eventPayload, Record marcRecord, Context context) {
     try {
-      LOGGER.info("Processing InstanceUpdateDelegate starting.");
       JsonObject mappingRules = new JsonObject(eventPayload.get(MAPPING_RULES_KEY));
       MappingParameters mappingParameters = new JsonObject(eventPayload.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
 
@@ -55,9 +52,8 @@ public class InstanceUpdateDelegate {
       return getInstanceById(instanceId, instanceCollection)
         .onSuccess(existingInstance -> fillVersion(existingInstance, eventPayload))
         .compose(existingInstance -> updateInstance(existingInstance, mappedInstance))
-        .compose(updatedInstance -> updateInstanceInStorageAndRetryIfOLConflictExists(updatedInstance, instanceCollection, eventPayload, marcRecord, context));
+        .compose(updatedInstance -> updateInstanceInStorage(updatedInstance, instanceCollection));
     } catch (Exception e) {
-      eventPayload.remove(CURRENT_RETRY_NUMBER);
       LOGGER.error("Error updating inventory instance", e);
       return Future.failedFuture(e);
     }
@@ -99,43 +95,17 @@ public class InstanceUpdateDelegate {
     }
   }
 
-
-  public Future<Instance> updateInstanceInStorageAndRetryIfOLConflictExists(Instance instance, InstanceCollection instanceCollection, Map<String, String> eventPayload, Record marcRecord, Context context) {
+  private Future<Instance> updateInstanceInStorage(Instance instance, InstanceCollection instanceCollection) {
     Promise<Instance> promise = Promise.promise();
-
-    instanceCollection.update(instance, success -> {
-        eventPayload.remove(CURRENT_RETRY_NUMBER);
-        promise.complete(instance);
-      },
+    instanceCollection.update(instance, success -> promise.complete(instance),
       failure -> {
         if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
-          processIfOLErrorExists(eventPayload, marcRecord, context, promise, failure);
+          promise.fail(new OptimisticLockingException(failure.getReason()));
         } else {
-          eventPayload.remove(CURRENT_RETRY_NUMBER);
           LOGGER.error(format("Error updating Instance - %s, status code %s", failure.getReason(), failure.getStatusCode()));
           promise.fail(failure.getReason());
         }
       });
     return promise.future();
-  }
-
-  private void processIfOLErrorExists(Map<String, String> eventPayload, Record marcRecord, Context context, Promise<Instance> promise, Failure failure) {
-    int currentRetryNumber = eventPayload.get(CURRENT_RETRY_NUMBER) == null ? 0 : Integer.parseInt(eventPayload.get(CURRENT_RETRY_NUMBER));
-    if (currentRetryNumber < MAX_RETRIES_COUNT) {
-      eventPayload.put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
-      LOGGER.warn("Error updating Instance - {}, status code {}. Retry InstanceUpdateDelegate handler...", failure.getReason(), failure.getStatusCode());
-      handle(eventPayload, marcRecord, context).onComplete(res -> {
-        if (res.succeeded()) {
-          promise.complete();
-        } else {
-          promise.fail(res.cause());
-        }
-      });
-    } else {
-      eventPayload.remove(CURRENT_RETRY_NUMBER);
-      String errMessage = format("Current retry number %s exceeded given number %s for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber);
-      LOGGER.error(errMessage);
-      promise.fail(errMessage);
-    }
   }
 }

@@ -18,6 +18,7 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import scala.concurrent.Promise;
 
+import org.folio.inventory.exceptions.OptimisticLockingException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -153,9 +154,9 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
     }).when(instanceRecordCollection).update(any(), any(), any());
 
     Future<Instance> future = updateInstanceEventHandler.handle(eventPayload);
-    verify(instanceRecordCollection, times(2)).update(any(), any(), any());
+    verify(instanceRecordCollection, times(1)).update(any(), any(), any());
     Assert.assertTrue(future.failed());
-
+    Assert.assertTrue(future.cause() instanceof OptimisticLockingException);
   }
 
   @Test
