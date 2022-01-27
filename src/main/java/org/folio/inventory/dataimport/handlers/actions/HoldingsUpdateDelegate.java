@@ -7,12 +7,15 @@ import java.util.Map;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
+
+import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import org.folio.Holdings;
 import org.folio.HoldingsRecord;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.mapping.defaultmapper.RecordMapper;
@@ -101,8 +104,12 @@ public class HoldingsUpdateDelegate {
     Promise<HoldingsRecord> promise = Promise.promise();
     holdingsRecordCollection.update(holdingsRecord, success -> promise.complete(holdingsRecord),
       failure -> {
-        LOGGER.error(format("Error updating Holdings - %s, status code %s", failure.getReason(), failure.getStatusCode()));
-        promise.fail(failure.getReason());
+        if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
+          promise.fail(new OptimisticLockingException(failure.getReason()));
+        } else {
+          LOGGER.error(format("Error updating Holdings - %s, status code %s", failure.getReason(), failure.getStatusCode()));
+          promise.fail(failure.getReason());
+        }
       });
     return promise.future();
   }

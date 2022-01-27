@@ -13,6 +13,7 @@ import java.util.Map;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
@@ -21,9 +22,11 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import org.folio.HoldingsRecord;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.inventory.dataimport.handlers.actions.HoldingsUpdateDelegate;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaHeaderUtils;
@@ -53,6 +56,8 @@ public class MarcHoldingsRecordHridSetKafkaHandler implements AsyncRecordHandler
   private static final String CHUNK_ID_HEADER = "chunkId";
   private static final String JOB_EXECUTION_ID_HEADER = "JOB_EXECUTION_ID";
   private static final ObjectMapper OBJECT_MAPPER = ObjectMapperTool.getMapper();
+  private static final String CURRENT_RETRY_NUMBER = "CURRENT_RETRY_NUMBER";
+  private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
 
   private final HoldingsUpdateDelegate holdingsRecordUpdateDelegate;
   private final MappingMetadataCache mappingMetadataCache;
@@ -94,10 +99,16 @@ public class MarcHoldingsRecordHridSetKafkaHandler implements AsyncRecordHandler
           .compose(v -> holdingsRecordUpdateDelegate.handle(eventPayload, marcRecord, context))
           .onComplete(ar -> {
             if (ar.succeeded()) {
+              eventPayload.remove(CURRENT_RETRY_NUMBER);
               promise.complete(record.key());
             } else {
-              LOGGER.error("Failed to process data import event payload ", ar.cause());
-              promise.fail(ar.cause());
+              if (ar.cause() instanceof OptimisticLockingException) {
+                processOLError(record, promise, eventPayload, ar);
+              } else {
+                eventPayload.remove(CURRENT_RETRY_NUMBER);
+                LOGGER.error("Failed to process data import event payload ", ar.cause());
+                promise.fail(ar.cause());
+              }
             }
           });
         return promise.future();
@@ -110,5 +121,26 @@ public class MarcHoldingsRecordHridSetKafkaHandler implements AsyncRecordHandler
   private void ensureEventPayloadWithMappingMetadata(HashMap<String, String> eventPayload, MappingMetadataDto mappingMetadataDto) {
     eventPayload.put(MAPPING_RULES_KEY, mappingMetadataDto.getMappingRules());
     eventPayload.put(MAPPING_PARAMS_KEY, mappingMetadataDto.getMappingParams());
+  }
+
+  private void processOLError(KafkaConsumerRecord<String, String> value, Promise<String> promise, HashMap<String, String> eventPayload, AsyncResult<HoldingsRecord> ar) {
+    int currentRetryNumber = eventPayload.get(CURRENT_RETRY_NUMBER) == null
+      ? 0 : Integer.parseInt(eventPayload.get(CURRENT_RETRY_NUMBER));
+    if (currentRetryNumber < MAX_RETRIES_COUNT) {
+      eventPayload.put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
+      LOGGER.warn("Error updating Holding - {}. Retry MarcHoldingsRecordHridSetKafkaHandler handler...", ar.cause().getMessage());
+      handle(value).onComplete(res -> {
+        if (res.succeeded()) {
+          promise.complete(value.key());
+        } else {
+          promise.fail(res.cause());
+        }
+      });
+    } else {
+      eventPayload.remove(CURRENT_RETRY_NUMBER);
+      String errMessage = format("Current retry number %s exceeded given number %s for the Holding update", MAX_RETRIES_COUNT, currentRetryNumber);
+      LOGGER.error(errMessage);
+      promise.fail(new OptimisticLockingException(errMessage));
+    }
   }
 }
