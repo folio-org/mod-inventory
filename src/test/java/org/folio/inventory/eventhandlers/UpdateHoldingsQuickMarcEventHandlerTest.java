@@ -159,30 +159,4 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
 
     Assert.assertTrue(future.failed());
   }
-
-  @Test
-  public void shouldCompleteExceptionallyOnOLNumberExceeded() {
-    List<HoldingsType> holdings = new ArrayList<>();
-    holdings.add(new HoldingsType().withName("testingnote$a").withId("fe19bae4-da28-472b-be90-d442e2428eadx"));
-    MappingParameters mappingParameters = new MappingParameters();
-    mappingParameters.withHoldingsTypes(holdings);
-
-    HashMap<String, String> eventPayload = new HashMap<>();
-    eventPayload.put("RECORD_TYPE", "MARC_HOLDING");
-    eventPayload.put("MARC_HOLDING", record.encode());
-    eventPayload.put("MAPPING_RULES", mappingRules.encode());
-    eventPayload.put("MAPPING_PARAMS", Json.encode(mappingParameters));
-    eventPayload.put("RELATED_RECORD_VERSION", HOLDINGS_VERSION.toString());
-
-    doAnswer(invocationOnMock -> {
-      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
-      failureHandler.accept(new Failure("Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", 409));
-      return null;
-    }).when(holdingsRecordCollection).update(any(), any(), any());
-
-    Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(eventPayload);
-    verify(holdingsRecordCollection, times(2)).update(any(), any(), any());
-    Assert.assertTrue(future.failed());
-  }
-
 }
