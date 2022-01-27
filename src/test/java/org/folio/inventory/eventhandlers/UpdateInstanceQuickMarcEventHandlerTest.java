@@ -16,12 +16,10 @@ import java.util.function.Consumer;
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import scala.concurrent.Promise;
 
-import org.folio.inventory.exceptions.OptimisticLockingException;
+import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;

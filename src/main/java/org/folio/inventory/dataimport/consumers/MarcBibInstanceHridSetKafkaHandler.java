@@ -18,7 +18,7 @@ import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.instances.Instance;
-import org.folio.inventory.exceptions.OptimisticLockingException;
+import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaHeaderUtils;
 import org.folio.processing.exceptions.EventProcessingException;

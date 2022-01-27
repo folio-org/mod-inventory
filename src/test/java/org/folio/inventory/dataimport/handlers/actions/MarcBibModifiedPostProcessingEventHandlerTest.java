@@ -16,7 +16,6 @@ import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
-import org.folio.inventory.exceptions.OptimisticLockingException;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
@@ -55,7 +54,6 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPP
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 

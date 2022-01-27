@@ -14,7 +14,7 @@ import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.folio.inventory.domain.instances.Instance;
-import org.folio.inventory.exceptions.OptimisticLockingException;
+import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.EntityType;
@@ -128,7 +128,7 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
       LOGGER.warn("Error updating Instance - {}. Retry MarcBibModifiedPostProcessingEventHandler handler...", updateAr.cause().getMessage());
       handle(dataImportEventPayload).whenComplete((res, e) -> {
         if (e != null) {
-          future.completeExceptionally(e.getCause());
+          future.completeExceptionally(e);
         } else {
           future.complete(dataImportEventPayload);
         }

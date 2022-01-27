@@ -1,4 +1,4 @@
-package org.folio.inventory.exceptions;
+package org.folio.inventory.dataimport.exceptions;
 
 /**
  * Exception for handling errors regarding Optimistic Locking mechanism
