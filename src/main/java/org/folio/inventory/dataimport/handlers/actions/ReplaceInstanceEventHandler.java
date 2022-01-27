@@ -1,12 +1,16 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
+import org.apache.http.HttpStatus;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
+import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.instances.Instance;
@@ -17,6 +21,7 @@ import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.processing.mapping.mapper.MappingContext;
+import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -38,6 +43,8 @@ import static org.folio.inventory.domain.instances.Instance.METADATA_KEY;
 import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+
 public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { // NOSONAR
 
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC or INSTANCE data";
@@ -45,6 +52,10 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   private static final String MAPPING_PARAMETERS_NOT_FOUND_MSG = "MappingParameters snapshot was not found by jobExecutionId '%s'. RecordId: '%s', chunkId: '%s' ";
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
+  private static final String CURRENT_RETRY_NUMBER = "CURRENT_RETRY_NUMBER";
+  private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
+  private static final String CURRENT_EVENT_TYPE_PROPERTY = "CURRENT_EVENT_TYPE";
+  private static final String CURRENT_NODE_PROPERTY = "CURRENT_NODE";
 
   private final PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
   private final MappingMetadataCache mappingMetadataCache;
@@ -74,6 +85,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         LOGGER.error(ACTION_HAS_NO_MAPPING_MSG);
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
+      LOGGER.info("Processing ReplaceInstanceEventHandler starting with jobExecutionId: {}.", dataImportEventPayload.getJobExecutionId());
 
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       Instance instanceToUpdate = Instance.fromJson(new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value())));
@@ -103,7 +115,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           }
 
           Instance mappedInstance = Instance.fromJson(instanceAsJson);
-          return updateInstance(mappedInstance, instanceCollection)
+          return updateInstanceAndRetryIfOlExists(mappedInstance, instanceCollection, dataImportEventPayload)
             .compose(updatedInstance -> precedingSucceedingTitlesHelper.getExistingPrecedingSucceedingTitles(mappedInstance, context))
             .map(precedingSucceedingTitles -> precedingSucceedingTitles.stream()
               .map(titleJson -> titleJson.getString("id"))
@@ -115,10 +127,13 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         .onComplete(ar -> {
           if (ar.succeeded()) {
             dataImportEventPayload.getContext().put(INSTANCE.value(), ar.result().encode());
+            dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
             future.complete(dataImportEventPayload);
           } else {
-            LOGGER.error("Error updating inventory Instance by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
+            dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
+            String errMessage = format("Error updating inventory Instance by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s': %s ", jobExecutionId,
               recordId, chunkId, ar.cause());
+            LOGGER.error(errMessage);
             future.completeExceptionally(ar.cause());
           }
         });
@@ -183,5 +198,63 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
     } catch (Exception e) {
       return Future.failedFuture(e);
     }
+  }
+
+  public Future<Instance> updateInstanceAndRetryIfOlExists(Instance instance, InstanceCollection instanceCollection, DataImportEventPayload eventPayload) {
+    Promise<Instance> promise = Promise.promise();
+    instanceCollection.update(instance, success -> promise.complete(instance),
+      failure -> {
+        if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
+          processOLError(instance, instanceCollection, eventPayload, promise, failure);
+        } else {
+          eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
+          LOGGER.error(format("Error updating Instance - %s, status code %s", failure.getReason(), failure.getStatusCode()));
+          promise.fail(failure.getReason());
+        }
+      });
+    return promise.future();
+  }
+
+  private void processOLError(Instance instance, InstanceCollection instanceCollection, DataImportEventPayload eventPayload, Promise<Instance> promise, Failure failure) {
+    int currentRetryNumber = eventPayload.getContext().get(CURRENT_RETRY_NUMBER) == null ? 0 : Integer.parseInt(eventPayload.getContext().get(CURRENT_RETRY_NUMBER));
+    if (currentRetryNumber < MAX_RETRIES_COUNT) {
+      eventPayload.getContext().put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
+      LOGGER.warn("OL error updating Instance - {}, status code {}. Retry ReplaceInstanceEventHandler handler...", failure.getReason(), failure.getStatusCode());
+      getActualInstanceAndReInvokeCurrentHandler(instance, instanceCollection, promise, eventPayload);
+    } else {
+      eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
+      String errMessage = format("Current retry number %s exceeded or equal given number %s for the Instance update for jobExecutionId '%s' ", MAX_RETRIES_COUNT, currentRetryNumber, eventPayload.getJobExecutionId());
+      LOGGER.error(errMessage);
+      promise.fail(errMessage);
+    }
+  }
+
+  private void getActualInstanceAndReInvokeCurrentHandler(Instance instance, InstanceCollection instanceCollection, Promise<Instance> promise, DataImportEventPayload eventPayload) {
+    instanceCollection.findById(instance.getId())
+      .thenAccept(actualInstance -> {
+        eventPayload.getContext().put(INSTANCE.value(), Json.encode(JsonObject.mapFrom(actualInstance)));
+        eventPayload.getEventsChain().remove(eventPayload.getContext().get(CURRENT_EVENT_TYPE_PROPERTY));
+        try {
+          eventPayload.setCurrentNode(ObjectMapperTool.getMapper().readValue(eventPayload.getContext().get(CURRENT_NODE_PROPERTY), ProfileSnapshotWrapper.class));
+        } catch (JsonProcessingException e) {
+          LOGGER.error(format("Cannot map from CURRENT_NODE value %s", e.getCause()));
+        }
+        eventPayload.getContext().remove(CURRENT_EVENT_TYPE_PROPERTY);
+        eventPayload.getContext().remove(CURRENT_NODE_PROPERTY);
+
+        handle(eventPayload).whenComplete((res, e) -> {
+          if (e != null) {
+            promise.fail(e.getMessage());
+          } else {
+            promise.complete();
+          }
+        });
+      })
+      .exceptionally(e -> {
+        eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
+        LOGGER.error(format("Cannot get actual Instance by id: %s", e.getCause()));
+        promise.fail(format("Cannot get actual Instance by id: %s", e.getCause()));
+        return null;
+      });
   }
 }

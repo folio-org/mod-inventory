@@ -13,6 +13,8 @@ import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import scala.concurrent.Promise;
+
 import org.apache.http.HttpStatus;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
@@ -20,6 +22,7 @@ import org.folio.JobProfile;
 import org.folio.MappingProfile;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.InstanceWriterFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
@@ -55,6 +58,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -86,6 +90,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -281,7 +286,8 @@ public class ReplaceInstanceEventHandlerTest {
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
       .withToken(TOKEN)
-      .withJobExecutionId(UUID.randomUUID().toString());;
+      .withJobExecutionId(UUID.randomUUID().toString());
+    ;
 
     CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get();
@@ -380,7 +386,8 @@ public class ReplaceInstanceEventHandlerTest {
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
       .withToken(TOKEN)
-      .withJobExecutionId(UUID.randomUUID().toString());;
+      .withJobExecutionId(UUID.randomUUID().toString());
+    ;
 
     CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
@@ -412,7 +419,8 @@ public class ReplaceInstanceEventHandlerTest {
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
       .withToken(TOKEN)
-      .withJobExecutionId(UUID.randomUUID().toString());;
+      .withJobExecutionId(UUID.randomUUID().toString());
+    ;
 
     CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
@@ -443,7 +451,8 @@ public class ReplaceInstanceEventHandlerTest {
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
       .withToken(TOKEN)
-      .withJobExecutionId(UUID.randomUUID().toString());;
+      .withJobExecutionId(UUID.randomUUID().toString());
+    ;
 
     CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
@@ -458,7 +467,7 @@ public class ReplaceInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_MATCHED.value())
       .withContext(context)
-      .withCurrentNode( new ProfileSnapshotWrapper()
+      .withCurrentNode(new ProfileSnapshotWrapper()
         .withContentType(ACTION_PROFILE)
         .withContent(actionProfile))
       .withTenant(TENANT_ID)
@@ -470,6 +479,54 @@ public class ReplaceInstanceEventHandlerTest {
 
     ExecutionException exception = Assert.assertThrows(ExecutionException.class, future::get);
     Assert.assertEquals(ACTION_HAS_NO_MAPPING_MSG, exception.getCause().getMessage());
+  }
+
+  @Test(expected = ExecutionException.class)
+  public void shouldNotProcessEventIfOLErrorExists() throws InterruptedException, ExecutionException, TimeoutException {
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    String instanceTypeId = UUID.randomUUID().toString();
+    String title = "titleValue";
+
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId), StringValue.of(title));
+
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+
+    Instance returnedInstance = new Instance(UUID.randomUUID().toString(), String.valueOf(INSTANCE_VERSION), UUID.randomUUID().toString(), "source", "title", instanceTypeId);
+    returnedInstance.setTags(List.of("firstTag"));
+    when(instanceRecordCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(returnedInstance));
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure("Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", 409));
+      return null;
+    }).when(instanceRecordCollection).update(any(), any(), any());
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new InstanceWriterFactory());
+
+    HashMap<String, String> context = new HashMap<>();
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(INSTANCE.value(), new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("hrid", UUID.randomUUID().toString())
+      .put("_version", INSTANCE_VERSION)
+      .encode());
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(mockServer.baseUrl())
+      .withToken(TOKEN)
+      .withJobExecutionId(UUID.randomUUID().toString());
+
+    CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
+    future.get(20, TimeUnit.SECONDS);
   }
 
   @Test

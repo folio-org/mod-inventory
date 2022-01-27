@@ -3,6 +3,7 @@ package org.folio.inventory.eventhandlers;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle.TITLE_KEY;
@@ -15,6 +16,8 @@ import java.util.function.Consumer;
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+
+import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -131,6 +134,27 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
     Assert.assertEquals("token", argument.getValue().getToken());
     Assert.assertEquals("dummy", argument.getValue().getTenantId());
     Assert.assertEquals("http://localhost", argument.getValue().getOkapiLocation());
+  }
+
+  @Test
+  public void shouldCompleteExceptionallyOnOLNumberExceeded() {
+    HashMap<String, String> eventPayload = new HashMap<>();
+    eventPayload.put("RECORD_TYPE", "MARC_BIB");
+    eventPayload.put("MARC_BIB", record.encode());
+    eventPayload.put("MAPPING_RULES", mappingRules.encode());
+    eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
+    eventPayload.put("RELATED_RECORD_VERSION", INSTANCE_VERSION);
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure("Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", 409));
+      return null;
+    }).when(instanceRecordCollection).update(any(), any(), any());
+
+    Future<Instance> future = updateInstanceEventHandler.handle(eventPayload);
+    verify(instanceRecordCollection, times(1)).update(any(), any(), any());
+    Assert.assertTrue(future.failed());
+    Assert.assertTrue(future.cause() instanceof OptimisticLockingException);
   }
 
   @Test

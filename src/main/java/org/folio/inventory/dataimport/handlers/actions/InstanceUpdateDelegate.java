@@ -4,11 +4,13 @@ import static java.lang.String.format;
 
 import java.util.Map;
 
+import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
+import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.InstanceUtil;
 import org.folio.processing.mapping.defaultmapper.RecordMapper;
@@ -97,8 +99,12 @@ public class InstanceUpdateDelegate {
     Promise<Instance> promise = Promise.promise();
     instanceCollection.update(instance, success -> promise.complete(instance),
       failure -> {
-        LOGGER.error(format("Error updating Instance - %s, status code %s", failure.getReason(), failure.getStatusCode()));
-        promise.fail(failure.getReason());
+        if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
+          promise.fail(new OptimisticLockingException(failure.getReason()));
+        } else {
+          LOGGER.error(format("Error updating Instance - %s, status code %s", failure.getReason(), failure.getStatusCode()));
+          promise.fail(failure.getReason());
+        }
       });
     return promise.future();
   }
