@@ -197,6 +197,7 @@ public class MarcHoldingsRecordHridSetKafkaHandlerTest {
     Map<String, String> payload = new HashMap<>();
     payload.put(JOB_EXECUTION_ID_KEY, UUID.randomUUID().toString());
     payload.put("MARC_HOLDINGS", Json.encode(record));
+    payload.put("CURRENT_RETRY_NUMBER", "1");
 
     Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
     String expectedKafkaRecordKey = "test_key";
