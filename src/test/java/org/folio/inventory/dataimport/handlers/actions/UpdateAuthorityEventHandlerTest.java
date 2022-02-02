@@ -294,8 +294,8 @@ public class UpdateAuthorityEventHandlerTest {
   }
 
   @Test
-  public void isPostProcessingNeededShouldReturnFalse() {
-    assertFalse(eventHandler.isPostProcessingNeeded());
+  public void isPostProcessingNeededShouldReturnTrue() {
+    assertTrue(eventHandler.isPostProcessingNeeded());
   }
 
   @Test

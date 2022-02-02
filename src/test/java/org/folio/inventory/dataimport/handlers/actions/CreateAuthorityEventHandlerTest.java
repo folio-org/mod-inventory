@@ -345,8 +345,8 @@ public class CreateAuthorityEventHandlerTest {
   }
 
   @Test
-  public void isPostProcessingNeededShouldReturnFalse() {
-    assertFalse(createMarcAuthoritiesEventHandler.isPostProcessingNeeded());
+  public void isPostProcessingNeededShouldReturnTrue() {
+    assertTrue(createMarcAuthoritiesEventHandler.isPostProcessingNeeded());
   }
 
   @Test
