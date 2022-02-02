@@ -6,6 +6,7 @@ import static org.folio.ActionProfile.Action.UPDATE;
 import static org.folio.ActionProfile.FolioRecord.AUTHORITY;
 import static org.folio.ActionProfile.FolioRecord.MARC_AUTHORITY;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_UPDATED;
+import static org.folio.rest.jaxrs.model.DataImportEventTypes.DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 
 import io.vertx.core.Future;
@@ -58,6 +59,11 @@ public class UpdateAuthorityEventHandler extends AbstractAuthorityEventHandler {
   @Override
   protected ProfileSnapshotWrapper.ContentType profileContentType() {
     return MAPPING_PROFILE;
+  }
+
+  @Override
+  public String getPostProcessingInitializationEventType() {
+    return DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING.value();
   }
 
   private Future<Authority> updateAuthority(Authority authority, AuthorityRecordCollection authorityRecordCollection) {
