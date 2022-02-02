@@ -537,7 +537,9 @@
       "interfaceType": "system",
       "handlers": [
         {
-          "methods": ["POST"],
+          "methods": [
+            "POST", "DELETE"
+          ],
           "pathPattern": "/_/tenant",
           "modulePermissions": []
         }
