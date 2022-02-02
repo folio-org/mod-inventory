@@ -1,0 +1,51 @@
+name: macOS
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: true
+    - uses: actions/setup-java@v2.3.1
+      with:
+        distribution: 'temurin'
+        java-version: '11'
+        cache: maven
+    - run: mvn clean install -DskipTests
+    - run: brew install postgres
+    - run: (echo "local all all trust"; echo "host all all all md5") > /usr/local/var/postgres/pg_hba.conf
+    - run: brew services start postgres
+    - run: brew install zookeeper
+    - run: brew services start zookeeper
+    - run: brew install kafka
+    - run: brew services start kafka
+    - run: brew install elasticsearch
+    - run: brew services start elasticsearch
+    - run: |
+        psql postgres \
+          -c "CREATE ROLE folio WITH PASSWORD 'folio123' LOGIN SUPERUSER" \
+          -c "CREATE DATABASE folio WITH OWNER folio"
+    - run: |
+        export DB_HOST=localhost
+        export DB_PORT=5432
+        export DB_USERNAME=folio
+        export DB_PASSWORD=folio123
+        export DB_DATABASE=postgres
+        export KAFKA_HOST=localhost
+        export KAFKA_PORT=9092
+        ( java -jar -Dstorage=postgres target/mod-inventory.jar > log ) &
+    - run: curl --retry 6 --retry-connrefused -sS http://localhost:9403/admin/health
+    - run: >
+        curl -sS -D - \
+          -H "Content-type: application/json" \
+          -H "x-okapi-url-to: http://localhost:9403" \
+          -H "x-okapi-tenant: diku" \
+          -d '{ "module_to": "mod-inventory-18.0.6" }' \
+          http://localhost:9403/_/tenant
+    - run: "curl -sS -H 'x-okapi-tenant: diku' http://localhost:9403/isbn/validator?isbn=091698477X | tee out"
+    - run: sleep 5; cat log
+    - run: grep isValid out
+
