@@ -258,7 +258,7 @@
     <vertx.version>4.2.1</vertx.version>
     <jsonschema2pojo_output_dir>${project.build.directory}/generated-sources/jsonschema2pojo</jsonschema2pojo_output_dir>
     <lombok.version>1.18.16</lombok.version>
-    <postgres.version>42.2.23</postgres.version>
+    <postgres.version>42.3.1</postgres.version>
     <liquibase.version>4.6.2</liquibase.version>
   </properties>
 
