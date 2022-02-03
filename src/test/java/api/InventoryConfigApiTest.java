@@ -5,6 +5,8 @@ import api.support.ApiTests;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.json.JsonObject;
 import junitparams.JUnitParamsRunner;
+import lombok.SneakyThrows;
+
 import org.folio.inventory.config.InventoryConfiguration;
 import org.folio.inventory.config.InventoryConfigurationImpl;
 import org.folio.inventory.support.http.client.Response;
@@ -23,8 +25,9 @@ import static org.junit.Assert.assertTrue;
 public class InventoryConfigApiTest extends ApiTests {
   private static final InventoryConfiguration config = new InventoryConfigurationImpl();
 
+  @SneakyThrows
   @Test
-  public void shouldReturnInstanceBlockedFieldsConfig() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+  public void shouldReturnInstanceBlockedFieldsConfig() {
     final var getCompleted = okapiClient.get(ApiRoot.instanceBlockedFieldsConfig());
 
     Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
@@ -37,8 +40,9 @@ public class InventoryConfigApiTest extends ApiTests {
     }
   }
 
+  @SneakyThrows
   @Test
-  public void shouldReturnHoldingsBlockedFieldsConfig() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+  public void shouldReturnHoldingsBlockedFieldsConfig() {
     final var getCompleted = okapiClient.get(ApiRoot.holdingsBlockedFieldsConfig());
 
     Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
