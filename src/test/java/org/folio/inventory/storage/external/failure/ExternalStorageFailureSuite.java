@@ -22,7 +22,8 @@ import io.vertx.core.Vertx;
   ExternalItemCollectionBadRequestExamples.class,
   ExternalInstanceCollectionServerErrorExamples.class,
   ExternalInstanceCollectionBadRequestExamples.class,
-  ExternalAuthorityCollectionBadRequestExamples.class
+  ExternalAuthorityCollectionBadRequestExamples.class,
+  ExternalAuthorityCollectionServerErrorExamples.class
 })
 public class ExternalStorageFailureSuite {
   private static final VertxAssistant vertxAssistant = new VertxAssistant();
