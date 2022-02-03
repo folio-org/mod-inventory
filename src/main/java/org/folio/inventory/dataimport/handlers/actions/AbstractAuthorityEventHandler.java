@@ -103,7 +103,7 @@ public abstract class AbstractAuthorityEventHandler implements EventHandler {
 
   @Override
   public boolean isPostProcessingNeeded() {
-    return false;
+    return true;
   }
 
   protected abstract Future<Authority> processAuthority(Authority authority, AuthorityRecordCollection authorityCollection, DataImportEventPayload payload);

@@ -2,6 +2,7 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static java.util.concurrent.CompletableFuture.completedStage;
+import static org.folio.rest.jaxrs.model.DataImportEventTypes.DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING;
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -344,7 +345,12 @@ public class CreateAuthorityEventHandlerTest {
   }
 
   @Test
-  public void isPostProcessingNeededShouldReturnFalse() {
-    assertFalse(createMarcAuthoritiesEventHandler.isPostProcessingNeeded());
+  public void isPostProcessingNeededShouldReturnTrue() {
+    assertTrue(createMarcAuthoritiesEventHandler.isPostProcessingNeeded());
+  }
+
+  @Test
+  public void shouldReturnPostProcessingInitializationEventType() {
+    assertEquals(DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING.value(), createMarcAuthoritiesEventHandler.getPostProcessingInitializationEventType());
   }
 }
