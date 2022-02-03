@@ -3,6 +3,7 @@ package org.folio.inventory.dataimport.handlers.actions;
 import static org.folio.ActionProfile.FolioRecord.AUTHORITY;
 import static org.folio.ActionProfile.FolioRecord.MARC_AUTHORITY;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_CREATED;
+import static org.folio.rest.jaxrs.model.DataImportEventTypes.DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 import io.vertx.core.Future;
@@ -77,6 +78,11 @@ public class CreateAuthorityEventHandler extends AbstractAuthorityEventHandler {
   @Override
   protected ProfileSnapshotWrapper.ContentType profileContentType() {
     return ACTION_PROFILE;
+  }
+
+  @Override
+  public String getPostProcessingInitializationEventType() {
+    return DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING.value();
   }
 
   private void createRelationship(Promise<Authority> promise, Authority authority, DataImportEventPayload payload) {
