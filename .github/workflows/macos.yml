@@ -36,7 +36,7 @@ jobs:
         export KAFKA_PORT=9092
         ( java -jar -Dstorage=postgres target/mod-inventory.jar > log ) &
     - run: curl --retry 6 --retry-connrefused -sS http://localhost:9403/admin/health
-    - run: >
+    - run: |
         curl -sS -D - \
           -H "Content-type: application/json" \
           -H "x-okapi-url-to: http://localhost:9403" \
