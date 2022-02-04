@@ -1,6 +1,7 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static org.folio.rest.jaxrs.model.DataImportEventTypes.DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
@@ -293,7 +294,12 @@ public class UpdateAuthorityEventHandlerTest {
   }
 
   @Test
-  public void isPostProcessingNeededShouldReturnFalse() {
-    assertFalse(eventHandler.isPostProcessingNeeded());
+  public void isPostProcessingNeededShouldReturnTrue() {
+    assertTrue(eventHandler.isPostProcessingNeeded());
+  }
+
+  @Test
+  public void shouldReturnPostProcessingInitializationEventType() {
+    assertEquals(DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING.value(), eventHandler.getPostProcessingInitializationEventType());
   }
 }
