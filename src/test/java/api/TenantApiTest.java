@@ -12,11 +12,16 @@ import java.util.Map;
 
 import static api.ApiTestSuite.TENANT_ID;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.folio.HttpStatus.HTTP_INTERNAL_SERVER_ERROR;
+import static org.folio.HttpStatus.HTTP_NO_CONTENT;
 import static org.folio.inventory.common.dao.PostgresConnectionOptions.*;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 public class TenantApiTest extends ApiTests {
+
+  public static int NO_CONTENT_STATUS = HTTP_NO_CONTENT.toInt();
+  public static int INTERNAL_SERVER_ERROR_STATUS = HTTP_INTERNAL_SERVER_ERROR.toInt();
 
   @Test
   public void shouldCreateSchemaWithTables() throws Exception {
@@ -24,7 +29,7 @@ public class TenantApiTest extends ApiTests {
       .post(ApiRoot.tenant(), "{}");
 
     Response postResponse = postCompleted.toCompletableFuture().get(10, SECONDS);
-    assertThat(postResponse.getStatusCode(), is(200));
+    assertThat(postResponse.getStatusCode(), is(NO_CONTENT_STATUS));
   }
 
   @Test
@@ -41,7 +46,7 @@ public class TenantApiTest extends ApiTests {
       .post(ApiRoot.tenant(), "{}");
 
     Response postResponse = postCompleted.toCompletableFuture().get(10, SECONDS);
-    assertThat(postResponse.getStatusCode(), is(500));
+    assertThat(postResponse.getStatusCode(), is(INTERNAL_SERVER_ERROR_STATUS));
 
     PostgresConnectionOptions.setSystemProperties(systemProperties);
   }
@@ -52,13 +57,13 @@ public class TenantApiTest extends ApiTests {
       .post(ApiRoot.tenant(), "{}");
 
     Response postResponse = postCompleted.toCompletableFuture().get(10, SECONDS);
-    assertThat(postResponse.getStatusCode(), is(200));
+    assertThat(postResponse.getStatusCode(), is(HTTP_NO_CONTENT.toInt()));
 
     final var deleteCompleted = okapiClient
       .delete(ApiRoot.tenant());
 
     Response deleteResponse = deleteCompleted.toCompletableFuture().get(10, SECONDS);
-    assertThat(deleteResponse.getStatusCode(), is(200));
+    assertThat(deleteResponse.getStatusCode(), is(NO_CONTENT_STATUS));
   }
 
   @Test
@@ -67,7 +72,7 @@ public class TenantApiTest extends ApiTests {
       .post(ApiRoot.tenant(), "{}");
 
     Response postResponse = postCompleted.toCompletableFuture().get(10, SECONDS);
-    assertThat(postResponse.getStatusCode(), is(200));
+    assertThat(postResponse.getStatusCode(), is(NO_CONTENT_STATUS));
 
     PgConnectOptions pgConnectOptions = PostgresConnectionOptions.getConnectionOptions(TENANT_ID);
     Map<String, String> systemProperties = Map.of(DB_HOST, pgConnectOptions.getHost(),
@@ -81,7 +86,7 @@ public class TenantApiTest extends ApiTests {
       .delete(ApiRoot.tenant());
 
     Response deleteResponseBefore = deleteCompletedBefore.toCompletableFuture().get(10, SECONDS);
-    assertThat(deleteResponseBefore.getStatusCode(), is(500));
+    assertThat(deleteResponseBefore.getStatusCode(), is(INTERNAL_SERVER_ERROR_STATUS));
 
     PostgresConnectionOptions.setSystemProperties(systemProperties);
 
@@ -89,7 +94,7 @@ public class TenantApiTest extends ApiTests {
       .delete(ApiRoot.tenant());
 
     Response deleteResponseAfter = deleteCompletedAfter.toCompletableFuture().get(10, SECONDS);
-    assertThat(deleteResponseAfter.getStatusCode(), is(200));
+    assertThat(deleteResponseAfter.getStatusCode(), is(NO_CONTENT_STATUS));
   }
 
 }
