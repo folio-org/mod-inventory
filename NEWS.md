@@ -1,3 +1,7 @@
+## 18.0.7 2021-02-09
+
+* Update folio-kafka-wrapper to v2.4.3 to allow adding ENV prefix to events_cache Kafka topic (MODINV-632, KAFKAWRAP-19)
+
 ## 18.0.6 2021-12-21
 
 * Update data-import-processing-core to v3.2.7 to enable matching on Instance identifier type and value (MODDICORE-231)
