@@ -238,6 +238,46 @@ public class UpdateItemEventHandlerTest {
     Assert.assertNotNull(eventPayload.getContext().get(HOLDINGS.value()));
   }
 
+  @Test
+  public void shouldUpdateItemWithNewStatusIfHoldingAlreadyInPayload()
+    throws UnsupportedEncodingException, InterruptedException, ExecutionException, TimeoutException {
+    // given
+    doAnswer(invocationOnMock -> {
+      MultipleRecords<Item> result = new MultipleRecords<>(new ArrayList<>(), 0);
+      Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
+      return null;
+    }).when(mockedItemCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    HashMap<String, String> payloadContext = new HashMap<>();
+    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+    payloadContext.put(ITEM.value(), existingItemJson.encode());
+    payloadContext.put(HOLDINGS.value(), "{notEmptyValue}");
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_ITEM_MATCHED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    // when
+    CompletableFuture<DataImportEventPayload> future = updateItemHandler.handle(dataImportEventPayload);
+
+    // then
+    DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
+    Assert.assertEquals(DI_INVENTORY_ITEM_UPDATED, DataImportEventTypes.fromValue(eventPayload.getEventType()));
+    Assert.assertNotNull(eventPayload.getContext().get(ITEM.value()));
+
+    JsonObject updatedItem = new JsonObject(eventPayload.getContext().get(ITEM.value()));
+    Assert.assertEquals(existingItemJson.getString("id"), updatedItem.getString("id"));
+    Assert.assertEquals(existingItemJson.getString(HRID_KEY), updatedItem.getString(HRID_KEY));
+    Assert.assertEquals(getNestedProperty(existingItemJson, "permanentLoanType", "id"), updatedItem.getString("permanentLoanTypeId"));
+    Assert.assertEquals(getNestedProperty(existingItemJson, "materialType", "id"), updatedItem.getString("materialTypeId"));
+    Assert.assertEquals(existingItemJson.getString("holdingsRecordId"), updatedItem.getString("holdingsRecordId"));
+    Assert.assertEquals(IN_PROCESS.value(), updatedItem.getJsonObject(STATUS_KEY).getString("name"));
+    Assert.assertNotNull(eventPayload.getContext().get(HOLDINGS.value()));
+  }
+
 
   @Test(expected = ExecutionException.class)
   public void shouldReturnFailedWhenOLError()
