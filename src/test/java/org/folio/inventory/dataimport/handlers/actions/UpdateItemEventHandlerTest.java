@@ -10,6 +10,7 @@ import static org.folio.inventory.domain.items.Item.STATUS_KEY;
 import static org.folio.inventory.domain.items.ItemStatusName.AVAILABLE;
 import static org.folio.inventory.domain.items.ItemStatusName.IN_PROCESS;
 import static org.folio.inventory.support.JsonHelper.getNestedProperty;
+import static org.folio.rest.jaxrs.model.EntityType.HOLDINGS;
 import static org.folio.rest.jaxrs.model.EntityType.ITEM;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
@@ -38,6 +39,7 @@ import java.util.function.Consumer;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.DataImportEventTypes;
+import org.folio.HoldingsRecord;
 import org.folio.JobProfile;
 import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
@@ -48,6 +50,7 @@ import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.ItemWriterFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.Status;
@@ -86,6 +89,8 @@ public class UpdateItemEventHandlerTest {
   private Storage mockedStorage;
   @Mock
   private ItemCollection mockedItemCollection;
+  @Mock
+  private HoldingsRecordCollection mockedHoldingsCollection;
   @Mock
   private Reader fakeReader;
   @Mock
@@ -156,6 +161,25 @@ public class UpdateItemEventHandlerTest {
     when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(IN_PROCESS.value()));
     when(mockedStorage.getItemCollection(ArgumentMatchers.any(Context.class))).thenReturn(mockedItemCollection);
+    when(mockedStorage.getHoldingsRecordCollection(ArgumentMatchers.any(Context.class))).thenReturn(mockedHoldingsCollection);
+
+
+    String instanceId = String.valueOf(UUID.randomUUID());
+    String holdingId = UUID.randomUUID().toString();
+    String hrid = UUID.randomUUID().toString();
+    String permanentLocationId = UUID.randomUUID().toString();
+
+    doAnswer(invocationOnMock -> {
+      HoldingsRecord returnedHoldings = new HoldingsRecord()
+        .withId(holdingId)
+        .withHrid(hrid)
+        .withInstanceId(instanceId)
+        .withPermanentLocationId(permanentLocationId)
+        .withVersion(1);
+      Consumer<Success<HoldingsRecord>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(returnedHoldings));
+      return null;
+    }).when(mockedHoldingsCollection).findById(anyString(),any(Consumer.class),any(Consumer.class));
 
     when(mappingMetadataCache.get(anyString(), any(Context.class)))
       .thenReturn(Future.succeededFuture(Optional.of(new MappingMetadataDto()
@@ -211,6 +235,7 @@ public class UpdateItemEventHandlerTest {
     Assert.assertEquals(getNestedProperty(existingItemJson, "materialType", "id"), updatedItem.getString("materialTypeId"));
     Assert.assertEquals(existingItemJson.getString("holdingsRecordId"), updatedItem.getString("holdingsRecordId"));
     Assert.assertEquals(IN_PROCESS.value(), updatedItem.getJsonObject(STATUS_KEY).getString("name"));
+    Assert.assertNotNull(eventPayload.getContext().get(HOLDINGS.value()));
   }
 
 
