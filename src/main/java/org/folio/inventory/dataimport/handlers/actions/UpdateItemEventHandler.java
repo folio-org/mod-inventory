@@ -31,6 +31,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
+import org.folio.MappingMetadataDto;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
@@ -116,11 +117,7 @@ public class UpdateItemEventHandler implements EventHandler {
           .orElseThrow(() -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId,
             recordId, chunkId))))
         .compose(mappingMetadataDto -> {
-          JsonObject itemAsJson = new JsonObject(payloadContext.get(ITEM.value()));
-          String oldItemStatus = itemAsJson.getJsonObject(STATUS_KEY).getString("name");
-          preparePayloadForMappingManager(dataImportEventPayload);
-          MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
-          MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
+          String oldItemStatus = preparePayloadAndGetStatus(dataImportEventPayload, payloadContext, mappingMetadataDto);
 
           JsonObject mappedItemAsJson = new JsonObject(payloadContext.get(ITEM.value()));
           mappedItemAsJson = mappedItemAsJson.containsKey(ITEM_PATH_FIELD) ? mappedItemAsJson.getJsonObject(ITEM_PATH_FIELD) : mappedItemAsJson;
@@ -170,6 +167,25 @@ public class UpdateItemEventHandler implements EventHandler {
     return future;
   }
 
+  @Override
+  public boolean isEligible(DataImportEventPayload dataImportEventPayload) {
+    if (dataImportEventPayload.getCurrentNode() != null && ACTION_PROFILE == dataImportEventPayload.getCurrentNode().getContentType()) {
+      ActionProfile actionProfile = JsonObject.mapFrom(dataImportEventPayload.getCurrentNode().getContent()).mapTo(ActionProfile.class);
+      return actionProfile.getAction() == UPDATE && actionProfile.getFolioRecord() == ActionProfile.FolioRecord.ITEM;
+    }
+    return false;
+  }
+
+
+  private String preparePayloadAndGetStatus(DataImportEventPayload dataImportEventPayload, HashMap<String, String> payloadContext, MappingMetadataDto mappingMetadataDto) {
+    JsonObject itemAsJson = new JsonObject(payloadContext.get(ITEM.value()));
+    String oldItemStatus = itemAsJson.getJsonObject(STATUS_KEY).getString("name");
+    preparePayloadForMappingManager(dataImportEventPayload);
+    MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
+    MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
+    return oldItemStatus;
+  }
+
   private Future<DataImportEventPayload> addHoldingToPayloadIfNeeded(DataImportEventPayload dataImportEventPayload, Context context, Item updatedItem) {
     Promise<DataImportEventPayload> promise = Promise.promise();
     if (StringUtils.isBlank(dataImportEventPayload.getContext().get(HOLDINGS.value()))) {
@@ -193,15 +209,6 @@ public class UpdateItemEventHandler implements EventHandler {
 
   private boolean isProtectedStatusChanged(String oldItemStatus, String newItemStatus) {
     return PROTECTED_STATUSES_FROM_UPDATE.contains(oldItemStatus) && !oldItemStatus.equals(newItemStatus);
-  }
-
-  @Override
-  public boolean isEligible(DataImportEventPayload dataImportEventPayload) {
-    if (dataImportEventPayload.getCurrentNode() != null && ACTION_PROFILE == dataImportEventPayload.getCurrentNode().getContentType()) {
-      ActionProfile actionProfile = JsonObject.mapFrom(dataImportEventPayload.getCurrentNode().getContent()).mapTo(ActionProfile.class);
-      return actionProfile.getAction() == UPDATE && actionProfile.getFolioRecord() == ActionProfile.FolioRecord.ITEM;
-    }
-    return false;
   }
 
   private void preparePayloadForMappingManager(DataImportEventPayload dataImportEventPayload) {
