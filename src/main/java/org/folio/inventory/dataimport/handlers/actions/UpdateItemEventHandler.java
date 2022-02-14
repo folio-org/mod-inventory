@@ -172,7 +172,7 @@ public class UpdateItemEventHandler implements EventHandler {
 
   private Future<DataImportEventPayload> addHoldingToPayloadIfNeeded(DataImportEventPayload dataImportEventPayload, Context context, Item updatedItem) {
     Promise<DataImportEventPayload> promise = Promise.promise();
-    if (dataImportEventPayload.getContext().get(HOLDINGS.value()) == null || StringUtils.isBlank(dataImportEventPayload.getContext().get(HOLDINGS.value()))) {
+    if (StringUtils.isBlank(dataImportEventPayload.getContext().get(HOLDINGS.value()))) {
       HoldingsRecordCollection holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
       holdingsRecordCollection.findById(updatedItem.getHoldingId(),
         success -> {
@@ -185,7 +185,7 @@ public class UpdateItemEventHandler implements EventHandler {
           promise.complete(dataImportEventPayload);
         });
     } else {
-      LOG.info("Holdings already exists in payload with for the hotlink");
+      LOG.debug("Holdings already exists in payload with for the hotlink with id {}", updatedItem.getHoldingId());
       promise.complete(dataImportEventPayload);
     }
     return promise.future();
