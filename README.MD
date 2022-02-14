@@ -128,6 +128,8 @@ http://localhost:9130/inventory
 
 Most of the development for these modules, thus far, has been performed on OS X, with some on Ubuntu. Feedback for these, and particularly other operating systems is very welcome.
 
+The GitHub Actions file [.github/workflows/macos.yml](.github/workflows/macos.yml) for macOS demonstrates how to use Homebrew to setup the infrastructure, run the module, enable it for the `diku` tenant and run a request.
+
 ## Permissions
 
 The inventory.all permission set currently represents all of the permissions needed to use the inventory related parts of the system (e.g. the scan application and its configuration). This means that it contains additional permissions than those directly needed by the inventory module itself.
