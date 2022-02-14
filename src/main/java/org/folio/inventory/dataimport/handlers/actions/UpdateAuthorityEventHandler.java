@@ -62,6 +62,11 @@ public class UpdateAuthorityEventHandler extends AbstractAuthorityEventHandler {
   }
 
   @Override
+  public boolean isPostProcessingNeeded() {
+    return false;
+  }
+
+  @Override
   public String getPostProcessingInitializationEventType() {
     return DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING.value();
   }

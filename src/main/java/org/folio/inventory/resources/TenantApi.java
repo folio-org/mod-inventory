@@ -24,18 +24,29 @@ import static org.folio.inventory.common.dao.PostgresConnectionOptions.convertTo
 public class TenantApi {
   private static final Logger LOGGER = LogManager.getLogger(TenantApi.class);
 
+  private static final String CREATE_SCHEMA_SQL = "CREATE SCHEMA IF NOT EXISTS %s";
+  private static final String DROP_SCHEMA_SQL = "DROP SCHEMA IF EXISTS %s CASCADE";
   private static final String CHANGELOG_TENANT_PATH = "liquibase/tenant/changelog.xml";
   private static final String TENANT_PATH = "/_/tenant";
 
   public void register(Router router) {
     router.post(TENANT_PATH).handler(this::create);
+    router.delete(TENANT_PATH).handler(this::delete);
   }
 
   public void create(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
 
     initializeSchemaForTenant(context.getTenantId())
-      .onSuccess(result -> routingContext.response().setStatusCode(HttpStatus.HTTP_OK.toInt()).end())
+      .onSuccess(result -> routingContext.response().setStatusCode(HttpStatus.HTTP_NO_CONTENT.toInt()).end())
+      .onFailure(fail -> routingContext.response().setStatusCode(HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt()).end(fail.toString()));
+  }
+
+  public void delete(RoutingContext routingContext) {
+    WebContext context = new WebContext(routingContext);
+
+    deleteSchemaForTenant(context.getTenantId())
+      .onSuccess(result -> routingContext.response().setStatusCode(HttpStatus.HTTP_NO_CONTENT.toInt()).end())
       .onFailure(fail -> routingContext.response().setStatusCode(HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt()).end(fail.toString()));
   }
 
@@ -46,7 +57,7 @@ public class TenantApi {
     SingleConnectionProvider connectionProvider = new SingleConnectionProvider();
 
     try (Connection connection = connectionProvider.getConnection(tenantId)) {
-      boolean schemaIsNotExecuted = connection.prepareStatement(format("CREATE SCHEMA IF NOT EXISTS %s", schemaName)).execute();
+      boolean schemaIsNotExecuted = connection.prepareStatement(format(CREATE_SCHEMA_SQL, schemaName)).execute();
       if (schemaIsNotExecuted) {
         return Future.failedFuture(String.format("Cannot create schema %s", schemaName));
       } else {
@@ -57,6 +68,27 @@ public class TenantApi {
       }
     } catch (Exception e) {
       String cause = format("Error while initializing schema %s for tenant %s", schemaName, tenantId);
+      LOGGER.error(cause, e);
+      return Future.failedFuture(cause);
+    }
+  }
+
+  public Future<Integer> deleteSchemaForTenant(String tenantId) {
+    String schemaName = convertToPsqlStandard(tenantId);
+    LOGGER.info("Attempting to drop schema {} for tenant {}", schemaName, tenantId);
+
+    SingleConnectionProvider connectionProvider = new SingleConnectionProvider();
+
+    try (Connection connection = connectionProvider.getConnection(tenantId)) {
+      boolean schemaIsNotDeleted = connection.prepareStatement(format(DROP_SCHEMA_SQL, schemaName)).execute();
+      if (schemaIsNotDeleted) {
+        return Future.failedFuture(String.format("Cannot drop schema %s", schemaName));
+      } else {
+        LOGGER.info("Drop action for schema {} was successful", schemaName);
+        return Future.succeededFuture(0);
+      }
+    } catch (Exception e) {
+      String cause = format("Error attempting to drop schema %s for tenant %s", schemaName, tenantId);
       LOGGER.error(cause, e);
       return Future.failedFuture(cause);
     }
