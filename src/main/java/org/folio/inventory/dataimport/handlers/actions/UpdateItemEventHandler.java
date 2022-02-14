@@ -181,7 +181,7 @@ public class UpdateItemEventHandler implements EventHandler {
           promise.complete(dataImportEventPayload);
         },
         failure -> {
-          LOG.warn(format("Error retrieving Holdings for the hotlink by id %s cause %s, status code %s", updatedItem.getHoldingId(), failure.getReason(), failure.getStatusCode()));
+          LOG.warn("Error retrieving Holdings for the hotlink by id {} cause {}, status code {}", updatedItem.getHoldingId(), failure.getReason(), failure.getStatusCode());
           promise.complete(dataImportEventPayload);
         });
     } else {
