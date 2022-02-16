@@ -42,7 +42,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
 public class DeleteAuthorityEventHandlerTest {
-  private static final String MARC_AUTHORITY_ID = "MARC_AUTHORITY_ID";
+  private static final String AUTHORITY_RECORD_ID = "AUTHORITY_RECORD_ID";
 
   @Rule
   public WireMockRule mockServer = new WireMockRule(
@@ -84,7 +84,7 @@ public class DeleteAuthorityEventHandlerTest {
       return null;
     }).when(authorityCollection).delete(any(), any(), any());
 
-    context.put(MARC_AUTHORITY_ID, UUID.randomUUID().toString());
+    context.put(AUTHORITY_RECORD_ID, UUID.randomUUID().toString());
   }
 
   @Test
@@ -102,7 +102,7 @@ public class DeleteAuthorityEventHandlerTest {
     org.folio.DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.SECONDS);
 
     assertEquals(DI_SRS_MARC_AUTHORITY_RECORD_DELETED.value(), actualDataImportEventPayload.getEventType());
-    assertNotNull(actualDataImportEventPayload.getContext().get(MARC_AUTHORITY_ID));
+    assertNotNull(actualDataImportEventPayload.getContext().get(AUTHORITY_RECORD_ID));
   }
 
   @Test(expected = ExecutionException.class)
@@ -134,7 +134,7 @@ public class DeleteAuthorityEventHandlerTest {
     throws ExecutionException, InterruptedException, TimeoutException {
 
     HashMap<String, String> context = new HashMap<>();
-    context.put(MARC_AUTHORITY_ID, "");
+    context.put(AUTHORITY_RECORD_ID, "");
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_AUTHORITY_RECORD_DELETED.value())

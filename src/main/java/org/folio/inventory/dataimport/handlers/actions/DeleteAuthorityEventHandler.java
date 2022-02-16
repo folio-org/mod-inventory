@@ -28,7 +28,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTI
 public class DeleteAuthorityEventHandler implements EventHandler {
   private static final Logger LOGGER = LogManager.getLogger(DeleteAuthorityEventHandler.class);
 
-  private static final String MARC_AUTHORITY_ID = "MARC_AUTHORITY_ID";
+  private static final String AUTHORITY_RECORD_ID = "AUTHORITY_RECORD_ID";
   private static final String UNEXPECTED_PAYLOAD_MSG = "Unexpected payload";
   private static final String ERROR_DELETING_AUTHORITY_MSG_TEMPLATE = "Failed deleting Authority. Cause: %s, status: '%s'";
   private static final String DELETE_FAILED_MSG_PATTERN = "Action DELETE for AUTHORITY record failed.";
@@ -53,7 +53,7 @@ public class DeleteAuthorityEventHandler implements EventHandler {
 
       var context = constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl());
       AuthorityRecordCollection authorityRecordCollection = storage.getAuthorityRecordCollection(context);
-      String id = payload.getContext().get(MARC_AUTHORITY_ID);
+      String id = payload.getContext().get(AUTHORITY_RECORD_ID);
 
       deleteAuthorityRecord(id, authorityRecordCollection)
         .onSuccess(successHandler(payload, future))
@@ -83,7 +83,7 @@ public class DeleteAuthorityEventHandler implements EventHandler {
     return payload != null
       && payload.getContext() != null
       && !payload.getContext().isEmpty()
-      && StringUtils.isNotBlank(payload.getContext().get(MARC_AUTHORITY_ID));
+      && StringUtils.isNotBlank(payload.getContext().get(AUTHORITY_RECORD_ID));
   }
 
   private Future<Authority> deleteAuthorityRecord(String id, AuthorityRecordCollection authorityCollection) {
