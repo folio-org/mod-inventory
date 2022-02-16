@@ -3,19 +3,14 @@ package org.folio.inventory.dataimport.handlers.actions;
 import com.github.tomakehurst.wiremock.common.Slf4jNotifier;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.JobProfile;
-import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
-import org.folio.rest.jaxrs.model.Record;
-import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -47,7 +42,6 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
 public class DeleteAuthorityEventHandlerTest {
-  private static final String PARSED_AUTHORITY_RECORD = "src/test/resources/marc/authority/parsed-authority-record.json";
   private static final String MARC_AUTHORITY_ID = "MARC_AUTHORITY_ID";
 
   @Rule
@@ -90,11 +84,7 @@ public class DeleteAuthorityEventHandlerTest {
       return null;
     }).when(authorityCollection).delete(any(), any(), any());
 
-    var parsedAuthorityRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_AUTHORITY_RECORD));
-    context.put(MARC_AUTHORITY_ID,
-      Json.encode(new Record()
-        .withId(UUID.randomUUID().toString())
-        .withParsedRecord(new ParsedRecord().withContent(parsedAuthorityRecord.encode()))));
+    context.put(MARC_AUTHORITY_ID, UUID.randomUUID().toString());
   }
 
   @Test
@@ -113,7 +103,6 @@ public class DeleteAuthorityEventHandlerTest {
 
     assertEquals(DI_SRS_MARC_AUTHORITY_RECORD_DELETED.value(), actualDataImportEventPayload.getEventType());
     assertNotNull(actualDataImportEventPayload.getContext().get(MARC_AUTHORITY_ID));
-    assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(MARC_AUTHORITY_ID)).getString("id"));
   }
 
   @Test(expected = ExecutionException.class)
