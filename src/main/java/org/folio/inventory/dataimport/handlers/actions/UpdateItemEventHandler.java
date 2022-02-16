@@ -1,10 +1,29 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
+import static java.lang.String.format;
+import static java.util.Objects.isNull;
+import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.folio.ActionProfile.Action.UPDATE;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_UPDATED;
+import static org.folio.inventory.domain.items.Item.STATUS_KEY;
+import static org.folio.rest.jaxrs.model.EntityType.HOLDINGS;
+import static org.folio.rest.jaxrs.model.EntityType.ITEM;
+import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
+
+import java.io.UnsupportedEncodingException;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpStatus;
@@ -12,12 +31,14 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
+import org.folio.MappingMetadataDto;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
+import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.ItemStatusName;
@@ -32,26 +53,12 @@ import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingPa
 import org.folio.processing.mapping.mapper.MappingContext;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 
-import java.io.UnsupportedEncodingException;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import static java.lang.String.format;
-import static java.util.Objects.isNull;
-import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.folio.ActionProfile.Action.UPDATE;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_UPDATED;
-import static org.folio.inventory.domain.items.Item.STATUS_KEY;
-import static org.folio.rest.jaxrs.model.EntityType.ITEM;
-import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
+
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
 
 public class UpdateItemEventHandler implements EventHandler {
 
@@ -110,11 +117,7 @@ public class UpdateItemEventHandler implements EventHandler {
           .orElseThrow(() -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId,
             recordId, chunkId))))
         .compose(mappingMetadataDto -> {
-          JsonObject itemAsJson = new JsonObject(payloadContext.get(ITEM.value()));
-          String oldItemStatus = itemAsJson.getJsonObject(STATUS_KEY).getString("name");
-          preparePayloadForMappingManager(dataImportEventPayload);
-          MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
-          MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
+          String oldItemStatus = preparePayloadAndGetStatus(dataImportEventPayload, payloadContext, mappingMetadataDto);
 
           JsonObject mappedItemAsJson = new JsonObject(payloadContext.get(ITEM.value()));
           mappedItemAsJson = mappedItemAsJson.containsKey(ITEM_PATH_FIELD) ? mappedItemAsJson.getJsonObject(ITEM_PATH_FIELD) : mappedItemAsJson;
@@ -144,8 +147,11 @@ public class UpdateItemEventHandler implements EventHandler {
                 dataImportEventPayload.getContext().put(ITEM.value(), ItemUtil.mapToJson(updatedItem).encode());
                 future.completeExceptionally(new EventProcessingException(msg));
               } else {
-                dataImportEventPayload.getContext().put(ITEM.value(), ItemUtil.mapToJson(updatedItem).encode());
-                future.complete(dataImportEventPayload);
+                addHoldingToPayloadIfNeeded(dataImportEventPayload, context, updatedItem)
+                  .onComplete(item -> {
+                    dataImportEventPayload.getContext().put(ITEM.value(), ItemUtil.mapToJson(updatedItem).encode());
+                    future.complete(dataImportEventPayload);
+                  });
               }
             });
         })
@@ -161,10 +167,6 @@ public class UpdateItemEventHandler implements EventHandler {
     return future;
   }
 
-  private boolean isProtectedStatusChanged(String oldItemStatus, String newItemStatus) {
-    return PROTECTED_STATUSES_FROM_UPDATE.contains(oldItemStatus) && !oldItemStatus.equals(newItemStatus);
-  }
-
   @Override
   public boolean isEligible(DataImportEventPayload dataImportEventPayload) {
     if (dataImportEventPayload.getCurrentNode() != null && ACTION_PROFILE == dataImportEventPayload.getCurrentNode().getContentType()) {
@@ -172,6 +174,41 @@ public class UpdateItemEventHandler implements EventHandler {
       return actionProfile.getAction() == UPDATE && actionProfile.getFolioRecord() == ActionProfile.FolioRecord.ITEM;
     }
     return false;
+  }
+
+
+  private String preparePayloadAndGetStatus(DataImportEventPayload dataImportEventPayload, HashMap<String, String> payloadContext, MappingMetadataDto mappingMetadataDto) {
+    JsonObject itemAsJson = new JsonObject(payloadContext.get(ITEM.value()));
+    String oldItemStatus = itemAsJson.getJsonObject(STATUS_KEY).getString("name");
+    preparePayloadForMappingManager(dataImportEventPayload);
+    MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
+    MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
+    return oldItemStatus;
+  }
+
+  private Future<DataImportEventPayload> addHoldingToPayloadIfNeeded(DataImportEventPayload dataImportEventPayload, Context context, Item updatedItem) {
+    Promise<DataImportEventPayload> promise = Promise.promise();
+    if (StringUtils.isBlank(dataImportEventPayload.getContext().get(HOLDINGS.value()))) {
+      HoldingsRecordCollection holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
+      holdingsRecordCollection.findById(updatedItem.getHoldingId(),
+        success -> {
+          LOG.info("Successfully retrieved Holdings for the hotlink by id: {}", updatedItem.getHoldingId());
+          dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encodePrettily(success.getResult()));
+          promise.complete(dataImportEventPayload);
+        },
+        failure -> {
+          LOG.warn("Error retrieving Holdings for the hotlink by id {} cause {}, status code {}", updatedItem.getHoldingId(), failure.getReason(), failure.getStatusCode());
+          promise.complete(dataImportEventPayload);
+        });
+    } else {
+      LOG.debug("Holdings already exists in payload with for the hotlink with id {}", updatedItem.getHoldingId());
+      promise.complete(dataImportEventPayload);
+    }
+    return promise.future();
+  }
+
+  private boolean isProtectedStatusChanged(String oldItemStatus, String newItemStatus) {
+    return PROTECTED_STATUSES_FROM_UPDATE.contains(oldItemStatus) && !oldItemStatus.equals(newItemStatus);
   }
 
   private void preparePayloadForMappingManager(DataImportEventPayload dataImportEventPayload) {
