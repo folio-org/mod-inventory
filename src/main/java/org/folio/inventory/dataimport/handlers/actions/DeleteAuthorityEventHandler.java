@@ -79,6 +79,7 @@ public class DeleteAuthorityEventHandler implements EventHandler {
     return false;
   }
 
+  /* Validates the event payload */
   private boolean isExpectedPayload(DataImportEventPayload payload) {
     return payload != null
       && payload.getContext() != null
@@ -86,6 +87,7 @@ public class DeleteAuthorityEventHandler implements EventHandler {
       && StringUtils.isNotBlank(payload.getContext().get(AUTHORITY_RECORD_ID));
   }
 
+  /* Deletes authority by id from storage */
   private Future<Authority> deleteAuthorityRecord(String id, AuthorityRecordCollection authorityCollection) {
     Promise<Authority> promise = Promise.promise();
     authorityCollection.delete(id, success -> promise.complete(),
@@ -95,6 +97,7 @@ public class DeleteAuthorityEventHandler implements EventHandler {
     return promise.future();
   }
 
+  /* Completes the given future with the given payload, writing a message in a log */
   private Handler<Authority> successHandler(DataImportEventPayload payload,
                                             CompletableFuture<DataImportEventPayload> future) {
     return authority -> {
@@ -103,6 +106,7 @@ public class DeleteAuthorityEventHandler implements EventHandler {
     };
   }
 
+  /* Completes exceptionally the given future with the given exception, writing a message in a log */
   private Handler<Throwable> failureHandler(DataImportEventPayload payload,
                                             CompletableFuture<DataImportEventPayload> future) {
     return e -> {
@@ -111,6 +115,7 @@ public class DeleteAuthorityEventHandler implements EventHandler {
     };
   }
 
+  /* Creates message for logging */
   private String constructMsg(String message, DataImportEventPayload payload) {
     if (payload == null) {
       return message;
@@ -124,6 +129,7 @@ public class DeleteAuthorityEventHandler implements EventHandler {
     }
   }
 
+  /* Gets data from header */
   private String getDataIdHeader(DataImportEventPayload payload, String key) {
     return payload.getContext() == null ? "-" : payload.getContext().get(key);
   }
