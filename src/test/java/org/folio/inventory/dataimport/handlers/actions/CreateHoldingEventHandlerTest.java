@@ -12,6 +12,7 @@ import org.folio.JobProfile;
 import org.folio.MappingProfile;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.HoldingWriterFactory;
@@ -60,6 +61,7 @@ import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
 import static org.folio.inventory.dataimport.handlers.actions.CreateHoldingEventHandler.ACTION_HAS_NO_MAPPING_MSG;
+import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
@@ -288,6 +290,12 @@ public class CreateHoldingEventHandlerTest {
     when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
 
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure(UNIQUE_ID_ERROR_MESSAGE, 400));
+      return null;
+    }).when(holdingsRecordsCollection).add(any(), any(), any());
 
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new HoldingWriterFactory());
