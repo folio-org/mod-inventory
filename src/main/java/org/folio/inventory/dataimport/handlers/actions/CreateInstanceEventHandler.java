@@ -11,6 +11,7 @@ import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.exceptions.DuplicatedEventException;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
@@ -36,6 +37,7 @@ import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING;
+import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
 import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
@@ -53,6 +55,8 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
   private PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
   private MappingMetadataCache mappingMetadataCache;
   private IdStorageService idStorageService;
+
+  private Instance duplicatedInstance = null;
 
   public CreateInstanceEventHandler(Storage storage, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper, MappingMetadataCache mappingMetadataCache, IdStorageService idStorageService) {
     super(storage);
@@ -87,42 +91,46 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
       Future<RecordToEntity> recordToInstanceFuture = idStorageService.store(targetRecord.getId(), UUID.randomUUID().toString(), dataImportEventPayload.getTenant());
       recordToInstanceFuture.onSuccess(res -> {
-        String instanceId = res.getEntityId();
-        mappingMetadataCache.get(jobExecutionId, context)
-          .compose(parametersOptional -> parametersOptional
-            .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()),
-              Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class)))
-            .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, jobExecutionId, recordId, chunkId))))
-          .compose(v -> {
-            InstanceCollection instanceCollection = storage.getInstanceCollection(context);
-            JsonObject instanceAsJson = prepareInstance(dataImportEventPayload, instanceId, jobExecutionId);
-            List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
-            if (!errors.isEmpty()) {
-              String msg = format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", errors,
-                jobExecutionId, recordId, chunkId);
-              LOGGER.warn(msg);
-              return Future.failedFuture(msg);
-            }
+          String instanceId = res.getEntityId();
+          mappingMetadataCache.get(jobExecutionId, context)
+            .compose(parametersOptional -> parametersOptional
+              .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()),
+                Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class)))
+              .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, jobExecutionId, recordId, chunkId))))
+            .compose(v -> {
+              InstanceCollection instanceCollection = storage.getInstanceCollection(context);
+              JsonObject instanceAsJson = prepareInstance(dataImportEventPayload, instanceId, jobExecutionId);
+              List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
+              if (!errors.isEmpty()) {
+                String msg = format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", errors,
+                  jobExecutionId, recordId, chunkId);
+                LOGGER.warn(msg);
+                return Future.failedFuture(msg);
+              }
 
-            Instance mappedInstance = Instance.fromJson(instanceAsJson);
-            return addInstance(mappedInstance, instanceCollection)
-              .compose(createdInstance -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(mappedInstance, context).map(createdInstance));
-          })
-          .onSuccess(ar -> {
-            dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(ar));
-            future.complete(dataImportEventPayload);
-          })
-          .onFailure(e -> {
-            LOGGER.error("Error creating inventory Instance by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId, recordId,
-              chunkId, e);
-            future.completeExceptionally(e);
-          });
-      })
-      .onFailure(failure -> {
-        LOGGER.error("Error creating inventory recordId and instanceId relationship by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId, recordId,
-          chunkId, failure);
-        future.completeExceptionally(failure);
-      });
+              Instance mappedInstance = Instance.fromJson(instanceAsJson);
+              return addInstance(mappedInstance, instanceCollection)
+                .compose(createdInstance -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(mappedInstance, context).map(createdInstance));
+            })
+            .onSuccess(ar -> {
+              dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(ar));
+              future.complete(dataImportEventPayload);
+            })
+            .onFailure(e -> {
+              if (e instanceof DuplicatedEventException) {
+                future.complete(dataImportEventPayload);
+              } else {
+                LOGGER.error("Error creating inventory Instance by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId, recordId,
+                  chunkId, e);
+                future.completeExceptionally(e);
+              }
+            });
+        })
+        .onFailure(failure -> {
+          LOGGER.error("Error creating inventory recordId and instanceId relationship by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId, recordId,
+            chunkId, failure);
+          future.completeExceptionally(failure);
+        });
     } catch (Exception e) {
       LOGGER.error("Error creating inventory Instance", e);
       future.completeExceptionally(e);
@@ -177,8 +185,14 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
     Promise<Instance> promise = Promise.promise();
     instanceCollection.add(instance, success -> promise.complete(success.getResult()),
       failure -> {
-        LOGGER.error(format("Error posting Instance by instanceId:'%s' cause %s, status code %s", instance.getId(), failure.getReason(), failure.getStatusCode()));
-        promise.fail(failure.getReason());
+        //This is temporary solution (verify by error message). It will be improved via another solution by https://issues.folio.org/browse/RMB-899.
+        if (failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
+          LOGGER.info("Duplicated event received by InstanceId: {}. Ignoring...", instance.getId());
+          promise.fail(new DuplicatedEventException("Duplicated event"));
+        } else {
+          LOGGER.error(format("Error posting Instance by instanceId:'%s' cause %s, status code %s", instance.getId(), failure.getReason(), failure.getStatusCode()));
+          promise.fail(failure.getReason());
+        }
       });
     return promise.future();
   }

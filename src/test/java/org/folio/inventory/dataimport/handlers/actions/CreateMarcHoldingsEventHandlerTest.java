@@ -1,6 +1,7 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -45,6 +46,8 @@ import com.google.common.collect.Lists;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+
+import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.relationship.RecordToEntity;
 import org.folio.inventory.services.HoldingsIdStorageService;
@@ -521,6 +524,50 @@ public class CreateMarcHoldingsEventHandlerTest {
 
     ExecutionException exception = Assert.assertThrows(ExecutionException.class, future::get);
     Assert.assertEquals(ACTION_HAS_NO_MAPPING_MSG, exception.getCause().getMessage());
+  }
+
+  @Test
+  public void shouldProcessEventEvenIfDuplicatedInventoryStorageErrorExists() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure(UNIQUE_ID_ERROR_MESSAGE, 400));
+      return null;
+    }).when(holdingsRecordsCollection).add(any(), any(), any());
+
+    HoldingsRecord holdings = new HoldingsRecord()
+      .withId(String.valueOf(UUID.randomUUID()))
+      .withHrid(String.valueOf(UUID.randomUUID()))
+      .withInstanceId(String.valueOf(UUID.randomUUID()))
+      .withSourceId(String.valueOf(UUID.randomUUID()))
+      .withHoldingsTypeId(String.valueOf(UUID.randomUUID()))
+      .withPermanentLocationId(PERMANENT_LOCATION_ID);
+
+    var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
+    record.setId(recordId);
+    HashMap<String, String> context = new HashMap<>();
+    context.put("HOLDINGS", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(holdings)).encode());
+    context.put(MARC_HOLDINGS.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_HOLDING_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = createMarcHoldingsEventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.SECONDS);
+    JsonObject createdHoldings = new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
+
+    assertEquals(holdingsId, createdHoldings.getString("id"));
+    assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
+    assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
+    assertNotNull(createdHoldings.getString("id"));
+    assertEquals(instanceId, createdHoldings.getString("instanceId"));
+    assertEquals(PERMANENT_LOCATION_ID, createdHoldings.getString("permanentLocationId"));
   }
 
   @Test

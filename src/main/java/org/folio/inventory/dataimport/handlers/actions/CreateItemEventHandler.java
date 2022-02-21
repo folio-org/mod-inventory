@@ -4,6 +4,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -12,6 +13,7 @@ import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.exceptions.DuplicatedEventException;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.folio.inventory.domain.items.CirculationNote;
@@ -43,6 +45,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.ITEM;
@@ -140,9 +143,13 @@ public class CreateItemEventHandler implements EventHandler {
               dataImportEventPayload.getContext().put(ITEM.value(), Json.encode(ar.result()));
               future.complete(dataImportEventPayload);
             } else {
-              LOG.error("Error creating inventory Item by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
-                recordId, chunkId, ar.cause());
-              future.completeExceptionally(ar.cause());
+              if (ar.cause() instanceof DuplicatedEventException) {
+                future.complete(dataImportEventPayload);
+              } else {
+                LOG.error("Error creating inventory Item by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
+                  recordId, chunkId, ar.cause());
+                future.completeExceptionally(ar.cause());
+              }
             }
           });
       }).onFailure(failure -> {
@@ -240,8 +247,14 @@ public class CreateItemEventHandler implements EventHandler {
 
     itemCollection.add(item.withCirculationNotes(notes), success -> promise.complete(success.getResult()),
       failure -> {
-        LOG.error(format("Error posting Item cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
-        promise.fail(failure.getReason());
+        //This is temporary solution (verify by error message). It will be improved via another solution by https://issues.folio.org/browse/RMB-899.
+        if (failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
+          LOG.info("Duplicated event received by ItemId: {}. Ignoring...", item.getId());
+          promise.fail(new DuplicatedEventException("Duplicated event"));
+        } else {
+          LOG.error(format("Error posting Item cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
+          promise.fail(failure.getReason());
+        }
       });
     return promise.future();
   }

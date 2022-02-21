@@ -3,6 +3,7 @@ package org.folio.inventory.dataimport.handlers.actions;
 import static org.folio.ActionProfile.FolioRecord.AUTHORITY;
 import static org.folio.ActionProfile.FolioRecord.MARC_AUTHORITY;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_CREATED;
+import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.rest.jaxrs.model.DataImportEventTypes.DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
@@ -43,8 +44,14 @@ public class CreateAuthorityEventHandler extends AbstractAuthorityEventHandler {
     createRelationship(promise, authority, payload);
     authorityCollection.add(authority, success -> promise.complete(success.getResult()),
       failure -> {
-        LOGGER.error(String.format(FAILED_CREATING_AUTHORITY_MSG_TEMPLATE, failure.getReason(), failure.getStatusCode()));
-        promise.fail(failure.getReason());
+        //This is temporary solution (verify by error message). It will be improved via another solution by https://issues.folio.org/browse/RMB-899.
+        if (failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
+          LOGGER.info("Duplicated event received by AuthorityId: {}. Ignoring...", authority.getId());
+          promise.complete(authority);
+        } else {
+          LOGGER.error(String.format(FAILED_CREATING_AUTHORITY_MSG_TEMPLATE, failure.getReason(), failure.getStatusCode()));
+          promise.fail(failure.getReason());
+        }
       });
     return promise.future();
   }

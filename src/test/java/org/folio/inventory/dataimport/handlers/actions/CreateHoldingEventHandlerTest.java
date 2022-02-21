@@ -277,6 +277,47 @@ public class CreateHoldingEventHandlerTest {
     Assert.assertEquals(FOLIO_SOURCE_ID, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("sourceId"));
   }
 
+  @Test
+  public void shouldProcessEventEvenIfDuplicatedInventoryStorageErrorExists() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    String permanentLocationId = UUID.randomUUID().toString();
+
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
+
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+
+    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new HoldingWriterFactory());
+
+    String instanceId = String.valueOf(UUID.randomUUID());
+    Instance instance = new Instance(instanceId, "5", String.valueOf(UUID.randomUUID()),
+      String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    HashMap<String, String> context = new HashMap<>();
+    context.put("INSTANCE", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
+
+    Assert.assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
+    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
+    Assert.assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("id"));
+    Assert.assertEquals(instanceId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("instanceId"));
+    Assert.assertEquals(permanentLocationId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("permanentLocationId"));
+    Assert.assertEquals(FOLIO_SOURCE_ID, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("sourceId"));
+  }
+
 
   @Test(expected = ExecutionException.class)
   public void shouldNotProcessEventIfInstanceIdIsNotExistsInInstanceInContextAndNotExistsInParsedRecords() throws InterruptedException, ExecutionException, TimeoutException {

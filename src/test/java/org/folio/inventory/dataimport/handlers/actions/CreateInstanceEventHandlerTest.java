@@ -20,6 +20,7 @@ import org.folio.JobProfile;
 import org.folio.MappingProfile;
 import org.folio.MappingMetadataDto;
 import org.folio.inventory.TestUtil;
+import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.InstanceWriterFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
@@ -69,6 +70,7 @@ import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
+import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
@@ -80,6 +82,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -489,6 +492,58 @@ public class CreateInstanceEventHandlerTest {
 
     CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.SECONDS);
+  }
+
+
+  @Test
+  public void shouldProcessEventEvenIfDuplicatedInventoryStorageErrorExists() throws InterruptedException, ExecutionException, TimeoutException {
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    String instanceTypeId = "fe19bae4-da28-472b-be90-d442e2428ead";
+    String recordId = "567859ad-505a-400d-a699-0028a1fdbf84";
+    String instanceId = "4d4545df-b5ba-4031-a031-70b1c1b2fc5d";
+    String title = "titleValue";
+    RecordToEntity recordToInstance = RecordToEntity.builder().recordId(recordId).entityId(instanceId).build();
+
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId), StringValue.of(title));
+
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+
+    when(instanceIdStorageService.store(any(), any(), any())).thenReturn(Future.succeededFuture(recordToInstance));
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure(UNIQUE_ID_ERROR_MESSAGE, 400));
+      return null;
+    }).when(instanceRecordCollection).add(any(), any(), any());
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new InstanceWriterFactory());
+
+    HashMap<String, String> context = new HashMap<>();
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    record.setId(recordId);
+
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(mockServer.baseUrl())
+      .withToken(TOKEN)
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl());
+
+    CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload actualDataImportEventPayload = future.get(20, TimeUnit.SECONDS);
+
+    assertEquals(DI_INVENTORY_INSTANCE_CREATED.value(), actualDataImportEventPayload.getEventType());
+    assertNotNull(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
+    JsonObject createdInstance = new JsonObject(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
+    assertNotNull(createdInstance);
   }
 
   private Response createdResponse() {

@@ -8,6 +8,7 @@ import static org.folio.ActionProfile.FolioRecord.MARC_HOLDINGS;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDINGS_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
+import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.inventory.dataimport.util.ParsedRecordUtil.getControlFieldValue;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
@@ -27,6 +28,7 @@ import org.folio.MappingMetadataDto;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.exceptions.DuplicatedEventException;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.relationship.RecordToEntity;
 import org.folio.inventory.services.IdStorageService;
@@ -99,35 +101,38 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
 
       Future<RecordToEntity> recordToHoldingsFuture = idStorageService.store(targetRecord.getId(), UUID.randomUUID().toString(), dataImportEventPayload.getTenant());
       recordToHoldingsFuture.onSuccess(res -> {
-        String holdingsId = res.getEntityId();
-        mappingMetadataCache.get(jobExecutionId, context)
-          .map(parametersOptional -> parametersOptional.orElseThrow(() ->
-            new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId,
-              recordId, chunkId))))
-          .onSuccess(mappingMetadata -> defaultMapRecordToHoldings(dataImportEventPayload, mappingMetadata))
-          .map(v -> processMappingResult(dataImportEventPayload, holdingsId))
-          .compose(holdingJson -> findInstanceIdByHrid(dataImportEventPayload, holdingJson, context)
-            .compose(instanceId -> {
-              fillInstanceId(dataImportEventPayload, holdingJson, instanceId);
-              var holdingsRecords = storage.getHoldingsRecordCollection(context);
-              HoldingsRecord holding = Json.decodeValue(payloadContext.get(HOLDINGS.value()), HoldingsRecord.class);
-              return addHoldings(holding, holdingsRecords);
-            }))
-          .onSuccess(createdHoldings -> {
-            LOGGER.info("Created Holding record by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
-              recordId, chunkId);
-            dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encodePrettily(createdHoldings));
-            future.complete(dataImportEventPayload);
-          })
-          .onFailure(e -> {
-            LOGGER.error(SAVE_HOLDING_ERROR_MESSAGE, e);
-            future.completeExceptionally(e);
-          });
-      })
-      .onFailure(failure -> {
-        LOGGER.error(format(CREATING_INVENTORY_RELATIONSHIP_ERROR_MESSAGE, jobExecutionId, recordId, chunkId), failure);
-        future.completeExceptionally(failure);
-      });
+          String holdingsId = res.getEntityId();
+          mappingMetadataCache.get(jobExecutionId, context)
+            .map(parametersOptional -> parametersOptional.orElseThrow(() ->
+              new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId,
+                recordId, chunkId))))
+            .onSuccess(mappingMetadata -> defaultMapRecordToHoldings(dataImportEventPayload, mappingMetadata))
+            .map(v -> processMappingResult(dataImportEventPayload, holdingsId))
+            .compose(holdingJson -> findInstanceIdByHrid(dataImportEventPayload, holdingJson, context)
+              .compose(instanceId -> {
+                fillInstanceId(dataImportEventPayload, holdingJson, instanceId);
+                var holdingsRecords = storage.getHoldingsRecordCollection(context);
+                HoldingsRecord holding = Json.decodeValue(payloadContext.get(HOLDINGS.value()), HoldingsRecord.class);
+                return addHoldings(holding, holdingsRecords);
+              }))
+            .onSuccess(createdHoldings -> {
+              LOGGER.info("Created Holding record by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
+                recordId, chunkId);
+              dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encodePrettily(createdHoldings));
+              future.complete(dataImportEventPayload);
+            })
+            .onFailure(e -> {
+              if (e instanceof DuplicatedEventException) {
+                future.complete(dataImportEventPayload);
+              }
+              LOGGER.error(SAVE_HOLDING_ERROR_MESSAGE, e);
+              future.completeExceptionally(e);
+            });
+        })
+        .onFailure(failure -> {
+          LOGGER.error(format(CREATING_INVENTORY_RELATIONSHIP_ERROR_MESSAGE, jobExecutionId, recordId, chunkId), failure);
+          future.completeExceptionally(failure);
+        });
     } catch (Exception e) {
       LOGGER.error("Failed to create Holdings", e);
       future.completeExceptionally(e);
@@ -235,8 +240,14 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
     holdingsRecordCollection.add(holdings,
       success -> promise.complete(success.getResult()),
       failure -> {
-        LOGGER.error(format("Error posting Holdings cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
-        promise.fail(failure.getReason());
+        //This is temporary solution (verify by error message). It will be improved via another solution by https://issues.folio.org/browse/RMB-899.
+        if (failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
+          LOGGER.info("Duplicated event received by InstanceId: {}. Ignoring...", holdings.getId());
+          promise.fail(new DuplicatedEventException("Duplicated event"));
+        } else {
+          LOGGER.error(format("Error posting Holdings cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
+          promise.fail(failure.getReason());
+        }
       });
     return promise.future();
   }

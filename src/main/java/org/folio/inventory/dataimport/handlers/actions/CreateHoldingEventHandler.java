@@ -6,6 +6,7 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
 import java.util.HashMap;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -14,6 +15,7 @@ import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.exceptions.DuplicatedEventException;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.relationship.RecordToEntity;
@@ -38,6 +40,7 @@ import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
+import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 public class CreateHoldingEventHandler implements EventHandler {
@@ -92,24 +95,24 @@ public class CreateHoldingEventHandler implements EventHandler {
       recordToHoldingsFuture.onSuccess(res -> {
           String holdingsId = res.getEntityId();
           mappingMetadataCache.get(jobExecutionId, context)
-          .map(parametersOptional -> parametersOptional.orElseThrow(() ->
-            new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG,
-              jobExecutionId, recordId, chunkId))))
-          .map(mappingMetadataDto -> {
-            prepareEvent(dataImportEventPayload);
-            MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
-            MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
+            .map(parametersOptional -> parametersOptional.orElseThrow(() ->
+              new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG,
+                jobExecutionId, recordId, chunkId))))
+            .map(mappingMetadataDto -> {
+              prepareEvent(dataImportEventPayload);
+              MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
+              MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
 
-            JsonObject holdingAsJson = new JsonObject(payloadContext.get(HOLDINGS.value()));
-            if (holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD) != null) {
-              holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD);
-            }
-            holdingAsJson.put("id", holdingsId);
-            holdingAsJson.put("sourceId", FOLIO_SOURCE_ID);
-            fillInstanceIdIfNeeded(dataImportEventPayload, holdingAsJson);
-            checkIfPermanentLocationIdExists(holdingAsJson);
-            return Json.decodeValue(payloadContext.get(HOLDINGS.value()), HoldingsRecord.class);
-          })
+              JsonObject holdingAsJson = new JsonObject(payloadContext.get(HOLDINGS.value()));
+              if (holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD) != null) {
+                holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD);
+              }
+              holdingAsJson.put("id", holdingsId);
+              holdingAsJson.put("sourceId", FOLIO_SOURCE_ID);
+              fillInstanceIdIfNeeded(dataImportEventPayload, holdingAsJson);
+              checkIfPermanentLocationIdExists(holdingAsJson);
+              return Json.decodeValue(payloadContext.get(HOLDINGS.value()), HoldingsRecord.class);
+            })
             .compose(holdingToCreate -> addHoldings(holdingToCreate, context))
             .onSuccess(createdHoldings -> {
               LOGGER.info("Created Holding record by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}'",
@@ -118,6 +121,9 @@ public class CreateHoldingEventHandler implements EventHandler {
               future.complete(dataImportEventPayload);
             })
             .onFailure(e -> {
+              if (e instanceof DuplicatedEventException) {
+                future.complete(dataImportEventPayload);
+              }
               LOGGER.error(SAVE_HOLDING_ERROR_MESSAGE, e);
               future.completeExceptionally(e);
             });
@@ -187,8 +193,14 @@ public class CreateHoldingEventHandler implements EventHandler {
     holdingsRecordCollection.add(holdings,
       success -> promise.complete(success.getResult()),
       failure -> {
-        LOGGER.error(format("Error posting Holdings cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
-        promise.fail(failure.getReason());
+        //for now there is a solution via error-message contains. It will be improved via another solution by https://issues.folio.org/browse/RMB-899.
+        if (failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
+          LOGGER.info("Duplicated event received by InstanceId: {}. Ignoring...", holdings.getId());
+          promise.fail(new DuplicatedEventException("Duplicated event"));
+        } else {
+          LOGGER.error(format("Error posting Holdings cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
+          promise.fail(failure.getReason());
+        }
       });
     return promise.future();
   }
