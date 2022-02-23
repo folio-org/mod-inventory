@@ -301,6 +301,49 @@ public class CreateItemEventHandlerTest {
   }
 
   @Test(expected = ExecutionException.class)
+  public void shouldReturnFailedFutureIfInventoryStorageErrorExists()
+    throws InterruptedException,
+    ExecutionException,
+    TimeoutException, UnsupportedEncodingException {
+
+    // given
+    RecordToEntity recordToItem = RecordToEntity.builder().recordId(RECORD_ID).entityId(ITEM_ID).build();
+    when(itemIdStorageService.store(any(), any(), any())).thenReturn(Future.succeededFuture(recordToItem));
+
+    Mockito.doAnswer(invocationOnMock -> {
+      MultipleRecords<Item> result = new MultipleRecords<>(new ArrayList<>(), 0);
+      Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
+      return null;
+    }).when(mockedItemCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure("Smth error", 400));
+      return null;
+    }).when(mockedItemCollection).add(any(), any(), any());
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new ItemWriterFactory());
+
+    String expectedHoldingId = UUID.randomUUID().toString();
+    JsonObject holdingAsJson = new JsonObject().put("id", expectedHoldingId);
+    HashMap<String, String> payloadContext = new HashMap<>();
+    payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+    payloadContext.put(EntityType.HOLDINGS.value(), holdingAsJson.encode());
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    // when
+    CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
+    future.get(5, TimeUnit.SECONDS);
+  }
+
+  @Test(expected = ExecutionException.class)
   public void shouldReturnFailedFutureWhenMappedItemWithoutStatus()
     throws InterruptedException,
     ExecutionException,

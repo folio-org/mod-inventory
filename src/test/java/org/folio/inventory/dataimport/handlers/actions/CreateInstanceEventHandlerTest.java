@@ -542,6 +542,53 @@ public class CreateInstanceEventHandlerTest {
     future.get(5, TimeUnit.SECONDS);
   }
 
+  @Test(expected = Exception.class)
+  public void shouldNotProcessEventEvenIfInventoryStorageErrorExists() throws InterruptedException, ExecutionException, TimeoutException {
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    String instanceTypeId = "fe19bae4-da28-472b-be90-d442e2428ead";
+    String recordId = "567859ad-505a-400d-a699-0028a1fdbf84";
+    String instanceId = "4d4545df-b5ba-4031-a031-70b1c1b2fc5d";
+    String title = "titleValue";
+    RecordToEntity recordToInstance = RecordToEntity.builder().recordId(recordId).entityId(instanceId).build();
+
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId), StringValue.of(title));
+
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+
+    when(instanceIdStorageService.store(any(), any(), any())).thenReturn(Future.succeededFuture(recordToInstance));
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure("Smth error", 400));
+      return null;
+    }).when(instanceRecordCollection).add(any(), any(), any());
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new InstanceWriterFactory());
+
+    HashMap<String, String> context = new HashMap<>();
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    record.setId(recordId);
+
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(mockServer.baseUrl())
+      .withToken(TOKEN)
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl());
+
+    CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
+
+    future.get(5, TimeUnit.SECONDS);
+  }
+
   private Response createdResponse() {
     return new Response(HttpStatus.SC_CREATED, null, null, null);
   }
