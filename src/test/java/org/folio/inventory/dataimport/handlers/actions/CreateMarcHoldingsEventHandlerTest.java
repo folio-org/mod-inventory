@@ -527,7 +527,7 @@ public class CreateMarcHoldingsEventHandlerTest {
   }
 
   @Test(expected = Exception.class)
-  public void shouldProcessEventEvenIfDuplicatedInventoryStorageErrorExists() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+  public void shouldNotProcessEventEvenIfDuplicatedInventoryStorageErrorExists() throws IOException, InterruptedException, ExecutionException, TimeoutException {
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
     doAnswer(invocationOnMock -> {
