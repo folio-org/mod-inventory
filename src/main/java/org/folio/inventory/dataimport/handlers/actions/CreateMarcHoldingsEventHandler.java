@@ -28,12 +28,12 @@ import org.folio.MappingMetadataDto;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
-import org.folio.inventory.dataimport.exceptions.DuplicatedEventException;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.relationship.RecordToEntity;
 import org.folio.inventory.services.IdStorageService;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
+import org.folio.kafka.exception.DuplicateEventException;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.defaultmapper.RecordMapper;
@@ -122,7 +122,7 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
               future.complete(dataImportEventPayload);
             })
             .onFailure(e -> {
-              if (e instanceof DuplicatedEventException) {
+              if (e instanceof DuplicateEventException) {
                 future.complete(dataImportEventPayload);
               }
               LOGGER.error(SAVE_HOLDING_ERROR_MESSAGE, e);
@@ -243,7 +243,7 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
         //This is temporary solution (verify by error message). It will be improved via another solution by https://issues.folio.org/browse/RMB-899.
         if (failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
           LOGGER.info("Duplicated event received by InstanceId: {}. Ignoring...", holdings.getId());
-          promise.fail(new DuplicatedEventException("Duplicated event"));
+          promise.fail(new DuplicateEventException("Duplicated event"));
         } else {
           LOGGER.error(format("Error posting Holdings cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
           promise.fail(failure.getReason());

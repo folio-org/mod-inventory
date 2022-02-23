@@ -11,13 +11,13 @@ import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
-import org.folio.inventory.dataimport.exceptions.DuplicatedEventException;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.domain.relationship.RecordToEntity;
 import org.folio.inventory.services.IdStorageService;
 import org.folio.inventory.storage.Storage;
+import org.folio.kafka.exception.DuplicateEventException;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
@@ -117,7 +117,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
               future.complete(dataImportEventPayload);
             })
             .onFailure(e -> {
-              if (e instanceof DuplicatedEventException) {
+              if (e instanceof DuplicateEventException) {
                 future.complete(dataImportEventPayload);
               } else {
                 LOGGER.error("Error creating inventory Instance by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId, recordId,
@@ -188,7 +188,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
         //This is temporary solution (verify by error message). It will be improved via another solution by https://issues.folio.org/browse/RMB-899.
         if (failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
           LOGGER.info("Duplicated event received by InstanceId: {}. Ignoring...", instance.getId());
-          promise.fail(new DuplicatedEventException("Duplicated event"));
+          promise.fail(new DuplicateEventException("Duplicated event"));
         } else {
           LOGGER.error(format("Error posting Instance by instanceId:'%s' cause %s, status code %s", instance.getId(), failure.getReason(), failure.getStatusCode()));
           promise.fail(failure.getReason());
