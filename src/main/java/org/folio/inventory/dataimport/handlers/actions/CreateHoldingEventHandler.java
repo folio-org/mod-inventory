@@ -52,7 +52,6 @@ public class CreateHoldingEventHandler implements EventHandler {
   private static final String HOLDINGS_PATH_FIELD = "holdings";
   private static final String PERMANENT_LOCATION_ID_FIELD = "permanentLocationId";
   private static final String PERMANENT_LOCATION_ID_ERROR_MESSAGE = "Can`t create Holding entity: 'permanentLocationId' is empty";
-  private static final String SAVE_HOLDING_ERROR_MESSAGE = "Can`t save new holding";
   private static final String CREATE_HOLDING_ERROR_MESSAGE = "Failed to create Holdings";
   private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t create Holding entity: context is empty or doesn`t exists";
   private static final String PAYLOAD_DATA_HAS_NO_INSTANCE_ID_ERROR_MSG = "Failed to extract instanceId from instance entity or parsed record";
@@ -121,12 +120,11 @@ public class CreateHoldingEventHandler implements EventHandler {
               future.complete(dataImportEventPayload);
             })
             .onFailure(e -> {
-              if (e instanceof DuplicateEventException) {
-                future.complete(dataImportEventPayload);
-              } else {
-                LOGGER.error(SAVE_HOLDING_ERROR_MESSAGE, e);
-                future.completeExceptionally(e);
+              if (!(e instanceof DuplicateEventException)) {
+                LOGGER.error("Error creating inventory Holding record by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
+                  recordId, chunkId, e);
               }
+              future.completeExceptionally(e);
             });
         })
         .onFailure(failure -> {

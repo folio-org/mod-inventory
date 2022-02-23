@@ -143,13 +143,11 @@ public class CreateItemEventHandler implements EventHandler {
               dataImportEventPayload.getContext().put(ITEM.value(), Json.encode(ar.result()));
               future.complete(dataImportEventPayload);
             } else {
-              if (ar.cause() instanceof DuplicateEventException) {
-                future.complete(dataImportEventPayload);
-              } else {
+              if (!(ar.cause() instanceof DuplicateEventException)) {
                 LOG.error("Error creating inventory Item by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
                   recordId, chunkId, ar.cause());
-                future.completeExceptionally(ar.cause());
               }
+              future.completeExceptionally(ar.cause());
             }
           });
       }).onFailure(failure -> {

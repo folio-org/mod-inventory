@@ -117,13 +117,11 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
               future.complete(dataImportEventPayload);
             })
             .onFailure(e -> {
-              if (e instanceof DuplicateEventException) {
-                future.complete(dataImportEventPayload);
-              } else {
-                LOGGER.error("Error creating inventory Instance by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId, recordId,
-                  chunkId, e);
-                future.completeExceptionally(e);
+              if (!(e instanceof DuplicateEventException)) {
+                LOGGER.error("Error creating inventory Instance by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
+                  recordId, chunkId, e);
               }
+              future.completeExceptionally(e);
             });
         })
         .onFailure(failure -> {

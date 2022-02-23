@@ -193,8 +193,8 @@ public class CreateAuthorityEventHandlerTest {
     assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(AUTHORITY.value())).getString("id"));
   }
 
-  @Test
-  public void shouldProcessEventEvenIfDuplicatedInventoryStorageErrorExists() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+  @Test(expected = Exception.class)
+  public void shouldNotProcessEventEvenIfDuplicatedInventoryStorageErrorExists() throws IOException, InterruptedException, ExecutionException, TimeoutException {
     when(storage.getAuthorityRecordCollection(any())).thenReturn(authorityCollection);
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
@@ -215,11 +215,7 @@ public class CreateAuthorityEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = createMarcAuthoritiesEventHandler.handle(dataImportEventPayload);
-    DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.SECONDS);
-
-    assertEquals(DI_INVENTORY_AUTHORITY_CREATED.value(), actualDataImportEventPayload.getEventType());
-    assertNotNull(actualDataImportEventPayload.getContext().get(AUTHORITY.value()));
-    assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(AUTHORITY.value())).getString("id"));
+    future.get(5, TimeUnit.SECONDS);
   }
 
   @Test(expected = ExecutionException.class)

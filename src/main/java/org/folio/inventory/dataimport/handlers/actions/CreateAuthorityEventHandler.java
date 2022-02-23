@@ -18,6 +18,7 @@ import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.domain.relationship.RecordToEntity;
 import org.folio.inventory.services.IdStorageService;
 import org.folio.inventory.storage.Storage;
+import org.folio.kafka.exception.DuplicateEventException;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 
 public class CreateAuthorityEventHandler extends AbstractAuthorityEventHandler {
@@ -47,7 +48,7 @@ public class CreateAuthorityEventHandler extends AbstractAuthorityEventHandler {
         //This is temporary solution (verify by error message). It will be improved via another solution by https://issues.folio.org/browse/RMB-899.
         if (failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
           LOGGER.info("Duplicated event received by AuthorityId: {}. Ignoring...", authority.getId());
-          promise.complete(authority);
+          promise.fail(new DuplicateEventException("Duplicated event"));
         } else {
           LOGGER.error(String.format(FAILED_CREATING_AUTHORITY_MSG_TEMPLATE, failure.getReason(), failure.getStatusCode()));
           promise.fail(failure.getReason());

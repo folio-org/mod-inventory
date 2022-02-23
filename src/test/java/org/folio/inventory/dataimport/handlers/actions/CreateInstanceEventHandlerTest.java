@@ -495,8 +495,8 @@ public class CreateInstanceEventHandlerTest {
   }
 
 
-  @Test
-  public void shouldProcessEventEvenIfDuplicatedInventoryStorageErrorExists() throws InterruptedException, ExecutionException, TimeoutException {
+  @Test(expected = Exception.class)
+  public void shouldNotProcessEventEvenIfDuplicatedInventoryStorageErrorExists() throws InterruptedException, ExecutionException, TimeoutException {
     Reader fakeReader = Mockito.mock(Reader.class);
 
     String instanceTypeId = "fe19bae4-da28-472b-be90-d442e2428ead";
@@ -538,12 +538,8 @@ public class CreateInstanceEventHandlerTest {
       .withOkapiUrl(mockServer.baseUrl());
 
     CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
-    DataImportEventPayload actualDataImportEventPayload = future.get(20, TimeUnit.SECONDS);
 
-    assertEquals(DI_INVENTORY_INSTANCE_CREATED.value(), actualDataImportEventPayload.getEventType());
-    assertNotNull(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
-    JsonObject createdInstance = new JsonObject(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
-    assertNotNull(createdInstance);
+    future.get(5, TimeUnit.SECONDS);
   }
 
   private Response createdResponse() {

@@ -58,7 +58,6 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
   private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingParameters and mapping rules snapshots were not found by jobExecutionId '%s'. RecordId: '%s', chunkId: '%s' ";
   private static final String CREATING_INVENTORY_RELATIONSHIP_ERROR_MESSAGE = "Error creating inventory recordId and holdingsId relationship by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s'";
   private static final String PERMANENT_LOCATION_ID_ERROR_MESSAGE = "Can`t create Holding entity: 'permanentLocationId' is empty";
-  private static final String SAVE_HOLDING_ERROR_MESSAGE = "Can`t save new holding";
   private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t create Holding entity: context is empty or doesn't exist";
   private static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create a Holding entity requires a mapping profile";
   private static final String FIELD_004_MARC_HOLDINGS_NOT_NULL = "The field 004 for marc holdings must be not null";
@@ -122,12 +121,11 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
               future.complete(dataImportEventPayload);
             })
             .onFailure(e -> {
-              if (e instanceof DuplicateEventException) {
-                future.complete(dataImportEventPayload);
-              } else {
-                LOGGER.error(SAVE_HOLDING_ERROR_MESSAGE, e);
-                future.completeExceptionally(e);
+              if (!(e instanceof DuplicateEventException)) {
+                LOGGER.error("Error creating Holding by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
+                  recordId, chunkId, e);
               }
+              future.completeExceptionally(e);
             });
         })
         .onFailure(failure -> {
