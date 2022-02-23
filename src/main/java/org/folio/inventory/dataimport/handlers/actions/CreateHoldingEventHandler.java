@@ -33,6 +33,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import static java.lang.String.format;
+import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.logging.log4j.util.Strings.isNotEmpty;
@@ -193,7 +194,7 @@ public class CreateHoldingEventHandler implements EventHandler {
       success -> promise.complete(success.getResult()),
       failure -> {
         //for now there is a solution via error-message contains. It will be improved via another solution by https://issues.folio.org/browse/RMB-899.
-        if (failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
+        if (isNotBlank(failure.getReason()) && failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
           LOGGER.info("Duplicated event received by InstanceId: {}. Ignoring...", holdings.getId());
           promise.fail(new DuplicateEventException("Duplicated event"));
         } else {

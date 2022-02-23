@@ -45,6 +45,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.ActionProfile.Action.CREATE;
@@ -246,9 +247,9 @@ public class CreateItemEventHandler implements EventHandler {
     itemCollection.add(item.withCirculationNotes(notes), success -> promise.complete(success.getResult()),
       failure -> {
         //This is temporary solution (verify by error message). It will be improved via another solution by https://issues.folio.org/browse/RMB-899.
-        if (failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
+        if (isNotBlank(failure.getReason()) && failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
           LOG.info("Duplicated event received by ItemId: {}. Ignoring...", item.getId());
-          promise.fail(new DuplicateEventException("Duplicated event"));
+          promise.fail(new DuplicateEventException(format("Duplicated event by Item id: %s", item.getId())));
         } else {
           LOG.error(format("Error posting Item cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
           promise.fail(failure.getReason());

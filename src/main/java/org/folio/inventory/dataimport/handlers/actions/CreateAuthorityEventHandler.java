@@ -1,5 +1,7 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import static java.lang.String.format;
+import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.folio.ActionProfile.FolioRecord.AUTHORITY;
 import static org.folio.ActionProfile.FolioRecord.MARC_AUTHORITY;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_CREATED;
@@ -46,9 +48,9 @@ public class CreateAuthorityEventHandler extends AbstractAuthorityEventHandler {
     authorityCollection.add(authority, success -> promise.complete(success.getResult()),
       failure -> {
         //This is temporary solution (verify by error message). It will be improved via another solution by https://issues.folio.org/browse/RMB-899.
-        if (failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
+        if (isNotBlank(failure.getReason()) && failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
           LOGGER.info("Duplicated event received by AuthorityId: {}. Ignoring...", authority.getId());
-          promise.fail(new DuplicateEventException("Duplicated event"));
+          promise.fail(new DuplicateEventException(format("Duplicated event by Authority id: %s", authority.getId())));
         } else {
           LOGGER.error(String.format(FAILED_CREATING_AUTHORITY_MSG_TEMPLATE, failure.getReason(), failure.getStatusCode()));
           promise.fail(failure.getReason());

@@ -31,6 +31,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import static java.lang.String.format;
+import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
@@ -55,8 +56,6 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
   private PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
   private MappingMetadataCache mappingMetadataCache;
   private IdStorageService idStorageService;
-
-  private Instance duplicatedInstance = null;
 
   public CreateInstanceEventHandler(Storage storage, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper, MappingMetadataCache mappingMetadataCache, IdStorageService idStorageService) {
     super(storage);
@@ -184,9 +183,9 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
     instanceCollection.add(instance, success -> promise.complete(success.getResult()),
       failure -> {
         //This is temporary solution (verify by error message). It will be improved via another solution by https://issues.folio.org/browse/RMB-899.
-        if (failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
+        if (isNotBlank(failure.getReason()) && failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
           LOGGER.info("Duplicated event received by InstanceId: {}. Ignoring...", instance.getId());
-          promise.fail(new DuplicateEventException("Duplicated event"));
+          promise.fail(new DuplicateEventException(format("Duplicated event by Instance id: %s", instance.getId())));
         } else {
           LOGGER.error(format("Error posting Instance by instanceId:'%s' cause %s, status code %s", instance.getId(), failure.getReason(), failure.getStatusCode()));
           promise.fail(failure.getReason());
