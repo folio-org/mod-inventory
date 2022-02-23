@@ -196,7 +196,7 @@ public class CreateHoldingEventHandler implements EventHandler {
         //for now there is a solution via error-message contains. It will be improved via another solution by https://issues.folio.org/browse/RMB-899.
         if (isNotBlank(failure.getReason()) && failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
           LOGGER.info("Duplicated event received by InstanceId: {}. Ignoring...", holdings.getId());
-          promise.fail(new DuplicateEventException("Duplicated event"));
+          promise.fail(new DuplicateEventException(format("Duplicated event by Holding id: %s", holdings.getId())));
         } else {
           LOGGER.error(format("Error posting Holdings cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
           promise.fail(failure.getReason());
