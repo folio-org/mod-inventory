@@ -123,9 +123,10 @@ public class CreateHoldingEventHandler implements EventHandler {
             .onFailure(e -> {
               if (e instanceof DuplicateEventException) {
                 future.complete(dataImportEventPayload);
+              } else {
+                LOGGER.error(SAVE_HOLDING_ERROR_MESSAGE, e);
+                future.completeExceptionally(e);
               }
-              LOGGER.error(SAVE_HOLDING_ERROR_MESSAGE, e);
-              future.completeExceptionally(e);
             });
         })
         .onFailure(failure -> {
