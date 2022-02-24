@@ -152,7 +152,7 @@ public class OkapiHttpClientTests {
     assertThat(response.getStatusCode(), is(HTTP_NO_CONTENT.toInt()));
     assertThat(response.getBody(), is(emptyOrNullString()));
   }
-  
+
   //TODO: Maybe replace this with a filter extension
   private MappingBuilder matchingFolioHeaders(MappingBuilder mappingBuilder) {
     return mappingBuilder
@@ -164,8 +164,7 @@ public class OkapiHttpClientTests {
   }
 
   private OkapiHttpClient createClient() {
-    return new OkapiHttpClient(
-      WebClient.wrap(vertxAssistant.createUsingVertx(Vertx::createHttpClient)),
+    return new OkapiHttpClient(vertxAssistant.getVertx(),
       okapiUrl, tenantId, token, userId, requestId, error -> {});
   }
 
