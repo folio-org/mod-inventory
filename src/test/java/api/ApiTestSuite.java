@@ -220,7 +220,7 @@ public class ApiTestSuite {
     throws MalformedURLException {
 
     return new OkapiHttpClient(
-      WebClient.wrap(vertxAssistant.createUsingVertx(Vertx::createHttpClient)),
+      vertxAssistant.getVertx(),
       new URL(storageOkapiUrl()), TENANT_ID, TOKEN, USER_ID, null,
       it -> System.out.println(String.format("Request failed: %s", it.toString())));
   }
