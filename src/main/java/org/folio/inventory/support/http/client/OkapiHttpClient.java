@@ -15,8 +15,6 @@ import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
 
 import io.vertx.core.Vertx;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.WebContext;
 
 import io.vertx.core.AsyncResult;
@@ -27,8 +25,6 @@ import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 
 public class OkapiHttpClient {
-  private static final Logger LOGGER = LogManager.getLogger(OkapiHttpClient.class);
-
   private static final String TENANT_HEADER = "X-Okapi-Tenant";
   private static final String TOKEN_HEADER = "X-Okapi-Token";
   private static final String OKAPI_URL_HEADER = "X-Okapi-Url";
@@ -46,7 +42,7 @@ public class OkapiHttpClient {
   static Map<Vertx,WebClient> webClients = new HashMap<>();
 
   static WebClient getWebClient(Vertx vertx) {
-    return webClients.computeIfAbsent(vertx, x -> WebClient.create(x));
+    return webClients.computeIfAbsent(vertx, WebClient::create);
   }
 
   /** HTTP client that calls via Okapi
