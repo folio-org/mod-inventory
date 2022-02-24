@@ -1,8 +1,11 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import static java.lang.String.format;
+import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.folio.ActionProfile.FolioRecord.AUTHORITY;
 import static org.folio.ActionProfile.FolioRecord.MARC_AUTHORITY;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_CREATED;
+import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.rest.jaxrs.model.DataImportEventTypes.DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
@@ -17,6 +20,7 @@ import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.domain.relationship.RecordToEntity;
 import org.folio.inventory.services.IdStorageService;
 import org.folio.inventory.storage.Storage;
+import org.folio.kafka.exception.DuplicateEventException;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 
 public class CreateAuthorityEventHandler extends AbstractAuthorityEventHandler {
@@ -43,8 +47,14 @@ public class CreateAuthorityEventHandler extends AbstractAuthorityEventHandler {
     createRelationship(promise, authority, payload);
     authorityCollection.add(authority, success -> promise.complete(success.getResult()),
       failure -> {
-        LOGGER.error(String.format(FAILED_CREATING_AUTHORITY_MSG_TEMPLATE, failure.getReason(), failure.getStatusCode()));
-        promise.fail(failure.getReason());
+        //This is temporary solution (verify by error message). It will be improved via another solution by https://issues.folio.org/browse/RMB-899.
+        if (isNotBlank(failure.getReason()) && failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
+          LOGGER.info("Duplicated event received by AuthorityId: {}. Ignoring...", authority.getId());
+          promise.fail(new DuplicateEventException(format("Duplicated event by Authority id: %s", authority.getId())));
+        } else {
+          LOGGER.error(String.format(FAILED_CREATING_AUTHORITY_MSG_TEMPLATE, failure.getReason(), failure.getStatusCode()));
+          promise.fail(failure.getReason());
+        }
       });
     return promise.future();
   }
