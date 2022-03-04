@@ -1,6 +1,7 @@
 package org.folio.inventory.dataimport.handlers.matching.loaders;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
@@ -10,9 +11,12 @@ import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.ItemUtil;
 import org.folio.rest.jaxrs.model.EntityType;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
 public class ItemLoader extends AbstractLoader<Item> {
 
@@ -39,10 +43,12 @@ public class ItemLoader extends AbstractLoader<Item> {
   protected String addCqlSubMatchCondition(DataImportEventPayload eventPayload) {
     String cqlSubMatch = EMPTY;
     if (eventPayload.getContext() != null) {
-      if (!isEmpty(eventPayload.getContext().get(EntityType.ITEM.value()))) {
+      if (isNotEmpty(eventPayload.getContext().get(AbstractLoader.MULTI_MATCH_IDS))) {
+        cqlSubMatch = getConditionByMultiMatchResult(eventPayload);
+      } else if (isNotEmpty(eventPayload.getContext().get(EntityType.ITEM.value()))) {
         JsonObject itemAsJson = new JsonObject(eventPayload.getContext().get(EntityType.ITEM.value()));
         cqlSubMatch = format(" AND id == \"%s\"", itemAsJson.getString("id"));
-      } else if (!isEmpty(eventPayload.getContext().get(EntityType.HOLDINGS.value()))) {
+      } else if (isNotEmpty(eventPayload.getContext().get(EntityType.HOLDINGS.value()))) {
         JsonObject holdingAsJson = new JsonObject(eventPayload.getContext().get(EntityType.HOLDINGS.value()));
         if (holdingAsJson.getJsonObject(HOLDINGS_FIELD) != null) {
           holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_FIELD);
@@ -56,5 +62,14 @@ public class ItemLoader extends AbstractLoader<Item> {
   @Override
   protected String mapEntityToJsonString(Item item) {
     return ItemUtil.mapToMappingResultRepresentation(item);
+  }
+
+  @Override
+  protected String mapEntityListToIdsJson(List<Item> itemList) {
+    List<String> idList = itemList.stream()
+      .map(Item::getId)
+      .collect(Collectors.toList());
+
+    return Json.encode(idList);
   }
 }

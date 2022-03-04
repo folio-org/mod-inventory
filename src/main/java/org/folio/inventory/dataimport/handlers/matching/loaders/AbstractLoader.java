@@ -2,6 +2,7 @@ package org.folio.inventory.dataimport.handlers.matching.loaders;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
@@ -14,15 +15,21 @@ import org.folio.processing.matching.loader.LoadResult;
 import org.folio.processing.matching.loader.MatchValueLoader;
 import org.folio.processing.matching.loader.query.LoadQuery;
 import org.folio.rest.jaxrs.model.EntityType;
+import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 
 import java.io.UnsupportedEncodingException;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
+import static java.lang.String.format;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 
 public abstract class AbstractLoader<T> implements MatchValueLoader {
 
   private static final Logger LOG = LogManager.getLogger(AbstractLoader.class);
+
+  public static final String MULTI_MATCH_IDS = "MULTI_MATCH_IDS";
 
   private final Vertx vertx;
 
@@ -49,9 +56,16 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
             if (collection.totalRecords == 1) {
               loadResult.setValue(mapEntityToJsonString(collection.records.get(0)));
             } else if (collection.totalRecords > 1) {
-              String errorMessage = String.format("Found multiple records matching specified conditions. CQL query: [%s].\nFound records: %s", cql, Json.encodePrettily(collection.records));
-              LOG.error(errorMessage);
-              future.completeExceptionally(new MatchingException(errorMessage));
+              if (canProcessMultiMatchResult(eventPayload)) {
+                LOG.info("Found multiple records by CQL query: [{}]. Found records IDs: {}", cql, mapEntityListToIdsJson(collection.records));
+                loadResult.setEntityType(MULTI_MATCH_IDS);
+                loadResult.setValue(mapEntityListToIdsJson(collection.records));
+              } else {
+                String errorMessage = String.format("Found multiple records matching specified conditions. CQL query: [%s].%nFound records: %s", cql, Json.encodePrettily(collection.records));
+                LOG.error(errorMessage);
+                future.completeExceptionally(new MatchingException(errorMessage));
+                return;
+              }
             }
             future.complete(loadResult);
           },
@@ -68,9 +82,24 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
     return future;
   }
 
+  private boolean canProcessMultiMatchResult(DataImportEventPayload eventPayload) {
+    List<ProfileSnapshotWrapper> childProfiles = eventPayload.getCurrentNode().getChildSnapshotWrappers();
+    return !childProfiles.isEmpty() && childProfiles.get(0).getContentType().equals(ProfileSnapshotWrapper.ContentType.MATCH_PROFILE);
+  }
+
   @Override
   public boolean isEligibleForEntityType(EntityType entityType) {
     return getEntityType() == entityType;
+  }
+
+  protected String getConditionByMultiMatchResult(DataImportEventPayload eventPayload) {
+    String preparedIds = new JsonArray(eventPayload.getContext().remove(MULTI_MATCH_IDS))
+      .stream()
+      .map(Object::toString)
+      .collect(Collectors.joining(" OR "));
+
+    String cqlSubMatch = format(" AND id == (%s)", preparedIds);
+    return cqlSubMatch;
   }
 
   protected abstract EntityType getEntityType();
@@ -80,4 +109,6 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
   protected abstract String addCqlSubMatchCondition(DataImportEventPayload eventPayload);
 
   protected abstract String mapEntityToJsonString(T entity);
+
+  protected abstract String mapEntityListToIdsJson(List<T> entityList);
 }
