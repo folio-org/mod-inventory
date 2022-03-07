@@ -64,6 +64,7 @@ import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.MatchExpression.DataValueType.VALUE_FROM_RECORD;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MATCH_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ReactTo.MATCH;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.junit.MatcherAssert.assertThat;
 import static org.junit.Assert.assertFalse;
@@ -418,7 +419,8 @@ public class MatchHoldingEventHandlerUnitTest {
     DataImportEventPayload eventPayload = createEventPayload().withContext(context);
     eventPayload.getCurrentNode().setChildSnapshotWrappers(List.of(new ProfileSnapshotWrapper()
       .withContent(new MatchProfile().withExistingRecordType(HOLDINGS).withIncomingRecordType(MARC_BIBLIOGRAPHIC))
-      .withContentType(MATCH_PROFILE)));
+      .withContentType(MATCH_PROFILE)
+      .withReactTo(MATCH)));
 
     eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) -> testContext.verify(v -> {
       testContext.assertNull(throwable);

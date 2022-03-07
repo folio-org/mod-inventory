@@ -16,6 +16,8 @@ import org.folio.processing.matching.loader.MatchValueLoader;
 import org.folio.processing.matching.loader.query.LoadQuery;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType;
+import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ReactTo;
 
 import java.io.UnsupportedEncodingException;
 import java.util.List;
@@ -23,6 +25,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 
 public abstract class AbstractLoader<T> implements MatchValueLoader {
@@ -84,7 +87,8 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
 
   private boolean canProcessMultiMatchResult(DataImportEventPayload eventPayload) {
     List<ProfileSnapshotWrapper> childProfiles = eventPayload.getCurrentNode().getChildSnapshotWrappers();
-    return !childProfiles.isEmpty() && childProfiles.get(0).getContentType().equals(ProfileSnapshotWrapper.ContentType.MATCH_PROFILE);
+    return isNotEmpty(childProfiles) && ReactTo.MATCH.equals(childProfiles.get(0).getReactTo())
+      && ContentType.MATCH_PROFILE.equals(childProfiles.get(0).getContentType());
   }
 
   @Override
@@ -98,8 +102,7 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
       .map(Object::toString)
       .collect(Collectors.joining(" OR "));
 
-    String cqlSubMatch = format(" AND id == (%s)", preparedIds);
-    return cqlSubMatch;
+    return format(" AND id == (%s)", preparedIds);
   }
 
   protected abstract EntityType getEntityType();

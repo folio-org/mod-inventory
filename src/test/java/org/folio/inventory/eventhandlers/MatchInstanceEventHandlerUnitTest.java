@@ -51,6 +51,7 @@ import java.util.function.Consumer;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static org.folio.DataImportEventTypes.DI_ERROR;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_NOT_MATCHED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
@@ -59,8 +60,10 @@ import static org.folio.inventory.dataimport.handlers.matching.loaders.AbstractL
 import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.MatchExpression.DataValueType.VALUE_FROM_RECORD;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MATCH_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ReactTo.MATCH;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.junit.MatcherAssert.assertThat;
 import static org.junit.Assert.assertFalse;
@@ -362,7 +365,6 @@ public class MatchInstanceEventHandlerUnitTest {
   @Test
   public void shouldPutMultipleMatchResultToPayloadOnHandleEventPayload(TestContext testContext)
     throws UnsupportedEncodingException {
-
     Async async = testContext.async();
     List<Instance> matchedInstances = List.of(
       new Instance(UUID.randomUUID().toString(), "1", "in1", "MARC", "Wonderful", "12334"),
@@ -388,8 +390,9 @@ public class MatchInstanceEventHandlerUnitTest {
     context.put(RELATIONS, MATCHING_RELATIONS);
     DataImportEventPayload eventPayload = createEventPayload().withContext(context);
     eventPayload.getCurrentNode().setChildSnapshotWrappers(List.of(new ProfileSnapshotWrapper()
+      .withContent(subMatchProfile)
       .withContentType(MATCH_PROFILE)
-      .withContent(subMatchProfile)));
+      .withReactTo(MATCH)));
 
     eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) -> testContext.verify(v -> {
       testContext.assertNull(throwable);
@@ -399,6 +402,39 @@ public class MatchInstanceEventHandlerUnitTest {
         hasItems(matchedInstances.get(0).getId(), matchedInstances.get(1).getId()));
       async.complete();
     }));
+  }
+
+  @Test
+  public void shouldReturnFailedFutureWhenFirstChildProfileIsNotMatchProfileOnHandleEventPayload(TestContext testContext)
+    throws UnsupportedEncodingException {
+    Async async = testContext.async();
+    List<Instance> matchedInstances = List.of(
+      new Instance(UUID.randomUUID().toString(), "1", "in1", "MARC", "Wonderful", "12334"),
+      new Instance(UUID.randomUUID().toString(), "1", "in2", "MARC", "Wonderful", "12334"));
+
+    doAnswer(invocation -> {
+      Consumer<Success<MultipleRecords<Instance>>> successHandler = invocation.getArgument(2);
+      Success<MultipleRecords<Instance>> result =
+        new Success<>(new MultipleRecords<>(matchedInstances, 2));
+      successHandler.accept(result);
+      return null;
+    }).when(instanceCollection)
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)),
+        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    EventHandler eventHandler = new MatchInstanceEventHandler(mappingMetadataCache);
+    HashMap<String, String> context = new HashMap<>();
+    context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
+    context.put(RELATIONS, MATCHING_RELATIONS);
+    DataImportEventPayload eventPayload = createEventPayload().withContext(context);
+    eventPayload.getCurrentNode().setChildSnapshotWrappers(List.of(
+      new ProfileSnapshotWrapper().withContentType(ACTION_PROFILE).withReactTo(MATCH).withOrder(0),
+      new ProfileSnapshotWrapper().withContentType(MATCH_PROFILE).withReactTo(MATCH).withOrder(1)));
+
+    eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) -> {
+      testContext.assertNotNull(throwable);
+      async.complete();
+    });
   }
 
   private DataImportEventPayload createEventPayload() {
