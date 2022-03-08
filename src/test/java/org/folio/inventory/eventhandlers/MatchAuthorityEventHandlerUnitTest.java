@@ -469,8 +469,7 @@ public class MatchAuthorityEventHandlerUnitTest {
   @Test
   public void shouldMatchWithSubConditionBasedOnMultiMatchResultOnHandleEventPayload(TestContext testContext) throws UnsupportedEncodingException {
     Async async = testContext.async();
-    List<String> multiMatchResult = List.of(
-      "bd39d7cc-f313-47ea-bf2d-abcac2b24a64", "e6dc8015-fcad-40cf-afa9-e817a605dc06");
+    List<String> multiMatchResult = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
     Authority expectedAuthority = createAuthority();
 
     MatchDetail personalNameMatchDetail = new MatchDetail()
