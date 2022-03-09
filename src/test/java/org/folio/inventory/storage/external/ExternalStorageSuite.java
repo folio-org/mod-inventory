@@ -90,7 +90,7 @@ public class ExternalStorageSuite {
     throws MalformedURLException {
 
     return new OkapiHttpClient(
-      WebClient.wrap(vertxAssistant.createUsingVertx(Vertx::createHttpClient)),
+      vertxAssistant.getVertx(),
       new URL(getStorageAddress()), TENANT_ID, TENANT_TOKEN, USER_ID, "1234",
       it -> System.out.println(String.format("Request failed: %s", it.toString())));
   }

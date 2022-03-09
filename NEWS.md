@@ -1,12 +1,9 @@
-## 18.x.x 2021-xx-xx
+## 18.1.0 2022-02-24
 
 * added Marc Authority handler for entities created via MARC Authority Data Import (MODINV-501)
 * added support for new administrative notes field (MODINV-580, MODINV-581, MODINV-582)
 * Update Log4j to 2.16.0. (CVE-2021-44228) (MODINV-599)
 * Remove Kafka cache for QuickMarcKafkaHandler (MODINV-614) (MODINV-599)
-
-## 18.1.0 2021-10-18
-
 * Edit MARC Authorities via quickMARC | Update Inventory Authorities (MODINV-503)
 * Fixed incorrect optimistic locking behavior for instance update when uploading file via data import (MODINV-546)
 * Fixed holdings record created via MARC Bib Data Import shows incorrect source (MODINV-549)
