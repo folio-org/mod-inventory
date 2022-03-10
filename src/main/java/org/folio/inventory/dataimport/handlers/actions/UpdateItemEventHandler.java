@@ -304,7 +304,7 @@ public class UpdateItemEventHandler implements EventHandler {
         try {
           eventPayload.setCurrentNode(ObjectMapperTool.getMapper().readValue(eventPayload.getContext().get(CURRENT_NODE_PROPERTY), ProfileSnapshotWrapper.class));
         } catch (JsonProcessingException e) {
-          LOG.error(format("Cannot map from CURRENT_NODE value %s", e.getCause()));
+          LOG.error("Cannot map from CURRENT_NODE value", e);
         }
         eventPayload.getContext().remove(CURRENT_EVENT_TYPE_PROPERTY);
         eventPayload.getContext().remove(CURRENT_NODE_PROPERTY);

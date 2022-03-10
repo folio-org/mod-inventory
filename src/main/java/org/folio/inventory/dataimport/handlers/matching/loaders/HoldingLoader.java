@@ -10,9 +10,12 @@ import org.folio.inventory.domain.SearchableCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.rest.jaxrs.model.EntityType;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
 public class HoldingLoader extends AbstractLoader<HoldingsRecord> {
 
@@ -39,13 +42,15 @@ public class HoldingLoader extends AbstractLoader<HoldingsRecord> {
   protected String addCqlSubMatchCondition(DataImportEventPayload eventPayload) {
     String cqlSubMatch = EMPTY;
     if (eventPayload.getContext() != null) {
-      if (!isEmpty(eventPayload.getContext().get(EntityType.HOLDINGS.value()))) {
+      if (isNotEmpty(eventPayload.getContext().get(AbstractLoader.MULTI_MATCH_IDS))) {
+        cqlSubMatch = getConditionByMultiMatchResult(eventPayload);
+      } else if (isNotEmpty(eventPayload.getContext().get(EntityType.HOLDINGS.value()))) {
         JsonObject holdingAsJson = new JsonObject(eventPayload.getContext().get(EntityType.HOLDINGS.value()));
         if (holdingAsJson.getJsonObject(HOLDINGS_FIELD) != null) {
           holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_FIELD);
         }
         cqlSubMatch = format(" AND id == \"%s\"", holdingAsJson.getString("id"));
-      } else if (!isEmpty(eventPayload.getContext().get(EntityType.INSTANCE.value()))) {
+      } else if (isNotEmpty(eventPayload.getContext().get(EntityType.INSTANCE.value()))) {
         JsonObject instanceAsJson = new JsonObject(eventPayload.getContext().get(EntityType.INSTANCE.value()));
         cqlSubMatch = format(" AND instanceId == \"%s\"", instanceAsJson.getString("id"));
       }
@@ -56,5 +61,14 @@ public class HoldingLoader extends AbstractLoader<HoldingsRecord> {
   @Override
   protected String mapEntityToJsonString(HoldingsRecord holdingsRecord) {
     return Json.encode(holdingsRecord);
+  }
+
+  @Override
+  protected String mapEntityListToIdsJsonString(List<HoldingsRecord> holdingList) {
+    List<String> idList = holdingList.stream()
+      .map(HoldingsRecord::getId)
+      .collect(Collectors.toList());
+
+    return Json.encode(idList);
   }
 }
