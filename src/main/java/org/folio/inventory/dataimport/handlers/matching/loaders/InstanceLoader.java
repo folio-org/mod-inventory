@@ -57,7 +57,7 @@ public class InstanceLoader extends AbstractLoader<Instance> {
   }
 
   @Override
-  protected String mapEntityListToIdsJson(List<Instance> instanceList) {
+  protected String mapEntityListToIdsJsonString(List<Instance> instanceList) {
     List<String> idList = instanceList.stream()
       .map(Instance::getId)
       .collect(Collectors.toList());

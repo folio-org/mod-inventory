@@ -64,7 +64,7 @@ public class HoldingLoader extends AbstractLoader<HoldingsRecord> {
   }
 
   @Override
-  protected String mapEntityListToIdsJson(List<HoldingsRecord> holdingList) {
+  protected String mapEntityListToIdsJsonString(List<HoldingsRecord> holdingList) {
     List<String> idList = holdingList.stream()
       .map(HoldingsRecord::getId)
       .collect(Collectors.toList());

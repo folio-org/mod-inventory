@@ -61,7 +61,7 @@ public class AuthorityLoader extends AbstractLoader<Authority> {
   }
 
   @Override
-  protected String mapEntityListToIdsJson(List<Authority> authorityList) {
+  protected String mapEntityListToIdsJsonString(List<Authority> authorityList) {
     List<String> idList = authorityList.stream()
       .map(Authority::getId)
       .collect(Collectors.toList());

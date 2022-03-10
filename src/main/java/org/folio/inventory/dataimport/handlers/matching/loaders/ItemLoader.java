@@ -65,7 +65,7 @@ public class ItemLoader extends AbstractLoader<Item> {
   }
 
   @Override
-  protected String mapEntityListToIdsJson(List<Item> itemList) {
+  protected String mapEntityListToIdsJsonString(List<Item> itemList) {
     List<String> idList = itemList.stream()
       .map(Item::getId)
       .collect(Collectors.toList());

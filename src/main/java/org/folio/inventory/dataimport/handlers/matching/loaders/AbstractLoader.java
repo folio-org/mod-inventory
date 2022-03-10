@@ -60,9 +60,9 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
               loadResult.setValue(mapEntityToJsonString(collection.records.get(0)));
             } else if (collection.totalRecords > 1) {
               if (canProcessMultiMatchResult(eventPayload)) {
-                LOG.info("Found multiple records by CQL query: [{}]. Found records IDs: {}", cql, mapEntityListToIdsJson(collection.records));
+                LOG.info("Found multiple records by CQL query: [{}]. Found records IDs: {}", cql, mapEntityListToIdsJsonString(collection.records));
                 loadResult.setEntityType(MULTI_MATCH_IDS);
-                loadResult.setValue(mapEntityListToIdsJson(collection.records));
+                loadResult.setValue(mapEntityListToIdsJsonString(collection.records));
               } else {
                 String errorMessage = String.format("Found multiple records matching specified conditions. CQL query: [%s].%nFound records: %s", cql, Json.encodePrettily(collection.records));
                 LOG.error(errorMessage);
@@ -113,5 +113,5 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
 
   protected abstract String mapEntityToJsonString(T entity);
 
-  protected abstract String mapEntityListToIdsJson(List<T> entityList);
+  protected abstract String mapEntityListToIdsJsonString(List<T> entityList);
 }
