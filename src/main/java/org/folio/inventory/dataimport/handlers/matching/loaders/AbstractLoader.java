@@ -36,7 +36,7 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
 
   private final Vertx vertx;
 
-  public AbstractLoader(Vertx vertx) {
+  protected AbstractLoader(Vertx vertx) {
     this.vertx = vertx;
   }
 
