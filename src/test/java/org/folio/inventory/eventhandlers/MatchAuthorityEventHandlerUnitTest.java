@@ -2,6 +2,8 @@ package org.folio.inventory.eventhandlers;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -43,6 +45,7 @@ import org.mockito.MockitoAnnotations;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -54,11 +57,16 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_MATCHED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_NOT_MATCHED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_AUTHORITY_RECORD_CREATED;
 import static org.folio.MatchDetail.MatchCriterion.EXACTLY_MATCHES;
+import static org.folio.inventory.dataimport.handlers.matching.loaders.AbstractLoader.MULTI_MATCH_IDS;
 import static org.folio.rest.jaxrs.model.EntityType.AUTHORITY;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_AUTHORITY;
+import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.MatchExpression.DataValueType.VALUE_FROM_RECORD;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MATCH_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ReactTo.MATCH;
+import static org.hamcrest.Matchers.hasItems;
+import static org.hamcrest.junit.MatcherAssert.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -456,6 +464,92 @@ public class MatchAuthorityEventHandlerUnitTest {
       testContext.assertEquals(DI_INVENTORY_AUTHORITY_MATCHED.value(), updatedEventPayload.getEventType());
       async.complete();
     });
+  }
+
+  @Test
+  public void shouldMatchWithSubConditionBasedOnMultiMatchResultOnHandleEventPayload(TestContext testContext) throws UnsupportedEncodingException {
+    Async async = testContext.async();
+    List<String> multiMatchResult = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
+    Authority expectedAuthority = createAuthority();
+
+    MatchDetail personalNameMatchDetail = new MatchDetail()
+      .withMatchCriterion(EXACTLY_MATCHES)
+      .withExistingMatchExpression(new MatchExpression()
+        .withDataValueType(VALUE_FROM_RECORD)
+        .withFields(singletonList(new Field()
+          .withLabel("personalName")
+          .withValue("authority.personalName"))));
+
+    doAnswer(invocation -> {
+      Consumer<Success<MultipleRecords<Authority>>> successHandler = invocation.getArgument(2);
+      Success<MultipleRecords<Authority>> result =
+        new Success<>(new MultipleRecords<>(singletonList(expectedAuthority), 1));
+      successHandler.accept(result);
+      return null;
+    }).when(collection)
+      .findByCql(eq(format("personalName == \"%s\" AND id == (%s OR %s)", PERSONAL_NAME, multiMatchResult.get(0), multiMatchResult.get(1))),
+        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
+    HashMap<String, String> context = new HashMap<>();
+    context.put(MULTI_MATCH_IDS, Json.encode(multiMatchResult));
+    context.put("MAPPING_PARAMS", new JsonObject().encode());
+    DataImportEventPayload eventPayload = createEventPayload(personalNameMatchDetail).withContext(context);
+
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
+      testContext.assertNull(throwable);
+      testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
+      testContext.assertEquals(updatedEventPayload.getEventsChain(), List.of(DI_SRS_MARC_AUTHORITY_RECORD_CREATED.value()));
+      testContext.assertEquals(DI_INVENTORY_AUTHORITY_MATCHED.value(), updatedEventPayload.getEventType());
+      testContext.assertEquals(
+        Json.decodeValue(updatedEventPayload.getContext().get(AUTHORITY.value()), Authority.class).getId(),
+        expectedAuthority.getId());
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldPutMultipleMatchResultToPayloadOnHandleEventPayload(TestContext testContext) throws UnsupportedEncodingException {
+    Async async = testContext.async();
+    List<Authority> matchedAuthorities = List.of(new Authority().withId(AUTHORITY_ID), new Authority().withId(UUID.randomUUID().toString()));
+
+    MatchDetail personalNameMatchDetail = new MatchDetail()
+      .withMatchCriterion(EXACTLY_MATCHES)
+      .withExistingMatchExpression(new MatchExpression()
+        .withDataValueType(VALUE_FROM_RECORD)
+        .withFields(singletonList(new Field()
+          .withLabel("personalName")
+          .withValue("authority.personalName"))));
+
+    doAnswer(invocation -> {
+      Consumer<Success<MultipleRecords<Authority>>> successHandler = invocation.getArgument(2);
+      Success<MultipleRecords<Authority>> result =
+        new Success<>(new MultipleRecords<>(matchedAuthorities, 2));
+      successHandler.accept(result);
+      return null;
+    }).when(collection)
+      .findByCql(eq(format("personalName == \"%s\"", PERSONAL_NAME)),
+        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
+    HashMap<String, String> context = new HashMap<>();
+    context.put("MAPPING_PARAMS", new JsonObject().encode());
+    DataImportEventPayload eventPayload = createEventPayload(personalNameMatchDetail).withContext(context);
+    eventPayload.getCurrentNode().setChildSnapshotWrappers(List.of(new ProfileSnapshotWrapper()
+      .withContent(new MatchProfile().withExistingRecordType(AUTHORITY).withIncomingRecordType(MARC_BIBLIOGRAPHIC))
+      .withContentType(MATCH_PROFILE)
+      .withReactTo(MATCH)));
+
+    eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) -> testContext.verify(v -> {
+
+      testContext.assertNull(throwable);
+      testContext.assertEquals(1, processedPayload.getEventsChain().size());
+      testContext.assertEquals(processedPayload.getEventsChain(), List.of(DI_SRS_MARC_AUTHORITY_RECORD_CREATED.value()));
+      testContext.assertEquals(DI_INVENTORY_AUTHORITY_MATCHED.value(), processedPayload.getEventType());
+      assertThat(new JsonArray(processedPayload.getContext().get(MULTI_MATCH_IDS)),
+        hasItems(matchedAuthorities.get(0).getId(), matchedAuthorities.get(1).getId()));
+      async.complete();
+    }));
   }
 
   private Authority createAuthority() {
