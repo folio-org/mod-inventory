@@ -136,7 +136,7 @@ public class DataImportKafkaHandlerTest {
     HttpClient client = vertx.createHttpClient(new HttpClientOptions().setConnectTimeout(3000));
     dataImportKafkaHandler = new DataImportKafkaHandler(vertx, mockedStorage, client,
       new ProfileSnapshotCache(vertx, client, 3600),
-      new MappingMetadataCache(vertx, client, 3600));
+      kafkaConfig, new MappingMetadataCache(vertx, client, 3600));
     EventManager.clearEventHandlers();
     EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, 1);
   }

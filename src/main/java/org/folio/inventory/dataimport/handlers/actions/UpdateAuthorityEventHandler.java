@@ -19,14 +19,17 @@ import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.exceptions.DataImportException;
 import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.storage.Storage;
+import org.folio.processing.events.services.publisher.KafkaEventPublisher;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 
 public class UpdateAuthorityEventHandler extends AbstractAuthorityEventHandler {
-
   protected static final String ERROR_UPDATING_AUTHORITY_MSG_TEMPLATE = "Failed updating Authority. Cause: %s, status: '%s'";
+  private final KafkaEventPublisher eventPublisher;
 
-  public UpdateAuthorityEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache) {
+  public UpdateAuthorityEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache,
+                                     KafkaEventPublisher publisher) {
     super(storage, mappingMetadataCache);
+    this.eventPublisher = publisher;
   }
 
   @Override
@@ -59,6 +62,11 @@ public class UpdateAuthorityEventHandler extends AbstractAuthorityEventHandler {
   @Override
   protected ProfileSnapshotWrapper.ContentType profileContentType() {
     return MAPPING_PROFILE;
+  }
+
+  @Override
+  protected void publishEvent(DataImportEventPayload payload) {
+    eventPublisher.publish(payload);
   }
 
   @Override
