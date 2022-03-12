@@ -118,7 +118,7 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
     ProfileSnapshotCache profileSnapshotCache = new ProfileSnapshotCache(vertx, client, Long.parseLong(profileSnapshotExpirationTime));
     MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, client, Long.parseLong(mappingMetadataExpirationTime));
 
-    DataImportKafkaHandler dataImportKafkaHandler = new DataImportKafkaHandler(vertx, storage, client, profileSnapshotCache, mappingMetadataCache);
+    DataImportKafkaHandler dataImportKafkaHandler = new DataImportKafkaHandler(vertx, storage, client, profileSnapshotCache, kafkaConfig, mappingMetadataCache);
 
     List<Future> futures = EVENT_TYPES.stream()
       .map(eventType -> createKafkaConsumerWrapper(kafkaConfig, eventType, dataImportKafkaHandler))

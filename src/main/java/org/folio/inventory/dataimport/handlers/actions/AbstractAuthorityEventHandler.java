@@ -118,6 +118,8 @@ public abstract class AbstractAuthorityEventHandler implements EventHandler {
 
   protected abstract ProfileSnapshotWrapper.ContentType profileContentType();
 
+  protected abstract void publishEvent(DataImportEventPayload payload);
+
   private boolean isEligibleMappingProfile(MappingProfile mappingProfile) {
     return mappingProfile.getExistingRecordType() == EntityType.fromValue(sourceRecordType().value());
   }
@@ -146,6 +148,7 @@ public abstract class AbstractAuthorityEventHandler implements EventHandler {
     return authority -> {
       LOGGER.info(constructMsg(format(ACTION_SUCCEED_MSG_PATTERN, profileAction(), targetRecordType()), payload));
       payload.getContext().put(targetRecordType().value(), Json.encode(authority));
+      publishEvent(payload);
       future.complete(payload);
     };
   }
