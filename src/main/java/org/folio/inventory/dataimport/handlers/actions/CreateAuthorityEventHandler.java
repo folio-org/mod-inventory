@@ -91,6 +91,11 @@ public class CreateAuthorityEventHandler extends AbstractAuthorityEventHandler {
   }
 
   @Override
+  protected void publishEvent(DataImportEventPayload payload) {
+
+  }
+
+  @Override
   public String getPostProcessingInitializationEventType() {
     return DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING.value();
   }

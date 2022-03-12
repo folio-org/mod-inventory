@@ -42,6 +42,7 @@ import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import org.folio.processing.events.services.publisher.KafkaEventPublisher;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -57,7 +58,6 @@ import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.storage.Storage;
-import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.EntityType;
@@ -102,10 +102,9 @@ public class UpdateAuthorityEventHandlerTest {
   private AuthorityRecordCollection authorityCollection;
 
   @Mock
-  private OkapiHttpClient mockedClient;
-
-  @Mock
   private Storage storage;
+  @Mock
+  private KafkaEventPublisher publisher;
 
   private UpdateAuthorityEventHandler eventHandler;
 
@@ -114,7 +113,7 @@ public class UpdateAuthorityEventHandlerTest {
     MockitoAnnotations.openMocks(this);
     MappingManager.clearReaderFactories();
     MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, vertx.createHttpClient(), 3600);
-    eventHandler = new UpdateAuthorityEventHandler(storage, mappingMetadataCache);
+    eventHandler = new UpdateAuthorityEventHandler(storage, mappingMetadataCache, publisher);
     JsonObject mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
 
     doAnswer(invocationOnMock -> {
