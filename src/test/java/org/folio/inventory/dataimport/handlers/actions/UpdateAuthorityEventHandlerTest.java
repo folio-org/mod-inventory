@@ -12,6 +12,8 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 
 import static org.folio.ActionProfile.Action.MODIFY;
 import static org.folio.ActionProfile.FolioRecord.AUTHORITY;
@@ -42,6 +44,7 @@ import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import org.folio.processing.events.services.publisher.KafkaEventPublisher;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -57,7 +60,6 @@ import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.storage.Storage;
-import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.EntityType;
@@ -102,10 +104,9 @@ public class UpdateAuthorityEventHandlerTest {
   private AuthorityRecordCollection authorityCollection;
 
   @Mock
-  private OkapiHttpClient mockedClient;
-
-  @Mock
   private Storage storage;
+  @Mock
+  private KafkaEventPublisher publisher;
 
   private UpdateAuthorityEventHandler eventHandler;
 
@@ -114,7 +115,7 @@ public class UpdateAuthorityEventHandlerTest {
     MockitoAnnotations.openMocks(this);
     MappingManager.clearReaderFactories();
     MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, vertx.createHttpClient(), 3600);
-    eventHandler = new UpdateAuthorityEventHandler(storage, mappingMetadataCache);
+    eventHandler = new UpdateAuthorityEventHandler(storage, mappingMetadataCache, publisher);
     JsonObject mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
 
     doAnswer(invocationOnMock -> {
@@ -147,6 +148,8 @@ public class UpdateAuthorityEventHandlerTest {
 
     CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.SECONDS);
+
+    verify(publisher, times(1)).publish(dataImportEventPayload);
 
     assertEquals(DI_INVENTORY_AUTHORITY_UPDATED.value(), actualDataImportEventPayload.getEventType());
     assertNotNull(actualDataImportEventPayload.getContext().get(AUTHORITY.value()));
@@ -230,6 +233,7 @@ public class UpdateAuthorityEventHandlerTest {
 
     ExecutionException exception = assertThrows(ExecutionException.class, future::get);
     assertThat(exception.getCause().getMessage(), containsString("Unexpected payload"));
+    verify(publisher, times(0)).publish(dataImportEventPayload);
   }
 
   @Test
