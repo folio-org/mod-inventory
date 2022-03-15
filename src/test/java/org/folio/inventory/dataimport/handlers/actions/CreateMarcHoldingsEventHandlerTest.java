@@ -175,8 +175,7 @@ public class CreateMarcHoldingsEventHandlerTest {
 
     doAnswer(invocationOnMock -> {
       sourceId = String.valueOf(UUID.randomUUID());
-      HoldingsRecordsSource source = new HoldingsRecordsSource();
-      source.setId(sourceId);
+      HoldingsRecordsSource source = new HoldingsRecordsSource().withId(sourceId).withName("MARC");
       List<HoldingsRecordsSource> sourceList = Collections.singletonList(source);
       MultipleRecords<HoldingsRecordsSource> result = new MultipleRecords<>(sourceList, 1);
       Consumer<Success<MultipleRecords<HoldingsRecordsSource>>> successHandler = invocationOnMock.getArgument(2);
@@ -301,36 +300,21 @@ public class CreateMarcHoldingsEventHandlerTest {
       return null;
     }).when(instanceRecordCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
-    when(storage.getHoldingsRecordsSourceCollection(any())).thenReturn(holdingsRecordsSourceCollection);
-    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+    var message = "No instance id found for marc holdings with hrid: in00000000315";
+    shouldNotProcessEventIfFieldNotFoundByMarcHoldings(message);
+  }
 
-    HoldingsRecord holdings = new HoldingsRecord()
-      .withId(String.valueOf(UUID.randomUUID()))
-      .withHrid(String.valueOf(UUID.randomUUID()))
-      .withInstanceId(String.valueOf(UUID.randomUUID()))
-      .withSourceId(String.valueOf(UUID.randomUUID()))
-      .withHoldingsTypeId(String.valueOf(UUID.randomUUID()))
-      .withPermanentLocationId(PERMANENT_LOCATION_ID);
+  @Test
+  public void shouldNotProcessEventIfSourceNotFoundByMarcHoldings() throws IOException {
+    doAnswer(invocationOnMock -> {
+      MultipleRecords<HoldingsRecordsSource> result = new MultipleRecords<>(new ArrayList<>(), 1);
+      Consumer<Success<MultipleRecords<HoldingsRecordsSource>>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
+      return null;
+    }).when(holdingsRecordsSourceCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
-    HashMap<String, String> context = new HashMap<>();
-    context.put("HOLDINGS", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(holdings)).encode());
-    context.put(MARC_HOLDINGS.value(), Json.encode(record));
-
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_SRS_MARC_HOLDING_RECORD_CREATED.value())
-      .withJobExecutionId(UUID.randomUUID().toString())
-      .withOkapiUrl(mockServer.baseUrl())
-      .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
-
-    CompletableFuture<DataImportEventPayload> future = createMarcHoldingsEventHandler.handle(dataImportEventPayload);
-
-    ExecutionException exception = Assert.assertThrows(ExecutionException.class, future::get);
-    Assert.assertEquals("No instance id found for marc holdings with hrid: in00000000315", exception.getCause().getMessage());
+    var message = "No source id found for holdings with name MARC";
+    shouldNotProcessEventIfFieldNotFoundByMarcHoldings(message);
   }
 
   @Test
@@ -689,5 +673,39 @@ public class CreateMarcHoldingsEventHandlerTest {
     assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("id"));
     Assert.assertNull(new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString(field));
     Assert.assertEquals(PERMANENT_LOCATION_ID, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("permanentLocationId"));
+  }
+
+  private void shouldNotProcessEventIfFieldNotFoundByMarcHoldings(String message) throws IOException {
+    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
+    when(storage.getHoldingsRecordsSourceCollection(any())).thenReturn(holdingsRecordsSourceCollection);
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+
+    HoldingsRecord holdings = new HoldingsRecord()
+      .withId(String.valueOf(UUID.randomUUID()))
+      .withHrid(String.valueOf(UUID.randomUUID()))
+      .withInstanceId(String.valueOf(UUID.randomUUID()))
+      .withSourceId(String.valueOf(UUID.randomUUID()))
+      .withHoldingsTypeId(String.valueOf(UUID.randomUUID()))
+      .withPermanentLocationId(PERMANENT_LOCATION_ID);
+
+    var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
+    HashMap<String, String> context = new HashMap<>();
+    context.put("HOLDINGS", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(holdings)).encode());
+    context.put(MARC_HOLDINGS.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_HOLDING_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl())
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = createMarcHoldingsEventHandler.handle(dataImportEventPayload);
+
+    ExecutionException exception = Assert.assertThrows(ExecutionException.class, future::get);
+    Assert.assertEquals(message, exception.getCause().getMessage());
+
   }
 }
