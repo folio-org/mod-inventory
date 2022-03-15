@@ -31,12 +31,7 @@ public class ExternalStorageModuleHoldingsRecordsSourceCollection
 
   @Override
   protected JsonObject mapToRequest(HoldingsRecordsSource record) {
-    try {
       return JsonObject.mapFrom(record);
-    } catch (Exception e) {
-      LOGGER.error(e);
-      throw new JsonMappingException("Can`t map 'holdingsRecordsSources' entity to json", e);
-    }
   }
 
   @Override

@@ -112,15 +112,16 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
             .map(v -> processMappingResult(dataImportEventPayload, holdingsId))
             .compose(holdingJson -> findInstanceIdByHrid(dataImportEventPayload, holdingJson, context)
               .map(instanceId -> {
-                fillInstanceId(dataImportEventPayload, holdingJson, instanceId);
+                holdingJson.put(INSTANCE_ID_FIELD, instanceId);
                 return holdingJson;
               }))
             .compose(holdingJson -> findSourceId(context)
               .map(sourceId -> {
-                fillSourceId(dataImportEventPayload, holdingJson, sourceId);
+                holdingJson.put(SOURCE_ID_FIELD, sourceId);
                 return holdingJson;
               }))
             .compose(holdingJson -> {
+              dataImportEventPayload.getContext().put(HOLDINGS.value(), holdingJson.encode());
               var holdingsRecords = storage.getHoldingsRecordCollection(context);
               HoldingsRecord holding = Json.decodeValue(payloadContext.get(HOLDINGS.value()), HoldingsRecord.class);
               return addHoldings(holding, holdingsRecords);
@@ -267,16 +268,6 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
     if (isEmpty(holdingAsJson.getString(PERMANENT_LOCATION_ID_FIELD))) {
       throw new EventProcessingException(PERMANENT_LOCATION_ID_ERROR_MESSAGE);
     }
-  }
-
-  private void fillInstanceId(DataImportEventPayload dataImportEventPayload, JsonObject holdingAsJson, String instanceId) {
-    holdingAsJson.put(INSTANCE_ID_FIELD, instanceId);
-    dataImportEventPayload.getContext().put(HOLDINGS.value(), holdingAsJson.encode());
-  }
-
-  private void fillSourceId(DataImportEventPayload dataImportEventPayload, JsonObject holdingAsJson, String sourceId) {
-    holdingAsJson.put(SOURCE_ID_FIELD, sourceId);
-    dataImportEventPayload.getContext().put(HOLDINGS.value(), holdingAsJson.encode());
   }
 
   private Future<HoldingsRecord> addHoldings(HoldingsRecord holdings, HoldingsRecordCollection holdingsRecordCollection) {
