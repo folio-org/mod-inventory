@@ -6,6 +6,7 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
 import java.util.HashMap;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -19,6 +20,7 @@ import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.relationship.RecordToEntity;
 import org.folio.inventory.services.IdStorageService;
 import org.folio.inventory.storage.Storage;
+import org.folio.kafka.exception.DuplicateEventException;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
@@ -31,6 +33,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import static java.lang.String.format;
+import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.logging.log4j.util.Strings.isNotEmpty;
@@ -38,6 +41,7 @@ import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
+import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 public class CreateHoldingEventHandler implements EventHandler {
@@ -49,7 +53,6 @@ public class CreateHoldingEventHandler implements EventHandler {
   private static final String HOLDINGS_PATH_FIELD = "holdings";
   private static final String PERMANENT_LOCATION_ID_FIELD = "permanentLocationId";
   private static final String PERMANENT_LOCATION_ID_ERROR_MESSAGE = "Can`t create Holding entity: 'permanentLocationId' is empty";
-  private static final String SAVE_HOLDING_ERROR_MESSAGE = "Can`t save new holding";
   private static final String CREATE_HOLDING_ERROR_MESSAGE = "Failed to create Holdings";
   private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t create Holding entity: context is empty or doesn`t exists";
   private static final String PAYLOAD_DATA_HAS_NO_INSTANCE_ID_ERROR_MSG = "Failed to extract instanceId from instance entity or parsed record";
@@ -92,24 +95,24 @@ public class CreateHoldingEventHandler implements EventHandler {
       recordToHoldingsFuture.onSuccess(res -> {
           String holdingsId = res.getEntityId();
           mappingMetadataCache.get(jobExecutionId, context)
-          .map(parametersOptional -> parametersOptional.orElseThrow(() ->
-            new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG,
-              jobExecutionId, recordId, chunkId))))
-          .map(mappingMetadataDto -> {
-            prepareEvent(dataImportEventPayload);
-            MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
-            MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
+            .map(parametersOptional -> parametersOptional.orElseThrow(() ->
+              new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG,
+                jobExecutionId, recordId, chunkId))))
+            .map(mappingMetadataDto -> {
+              prepareEvent(dataImportEventPayload);
+              MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
+              MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
 
-            JsonObject holdingAsJson = new JsonObject(payloadContext.get(HOLDINGS.value()));
-            if (holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD) != null) {
-              holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD);
-            }
-            holdingAsJson.put("id", holdingsId);
-            holdingAsJson.put("sourceId", FOLIO_SOURCE_ID);
-            fillInstanceIdIfNeeded(dataImportEventPayload, holdingAsJson);
-            checkIfPermanentLocationIdExists(holdingAsJson);
-            return Json.decodeValue(payloadContext.get(HOLDINGS.value()), HoldingsRecord.class);
-          })
+              JsonObject holdingAsJson = new JsonObject(payloadContext.get(HOLDINGS.value()));
+              if (holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD) != null) {
+                holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD);
+              }
+              holdingAsJson.put("id", holdingsId);
+              holdingAsJson.put("sourceId", FOLIO_SOURCE_ID);
+              fillInstanceIdIfNeeded(dataImportEventPayload, holdingAsJson);
+              checkIfPermanentLocationIdExists(holdingAsJson);
+              return Json.decodeValue(payloadContext.get(HOLDINGS.value()), HoldingsRecord.class);
+            })
             .compose(holdingToCreate -> addHoldings(holdingToCreate, context))
             .onSuccess(createdHoldings -> {
               LOGGER.info("Created Holding record by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}'",
@@ -118,7 +121,10 @@ public class CreateHoldingEventHandler implements EventHandler {
               future.complete(dataImportEventPayload);
             })
             .onFailure(e -> {
-              LOGGER.error(SAVE_HOLDING_ERROR_MESSAGE, e);
+              if (!(e instanceof DuplicateEventException)) {
+                LOGGER.error("Error creating inventory Holding record by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
+                  recordId, chunkId, e);
+              }
               future.completeExceptionally(e);
             });
         })
@@ -187,8 +193,14 @@ public class CreateHoldingEventHandler implements EventHandler {
     holdingsRecordCollection.add(holdings,
       success -> promise.complete(success.getResult()),
       failure -> {
-        LOGGER.error(format("Error posting Holdings cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
-        promise.fail(failure.getReason());
+        //for now there is a solution via error-message contains. It will be improved via another solution by https://issues.folio.org/browse/RMB-899.
+        if (isNotBlank(failure.getReason()) && failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
+          LOGGER.info("Duplicated event received by InstanceId: {}. Ignoring...", holdings.getId());
+          promise.fail(new DuplicateEventException(format("Duplicated event by Holding id: %s", holdings.getId())));
+        } else {
+          LOGGER.error(format("Error posting Holdings cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
+          promise.fail(failure.getReason());
+        }
       });
     return promise.future();
   }

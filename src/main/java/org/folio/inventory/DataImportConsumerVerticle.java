@@ -23,6 +23,7 @@ import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_NOT_MATCHED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_HOLDING_RECORD_CREATED;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_AUTHORITY_RECORD_DELETED;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX_REQUEST_SIZE;
@@ -79,6 +80,7 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
     DI_INVENTORY_ITEM_MATCHED,
     DI_INVENTORY_ITEM_NOT_MATCHED,
     DI_SRS_MARC_AUTHORITY_RECORD_CREATED,
+    DI_SRS_MARC_AUTHORITY_RECORD_DELETED,
     DI_SRS_MARC_AUTHORITY_RECORD_MODIFIED_READY_FOR_POST_PROCESSING,
     DI_SRS_MARC_AUTHORITY_RECORD_NOT_MATCHED,
     DI_SRS_MARC_BIB_RECORD_CREATED,
@@ -118,7 +120,7 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
     ProfileSnapshotCache profileSnapshotCache = new ProfileSnapshotCache(vertx, client, Long.parseLong(profileSnapshotExpirationTime));
     MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, client, Long.parseLong(mappingMetadataExpirationTime));
 
-    DataImportKafkaHandler dataImportKafkaHandler = new DataImportKafkaHandler(vertx, storage, client, profileSnapshotCache, mappingMetadataCache);
+    DataImportKafkaHandler dataImportKafkaHandler = new DataImportKafkaHandler(vertx, storage, client, profileSnapshotCache, kafkaConfig, mappingMetadataCache);
 
     List<Future> futures = EVENT_TYPES.stream()
       .map(eventType -> createKafkaConsumerWrapper(kafkaConfig, eventType, dataImportKafkaHandler))
