@@ -188,15 +188,12 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
     try {
       sourceCollection.findByCql(format("name=%s", MARC_NAME), PagingParameters.defaults(),
         findResult -> {
-          String sourceId = null;
           if (findResult.getResult() != null && findResult.getResult().totalRecords == 1){
-            var records = findResult.getResult().records;
-            var instance = records.stream()
-              .findFirst()
-              .orElseThrow(() -> new EventProcessingException("No source id found for holdings with name MARC"));
-            sourceId = instance.getId();
+            var sourceId = findResult.getResult().records.get(0).getId();
+            promise.complete(sourceId);
+          } else {
+            promise.fail(new EventProcessingException("No source id found for holdings with name MARC"));
           }
-          promise.complete(sourceId);
         },
         failure -> {
           LOGGER.error(format(ERROR_HOLDING_MSG + ". StatusCode: %s. Message: %s", failure.getStatusCode(), failure.getReason()));
