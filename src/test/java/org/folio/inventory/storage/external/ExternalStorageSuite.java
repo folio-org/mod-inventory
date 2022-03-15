@@ -19,7 +19,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 import io.vertx.core.Vertx;
-import io.vertx.ext.web.client.WebClient;
 import support.fakes.FakeOkapi;
 
 @RunWith(Suite.class)
@@ -28,6 +27,7 @@ import support.fakes.FakeOkapi;
   ExternalInstanceCollectionExamples.class,
   ExternalStorageModuleHoldingsRecordCollectionExamples.class,
   ExternalStorageModuleAuthorityRecordCollectionExamples.class,
+  ExternalStorageModuleHoldingsRecordsSourceCollectionExamples.class,
   ReferenceRecordClientExamples.class
 })
 public class ExternalStorageSuite {

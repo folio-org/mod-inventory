@@ -381,6 +381,7 @@
             <configuration>
               <sourcePaths>
                 <path>${basedir}/ramls/holdings-record.json</path>
+                <path>${basedir}/ramls/holdings-records-source.json</path>
                 <path>${basedir}/ramls/mappingMetadataDto.json</path>
               </sourcePaths>
               <targetPackage>org.folio</targetPackage>
