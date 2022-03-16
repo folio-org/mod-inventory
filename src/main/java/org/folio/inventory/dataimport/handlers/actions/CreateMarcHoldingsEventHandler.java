@@ -53,8 +53,10 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
   private static final Logger LOGGER = LogManager.getLogger(CreateMarcHoldingsEventHandler.class);
   private static final String ERROR_HOLDING_MSG = "Error loading inventory holdings for MARC BIB";
   private static final String MARC_FORMAT = "MARC_HOLDINGS";
+  private static final String MARC_NAME = "MARC";
   private static final String HOLDINGS_PATH = "holdings";
   private static final String INSTANCE_ID_FIELD = "instanceId";
+  private static final String SOURCE_ID_FIELD = "sourceId";
   private static final String PERMANENT_LOCATION_ID_FIELD = "permanentLocationId";
   private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingParameters and mapping rules snapshots were not found by jobExecutionId '%s'. RecordId: '%s', chunkId: '%s' ";
   private static final String CREATING_INVENTORY_RELATIONSHIP_ERROR_MESSAGE = "Error creating inventory recordId and holdingsId relationship by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s'";
@@ -109,12 +111,21 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
             .onSuccess(mappingMetadata -> defaultMapRecordToHoldings(dataImportEventPayload, mappingMetadata))
             .map(v -> processMappingResult(dataImportEventPayload, holdingsId))
             .compose(holdingJson -> findInstanceIdByHrid(dataImportEventPayload, holdingJson, context)
-              .compose(instanceId -> {
-                fillInstanceId(dataImportEventPayload, holdingJson, instanceId);
-                var holdingsRecords = storage.getHoldingsRecordCollection(context);
-                HoldingsRecord holding = Json.decodeValue(payloadContext.get(HOLDINGS.value()), HoldingsRecord.class);
-                return addHoldings(holding, holdingsRecords);
+              .map(instanceId -> {
+                holdingJson.put(INSTANCE_ID_FIELD, instanceId);
+                return holdingJson;
               }))
+            .compose(holdingJson -> findSourceId(context)
+              .map(sourceId -> {
+                holdingJson.put(SOURCE_ID_FIELD, sourceId);
+                return holdingJson;
+              }))
+            .compose(holdingJson -> {
+              dataImportEventPayload.getContext().put(HOLDINGS.value(), holdingJson.encode());
+              var holdingsRecords = storage.getHoldingsRecordCollection(context);
+              HoldingsRecord holding = Json.decodeValue(payloadContext.get(HOLDINGS.value()), HoldingsRecord.class);
+              return addHoldings(holding, holdingsRecords);
+            })
             .onSuccess(createdHoldings -> {
               LOGGER.info("Created Holding record by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
                 recordId, chunkId);
@@ -168,6 +179,32 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
       LOGGER.error("Failed to map Record to Holdings", e);
       throw new JsonMappingException("Error in default mapper.", e);
     }
+  }
+
+  private Future<String> findSourceId(Context context) {
+    Promise<String> promise = Promise.promise();
+
+    var sourceCollection = storage.getHoldingsRecordsSourceCollection(context);
+    try {
+      sourceCollection.findByCql(format("name=%s", MARC_NAME), PagingParameters.defaults(),
+        findResult -> {
+          if (findResult.getResult() != null && findResult.getResult().totalRecords == 1){
+            var sourceId = findResult.getResult().records.get(0).getId();
+            promise.complete(sourceId);
+          } else {
+            promise.fail(new EventProcessingException("No source id found for holdings with name MARC"));
+          }
+        },
+        failure -> {
+          LOGGER.error(format(ERROR_HOLDING_MSG + ". StatusCode: %s. Message: %s", failure.getStatusCode(), failure.getReason()));
+          promise.fail(new EventProcessingException(failure.getReason()));
+        });
+    } catch (UnsupportedEncodingException e) {
+      LOGGER.error(ERROR_HOLDING_MSG, e);
+      promise.fail(e);
+    }
+
+    return promise.future();
   }
 
   private Future<String> findInstanceIdByHrid(DataImportEventPayload dataImportEventPayload, JsonObject holdingAsJson, Context context) {
@@ -228,11 +265,6 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
     if (isEmpty(holdingAsJson.getString(PERMANENT_LOCATION_ID_FIELD))) {
       throw new EventProcessingException(PERMANENT_LOCATION_ID_ERROR_MESSAGE);
     }
-  }
-
-  private void fillInstanceId(DataImportEventPayload dataImportEventPayload, JsonObject holdingAsJson, String instanceId) {
-    holdingAsJson.put(INSTANCE_ID_FIELD, instanceId);
-    dataImportEventPayload.getContext().put(HOLDINGS.value(), holdingAsJson.encode());
   }
 
   private Future<HoldingsRecord> addHoldings(HoldingsRecord holdings, HoldingsRecordCollection holdingsRecordCollection) {
