@@ -22,7 +22,6 @@ import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.json.Json;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -36,7 +35,7 @@ public class MappingMetadataCacheTest {
 
   private final Vertx vertx = Vertx.vertx();
   private final MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx,
-    vertx.createHttpClient(new HttpClientOptions().setConnectTimeout(3000)), 3600);
+    vertx.createHttpClient(), 3600);
 
   @Rule
   public WireMockRule mockServer = new WireMockRule(

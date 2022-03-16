@@ -94,11 +94,11 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
    * Otherwise, for performance needs returns paging parameters with limit = 2, which is
    * a minimum value that is necessary to get target record or identify whether multiple match result occurred.
    *
-   * @param multiMatchResultParams - identifies if should return paging parameters for multiple matching
+   * @param multiMatchResultParams - identifies whether to return paging parameters for multiple matching
    * @return {@link PagingParameters}
    */
   private PagingParameters buildPagingParameters(boolean multiMatchResultParams) {
-    // currently, limit = 90 is used because of constraint for url size that is used for processing multi-match result
+    // currently, limit = 90 is used because of constraint for URL size that is used for processing multi-match result
     // in scope of https://issues.folio.org/browse/MODDICORE-251 a new approach will be introduced for multi-matching result processing
     return multiMatchResultParams ? PagingParameters.from(90, 0) : PagingParameters.from(2, 0);
   }
