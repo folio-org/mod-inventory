@@ -100,7 +100,7 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
   private PagingParameters buildPagingParameters(boolean multiMatchResultParams) {
     // currently, limit = 90 is used because of constraint for URL size that is used for processing multi-match result
     // in scope of https://issues.folio.org/browse/MODDICORE-251 a new approach will be introduced for multi-matching result processing
-    return multiMatchResultParams ? PagingParameters.from(90, 0) : PagingParameters.from(2, 0);
+    return multiMatchResultParams ? new PagingParameters(90, 0) : new PagingParameters(2, 0);
   }
 
   private boolean canProcessMultiMatchResult(DataImportEventPayload eventPayload) {
