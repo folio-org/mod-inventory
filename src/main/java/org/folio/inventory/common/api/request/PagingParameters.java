@@ -28,6 +28,10 @@ public class PagingParameters {
 
   }
 
+  public static PagingParameters from(int limit, int offset) {
+    return new PagingParameters(limit, offset);
+  }
+
   public static boolean valid(String limit, String offset) {
     if (StringUtils.isEmpty(limit) || StringUtils.isEmpty(offset)) {
       return false;
