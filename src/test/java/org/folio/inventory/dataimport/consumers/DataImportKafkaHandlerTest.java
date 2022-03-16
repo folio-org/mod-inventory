@@ -9,7 +9,6 @@ import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
-import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
@@ -133,7 +132,7 @@ public class DataImportKafkaHandlerTest {
       .maxRequestSize(1048576)
       .build();
 
-    HttpClient client = vertx.createHttpClient(new HttpClientOptions().setConnectTimeout(3000));
+    HttpClient client = vertx.createHttpClient();
     dataImportKafkaHandler = new DataImportKafkaHandler(vertx, mockedStorage, client,
       new ProfileSnapshotCache(vertx, client, 3600),
       kafkaConfig, new MappingMetadataCache(vertx, client, 3600));
