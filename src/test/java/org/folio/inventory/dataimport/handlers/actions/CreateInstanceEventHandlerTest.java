@@ -10,7 +10,6 @@ import com.google.common.collect.Lists;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.apache.http.HttpStatus;
@@ -169,7 +168,7 @@ public class CreateInstanceEventHandlerTest {
     Vertx vertx = Vertx.vertx();
     createInstanceEventHandler = new CreateInstanceEventHandler(storage,
       new PrecedingSucceedingTitlesHelper(context -> mockedClient), new MappingMetadataCache(vertx,
-      vertx.createHttpClient(new HttpClientOptions().setConnectTimeout(3000)), 3600),
+      vertx.createHttpClient(), 3600),
       instanceIdStorageService);
 
 

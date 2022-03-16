@@ -57,14 +57,11 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
-import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.json.JsonObject;
 
 public class DataImportConsumerVerticle extends AbstractVerticle {
 
   private static final Logger LOGGER = LogManager.getLogger(DataImportConsumerVerticle.class);
-
-  private static final int DEFAULT_HTTP_TIMEOUT_IN_MILLISECONDS = 3000;
 
   private static final List<DataImportEventTypes> EVENT_TYPES = List.of(
     DI_INVENTORY_HOLDING_CREATED,
@@ -110,8 +107,7 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
     LOGGER.info(format("kafkaConfig: %s", kafkaConfig));
     EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, maxDistributionNumber);
 
-    HttpClientOptions params = new HttpClientOptions().setConnectTimeout(DEFAULT_HTTP_TIMEOUT_IN_MILLISECONDS);
-    HttpClient client = vertx.createHttpClient(params);
+    HttpClient client = vertx.createHttpClient();
     Storage storage = Storage.basedUpon(vertx, config, client);
 
     String profileSnapshotExpirationTime = getCacheEnvVariable(config, "inventory.profile-snapshot-cache.expiration.time.seconds");
