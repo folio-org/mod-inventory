@@ -33,6 +33,8 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
   private static final Logger LOG = LogManager.getLogger(AbstractLoader.class);
 
   public static final String MULTI_MATCH_IDS = "MULTI_MATCH_IDS";
+  private static final String ERROR_LOAD_MSG = "Failed to load records cause: %s, status code: %s";
+  private static final int MULTI_MATCH_LOAD_LIMIT = 90;
 
   private final Vertx vertx;
 
@@ -49,22 +51,24 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
     LoadResult loadResult = new LoadResult();
     loadResult.setEntityType(getEntityType().value());
     Context context = constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl());
+    boolean canProcessMultiMatchResult = canProcessMultiMatchResult(eventPayload);
+    PagingParameters pagingParameters = buildPagingParameters(canProcessMultiMatchResult);
 
     vertx.runOnContext(v -> {
       try {
         String cql = loadQuery.getCql() + addCqlSubMatchCondition(eventPayload);
-        getSearchableCollection(context).findByCql(cql, PagingParameters.defaults(),
+        getSearchableCollection(context).findByCql(cql, pagingParameters,
           success -> {
             MultipleRecords<T> collection = success.getResult();
             if (collection.totalRecords == 1) {
               loadResult.setValue(mapEntityToJsonString(collection.records.get(0)));
             } else if (collection.totalRecords > 1) {
-              if (canProcessMultiMatchResult(eventPayload)) {
+              if (canProcessMultiMatchResult) {
                 LOG.info("Found multiple records by CQL query: [{}]. Found records IDs: {}", cql, mapEntityListToIdsJsonString(collection.records));
                 loadResult.setEntityType(MULTI_MATCH_IDS);
                 loadResult.setValue(mapEntityListToIdsJsonString(collection.records));
               } else {
-                String errorMessage = String.format("Found multiple records matching specified conditions. CQL query: [%s].%nFound records: %s", cql, Json.encodePrettily(collection.records));
+                String errorMessage = format("Found multiple records matching specified conditions. CQL query: [%s].%nFound records: %s", cql, Json.encodePrettily(collection.records));
                 LOG.error(errorMessage);
                 future.completeExceptionally(new MatchingException(errorMessage));
                 return;
@@ -74,7 +78,7 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
           },
           failure -> {
             LOG.error(failure.getReason());
-            future.completeExceptionally(new MatchingException(failure.getReason()));
+            future.completeExceptionally(new MatchingException(format(ERROR_LOAD_MSG, failure.getReason(), failure.getStatusCode())));
           });
       } catch (UnsupportedEncodingException e) {
         LOG.error("Failed to retrieve records", e);
@@ -83,6 +87,21 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
     });
 
     return future;
+  }
+
+  /**
+   * Creates paging parameters for entities loading.
+   * If matching result of current matching can be processed by next profile than returns parameters with limit = 90.
+   * Otherwise, for performance needs returns paging parameters with limit = 2, which is
+   * a minimum value that is necessary to get target record or identify whether multiple match result occurred.
+   *
+   * @param multiMatchLoadingParams - identifies whether to return paging parameters for multiple matching
+   * @return {@link PagingParameters}
+   */
+  private PagingParameters buildPagingParameters(boolean multiMatchLoadingParams) {
+    // currently, limit = 90 is used because of constraint for URL size that is used for processing multi-match result
+    // in scope of https://issues.folio.org/browse/MODDICORE-251 a new approach will be introduced for multi-matching result processing
+    return multiMatchLoadingParams ? new PagingParameters(MULTI_MATCH_LOAD_LIMIT, 0) : new PagingParameters(2, 0);
   }
 
   private boolean canProcessMultiMatchResult(DataImportEventPayload eventPayload) {
