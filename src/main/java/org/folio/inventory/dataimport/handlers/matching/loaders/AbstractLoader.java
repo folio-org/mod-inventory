@@ -34,6 +34,7 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
 
   public static final String MULTI_MATCH_IDS = "MULTI_MATCH_IDS";
   private static final String ERROR_LOAD_MSG = "Failed to load records cause: %s, status code: %s";
+  private static final int MULTI_MATCH_LOAD_LIMIT = 90;
 
   private final Vertx vertx;
 
@@ -94,13 +95,13 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
    * Otherwise, for performance needs returns paging parameters with limit = 2, which is
    * a minimum value that is necessary to get target record or identify whether multiple match result occurred.
    *
-   * @param multiMatchResultParams - identifies whether to return paging parameters for multiple matching
+   * @param multiMatchLoadingParams - identifies whether to return paging parameters for multiple matching
    * @return {@link PagingParameters}
    */
-  private PagingParameters buildPagingParameters(boolean multiMatchResultParams) {
+  private PagingParameters buildPagingParameters(boolean multiMatchLoadingParams) {
     // currently, limit = 90 is used because of constraint for URL size that is used for processing multi-match result
     // in scope of https://issues.folio.org/browse/MODDICORE-251 a new approach will be introduced for multi-matching result processing
-    return multiMatchResultParams ? new PagingParameters(90, 0) : new PagingParameters(2, 0);
+    return multiMatchLoadingParams ? new PagingParameters(MULTI_MATCH_LOAD_LIMIT, 0) : new PagingParameters(2, 0);
   }
 
   private boolean canProcessMultiMatchResult(DataImportEventPayload eventPayload) {
