@@ -75,7 +75,7 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
     var sourceId = String.valueOf(UUID.randomUUID());
     when(storage.getHoldingsRecordCollection(any(Context.class))).thenReturn(holdingsRecordCollection);
     when(storage.getHoldingsRecordsSourceCollection(any(Context.class))).thenReturn(sourceCollection);
-    when(collectionStorageService.findSourceIdByName(sourceCollection, "MARC")).thenReturn(Future.succeededFuture(sourceId));
+    when(collectionStorageService.findSourceIdByName(any(HoldingsRecordsSourceCollection.class), any())).thenReturn(Future.succeededFuture(sourceId));
 
     doAnswer(invocationOnMock -> {
       Consumer<Success<HoldingsRecord>> successHandler = invocationOnMock.getArgument(1);

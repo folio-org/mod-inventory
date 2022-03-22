@@ -12,6 +12,7 @@ import org.folio.inventory.dataimport.consumers.QuickMarcKafkaHandler;
 import org.folio.inventory.dataimport.handlers.QMEventTypes;
 import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
 import org.folio.inventory.dataimport.util.ConsumerWrapperUtil;
+import org.folio.inventory.services.CollectionStorageService;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.GlobalLoadSensor;
@@ -45,7 +46,8 @@ public class QuickMarcConsumerVerticle extends AbstractVerticle {
     Storage storage = Storage.basedUpon(vertx, config, client);
 
     var precedingSucceedingTitlesHelper = new PrecedingSucceedingTitlesHelper(WebClient.wrap(client));
-    var handler = new QuickMarcKafkaHandler(vertx, storage, maxDistributionNumber, kafkaConfig, precedingSucceedingTitlesHelper);
+    CollectionStorageService collectionStorageService = new CollectionStorageService();
+    var handler = new QuickMarcKafkaHandler(vertx, storage, maxDistributionNumber, kafkaConfig, precedingSucceedingTitlesHelper, collectionStorageService);
 
     var kafkaConsumerFuture = createKafkaConsumer(kafkaConfig, QMEventTypes.QM_SRS_MARC_RECORD_UPDATED, handler);
 

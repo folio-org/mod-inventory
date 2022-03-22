@@ -186,8 +186,8 @@ public class CreateMarcHoldingsEventHandlerTest {
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
     when(storage.getHoldingsRecordsSourceCollection(any())).thenReturn(holdingsRecordsSourceCollection);
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
-    when(collectionStorageService.findInstanceIdByHrid(instanceRecordCollection, "in00000000315")).thenReturn(Future.succeededFuture(instanceId));
-    when(collectionStorageService.findSourceIdByName(holdingsRecordsSourceCollection, "MARC")).thenReturn(Future.succeededFuture(sourceId));
+    when(collectionStorageService.findInstanceIdByHrid(any(InstanceCollection.class), any())).thenReturn(Future.succeededFuture(instanceId));
+    when(collectionStorageService.findSourceIdByName(any(HoldingsRecordsSourceCollection.class), any())).thenReturn(Future.succeededFuture(sourceId));
 
     HoldingsRecord holdings = new HoldingsRecord()
       .withId(String.valueOf(UUID.randomUUID()))

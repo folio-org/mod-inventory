@@ -102,7 +102,7 @@ public class MarcHoldingsRecordHridSetKafkaHandlerTest {
     var sourceId = String.valueOf(UUID.randomUUID());
     when(mockedStorage.getHoldingsRecordCollection(any(Context.class))).thenReturn(mockedHoldingsCollection);
     when(mockedStorage.getHoldingsRecordsSourceCollection(any(Context.class))).thenReturn(sourceCollection);
-    when(collectionStorageService.findSourceIdByName(sourceCollection, "MARC")).thenReturn(Future.succeededFuture(sourceId));
+    when(collectionStorageService.findSourceIdByName(any(HoldingsRecordsSourceCollection.class), any())).thenReturn(Future.succeededFuture(sourceId));
 
     doAnswer(invocationOnMock -> {
       Consumer<Success<HoldingsRecord>> successHandler = invocationOnMock.getArgument(1);

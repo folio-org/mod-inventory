@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -34,6 +35,8 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
 import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
 import net.mguenther.kafka.junit.ObserveKeyValues;
+import org.folio.inventory.domain.HoldingsRecordsSourceCollection;
+import org.folio.inventory.services.CollectionStorageService;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -87,6 +90,10 @@ public class QuickMarcKafkaHandlerTest {
   @Mock
   private Storage mockedStorage;
   @Mock
+  private CollectionStorageService collectionStorageService;
+  @Mock
+  private HoldingsRecordsSourceCollection sourceCollection;
+  @Mock
   private InstanceCollection mockedInstanceCollection;
   @Mock
   private HoldingsRecordCollection mockedHoldingsRecordCollection;
@@ -134,9 +141,12 @@ public class QuickMarcKafkaHandlerTest {
       .withContent(JsonObject.mapFrom(authorityRecord.getParsedRecord().getContent()).encode());
 
     mocks = MockitoAnnotations.openMocks(this);
+    var sourceId = String.valueOf(UUID.randomUUID());
     when(mockedStorage.getInstanceCollection(any(Context.class))).thenReturn(mockedInstanceCollection);
     when(mockedStorage.getHoldingsRecordCollection(any(Context.class))).thenReturn(mockedHoldingsRecordCollection);
     when(mockedStorage.getAuthorityRecordCollection(any(Context.class))).thenReturn(mockedAuthorityRecordCollection);
+    when(mockedStorage.getHoldingsRecordsSourceCollection(any(Context.class))).thenReturn(sourceCollection);
+    when(collectionStorageService.findSourceIdByName(any(HoldingsRecordsSourceCollection.class), any())).thenReturn(Future.succeededFuture(sourceId));
 
     doAnswer(invocationOnMock -> {
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
@@ -187,7 +197,7 @@ public class QuickMarcKafkaHandlerTest {
     PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper =
       new PrecedingSucceedingTitlesHelper(context -> okapiHttpClient);
     handler =
-      new QuickMarcKafkaHandler(vertx, mockedStorage, 100, kafkaConfig, precedingSucceedingTitlesHelper);
+      new QuickMarcKafkaHandler(vertx, mockedStorage, 100, kafkaConfig, precedingSucceedingTitlesHelper, collectionStorageService);
 
     when(kafkaRecord.headers()).thenReturn(List.of(
       KafkaHeader.header(XOkapiHeaders.TENANT.toLowerCase(), TENANT_ID),

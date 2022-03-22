@@ -68,12 +68,12 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
   private final Map<QMEventTypes, KafkaProducer<String, String>> producerMap = new HashMap<>();
 
   public QuickMarcKafkaHandler(Vertx vertx, Storage storage, int maxDistributionNumber, KafkaConfig kafkaConfig,
-                               PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper) {
+                               PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper, CollectionStorageService collectionStorageService) {
     this.vertx = vertx;
     this.maxDistributionNumber = maxDistributionNumber;
     this.kafkaConfig = kafkaConfig;
     this.instanceUpdateDelegate = new InstanceUpdateDelegate(storage);
-    this.holdingsUpdateDelegate = new HoldingsUpdateDelegate(storage, new CollectionStorageService());
+    this.holdingsUpdateDelegate = new HoldingsUpdateDelegate(storage, collectionStorageService);
     this.authorityUpdateDelegate = new AuthorityUpdateDelegate(storage);
     this.precedingSucceedingTitlesHelper = precedingSucceedingTitlesHelper;
     createProducer(kafkaConfig, QM_INVENTORY_INSTANCE_UPDATED);
