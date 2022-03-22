@@ -9,7 +9,7 @@ import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.HoldingsRecordsSourceCollection;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
-import org.folio.inventory.services.CollectionStorageService;
+import org.folio.inventory.services.HoldingsCollectionService;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -30,8 +30,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 
-public class CollectionStorageServiceTest {
-  private CollectionStorageService collectionStorageService;
+public class HoldingsCollectionServiceTest {
+  private HoldingsCollectionService holdingsCollectionService;
 
   @Mock
   HoldingsRecordsSourceCollection holdingsRecordsSourceCollection;
@@ -41,7 +41,7 @@ public class CollectionStorageServiceTest {
   @Before
   public void setUp() throws IOException {
     MockitoAnnotations.openMocks(this);
-    collectionStorageService = new CollectionStorageService();
+    holdingsCollectionService = new HoldingsCollectionService();
   }
 
   @Test
@@ -56,7 +56,7 @@ public class CollectionStorageServiceTest {
       return null;
     }).when(holdingsRecordsSourceCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    Future<String> future = collectionStorageService.findSourceIdByName(holdingsRecordsSourceCollection, "MARC");
+    Future<String> future = holdingsCollectionService.findSourceIdByName(holdingsRecordsSourceCollection, "MARC");
     assertEquals(sourceId, future.result());
   }
 
@@ -74,7 +74,7 @@ public class CollectionStorageServiceTest {
       return null;
     }).when(instanceRecordCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    Future<String> future = collectionStorageService.findInstanceIdByHrid(instanceRecordCollection, "in00000000315");
+    Future<String> future = holdingsCollectionService.findInstanceIdByHrid(instanceRecordCollection, "in00000000315");
     assertEquals(instanceId, future.result());
   }
 
@@ -84,7 +84,7 @@ public class CollectionStorageServiceTest {
     doThrow(new UnsupportedEncodingException())
       .when(instanceRecordCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    Future<String> future = collectionStorageService.findInstanceIdByHrid(instanceRecordCollection, "in00000000315");
+    Future<String> future = holdingsCollectionService.findInstanceIdByHrid(instanceRecordCollection, "in00000000315");
     assertTrue(future.failed());
   }
 
@@ -93,7 +93,7 @@ public class CollectionStorageServiceTest {
     doThrow(new UnsupportedEncodingException())
       .when(holdingsRecordsSourceCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    Future<String> future = collectionStorageService.findSourceIdByName(holdingsRecordsSourceCollection, "MARC");
+    Future<String> future = holdingsCollectionService.findSourceIdByName(holdingsRecordsSourceCollection, "MARC");
     assertTrue(future.failed());
   }
 
@@ -105,7 +105,7 @@ public class CollectionStorageServiceTest {
       return null;
     }).when(holdingsRecordsSourceCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    Future<String> future = collectionStorageService.findSourceIdByName(holdingsRecordsSourceCollection, "MARC");
+    Future<String> future = holdingsCollectionService.findSourceIdByName(holdingsRecordsSourceCollection, "MARC");
     assertTrue(future.failed());
   }
 
@@ -117,7 +117,7 @@ public class CollectionStorageServiceTest {
       return null;
     }).when(instanceRecordCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    Future<String> future = collectionStorageService.findInstanceIdByHrid(instanceRecordCollection, "in00000000315");
+    Future<String> future = holdingsCollectionService.findInstanceIdByHrid(instanceRecordCollection, "in00000000315");
     assertTrue(future.failed());
   }
 
@@ -131,7 +131,7 @@ public class CollectionStorageServiceTest {
     }).when(holdingsRecordsSourceCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
     var message = "No source id found for holdings with name MARC";
-    Future<String> future = collectionStorageService.findSourceIdByName(holdingsRecordsSourceCollection, "MARC");
+    Future<String> future = holdingsCollectionService.findSourceIdByName(holdingsRecordsSourceCollection, "MARC");
     assertTrue(future.failed());
     assertEquals(future.cause().getMessage(), message);
   }
@@ -146,7 +146,7 @@ public class CollectionStorageServiceTest {
     }).when(instanceRecordCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
     var message = "No instance id found for marc holdings with hrid: in00000000315";
-    Future<String> future = collectionStorageService.findInstanceIdByHrid(instanceRecordCollection, "in00000000315");
+    Future<String> future = holdingsCollectionService.findInstanceIdByHrid(instanceRecordCollection, "in00000000315");
     assertTrue(future.failed());
     assertEquals(future.cause().getMessage(), message);
   }
@@ -160,7 +160,7 @@ public class CollectionStorageServiceTest {
       return null;
     }).when(instanceRecordCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    collectionStorageService.findInstanceIdByHrid(instanceRecordCollection, "in00000000315");
+    holdingsCollectionService.findInstanceIdByHrid(instanceRecordCollection, "in00000000315");
   }
 
   @Test(expected = Exception.class)
@@ -172,7 +172,7 @@ public class CollectionStorageServiceTest {
       return null;
     }).when(holdingsRecordsSourceCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    collectionStorageService.findSourceIdByName(holdingsRecordsSourceCollection, "MARC");
+    holdingsCollectionService.findSourceIdByName(holdingsRecordsSourceCollection, "MARC");
   }
 
 }

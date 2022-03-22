@@ -13,8 +13,8 @@ import java.io.UnsupportedEncodingException;
 
 import static java.lang.String.format;
 
-public class CollectionStorageService {
-  private static final Logger LOGGER = LogManager.getLogger(CollectionStorageService.class);
+public class HoldingsCollectionService {
+  private static final Logger LOGGER = LogManager.getLogger(HoldingsCollectionService.class);
 
   private static final String ERROR_HOLDING_MSG = "Error loading inventory holdings for MARC BIB";
 

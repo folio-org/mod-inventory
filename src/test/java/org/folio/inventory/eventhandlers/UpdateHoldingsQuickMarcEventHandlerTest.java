@@ -19,7 +19,7 @@ import io.vertx.core.json.JsonObject;
 
 import org.folio.HoldingsType;
 import org.folio.inventory.domain.HoldingsRecordsSourceCollection;
-import org.folio.inventory.services.CollectionStorageService;
+import org.folio.inventory.services.HoldingsCollectionService;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.junit.Assert;
 import org.junit.Before;
@@ -52,7 +52,7 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
   @Mock
   private Storage storage;
   @Mock
-  private CollectionStorageService collectionStorageService;
+  private HoldingsCollectionService holdingsCollectionService;
   @Mock
   private HoldingsRecordsSourceCollection sourceCollection;
   @Mock
@@ -69,13 +69,13 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
   @Before
   public void setUp() throws IOException {
     existingHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)).mapTo(HoldingsRecord.class);
-    holdingsUpdateDelegate = Mockito.spy(new HoldingsUpdateDelegate(storage, collectionStorageService));
+    holdingsUpdateDelegate = Mockito.spy(new HoldingsUpdateDelegate(storage, holdingsCollectionService));
     updateHoldingsQuickMarcEventHandler = new UpdateHoldingsQuickMarcEventHandler(holdingsUpdateDelegate, context);
 
     var sourceId = String.valueOf(UUID.randomUUID());
     when(storage.getHoldingsRecordCollection(any(Context.class))).thenReturn(holdingsRecordCollection);
     when(storage.getHoldingsRecordsSourceCollection(any(Context.class))).thenReturn(sourceCollection);
-    when(collectionStorageService.findSourceIdByName(any(HoldingsRecordsSourceCollection.class), any())).thenReturn(Future.succeededFuture(sourceId));
+    when(holdingsCollectionService.findSourceIdByName(any(HoldingsRecordsSourceCollection.class), any())).thenReturn(Future.succeededFuture(sourceId));
 
     doAnswer(invocationOnMock -> {
       Consumer<Success<HoldingsRecord>> successHandler = invocationOnMock.getArgument(1);

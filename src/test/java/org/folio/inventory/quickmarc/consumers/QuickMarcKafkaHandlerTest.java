@@ -36,7 +36,7 @@ import io.vertx.kafka.client.producer.KafkaHeader;
 import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
 import net.mguenther.kafka.junit.ObserveKeyValues;
 import org.folio.inventory.domain.HoldingsRecordsSourceCollection;
-import org.folio.inventory.services.CollectionStorageService;
+import org.folio.inventory.services.HoldingsCollectionService;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -90,7 +90,7 @@ public class QuickMarcKafkaHandlerTest {
   @Mock
   private Storage mockedStorage;
   @Mock
-  private CollectionStorageService collectionStorageService;
+  private HoldingsCollectionService holdingsCollectionService;
   @Mock
   private HoldingsRecordsSourceCollection sourceCollection;
   @Mock
@@ -146,7 +146,7 @@ public class QuickMarcKafkaHandlerTest {
     when(mockedStorage.getHoldingsRecordCollection(any(Context.class))).thenReturn(mockedHoldingsRecordCollection);
     when(mockedStorage.getAuthorityRecordCollection(any(Context.class))).thenReturn(mockedAuthorityRecordCollection);
     when(mockedStorage.getHoldingsRecordsSourceCollection(any(Context.class))).thenReturn(sourceCollection);
-    when(collectionStorageService.findSourceIdByName(any(HoldingsRecordsSourceCollection.class), any())).thenReturn(Future.succeededFuture(sourceId));
+    when(holdingsCollectionService.findSourceIdByName(any(HoldingsRecordsSourceCollection.class), any())).thenReturn(Future.succeededFuture(sourceId));
 
     doAnswer(invocationOnMock -> {
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
@@ -197,7 +197,7 @@ public class QuickMarcKafkaHandlerTest {
     PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper =
       new PrecedingSucceedingTitlesHelper(context -> okapiHttpClient);
     handler =
-      new QuickMarcKafkaHandler(vertx, mockedStorage, 100, kafkaConfig, precedingSucceedingTitlesHelper, collectionStorageService);
+      new QuickMarcKafkaHandler(vertx, mockedStorage, 100, kafkaConfig, precedingSucceedingTitlesHelper, holdingsCollectionService);
 
     when(kafkaRecord.headers()).thenReturn(List.of(
       KafkaHeader.header(XOkapiHeaders.TENANT.toLowerCase(), TENANT_ID),

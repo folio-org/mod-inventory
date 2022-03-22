@@ -17,7 +17,7 @@ import org.folio.HoldingsRecord;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.inventory.domain.HoldingsRecordCollection;
-import org.folio.inventory.services.CollectionStorageService;
+import org.folio.inventory.services.HoldingsCollectionService;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.mapping.defaultmapper.RecordMapper;
 import org.folio.processing.mapping.defaultmapper.RecordMapperBuilder;
@@ -36,11 +36,11 @@ public class HoldingsUpdateDelegate {
   private static final String MARC_NAME = "MARC";
 
   private final Storage storage;
-  private final CollectionStorageService collectionStorageService;
+  private final HoldingsCollectionService holdingsCollectionService;
 
-  public HoldingsUpdateDelegate(Storage storage, CollectionStorageService collectionStorageService) {
+  public HoldingsUpdateDelegate(Storage storage, HoldingsCollectionService holdingsCollectionService) {
     this.storage = storage;
-    this.collectionStorageService = collectionStorageService;
+    this.holdingsCollectionService = holdingsCollectionService;
   }
 
   public Future<HoldingsRecord> handle(Map<String, String> eventPayload, Record marcRecord, Context context) {
@@ -124,6 +124,6 @@ public class HoldingsUpdateDelegate {
 
   private Future<String> findSourceId(Context context) {
     var sourceCollection = storage.getHoldingsRecordsSourceCollection(context);
-    return collectionStorageService.findSourceIdByName(sourceCollection, MARC_NAME);
+    return holdingsCollectionService.findSourceIdByName(sourceCollection, MARC_NAME);
   }
 }

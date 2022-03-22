@@ -29,7 +29,7 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.relationship.RecordToEntity;
-import org.folio.inventory.services.CollectionStorageService;
+import org.folio.inventory.services.HoldingsCollectionService;
 import org.folio.inventory.services.IdStorageService;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
@@ -66,18 +66,18 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
   private static final String CHUNK_ID_HEADER = "chunkId";
 
   private final Storage storage;
-  private final CollectionStorageService collectionStorageService;
+  private final HoldingsCollectionService holdingsCollectionService;
   private final MappingMetadataCache mappingMetadataCache;
   private final IdStorageService idStorageService;
 
   public CreateMarcHoldingsEventHandler(Storage storage,
                                         MappingMetadataCache mappingMetadataCache,
                                         IdStorageService idStorageService,
-                                        CollectionStorageService collectionStorageService) {
+                                        HoldingsCollectionService holdingsCollectionService) {
     this.storage = storage;
     this.mappingMetadataCache = mappingMetadataCache;
     this.idStorageService = idStorageService;
-    this.collectionStorageService = collectionStorageService;
+    this.holdingsCollectionService = holdingsCollectionService;
   }
 
   @Override
@@ -186,12 +186,13 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
 
   private Future<String> findSourceId(Context context) {
     var sourceCollection = storage.getHoldingsRecordsSourceCollection(context);
-    return collectionStorageService.findSourceIdByName(sourceCollection, MARC_NAME);
+    return holdingsCollectionService.findSourceIdByName(sourceCollection, MARC_NAME);
   }
 
   private Future<String> findInstanceIdByHrid(DataImportEventPayload dataImportEventPayload, JsonObject holdingAsJson, Context context) {
     Promise<String> promise = Promise.promise();
-    if (StringUtils.isBlank(holdingAsJson.getString(INSTANCE_ID_FIELD))) {
+    String instanceId = holdingAsJson.getString(INSTANCE_ID_FIELD);
+    if (StringUtils.isBlank(instanceId)) {
       var recordAsString = dataImportEventPayload.getContext().get(MARC_FORMAT);
       var record = Json.decodeValue(recordAsString, Record.class);
       var instanceHrid = getControlFieldValue(record, "004");
@@ -199,7 +200,9 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
         throw new EventProcessingException(FIELD_004_MARC_HOLDINGS_NOT_NULL);
       }
       var instanceCollection = storage.getInstanceCollection(context);
-      return collectionStorageService.findInstanceIdByHrid(instanceCollection, instanceHrid);
+      return holdingsCollectionService.findInstanceIdByHrid(instanceCollection, instanceHrid);
+    }else{
+      promise.complete(instanceId);
     }
     return promise.future();
   }

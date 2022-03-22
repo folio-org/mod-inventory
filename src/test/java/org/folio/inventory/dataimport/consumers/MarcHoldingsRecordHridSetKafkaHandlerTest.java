@@ -37,7 +37,7 @@ import org.folio.HoldingsType;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.HoldingsRecordsSourceCollection;
-import org.folio.inventory.services.CollectionStorageService;
+import org.folio.inventory.services.HoldingsCollectionService;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.MappingMetadataDto;
 import org.junit.After;
@@ -69,7 +69,7 @@ public class MarcHoldingsRecordHridSetKafkaHandlerTest {
   @Mock
   private Storage mockedStorage;
   @Mock
-  private CollectionStorageService collectionStorageService;
+  private HoldingsCollectionService holdingsCollectionService;
   @Mock
   private HoldingsRecordsSourceCollection sourceCollection;
   @Mock
@@ -102,7 +102,7 @@ public class MarcHoldingsRecordHridSetKafkaHandlerTest {
     var sourceId = String.valueOf(UUID.randomUUID());
     when(mockedStorage.getHoldingsRecordCollection(any(Context.class))).thenReturn(mockedHoldingsCollection);
     when(mockedStorage.getHoldingsRecordsSourceCollection(any(Context.class))).thenReturn(sourceCollection);
-    when(collectionStorageService.findSourceIdByName(any(HoldingsRecordsSourceCollection.class), any())).thenReturn(Future.succeededFuture(sourceId));
+    when(holdingsCollectionService.findSourceIdByName(any(HoldingsRecordsSourceCollection.class), any())).thenReturn(Future.succeededFuture(sourceId));
 
     doAnswer(invocationOnMock -> {
       Consumer<Success<HoldingsRecord>> successHandler = invocationOnMock.getArgument(1);
@@ -131,7 +131,7 @@ public class MarcHoldingsRecordHridSetKafkaHandlerTest {
 
     MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, vertx.createHttpClient(), 3600);
     marcHoldingsRecordHridSetKafkaHandler =
-      new MarcHoldingsRecordHridSetKafkaHandler(new HoldingsUpdateDelegate(mockedStorage, collectionStorageService), mappingMetadataCache);
+      new MarcHoldingsRecordHridSetKafkaHandler(new HoldingsUpdateDelegate(mockedStorage, holdingsCollectionService), mappingMetadataCache);
 
     this.okapiHeaders = List.of(
       KafkaHeader.header(OKAPI_TENANT_HEADER, "diku"),

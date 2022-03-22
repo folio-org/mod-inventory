@@ -49,7 +49,7 @@ import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.HoldingsRecordsSourceCollection;
 import org.folio.inventory.domain.relationship.RecordToEntity;
-import org.folio.inventory.services.CollectionStorageService;
+import org.folio.inventory.services.HoldingsCollectionService;
 import org.folio.inventory.services.HoldingsIdStorageService;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.MappingMetadataDto;
@@ -98,7 +98,7 @@ public class CreateMarcHoldingsEventHandlerTest {
   @Mock
   private HoldingsIdStorageService holdingsIdStorageService;
   @Mock
-  private CollectionStorageService collectionStorageService;
+  private HoldingsCollectionService holdingsCollectionService;
 
   @Rule
   public WireMockRule mockServer = new WireMockRule(
@@ -156,7 +156,7 @@ public class CreateMarcHoldingsEventHandlerTest {
     MockitoAnnotations.openMocks(this);
     MappingManager.clearReaderFactories();
     MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, vertx.createHttpClient(), 3600);
-    createMarcHoldingsEventHandler = new CreateMarcHoldingsEventHandler(storage, mappingMetadataCache, holdingsIdStorageService, collectionStorageService);
+    createMarcHoldingsEventHandler = new CreateMarcHoldingsEventHandler(storage, mappingMetadataCache, holdingsIdStorageService, holdingsCollectionService);
     mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
     instanceId = String.valueOf(UUID.randomUUID());
     sourceId = String.valueOf(UUID.randomUUID());
@@ -186,8 +186,8 @@ public class CreateMarcHoldingsEventHandlerTest {
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
     when(storage.getHoldingsRecordsSourceCollection(any())).thenReturn(holdingsRecordsSourceCollection);
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
-    when(collectionStorageService.findInstanceIdByHrid(any(InstanceCollection.class), any())).thenReturn(Future.succeededFuture(instanceId));
-    when(collectionStorageService.findSourceIdByName(any(HoldingsRecordsSourceCollection.class), any())).thenReturn(Future.succeededFuture(sourceId));
+    when(holdingsCollectionService.findInstanceIdByHrid(any(InstanceCollection.class), any())).thenReturn(Future.succeededFuture(instanceId));
+    when(holdingsCollectionService.findSourceIdByName(any(HoldingsRecordsSourceCollection.class), any())).thenReturn(Future.succeededFuture(sourceId));
 
     HoldingsRecord holdings = new HoldingsRecord()
       .withId(String.valueOf(UUID.randomUUID()))
