@@ -13,7 +13,6 @@ import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_
 import static org.folio.inventory.dataimport.util.ParsedRecordUtil.getControlFieldValue;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
-import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -27,10 +26,10 @@ import org.folio.Holdings;
 import org.folio.HoldingsRecord;
 import org.folio.MappingMetadataDto;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.relationship.RecordToEntity;
+import org.folio.inventory.services.CollectionStorageService;
 import org.folio.inventory.services.IdStorageService;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
@@ -51,7 +50,6 @@ import io.vertx.core.json.JsonObject;
 public class CreateMarcHoldingsEventHandler implements EventHandler {
 
   private static final Logger LOGGER = LogManager.getLogger(CreateMarcHoldingsEventHandler.class);
-  private static final String ERROR_HOLDING_MSG = "Error loading inventory holdings for MARC BIB";
   private static final String MARC_FORMAT = "MARC_HOLDINGS";
   private static final String MARC_NAME = "MARC";
   private static final String HOLDINGS_PATH = "holdings";
@@ -68,13 +66,18 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
   private static final String CHUNK_ID_HEADER = "chunkId";
 
   private final Storage storage;
+  private final CollectionStorageService collectionStorageService;
   private final MappingMetadataCache mappingMetadataCache;
   private final IdStorageService idStorageService;
 
-  public CreateMarcHoldingsEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache, IdStorageService idStorageService) {
+  public CreateMarcHoldingsEventHandler(Storage storage,
+                                        MappingMetadataCache mappingMetadataCache,
+                                        IdStorageService idStorageService,
+                                        CollectionStorageService collectionStorageService) {
     this.storage = storage;
     this.mappingMetadataCache = mappingMetadataCache;
     this.idStorageService = idStorageService;
+    this.collectionStorageService = collectionStorageService;
   }
 
   @Override
@@ -182,29 +185,8 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
   }
 
   private Future<String> findSourceId(Context context) {
-    Promise<String> promise = Promise.promise();
-
     var sourceCollection = storage.getHoldingsRecordsSourceCollection(context);
-    try {
-      sourceCollection.findByCql(format("name=%s", MARC_NAME), PagingParameters.defaults(),
-        findResult -> {
-          if (findResult.getResult() != null && findResult.getResult().totalRecords == 1){
-            var sourceId = findResult.getResult().records.get(0).getId();
-            promise.complete(sourceId);
-          } else {
-            promise.fail(new EventProcessingException("No source id found for holdings with name MARC"));
-          }
-        },
-        failure -> {
-          LOGGER.error(format(ERROR_HOLDING_MSG + ". StatusCode: %s. Message: %s", failure.getStatusCode(), failure.getReason()));
-          promise.fail(new EventProcessingException(failure.getReason()));
-        });
-    } catch (UnsupportedEncodingException e) {
-      LOGGER.error(ERROR_HOLDING_MSG, e);
-      promise.fail(e);
-    }
-
-    return promise.future();
+    return collectionStorageService.findSourceIdByName(sourceCollection, MARC_NAME);
   }
 
   private Future<String> findInstanceIdByHrid(DataImportEventPayload dataImportEventPayload, JsonObject holdingAsJson, Context context) {
@@ -217,27 +199,7 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
         throw new EventProcessingException(FIELD_004_MARC_HOLDINGS_NOT_NULL);
       }
       var instanceCollection = storage.getInstanceCollection(context);
-      try {
-        instanceCollection.findByCql(format("hrid=%s", instanceHrid), PagingParameters.defaults(),
-          findResult -> {
-            String instanceId = null;
-            if (findResult.getResult() != null && findResult.getResult().totalRecords == 1) {
-              var records = findResult.getResult().records;
-              var instance = records.stream()
-                .findFirst()
-                .orElseThrow(() -> new EventProcessingException("No instance id found for marc holdings with hrid: " + instanceHrid));
-              instanceId = instance.getId();
-            }
-            promise.complete(instanceId);
-          },
-          failure -> {
-            LOGGER.error(format(ERROR_HOLDING_MSG + ". StatusCode: %s. Message: %s", failure.getStatusCode(), failure.getReason()));
-            promise.fail(new EventProcessingException(failure.getReason()));
-          });
-      } catch (UnsupportedEncodingException e) {
-        LOGGER.error(ERROR_HOLDING_MSG, e);
-        promise.fail(e);
-      }
+      return collectionStorageService.findInstanceIdByHrid(instanceCollection, instanceHrid);
     }
     return promise.future();
   }
