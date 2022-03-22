@@ -14,6 +14,7 @@ import org.folio.inventory.dataimport.consumers.MarcBibInstanceHridSetKafkaHandl
 import org.folio.inventory.dataimport.consumers.MarcHoldingsRecordHridSetKafkaHandler;
 import org.folio.inventory.dataimport.handlers.actions.HoldingsUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
+import org.folio.inventory.services.HoldingsCollectionService;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.GlobalLoadSensor;
 import org.folio.kafka.KafkaConfig;
@@ -58,8 +59,9 @@ public class MarcHridSetConsumerVerticle extends AbstractVerticle {
 
     HttpClient client = vertx.createHttpClient();
     Storage storage = Storage.basedUpon(vertx, config, client);
+    HoldingsCollectionService holdingsCollectionService = new HoldingsCollectionService();
     InstanceUpdateDelegate instanceUpdateDelegate = new InstanceUpdateDelegate(storage);
-    HoldingsUpdateDelegate holdingsRecordUpdateDelegate = new HoldingsUpdateDelegate(storage);
+    HoldingsUpdateDelegate holdingsRecordUpdateDelegate = new HoldingsUpdateDelegate(storage, holdingsCollectionService);
 
     String mappingMetadataExpirationTime = getCacheEnvVariable(config, "inventory.mapping-metadata-cache.expiration.time.seconds");
     MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, client, Long.parseLong(mappingMetadataExpirationTime));
