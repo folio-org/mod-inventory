@@ -27,6 +27,7 @@ import java.util.concurrent.TimeoutException;
 import org.folio.inventory.common.VertxAssistant;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -37,7 +38,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
 import lombok.SneakyThrows;
-
+@Ignore
 public class OkapiHttpClientTests {
   private static VertxAssistant vertxAssistant;
 
