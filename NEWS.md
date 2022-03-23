@@ -1,3 +1,12 @@
+## 18.1.1 2022-03-23
+
+* Update data-import-processing-core to v3.3.1
+* Add logic to skip sending DI_ERROR from mod-inventory in case for duplicates (MODINV-646)
+* Record matches are not decreased when additional match conditions are added to a job profile (MODINV-652)
+* Data Import Log > Authority toggle > JSON response does not show (MODINV-656)
+* Fix creation of holdings via data import (MODINV-657)
+* The error appears when save "MARC Holding" record after editing in quickMARC (MODINV-661)
+
 ## 18.1.0 2022-02-24
 
 * added Marc Authority handler for entities created via MARC Authority Data Import (MODINV-501)
