@@ -1,3 +1,7 @@
+## 18.1.2 2022-03-25
+
+* Add parameter to allow deploying module without Kafka consumers (MODINV-658)
+
 ## 18.1.1 2022-03-23
 
 * Update data-import-processing-core to v3.3.1
