@@ -1,3 +1,7 @@
+## 18.1.3 2022-03-29
+
+* Fix latency in create holdings flow (MODINV-669)
+
 ## 18.1.2 2022-03-25
 
 * Add parameter to allow deploying module without Kafka consumers (MODINV-658)
