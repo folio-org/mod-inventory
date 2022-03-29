@@ -45,7 +45,7 @@ public class HoldingsCollectionService {
   public Future<String> findInstanceIdByHrid(InstanceCollection instanceCollection, String instanceHrid) {
     Promise<String> promise = Promise.promise();
     try {
-      instanceCollection.findByCql(format("hrid=%s", instanceHrid), PagingParameters.defaults(),
+      instanceCollection.findByCql(format("hrid==%s", instanceHrid), PagingParameters.defaults(),
         findResult -> {
           if (findResult.getResult() != null && findResult.getResult().totalRecords == 1) {
             var instanceId = findResult.getResult().records.get(0).getId();
