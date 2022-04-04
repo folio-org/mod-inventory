@@ -1,3 +1,7 @@
+## 18.1.4 2022-04-04
+
+* Update data-import-processing-core to v3.3.2 to enable fix of sending of DI_ERROR after DuplicateEventException (MODDICORE-255)
+
 ## 18.1.3 2022-03-29
 
 * Fix latency in create holdings flow (MODINV-669)
