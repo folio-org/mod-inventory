@@ -1,3 +1,7 @@
+## 18.2.0 IN-PROGRESS
+
+* Added permissions to search for item records to instance retrive by id endpoint (MODINV-662)
+
 ## 18.1.0 2022-02-24
 
 * added Marc Authority handler for entities created via MARC Authority Data Import (MODINV-501)
