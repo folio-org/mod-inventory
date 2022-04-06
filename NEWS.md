@@ -1,4 +1,7 @@
-<<<<<<< HEAD
+## 18.1.5 2022-04-06
+
+* Added permissions to search for item records to instance retrive by id endpoint (MODINV-662)
+
 ## 18.1.4 2022-04-04
 
 * Update data-import-processing-core to v3.3.2 to enable fix of sending of DI_ERROR after DuplicateEventException (MODDICORE-255)
@@ -19,11 +22,6 @@
 * Data Import Log > Authority toggle > JSON response does not show (MODINV-656)
 * Fix creation of holdings via data import (MODINV-657)
 * The error appears when save "MARC Holding" record after editing in quickMARC (MODINV-661)
-=======
-## 18.2.0 IN-PROGRESS
-
-* Added permissions to search for item records to instance retrive by id endpoint (MODINV-662)
->>>>>>> 05bafa6d (Added permission to endpoint)
 
 ## 18.1.0 2022-02-24
 
