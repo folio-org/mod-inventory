@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "Product identifier",
+  "type": "object",
+  "properties": {
+    "productId": {
+      "description": "The actual product identifier",
+      "type": "string"
+    },
+    "productIdType": {
+      "description": "The type of product identifier",
+      "$ref": "product_id_type.json"
+    },
+    "qualifier": {
+      "description": "Information about the binding, format, volume numbers, part of a set, publisher, distributor, etc. which might be enclosed in parenthesis",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

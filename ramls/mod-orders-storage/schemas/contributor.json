@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "contributor to the material",
+  "type": "object",
+  "properties": {
+    "contributor": {
+      "description": "the name of a contributor to the material",
+      "type": "string"
+    },
+    "contributorNameTypeId": {
+      "description": "UUID of the contributor type",
+      "type": "string",
+      "pattern": "^[a-f0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "contributorNameTypeId"
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "Reference number item",
+  "type": "object",
+  "properties": {
+    "refNumber": {
+      "description": "a reference number for this purchase order line",
+      "type": "string"
+    },
+    "refNumberType": {
+      "description": "the reference number type",
+      "type" : "string",
+      "enum": [
+        "Vendor continuation reference number",
+        "Vendor order reference number",
+        "Vendor subscription reference number",
+        "Vendor internal number",
+        "Vendor title number"
+      ],
+      "javaEnums" : [
+        "CONTINUATION_REF_NUMBER",
+        "ORDER_REF_NUMBER",
+        "SUBSCRIPTION_REF_NUMBER",
+        "INTERNAL_NUMBER",
+        "TITLE_NUMBER"
+      ]
+    },
+    "vendorDetailsSource": {
+      "description": "the reference number type",
+      "type": "string",
+      "enum": [
+        "OrderLine",
+        "InvoiceLine"
+      ],
+      "javaEnums" : [
+        "ORDER_LINE",
+        "INVOICE_LINE"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

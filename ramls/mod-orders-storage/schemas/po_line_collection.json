@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "collection of purchase order line records",
+  "type": "object",
+  "properties": {
+    "poLines": {
+      "description": "collection of purchase order line records",
+      "type": "array",
+      "id": "poLines",
+      "items": {
+        "type": "object",
+        "$ref": "po_line.json"
+      }
+    },
+    "totalRecords": {
+      "description": "The number of objects contained in this collection",
+      "type": "integer"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "poLines",
+    "totalRecords"
+  ]
+}

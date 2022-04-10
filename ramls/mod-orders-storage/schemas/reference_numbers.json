@@ -1,0 +1,9 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "Reference number items array",
+  "type": "array",
+  "items": {
+    "$ref": "reference_number_item.json"
+  },
+  "additionalProperties": false
+}

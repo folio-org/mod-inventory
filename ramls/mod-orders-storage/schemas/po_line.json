@@ -1,0 +1,239 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "purchase order line",
+  "type": "object",
+  "properties": {
+    "id": {
+      "description": "UUID identifying this purchase order line",
+      "$ref": "../../uuid.json"
+    },
+    "edition": {
+      "description": "edition of the material",
+      "type": "string"
+    },
+    "checkinItems": {
+      "description": "if true this will toggle the Check-in workflow for details associated with this PO line",
+      "type": "boolean",
+      "default": false
+    },
+    "agreementId": {
+      "description": "UUID of the agreement this purchase order line is related to",
+      "$ref": "../../uuid.json"
+    },
+    "acquisitionMethod": {
+      "description": "UUID of the acquisition method for this purchase order line",
+      "type": "string",
+      "$ref": "../../uuid.json"
+    },
+    "automaticExport": {
+      "description": "if true then line will be marked as available to export in the EDIFACT format or other format",
+      "type": "boolean",
+      "default": false
+    },
+    "alerts": {
+      "description": "an array of alert record IDs",
+      "id": "alerts",
+      "type": "array",
+      "items": {
+        "description": "UUID of an alert record",
+        "$ref": "../../uuid.json"
+      }
+    },
+    "cancellationRestriction": {
+      "description": "whether or not there are cancellation restrictions for this purchase order line",
+      "type": "boolean"
+    },
+    "cancellationRestrictionNote": {
+      "description": "free-form notes related to cancellation restrictions",
+      "type": "string"
+    },
+    "claims": {
+      "description": "list of claims",
+      "id": "claims",
+      "type": "array",
+      "items": {
+        "description": "claim record",
+        "type": "object",
+        "$ref": "claim.json"
+      }
+    },
+    "collection": {
+      "description": "whether or not this purchase order line is for a collection",
+      "type": "boolean",
+      "default": false
+    },
+    "contributors": {
+      "description": "list of contributors to the material",
+      "id": "contributors",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "$ref": "contributor.json"
+      }
+    },
+    "cost": {
+      "description": "cost record",
+      "type": "object",
+      "$ref": "cost.json"
+    },
+    "description": {
+      "description": "description of the material",
+      "type": "string"
+    },
+    "details": {
+      "description": "details record",
+      "type": "object",
+      "$ref": "details.json"
+    },
+    "donor": {
+      "description": "the donor contributing to this purchase order line",
+      "type": "string"
+    },
+    "eresource": {
+      "description": "eresource record",
+      "type": "object",
+      "$ref": "eresource.json"
+    },
+    "fundDistribution": {
+      "description": "Fund distribution records for this purchase order line",
+      "id": "fundDistribution",
+      "type": "array",
+      "items": {
+        "description": "fund distribution record",
+        "type": "object",
+        "$ref": "fund_distribution.json"
+      }
+    },
+    "instanceId": {
+      "description": "UUID of the instance record this purchase order line is related to",
+      "$ref": "../../uuid.json"
+    },
+    "isPackage": {
+      "description": "Indicates that this POL is for a package",
+      "type": "boolean",
+      "default": false
+    },
+    "locations": {
+      "description": "Location records for this purchase order line",
+      "id": "locations",
+      "type": "array",
+      "items": {
+        "description": "location record",
+        "type": "object",
+        "$ref": "location.json"
+      }
+    },
+    "lastEDIExportDate": {
+      "description": "The last date when line was exported in the EDIFACT file",
+      "type": "string",
+      "format": "date-time"
+    },
+    "orderFormat": {
+      "description": "The purchase order line format",
+      "type": "object",
+      "$ref": "order_format.json"
+    },
+    "packagePoLineId": {
+      "description": "UUID referencing the poLine that represents the package that this POLs title belongs to",
+      "$ref": "../../uuid.json"
+    },
+    "paymentStatus": {
+      "description": "The purchase order line payment status",
+      "type": "string",
+      "$ref": "payment_status.json"
+    },
+    "physical": {
+      "description": "UUID of the physical (details) record",
+      "type": "object",
+      "$ref": "physical.json"
+    },
+    "poLineDescription": {
+      "description": "purchase order line description",
+      "type": "string"
+    },
+    "poLineNumber": {
+      "description": "A human readable number assigned to this PO line",
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9]{1,22}-[0-9]{1,3}$"
+    },
+    "publicationDate": {
+      "description": "date (year) of the material's publication",
+      "type": "string"
+    },
+    "publisher": {
+      "description": "publisher of the material",
+      "type": "string"
+    },
+    "purchaseOrderId": {
+      "description": "UUID of the purchase order",
+      "$ref": "../../uuid.json"
+    },
+    "receiptDate": {
+      "description": "date the purchase order line was received",
+      "type": [
+        "null",
+        "string"
+      ],
+      "format": "date-time"
+    },
+    "receiptStatus": {
+      "description": "The purchase order line receipt status",
+      "type": "object",
+      "$ref": "receipt_status.json"
+    },
+    "reportingCodes": {
+      "description": "a list of reporting codes associated with this purchase order line",
+      "id": "reportingCodes",
+      "type": "array",
+      "items": {
+        "description": "UUID of the reporting code",
+        "$ref": "../../uuid.json"
+      }
+    },
+    "requester": {
+      "description": "who requested this purchase order line",
+      "type": "string"
+    },
+    "rush": {
+      "description": "whether or not this is a rush order",
+      "type": "boolean",
+      "default": false
+    },
+    "selector": {
+      "description": "who selected this material",
+      "type": "string"
+    },
+    "source": {
+      "description": "the source of this purchase order line",
+      "type": "object",
+      "$ref": "source.json"
+    },
+    "tags": {
+      "description": "arbitrary tags associated with this purchase order line",
+      "id": "tags",
+      "type": "object",
+      "$ref": "../../raml-util/schemas/tags.schema"
+    },
+    "titleOrPackage": {
+      "description": "title of the material",
+      "type": "string"
+    },
+    "vendorDetail": {
+      "description": "Vendor detail record",
+      "type": "object",
+      "$ref": "vendor_detail.json"
+    },
+    "metadata": {
+      "type": "object",
+      "$ref": "../../raml-util/schemas/metadata.schema",
+      "readonly": true
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "orderFormat",
+    "source",
+    "purchaseOrderId",
+    "titleOrPackage"
+  ]
+}

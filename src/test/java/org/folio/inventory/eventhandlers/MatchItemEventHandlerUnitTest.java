@@ -12,6 +12,7 @@ import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
 import org.folio.MatchDetail;
 import org.folio.MatchProfile;
+import org.folio.inventory.client.OrdersClient;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
@@ -96,8 +97,10 @@ public class MatchItemEventHandlerUnitTest {
   private MarcValueReaderImpl marcValueReader;
   @Mock
   private MappingMetadataCache mappingMetadataCache;
+  @Mock
+  private OrdersClient ordersClient;
   @InjectMocks
-  private ItemLoader itemLoader = new ItemLoader(storage, Vertx.vertx());
+  private ItemLoader itemLoader = new ItemLoader(storage, Vertx.vertx(), ordersClient);
 
   @Before
   public void setUp() {

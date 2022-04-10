@@ -11,6 +11,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.folio.DataImportEventPayload;
 import org.folio.MatchDetail;
 import org.folio.MatchProfile;
+import org.folio.inventory.client.OrdersClient;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
@@ -38,6 +39,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import java.io.UnsupportedEncodingException;
@@ -95,8 +97,10 @@ public class MatchInstanceEventHandlerUnitTest {
   private MarcValueReaderImpl marcValueReader;
   @Mock
   private MappingMetadataCache mappingMetadataCache;
+  @Mock
+  private OrdersClient ordersClient;
   @InjectMocks
-  private final InstanceLoader instanceLoader = new InstanceLoader(storage, Vertx.vertx());
+  private final InstanceLoader instanceLoader = new InstanceLoader(storage, Vertx.vertx(), ordersClient);
 
   @Before
   public void setUp() {

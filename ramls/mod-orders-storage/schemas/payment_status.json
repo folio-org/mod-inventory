@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "Payment/Receipt status",
+  "type": "string",
+  "enum": [
+    "Awaiting Payment",
+    "Cancelled",
+    "Fully Paid",
+    "Partially Paid",
+    "Payment Not Required",
+    "Pending",
+    "Ongoing"
+  ],
+  "default": "Pending"
+}

@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "The source of the Order",
+  "type": "string",
+  "enum": [
+    "User",
+    "API",
+    "EDI",
+    "MARC",
+    "EBSCONET"
+  ]
+}

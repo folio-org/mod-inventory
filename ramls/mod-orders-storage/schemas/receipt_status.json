@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "The purchase order line receipt status",
+  "type": "string",
+  "enum": [
+    "Awaiting Receipt",
+    "Cancelled",
+    "Fully Received",
+    "Partially Received",
+    "Pending",
+    "Receipt Not Required",
+    "Ongoing"
+  ],
+  "default": "Pending"
+}

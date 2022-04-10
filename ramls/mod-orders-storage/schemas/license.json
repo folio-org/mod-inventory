@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "purchase order line license record",
+  "type": "object",
+  "properties": {
+    "code": {
+      "description": "license code",
+      "type": "string"
+    },
+    "description": {
+      "description": "license description",
+      "type": "string"
+    },
+    "reference": {
+      "description": "license reference",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

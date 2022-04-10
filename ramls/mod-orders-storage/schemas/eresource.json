@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "purchase order line e-resource details",
+  "type": "object",
+  "properties": {
+    "activated": {
+      "description": "whether or not this resource is activated",
+      "type": "boolean",
+      "default": false
+    },
+    "activationDue": {
+      "description": "number of days until activation, from date of order placement",
+      "type": "integer"
+    },
+    "createInventory": {
+      "description": "Shows what inventory objects need to be created for electronic resource",
+      "type": "string",
+      "enum": [
+        "Instance, Holding, Item",
+        "Instance, Holding",
+        "Instance",
+        "None"
+      ]
+    },
+    "trial": {
+      "description": "whether or not this is a trial",
+      "type": "boolean",
+      "default": false
+    },
+    "expectedActivation": {
+      "description": "expected date the resource will be activated",
+      "type": "string",
+      "format": "date-time"
+    },
+    "userLimit": {
+      "description": "the concurrent user-limit",
+      "type": "integer"
+    },
+    "accessProvider": {
+      "description": "UUID of the access provider",
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+    },
+    "license": {
+      "description": "License record",
+      "type": "object",
+      "$ref": "license.json"
+    },
+     "materialType": {
+      "description": "UUID of the material Type",
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+    },
+    "resourceUrl": {
+      "description": "Electronic resource can be access via this URL",
+      "type": "string",
+      "pattern": "\\b((?:[a-z][\\w-]+:(?:\/{1,3}|[a-z0-9%])|www\\d{0,3}[.]|[a-z0-9.\\-]+[.][a-z]{2,4}\/)(?:[^\\s()<>]+|\\(([^\\s()<>]+|(\\([^\\s()<>]+\\)))*\\))+(?:\\(([^\\s()<>]+|(\\([^\\s()<>]+\\)))*\\)|[^\\s`!()\\[\\]{};:'\".,<>?]))"
+    }
+  },
+  "additionalProperties": false
+}

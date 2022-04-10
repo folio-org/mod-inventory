@@ -1,32 +1,46 @@
 package org.folio.inventory.dataimport.handlers.matching.loaders;
 
+import static java.lang.String.format;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+
 import org.folio.DataImportEventPayload;
+import org.folio.inventory.client.OrdersClient;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.dataimport.handlers.matching.preloaders.ItemPreloader;
 import org.folio.inventory.domain.SearchableCollection;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.ItemUtil;
+import org.folio.processing.matching.loader.LoadResult;
+import org.folio.processing.matching.loader.query.LoadQuery;
 import org.folio.rest.jaxrs.model.EntityType;
-
-import java.util.List;
-import java.util.stream.Collectors;
-
-import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
 public class ItemLoader extends AbstractLoader<Item> {
 
   private static final String HOLDINGS_FIELD = "holdings";
 
-  private Storage storage;
+  private final Storage storage;
+  private final ItemPreloader preloader;
 
-  public ItemLoader(Storage storage, Vertx vertx) {
+  public ItemLoader(Storage storage, Vertx vertx, OrdersClient ordersClient) {
     super(vertx);
     this.storage = storage;
+    preloader = new ItemPreloader(ordersClient);
+  }
+
+  @Override
+  public CompletableFuture<LoadResult> loadEntity(LoadQuery loadQuery, DataImportEventPayload eventPayload) {
+    return preloader.preload(loadQuery, eventPayload)
+            .thenCompose(query -> super.loadEntity(query, eventPayload));
   }
 
   @Override
