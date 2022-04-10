@@ -388,6 +388,16 @@
               <generateBuilders>true</generateBuilders>
             </configuration>
           </execution>
+          <execution>
+            <id>orders-storage</id>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <configuration>
+              <sourceDirectory>${basedir}/ramls/mod-orders-storage/schemas</sourceDirectory>
+              <targetPackage>org.folio.rest.acq.model</targetPackage>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
       <plugin>
