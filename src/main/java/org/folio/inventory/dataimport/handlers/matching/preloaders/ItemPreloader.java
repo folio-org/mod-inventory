@@ -10,7 +10,7 @@ import org.folio.rest.acq.model.PoLine;
 
 public class ItemPreloader extends AbstractPreloader {
 
-    private final OrdersPreloaderHelper ordersPreloaderHelper;
+    private OrdersPreloaderHelper ordersPreloaderHelper;
 
     public ItemPreloader(OrdersPreloaderHelper ordersPreloaderHelper) {
         this.ordersPreloaderHelper = ordersPreloaderHelper;
@@ -23,7 +23,7 @@ public class ItemPreloader extends AbstractPreloader {
 
     @Override
     protected String getLoaderTargetFieldName() {
-        return "holdingsRecords.id";
+        return "item.holdingsRecords.id";
     }
 
     @Override
@@ -33,7 +33,7 @@ public class ItemPreloader extends AbstractPreloader {
         return ordersPreloaderHelper.preload(eventPayload, preloadingField, loadingParameters, this::convertPreloadResult);
     }
 
-    protected List<String> convertPreloadResult(List<PoLine> poLines) {
+    private List<String> convertPreloadResult(List<PoLine> poLines) {
         return poLines.stream()
                 .flatMap(poLine -> poLine.getLocations().stream().map(Location::getHoldingId))
                 .collect(Collectors.toList());

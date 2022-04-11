@@ -1,6 +1,8 @@
 package org.folio.inventory.dataimport.handlers.matching.preloaders;
 
 
+import static java.util.Objects.isNull;
+
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 
 import java.util.List;
@@ -15,7 +17,7 @@ import org.folio.rest.acq.model.PoLine;
 
 public class OrdersPreloaderHelper {
 
-    private final OrdersClient ordersClient;
+    private OrdersClient ordersClient;
 
     public OrdersPreloaderHelper(OrdersClient ordersClient) {
         this.ordersClient = ordersClient;
@@ -25,6 +27,10 @@ public class OrdersPreloaderHelper {
                                                    PreloadingFields preloadingField,
                                                    List<String> loadingParameters,
                                                    Function<List<PoLine>, List<String>> convertPreloadResult) {
+        if (isNull(loadingParameters) || loadingParameters.isEmpty()) {
+            throw new IllegalArgumentException("Loadind parameters for Orders preloading must not be empty");
+        }
+
         switch (preloadingField) {
             case POL: {
                 Context context = constructContext(eventPayload.getTenant(),

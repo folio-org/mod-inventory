@@ -7,6 +7,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
+
 import org.folio.DataImportEventPayload;
 import org.folio.MatchDetail;
 import org.folio.MatchProfile;
@@ -22,8 +25,14 @@ import org.folio.rest.jaxrs.model.MatchExpression;
 public abstract class AbstractPreloader {
 
     public CompletableFuture<LoadQuery> preload(LoadQuery query, DataImportEventPayload dataImportEventPayload) {
+        if (query == null) {
+            return CompletableFuture.completedFuture(null);
+        }
+
         MatchProfile matchProfile = (MatchProfile)dataImportEventPayload.getCurrentNode().getContent();
-        MatchDetail matchDetail = matchProfile.getMatchDetails().get(0);
+        MatchDetail matchDetail = new JsonObject(Json.encode(
+                matchProfile.getMatchDetails().get(0)))
+                .mapTo(MatchDetail.class);
         MatchExpression matchExpression = matchDetail.getExistingMatchExpression();
 
         Optional<PreloadingFields> preloadingField = getPreloadingField(matchExpression);
@@ -53,7 +62,7 @@ public abstract class AbstractPreloader {
     private Optional<PreloadingFields> getPreloadingField(MatchExpression matchExpression) {
         return Arrays.stream(PreloadingFields.values())
                 .filter(preloadingField -> matchExpression.getFields().stream()
-                        .anyMatch(field -> field.getValue().equals(getMatchEntityName() + "." + preloadingField)))
+                        .anyMatch(field -> field.getValue().equals(getMatchEntityName() + "." + preloadingField.getExistingMatchField())))
                 .findFirst();
     }
 

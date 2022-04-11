@@ -9,7 +9,7 @@ import org.folio.rest.acq.model.PoLine;
 
 public class InstancePreloader extends AbstractPreloader {
 
-    private final OrdersPreloaderHelper ordersPreloaderHelper;
+    private OrdersPreloaderHelper ordersPreloaderHelper;
 
     public InstancePreloader(OrdersPreloaderHelper ordersPreloaderHelper) {
         this.ordersPreloaderHelper = ordersPreloaderHelper;
@@ -32,7 +32,7 @@ public class InstancePreloader extends AbstractPreloader {
         return ordersPreloaderHelper.preload(eventPayload, preloadingField, loadingParameters, this::convertPreloadResult);
     }
 
-    protected List<String> convertPreloadResult(List<PoLine> poLines) {
+    private List<String> convertPreloadResult(List<PoLine> poLines) {
         return poLines.stream()
                 .map(PoLine::getInstanceId)
                 .collect(Collectors.toList());
