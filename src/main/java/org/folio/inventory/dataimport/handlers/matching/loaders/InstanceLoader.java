@@ -15,9 +15,8 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
 import org.folio.DataImportEventPayload;
-import org.folio.inventory.client.OrdersClient;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.dataimport.handlers.matching.preloaders.InstancePreloader;
+import org.folio.inventory.dataimport.handlers.matching.preloaders.AbstractPreloader;
 import org.folio.inventory.domain.SearchableCollection;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.storage.Storage;
@@ -28,12 +27,12 @@ import org.folio.rest.jaxrs.model.EntityType;
 public class InstanceLoader extends AbstractLoader<Instance> {
 
   private Storage storage;
-  private final InstancePreloader preloader;
+  private AbstractPreloader preloader;
 
-  public InstanceLoader(Storage storage, Vertx vertx, OrdersClient ordersClient) {
+  public InstanceLoader(Storage storage, Vertx vertx, AbstractPreloader preloader) {
     super(vertx);
     this.storage = storage;
-    this.preloader = new InstancePreloader(ordersClient);
+    this.preloader = preloader;
   }
 
   @Override

@@ -1,18 +1,22 @@
 package org.folio.inventory.dataimport.handlers.matching.preloaders;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import org.folio.inventory.client.OrdersClient;
+import org.folio.DataImportEventPayload;
 import org.folio.rest.acq.model.PoLine;
 
 public class InstancePreloader extends AbstractPreloader {
-    public InstancePreloader(OrdersClient ordersClient) {
-        super(ordersClient);
+
+    private final OrdersPreloaderHelper ordersPreloaderHelper;
+
+    public InstancePreloader(OrdersPreloaderHelper ordersPreloaderHelper) {
+        this.ordersPreloaderHelper = ordersPreloaderHelper;
     }
 
     @Override
-    protected String getEntityName() {
+    protected String getMatchEntityName() {
         return "instance";
     }
 
@@ -22,6 +26,12 @@ public class InstancePreloader extends AbstractPreloader {
     }
 
     @Override
+    protected CompletableFuture<List<String>> doPreloading(DataImportEventPayload eventPayload,
+                                                           PreloadingFields preloadingField,
+                                                           List<String> loadingParameters) {
+        return ordersPreloaderHelper.preload(eventPayload, preloadingField, loadingParameters, this::convertPreloadResult);
+    }
+
     protected List<String> convertPreloadResult(List<PoLine> poLines) {
         return poLines.stream()
                 .map(PoLine::getInstanceId)

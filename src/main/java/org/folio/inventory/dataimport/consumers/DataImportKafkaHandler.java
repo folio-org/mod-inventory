@@ -49,6 +49,10 @@ import org.folio.inventory.dataimport.handlers.matching.loaders.AuthorityLoader;
 import org.folio.inventory.dataimport.handlers.matching.loaders.HoldingLoader;
 import org.folio.inventory.dataimport.handlers.matching.loaders.InstanceLoader;
 import org.folio.inventory.dataimport.handlers.matching.loaders.ItemLoader;
+import org.folio.inventory.dataimport.handlers.matching.preloaders.HoldingsPreloader;
+import org.folio.inventory.dataimport.handlers.matching.preloaders.InstancePreloader;
+import org.folio.inventory.dataimport.handlers.matching.preloaders.ItemPreloader;
+import org.folio.inventory.dataimport.handlers.matching.preloaders.OrdersPreloaderHelper;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.services.AuthorityIdStorageService;
 import org.folio.inventory.services.HoldingsCollectionService;
@@ -133,9 +137,14 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
 
   private void registerDataImportProcessingHandlers(Storage storage, HttpClient client) {
     OrdersClient ordersClient = new OrdersClient(WebClient.wrap(client));
-    MatchValueLoaderFactory.register(new InstanceLoader(storage, vertx, ordersClient));
-    MatchValueLoaderFactory.register(new ItemLoader(storage, vertx, ordersClient));
-    MatchValueLoaderFactory.register(new HoldingLoader(storage, vertx, ordersClient));
+    OrdersPreloaderHelper ordersPreloaderHelper = new OrdersPreloaderHelper(ordersClient);
+    InstancePreloader instancePreloader = new InstancePreloader(ordersPreloaderHelper);
+    HoldingsPreloader holdingsPreloader = new HoldingsPreloader(ordersPreloaderHelper);
+    ItemPreloader itemPreloader = new ItemPreloader(ordersPreloaderHelper);
+
+    MatchValueLoaderFactory.register(new InstanceLoader(storage, vertx, instancePreloader));
+    MatchValueLoaderFactory.register(new ItemLoader(storage, vertx, itemPreloader));
+    MatchValueLoaderFactory.register(new HoldingLoader(storage, vertx, holdingsPreloader));
     MatchValueLoaderFactory.register(new AuthorityLoader(storage, vertx));
 
     MatchValueReaderFactory.register(new MarcValueReaderImpl());

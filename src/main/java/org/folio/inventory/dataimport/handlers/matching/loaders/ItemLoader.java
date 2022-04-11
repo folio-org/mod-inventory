@@ -13,9 +13,8 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
 import org.folio.DataImportEventPayload;
-import org.folio.inventory.client.OrdersClient;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.dataimport.handlers.matching.preloaders.ItemPreloader;
+import org.folio.inventory.dataimport.handlers.matching.preloaders.AbstractPreloader;
 import org.folio.inventory.domain.SearchableCollection;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.storage.Storage;
@@ -29,12 +28,12 @@ public class ItemLoader extends AbstractLoader<Item> {
   private static final String HOLDINGS_FIELD = "holdings";
 
   private Storage storage;
-  private final ItemPreloader preloader;
+  private AbstractPreloader preloader;
 
-  public ItemLoader(Storage storage, Vertx vertx, OrdersClient ordersClient) {
+  public ItemLoader(Storage storage, Vertx vertx, AbstractPreloader preloader) {
     super(vertx);
     this.storage = storage;
-    this.preloader = new ItemPreloader(ordersClient);
+    this.preloader = preloader;
   }
 
   @Override

@@ -1,5 +1,40 @@
 package org.folio.inventory.eventhandlers;
 
+import static java.lang.String.format;
+import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
+import static org.hamcrest.Matchers.hasItems;
+import static org.hamcrest.junit.MatcherAssert.assertThat;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.when;
+
+import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_MATCHED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_NOT_MATCHED;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
+import static org.folio.MatchDetail.MatchCriterion.EXACTLY_MATCHES;
+import static org.folio.inventory.dataimport.handlers.matching.loaders.AbstractLoader.MULTI_MATCH_IDS;
+import static org.folio.rest.jaxrs.model.EntityType.ITEM;
+import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
+import static org.folio.rest.jaxrs.model.MatchExpression.DataValueType.VALUE_FROM_RECORD;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MATCH_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ReactTo.MATCH;
+
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
+
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
@@ -8,11 +43,18 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+
 import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
+import org.folio.MappingMetadataDto;
 import org.folio.MatchDetail;
 import org.folio.MatchProfile;
-import org.folio.inventory.client.OrdersClient;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
@@ -21,6 +63,7 @@ import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.MatchItemEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.loaders.ItemLoader;
+import org.folio.inventory.dataimport.handlers.matching.preloaders.AbstractPreloader;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.ItemStatusName;
@@ -34,48 +77,8 @@ import org.folio.processing.value.MissingValue;
 import org.folio.processing.value.StringValue;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Field;
-import org.folio.MappingMetadataDto;
 import org.folio.rest.jaxrs.model.MatchExpression;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-
-import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.function.Consumer;
-
-import static java.lang.String.format;
-import static java.util.Arrays.asList;
-import static java.util.Collections.singletonList;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_MATCHED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_NOT_MATCHED;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
-import static org.folio.MatchDetail.MatchCriterion.EXACTLY_MATCHES;
-import static org.folio.inventory.dataimport.handlers.matching.loaders.AbstractLoader.MULTI_MATCH_IDS;
-import static org.folio.rest.jaxrs.model.EntityType.ITEM;
-import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
-import static org.folio.rest.jaxrs.model.MatchExpression.DataValueType.VALUE_FROM_RECORD;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MATCH_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ReactTo.MATCH;
-import static org.hamcrest.Matchers.hasItems;
-import static org.hamcrest.junit.MatcherAssert.assertThat;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.when;
 
 @RunWith(VertxUnitRunner.class)
 public class MatchItemEventHandlerUnitTest {
@@ -98,9 +101,9 @@ public class MatchItemEventHandlerUnitTest {
   @Mock
   private MappingMetadataCache mappingMetadataCache;
   @Mock
-  private OrdersClient ordersClient;
+  private AbstractPreloader preloader;
   @InjectMocks
-  private ItemLoader itemLoader = new ItemLoader(storage, Vertx.vertx(), ordersClient);
+  private ItemLoader itemLoader = new ItemLoader(storage, Vertx.vertx(), preloader);
 
   @Before
   public void setUp() {
@@ -118,6 +121,10 @@ public class MatchItemEventHandlerUnitTest {
       .thenReturn(Future.succeededFuture(Optional.of(new MappingMetadataDto()
         .withMappingRules(new JsonObject().encode())
         .withMappingParams(LOCATIONS_PARAMS))));
+
+    doAnswer(invocationOnMock -> CompletableFuture.completedFuture(invocationOnMock.getArgument(0)))
+            .when(preloader)
+            .preload(any(), any());
   }
 
   @Test
