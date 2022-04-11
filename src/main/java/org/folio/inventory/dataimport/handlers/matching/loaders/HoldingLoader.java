@@ -27,13 +27,13 @@ public class HoldingLoader extends AbstractLoader<HoldingsRecord> {
 
   private static final String HOLDINGS_FIELD = "holdings";
 
-  private final Storage storage;
+  private Storage storage;
   private final HoldingsPreloader preloader;
 
   public HoldingLoader(Storage storage, Vertx vertx, OrdersClient ordersClient) {
     super(vertx);
     this.storage = storage;
-    preloader = new HoldingsPreloader(ordersClient);
+    this.preloader = new HoldingsPreloader(ordersClient);
   }
 
   @Override

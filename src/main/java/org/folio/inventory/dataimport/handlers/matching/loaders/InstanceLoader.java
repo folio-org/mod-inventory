@@ -27,13 +27,13 @@ import org.folio.rest.jaxrs.model.EntityType;
 
 public class InstanceLoader extends AbstractLoader<Instance> {
 
-  private final Storage storage;
+  private Storage storage;
   private final InstancePreloader preloader;
 
   public InstanceLoader(Storage storage, Vertx vertx, OrdersClient ordersClient) {
     super(vertx);
     this.storage = storage;
-    preloader = new InstancePreloader(ordersClient);
+    this.preloader = new InstancePreloader(ordersClient);
   }
 
   @Override

@@ -28,13 +28,13 @@ public class ItemLoader extends AbstractLoader<Item> {
 
   private static final String HOLDINGS_FIELD = "holdings";
 
-  private final Storage storage;
+  private Storage storage;
   private final ItemPreloader preloader;
 
   public ItemLoader(Storage storage, Vertx vertx, OrdersClient ordersClient) {
     super(vertx);
     this.storage = storage;
-    preloader = new ItemPreloader(ordersClient);
+    this.preloader = new ItemPreloader(ordersClient);
   }
 
   @Override
