@@ -289,7 +289,12 @@ public class Instances extends AbstractInstances {
     }
     for (int index = 0; index < precedingSucceedingTitles.size(); index++) {
       JsonObject jsonObject = precedingSucceedingTitles.getJsonObject(index);
+      // This needs to be removed because the UI does not always send back the ID
+      // that it received
       jsonObject.put(ID, null);
+      // These need to be removed because a quirk of JsonObject.mapFrom is that
+      // null values get mapped to a property with a null value rather than
+      // the absence of a value
       jsonObject.put(PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY, null);
       jsonObject.put(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY, null);
     }

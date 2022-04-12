@@ -489,6 +489,7 @@ public class InstancesApiExamples extends ApiTests {
     JsonObject updateInstanceRequest = newInstance.copy()
       .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameTwo)))
       .put(PUBLICATION_PERIOD_KEY, publicationPeriodToJson(new PublicationPeriod(2000, 2012)))
+      // Deliberately send update request with preceding title without an ID
       .put(PRECEDING_TITLES_KEY, procedingTitles)
       .put("natureOfContentTermIds",
         new JsonArray().add(ApiTestSuite.getAudiobookNatureOfContentTermId()));
@@ -501,7 +502,7 @@ public class InstancesApiExamples extends ApiTests {
   @Test
   public void canAddTagToExistingInstanceWithUnconnectedPrecedingSucceeding() {
     var smallAngryPlanet = smallAngryPlanet(UUID.randomUUID());
-
+    
     var precedingTitles = new JsonArray();
     precedingTitles.add(
       new JsonObject()
