@@ -16,7 +16,7 @@ import io.vertx.core.json.JsonObject;
 
 public class RelatedInstanceTest extends ApiTests {
 
-  private static final String RELATED_INSTANCE_KEY = "relatedInstance";
+  private static final String SIBLING_INSTANCE_KEY = "siblingInstanceId";
   private static final String INSTANCE_RELATIONSHIP_TYPE_ID_KEY = "instanceRelationshipTypeId";
 
   @Test
@@ -45,18 +45,18 @@ public class RelatedInstanceTest extends ApiTests {
     var firstInstanceJson = instancesClient.getById(firstInstanceId).getJson();
     var firstInstanceRelatedInstancesJson = firstInstanceJson.getJsonArray(Instance.RELATED_INSTANCES_KEY);
     assertThat(firstInstanceRelatedInstancesJson.size(), is(1));
-    assertThat(firstInstanceRelatedInstancesJson.getJsonObject(0).getString(RELATED_INSTANCE_KEY), is(secondInstanceId));
+    assertThat(firstInstanceRelatedInstancesJson.getJsonObject(0).getString(SIBLING_INSTANCE_KEY), is(secondInstanceId));
 
     var secondInstanceJson = instancesClient.getById(secondInstanceId).getJson();
     var secondInstanceRelatedInstancesJson = secondInstanceJson.getJsonArray(Instance.RELATED_INSTANCES_KEY);
     assertThat(secondInstanceRelatedInstancesJson.size(), is(1));
-    assertThat(secondInstanceRelatedInstancesJson.getJsonObject(0).getString(RELATED_INSTANCE_KEY), is(firstInstanceId));
+    assertThat(secondInstanceRelatedInstancesJson.getJsonObject(0).getString(SIBLING_INSTANCE_KEY), is(firstInstanceId));
 
   }
 
-  private JsonObject createRelatedInstance(UUID relatedInstance) {
+  private JsonObject createRelatedInstance(UUID siblingInstance) {
     return new JsonObject()
-      .put(RELATED_INSTANCE_KEY, relatedInstance)
+      .put(SIBLING_INSTANCE_KEY, siblingInstance)
       .put(INSTANCE_RELATIONSHIP_TYPE_ID_KEY, instanceRelationshipTypeFixture.createIfNotExist(new JsonObject()
         .put("id", UUID.randomUUID().toString())
         .put("name", "siblings")));

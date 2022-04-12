@@ -33,10 +33,6 @@
       "items": {
         "type": "object",
         "properties": {
-          "id": {
-            "description": "Id of the related instance",
-            "type": "string"
-          },
           "siblingInstanceId": {
             "description": "Id of the sibling instance",
             "type": "string"
