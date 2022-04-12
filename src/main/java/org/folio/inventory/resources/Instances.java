@@ -271,6 +271,8 @@ public class Instances extends AbstractInstances {
 
     zeroingFields(existingInstanceJson.getJsonArray(Instance.PRECEDING_TITLES_KEY));
     zeroingFields(existingInstanceJson.getJsonArray(Instance.SUCCEEDING_TITLES_KEY));
+    zeroingFields(updatedInstanceJson.getJsonArray(Instance.PRECEDING_TITLES_KEY));
+    zeroingFields(updatedInstanceJson.getJsonArray(Instance.SUCCEEDING_TITLES_KEY));
 
     Map<String, Object> existingBlockedFields = new HashMap<>();
     Map<String, Object> updatedBlockedFields = new HashMap<>();
