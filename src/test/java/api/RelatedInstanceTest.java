@@ -1,13 +1,18 @@
 package api;
 
 import static api.support.InstanceSamples.nod;
+import static io.vertx.core.json.JsonObject.mapFrom;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 import java.util.Random;
 import java.util.UUID;
 
+import org.folio.InstanceRelationshipType;
 import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.domain.instances.RelatedInstance;
 import org.junit.Test;
 
 import api.support.ApiTests;
@@ -17,12 +22,6 @@ import io.vertx.core.json.JsonObject;
 public class RelatedInstanceTest extends ApiTests {
 
   private static final String SIBLING_INSTANCE_KEY = "siblingInstanceId";
-  private static final String INSTANCE_RELATIONSHIP_TYPE_ID_KEY = "instanceRelationshipTypeId";
-
-  @Test
-  public void canFetchMultipleInstancesWithRelatedInstances() throws Exception {
-
-  }
 
   @Test
   public void canFetchOneInstanceWithRelatedInstances() throws Exception {
@@ -44,22 +43,41 @@ public class RelatedInstanceTest extends ApiTests {
     
     var firstInstanceJson = instancesClient.getById(firstInstanceId).getJson();
     var firstInstanceRelatedInstancesJson = firstInstanceJson.getJsonArray(Instance.RELATED_INSTANCES_KEY);
-    assertThat(firstInstanceRelatedInstancesJson.size(), is(1));
-    assertThat(firstInstanceRelatedInstancesJson.getJsonObject(0).getString(SIBLING_INSTANCE_KEY), is(secondInstanceId));
+    
+    assertThat(firstInstanceRelatedInstancesJson, notNullValue());
+    assertThat(firstInstanceRelatedInstancesJson.size(), not(0));
+    
+    var firstInstanceFirstRelatedInstanceJson = firstInstanceRelatedInstancesJson.getJsonObject(0);
+
+    assertThat(firstInstanceRelatedInstancesJson, notNullValue());
+    assertThat(firstInstanceFirstRelatedInstanceJson.getString(SIBLING_INSTANCE_KEY), is(secondInstanceId));
 
     var secondInstanceJson = instancesClient.getById(secondInstanceId).getJson();
     var secondInstanceRelatedInstancesJson = secondInstanceJson.getJsonArray(Instance.RELATED_INSTANCES_KEY);
-    assertThat(secondInstanceRelatedInstancesJson.size(), is(1));
-    assertThat(secondInstanceRelatedInstancesJson.getJsonObject(0).getString(SIBLING_INSTANCE_KEY), is(firstInstanceId));
+    
+    assertThat(secondInstanceRelatedInstancesJson, notNullValue());
+    assertThat(secondInstanceRelatedInstancesJson.size(), not(0));
+    
+    var secondInstanceFirstRelatedInstanceJson = secondInstanceRelatedInstancesJson.getJsonObject(0);
+    
+    assertThat(secondInstanceFirstRelatedInstanceJson, notNullValue());
+    assertThat(secondInstanceFirstRelatedInstanceJson.getString(SIBLING_INSTANCE_KEY), is(firstInstanceId));
 
   }
 
-  private JsonObject createRelatedInstance(UUID siblingInstance) {
-    return new JsonObject()
-      .put(SIBLING_INSTANCE_KEY, siblingInstance)
-      .put(INSTANCE_RELATIONSHIP_TYPE_ID_KEY, instanceRelationshipTypeFixture.createIfNotExist(new JsonObject()
-        .put("id", UUID.randomUUID().toString())
-        .put("name", "siblings")));
+  private JsonObject createRelatedInstance(UUID siblingInstanceId) {
+    String instanceRelationshipTypeID = UUID.randomUUID().toString();
+
+    instanceRelationshipTypeFixture.createIfNotExist(mapFrom(
+      new InstanceRelationshipType()
+        .withId(instanceRelationshipTypeID)
+        .withName("siblings")
+      ));  
+
+    return  mapFrom(new RelatedInstance(
+        siblingInstanceId.toString(), 
+        instanceRelationshipTypeID
+      ));
   }
 
   private String randomString(String prefix) {
