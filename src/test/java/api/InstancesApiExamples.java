@@ -69,6 +69,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import static support.matchers.ResponseMatchers.hasValidationError;
+import static support.matchers.ResponseMatchers.hasValidationErrorMessage;
 
 public class InstancesApiExamples extends ApiTests {
 
@@ -521,6 +522,8 @@ public class InstancesApiExamples extends ApiTests {
     var putResponse = updateInstance(updateInstanceRequest);
 
     assertThat(putResponse.getStatusCode(), is(422));
+    assertThat(putResponse, hasValidationErrorMessage(
+      "Instance is controlled by MARC record, these fields are blocked and can not be updated: physicalDescriptions,notes,languages,precedingTitles,identifiers,instanceTypeId,modeOfIssuanceId,subjects,source,title,indexTitle,publicationFrequency,electronicAccess,publicationRange,classifications,succeedingTitles,editions,hrid,series,instanceFormatIds,publication,contributors,alternativeTitles"));
   }
 
   @Test
@@ -534,7 +537,7 @@ public class InstancesApiExamples extends ApiTests {
   }
 
   @Test
-  public void cannotUpdateAnInstanceWithOptimisticLockingFailure() throws Exception {
+  public void cannotUpdateAnInstanceWithOptimisticLockingFailure() {
 
     JsonObject instance = createInstance(smallAngryPlanet(ApiTestSuite.ID_FOR_OPTIMISTIC_LOCKING_FAILURE));
 
