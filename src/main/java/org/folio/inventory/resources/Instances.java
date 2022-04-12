@@ -160,6 +160,7 @@ public class Instances extends AbstractInstances {
       .thenCompose(InstancePrecedingSucceedingTitleValidators::refuseWhenUnconnectedHasNoTitle)
       .thenCompose(instance -> storage.getInstanceCollection(context).add(instance))
       .thenCompose(response -> {
+        response.setRelatedInstances(newInstance.getRelatedInstances());
         response.setParentInstances(newInstance.getParentInstances());
         response.setChildInstances(newInstance.getChildInstances());
         response.setPrecedingTitles(newInstance.getPrecedingTitles());
@@ -338,6 +339,24 @@ public class Instances extends AbstractInstances {
       }
     );
   }
+
+  // /**
+  //  * Fetches instance relationships for multiple Instance records, populates, responds
+  //  *
+  //  * @param instancesResponse Multi record Instances result
+  //  * @param routingContext Routing
+  //  */
+  // private CompletableFuture<InstancesResponse> fetchRelatedInstances(
+  //   InstancesResponse instancesResponse,
+  //   RoutingContext routingContext) {
+
+  //   final List<String> instanceIds =
+  //     getInstanceIdsFromInstanceResult(instancesResponse.getSuccess());
+
+  //   return createInstanceRelationshipsService(routingContext)
+  //     .fetchInstanceRelationships(instanceIds)
+  //     .thenCompose(response -> withInstancesRelationships(instancesResponse, response));
+  // }
 
   /**
    * Fetches instance relationships for multiple Instance records, populates, responds
