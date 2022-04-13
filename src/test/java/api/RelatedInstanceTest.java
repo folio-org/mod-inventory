@@ -12,7 +12,6 @@ import java.util.UUID;
 
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.RelatedInstance;
-import org.folio.inventory.support.http.client.IndividualResource;
 import org.junit.Test;
 
 import api.support.ApiTests;

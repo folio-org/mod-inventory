@@ -67,14 +67,14 @@ public abstract class AbstractInstances {
   protected CompletableFuture<List<Response>> updateInstanceRelationships(Instance instance,
     RoutingContext routingContext, WebContext context) {
 
-    CollectionResourceClient relatedInstancesClient = createInstanceRelationshipsClient(
+    CollectionResourceClient instanceRelationshipsClient = createInstanceRelationshipsClient(
       routingContext, context);
-    CollectionResourceRepository relatedInstancesRepository = new CollectionResourceRepository(relatedInstancesClient);
+    CollectionResourceRepository relatedInstancesRepository = new CollectionResourceRepository(instanceRelationshipsClient);
     List<String> instanceId = List.of(instance.getId());
     String query = createQueryForInstanceRelationships(instanceId);
 
     CompletableFuture<Response> future = new CompletableFuture<>();
-    relatedInstancesClient.getAll(query, future::complete);
+    instanceRelationshipsClient.getAll(query, future::complete);
 
     return future.thenCompose(result ->
       updateInstanceRelationships(instance, relatedInstancesRepository, result));
@@ -122,7 +122,40 @@ public abstract class AbstractInstances {
     RoutingContext routingContext, WebContext context, Instance instance) {
 
     return updateInstanceRelationships(instance, routingContext, context)
-      .thenCompose(r -> updatePrecedingSucceedingTitles(instance, routingContext, context));
+      .thenCompose(r -> updatePrecedingSucceedingTitles(instance, routingContext, context))
+      .thenCompose(r -> updateRelatedInstances(instance, routingContext, context));
+  }
+
+  protected CompletableFuture<List<Response>> updateRelatedInstances(
+    Instance instance, RoutingContext routingContext, WebContext context) {
+
+    CollectionResourceClient relatedInstancesClient = createRelatedInstancesClient(
+      routingContext, context);
+    CollectionResourceRepository relatedInstancesRepository =
+      new CollectionResourceRepository(relatedInstancesClient);
+
+    List<String> instanceId = List.of(instance.getId());
+    String query = createQueryForRelatedInstances(instanceId);
+
+    CompletableFuture<Response> future = new CompletableFuture<>();
+    relatedInstancesClient.getAll(query, future::complete);
+
+    return future.thenCompose(result ->
+      updateRelatedInstances(instance, relatedInstancesRepository, result));
+  }
+
+  private CompletableFuture<List<Response>> updateRelatedInstances(Instance instance,
+    CollectionResourceRepository relatedInstancesClient, Response result) {
+
+    JsonObject json = result.getJson();
+    List<JsonObject> relatedInstancesList = JsonArrayHelper.toList(json.getJsonArray(Instance.RELATED_INSTANCES_KEY));
+    Map<String, PrecedingSucceedingTitle> updatingRelatedInstances =
+      getUpdatingPrecedingSucceedingTitles(instance);
+
+    List<CompletableFuture<Response>> allFutures = update(relatedInstancesClient,
+      existingPrecedingSucceedingTitles, updatingPrecedingSucceedingTitles);
+
+    return allResultsOf(allFutures);
   }
 
   protected CompletableFuture<List<Response>> updatePrecedingSucceedingTitles(
@@ -205,6 +238,12 @@ public abstract class AbstractInstances {
     return allFutures;
   }
 
+  private Map<String, RelatedInstance> getUpdatingRelatedInstances(Instance instance) {
+    Map<String, RelatedInstance> updatingRelatedInstances = new HashMap();
+    updateRelatedInstances(instance, updatingRelatedInstances);
+    return updatingRelatedInstances;
+  }
+
   private Map<String, PrecedingSucceedingTitle> getUpdatingPrecedingSucceedingTitles(Instance instance) {
     Map<String, PrecedingSucceedingTitle> updatingPrecedingSucceedingTitles = new HashMap();
 
@@ -228,6 +267,16 @@ public abstract class AbstractInstances {
             child.title,
             child.hrid,
             child.identifiers));
+      });
+    }
+  }
+
+  private void updateRelatedInstances(Instance instance,
+    Map<String, RelatedInstance> updatingRelatedInstances) {
+
+    if (instance.getRelatedInstances() != null) {
+      instance.getRelatedInstances().forEach(rel -> {
+          updatingRelatedInstances.put(rel.relatedInstanceId, rel);
       });
     }
   }
