@@ -11,6 +11,7 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
+import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.InstanceUtil;
 import org.folio.processing.mapping.defaultmapper.RecordMapper;
@@ -73,7 +74,15 @@ public class InstanceUpdateDelegate {
 
   private Future<Instance> getInstanceById(String instanceId, InstanceCollection instanceCollection) {
     Promise<Instance> promise = Promise.promise();
-    instanceCollection.findById(instanceId, success -> promise.complete(success.getResult()),
+    instanceCollection.findById(instanceId, success -> {
+        if (success.getResult() == null) {
+          String errorMsg = format("Can't find Instance by id: %s ", instanceId);
+          LOGGER.error(errorMsg);
+          promise.fail(new NotFoundException(errorMsg));
+        } else {
+          promise.complete(success.getResult());
+        }
+      },
       failure -> {
         LOGGER.error(format("Error retrieving Instance by id %s - %s, status code %s", instanceId, failure.getReason(), failure.getStatusCode()));
         promise.fail(failure.getReason());
