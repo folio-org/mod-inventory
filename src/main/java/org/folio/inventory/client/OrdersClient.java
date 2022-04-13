@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
 import lombok.SneakyThrows;
@@ -18,12 +19,13 @@ import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.exceptions.OrdersLoadingException;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
-import org.folio.rest.acq.model.PoLineCollection;
 
 public class OrdersClient {
 
     private static final String CLIENT_PREFIX = "/orders";
     private static final String ORDER_LINES_API_PREFIX = "/order-lines";
+    private static final String PO_LINES_FIELD = "poLines";
+
     private static final Logger LOGGER = LogManager.getLogger(OrdersClient.class);
 
     private final WebClient webClient;
@@ -34,7 +36,7 @@ public class OrdersClient {
         this.okapiHttpClientCreator = this::createOkapiHttpClient;
     }
 
-    public CompletableFuture<Optional<PoLineCollection>> getPoLineCollection(String cql, Context context) {
+    public CompletableFuture<Optional<JsonArray>> getPoLineCollection(String cql, Context context) {
         LOGGER.trace("Trying to get InstanceId for okapi url: {}, tenantId: {}, by cql: {}",
                 context.getOkapiLocation(), context.getTenantId(), cql);
 
@@ -49,8 +51,8 @@ public class OrdersClient {
                 .thenCompose(httpResponse -> {
                     if (httpResponse.getStatusCode() == HttpStatus.SC_OK) {
                         LOGGER.debug("PurchaseOrderLine was loaded for cql '{}'", cql);
-                        PoLineCollection poLineCollection = new JsonObject(httpResponse.getBody()).mapTo(PoLineCollection.class);
-                        return CompletableFuture.completedFuture(Optional.ofNullable(poLineCollection));
+                        JsonArray poLines = new JsonObject(httpResponse.getBody()).getJsonArray(PO_LINES_FIELD);
+                        return CompletableFuture.completedFuture(Optional.ofNullable(poLines));
                     } else if (httpResponse.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
                         LOGGER.warn("PurchaseOrderLine was not found by cql '{}'", cql);
                         return CompletableFuture.completedFuture(Optional.empty());

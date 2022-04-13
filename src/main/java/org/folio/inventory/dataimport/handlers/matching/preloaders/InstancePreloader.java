@@ -1,13 +1,18 @@
 package org.folio.inventory.dataimport.handlers.matching.preloaders;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import io.vertx.core.json.JsonArray;
+
 import org.folio.DataImportEventPayload;
-import org.folio.rest.acq.model.PoLine;
+import org.folio.inventory.support.JsonArrayHelper;
 
 public class InstancePreloader extends AbstractPreloader {
+
+    private static final String INSTANCE_ID_FIELD = "instanceId";
 
     private OrdersPreloaderHelper ordersPreloaderHelper;
 
@@ -32,9 +37,10 @@ public class InstancePreloader extends AbstractPreloader {
         return ordersPreloaderHelper.preload(eventPayload, preloadingField, loadingParameters, this::extractInstanceIdsForInstances);
     }
 
-    private List<String> extractInstanceIdsForInstances(List<PoLine> poLines) {
-        return poLines.stream()
-                .map(PoLine::getInstanceId)
+    private List<String> extractInstanceIdsForInstances(JsonArray poLines) {
+        return JsonArrayHelper.toList(poLines).stream()
+                .map(poLine -> poLine.getString(INSTANCE_ID_FIELD))
+                .filter(Objects::nonNull)
                 .distinct()
                 .collect(Collectors.toList());
     }

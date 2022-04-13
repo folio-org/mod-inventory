@@ -1,12 +1,17 @@
 package org.folio.inventory.dataimport.handlers.matching.preloaders;
 
+import static org.folio.inventory.dataimport.handlers.matching.preloaders.HoldingsPreloader.HOLDINGS_ID_FIELD;
+import static org.folio.inventory.dataimport.handlers.matching.preloaders.HoldingsPreloader.LOCATIONS_FIELD;
+
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import io.vertx.core.json.JsonArray;
+
 import org.folio.DataImportEventPayload;
-import org.folio.rest.acq.model.Location;
-import org.folio.rest.acq.model.PoLine;
+import org.folio.inventory.support.JsonArrayHelper;
 
 public class ItemPreloader extends AbstractPreloader {
 
@@ -33,9 +38,11 @@ public class ItemPreloader extends AbstractPreloader {
         return ordersPreloaderHelper.preload(eventPayload, preloadingField, loadingParameters, this::extractHoldingsIdsForItems);
     }
 
-    private List<String> extractHoldingsIdsForItems(List<PoLine> poLines) {
-        return poLines.stream()
-                .flatMap(poLine -> poLine.getLocations().stream().map(Location::getHoldingId))
+    private List<String> extractHoldingsIdsForItems(JsonArray poLines) {
+        return JsonArrayHelper.toList(poLines).stream()
+                .flatMap(poLine -> JsonArrayHelper.toList(poLine.getJsonArray(LOCATIONS_FIELD)).stream()
+                        .map(location -> location.getString(HOLDINGS_ID_FIELD)))
+                .filter(Objects::nonNull)
                 .distinct()
                 .collect(Collectors.toList());
     }

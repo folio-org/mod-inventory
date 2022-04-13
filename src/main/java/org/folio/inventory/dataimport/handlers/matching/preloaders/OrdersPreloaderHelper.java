@@ -10,11 +10,12 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
+import io.vertx.core.json.JsonArray;
+
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.client.OrdersClient;
 import org.folio.inventory.common.Context;
 import org.folio.processing.exceptions.MatchingException;
-import org.folio.rest.acq.model.PoLine;
 
 public class OrdersPreloaderHelper {
 
@@ -27,7 +28,7 @@ public class OrdersPreloaderHelper {
     public CompletableFuture<List<String>> preload(DataImportEventPayload eventPayload,
                                                    PreloadingFields preloadingField,
                                                    List<String> loadingParameters,
-                                                   Function<List<PoLine>, List<String>> convertPreloadResult) {
+                                                   Function<JsonArray, List<String>> convertPreloadResult) {
         if (isNull(loadingParameters) || loadingParameters.isEmpty()) {
             throw new IllegalArgumentException("Loading parameters for Orders preloading must not be empty");
         }
@@ -41,11 +42,11 @@ public class OrdersPreloaderHelper {
                                 String.format("purchaseOrder.workflowStatus==Open AND %s",
                                         buildMultipleValuesCqlQuery("poLineNumber", loadingParameters)),
                                 context)
-                        .thenApply(poLineCollection -> {
-                            if (poLineCollection.isEmpty() || poLineCollection.get().getPoLines().isEmpty()) {
+                        .thenApply(poLines -> {
+                            if (poLines.isEmpty() || poLines.get().isEmpty()) {
                                 throw new MatchingException("Not found POL");
                             }
-                            return convertPreloadResult.apply(poLineCollection.get().getPoLines());
+                            return convertPreloadResult.apply(poLines.get());
                         });
             }
             default: {

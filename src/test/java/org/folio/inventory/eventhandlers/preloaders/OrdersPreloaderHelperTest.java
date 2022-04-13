@@ -6,6 +6,8 @@ import static org.mockito.Mockito.when;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -13,6 +15,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import lombok.SneakyThrows;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -25,14 +29,15 @@ import org.folio.DataImportEventPayload;
 import org.folio.inventory.client.OrdersClient;
 import org.folio.inventory.dataimport.handlers.matching.preloaders.OrdersPreloaderHelper;
 import org.folio.inventory.dataimport.handlers.matching.preloaders.PreloadingFields;
-import org.folio.rest.acq.model.PoLine;
-import org.folio.rest.acq.model.PoLineCollection;
+import org.folio.inventory.support.JsonArrayHelper;
 
 @RunWith(MockitoJUnitRunner.class)
 public class OrdersPreloaderHelperTest {
 
     private static final String NOT_FOUND_POL_MESSAGE = "Not found POL";
     private static final String EMPTY_ORDER_PRELOADING_PARAMETERS_MESSAGE = "Loading parameters for Orders preloading must not be empty";
+
+    private static final String INSTANCE_ID_FIELD = "instanceId";
 
     @Mock
     private OrdersClient ordersClient;
@@ -43,12 +48,8 @@ public class OrdersPreloaderHelperTest {
     @SneakyThrows
     public void shouldPreloadByPOL() {
         List<String> instanceIdsMock = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
-        PoLineCollection poLineCollectionMock = new PoLineCollection();
-        poLineCollectionMock.setPoLines(instanceIdsMock.stream()
-                .map(instanceId -> {
-                    PoLine poLine = new PoLine();
-                    poLine.setInstanceId(instanceId);
-                    return poLine;})
+        JsonArray poLineCollectionMock = new JsonArray(instanceIdsMock.stream()
+                .map(instanceId -> new JsonObject(Map.of(INSTANCE_ID_FIELD, instanceId)))
                 .collect(Collectors.toList()));
 
         List<String> poLineNumbersMock = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
@@ -94,9 +95,11 @@ public class OrdersPreloaderHelperTest {
                 .hasMessage(NOT_FOUND_POL_MESSAGE);
     }
 
-    private Function<List<PoLine>, List<String>> getPreloadResultConverter() {
-        return poLines -> poLines.stream()
-                .map(PoLine::getInstanceId)
+    private Function<JsonArray, List<String>> getPreloadResultConverter() {
+        return poLines -> JsonArrayHelper.toList(poLines).stream()
+                .map(poLine -> poLine.getString(INSTANCE_ID_FIELD))
+                .filter(Objects::nonNull)
+                .distinct()
                 .collect(Collectors.toList());
     }
 

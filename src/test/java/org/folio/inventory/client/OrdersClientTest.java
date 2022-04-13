@@ -3,6 +3,7 @@ package org.folio.inventory.client;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 
 import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -15,6 +16,8 @@ import com.github.tomakehurst.wiremock.matching.RegexPattern;
 import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -27,8 +30,6 @@ import org.junit.runner.RunWith;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.exceptions.OrdersLoadingException;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
-import org.folio.rest.acq.model.PoLine;
-import org.folio.rest.acq.model.PoLineCollection;
 
 @RunWith(VertxUnitRunner.class)
 public class OrdersClientTest {
@@ -36,12 +37,14 @@ public class OrdersClientTest {
   private static final String TENANT_ID = "diku";
   private static final String ORDER_LINES_URL = "/orders/order-lines";
   private static final String ORDER_LINES_CQL = "poLineNumber=10001-1";
+  private static final String INSTANCE_ID_FIELD = "instanceId";
+  private static final String PO_LINES_FIELD = "poLines";
 
   private final Vertx vertx = Vertx.vertx();
   private final OrdersClient ordersClient = new OrdersClient(WebClient.wrap(vertx.createHttpClient()));
 
   private final String instanceIdMock = UUID.randomUUID().toString();
-  private final PoLineCollection orderLinesResponseMock = new PoLineCollection();
+  private JsonObject orderLinesResponseMock;
 
   @Rule
   public WireMockRule mockServer = new WireMockRule(
@@ -54,9 +57,8 @@ public class OrdersClientTest {
 
   @Before
   public void setUp() {
-    PoLine poLineMock = new PoLine();
-    poLineMock.setInstanceId(instanceIdMock);
-    orderLinesResponseMock.setPoLines(Collections.singletonList(poLineMock));
+    JsonObject poLineMock = new JsonObject(Map.of(INSTANCE_ID_FIELD, instanceIdMock));
+    orderLinesResponseMock = new JsonObject(Map.of(PO_LINES_FIELD, new JsonArray(Collections.singletonList(poLineMock))));
 
     WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(ORDER_LINES_URL), true))
                     .withQueryParam("query", new RegexPattern(".*"))
@@ -69,12 +71,12 @@ public class OrdersClientTest {
   public void shouldReturnInstanceIdForOrderLine(TestContext context) {
     Async async = context.async();
 
-    CompletableFuture<Optional<PoLineCollection>> optionalFuture = ordersClient.getPoLineCollection(ORDER_LINES_CQL, this.context);
+    CompletableFuture<Optional<JsonArray>> optionalFuture = ordersClient.getPoLineCollection(ORDER_LINES_CQL, this.context);
 
     optionalFuture.whenComplete((result, throwable) -> {
       context.assertNull(throwable);
       context.assertTrue(result.isPresent());
-      context.assertEquals(result.get().getPoLines().get(0).getInstanceId(), instanceIdMock);
+      context.assertEquals(result.get().getJsonObject(0).getString(INSTANCE_ID_FIELD), instanceIdMock);
       async.complete();
     });
   }
@@ -86,7 +88,7 @@ public class OrdersClientTest {
             .withQueryParam("query", new RegexPattern(".*"))
             .willReturn(WireMock.notFound()));
 
-    CompletableFuture<Optional<PoLineCollection>> optionalFuture = ordersClient.getPoLineCollection(ORDER_LINES_CQL, this.context);
+    CompletableFuture<Optional<JsonArray>> optionalFuture = ordersClient.getPoLineCollection(ORDER_LINES_CQL, this.context);
 
     optionalFuture.whenComplete((result, throwable) -> {
       context.assertNull(throwable);
@@ -102,7 +104,7 @@ public class OrdersClientTest {
             .withQueryParam("query", new RegexPattern(".*"))
       .willReturn(WireMock.serverError()));
 
-    CompletableFuture<Optional<PoLineCollection>> optionalFuture = ordersClient.getPoLineCollection(ORDER_LINES_CQL, this.context);
+    CompletableFuture<Optional<JsonArray>> optionalFuture = ordersClient.getPoLineCollection(ORDER_LINES_CQL, this.context);
 
     optionalFuture.whenComplete((result, throwable) -> {
       context.assertNull(result);
@@ -116,7 +118,7 @@ public class OrdersClientTest {
   public void shouldReturnFailedFutureWhenSpecifiedCqlIsNull(TestContext context) {
     Async async = context.async();
 
-    CompletableFuture<Optional<PoLineCollection>> optionalFuture = ordersClient.getPoLineCollection(null, this.context);
+    CompletableFuture<Optional<JsonArray>> optionalFuture = ordersClient.getPoLineCollection(null, this.context);
 
     optionalFuture.whenComplete((result, throwable) -> {
       context.assertNull(result);
