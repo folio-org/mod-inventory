@@ -23,6 +23,7 @@ import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceRelationship;
 import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
 import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
+import org.folio.inventory.domain.instances.RelatedInstance;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
@@ -70,7 +71,7 @@ public abstract class AbstractInstances {
       routingContext, context);
     CollectionResourceRepository relatedInstancesRepository = new CollectionResourceRepository(relatedInstancesClient);
     List<String> instanceId = List.of(instance.getId());
-    String query = createQueryForRelatedInstances(instanceId);
+    String query = createQueryForInstanceRelationships(instanceId);
 
     CompletableFuture<Response> future = new CompletableFuture<>();
     relatedInstancesClient.getAll(query, future::complete);
@@ -268,11 +269,13 @@ public abstract class AbstractInstances {
     List<Instance> instances = wrappedInstances.records;
 
     instances.forEach(instance -> {
+      List<RelatedInstance> relatedInstances = instancesResponse.getRelatedInstanceMap().get(instance.getId());
       List<InstanceRelationshipToParent> parentInstances = instancesResponse.getParentInstanceMap().get(instance.getId());
       List<InstanceRelationshipToChild> childInstances = instancesResponse.getChildInstanceMap().get(instance.getId());
       List<PrecedingSucceedingTitle> precedingTitles = instancesResponse.getPrecedingTitlesMap().get(instance.getId());
       List<PrecedingSucceedingTitle> succeedingTitles = instancesResponse.getSucceedingTitlesMap().get(instance.getId());
       results.add(instance
+        .setRelatedInstances(relatedInstances)
         .setParentInstances(parentInstances)
         .setChildInstances(childInstances)
         .setPrecedingTitles(precedingTitles)
@@ -288,6 +291,12 @@ public abstract class AbstractInstances {
 
 
   // Utilities
+  protected CollectionResourceClient createRelatedInstancesClient(
+    RoutingContext routingContext, WebContext context) {
+
+    return getCollectionResourceRepository(routingContext, context,
+      "/instance-storage/instances");
+  }
 
   protected CollectionResourceClient createInstanceRelationshipsClient(
     RoutingContext routingContext, WebContext context) {
@@ -352,6 +361,11 @@ public abstract class AbstractInstances {
   }
 
   protected String createQueryForRelatedInstances(List<String> instanceIds) {
+    String idList = instanceIds.stream().distinct().collect(Collectors.joining(" or "));
+    return format("%s==(%s)", RelatedInstance.RELATED_INSTANCE_ID_KEY, idList);
+  }
+
+  protected String createQueryForInstanceRelationships(List<String> instanceIds) {
     String idList = instanceIds.stream().distinct().collect(Collectors.joining(" or "));
     return format("subInstanceId==(%s) or superInstanceId==(%s)", idList, idList);
   }

@@ -207,6 +207,7 @@ public class InstancesBatch extends AbstractInstances {
       for (Instance createdInstance : createdInstances) {
         Instance newInstance = mapInstanceById.get(createdInstance.getId());
         if (newInstance != null) {
+          createdInstance.setRelatedInstances(newInstance.getRelatedInstances());
           createdInstance.setParentInstances(newInstance.getParentInstances());
           createdInstance.setChildInstances(newInstance.getChildInstances());
           createdInstance.setPrecedingTitles(newInstance.getPrecedingTitles());

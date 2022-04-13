@@ -4,25 +4,21 @@ import io.vertx.core.json.JsonObject;
 
 public class RelatedInstance {
   // JSON property names
-  public static final String SIBLING_INSTANCE_ID_KEY = "siblingInstanceId";
-  public static final String INSTANCE_RELATIONSHIP_TYPE_ID_KEY = "instanceRelationshipTypeId";
+  public static final String RELATED_INSTANCE_ID_KEY = "relatedInstanceId";
 
-  public final String siblingInstanceId;
-  public final String instanceRelationshipTypeId;
+  public final String relatedInstanceId;
 
-  public RelatedInstance (String siblingInstanceId, String instanceRelationshipTypeId) {
-    this.siblingInstanceId = siblingInstanceId;
-    this.instanceRelationshipTypeId = instanceRelationshipTypeId;
+  public RelatedInstance (String relatedInstanceId) {
+    this.relatedInstanceId = relatedInstanceId;
   }
 
   public RelatedInstance (JsonObject rel) {
-    this(rel.getString(SIBLING_INSTANCE_ID_KEY),
-         rel.getString(INSTANCE_RELATIONSHIP_TYPE_ID_KEY));
+    this(rel.getString(RELATED_INSTANCE_ID_KEY));
   }
 
   @Override
   public String toString() {
-    return "{ \""+SIBLING_INSTANCE_ID_KEY+"\": \""+siblingInstanceId+"\", \""+INSTANCE_RELATIONSHIP_TYPE_ID_KEY+"\": \""+instanceRelationshipTypeId+"\"}";
+    return "{ \""+RELATED_INSTANCE_ID_KEY+"\": \""+relatedInstanceId+"\" }";
   }
 
   @Override

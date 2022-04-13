@@ -266,7 +266,7 @@ public class Instance {
     json.put(ADMININSTRATIVE_NOTES_KEY, getAdministrativeNotes());
     putIfNotNull(json, MATCH_KEY_KEY, getMatchKey());
     putIfNotNull(json, INDEX_TITLE_KEY, getIndexTitle());
-    putIfNotNull(json, RELATED_INSTANCES_KEY, getRelatedInstances());
+    putIfNotNull(json, RELATED_INSTANCES_KEY, relatedInstances);
     putIfNotNull(json, PARENT_INSTANCES_KEY, parentInstances);
     putIfNotNull(json, CHILD_INSTANCES_KEY, childInstances);
     putIfNotNull(json, IS_BOUND_WITH_KEY, getIsBoundWith());

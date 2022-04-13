@@ -12,14 +12,14 @@ public class InstanceRelationshipTypeFixture extends ReferenceRecordFixture {
   }
 
   public ReferenceRecordResponse boundWith() {
-    return createIfNotExist(newInstanceRelationship("bound-with"));
+    return createIfNotExist(newInstanceRelationshipType("bound-with"));
   }
 
   public ReferenceRecordResponse monographicSeries() {
-    return createIfNotExist(newInstanceRelationship("monographic series"));
+    return createIfNotExist(newInstanceRelationshipType("monographic series"));
   }
 
-  private JsonObject newInstanceRelationship(String name) {
+  private JsonObject newInstanceRelationshipType(String name) {
     return new JsonObject()
       .put("id", UUID.randomUUID().toString())
       .put("name", name);

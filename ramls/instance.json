@@ -33,19 +33,14 @@
       "items": {
         "type": "object",
         "properties": {
-          "siblingInstanceId": {
-            "description": "Id of the sibling instance",
-            "type": "string"
-          },
-          "instanceRelationshipTypeId": {
-            "description": "Id of the relationship type",
+          "relatedInstanceId": {
+            "description": "Id of the related instance",
             "type": "string"
           }
         },
         "additionalProperties": false,
         "required": [
-          "siblingInstanceId",
-          "instanceRelationshipTypeId"
+          "relatedInstanceId"
         ]
       }
     },
