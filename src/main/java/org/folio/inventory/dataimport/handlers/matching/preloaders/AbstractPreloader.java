@@ -4,6 +4,7 @@ package org.folio.inventory.dataimport.handlers.matching.preloaders;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -29,10 +30,15 @@ public abstract class AbstractPreloader {
             return CompletableFuture.completedFuture(null);
         }
 
-        MatchProfile matchProfile = (MatchProfile)dataImportEventPayload.getCurrentNode().getContent();
-        MatchDetail matchDetail = new JsonObject(Json.encode(
-                matchProfile.getMatchDetails().get(0)))
-                .mapTo(MatchDetail.class);
+        MatchProfile matchProfile;
+        if (dataImportEventPayload.getCurrentNode().getContent() instanceof Map) {
+            matchProfile = (new JsonObject((Map)dataImportEventPayload.getCurrentNode().getContent()))
+                    .mapTo(MatchProfile.class);
+        } else {
+            matchProfile = new JsonObject(Json.encode(dataImportEventPayload.getCurrentNode().getContent()))
+                    .mapTo(MatchProfile.class);
+        }
+        MatchDetail matchDetail = matchProfile.getMatchDetails().get(0);
         MatchExpression matchExpression = matchDetail.getExistingMatchExpression();
 
         Optional<PreloadingFields> preloadingField = getPreloadingField(matchExpression);

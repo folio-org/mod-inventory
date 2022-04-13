@@ -32,7 +32,7 @@ import org.folio.rest.acq.model.PoLineCollection;
 public class OrdersPreloaderHelperTest {
 
     private static final String NOT_FOUND_POL_MESSAGE = "Not found POL";
-    private static final String EMPTY_ORDER_PRELOADING_PARAMETERS_MESSAGE = "Loadind parameters for Orders preloading must not be empty";
+    private static final String EMPTY_ORDER_PRELOADING_PARAMETERS_MESSAGE = "Loading parameters for Orders preloading must not be empty";
 
     @Mock
     private OrdersClient ordersClient;
@@ -52,7 +52,7 @@ public class OrdersPreloaderHelperTest {
                 .collect(Collectors.toList()));
 
         List<String> poLineNumbersMock = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
-        String orderLinesCql = String.format("purchaseOrder.workflowStatus==Open AND poLineNumber==(%s OR %s)",
+        String orderLinesCql = String.format("purchaseOrder.workflowStatus==Open AND poLineNumber==(%s or %s)",
                 poLineNumbersMock.get(0),
                 poLineNumbersMock.get(1));
 

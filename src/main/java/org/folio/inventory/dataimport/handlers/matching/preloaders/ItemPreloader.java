@@ -30,12 +30,13 @@ public class ItemPreloader extends AbstractPreloader {
     protected CompletableFuture<List<String>> doPreloading(DataImportEventPayload eventPayload,
                                                            PreloadingFields preloadingField,
                                                            List<String> loadingParameters) {
-        return ordersPreloaderHelper.preload(eventPayload, preloadingField, loadingParameters, this::convertPreloadResult);
+        return ordersPreloaderHelper.preload(eventPayload, preloadingField, loadingParameters, this::extractHoldingsIdsForItems);
     }
 
-    private List<String> convertPreloadResult(List<PoLine> poLines) {
+    private List<String> extractHoldingsIdsForItems(List<PoLine> poLines) {
         return poLines.stream()
                 .flatMap(poLine -> poLine.getLocations().stream().map(Location::getHoldingId))
+                .distinct()
                 .collect(Collectors.toList());
     }
 }

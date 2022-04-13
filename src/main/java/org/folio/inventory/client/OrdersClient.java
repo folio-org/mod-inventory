@@ -3,6 +3,7 @@ package org.folio.inventory.client;
 import static java.util.Objects.isNull;
 
 import java.net.URL;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -22,6 +23,7 @@ import org.folio.rest.acq.model.PoLineCollection;
 public class OrdersClient {
 
     private static final String CLIENT_PREFIX = "/orders";
+    private static final String ORDER_LINES_API_PREFIX = "/order-lines";
     private static final Logger LOGGER = LogManager.getLogger(OrdersClient.class);
 
     private final WebClient webClient;
@@ -42,7 +44,7 @@ public class OrdersClient {
 
         OkapiHttpClient client = okapiHttpClientCreator.apply(context);
 
-        return client.get(context.getOkapiLocation() + CLIENT_PREFIX + "/order-lines?query=" + cql)
+        return client.get(context.getOkapiLocation() + CLIENT_PREFIX + ORDER_LINES_API_PREFIX, Map.of("query", cql))
                 .toCompletableFuture()
                 .thenCompose(httpResponse -> {
                     if (httpResponse.getStatusCode() == HttpStatus.SC_OK) {

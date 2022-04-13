@@ -29,12 +29,13 @@ public class InstancePreloader extends AbstractPreloader {
     protected CompletableFuture<List<String>> doPreloading(DataImportEventPayload eventPayload,
                                                            PreloadingFields preloadingField,
                                                            List<String> loadingParameters) {
-        return ordersPreloaderHelper.preload(eventPayload, preloadingField, loadingParameters, this::convertPreloadResult);
+        return ordersPreloaderHelper.preload(eventPayload, preloadingField, loadingParameters, this::extractInstanceIdsForInstances);
     }
 
-    private List<String> convertPreloadResult(List<PoLine> poLines) {
+    private List<String> extractInstanceIdsForInstances(List<PoLine> poLines) {
         return poLines.stream()
                 .map(PoLine::getInstanceId)
+                .distinct()
                 .collect(Collectors.toList());
     }
 }

@@ -1,3 +1,6 @@
+## 18.2.0-SNAPSHOT xxxx-xx-xx
+* Match logic for POL matches to Inventory records (MODINV-578)
+
 ## 18.1.0 2022-02-24
 
 * added Marc Authority handler for entities created via MARC Authority Data Import (MODINV-501)

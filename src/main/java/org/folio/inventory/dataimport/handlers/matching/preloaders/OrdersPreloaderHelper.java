@@ -4,6 +4,7 @@ package org.folio.inventory.dataimport.handlers.matching.preloaders;
 import static java.util.Objects.isNull;
 
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
+import static org.folio.inventory.support.CqlHelper.buildMultipleValuesCqlQuery;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -28,7 +29,7 @@ public class OrdersPreloaderHelper {
                                                    List<String> loadingParameters,
                                                    Function<List<PoLine>, List<String>> convertPreloadResult) {
         if (isNull(loadingParameters) || loadingParameters.isEmpty()) {
-            throw new IllegalArgumentException("Loadind parameters for Orders preloading must not be empty");
+            throw new IllegalArgumentException("Loading parameters for Orders preloading must not be empty");
         }
 
         switch (preloadingField) {
@@ -37,8 +38,8 @@ public class OrdersPreloaderHelper {
                         eventPayload.getToken(),
                         eventPayload.getOkapiUrl());
                 return ordersClient.getPoLineCollection(
-                                String.format("purchaseOrder.workflowStatus==Open AND poLineNumber==(%s)",
-                                        getCqlParametersString(loadingParameters)),
+                                String.format("purchaseOrder.workflowStatus==Open AND %s",
+                                        buildMultipleValuesCqlQuery("poLineNumber", loadingParameters)),
                                 context)
                         .thenApply(poLineCollection -> {
                             if (poLineCollection.isEmpty() || poLineCollection.get().getPoLines().isEmpty()) {
@@ -51,12 +52,5 @@ public class OrdersPreloaderHelper {
                 return CompletableFuture.failedFuture(new IllegalStateException("Unknown preloading field"));
             }
         }
-    }
-
-    private String getCqlParametersString(List<String> parameters) {
-        if (parameters.size() == 1) {
-            return parameters.get(0);
-        }
-        return String.join(" OR ", parameters);
     }
 }
