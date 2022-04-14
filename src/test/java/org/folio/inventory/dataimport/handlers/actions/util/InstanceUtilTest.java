@@ -17,6 +17,8 @@ import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
 import org.folio.inventory.support.InstanceUtil;
 import org.junit.Test;
 
+import com.google.common.collect.Lists;
+
 public class InstanceUtilTest {
 
   @Test
@@ -72,6 +74,7 @@ public class InstanceUtilTest {
     existing.setParentInstances(parents);
     existing.setChildInstances(children);
     existing.setTags(tagList);
+    existing.setAdministrativeNotes(Lists.newArrayList("Adm note1", "Adm note2"));
 
     org.folio.inventory.domain.instances.Instance instance = InstanceUtil.mergeFieldsWhichAreNotControlled(existing, mapped);
     assertEquals("30773a27-b485-4dab-aeb6-b8c04fa3cb17", instance.getId());
@@ -91,5 +94,7 @@ public class InstanceUtilTest {
     assertEquals(tagList, instance.getTags());
     assertEquals("30773a27-b485-4dab-aeb6-b8c04fa3cb19", instance.getParentInstances().get(0).getId());
     assertEquals("30773a27-b485-4dab-aeb6-b8c04fa3cb19", instance.getChildInstances().get(0).getId());
+    assertEquals("Adm note1", instance.getAdministrativeNotes().get(0));
+    assertEquals("Adm note2", instance.getAdministrativeNotes().get(1));
   }
 }
