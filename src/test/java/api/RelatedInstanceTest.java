@@ -6,7 +6,12 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.folio.inventory.domain.instances.Instance;
@@ -18,6 +23,40 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public class RelatedInstanceTest extends ApiTests {
+
+  @Test
+  public void testRelatedInstance() {
+    String id = UUID.randomUUID().toString();
+    String instanceId = UUID.randomUUID().toString();
+    String relatedInstanceId = UUID.randomUUID().toString();
+    String relatedInstanceTypeId = UUID.randomUUID().toString();
+    RelatedInstance relatedInstance = new RelatedInstance(
+      id,
+      instanceId,
+      relatedInstanceId,
+      relatedInstanceTypeId
+    );
+
+    JsonObject relatedInstanceJson = mapFrom(relatedInstance);
+
+    RelatedInstance sameRelatedInstance = RelatedInstance.from(relatedInstanceJson, instanceId);
+
+    assertEquals(id, sameRelatedInstance.id);
+    assertEquals(instanceId, sameRelatedInstance.instanceId);
+    assertEquals(relatedInstanceId, sameRelatedInstance.relatedInstanceId);
+    assertEquals(relatedInstanceTypeId, sameRelatedInstance.relatedInstanceTypeId);
+
+    assertEquals(relatedInstance, sameRelatedInstance);
+
+    RelatedInstance inverseRelatedInstance = RelatedInstance.from(relatedInstanceJson, relatedInstanceId);
+
+    assertEquals(id, inverseRelatedInstance.id);
+    assertEquals(relatedInstanceId, inverseRelatedInstance.instanceId);
+    assertEquals(instanceId, inverseRelatedInstance.relatedInstanceId);
+    assertEquals(relatedInstanceTypeId, inverseRelatedInstance.relatedInstanceTypeId);
+
+    assertNotEquals(relatedInstance, inverseRelatedInstance);
+  }
 
   @Test
   public void canCreateInstanceWithRelatedInstances() throws Exception {
@@ -67,6 +106,19 @@ public class RelatedInstanceTest extends ApiTests {
     assertThat(secondInstanceFirstRelatedInstanceJson.getString(RelatedInstance.RELATED_INSTANCE_ID_KEY),
         is(instanceId.toString()));
 
+    List<JsonObject> instances = instancesClient.getAll();
+
+    Optional<JsonObject> instance = instances.stream()
+      .filter(i -> i.getString("id").equals(instanceId.toString())).findAny();
+
+    assertTrue(instance.isPresent());
+    assertEquals(firstInstanceJson, instance.get());
+
+    Optional<JsonObject> relatedInstance = instances.stream()
+      .filter(i -> i.getString("id").equals(relatedInstanceId.toString())).findAny();
+
+    assertTrue(relatedInstance.isPresent());
+    assertEquals(secondInstanceJson, relatedInstance.get());
   }
 
   private JsonObject createRelatedInstance(UUID id, UUID isntanceId, UUID relatedInstanceId, String relatedInstanceTypeId) {

@@ -46,4 +46,19 @@ public class RelatedInstance {
     return toString().hashCode();
   }
 
+  public static RelatedInstance from(JsonObject rel, String instanceId) {
+    RelatedInstance relatedInstance = new RelatedInstance(rel);
+
+    if (!relatedInstance.instanceId.equals(instanceId)) {
+      return new RelatedInstance(
+        relatedInstance.id,
+        instanceId,
+        relatedInstance.instanceId,
+        relatedInstance.relatedInstanceTypeId
+      );
+    }
+
+    return relatedInstance;
+  }
+
 }

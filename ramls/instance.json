@@ -33,14 +33,6 @@
       "items": {
         "type": "object",
         "properties": {
-          "id": {
-            "description": "Id of the related instance association",
-            "type": "string"
-          },
-          "instanceId": {
-            "description": "Id of the instance",
-            "type": "string"
-          },
           "relatedInstanceId": {
             "description": "Id of the related instance",
             "type": "string"
@@ -49,10 +41,9 @@
             "description": "Id of the related instance type",
             "type": "string"
           }
-        },
+        }, 
         "additionalProperties": false,
         "required": [
-          "instanceId",
           "relatedInstanceId",
           "relatedInstanceTypeId"
         ]

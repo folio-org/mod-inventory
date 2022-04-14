@@ -57,6 +57,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
@@ -515,7 +516,7 @@ public class Instances extends AbstractInstances {
           } else {
             Map<String, String> holdingsToInstanceMap = new HashMap<>();
             for (JsonObject holdingsRecord : holdingsRecordList) {
-              holdingsToInstanceMap.put(holdingsRecord.getString("id"), holdingsRecord.getString("instanceId"));
+              holdingsToInstanceMap.put(holdingsRecord.getString("id"), holdingsRecord.getString(RelatedInstance.INSTANCE_ID_KEY));
             }
             ArrayList<String> holdingsIdsList = new ArrayList<>(holdingsToInstanceMap.keySet());
             return checkHoldingsForBoundWith(holdingsIdsList, routingContext, webContext)
@@ -596,13 +597,24 @@ public class Instances extends AbstractInstances {
   }
 
   private CompletableFuture<InstancesResponse> withRelatedInstances(
-    InstancesResponse instancesResponse, List<JsonObject> relationsList) {
+    InstancesResponse instancesResponse, List<JsonObject> relatedInstanceList) {
+
+    final List<String> instanceIds =
+      getInstanceIdsFromInstanceResult(instancesResponse.getSuccess());
 
     Map<String, List<RelatedInstance>> relatedInstanceMap = new HashMap<>();
 
-    relationsList.forEach(rel -> 
-      addToList(relatedInstanceMap, rel.getString("relatedInstanceId"), new RelatedInstance(rel))
-    );
+    instanceIds.forEach(instanceId -> {
+
+      Optional<JsonObject> relatedInstance = relatedInstanceList.stream()
+        .filter(ri -> ri.getString(RelatedInstance.INSTANCE_ID_KEY).equals(instanceId) || ri.getString(RelatedInstance.RELATED_INSTANCE_ID_KEY).equals(instanceId))
+        .findAny();
+
+      if (relatedInstance.isPresent()) {
+        addToList(relatedInstanceMap, instanceId, RelatedInstance.from(relatedInstance.get(), instanceId));
+      }
+
+    });
 
     instancesResponse.setRelatedInstanceMap(relatedInstanceMap);
 
@@ -615,9 +627,9 @@ public class Instances extends AbstractInstances {
     List<RelatedInstance> relatedInstanceList = new ArrayList<>();
     if (result.getStatusCode() == 200) {
       JsonObject json = result.getJson();
-      List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("relatedInstances"));
+      List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray(Instance.RELATED_INSTANCES_KEY));
       relationsList.forEach(rel -> 
-        relatedInstanceList.add(new RelatedInstance(rel))
+        relatedInstanceList.add(RelatedInstance.from(rel, instance.getId()))
       );
       instance.getRelatedInstances().addAll(relatedInstanceList);
     }
@@ -682,7 +694,7 @@ public class Instances extends AbstractInstances {
   // Utilities
 
   private CqlQuery cqlMatchAnyByInstanceIds(List<String> instanceIds) {
-    return CqlQuery.exactMatchAny("instanceId", instanceIds);
+    return CqlQuery.exactMatchAny(RelatedInstance.INSTANCE_ID_KEY, instanceIds);
   }
 
   private CqlQuery cqlMatchAnyByHoldingsRecordIds(List<String> holdingsRecordIds) {

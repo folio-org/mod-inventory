@@ -93,7 +93,7 @@ public abstract class AbstractInstances {
 
     JsonObject json = result.getJson();
 
-    List<JsonObject> relatedInstancesList = JsonArrayHelper.toList(json.getJsonArray("relatedInstances"));
+    List<JsonObject> relatedInstancesList = JsonArrayHelper.toList(json.getJsonArray(Instance.RELATED_INSTANCES_KEY));
     Map<String, RelatedInstance> existingRelatedInstances = new HashMap<>();
 
     relatedInstancesList.stream().map(RelatedInstance::new).forEachOrdered(related ->
@@ -110,20 +110,6 @@ public abstract class AbstractInstances {
             instance.getId(),
             updating.relatedInstanceId,
             updating.relatedInstanceTypeId));
-
-        boolean inverseExists = existingRelatedInstances.values().stream().anyMatch(existing ->
-          existing.relatedInstanceId.equals(instance.getId())
-        );
-
-        if (!inverseExists) {
-          String inverseId = UUID.randomUUID().toString();
-          updatingRelatedInstances.put(inverseId,
-            new RelatedInstance(
-              inverseId,
-              updating.relatedInstanceId,
-              instance.getId(),
-              updating.relatedInstanceTypeId));
-        }
       });
     }
 
@@ -431,7 +417,7 @@ public abstract class AbstractInstances {
 
   protected String createQueryForRelatedInstances(List<String> instanceIds) {
     String idList = instanceIds.stream().distinct().collect(Collectors.joining(" or "));
-    return format("instanceId==(%s)", idList);
+    return format("instanceId==(%1$s) or relatedInstanceId==(%1$s)", idList);
   }
 
   protected String createQueryForInstanceRelationships(List<String> instanceIds) {
