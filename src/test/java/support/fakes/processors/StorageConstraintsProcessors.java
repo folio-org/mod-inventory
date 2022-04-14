@@ -1,9 +1,8 @@
 package support.fakes.processors;
 
-import api.ApiTestSuite;
-import api.support.http.StorageInterfaceUrls;
 import io.vertx.core.json.JsonObject;
 import org.folio.inventory.domain.instances.InstanceRelationship;
+import org.folio.inventory.domain.instances.RelatedInstance;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.exceptions.UnprocessableEntityException;
 import org.folio.inventory.support.http.client.Response;
@@ -12,13 +11,10 @@ import org.folio.util.StringUtil;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 
 import static api.ApiTestSuite.createOkapiHttpClient;
@@ -31,6 +27,35 @@ import static org.folio.inventory.support.JsonArrayHelper.toList;
 public final class StorageConstraintsProcessors {
 
   private StorageConstraintsProcessors() {
+  }
+
+  public static CompletableFuture<JsonObject> relatedInstancesConstraints(
+    @SuppressWarnings("unused") JsonObject oldRelatedInstance, JsonObject newRelatedInstance) throws MalformedURLException {
+
+    final RelatedInstance relatedInstance = new RelatedInstance(newRelatedInstance);
+
+    return getInstanceByIds(relatedInstance.instanceId, relatedInstance.relatedInstanceId)
+      .thenCombine(get(instanceRelationshipTypeUrl(
+        "/" + relatedInstance.relatedInstanceTypeId)), (relationships, relationshipType) -> {
+
+        if (relationshipType.getStatusCode() != 200) {
+          throw new UnprocessableEntityException(new ValidationError(
+            "Related instance type does not exist", "relatedInstanceTypeId",
+            relatedInstance.relatedInstanceTypeId));
+        }
+
+        if (!relationships.containsKey(relatedInstance.instanceId)) {
+          throw new UnprocessableEntityException(new ValidationError(
+            "Instance does not exist", "instanceId", relatedInstance.instanceId));
+        }
+
+        if (!relationships.containsKey(relatedInstance.relatedInstanceId)) {
+          throw new UnprocessableEntityException(new ValidationError(
+            "Related instance does not exist", "relatedInstanceId", relatedInstance.relatedInstanceId));
+        }
+
+        return newRelatedInstance;
+      });
   }
 
   public static CompletableFuture<JsonObject> instanceRelationshipsConstraints(

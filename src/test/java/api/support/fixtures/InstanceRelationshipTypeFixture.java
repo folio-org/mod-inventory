@@ -19,6 +19,10 @@ public class InstanceRelationshipTypeFixture extends ReferenceRecordFixture {
     return createIfNotExist(newInstanceRelationship("monographic series"));
   }
 
+  public ReferenceRecordResponse related() {
+    return createIfNotExist(newInstanceRelationship("related"));
+  }
+
   private JsonObject newInstanceRelationship(String name) {
     return new JsonObject()
       .put("id", UUID.randomUUID().toString())

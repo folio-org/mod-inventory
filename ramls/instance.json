@@ -27,6 +27,37 @@
       "type": "string",
       "description": "The metadata source and its format of the underlying record to the instance record. (e.g. FOLIO if it's a record created in Inventory;  MARC if it's a MARC record created in MARCcat or EPKB if it's a record coming from eHoldings)"
     },
+    "relatedInstances": {
+      "description": "Array of related instances",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "Id of the related instance association",
+            "type": "string"
+          },
+          "instanceId": {
+            "description": "Id of the instance",
+            "type": "string"
+          },
+          "relatedInstanceId": {
+            "description": "Id of the related instance",
+            "type": "string"
+          },
+          "relatedInstanceTypeId": {
+            "description": "Id of the related instance type",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "instanceId",
+          "relatedInstanceId",
+          "relatedInstanceTypeId"
+        ]
+      }
+    },
     "parentInstances": {
       "description": "Array of parent instances",
       "type": "array",

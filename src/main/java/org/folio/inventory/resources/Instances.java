@@ -28,9 +28,11 @@ import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.domain.instances.InstanceRelationship;
 import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
 import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
+import org.folio.inventory.domain.instances.RelatedInstance;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.exceptions.UnprocessableEntityException;
 import org.folio.inventory.services.InstanceRelationshipsService;
+import org.folio.inventory.services.RelatedInstancesService;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.storage.external.CqlQuery;
@@ -129,6 +131,7 @@ public class Instances extends AbstractInstances {
     instancesResponse.setSuccess(success);
 
     completedFuture(instancesResponse)
+      .thenCompose(response -> fetchRelatedInstances(response, routingContext))
       .thenCompose(response -> fetchRelationships(response, routingContext))
       .thenCompose(response -> fetchPrecedingSucceedingTitles(response, routingContext, context))
       .thenCompose(response -> lookUpBoundWithsForInstanceRecordSet(instancesResponse, routingContext, context))
@@ -160,6 +163,7 @@ public class Instances extends AbstractInstances {
       .thenCompose(InstancePrecedingSucceedingTitleValidators::refuseWhenUnconnectedHasNoTitle)
       .thenCompose(instance -> storage.getInstanceCollection(context).add(instance))
       .thenCompose(response -> {
+        response.setRelatedInstances(newInstance.getRelatedInstances());
         response.setParentInstances(newInstance.getParentInstances());
         response.setChildInstances(newInstance.getChildInstances());
         response.setPrecedingTitles(newInstance.getPrecedingTitles());
@@ -188,6 +192,7 @@ public class Instances extends AbstractInstances {
       .thenCompose(InstancePrecedingSucceedingTitleValidators::refuseWhenUnconnectedHasNoTitle)
       .thenCompose(instance -> instanceCollection.findById(rContext.request().getParam("id")))
       .thenCompose(InstancesValidators::refuseWhenInstanceNotFound)
+      .thenCompose(existingInstance -> fetchRelatedInstances(new Success<>(existingInstance), rContext, wContext))
       .thenCompose(existingInstance -> fetchPrecedingSucceedingTitles(new Success<>(existingInstance), rContext, wContext))
       .thenCompose(existingInstance -> refuseWhenBlockedFieldsChanged(existingInstance, updatedInstance))
       .thenCompose(existingInstance -> refuseWhenHridChanged(existingInstance, updatedInstance))
@@ -319,6 +324,7 @@ public class Instances extends AbstractInstances {
         Instance instance = it.getResult();
         if (instance != null) {
           completedFuture(instance)
+            .thenCompose(response -> fetchRelatedInstances(it, routingContext, context))
             .thenCompose(response -> fetchInstanceRelationships(it, routingContext, context))
             .thenCompose(response -> fetchPrecedingSucceedingTitles(it, routingContext, context))
             .thenCompose(response -> setBoundWithFlag(it, routingContext, context))
@@ -337,6 +343,24 @@ public class Instances extends AbstractInstances {
         return completedFuture(instance);
       }
     );
+  }
+
+  /**
+   * Fetches related instances for multiple Instance records, populates, responds
+   *
+   * @param instancesResponse Multi record Instances result
+   * @param routingContext Routing
+   */
+  private CompletableFuture<InstancesResponse> fetchRelatedInstances(
+    InstancesResponse instancesResponse,
+    RoutingContext routingContext) {
+
+    final List<String> instanceIds =
+      getInstanceIdsFromInstanceResult(instancesResponse.getSuccess());
+
+    return createRelatedInstancesService(routingContext)
+      .fetchRelatedInstances(instanceIds)
+      .thenCompose(response -> withRelatedInstances(instancesResponse, response));
   }
 
   /**
@@ -512,6 +536,33 @@ public class Instances extends AbstractInstances {
   }
 
   /**
+   * Fetches related instances for a single Instance result, populates, responds
+   *
+   * @param success        Single record Instance result
+   * @param routingContext Routing
+   * @param context        Context
+   */
+  private CompletableFuture<Instance> fetchRelatedInstances(
+    Success<Instance> success, RoutingContext routingContext, WebContext context) {
+
+    Instance instance = success.getResult();
+    List<String> instanceIds = getInstanceIdsFromInstanceResult(success);
+    String query = createQueryForRelatedInstances(instanceIds);
+    CollectionResourceClient relatedInstancesClient =
+      createRelatedInstancesClient(routingContext, context);
+
+    if (relatedInstancesClient != null) {
+      CompletableFuture<Response> relatedInstancesFetched = new CompletableFuture<>();
+
+      relatedInstancesClient.getMany(query, Integer.MAX_VALUE, 0, relatedInstancesFetched::complete);
+
+      return relatedInstancesFetched
+        .thenCompose(response -> withRelatedInstances(instance, response));
+    }
+    return completedFuture(null);
+  }
+
+  /**
    * Fetches instance relationships for a single Instance result, populates, responds
    *
    * @param success        Single record Instance result
@@ -523,7 +574,7 @@ public class Instances extends AbstractInstances {
 
     Instance instance = success.getResult();
     List<String> instanceIds = getInstanceIdsFromInstanceResult(success);
-    String query = createQueryForRelatedInstances(instanceIds);
+    String query = createQueryForInstanceRelationships(instanceIds);
     CollectionResourceClient relatedInstancesClient =
       createInstanceRelationshipsClient(routingContext, context);
 
@@ -542,6 +593,35 @@ public class Instances extends AbstractInstances {
     Instance instance) {
 
     JsonResponse.success(routingContext.response(), instance.getJsonForResponse(context));
+  }
+
+  private CompletableFuture<InstancesResponse> withRelatedInstances(
+    InstancesResponse instancesResponse, List<JsonObject> relationsList) {
+
+    Map<String, List<RelatedInstance>> relatedInstanceMap = new HashMap<>();
+
+    relationsList.forEach(rel -> 
+      addToList(relatedInstanceMap, rel.getString("relatedInstanceId"), new RelatedInstance(rel))
+    );
+
+    instancesResponse.setRelatedInstanceMap(relatedInstanceMap);
+
+    return CompletableFuture.completedFuture(instancesResponse);
+  }
+
+  private CompletableFuture<Instance> withRelatedInstances(Instance instance,
+    Response result) {
+
+    List<RelatedInstance> relatedInstanceList = new ArrayList<>();
+    if (result.getStatusCode() == 200) {
+      JsonObject json = result.getJson();
+      List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("relatedInstances"));
+      relationsList.forEach(rel -> 
+        relatedInstanceList.add(new RelatedInstance(rel))
+      );
+      instance.getRelatedInstances().addAll(relatedInstanceList);
+    }
+    return completedFuture(instance);
   }
 
   private CompletableFuture<InstancesResponse> withInstancesRelationships(
@@ -581,7 +661,6 @@ public class Instances extends AbstractInstances {
     }
     return completedFuture(instance);
   }
-
 
   private CompletableFuture<Instance> fetchPrecedingSucceedingTitles(
     Success<Instance> success, RoutingContext routingContext, WebContext context) {
@@ -773,6 +852,13 @@ public class Instances extends AbstractInstances {
     } else {
       return completedFuture(PrecedingSucceedingTitle.from(rel));
     }
+  }
+
+  private RelatedInstancesService createRelatedInstancesService(RoutingContext routingContext) {
+    final WebContext webContext = new WebContext(routingContext);
+
+    return new RelatedInstancesService(
+      createRelatedInstancesClient(routingContext, webContext));
   }
 
   private InstanceRelationshipsService createInstanceRelationshipsService(RoutingContext routingContext) {
