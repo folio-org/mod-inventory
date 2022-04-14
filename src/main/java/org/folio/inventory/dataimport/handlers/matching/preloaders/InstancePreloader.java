@@ -13,6 +13,8 @@ import org.folio.inventory.support.JsonArrayHelper;
 public class InstancePreloader extends AbstractPreloader {
 
     private static final String INSTANCE_ID_FIELD = "instanceId";
+    private static final String INSTANCE_ENTITY_NAME = "instance";
+    private static final String INSTANCE_TARGET_FIELD_NAME = "instance.id";
 
     private OrdersPreloaderHelper ordersPreloaderHelper;
 
@@ -22,12 +24,12 @@ public class InstancePreloader extends AbstractPreloader {
 
     @Override
     protected String getMatchEntityName() {
-        return "instance";
+        return INSTANCE_ENTITY_NAME;
     }
 
     @Override
     protected String getLoaderTargetFieldName() {
-        return "instance.id";
+        return INSTANCE_TARGET_FIELD_NAME;
     }
 
     @Override

@@ -1,8 +1,5 @@
 package org.folio.inventory.dataimport.handlers.matching.preloaders;
 
-import static org.folio.inventory.dataimport.handlers.matching.preloaders.HoldingsPreloader.HOLDINGS_ID_FIELD;
-import static org.folio.inventory.dataimport.handlers.matching.preloaders.HoldingsPreloader.LOCATIONS_FIELD;
-
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -15,6 +12,11 @@ import org.folio.inventory.support.JsonArrayHelper;
 
 public class ItemPreloader extends AbstractPreloader {
 
+    private static final String LOCATIONS_FIELD = "locations";
+    private static final String HOLDINGS_ID_FIELD = "holdingId";
+    private static final String ITEM_ENTITY_NAME = "item";
+    private static final String ITEM_TARGET_FIELD_NAME = "item.holdingsRecords.id";
+
     private OrdersPreloaderHelper ordersPreloaderHelper;
 
     public ItemPreloader(OrdersPreloaderHelper ordersPreloaderHelper) {
@@ -23,12 +25,12 @@ public class ItemPreloader extends AbstractPreloader {
 
     @Override
     protected String getMatchEntityName() {
-        return "item";
+        return ITEM_ENTITY_NAME;
     }
 
     @Override
     protected String getLoaderTargetFieldName() {
-        return "item.holdingsRecords.id";
+        return ITEM_TARGET_FIELD_NAME;
     }
 
     @Override

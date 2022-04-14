@@ -12,8 +12,10 @@ import org.folio.inventory.support.JsonArrayHelper;
 
 public class HoldingsPreloader extends AbstractPreloader {
 
-    static final String LOCATIONS_FIELD = "locations";
-    static final String HOLDINGS_ID_FIELD = "holdingId";
+    private static final String LOCATIONS_FIELD = "locations";
+    private static final String HOLDINGS_ID_FIELD = "holdingId";
+    private static final String HOLDINGS_ENTITY_NAME = "holdingsrecord";
+    private static final String HOLDINGS_TARGET_FIELD_NAME = "holdingsrecord.id";
 
     private OrdersPreloaderHelper ordersPreloaderHelper;
 
@@ -23,12 +25,12 @@ public class HoldingsPreloader extends AbstractPreloader {
 
     @Override
     protected String getMatchEntityName() {
-        return "holdingsrecord";
+        return HOLDINGS_ENTITY_NAME;
     }
 
     @Override
     protected String getLoaderTargetFieldName() {
-        return "holdingsrecord.id";
+        return HOLDINGS_TARGET_FIELD_NAME;
     }
 
     @Override

@@ -23,6 +23,13 @@ import org.folio.processing.value.Value;
 import org.folio.rest.jaxrs.model.Field;
 import org.folio.rest.jaxrs.model.MatchExpression;
 
+/**
+ * Preloader intended to run some logic to modify existing loading query before passing it to Loader
+ * It check whether match expression contains any of defined fields that imply preloading
+ * If field is not found - initial query returned
+ * If field is found - extract field values, pass them to preloading implementation, then -
+ * construct query with new values returned from preloading implementation
+ * */
 public abstract class AbstractPreloader {
 
     public CompletableFuture<LoadQuery> preload(LoadQuery query, DataImportEventPayload dataImportEventPayload) {
@@ -30,14 +37,7 @@ public abstract class AbstractPreloader {
             return CompletableFuture.completedFuture(null);
         }
 
-        MatchProfile matchProfile;
-        if (dataImportEventPayload.getCurrentNode().getContent() instanceof Map) {
-            matchProfile = (new JsonObject((Map)dataImportEventPayload.getCurrentNode().getContent()))
-                    .mapTo(MatchProfile.class);
-        } else {
-            matchProfile = new JsonObject(Json.encode(dataImportEventPayload.getCurrentNode().getContent()))
-                    .mapTo(MatchProfile.class);
-        }
+        MatchProfile matchProfile = extractMatchProfile(dataImportEventPayload);
         MatchDetail matchDetail = matchProfile.getMatchDetails().get(0);
         MatchExpression matchExpression = matchDetail.getExistingMatchExpression();
 
@@ -46,14 +46,7 @@ public abstract class AbstractPreloader {
             return CompletableFuture.completedFuture(query);
         }
 
-        MatchValueReader reader = MatchValueReaderFactory.build(matchProfile.getIncomingRecordType());
-        Value value = reader.read(dataImportEventPayload, matchDetail);
-        List<String> preloadValues;
-        if (value.getType().equals(Value.ValueType.STRING)) {
-            preloadValues = Collections.singletonList((String) value.getValue());
-        } else {
-            preloadValues = ((ListValue) value).getValue();
-        }
+        List<String> preloadValues = extractPreloadValues(dataImportEventPayload, matchProfile, matchDetail);
 
         return doPreloading(dataImportEventPayload, preloadingField.get(), preloadValues)
                 .thenApply(values -> {
@@ -63,6 +56,38 @@ public abstract class AbstractPreloader {
 
                     return LoadQueryBuilder.build(ListValue.of(values), matchDetail);
                 });
+    }
+
+    /**
+     * Extracts match profile from event payload
+     * Additional json encoding is needed to return a copy of object not to modify eventPayload
+     * @return MatchProfile object deep copy
+     * */
+    private MatchProfile extractMatchProfile(DataImportEventPayload dataImportEventPayload) {
+        if (dataImportEventPayload.getCurrentNode().getContent() instanceof Map) {
+            return (new JsonObject((Map)dataImportEventPayload.getCurrentNode().getContent()))
+                    .mapTo(MatchProfile.class);
+        }
+
+        return new JsonObject(Json.encode(dataImportEventPayload.getCurrentNode().getContent()))
+                .mapTo(MatchProfile.class);
+    }
+
+    /**
+     * Reads incoming record match values from event payload
+     * @return record field values according to match details
+     * */
+    private List<String> extractPreloadValues(DataImportEventPayload dataImportEventPayload,
+                                              MatchProfile matchProfile,
+                                              MatchDetail matchDetail) {
+        MatchValueReader reader = MatchValueReaderFactory.build(matchProfile.getIncomingRecordType());
+        Value value = reader.read(dataImportEventPayload, matchDetail);
+
+        if (value.getType().equals(Value.ValueType.STRING)) {
+            return Collections.singletonList((String) value.getValue());
+        }
+
+        return  ((ListValue) value).getValue();
     }
 
     private Optional<PreloadingFields> getPreloadingField(MatchExpression matchExpression) {

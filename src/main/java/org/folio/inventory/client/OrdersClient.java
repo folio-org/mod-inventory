@@ -37,7 +37,7 @@ public class OrdersClient {
     }
 
     public CompletableFuture<Optional<JsonArray>> getPoLineCollection(String cql, Context context) {
-        LOGGER.trace("Trying to get InstanceId for okapi url: {}, tenantId: {}, by cql: {}",
+        LOGGER.trace("Trying to get PoLineCollection for okapi url: {}, tenantId: {}, by cql: {}",
                 context.getOkapiLocation(), context.getTenantId(), cql);
 
         if (isNull(cql)) {

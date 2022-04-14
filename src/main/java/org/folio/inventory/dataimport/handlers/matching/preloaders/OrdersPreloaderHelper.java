@@ -50,7 +50,7 @@ public class OrdersPreloaderHelper {
                         });
             }
             default: {
-                return CompletableFuture.failedFuture(new IllegalStateException("Unknown preloading field"));
+                return CompletableFuture.failedFuture(new IllegalArgumentException("Unknown preloading field"));
             }
         }
     }
