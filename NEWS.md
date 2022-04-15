@@ -1,3 +1,8 @@
+## 18.1.6 2022-04-15
+
+* Fixed update of an Instance to not erase administrative note (MODINV-679)
+* Update data-import-processing-core to v3.3.3
+
 ## 18.1.5 2022-04-06
 
 * Added permissions to search for item records to instance retrive by id endpoint (MODINV-662)
