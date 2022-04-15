@@ -1,10 +1,10 @@
 package org.folio.inventory.dataimport.handlers.matching;
 
-import org.folio.inventory.dataimport.cache.MappingMetadataCache;
-import org.folio.rest.jaxrs.model.EntityType;
-
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_NOT_MATCHED;
+
+import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.rest.jaxrs.model.EntityType;
 
 public class MatchInstanceEventHandler extends AbstractMatchEventHandler {
 

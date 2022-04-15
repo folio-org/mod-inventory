@@ -14,15 +14,15 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
 
-import io.vertx.core.Vertx;
-import org.folio.inventory.common.WebContext;
-
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
+
+import org.folio.inventory.common.WebContext;
 
 public class OkapiHttpClient {
   private static final String TENANT_HEADER = "X-Okapi-Tenant";
@@ -147,6 +147,18 @@ public class OkapiHttpClient {
     final var futureResponse = new CompletableFuture<AsyncResult<HttpResponse<Buffer>>>();
 
     final HttpRequest<Buffer> request = withStandardHeaders(webClient.getAbs(url));
+
+    request.send(futureResponse::complete);
+
+    return futureResponse
+      .thenCompose(OkapiHttpClient::mapAsyncResultToCompletionStage);
+  }
+
+  public CompletionStage<Response> get(String url, Map<String, String> params) {
+    final var futureResponse = new CompletableFuture<AsyncResult<HttpResponse<Buffer>>>();
+
+    final HttpRequest<Buffer> request = withStandardHeaders(webClient.getAbs(url));
+    params.forEach(request::addQueryParam);
 
     request.send(futureResponse::complete);
 

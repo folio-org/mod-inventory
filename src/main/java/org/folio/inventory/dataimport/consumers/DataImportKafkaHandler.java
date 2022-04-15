@@ -1,6 +1,7 @@
 package org.folio.inventory.dataimport.consumers;
 
 import static java.lang.String.format;
+
 import static org.folio.DataImportEventTypes.DI_ERROR;
 
 import java.util.Map;
@@ -15,7 +16,9 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
 import org.folio.DataImportEventPayload;
+import org.folio.inventory.client.OrdersClient;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.dao.EntityIdStorageDaoImpl;
 import org.folio.inventory.common.dao.PostgresClientFactory;
@@ -24,20 +27,20 @@ import org.folio.inventory.dataimport.InstanceWriterFactory;
 import org.folio.inventory.dataimport.ItemWriterFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
+import org.folio.inventory.dataimport.handlers.actions.CreateAuthorityEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler;
-import org.folio.inventory.dataimport.handlers.actions.CreateAuthorityEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateMarcHoldingsEventHandler;
+import org.folio.inventory.dataimport.handlers.actions.DeleteAuthorityEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.actions.MarcBibMatchedPostProcessingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.MarcBibModifiedPostProcessingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
 import org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler;
+import org.folio.inventory.dataimport.handlers.actions.UpdateAuthorityEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.UpdateHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler;
-import org.folio.inventory.dataimport.handlers.actions.UpdateAuthorityEventHandler;
-import org.folio.inventory.dataimport.handlers.actions.DeleteAuthorityEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchAuthorityEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchInstanceEventHandler;
@@ -46,12 +49,16 @@ import org.folio.inventory.dataimport.handlers.matching.loaders.AuthorityLoader;
 import org.folio.inventory.dataimport.handlers.matching.loaders.HoldingLoader;
 import org.folio.inventory.dataimport.handlers.matching.loaders.InstanceLoader;
 import org.folio.inventory.dataimport.handlers.matching.loaders.ItemLoader;
+import org.folio.inventory.dataimport.handlers.matching.preloaders.HoldingsPreloader;
+import org.folio.inventory.dataimport.handlers.matching.preloaders.InstancePreloader;
+import org.folio.inventory.dataimport.handlers.matching.preloaders.ItemPreloader;
+import org.folio.inventory.dataimport.handlers.matching.preloaders.OrdersPreloaderHelper;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.services.AuthorityIdStorageService;
+import org.folio.inventory.services.HoldingsCollectionService;
 import org.folio.inventory.services.HoldingsIdStorageService;
 import org.folio.inventory.services.InstanceIdStorageService;
 import org.folio.inventory.services.ItemIdStorageService;
-import org.folio.inventory.services.HoldingsCollectionService;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaConfig;
@@ -129,9 +136,15 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
   }
 
   private void registerDataImportProcessingHandlers(Storage storage, HttpClient client) {
-    MatchValueLoaderFactory.register(new InstanceLoader(storage, vertx));
-    MatchValueLoaderFactory.register(new ItemLoader(storage, vertx));
-    MatchValueLoaderFactory.register(new HoldingLoader(storage, vertx));
+    OrdersClient ordersClient = new OrdersClient(WebClient.wrap(client));
+    OrdersPreloaderHelper ordersPreloaderHelper = new OrdersPreloaderHelper(ordersClient);
+    InstancePreloader instancePreloader = new InstancePreloader(ordersPreloaderHelper);
+    HoldingsPreloader holdingsPreloader = new HoldingsPreloader(ordersPreloaderHelper);
+    ItemPreloader itemPreloader = new ItemPreloader(ordersPreloaderHelper);
+
+    MatchValueLoaderFactory.register(new InstanceLoader(storage, vertx, instancePreloader));
+    MatchValueLoaderFactory.register(new ItemLoader(storage, vertx, itemPreloader));
+    MatchValueLoaderFactory.register(new HoldingLoader(storage, vertx, holdingsPreloader));
     MatchValueLoaderFactory.register(new AuthorityLoader(storage, vertx));
 
     MatchValueReaderFactory.register(new MarcValueReaderImpl());

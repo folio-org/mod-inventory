@@ -2,6 +2,7 @@ package org.folio.inventory.support;
 
 import java.util.List;
 import java.util.stream.Collectors;
+
 import org.folio.util.StringUtil;
 
 /**
@@ -23,10 +24,14 @@ public class CqlHelper {
    * @return CQL expression
    */
   public static String buildQueryByIds(List<String> recordIds) {
-    return String.format("id==(%s)", recordIds.stream()
-        .map(String::toString)
-        .distinct()
-        .collect(Collectors.joining(" or ")));
+    return buildMultipleValuesCqlQuery("id", recordIds);
+  }
+
+  public static String buildMultipleValuesCqlQuery(String parameter, List<String> values) {
+    return String.format("%s==(%s)", parameter, values.stream()
+            .map(String::toString)
+            .distinct()
+            .collect(Collectors.joining(" or ")));
   }
 
   /**
