@@ -51,6 +51,18 @@ public class CqlHelperTest {
   }
 
   @Test
+  public void oneRecordCustomComparisonOperatorCqlQuery() {
+    Assertions.assertThat(CqlHelper.buildMultipleValuesCqlQuery("parameter", "=", List.of("a")))
+            .isEqualTo("parameter=(a)");
+  }
+
+  @Test
+  public void multipleRecordCustomComparisonOperatorCqlQuery() {
+    Assertions.assertThat(CqlHelper.buildMultipleValuesCqlQuery("parameter", "=", List.of("a", "b", "c")))
+            .isEqualTo("parameter=(a or b or c)");
+  }
+
+  @Test
   @Parameters({
     "    | barcode==\"\"",      // barcode==""
     "abc | barcode==\"abc\"",   // barcode=="abc"

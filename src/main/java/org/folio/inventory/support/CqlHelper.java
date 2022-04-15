@@ -28,7 +28,11 @@ public class CqlHelper {
   }
 
   public static String buildMultipleValuesCqlQuery(String parameter, List<String> values) {
-    return String.format("%s==(%s)", parameter, values.stream()
+    return buildMultipleValuesCqlQuery(parameter, "==", values);
+  }
+
+  public static String buildMultipleValuesCqlQuery(String parameter, String comparisonOperator, List<String> values) {
+    return String.format("%s%s(%s)", parameter, comparisonOperator, values.stream()
             .map(String::toString)
             .distinct()
             .collect(Collectors.joining(" or ")));

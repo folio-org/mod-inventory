@@ -38,6 +38,7 @@ public class OrdersPreloaderHelperTest {
     private static final String EMPTY_ORDER_PRELOADING_PARAMETERS_MESSAGE = "Loading parameters for Orders preloading must not be empty";
 
     private static final String INSTANCE_ID_FIELD = "instanceId";
+    private static final String VRN_VALUE_CQL_PATTERN = "\"\\\"refNumber\\\":\\\"%s\\\"\"";
 
     @Mock
     private OrdersClient ordersClient;
@@ -63,6 +64,31 @@ public class OrdersPreloaderHelperTest {
         List<String> instanceIds = ordersPreloaderHelper.preload(createEventPayload(),
                         PreloadingFields.POL,
                         poLineNumbersMock,
+                        getPreloadResultConverter())
+                .get(20, TimeUnit.SECONDS);
+
+        Assertions.assertThat(instanceIds).isEqualTo(instanceIdsMock);
+    }
+
+    @Test
+    @SneakyThrows
+    public void shouldPreloadByVRN() {
+        List<String> instanceIdsMock = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
+        JsonArray poLineCollectionMock = new JsonArray(instanceIdsMock.stream()
+                .map(instanceId -> new JsonObject(Map.of(INSTANCE_ID_FIELD, instanceId)))
+                .collect(Collectors.toList()));
+
+        List<String> vendorReferenceNumbersMock = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
+        String orderLinesCql = String.format("purchaseOrder.workflowStatus==Open AND vendorDetail.referenceNumbers=(%s or %s)",
+                String.format(VRN_VALUE_CQL_PATTERN, vendorReferenceNumbersMock.get(0)),
+                String.format(VRN_VALUE_CQL_PATTERN, vendorReferenceNumbersMock.get(1)));
+
+        when(ordersClient.getPoLineCollection(eq(orderLinesCql), any()))
+                .thenReturn(CompletableFuture.completedFuture(Optional.of(poLineCollectionMock)));
+
+        List<String> instanceIds = ordersPreloaderHelper.preload(createEventPayload(),
+                        PreloadingFields.VRN,
+                        vendorReferenceNumbersMock,
                         getPreloadResultConverter())
                 .get(20, TimeUnit.SECONDS);
 
