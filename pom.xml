@@ -191,7 +191,7 @@
     <dependency>
       <groupId>org.folio</groupId>
       <artifactId>data-import-processing-core</artifactId>
-      <version>3.3.2</version>
+      <version>3.3.3</version>
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
@@ -436,6 +436,7 @@
             <include>**/storage/external/failure/ExternalStorageFailureSuite.class</include>
             <include>org/folio/inventory/**</include>
           </includes>
+          <testFailureIgnore>true</testFailureIgnore>
         </configuration>
       </plugin>
       <plugin>
