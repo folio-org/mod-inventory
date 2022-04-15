@@ -81,7 +81,7 @@ public class HoldingsUpdateDelegate {
     Promise<HoldingsRecord> promise = Promise.promise();
     holdingsRecordCollection.findById(holdingsId, success -> {
         if (success.getResult() == null) {
-          LOGGER.error(format("Can't find Holdings by id: %s ", holdingsId));
+          LOGGER.error("Can't find Holdings by id: {} ", holdingsId);
           promise.fail(new NotFoundException(format("Can't find Holdings by id: %s ", holdingsId)));
         } else {
           promise.complete(success.getResult());

@@ -76,7 +76,7 @@ public class InstanceUpdateDelegate {
     Promise<Instance> promise = Promise.promise();
     instanceCollection.findById(instanceId, success -> {
         if (success.getResult() == null) {
-          LOGGER.error(format("Can't find Instance by id: %s ", instanceId));
+          LOGGER.error("Can't find Instance by id: {} ", instanceId);
           promise.fail(new NotFoundException(format("Can't find Instance by id: %s ", instanceId)));
         } else {
           promise.complete(success.getResult());
