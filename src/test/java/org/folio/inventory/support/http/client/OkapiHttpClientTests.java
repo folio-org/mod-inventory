@@ -27,7 +27,6 @@ import java.util.concurrent.TimeoutException;
 import org.folio.inventory.common.VertxAssistant;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -37,7 +36,6 @@ import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import io.vertx.core.json.JsonObject;
 import lombok.SneakyThrows;
 
-@Ignore
 public class OkapiHttpClientTests {
   private static VertxAssistant vertxAssistant;
 
