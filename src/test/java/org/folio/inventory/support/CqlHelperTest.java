@@ -6,12 +6,13 @@ import static org.junit.Assert.assertThat;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.Arrays;
-
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import java.util.List;
 
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
+import org.assertj.core.api.Assertions;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 @RunWith(JUnitParamsRunner.class)
 public class CqlHelperTest {
@@ -28,9 +29,25 @@ public class CqlHelperTest {
   }
 
   @Test
-  public void multipleRecordsCqlQuery() {
-    assertThat(urlDecode(multi("a"          )), is("id==(a)"));
-    assertThat(urlDecode(multi("a", "b", "c")), is("id==(a or b or c)"));
+  public void multipleRecordIdsCqlQuery() {
+    Assertions.assertThat(urlDecode(multi("a", "b", "c"))).isEqualTo("id==(a or b or c)");
+  }
+
+  @Test
+  public void oneRecordIdCqlQuery() {
+    Assertions.assertThat(urlDecode(multi("a"))).isEqualTo("id==(a)");
+  }
+
+  @Test
+  public void oneRecordParameterCqlQuery() {
+    Assertions.assertThat(CqlHelper.buildMultipleValuesCqlQuery("parameter", List.of("a")))
+            .isEqualTo("parameter==(a)");
+  }
+
+  @Test
+  public void multipleRecordParametersCqlQuery() {
+    Assertions.assertThat(CqlHelper.buildMultipleValuesCqlQuery("parameter", List.of("a", "b", "c")))
+            .isEqualTo("parameter==(a or b or c)");
   }
 
   @Test
