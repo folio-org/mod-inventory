@@ -4,6 +4,7 @@ import io.vertx.core.json.JsonObject;
 
 public class RelatedInstance {
   // JSON property names
+  public static final String ID_KEY = "id";
   public static final String INSTANCE_ID_KEY = "instanceId";
   public static final String RELATED_INSTANCE_ID_KEY = "relatedInstanceId";
   public static final String RELATED_INSTANCE_TYPE_ID_KEY = "relatedInstanceTypeId";
@@ -21,29 +22,10 @@ public class RelatedInstance {
   }
 
   public RelatedInstance(JsonObject rel) {
-    this(rel.getString("id"),
+    this(rel.getString(ID_KEY),
          rel.getString(INSTANCE_ID_KEY),
          rel.getString(RELATED_INSTANCE_ID_KEY),
          rel.getString(RELATED_INSTANCE_TYPE_ID_KEY));
-  }
-
-  @Override
-  public String toString() {
-    return "{ \"id\": \"" + id + "\", \"instanceId\": \"" + instanceId + "\", \"relatedInstanceId\": \"" + relatedInstanceId + "\", \"relatedInstanceTypeId\": \""+ relatedInstanceTypeId + "\" }";
-  }
-
-  @Override
-  public boolean equals (Object object) {
-    if (object instanceof RelatedInstance) {
-      return object.toString().equals(this.toString());
-    } else {
-      return false;
-    }
-  }
-
-  @Override
-  public int hashCode() {
-    return toString().hashCode();
   }
 
   public static RelatedInstance from(JsonObject rel, String instanceId) {

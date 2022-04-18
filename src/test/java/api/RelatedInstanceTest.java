@@ -46,7 +46,10 @@ public class RelatedInstanceTest extends ApiTests {
     assertEquals(relatedInstanceId, sameRelatedInstance.relatedInstanceId);
     assertEquals(relatedInstanceTypeId, sameRelatedInstance.relatedInstanceTypeId);
 
-    assertEquals(relatedInstance, sameRelatedInstance);
+    assertEquals(relatedInstance.id, sameRelatedInstance.id);
+    assertEquals(relatedInstance.instanceId, sameRelatedInstance.instanceId);
+    assertEquals(relatedInstance.relatedInstanceId, sameRelatedInstance.relatedInstanceId);
+    assertEquals(relatedInstance.relatedInstanceTypeId, sameRelatedInstance.relatedInstanceTypeId);
 
     RelatedInstance inverseRelatedInstance = RelatedInstance.from(relatedInstanceJson, relatedInstanceId);
 
@@ -55,7 +58,10 @@ public class RelatedInstanceTest extends ApiTests {
     assertEquals(instanceId, inverseRelatedInstance.relatedInstanceId);
     assertEquals(relatedInstanceTypeId, inverseRelatedInstance.relatedInstanceTypeId);
 
-    assertNotEquals(relatedInstance, inverseRelatedInstance);
+    assertEquals(relatedInstance.id, inverseRelatedInstance.id);
+    assertEquals(relatedInstance.instanceId, inverseRelatedInstance.relatedInstanceId);
+    assertEquals(relatedInstance.relatedInstanceId, inverseRelatedInstance.instanceId);
+    assertEquals(relatedInstance.relatedInstanceTypeId, inverseRelatedInstance.relatedInstanceTypeId);
   }
 
   @Test
