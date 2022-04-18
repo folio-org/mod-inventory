@@ -67,6 +67,7 @@ public class Instances extends AbstractInstances {
   private static final String INSTANCES_CONTEXT_PATH = INSTANCES_PATH + "/context";
   private static final String BLOCKED_FIELDS_UPDATE_ERROR_MESSAGE = "Instance is controlled by MARC record, these fields are blocked and can not be updated: ";
   private static final String ID = "id";
+  private static final String INSTANCE_ID = "instanceId";
 
   public Instances(final Storage storage, final HttpClient client) {
     super(storage, client);
@@ -516,7 +517,7 @@ public class Instances extends AbstractInstances {
           } else {
             Map<String, String> holdingsToInstanceMap = new HashMap<>();
             for (JsonObject holdingsRecord : holdingsRecordList) {
-              holdingsToInstanceMap.put(holdingsRecord.getString("id"), holdingsRecord.getString(RelatedInstance.INSTANCE_ID_KEY));
+              holdingsToInstanceMap.put(holdingsRecord.getString(ID), holdingsRecord.getString(INSTANCE_ID));
             }
             ArrayList<String> holdingsIdsList = new ArrayList<>(holdingsToInstanceMap.keySet());
             return checkHoldingsForBoundWith(holdingsIdsList, routingContext, webContext)
@@ -607,7 +608,7 @@ public class Instances extends AbstractInstances {
     instanceIds.forEach(instanceId -> {
 
       Optional<JsonObject> relatedInstance = relatedInstanceList.stream()
-        .filter(ri -> ri.getString(RelatedInstance.INSTANCE_ID_KEY).equals(instanceId) || ri.getString(RelatedInstance.RELATED_INSTANCE_ID_KEY).equals(instanceId))
+        .filter(ri -> ri.getString(INSTANCE_ID).equals(instanceId) || ri.getString(RelatedInstance.RELATED_INSTANCE_ID_KEY).equals(instanceId))
         .findAny();
 
       if (relatedInstance.isPresent()) {
@@ -694,7 +695,7 @@ public class Instances extends AbstractInstances {
   // Utilities
 
   private CqlQuery cqlMatchAnyByInstanceIds(List<String> instanceIds) {
-    return CqlQuery.exactMatchAny(RelatedInstance.INSTANCE_ID_KEY, instanceIds);
+    return CqlQuery.exactMatchAny(INSTANCE_ID, instanceIds);
   }
 
   private CqlQuery cqlMatchAnyByHoldingsRecordIds(List<String> holdingsRecordIds) {
