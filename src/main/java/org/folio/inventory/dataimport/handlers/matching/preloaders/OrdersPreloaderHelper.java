@@ -9,7 +9,6 @@ import static org.folio.inventory.support.CqlHelper.buildMultipleValuesCqlQuery;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import io.vertx.core.json.JsonArray;
 
@@ -21,7 +20,6 @@ import org.folio.processing.exceptions.MatchingException;
 public class OrdersPreloaderHelper {
 
     private static final String ORDER_LINES_CQL_PATTERN = "purchaseOrder.workflowStatus==Open AND %s";
-    private static final String VRN_VALUE_CQL_PATTERN = "\"\\\"refNumber\\\":\\\"%s\\\"\"";
 
     private OrdersClient ordersClient;
 
@@ -39,14 +37,12 @@ public class OrdersPreloaderHelper {
 
         switch (preloadingField) {
             case POL: {
-                String cqlCondition = buildMultipleValuesCqlQuery("poLineNumber", loadingParameters);
+                String cqlCondition = buildMultipleValuesCqlQuery("poLineNumber==", loadingParameters);
                 return getPoLineCollection(cqlCondition, eventPayload, convertPreloadResult);
             }
             case VRN: {
-                List<String> vrnLoadingParameters = loadingParameters.stream()
-                        .map(parameter -> String.format(VRN_VALUE_CQL_PATTERN, parameter))
-                        .collect(Collectors.toList());
-                String cqlCondition = buildMultipleValuesCqlQuery("vendorDetail.referenceNumbers", "=", vrnLoadingParameters);
+                String cqlCondition = buildMultipleValuesCqlQuery("vendorDetail.referenceNumbers=/@refNumber ",
+                        loadingParameters);
                 return getPoLineCollection(cqlCondition, eventPayload, convertPreloadResult);
             }
             default: {

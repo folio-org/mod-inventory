@@ -38,7 +38,6 @@ public class OrdersPreloaderHelperTest {
     private static final String EMPTY_ORDER_PRELOADING_PARAMETERS_MESSAGE = "Loading parameters for Orders preloading must not be empty";
 
     private static final String INSTANCE_ID_FIELD = "instanceId";
-    private static final String VRN_VALUE_CQL_PATTERN = "\"\\\"refNumber\\\":\\\"%s\\\"\"";
 
     @Mock
     private OrdersClient ordersClient;
@@ -79,9 +78,10 @@ public class OrdersPreloaderHelperTest {
                 .collect(Collectors.toList()));
 
         List<String> vendorReferenceNumbersMock = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
-        String orderLinesCql = String.format("purchaseOrder.workflowStatus==Open AND vendorDetail.referenceNumbers=(%s or %s)",
-                String.format(VRN_VALUE_CQL_PATTERN, vendorReferenceNumbersMock.get(0)),
-                String.format(VRN_VALUE_CQL_PATTERN, vendorReferenceNumbersMock.get(1)));
+        String orderLinesCql = String.format(
+                "purchaseOrder.workflowStatus==Open AND vendorDetail.referenceNumbers=/@refNumber (%s or %s)",
+                vendorReferenceNumbersMock.get(0),
+                vendorReferenceNumbersMock.get(1));
 
         when(ordersClient.getPoLineCollection(eq(orderLinesCql), any()))
                 .thenReturn(CompletableFuture.completedFuture(Optional.of(poLineCollectionMock)));
