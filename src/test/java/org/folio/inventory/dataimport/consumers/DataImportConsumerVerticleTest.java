@@ -49,7 +49,7 @@ import java.util.concurrent.TimeUnit;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
-import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.useDefaults;
+import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.DataImportEventTypes.DI_COMPLETED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
@@ -81,8 +81,7 @@ public class DataImportConsumerVerticleTest {
 
   private static Vertx vertx;
 
-  @ClassRule
-  public static EmbeddedKafkaCluster cluster = provisionWith(useDefaults());
+  public static EmbeddedKafkaCluster cluster;
 
   @Mock
   private EventHandler mockedEventHandler;
@@ -129,6 +128,8 @@ public class DataImportConsumerVerticleTest {
   @BeforeClass
   public static void setUpClass(TestContext context) {
     Async async = context.async();
+    cluster = provisionWith(defaultClusterConfig());
+    cluster.start();
     String[] hostAndPort = cluster.getBrokerList().split(":");
 
     KafkaConfig kafkaConfig = KafkaConfig.builder()
