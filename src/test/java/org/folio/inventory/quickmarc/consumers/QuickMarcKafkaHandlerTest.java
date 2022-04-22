@@ -1,7 +1,7 @@
 package org.folio.inventory.quickmarc.consumers;
 
 import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
-import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.useDefaults;
+import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -39,7 +39,6 @@ import org.folio.inventory.domain.HoldingsRecordsSourceCollection;
 import org.folio.inventory.services.HoldingsCollectionService;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -83,8 +82,7 @@ public class QuickMarcKafkaHandlerTest {
   private static final String AUTHORITY_RECORD_PATH = "src/test/resources/handlers/authority-record.json";
   private static final String AUTHORITY_PATH = "src/test/resources/handlers/authority.json";
 
-  @ClassRule
-  public static EmbeddedKafkaCluster cluster = provisionWith(useDefaults());
+  public static EmbeddedKafkaCluster cluster;
 
   private final Vertx vertx = Vertx.vertx();
   @Mock
@@ -186,6 +184,8 @@ public class QuickMarcKafkaHandlerTest {
     when(okapiHttpClient.put(anyString(), any(JsonObject.class)))
       .thenReturn(CompletableFuture.completedFuture(new Response(204, null, null, null)));
 
+    cluster = provisionWith(defaultClusterConfig());
+    cluster.start();
     String[] hostAndPort = cluster.getBrokerList().split(":");
     kafkaConfig = KafkaConfig.builder()
       .envId("env")
