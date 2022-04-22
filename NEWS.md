@@ -2,6 +2,7 @@
 
 * Added permissions to search for item records to instance retrive by id endpoint (MODINV-662)
 * Match logic for POL matches to Inventory records (MODINV-578)
+* Match logic for VRN matches to Inventory records (MODINV-577)
 
 ## 18.1.0 2022-02-24
 

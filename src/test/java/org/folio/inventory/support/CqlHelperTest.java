@@ -39,27 +39,27 @@ public class CqlHelperTest {
   }
 
   @Test
-  public void oneRecordParameterCqlQuery() {
-    Assertions.assertThat(CqlHelper.buildMultipleValuesCqlQuery("parameter", List.of("a")))
-            .isEqualTo("parameter==(a)");
+  public void oneRecordCustomPrefixCqlQuery() {
+    Assertions.assertThat(CqlHelper.buildMultipleValuesCqlQuery("parameter=", List.of("a")))
+            .isEqualTo("parameter=(a)");
   }
 
   @Test
-  public void multipleRecordParametersCqlQuery() {
-    Assertions.assertThat(CqlHelper.buildMultipleValuesCqlQuery("parameter", List.of("a", "b", "c")))
-            .isEqualTo("parameter==(a or b or c)");
+  public void multipleRecordCustomPrefixCqlQuery() {
+    Assertions.assertThat(CqlHelper.buildMultipleValuesCqlQuery("parameter=", List.of("a", "b", "c")))
+            .isEqualTo("parameter=(a or b or c)");
   }
 
   @Test
   @Parameters({
-    "    | barcode==\"\"",      // barcode==""
-    "abc | barcode==\"abc\"",   // barcode=="abc"
-    "*   | barcode==\"\\*\"",   // barcode=="\*"
-    "?   | barcode==\"\\?\"",   // barcode=="\?"
-    "^   | barcode==\"\\^\"",   // barcode=="\^"
-    "\"  | barcode==\"\\\"\"",  // barcode=="\""
-    "\\  | barcode==\"\\\\\"",  // barcode=="\\"
-    "*?^\"\\*?^\"\\ | barcode==\"\\*\\?\\^\\\"\\\\\\*\\?\\^\\\"\\\\\"", // barcode=="\*\?\^\"\\\*\?\^\"\\"
+          "    | barcode==\"\"",      // barcode==""
+          "abc | barcode==\"abc\"",   // barcode=="abc"
+          "*   | barcode==\"\\*\"",   // barcode=="\*"
+          "?   | barcode==\"\\?\"",   // barcode=="\?"
+          "^   | barcode==\"\\^\"",   // barcode=="\^"
+          "\"  | barcode==\"\\\"\"",  // barcode=="\""
+          "\\  | barcode==\"\\\\\"",  // barcode=="\\"
+          "*?^\"\\*?^\"\\ | barcode==\"\\*\\?\\^\\\"\\\\\\*\\?\\^\\\"\\\\\"", // barcode=="\*\?\^\"\\\*\?\^\"\\"
   })
   public void barcode(String barcode, String cql) {
     assertThat(CqlHelper.barcodeIs(barcode), is(cql));
