@@ -5,7 +5,6 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import liquibase.Contexts;
 import liquibase.Liquibase;
-import liquibase.database.Database;
 import liquibase.database.DatabaseFactory;
 import liquibase.database.jvm.JdbcConnection;
 import liquibase.exception.LiquibaseException;
@@ -56,8 +55,9 @@ public class TenantApi {
 
     SingleConnectionProvider connectionProvider = new SingleConnectionProvider();
 
-    try (Connection connection = connectionProvider.getConnection(tenantId)) {
-      boolean schemaIsNotExecuted = connection.prepareStatement(format(CREATE_SCHEMA_SQL, schemaName)).execute();
+    try (var connection = connectionProvider.getConnection(tenantId);
+         var preparedStatement = connection.prepareStatement(format(CREATE_SCHEMA_SQL, schemaName))) {
+      boolean schemaIsNotExecuted = preparedStatement.execute();
       if (schemaIsNotExecuted) {
         return Future.failedFuture(String.format("Cannot create schema %s", schemaName));
       } else {
@@ -79,8 +79,9 @@ public class TenantApi {
 
     SingleConnectionProvider connectionProvider = new SingleConnectionProvider();
 
-    try (Connection connection = connectionProvider.getConnection(tenantId)) {
-      boolean schemaIsNotDeleted = connection.prepareStatement(format(DROP_SCHEMA_SQL, schemaName)).execute();
+    try (var connection = connectionProvider.getConnection(tenantId);
+         var preparedStatement = connection.prepareStatement(format(DROP_SCHEMA_SQL, schemaName))) {
+      boolean schemaIsNotDeleted = preparedStatement.execute();
       if (schemaIsNotDeleted) {
         return Future.failedFuture(String.format("Cannot drop schema %s", schemaName));
       } else {
@@ -95,17 +96,11 @@ public class TenantApi {
   }
 
   private void runScripts(String schemaName, Connection connection) throws LiquibaseException {
-    Liquibase liquibase = null;
-    try {
-      Database database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(connection));
-      database.setDefaultSchemaName(schemaName);
-      liquibase = new Liquibase(CHANGELOG_TENANT_PATH, new ClassLoaderResourceAccessor(), database);
+    var database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(connection));
+    database.setDefaultSchemaName(schemaName);
+    try (var liquibase = new Liquibase(CHANGELOG_TENANT_PATH, new ClassLoaderResourceAccessor(), database)) {
       liquibase.update(new Contexts());
-    } finally {
-      if (liquibase != null && liquibase.getDatabase() != null) {
-        Database database = liquibase.getDatabase();
-        database.close();
-      }
     }
+    // no need to call database.close() because liquibase.close() has already closed the connection.
   }
 }
