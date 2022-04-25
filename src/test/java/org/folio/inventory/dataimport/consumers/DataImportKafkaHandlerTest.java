@@ -29,7 +29,9 @@ import org.folio.processing.events.EventManager;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -79,7 +81,8 @@ public class DataImportKafkaHandlerTest {
       .dynamicPort()
       .notifier(new Slf4jNotifier(true)));
 
-  private Vertx vertx = Vertx.vertx();
+  private static Vertx vertx;
+  private static KafkaConfig kafkaConfig;
   private DataImportKafkaHandler dataImportKafkaHandler;
 
   private JobProfile jobProfile = new JobProfile()
@@ -116,27 +119,41 @@ public class DataImportKafkaHandlerTest {
             .withContentType(MAPPING_PROFILE)
             .withContent(JsonObject.mapFrom(mappingProfile).getMap())))));
 
-  @Before
-  public void setUp() {
-    MockitoAnnotations.openMocks(this);
-
+  @BeforeClass
+  public static void setUpClass() {
+    vertx = Vertx.vertx();
     cluster = provisionWith(defaultClusterConfig());
     cluster.start();
     String[] hostAndPort = cluster.getBrokerList().split(":");
 
-    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(JOB_PROFILE_URL + "/.*"), true))
-      .willReturn(WireMock.ok().withBody(Json.encode(profileSnapshotWrapper))));
-
-    KafkaConfig kafkaConfig = KafkaConfig.builder()
+    kafkaConfig = KafkaConfig.builder()
       .kafkaHost(hostAndPort[0])
       .kafkaPort(hostAndPort[1])
       .maxRequestSize(1048576)
       .build();
+  }
+
+  @AfterClass
+  public static void afterClass(TestContext context) {
+    Async async = context.async();
+    vertx.close(ar -> {
+      cluster.stop();
+      async.complete();
+    });
+  }
+
+  @Before
+  public void setUp() {
+    MockitoAnnotations.openMocks(this);
+
+    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(JOB_PROFILE_URL + "/.*"), true))
+      .willReturn(WireMock.ok().withBody(Json.encode(profileSnapshotWrapper))));
 
     HttpClient client = vertx.createHttpClient();
     dataImportKafkaHandler = new DataImportKafkaHandler(vertx, mockedStorage, client,
       new ProfileSnapshotCache(vertx, client, 3600),
       kafkaConfig, new MappingMetadataCache(vertx, client, 3600));
+
     EventManager.clearEventHandlers();
     EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, 1);
   }

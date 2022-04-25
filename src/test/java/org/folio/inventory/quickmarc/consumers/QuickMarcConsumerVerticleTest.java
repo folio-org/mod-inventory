@@ -34,7 +34,10 @@ public class QuickMarcConsumerVerticleTest {
   @AfterClass
   public static void tearDownClass(TestContext context) {
     Async async = context.async();
-    VERTX.close(ar -> async.complete());
+    VERTX.close(ar -> {
+      cluster.stop();
+      async.complete();
+    });
   }
 
   @Test

@@ -58,7 +58,10 @@ public class MarcHridSetConsumerVerticleTest {
   @AfterClass
   public static void tearDownClass(TestContext context) {
     Async async = context.async();
-    vertx.close(ar -> async.complete());
+    vertx.close(ar -> {
+      cluster.stop();
+      async.complete();
+    });
   }
 
 }
