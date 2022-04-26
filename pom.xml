@@ -39,6 +39,11 @@
 
   <dependencies>
     <dependency>
+      <groupId>org.apache.kafka</groupId>
+      <artifactId>kafka-clients</artifactId>
+      <version>${kafkaclients.version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>postgresql</artifactId>
       <version>${testcontainers.version}</version>
@@ -212,7 +217,7 @@
     <dependency>
       <groupId>net.mguenther.kafka</groupId>
       <artifactId>kafka-junit</artifactId>
-      <version>2.6.0</version>
+      <version>${kafkaclients.version}</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -255,11 +260,12 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <testcontainers.version>1.15.3</testcontainers.version>
-    <vertx.version>4.2.5</vertx.version>
+    <vertx.version>4.2.6</vertx.version>
     <jsonschema2pojo_output_dir>${project.build.directory}/generated-sources/jsonschema2pojo</jsonschema2pojo_output_dir>
     <lombok.version>1.18.16</lombok.version>
     <postgres.version>42.3.2</postgres.version>
     <liquibase.version>4.6.2</liquibase.version>
+    <kafkaclients.version>3.1.0</kafkaclients.version>
   </properties>
 
   <distributionManagement>

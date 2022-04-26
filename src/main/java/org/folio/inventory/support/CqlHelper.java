@@ -24,11 +24,11 @@ public class CqlHelper {
    * @return CQL expression
    */
   public static String buildQueryByIds(List<String> recordIds) {
-    return buildMultipleValuesCqlQuery("id", recordIds);
+    return buildMultipleValuesCqlQuery("id==", recordIds);
   }
 
-  public static String buildMultipleValuesCqlQuery(String parameter, List<String> values) {
-    return String.format("%s==(%s)", parameter, values.stream()
+  public static String buildMultipleValuesCqlQuery(String prefix, List<String> values) {
+    return String.format("%s(%s)", prefix, values.stream()
             .map(String::toString)
             .distinct()
             .collect(Collectors.joining(" or ")));

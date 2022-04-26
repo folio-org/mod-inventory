@@ -10,12 +10,11 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
 import org.folio.inventory.MarcHridSetConsumerVerticle;
 import org.junit.AfterClass;
-import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
-import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.useDefaults;
+import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX_REQUEST_SIZE;
@@ -29,12 +28,13 @@ public class MarcHridSetConsumerVerticleTest {
   private static final String KAFKA_ENV_NAME = "test-env";
   private static Vertx vertx = Vertx.vertx();
 
-  @ClassRule
-  public static EmbeddedKafkaCluster cluster = provisionWith(useDefaults());
+  public static EmbeddedKafkaCluster cluster;
 
   @Test
   public void shouldDeployVerticle(TestContext context) {
     Async async = context.async();
+    cluster = provisionWith(defaultClusterConfig());
+    cluster.start();
     String[] hostAndPort = cluster.getBrokerList().split(":");
     DeploymentOptions options = new DeploymentOptions()
       .setConfig(new JsonObject()
@@ -58,7 +58,10 @@ public class MarcHridSetConsumerVerticleTest {
   @AfterClass
   public static void tearDownClass(TestContext context) {
     Async async = context.async();
-    vertx.close(ar -> async.complete());
+    vertx.close(ar -> {
+      cluster.stop();
+      async.complete();
+    });
   }
 
 }
