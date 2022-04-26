@@ -57,7 +57,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
@@ -605,17 +604,11 @@ public class Instances extends AbstractInstances {
 
     Map<String, List<RelatedInstance>> relatedInstanceMap = new HashMap<>();
 
-    instanceIds.forEach(instanceId -> {
-
-      Optional<JsonObject> relatedInstance = relatedInstanceList.stream()
+    instanceIds.forEach(instanceId ->
+      relatedInstanceList.stream()
         .filter(ri -> ri.getString(INSTANCE_ID).equals(instanceId) || ri.getString(RelatedInstance.RELATED_INSTANCE_ID_KEY).equals(instanceId))
-        .findAny();
-
-      if (relatedInstance.isPresent()) {
-        addToList(relatedInstanceMap, instanceId, RelatedInstance.from(relatedInstance.get(), instanceId));
-      }
-
-    });
+        .forEach(relatedInstance ->
+          addToList(relatedInstanceMap, instanceId, RelatedInstance.from(relatedInstance, instanceId))));
 
     instancesResponse.setRelatedInstanceMap(relatedInstanceMap);
 
