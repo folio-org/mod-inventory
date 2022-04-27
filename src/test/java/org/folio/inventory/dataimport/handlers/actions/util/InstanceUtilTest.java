@@ -1,14 +1,6 @@
 package org.folio.inventory.dataimport.handlers.actions.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
+import com.google.common.collect.Lists;
 import org.folio.AlternativeTitle;
 import org.folio.Contributor;
 import org.folio.Instance;
@@ -17,7 +9,12 @@ import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
 import org.folio.inventory.support.InstanceUtil;
 import org.junit.Test;
 
-import com.google.common.collect.Lists;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import static org.junit.Assert.*;
 
 public class InstanceUtilTest {
 
@@ -96,5 +93,16 @@ public class InstanceUtilTest {
     assertEquals("30773a27-b485-4dab-aeb6-b8c04fa3cb19", instance.getChildInstances().get(0).getId());
     assertEquals("Adm note1", instance.getAdministrativeNotes().get(0));
     assertEquals("Adm note2", instance.getAdministrativeNotes().get(1));
+  }
+
+  @Test
+  public void mergeFieldsWithNullVersion() {
+    org.folio.inventory.domain.instances.Instance existing =
+      new org.folio.inventory.domain.instances.Instance("id", null, "IN00001", "source", "title", "instanceTypeId");
+
+    org.folio.Instance mapped = new org.folio.Instance().withVersion(3);
+    org.folio.inventory.domain.instances.Instance merged = InstanceUtil.mergeFieldsWhichAreNotControlled(existing, mapped);
+    assertEquals(merged.getId(), "id");
+    assertEquals(merged.getVersion(),"3");
   }
 }

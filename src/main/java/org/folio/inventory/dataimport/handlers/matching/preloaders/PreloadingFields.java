@@ -6,7 +6,8 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum PreloadingFields {
-    POL("purchaseOrderLineNumber");
+    POL("purchaseOrderLineNumber"),
+    VRN("vendorReferenceNumber");
 
     private final String existingMatchField;
 }
