@@ -106,10 +106,7 @@ public abstract class AbstractInstances {
         String id = (updating.id == null ? UUID.randomUUID().toString() : updating.id);
         updatingRelatedInstances.put(id,
           new RelatedInstance(
-            id,
-            instance.getId(),
-            updating.relatedInstanceId,
-            updating.relatedInstanceTypeId));
+            id, instance.getId(), updating.relatedInstanceId, updating.relatedInstanceTypeId));
       });
     }
 
