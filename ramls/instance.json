@@ -52,6 +52,8 @@
         }, 
         "additionalProperties": false,
         "required": [
+          "id",
+          "instanceId",
           "relatedInstanceId",
           "relatedInstanceTypeId"
         ]
