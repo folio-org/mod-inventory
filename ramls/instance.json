@@ -52,7 +52,6 @@
         }, 
         "additionalProperties": false,
         "required": [
-          "id",
           "instanceId",
           "relatedInstanceId",
           "relatedInstanceTypeId"
@@ -80,7 +79,6 @@
         },
         "additionalProperties": false,
         "required": [
-          "id",
           "superInstanceId",
           "instanceRelationshipTypeId"
         ]
