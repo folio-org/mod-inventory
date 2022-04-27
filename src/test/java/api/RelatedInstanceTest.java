@@ -62,7 +62,6 @@ public class RelatedInstanceTest extends ApiTests {
   @Test
   @SneakyThrows
   public void canCreateInstanceWithRelatedInstances() {
-
     var instanceId = UUID.randomUUID();
     var relatedInstanceId = UUID.randomUUID();
 
@@ -293,7 +292,45 @@ public class RelatedInstanceTest extends ApiTests {
         is(anotherRelatedInstanceId.toString()));
     assertThat(thirdInstanceFirstRelatedInstanceJson.getString(RelatedInstance.RELATED_INSTANCE_ID_KEY),
         is(instanceId.toString()));
+  }
 
+  @Test
+  @SneakyThrows
+  public void canRemoveRelatedInstancesFromInstance() {
+    var instanceId = UUID.randomUUID();
+    var relatedInstanceId = UUID.randomUUID();
+
+    String relatedInstanceTypeId = relatedInstanceTypeFixture.related().getId();
+
+    var firstNodJson = nod(instanceId)
+        .put(Instance.TITLE_KEY, "An instance");
+
+    instancesClient.create(firstNodJson);
+
+    var secondNodJson = nod(relatedInstanceId)
+        .put(Instance.TITLE_KEY, "A related instance")
+        .put(Instance.HRID_KEY, "in00000001")
+        .put(Instance.RELATED_INSTANCES_KEY, new JsonArray()
+            .add(createRelatedInstance(UUID.randomUUID(), relatedInstanceId, instanceId, relatedInstanceTypeId)));
+
+    instancesClient.create(secondNodJson);
+
+    secondNodJson = secondNodJson
+        .put(Instance.RELATED_INSTANCES_KEY, new JsonArray());
+
+    instancesClient.replace(relatedInstanceId, secondNodJson);
+
+    var firstInstanceJson = instancesClient.getById(instanceId).getJson();
+    var firstInstanceRelatedInstancesJson = firstInstanceJson.getJsonArray(Instance.RELATED_INSTANCES_KEY);
+
+    assertThat(firstInstanceRelatedInstancesJson, notNullValue());
+    assertEquals(0, firstInstanceRelatedInstancesJson.size());
+
+    var secondInstanceJson = instancesClient.getById(relatedInstanceId).getJson();
+    var secondInstanceRelatedInstancesJson = secondInstanceJson.getJsonArray(Instance.RELATED_INSTANCES_KEY);
+
+    assertThat(secondInstanceRelatedInstancesJson, notNullValue());
+    assertEquals(0, secondInstanceRelatedInstancesJson.size());
   }
 
   private JsonObject createRelatedInstance(UUID id, UUID isntanceId, UUID relatedInstanceId,
