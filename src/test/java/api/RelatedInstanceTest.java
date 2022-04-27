@@ -19,20 +19,18 @@ import org.junit.Test;
 import api.support.ApiTests;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import lombok.SneakyThrows;
 
 public class RelatedInstanceTest extends ApiTests {
 
   @Test
-  public void testRelatedInstance() {
+  public void testRelatedInstanceFrom() {
     String id = UUID.randomUUID().toString();
     String instanceId = UUID.randomUUID().toString();
     String relatedInstanceId = UUID.randomUUID().toString();
     String relatedInstanceTypeId = UUID.randomUUID().toString();
     RelatedInstance relatedInstance = new RelatedInstance(
-        id,
-        instanceId,
-        relatedInstanceId,
-        relatedInstanceTypeId);
+        id, instanceId, relatedInstanceId, relatedInstanceTypeId);
 
     JsonObject relatedInstanceJson = mapFrom(relatedInstance);
 
@@ -62,7 +60,8 @@ public class RelatedInstanceTest extends ApiTests {
   }
 
   @Test
-  public void canCreateInstanceWithRelatedInstances() throws Exception {
+  @SneakyThrows
+  public void canCreateInstanceWithRelatedInstances() {
 
     var instanceId = UUID.randomUUID();
     var relatedInstanceId = UUID.randomUUID();
@@ -125,7 +124,8 @@ public class RelatedInstanceTest extends ApiTests {
   }
 
   @Test
-  public void canUpdateInstanceWithRelatedInstances() throws Exception {
+  @SneakyThrows
+  public void canUpdateInstanceWithRelatedInstances() {
     var instanceId = UUID.randomUUID();
     var relatedInstanceId = UUID.randomUUID();
     var anotherRelatedInstanceId = UUID.randomUUID();
@@ -299,10 +299,7 @@ public class RelatedInstanceTest extends ApiTests {
   private JsonObject createRelatedInstance(UUID id, UUID isntanceId, UUID relatedInstanceId,
       String relatedInstanceTypeId) {
     return mapFrom(new RelatedInstance(
-        id.toString(),
-        isntanceId.toString(),
-        relatedInstanceId.toString(),
-        relatedInstanceTypeId));
+        id.toString(), isntanceId.toString(), relatedInstanceId.toString(), relatedInstanceTypeId));
   }
 
 }
