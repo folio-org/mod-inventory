@@ -142,14 +142,12 @@ public class RelatedInstanceTest extends ApiTests {
     assertThat(secondInstanceFirstRelatedInstanceJson, notNullValue());
     assertThat(secondInstanceFirstRelatedInstanceJson.getString(RelatedInstance.INSTANCE_ID_KEY),
         is(relatedInstanceId.toString()));
+    assertThat(secondInstanceFirstRelatedInstanceJson.getString(RelatedInstance.RELATED_INSTANCE_ID_KEY),
+        is(instanceId.toString()));
 
     assertThat(secondInstanceSecondRelatedInstanceJson, notNullValue());
     assertThat(secondInstanceSecondRelatedInstanceJson.getString(RelatedInstance.INSTANCE_ID_KEY),
         is(relatedInstanceId.toString()));
-
-    assertThat(secondInstanceFirstRelatedInstanceJson.getString(RelatedInstance.RELATED_INSTANCE_ID_KEY),
-        is(instanceId.toString()));
-
     assertThat(secondInstanceSecondRelatedInstanceJson.getString(RelatedInstance.RELATED_INSTANCE_ID_KEY),
         is(anotherRelatedInstanceId.toString()));
 
@@ -204,13 +202,12 @@ public class RelatedInstanceTest extends ApiTests {
     assertThat(firstInstanceRelatedInstancesJson, notNullValue());
     assertThat(firstInstanceFirstRelatedInstanceJson.getString(RelatedInstance.INSTANCE_ID_KEY),
         is(instanceId.toString()));
+    assertThat(firstInstanceFirstRelatedInstanceJson.getString(RelatedInstance.RELATED_INSTANCE_ID_KEY),
+        is(relatedInstanceId.toString()));
 
     assertThat(firstInstanceSecondRelatedInstanceJson, notNullValue());
     assertThat(firstInstanceSecondRelatedInstanceJson.getString(RelatedInstance.INSTANCE_ID_KEY),
         is(instanceId.toString()));
-
-    assertThat(firstInstanceFirstRelatedInstanceJson.getString(RelatedInstance.RELATED_INSTANCE_ID_KEY),
-        is(relatedInstanceId.toString()));
     assertThat(firstInstanceSecondRelatedInstanceJson.getString(RelatedInstance.RELATED_INSTANCE_ID_KEY),
         is(anotherRelatedInstanceId.toString()));
 
