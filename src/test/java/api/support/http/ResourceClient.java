@@ -110,6 +110,16 @@ public class ResourceClient {
       "Preceding-succeeding titles", "precedingSucceedingTitles");
   }
 
+  public static ResourceClient forRelatedInstances(OkapiHttpClient okapiClient) {
+    return new ResourceClient(okapiClient, StorageInterfaceUrls::relatedInstancesUrl,
+      "Related instances", "relatedInstances");
+  }
+
+  public static ResourceClient forRelatedInstanceTypes(OkapiHttpClient okapiClient) {
+    return new ResourceClient(okapiClient, StorageInterfaceUrls::relatedInstanceTypeUrl,
+      "Related isntance types", "relatedInstanceTypes");
+  }
+
   public static ResourceClient forInstanceRelationship(OkapiHttpClient okapiClient) {
     return new ResourceClient(okapiClient, StorageInterfaceUrls::instanceRelationshipUrl,
       "Instance relationships", "instanceRelationships");
