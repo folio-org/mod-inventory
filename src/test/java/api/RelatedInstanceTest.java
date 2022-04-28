@@ -118,10 +118,11 @@ public class RelatedInstanceTest extends ApiTests {
 
     var firstInstanceJson = instancesClient.getById(instanceId).getJson();
     var firstInstanceRelatedInstancesJson = firstInstanceJson.getJsonArray(Instance.RELATED_INSTANCES_KEY);
-    var firstInstanceFirstRelatedInstanceJson = firstInstanceRelatedInstancesJson.getJsonObject(0);
 
     assertThat(firstInstanceRelatedInstancesJson, notNullValue());
     assertEquals(1, firstInstanceRelatedInstancesJson.size());
+
+    var firstInstanceFirstRelatedInstanceJson = firstInstanceRelatedInstancesJson.getJsonObject(0);
 
     assertThat(firstInstanceRelatedInstancesJson, notNullValue());
     assertThat(firstInstanceFirstRelatedInstanceJson.getString(RelatedInstance.INSTANCE_ID_KEY),
@@ -131,11 +132,12 @@ public class RelatedInstanceTest extends ApiTests {
 
     var secondInstanceJson = instancesClient.getById(relatedInstanceId).getJson();
     var secondInstanceRelatedInstancesJson = secondInstanceJson.getJsonArray(Instance.RELATED_INSTANCES_KEY);
-    var secondInstanceFirstRelatedInstanceJson = secondInstanceRelatedInstancesJson.getJsonObject(0);
-    var secondInstanceSecondRelatedInstanceJson = secondInstanceRelatedInstancesJson.getJsonObject(1);
 
     assertThat(secondInstanceRelatedInstancesJson, notNullValue());
     assertEquals(2, secondInstanceRelatedInstancesJson.size());
+
+    var secondInstanceFirstRelatedInstanceJson = secondInstanceRelatedInstancesJson.getJsonObject(0);
+    var secondInstanceSecondRelatedInstanceJson = secondInstanceRelatedInstancesJson.getJsonObject(1);
 
     assertThat(secondInstanceFirstRelatedInstanceJson, notNullValue());
     assertThat(secondInstanceFirstRelatedInstanceJson.getString(RelatedInstance.INSTANCE_ID_KEY),
@@ -229,7 +231,6 @@ public class RelatedInstanceTest extends ApiTests {
         assertThat(firstInstanceSecondRelatedInstanceJson.getString(RelatedInstance.RELATED_INSTANCE_ID_KEY),
             is(relatedInstanceId.toString()));
     }
-    
 
     secondInstanceJson = instancesClient.getById(relatedInstanceId).getJson();
     secondInstanceRelatedInstancesJson = secondInstanceJson.getJsonArray(Instance.RELATED_INSTANCES_KEY);
