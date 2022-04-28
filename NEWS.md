@@ -1,3 +1,7 @@
+## 18.0.8 2022-04-28
+
+* Fix "\_version" is not mandatory field (MODINV-684)
+
 ## 18.0.7 2021-02-09
 
 * Update folio-kafka-wrapper to v2.4.3 to allow adding ENV prefix to events_cache Kafka topic (MODINV-632, KAFKAWRAP-19)
