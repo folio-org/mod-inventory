@@ -16,6 +16,7 @@ import org.folio.inventory.dataimport.HoldingWriterFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.resources.Holdings;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.mapping.MappingManager;
@@ -72,6 +73,8 @@ public class UpdateHoldingEventHandlerTest {
   private Storage storage;
   @Mock
   HoldingsRecordCollection holdingsRecordsCollection;
+  @Mock
+  ItemCollection itemCollection;
   @Mock
   private MappingMetadataCache mappingMetadataCache;
   @Spy
@@ -145,6 +148,7 @@ public class UpdateHoldingEventHandlerTest {
     when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
 
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
+    when(storage.getItemCollection(any())).thenReturn(itemCollection);
 
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new HoldingWriterFactory());
