@@ -113,10 +113,9 @@ public class UpdateHoldingEventHandler implements EventHandler {
           MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
 
           HoldingsRecordCollection holdingsRecords = storage.getHoldingsRecordCollection(context);
-          ItemCollection itemCollection = storage.getItemCollection(context);
           HoldingsRecord holding = retrieveHolding(dataImportEventPayload.getContext());
 
-          holdingsRecords.update(holding, holdingSuccess -> constructDataImportEventPayload(future, dataImportEventPayload, itemCollection, holding),
+          holdingsRecords.update(holding, holdingSuccess -> constructDataImportEventPayload(future, dataImportEventPayload, holding, context),
             failure -> {
               if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
                 processOLError(dataImportEventPayload, future, holdingsRecords, holding, failure);
@@ -207,10 +206,11 @@ public class UpdateHoldingEventHandler implements EventHandler {
     });
   }
 
-  private void constructDataImportEventPayload(CompletableFuture<DataImportEventPayload> future, DataImportEventPayload dataImportEventPayload, ItemCollection itemCollection, HoldingsRecord holding) {
+  private void constructDataImportEventPayload(CompletableFuture<DataImportEventPayload> future, DataImportEventPayload dataImportEventPayload, HoldingsRecord holding, Context context) {
     HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
     payloadContext.put(HOLDINGS.value(), Json.encodePrettily(holding));
     if(payloadContext.containsKey(ITEM.value())) {
+      ItemCollection itemCollection = storage.getItemCollection(context);
       updateDataImportEventPayloadItem(future, dataImportEventPayload, itemCollection);
     } else {
       future.complete(dataImportEventPayload);

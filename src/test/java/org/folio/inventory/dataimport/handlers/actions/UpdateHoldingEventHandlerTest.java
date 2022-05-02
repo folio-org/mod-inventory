@@ -196,7 +196,7 @@ public class UpdateHoldingEventHandlerTest {
       successHandler.accept(new Success<>(ItemUtil.jsonToItem(existingItemJson)));
       return null;
     }).when(itemCollection).findById(anyString(), any(Consumer.class), any(Consumer.class));
-    Mockito.when(storage.getItemCollection(ArgumentMatchers.any(Context.class))).thenReturn(itemCollection);
+    when(storage.getItemCollection(ArgumentMatchers.any(Context.class))).thenReturn(itemCollection);
 
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new HoldingWriterFactory());
