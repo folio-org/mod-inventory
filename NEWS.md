@@ -1,3 +1,8 @@
+## 18.1.7 2022-04-28
+
+* Fix "\_version" is not mandatory field (MODINV-684)
+* Fix ZipException on 64-bit systems (FOLIO-3484)
+
 ## 18.1.6 2022-04-15
 
 * Fixed update of an Instance to not erase administrative note (MODINV-679)
