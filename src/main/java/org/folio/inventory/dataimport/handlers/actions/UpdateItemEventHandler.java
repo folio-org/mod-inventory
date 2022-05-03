@@ -298,7 +298,7 @@ public class UpdateItemEventHandler implements EventHandler {
   private void getActualItemAndReInvokeCurrentHandler(Item item, ItemCollection itemCollection, Promise<Item> promise, DataImportEventPayload eventPayload) {
     itemCollection.findById(item.getId())
       .thenAccept(actualItem -> {
-        JsonObject itemAsJson = new JsonObject(ItemUtil.mapToMappingResultRepresentation(item));
+        JsonObject itemAsJson = new JsonObject(ItemUtil.mapToMappingResultRepresentation(actualItem));
         eventPayload.getContext().put(ITEM.value(), Json.encode(itemAsJson));
         eventPayload.getEventsChain().remove(eventPayload.getContext().get(CURRENT_EVENT_TYPE_PROPERTY));
         try {
