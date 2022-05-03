@@ -335,6 +335,7 @@
             "inventory-storage.instances.item.get",
             "inventory-storage.preceding-succeeding-titles.collection.get",
             "inventory-storage.instance-relationships.collection.get",
+            "inventory-storage.related-instances.collection.get",
             "inventory-storage.bound-with-parts.collection.get",
             "inventory-storage.holdings.collection.get",
             "inventory-storage.items.collection.get"
@@ -366,6 +367,7 @@
             "inventory-storage.instances.item.get",
             "inventory-storage.preceding-succeeding-titles.collection.get",
             "inventory-storage.instance-relationships.collection.get",
+            "inventory-storage.related-instances.collection.get",
             "inventory-storage.bound-with-parts.collection.get",
             "inventory-storage.holdings.collection.get",
             "inventory-storage.items.collection.get"
@@ -384,7 +386,11 @@
             "inventory-storage.instance-relationships.collection.get",
             "inventory-storage.instance-relationships.item.post",
             "inventory-storage.instance-relationships.item.put",
-            "inventory-storage.instance-relationships.item.delete"
+            "inventory-storage.instance-relationships.item.delete",
+            "inventory-storage.related-instances.collection.get",
+            "inventory-storage.related-instances.item.post",
+            "inventory-storage.related-instances.item.put",
+            "inventory-storage.related-instances.item.delete"
           ]
         }, {
           "methods": ["PUT"],
@@ -403,7 +409,11 @@
             "inventory-storage.instance-relationships.collection.get",
             "inventory-storage.instance-relationships.item.post",
             "inventory-storage.instance-relationships.item.put",
-            "inventory-storage.instance-relationships.item.delete"
+            "inventory-storage.instance-relationships.item.delete",
+            "inventory-storage.related-instances.collection.get",
+            "inventory-storage.related-instances.item.post",
+            "inventory-storage.related-instances.item.put",
+            "inventory-storage.related-instances.item.delete"
           ]
         }, {
           "methods": ["DELETE"],
@@ -459,7 +469,11 @@
             "inventory-storage.instance-relationships.collection.get",
             "inventory-storage.instance-relationships.item.post",
             "inventory-storage.instance-relationships.item.put",
-            "inventory-storage.instance-relationships.item.delete"
+            "inventory-storage.instance-relationships.item.delete",
+            "inventory-storage.related-instances.collection.get",
+            "inventory-storage.related-instances.item.post",
+            "inventory-storage.related-instances.item.put",
+            "inventory-storage.related-instances.item.delete"
           ]
         }
       ]
