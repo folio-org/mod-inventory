@@ -61,6 +61,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
   private static final String CURRENT_HOLDING_PROPERTY = "CURRENT_HOLDING";
   private static final String CURRENT_NODE_PROPERTY = "CURRENT_NODE";
   private static final String CANNOT_UPDATE_HOLDING_ERROR_MESSAGE = "Error updating Holding by holdingId '%s' and jobExecution '%s' recordId '%s' chunkId '%s' - %s, status code %s";
+  private static final String CANNOT_GET_ACTUAL_ITEM_MESSAGE = "Cannot get actual Item after successfully updating holdings, by ITEM id: {} - {}, status code {}";
 
   private final Storage storage;
   private final MappingMetadataCache mappingMetadataCache;
@@ -227,8 +228,10 @@ public class UpdateHoldingEventHandler implements EventHandler {
       }
       future.complete(dataImportEventPayload);
     }, failure -> {
-      LOGGER.error("Cannot get actual Item after successfully updating holdings, by ITEM id: {} - {}, status code {}", itemId, failure.getReason(), failure.getStatusCode());
-      future.complete(dataImportEventPayload);
+      EventProcessingException processingException =
+        new EventProcessingException(format(CANNOT_GET_ACTUAL_ITEM_MESSAGE, itemId, failure.getReason(), failure.getStatusCode()));
+      LOGGER.error(processingException);
+      future.completeExceptionally(processingException);
     });
   }
 }
