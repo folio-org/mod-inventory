@@ -5,7 +5,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import api.support.fixtures.MarkItemFixture;
-import api.support.fixtures.RelatedInstanceTypeFixture;
 
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.junit.AfterClass;
@@ -29,11 +28,9 @@ public abstract class ApiTests {
   protected final ResourceClient usersClient;
   protected final ResourceClient instancesBatchClient;
   protected final ResourceClient precedingSucceedingTitlesClient;
-  protected final ResourceClient relatedInstanceClient;
   protected final ResourceClient instanceRelationshipClient;
   protected final ResourceClient requestStorageClient;
 
-  protected final RelatedInstanceTypeFixture relatedInstanceTypeFixture;
   protected final InstanceRelationshipTypeFixture instanceRelationshipTypeFixture;
   protected final MarkItemFixture markItemFixture;
 
@@ -47,10 +44,8 @@ public abstract class ApiTests {
     usersClient = ResourceClient.forUsers(okapiClient);
     instancesBatchClient = ResourceClient.forInstancesBatch(okapiClient);
     precedingSucceedingTitlesClient = ResourceClient.forPrecedingSucceedingTitles(okapiClient);
-    relatedInstanceClient = ResourceClient.forRelatedInstances(okapiClient);
     instanceRelationshipClient = ResourceClient.forInstanceRelationship(okapiClient);
     requestStorageClient = ResourceClient.forRequestStorage(okapiClient);
-    relatedInstanceTypeFixture = new RelatedInstanceTypeFixture(okapiClient);
     instanceRelationshipTypeFixture = new InstanceRelationshipTypeFixture(okapiClient);
     markItemFixture = new MarkItemFixture(okapiClient);
   }

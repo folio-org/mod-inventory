@@ -5,14 +5,12 @@ import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
 import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
-import org.folio.inventory.domain.instances.RelatedInstance;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 
 import java.util.*;
 
 public class InstancesResponse {
   private Success<MultipleRecords<Instance>> success;
-  private Map<String, List<RelatedInstance>> relatedInstanceMap = new HashMap<>();
   private Map<String, List<InstanceRelationshipToParent>> parentInstanceMap = new HashMap();
   private Map<String, List<InstanceRelationshipToChild>> childInstanceMap = new HashMap();
   private Map<String, List<PrecedingSucceedingTitle>> precedingTitlesMap = new HashMap();
@@ -30,17 +28,6 @@ public class InstancesResponse {
 
   public boolean hasRecords () {
     return !success.getResult().records.isEmpty();
-  }
-
-  public Map<String, List<RelatedInstance>> getRelatedInstanceMap() {
-    return Collections.unmodifiableMap(relatedInstanceMap);
-  }
-
-  public InstancesResponse setRelatedInstanceMap(
-    Map<String, List<RelatedInstance>> relatedInstanceMap) {
-
-    this.relatedInstanceMap = relatedInstanceMap;
-    return this;
   }
 
   public Map<String, List<InstanceRelationshipToParent>> getParentInstanceMap() {
