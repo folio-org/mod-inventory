@@ -32,7 +32,6 @@ public class Instance {
   public static final String HRID_KEY = "hrid";
   public static final String MATCH_KEY_KEY = "matchKey";
   public static final String SOURCE_KEY = "source";
-  public static final String RELATED_INSTANCES_KEY = "relatedInstances";
   public static final String PARENT_INSTANCES_KEY = "parentInstances";
   public static final String CHILD_INSTANCES_KEY = "childInstances";
   public static final String PRECEDING_TITLES_KEY = "precedingTitles";
@@ -78,7 +77,6 @@ public class Instance {
   private final String hrid;
   private String matchKey;
   private final String source;
-  private List<RelatedInstance> relatedInstances = new ArrayList<>();
   private List<InstanceRelationshipToParent> parentInstances = new ArrayList();
   private List<InstanceRelationshipToChild> childInstances = new ArrayList();
   private List<PrecedingSucceedingTitle> precedingTitles = new ArrayList<>();
@@ -155,7 +153,6 @@ public class Instance {
       instanceJson.getString(INSTANCE_TYPE_ID_KEY))
       .setIndexTitle(instanceJson.getString(INDEX_TITLE_KEY))
       .setMatchKey(instanceJson.getString(MATCH_KEY_KEY))
-      .setRelatedInstances(instanceJson.getJsonArray(RELATED_INSTANCES_KEY))
       .setParentInstances(instanceJson.getJsonArray(PARENT_INSTANCES_KEY))
       .setChildInstances(instanceJson.getJsonArray(CHILD_INSTANCES_KEY))
       .setPrecedingTitles(instanceJson.getJsonArray(PRECEDING_TITLES_KEY))
@@ -266,7 +263,6 @@ public class Instance {
     json.put(ADMININSTRATIVE_NOTES_KEY, getAdministrativeNotes());
     putIfNotNull(json, MATCH_KEY_KEY, getMatchKey());
     putIfNotNull(json, INDEX_TITLE_KEY, getIndexTitle());
-    putIfNotNull(json, RELATED_INSTANCES_KEY, relatedInstances);
     putIfNotNull(json, PARENT_INSTANCES_KEY, parentInstances);
     putIfNotNull(json, CHILD_INSTANCES_KEY, childInstances);
     putIfNotNull(json, IS_BOUND_WITH_KEY, getIsBoundWith());
@@ -325,8 +321,6 @@ public class Instance {
     return json;
   }
 
-
-
   public Instance setMatchKey(String matchKey) {
     this.matchKey = matchKey;
     return this;
@@ -334,21 +328,6 @@ public class Instance {
 
   public Instance setIndexTitle(String indexTitle) {
     this.indexTitle = indexTitle;
-    return this;
-  }
-
-  public Instance setRelatedInstances(List<RelatedInstance> relatedInstances) {
-    this.relatedInstances = (relatedInstances != null ? relatedInstances : this.relatedInstances);
-    return this;
-  }
-
-  public Instance setRelatedInstances(JsonArray relatedInstances) {
-    this.relatedInstances = relatedInstances != null
-      ? JsonArrayHelper.toList(relatedInstances).stream()
-        .map(RelatedInstance::new)
-        .collect(Collectors.toList())
-      : new ArrayList<>();
-
     return this;
   }
 
@@ -650,10 +629,6 @@ public class Instance {
 
   public List<String> getAdministrativeNotes() {
     return administrativeNotes;
-  }
-
-  public List<RelatedInstance> getRelatedInstances() {
-    return relatedInstances;
   }
 
   public List<InstanceRelationshipToParent> getParentInstances() {

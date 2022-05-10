@@ -51,7 +51,6 @@ import support.fakes.FakeOkapi;
   ModsIngestExamples.class,
   IsbnUtilsApiExamples.class,
   ItemAllowedStatusesSchemaTest.class,
-  RelatedInstanceTest.class,
   PrecedingSucceedingTitlesApiExamples.class,
   InstanceRelationshipsTest.class,
   HoldingApiExample.class,

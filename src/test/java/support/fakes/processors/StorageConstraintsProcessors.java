@@ -2,7 +2,6 @@ package support.fakes.processors;
 
 import io.vertx.core.json.JsonObject;
 import org.folio.inventory.domain.instances.InstanceRelationship;
-import org.folio.inventory.domain.instances.RelatedInstance;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.exceptions.UnprocessableEntityException;
 import org.folio.inventory.support.http.client.Response;
@@ -27,35 +26,6 @@ import static org.folio.inventory.support.JsonArrayHelper.toList;
 public final class StorageConstraintsProcessors {
 
   private StorageConstraintsProcessors() {
-  }
-
-  public static CompletableFuture<JsonObject> relatedInstancesConstraints(
-    @SuppressWarnings("unused") JsonObject oldRelatedInstance, JsonObject newRelatedInstance) throws MalformedURLException {
-
-    final RelatedInstance relatedInstance = new RelatedInstance(newRelatedInstance);
-
-    return getInstanceByIds(relatedInstance.instanceId, relatedInstance.relatedInstanceId)
-      .thenCombine(get(instanceRelationshipTypeUrl(
-        "/" + relatedInstance.relatedInstanceTypeId)), (relationships, relationshipType) -> {
-
-        if (relationshipType.getStatusCode() != 200) {
-          throw new UnprocessableEntityException(new ValidationError(
-            "Related instance type does not exist", "relatedInstanceTypeId",
-            relatedInstance.relatedInstanceTypeId));
-        }
-
-        if (!relationships.containsKey(relatedInstance.instanceId)) {
-          throw new UnprocessableEntityException(new ValidationError(
-            "Instance does not exist", "instanceId", relatedInstance.instanceId));
-        }
-
-        if (!relationships.containsKey(relatedInstance.relatedInstanceId)) {
-          throw new UnprocessableEntityException(new ValidationError(
-            "Related instance does not exist", "relatedInstanceId", relatedInstance.relatedInstanceId));
-        }
-
-        return newRelatedInstance;
-      });
   }
 
   public static CompletableFuture<JsonObject> instanceRelationshipsConstraints(
