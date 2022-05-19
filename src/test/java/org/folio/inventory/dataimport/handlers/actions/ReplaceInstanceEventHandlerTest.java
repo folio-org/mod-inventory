@@ -66,6 +66,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static java.util.concurrent.CompletableFuture.completedStage;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
@@ -98,11 +100,13 @@ public class ReplaceInstanceEventHandlerTest {
   private static final String PARSED_CONTENT = "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"245\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"a\":\"titleValue\"}]}},{\"336\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"b\":\"b6698d38-149f-11ec-82a8-0242ac130003\"}]}},{\"780\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"Houston oil directory\"}]}},{\"785\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"SAIS review of international affairs\"},{\"x\":\"1945-4724\"}]}},{\"500\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Adaptation of Xi xiang ji by Wang Shifu.\"}]}},{\"520\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\"}]}}]}";
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/bib-rules.json";
   private static final String MAPPING_METADATA_URL = "/mapping-metadata";
+  private static final String SOURCE_RECORDS_PATH = "/source-storage/records";
   private static final String PRECEDING_SUCCEEDING_TITLES_KEY = "precedingSucceedingTitles";
   private static final String TENANT_ID = "diku";
   private static final String TOKEN = "dummy";
   private static final Integer INSTANCE_VERSION = 1;
   private static final String INSTANCE_VERSION_AS_STRING = "1";
+  private static final String MARC_INSTANCE_SOURCE = "MARC";
 
   @Mock
   private Storage storage;
@@ -171,6 +175,10 @@ public class ReplaceInstanceEventHandlerTest {
         .withMappingParams(Json.encode(new MappingParameters()))
         .withMappingRules(mappingRules.toString())))));
 
+    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(SOURCE_RECORDS_PATH + "/.{36}" + "/formatted"), true))
+      .willReturn(WireMock.ok(Json.encode(new Record()
+        .withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT))))));
+
     precedingSucceedingTitlesHelper = Mockito.spy(new PrecedingSucceedingTitlesHelper(ctxt -> mockedClient));
 
     Vertx vertx = Vertx.vertx();
@@ -215,6 +223,7 @@ public class ReplaceInstanceEventHandlerTest {
     context.put(INSTANCE.value(), new JsonObject()
       .put("id", UUID.randomUUID().toString())
       .put("hrid", UUID.randomUUID().toString())
+      .put("source", MARC_INSTANCE_SOURCE)
       .put("_version", INSTANCE_VERSION)
       .encode());
 
@@ -236,7 +245,7 @@ public class ReplaceInstanceEventHandlerTest {
     assertNotNull(createdInstance.getString("id"));
     assertEquals(title, createdInstance.getString("title"));
     assertEquals(instanceTypeId, createdInstance.getString("instanceTypeId"));
-    assertEquals("MARC", createdInstance.getString("source"));
+    assertEquals(MARC_INSTANCE_SOURCE, createdInstance.getString("source"));
     assertThat(createdInstance.getJsonArray("precedingTitles").size(), is(1));
     assertThat(createdInstance.getJsonArray("succeedingTitles").size(), is(1));
     assertThat(createdInstance.getJsonArray("notes").size(), is(2));
@@ -244,6 +253,7 @@ public class ReplaceInstanceEventHandlerTest {
     assertThat(createdInstance.getJsonArray("notes").getJsonObject(1).getString("instanceNoteTypeId"), notNullValue());
     assertThat(createdInstance.getString("_version"), is(INSTANCE_VERSION_AS_STRING));
     verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
+    verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern("/source-storage/records" + "/.*"), true)));
   }
 
   @Test
@@ -284,7 +294,6 @@ public class ReplaceInstanceEventHandlerTest {
       .withOkapiUrl(mockServer.baseUrl())
       .withToken(TOKEN)
       .withJobExecutionId(UUID.randomUUID().toString());
-    ;
 
     CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get();
@@ -358,7 +367,7 @@ public class ReplaceInstanceEventHandlerTest {
   }
 
   @Test(expected = ExecutionException.class)
-  public void shouldNotProcessEventIfMArcBibliographicIsNotExistsInContext() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+  public void shouldNotProcessEventIfMArcBibliographicIsNotExistsInContext() throws InterruptedException, ExecutionException, TimeoutException {
     Reader fakeReader = Mockito.mock(Reader.class);
 
     String instanceTypeId = UUID.randomUUID().toString();
@@ -384,14 +393,13 @@ public class ReplaceInstanceEventHandlerTest {
       .withOkapiUrl(mockServer.baseUrl())
       .withToken(TOKEN)
       .withJobExecutionId(UUID.randomUUID().toString());
-    ;
 
     CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
   }
 
   @Test(expected = ExecutionException.class)
-  public void shouldNotProcessEventIfMarcBibliographicIsEmptyInContext() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+  public void shouldNotProcessEventIfMarcBibliographicIsEmptyInContext() throws InterruptedException, ExecutionException, TimeoutException {
     Reader fakeReader = Mockito.mock(Reader.class);
 
     String instanceTypeId = UUID.randomUUID().toString();
@@ -417,14 +425,13 @@ public class ReplaceInstanceEventHandlerTest {
       .withOkapiUrl(mockServer.baseUrl())
       .withToken(TOKEN)
       .withJobExecutionId(UUID.randomUUID().toString());
-    ;
 
     CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
   }
 
   @Test(expected = ExecutionException.class)
-  public void shouldNotProcessEventIfRequiredFieldIsEmpty() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+  public void shouldNotProcessEventIfRequiredFieldIsEmpty() throws InterruptedException, ExecutionException, TimeoutException {
     Reader fakeReader = Mockito.mock(Reader.class);
 
     String instanceTypeId = UUID.randomUUID().toString();
@@ -449,7 +456,6 @@ public class ReplaceInstanceEventHandlerTest {
       .withOkapiUrl(mockServer.baseUrl())
       .withToken(TOKEN)
       .withJobExecutionId(UUID.randomUUID().toString());
-    ;
 
     CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
@@ -524,6 +530,49 @@ public class ReplaceInstanceEventHandlerTest {
 
     CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
     future.get(20, TimeUnit.SECONDS);
+  }
+
+  @Test
+  public void shouldNotRequestMarcRecordIfInstanceSourceIsNotMarc() throws InterruptedException, ExecutionException, TimeoutException {
+    String instanceTypeId = UUID.randomUUID().toString();
+    String newTitle = "test title";
+
+    Reader mockedReader = Mockito.mock(Reader.class);
+    when(mockedReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId), StringValue.of(newTitle));
+    when(fakeReaderFactory.createReader()).thenReturn(mockedReader);
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new InstanceWriterFactory());
+
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    JsonObject instanceJson = new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("hrid", UUID.randomUUID().toString())
+      .put("source", "FOLIO")
+      .put("_version", INSTANCE_VERSION);
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(mockServer.baseUrl())
+      .withToken(TOKEN)
+      .withContext(new HashMap<>() {{
+        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+        put(INSTANCE.value(), instanceJson.encode());
+      }});
+
+    CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload actualDataImportEventPayload = future.get(20, TimeUnit.SECONDS);
+
+    assertEquals(DI_INVENTORY_INSTANCE_UPDATED.value(), actualDataImportEventPayload.getEventType());
+    assertNotNull(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
+    JsonObject createdInstance = new JsonObject(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
+    assertEquals(newTitle, createdInstance.getString("title"));
+    assertEquals(MARC_INSTANCE_SOURCE, createdInstance.getString("source"));
+    verify(0, getRequestedFor(new UrlPathPattern(new RegexPattern(SOURCE_RECORDS_PATH + "/.{36}"), true)));
   }
 
   @Test
