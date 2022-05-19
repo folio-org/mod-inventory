@@ -103,8 +103,8 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler {
       String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
       mappingMetadataCache.get(jobExecutionId, context)
         .compose(parametersOptional -> parametersOptional
-          .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()), new JsonObject(mappingMetadata.getMappingParams())
-            .mapTo(MappingParameters.class), instanceToUpdate))
+          .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()),
+            Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class), instanceToUpdate))
           .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, jobExecutionId,
             recordId, chunkId))))
         .compose(e -> {
