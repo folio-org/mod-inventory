@@ -283,6 +283,14 @@ public class Items extends AbstractInventoryResource {
     RoutingContext routingContext,
     WebContext context,
     MultipleRecords<Item> wrappedItems) {
+    List<String> itemIds = wrappedItems.records.stream().map(Item::getId).collect(Collectors.toList());
+    if (itemIds.size() == 0) {
+      JsonResponse.success(routingContext.response(),
+      new ItemRepresentation(RELATIVE_ITEMS_PATH)
+        .toJson(wrappedItems, null, null, null,
+          null, null, context));
+      return;
+    }
 
     CollectionResourceClient holdingsClient;
     CollectionResourceClient instancesClient;
@@ -429,7 +437,6 @@ public class Items extends AbstractInventoryResource {
 
             locationsClient.get(id, newFuture::complete);
           });
-
         CompletableFuture<Response> boundWithPartsFuture =
           getBoundWithPartsForMultipleItemsFuture(wrappedItems, boundWithPartsClient);
         allFutures.add(boundWithPartsFuture);
@@ -980,7 +987,7 @@ public class Items extends AbstractInventoryResource {
 
     String boundWithPartsByItemIdQuery = String.format("itemId==(%s)",
       item.getId());
-
+    log.info("bound with part future lookup: " + boundWithPartsByItemIdQuery);
     boundWithPartsClient.getMany(
       boundWithPartsByItemIdQuery,
       1000,
@@ -1009,7 +1016,7 @@ public class Items extends AbstractInventoryResource {
         }
       }
     } else {
-      log.error("Failed to retrieve bound-with parts, status code:  " + (response != null ? response.getStatusCode() : "null response"));
+      log.error("Failed to retrieve bound-with parts, status code:  " + response.getBody() + (response != null ? response.getStatusCode() : "null response"));
     }
 
   }
@@ -1019,7 +1026,6 @@ public class Items extends AbstractInventoryResource {
     CollectionResourceClient boundWithPartsClient)
   {
     CompletableFuture<Response> future = new CompletableFuture<>();
-
     List<String> itemIds = wrappedItems.records.stream()
       .map(Item::getId)
       .collect(Collectors.toList());
@@ -1029,7 +1035,7 @@ public class Items extends AbstractInventoryResource {
         itemIds.stream()
           .map(String::toString)
           .collect(Collectors.joining(" or ")));
-
+    
     boundWithPartsClient.getMany(
       boundWithPartsByItemIdsQuery,
       itemIds.size(),
