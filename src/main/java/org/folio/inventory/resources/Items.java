@@ -437,6 +437,7 @@ public class Items extends AbstractInventoryResource {
 
             locationsClient.get(id, newFuture::complete);
           });
+
         CompletableFuture<Response> boundWithPartsFuture =
           getBoundWithPartsForMultipleItemsFuture(wrappedItems, boundWithPartsClient);
         allFutures.add(boundWithPartsFuture);
@@ -1026,6 +1027,7 @@ public class Items extends AbstractInventoryResource {
     CollectionResourceClient boundWithPartsClient)
   {
     CompletableFuture<Response> future = new CompletableFuture<>();
+
     List<String> itemIds = wrappedItems.records.stream()
       .map(Item::getId)
       .collect(Collectors.toList());
