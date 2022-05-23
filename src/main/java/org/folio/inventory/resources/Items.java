@@ -987,7 +987,7 @@ public class Items extends AbstractInventoryResource {
 
     String boundWithPartsByItemIdQuery = String.format("itemId==(%s)",
       item.getId());
-    log.info("bound with part future lookup: " + boundWithPartsByItemIdQuery);
+
     boundWithPartsClient.getMany(
       boundWithPartsByItemIdQuery,
       1000,
@@ -1016,7 +1016,7 @@ public class Items extends AbstractInventoryResource {
         }
       }
     } else {
-      log.error("Failed to retrieve bound-with parts, status code:  " + response.getBody() + (response != null ? response.getStatusCode() : "null response"));
+      log.error("Failed to retrieve bound-with parts, status code:  " + (response != null ? response.getStatusCode() : "null response"));
     }
 
   }
@@ -1035,7 +1035,7 @@ public class Items extends AbstractInventoryResource {
         itemIds.stream()
           .map(String::toString)
           .collect(Collectors.joining(" or ")));
-    
+
     boundWithPartsClient.getMany(
       boundWithPartsByItemIdsQuery,
       itemIds.size(),
