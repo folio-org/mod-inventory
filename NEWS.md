@@ -1,3 +1,7 @@
+## 18.1.8 2022-05-23
+
+* Fix DI process for Item update in case match for Item happened before Holdings update (MODINV-690)
+
 ## 18.1.7 2022-04-28
 
 * Fix "\_version" is not mandatory field (MODINV-684)

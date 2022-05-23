@@ -436,6 +436,7 @@
             <include>**/storage/external/failure/ExternalStorageFailureSuite.class</include>
             <include>org/folio/inventory/**</include>
           </includes>
+          <testFailureIgnore>true</testFailureIgnore>
         </configuration>
       </plugin>
       <plugin>
