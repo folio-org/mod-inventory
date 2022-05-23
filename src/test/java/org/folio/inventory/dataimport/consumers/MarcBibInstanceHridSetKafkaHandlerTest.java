@@ -9,6 +9,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
@@ -131,6 +132,38 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
 
     Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
+
+    // when
+    Future<String> future = marcBibInstanceHridSetKafkaHandler.handle(kafkaRecord);
+
+    // then
+    future.onComplete(ar -> {
+      context.assertTrue(ar.failed());
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldReturnFailedIfOLErrorExist(TestContext context) {
+    // given
+    Async async = context.async();
+    Map<String, String> payload = new HashMap<>();
+    payload.put("MARC_BIB", Json.encode(record));
+    payload.put(JOB_EXECUTION_ID_KEY, UUID.randomUUID().toString());
+    payload.put("CURRENT_RETRY_NUMBER", "1");
+
+
+    Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
+    String expectedKafkaRecordKey = "test_key";
+    when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
+    when(kafkaRecord.value()).thenReturn(Json.encode(event));
+
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure("Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", 409));
+      return null;
+    }).when(mockedInstanceCollection).update(any(), any(), any());
 
     // when
     Future<String> future = marcBibInstanceHridSetKafkaHandler.handle(kafkaRecord);

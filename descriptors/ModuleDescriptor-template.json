@@ -367,7 +367,8 @@
             "inventory-storage.preceding-succeeding-titles.collection.get",
             "inventory-storage.instance-relationships.collection.get",
             "inventory-storage.bound-with-parts.collection.get",
-            "inventory-storage.holdings.collection.get"
+            "inventory-storage.holdings.collection.get",
+            "inventory-storage.items.collection.get"
           ]
         }, {
           "methods": ["POST"],
@@ -533,13 +534,16 @@
     },
     {
       "id": "_tenant",
-      "version": "2.0",
+      "version": "1.2",
       "interfaceType": "system",
       "handlers": [
         {
-          "methods": ["POST"],
-          "pathPattern": "/_/tenant",
-          "modulePermissions": []
+          "methods": [ "POST" ],
+          "pathPattern": "/_/tenant"
+        },
+        {
+          "methods": [ "DELETE", "GET" ],
+          "pathPattern": "/_/tenant"
         }
       ]
     }
@@ -614,6 +618,10 @@
     {
       "id": "data-import-converter-storage",
       "version": "1.2"
+    },
+    {
+      "id": "order-lines",
+      "version": "3.0"
     }
   ],
   "permissionSets": [
@@ -854,7 +862,7 @@
         "value": "okapi_modules"
       },
       {
-        "name": "DB_QUERYTIMEOUT",
+        "name": "DB_IDLETIMEOUT",
         "value": "60000"
       },
       {

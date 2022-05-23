@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 import io.vertx.core.Future;
@@ -17,6 +18,8 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
 import org.folio.HoldingsType;
+import org.folio.inventory.domain.HoldingsRecordsSourceCollection;
+import org.folio.inventory.services.HoldingsCollectionService;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.junit.Assert;
 import org.junit.Before;
@@ -49,6 +52,10 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
   @Mock
   private Storage storage;
   @Mock
+  private HoldingsCollectionService holdingsCollectionService;
+  @Mock
+  private HoldingsRecordsSourceCollection sourceCollection;
+  @Mock
   private Context context;
   @Mock
   private HoldingsRecordCollection holdingsRecordCollection;
@@ -62,10 +69,14 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
   @Before
   public void setUp() throws IOException {
     existingHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)).mapTo(HoldingsRecord.class);
-    holdingsUpdateDelegate = Mockito.spy(new HoldingsUpdateDelegate(storage));
+    holdingsUpdateDelegate = Mockito.spy(new HoldingsUpdateDelegate(storage, holdingsCollectionService));
     updateHoldingsQuickMarcEventHandler = new UpdateHoldingsQuickMarcEventHandler(holdingsUpdateDelegate, context);
 
-    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordCollection);
+    var sourceId = String.valueOf(UUID.randomUUID());
+    when(storage.getHoldingsRecordCollection(any(Context.class))).thenReturn(holdingsRecordCollection);
+    when(storage.getHoldingsRecordsSourceCollection(any(Context.class))).thenReturn(sourceCollection);
+    when(holdingsCollectionService.findSourceIdByName(any(HoldingsRecordsSourceCollection.class), any())).thenReturn(Future.succeededFuture(sourceId));
+
     doAnswer(invocationOnMock -> {
       Consumer<Success<HoldingsRecord>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(existingHoldingsRecord));
@@ -158,5 +169,4 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
 
     Assert.assertTrue(future.failed());
   }
-
 }

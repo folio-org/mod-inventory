@@ -1,7 +1,12 @@
 package org.folio.inventory.quickmarc.consumers;
 
 import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
-import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.useDefaults;
+import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -19,6 +24,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -34,10 +40,8 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
 import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
 import net.mguenther.kafka.junit.ObserveKeyValues;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.folio.inventory.domain.HoldingsRecordsSourceCollection;
+import org.folio.inventory.services.HoldingsCollectionService;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -80,12 +84,17 @@ public class QuickMarcKafkaHandlerTest {
   private static final String AUTHORITY_RECORD_PATH = "src/test/resources/handlers/authority-record.json";
   private static final String AUTHORITY_PATH = "src/test/resources/handlers/authority.json";
 
-  @ClassRule
-  public static EmbeddedKafkaCluster cluster = provisionWith(useDefaults());
+  private static EmbeddedKafkaCluster cluster;
+  private static KafkaConfig kafkaConfig;
 
-  private final Vertx vertx = Vertx.vertx();
+  private static final Vertx vertx = Vertx.vertx();
+
   @Mock
   private Storage mockedStorage;
+  @Mock
+  private HoldingsCollectionService holdingsCollectionService;
+  @Mock
+  private HoldingsRecordsSourceCollection sourceCollection;
   @Mock
   private InstanceCollection mockedInstanceCollection;
   @Mock
@@ -110,8 +119,29 @@ public class QuickMarcKafkaHandlerTest {
   private Authority existingAuthority;
 
   private QuickMarcKafkaHandler handler;
-  private KafkaConfig kafkaConfig;
   private AutoCloseable mocks;
+
+  @BeforeClass
+  public static void beforeClass() {
+    cluster = provisionWith(defaultClusterConfig());
+    cluster.start();
+    String[] hostAndPort = cluster.getBrokerList().split(":");
+    kafkaConfig = KafkaConfig.builder()
+      .envId("env")
+      .kafkaHost(hostAndPort[0])
+      .kafkaPort(hostAndPort[1])
+      .maxRequestSize(1048576)
+      .build();
+  }
+
+  @AfterClass
+  public static void tearDownClass(TestContext context) {
+    Async async = context.async();
+    vertx.close(ar -> {
+      cluster.stop();
+      async.complete();
+    });
+  }
 
   @Before
   public void setUp() throws IOException {
@@ -134,9 +164,12 @@ public class QuickMarcKafkaHandlerTest {
       .withContent(JsonObject.mapFrom(authorityRecord.getParsedRecord().getContent()).encode());
 
     mocks = MockitoAnnotations.openMocks(this);
+    var sourceId = String.valueOf(UUID.randomUUID());
     when(mockedStorage.getInstanceCollection(any(Context.class))).thenReturn(mockedInstanceCollection);
     when(mockedStorage.getHoldingsRecordCollection(any(Context.class))).thenReturn(mockedHoldingsRecordCollection);
     when(mockedStorage.getAuthorityRecordCollection(any(Context.class))).thenReturn(mockedAuthorityRecordCollection);
+    when(mockedStorage.getHoldingsRecordsSourceCollection(any(Context.class))).thenReturn(sourceCollection);
+    when(holdingsCollectionService.findSourceIdByName(any(HoldingsRecordsSourceCollection.class), any())).thenReturn(Future.succeededFuture(sourceId));
 
     doAnswer(invocationOnMock -> {
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
@@ -176,18 +209,10 @@ public class QuickMarcKafkaHandlerTest {
     when(okapiHttpClient.put(anyString(), any(JsonObject.class)))
       .thenReturn(CompletableFuture.completedFuture(new Response(204, null, null, null)));
 
-    String[] hostAndPort = cluster.getBrokerList().split(":");
-    kafkaConfig = KafkaConfig.builder()
-      .envId("env")
-      .kafkaHost(hostAndPort[0])
-      .kafkaPort(hostAndPort[1])
-      .maxRequestSize(1048576)
-      .build();
-
     PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper =
       new PrecedingSucceedingTitlesHelper(context -> okapiHttpClient);
     handler =
-      new QuickMarcKafkaHandler(vertx, mockedStorage, 100, kafkaConfig, precedingSucceedingTitlesHelper);
+      new QuickMarcKafkaHandler(vertx, mockedStorage, 100, kafkaConfig, precedingSucceedingTitlesHelper, holdingsCollectionService);
 
     when(kafkaRecord.headers()).thenReturn(List.of(
       KafkaHeader.header(XOkapiHeaders.TENANT.toLowerCase(), TENANT_ID),

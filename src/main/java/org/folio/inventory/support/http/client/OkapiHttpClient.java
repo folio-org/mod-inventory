@@ -8,21 +8,23 @@ import static org.apache.http.HttpHeaders.LOCATION;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
 
-import org.folio.inventory.common.WebContext;
-
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 
-public class OkapiHttpClient {
+import org.folio.inventory.common.WebContext;
 
+public class OkapiHttpClient {
   private static final String TENANT_HEADER = "X-Okapi-Tenant";
   private static final String TOKEN_HEADER = "X-Okapi-Token";
   private static final String OKAPI_URL_HEADER = "X-Okapi-Url";
@@ -36,6 +38,27 @@ public class OkapiHttpClient {
   private final String userId;
   private final String requestId;
   private final Consumer<Throwable> exceptionHandler;
+
+  static Map<Vertx,WebClient> webClients = new HashMap<>();
+
+  static WebClient getWebClient(Vertx vertx) {
+    return webClients.computeIfAbsent(vertx, WebClient::create);
+  }
+
+  /** HTTP client that calls via Okapi
+   *
+   * @param vertx Vert.x handle
+   * @param okapiUrl Okapi URL (java.net.URL)
+   * @param tenantId Okapi tenantId - ignored if blank/empty
+   * @param token - Okapi token - ignored if blank/empty
+   * @param userId - Folio User ID - ignored if blank/empty
+   * @param requestId - Okapi Request ID - ignored if null
+   * @param exceptionHandler - exceptionHandler (for POST only, not PUT??)
+   */
+  public OkapiHttpClient(Vertx vertx, URL okapiUrl, String tenantId,
+    String token, String userId, String requestId, Consumer<Throwable> exceptionHandler) {
+    this(getWebClient(vertx), okapiUrl, tenantId, token, userId, requestId, exceptionHandler);
+  }
 
   public OkapiHttpClient(WebClient webClient, WebContext context,
     Consumer<Throwable> exceptionHandler) throws MalformedURLException {
@@ -124,6 +147,18 @@ public class OkapiHttpClient {
     final var futureResponse = new CompletableFuture<AsyncResult<HttpResponse<Buffer>>>();
 
     final HttpRequest<Buffer> request = withStandardHeaders(webClient.getAbs(url));
+
+    request.send(futureResponse::complete);
+
+    return futureResponse
+      .thenCompose(OkapiHttpClient::mapAsyncResultToCompletionStage);
+  }
+
+  public CompletionStage<Response> get(String url, Map<String, String> params) {
+    final var futureResponse = new CompletableFuture<AsyncResult<HttpResponse<Buffer>>>();
+
+    final HttpRequest<Buffer> request = withStandardHeaders(webClient.getAbs(url));
+    params.forEach(request::addQueryParam);
 
     request.send(futureResponse::complete);
 

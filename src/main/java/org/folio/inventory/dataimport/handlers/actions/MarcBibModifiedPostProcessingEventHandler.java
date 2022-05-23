@@ -1,5 +1,6 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
@@ -13,6 +14,7 @@ import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.EntityType;
@@ -41,6 +43,8 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
   private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingMetadata snapshot was not found by jobExecutionId '%s'";
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
+  private static final String CURRENT_RETRY_NUMBER = "CURRENT_RETRY_NUMBER";
+  private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
 
   private final InstanceUpdateDelegate instanceUpdateDelegate;
   private final PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
@@ -62,6 +66,8 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
         LOGGER.error(PAYLOAD_HAS_NO_DATA_MSG);
         return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
       }
+
+      LOGGER.info("Processing ReplaceInstanceEventHandler starting with jobExecutionId: {}.", dataImportEventPayload.getJobExecutionId());
 
       Record record = new JsonObject(payloadContext.get(MARC_BIBLIOGRAPHIC.value())).mapTo(Record.class);
       String instanceId = ParsedRecordUtil.getAdditionalSubfieldValue(record.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.I);
@@ -87,6 +93,7 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
         .compose(ar -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(instanceUpdatePromise.future().result(), context))
         .onComplete(updateAr -> {
           if (updateAr.succeeded()) {
+            dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
             Instance resultedInstance = instanceUpdatePromise.future().result();
             if (resultedInstance.getVersion() != null) {
               int currentVersion = Integer.parseInt(resultedInstance.getVersion());
@@ -96,15 +103,42 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
             dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(resultedInstance));
             future.complete(dataImportEventPayload);
           } else {
-            LOGGER.error("Error updating inventory instance by id: '{}' by jobExecutionId: '{}'", instanceId, dataImportEventPayload.getJobExecutionId(), updateAr.cause());
-            future.completeExceptionally(updateAr.cause());
+            if (updateAr.cause() instanceof OptimisticLockingException) {
+              processOLError(dataImportEventPayload, future, updateAr);
+            } else {
+              dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
+              LOGGER.error("Error updating inventory instance by id: '{}' by jobExecutionId: '{}'", instanceId, dataImportEventPayload.getJobExecutionId(), updateAr.cause());
+              future.completeExceptionally(updateAr.cause());
+            }
           }
         });
     } catch (Exception e) {
+      dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
       LOGGER.error("Error updating inventory instance", e);
       future.completeExceptionally(e);
     }
     return future;
+  }
+
+  private void processOLError(DataImportEventPayload dataImportEventPayload, CompletableFuture<DataImportEventPayload> future, AsyncResult<Void> updateAr) {
+    int currentRetryNumber = dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER) == null
+      ? 0 : Integer.parseInt(dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER));
+    if (currentRetryNumber < MAX_RETRIES_COUNT) {
+      dataImportEventPayload.getContext().put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
+      LOGGER.warn("Error updating Instance - {}. Retry MarcBibModifiedPostProcessingEventHandler handler...", updateAr.cause().getMessage());
+      handle(dataImportEventPayload).whenComplete((res, e) -> {
+        if (e != null) {
+          future.completeExceptionally(e);
+        } else {
+          future.complete(dataImportEventPayload);
+        }
+      });
+    } else {
+      dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
+      String errMessage = format("Current retry number %s exceeded given number %s for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber);
+      LOGGER.error(errMessage);
+      future.completeExceptionally(new OptimisticLockingException(errMessage));
+    }
   }
 
   @Override

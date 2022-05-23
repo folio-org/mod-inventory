@@ -1,8 +1,7 @@
 package org.folio.inventory.support;
 
-import java.util.ArrayList;
-import java.util.List;
-
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import org.folio.ChildInstance;
 import org.folio.ParentInstance;
 import org.folio.Tags;
@@ -10,13 +9,14 @@ import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
 import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
 
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
+import java.util.ArrayList;
+import java.util.List;
 
 public class InstanceUtil {
 
   private static final String STATISTICAL_CODE_IDS_PROPERTY = "statisticalCodeIds";
   private static final String NATURE_OF_CONTENT_TERM_IDS_PROPERTY = "natureOfContentTermIds";
+  private static final String ADMINISTRATIVE_NOTES_PROPERTY = "administrativeNotes";
   private static final String PARENT_INSTANCES_PROPERTY = "parentInstances";
   private static final String CHILDREN_INSTANCES_PROPERTY = "childInstances";
 
@@ -41,7 +41,7 @@ public class InstanceUtil {
     //Fields which are not affects by default mapping.
     org.folio.Instance tmp = new org.folio.Instance()
       .withId(existing.getId())
-      .withVersion(Integer.parseInt(existing.getVersion()))
+      .withVersion(asIntegerOrNull(existing.getVersion()))
       .withDiscoverySuppress(existing.getDiscoverySuppress())
       .withStaffSuppress(existing.getStaffSuppress())
       .withPreviouslyHeld(existing.getPreviouslyHeld())
@@ -50,6 +50,7 @@ public class InstanceUtil {
       .withStatisticalCodeIds(existing.getStatisticalCodeIds())
       .withNatureOfContentTermIds(existing.getNatureOfContentTermIds())
       .withTags(new Tags().withTagList(existing.getTags()))
+      .withAdministrativeNotes(existing.getAdministrativeNotes())
       .withParentInstances(parentInstances)
       .withChildInstances(childInstances);
 
@@ -84,16 +85,30 @@ public class InstanceUtil {
   }
 
   public static JsonObject mergeInstances(JsonObject existing, JsonObject mapped) {
-    //Statistical code, nature of content terms, parent/childInstances don`t revealed via mergeIn() because of simple array type.
+    //Statistical code, nature of content terms, administrative notes, parent/childInstances don`t revealed via mergeIn() because of simple array type.
     JsonArray statisticalCodeIds = existing.getJsonArray(STATISTICAL_CODE_IDS_PROPERTY);
     JsonArray natureOfContentTermIds = existing.getJsonArray(NATURE_OF_CONTENT_TERM_IDS_PROPERTY);
+    JsonArray administrativeNotes = existing.getJsonArray(ADMINISTRATIVE_NOTES_PROPERTY);
     JsonArray parents = existing.getJsonArray(PARENT_INSTANCES_PROPERTY);
     JsonArray children = existing.getJsonArray(CHILDREN_INSTANCES_PROPERTY);
     JsonObject mergedInstanceAsJson = existing.mergeIn(mapped);
     mergedInstanceAsJson.put(STATISTICAL_CODE_IDS_PROPERTY, statisticalCodeIds);
     mergedInstanceAsJson.put(NATURE_OF_CONTENT_TERM_IDS_PROPERTY, natureOfContentTermIds);
+    mergedInstanceAsJson.put(ADMINISTRATIVE_NOTES_PROPERTY, administrativeNotes);
     mergedInstanceAsJson.put(PARENT_INSTANCES_PROPERTY, parents);
     mergedInstanceAsJson.put(CHILDREN_INSTANCES_PROPERTY, children);
     return mergedInstanceAsJson;
+  }
+
+  /**
+   * Returns the value if s can be parsed as Integer. Returns null if s is null.
+   *
+   * @throws NumberFormatException if s is not null and cannot be parsed as Integer.
+   */
+  private static Integer asIntegerOrNull(String s) {
+    if (s == null) {
+      return null;
+    }
+    return Integer.parseInt(s);
   }
 }

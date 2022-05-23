@@ -45,6 +45,9 @@ public class Launcher {
     String storageType = System.getProperty(
       "org.folio.metadata.inventory.storage.type", null);
 
+    String kafkaConsumersToBeInitialized = System.getProperty(
+      "org.folio.metadata.inventory.kafka.consumers.initialized", "true");
+
     String storageLocation = System.getProperty(
       "org.folio.metadata.inventory.storage.location", null);
 
@@ -52,9 +55,12 @@ public class Launcher {
     putNonNullConfig("storage.location", storageLocation, config);
     putNonNullConfig("port", port, config);
 
-    Map<String, Object> consumerVerticlesConfig = getConsumerVerticleConfig();
     start(config);
-    startConsumerVerticles(consumerVerticlesConfig);
+
+    if(Boolean.parseBoolean(kafkaConsumersToBeInitialized)){
+      Map<String, Object> consumerVerticlesConfig = getConsumerVerticleConfig();
+      startConsumerVerticles(consumerVerticlesConfig);
+    }
   }
 
   private static void start(Map<String, Object> config)
@@ -130,7 +136,7 @@ public class Launcher {
     configMap.put(OKAPI_URL, System.getenv().getOrDefault(OKAPI_URL, "http://okapi:9130"));
     configMap.put(KAFKA_REPLICATION_FACTOR, System.getenv().getOrDefault(KAFKA_REPLICATION_FACTOR, "1"));
     configMap.put(KAFKA_ENV, System.getenv().getOrDefault(KAFKA_ENV, "folio"));
-    configMap.put(KAFKA_MAX_REQUEST_SIZE, System.getenv().getOrDefault(KAFKA_MAX_REQUEST_SIZE, "1048576"));
+    configMap.put(KAFKA_MAX_REQUEST_SIZE, System.getenv().getOrDefault(KAFKA_MAX_REQUEST_SIZE, "4000000"));
 
     String storageType = System.getProperty("org.folio.metadata.inventory.storage.type");
     String storageLocation = System.getProperty("org.folio.metadata.inventory.storage.location");

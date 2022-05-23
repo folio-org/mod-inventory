@@ -2,6 +2,8 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static java.util.concurrent.CompletableFuture.completedStage;
+import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
+import static org.folio.rest.jaxrs.model.DataImportEventTypes.DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING;
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -41,6 +43,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.apache.http.HttpStatus;
+import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.domain.relationship.RecordToEntity;
 import org.folio.inventory.services.IdStorageService;
 import org.junit.Before;
@@ -188,6 +191,31 @@ public class CreateAuthorityEventHandlerTest {
     assertEquals(DI_INVENTORY_AUTHORITY_CREATED.value(), actualDataImportEventPayload.getEventType());
     assertNotNull(actualDataImportEventPayload.getContext().get(AUTHORITY.value()));
     assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(AUTHORITY.value())).getString("id"));
+  }
+
+  @Test(expected = Exception.class)
+  public void shouldNotProcessEventEvenIfDuplicatedInventoryStorageErrorExists() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    when(storage.getAuthorityRecordCollection(any())).thenReturn(authorityCollection);
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure(UNIQUE_ID_ERROR_MESSAGE, 400));
+      return null;
+    }).when(authorityCollection).add(any(), any(), any());
+
+    var parsedAuthorityRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_AUTHORITY_RECORD));
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedAuthorityRecord.encode()));
+    HashMap<String, String> context = new HashMap<>();
+    context.put(MARC_AUTHORITY.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_AUTHORITY_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = createMarcAuthoritiesEventHandler.handle(dataImportEventPayload);
+    future.get(5, TimeUnit.SECONDS);
   }
 
   @Test(expected = ExecutionException.class)
@@ -344,7 +372,12 @@ public class CreateAuthorityEventHandlerTest {
   }
 
   @Test
-  public void isPostProcessingNeededShouldReturnFalse() {
-    assertFalse(createMarcAuthoritiesEventHandler.isPostProcessingNeeded());
+  public void isPostProcessingNeededShouldReturnTrue() {
+    assertTrue(createMarcAuthoritiesEventHandler.isPostProcessingNeeded());
+  }
+
+  @Test
+  public void shouldReturnPostProcessingInitializationEventType() {
+    assertEquals(DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING.value(), createMarcAuthoritiesEventHandler.getPostProcessingInitializationEventType());
   }
 }

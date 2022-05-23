@@ -1,21 +1,56 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import io.vertx.core.Future;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
+import static org.folio.ActionProfile.Action.UPDATE;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_MATCHED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_UPDATED;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
+import static org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler.ACTION_HAS_NO_MAPPING_MSG;
+import static org.folio.inventory.domain.items.Item.HRID_KEY;
+import static org.folio.inventory.domain.items.Item.STATUS_KEY;
+import static org.folio.inventory.domain.items.ItemStatusName.AVAILABLE;
+import static org.folio.inventory.domain.items.ItemStatusName.IN_PROCESS;
+import static org.folio.inventory.support.JsonHelper.getNestedProperty;
+import static org.folio.rest.jaxrs.model.EntityType.HOLDINGS;
+import static org.folio.rest.jaxrs.model.EntityType.ITEM;
+import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
+
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.DataImportEventTypes;
+import org.folio.HoldingsRecord;
 import org.folio.JobProfile;
+import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.ItemWriterFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.Status;
@@ -26,39 +61,26 @@ import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingPa
 import org.folio.processing.mapping.mapper.reader.Reader;
 import org.folio.processing.mapping.mapper.reader.record.marc.MarcBibReaderFactory;
 import org.folio.processing.value.StringValue;
+import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.MappingDetail;
-import org.folio.MappingMetadataDto;
 import org.folio.rest.jaxrs.model.MappingRule;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
-import org.folio.rest.jaxrs.model.*;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.*;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
+import org.mockito.Spy;
 
-import java.io.UnsupportedEncodingException;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.function.Consumer;
-
-import static org.folio.ActionProfile.Action.UPDATE;
-import static org.folio.DataImportEventTypes.*;
-import static org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler.ACTION_HAS_NO_MAPPING_MSG;
-import static org.folio.inventory.domain.items.Item.HRID_KEY;
-import static org.folio.inventory.domain.items.Item.STATUS_KEY;
-import static org.folio.inventory.domain.items.ItemStatusName.AVAILABLE;
-import static org.folio.inventory.domain.items.ItemStatusName.IN_PROCESS;
-import static org.folio.inventory.support.JsonHelper.getNestedProperty;
-import static org.folio.rest.jaxrs.model.EntityType.ITEM;
-import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.verify;
+import io.vertx.core.Future;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
 
 @RunWith(JUnitParamsRunner.class)
 public class UpdateItemEventHandlerTest {
@@ -67,6 +89,8 @@ public class UpdateItemEventHandlerTest {
   private Storage mockedStorage;
   @Mock
   private ItemCollection mockedItemCollection;
+  @Mock
+  private HoldingsRecordCollection mockedHoldingsCollection;
   @Mock
   private Reader fakeReader;
   @Mock
@@ -120,16 +144,44 @@ public class UpdateItemEventHandlerTest {
   public void setUp() {
     MockitoAnnotations.initMocks(this);
 
-    Mockito.doAnswer(invocationOnMock -> {
+    doAnswer(invocationOnMock -> {
       Item item = invocationOnMock.getArgument(0);
       return CompletableFuture.completedFuture(item);
     }).when(mockedItemCollection).update(any(Item.class));
 
-    Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-    Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(IN_PROCESS.value()));
-    Mockito.when(mockedStorage.getItemCollection(ArgumentMatchers.any(Context.class))).thenReturn(mockedItemCollection);
+    Item returnedItem = new Item(UUID.randomUUID().toString(), "2", UUID.randomUUID().toString(), "test", new Status(AVAILABLE),
+      UUID.randomUUID().toString(), UUID.randomUUID().toString(), new JsonObject());
 
-    Mockito.when(mappingMetadataCache.get(anyString(), any(Context.class)))
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(returnedItem));
+      return null;
+    }).when(mockedItemCollection).update(any(), any(), any());
+
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(IN_PROCESS.value()));
+    when(mockedStorage.getItemCollection(ArgumentMatchers.any(Context.class))).thenReturn(mockedItemCollection);
+    when(mockedStorage.getHoldingsRecordCollection(ArgumentMatchers.any(Context.class))).thenReturn(mockedHoldingsCollection);
+
+
+    String instanceId = String.valueOf(UUID.randomUUID());
+    String holdingId = UUID.randomUUID().toString();
+    String hrid = UUID.randomUUID().toString();
+    String permanentLocationId = UUID.randomUUID().toString();
+
+    doAnswer(invocationOnMock -> {
+      HoldingsRecord returnedHoldings = new HoldingsRecord()
+        .withId(holdingId)
+        .withHrid(hrid)
+        .withInstanceId(instanceId)
+        .withPermanentLocationId(permanentLocationId)
+        .withVersion(1);
+      Consumer<Success<HoldingsRecord>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(returnedHoldings));
+      return null;
+    }).when(mockedHoldingsCollection).findById(anyString(),any(Consumer.class),any(Consumer.class));
+
+    when(mappingMetadataCache.get(anyString(), any(Context.class)))
       .thenReturn(Future.succeededFuture(Optional.of(new MappingMetadataDto()
         .withMappingRules(new JsonObject().encode())
         .withMappingParams(Json.encode(new MappingParameters())))));
@@ -151,7 +203,7 @@ public class UpdateItemEventHandlerTest {
   public void shouldUpdateItemWithNewStatus()
     throws UnsupportedEncodingException, InterruptedException, ExecutionException, TimeoutException {
     // given
-    Mockito.doAnswer(invocationOnMock -> {
+    doAnswer(invocationOnMock -> {
       MultipleRecords<Item> result = new MultipleRecords<>(new ArrayList<>(), 0);
       Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
       successHandler.accept(new Success<>(result));
@@ -183,6 +235,87 @@ public class UpdateItemEventHandlerTest {
     Assert.assertEquals(getNestedProperty(existingItemJson, "materialType", "id"), updatedItem.getString("materialTypeId"));
     Assert.assertEquals(existingItemJson.getString("holdingsRecordId"), updatedItem.getString("holdingsRecordId"));
     Assert.assertEquals(IN_PROCESS.value(), updatedItem.getJsonObject(STATUS_KEY).getString("name"));
+    Assert.assertNotNull(eventPayload.getContext().get(HOLDINGS.value()));
+  }
+
+  @Test
+  public void shouldUpdateItemWithNewStatusIfHoldingAlreadyInPayload()
+    throws UnsupportedEncodingException, InterruptedException, ExecutionException, TimeoutException {
+    // given
+    doAnswer(invocationOnMock -> {
+      MultipleRecords<Item> result = new MultipleRecords<>(new ArrayList<>(), 0);
+      Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
+      return null;
+    }).when(mockedItemCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    HashMap<String, String> payloadContext = new HashMap<>();
+    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+    payloadContext.put(ITEM.value(), existingItemJson.encode());
+    payloadContext.put(HOLDINGS.value(), "{notEmptyValue}");
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_ITEM_MATCHED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    // when
+    CompletableFuture<DataImportEventPayload> future = updateItemHandler.handle(dataImportEventPayload);
+
+    // then
+    DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
+    Assert.assertEquals(DI_INVENTORY_ITEM_UPDATED, DataImportEventTypes.fromValue(eventPayload.getEventType()));
+    Assert.assertNotNull(eventPayload.getContext().get(ITEM.value()));
+
+    JsonObject updatedItem = new JsonObject(eventPayload.getContext().get(ITEM.value()));
+    Assert.assertEquals(existingItemJson.getString("id"), updatedItem.getString("id"));
+    Assert.assertEquals(existingItemJson.getString(HRID_KEY), updatedItem.getString(HRID_KEY));
+    Assert.assertEquals(getNestedProperty(existingItemJson, "permanentLoanType", "id"), updatedItem.getString("permanentLoanTypeId"));
+    Assert.assertEquals(getNestedProperty(existingItemJson, "materialType", "id"), updatedItem.getString("materialTypeId"));
+    Assert.assertEquals(existingItemJson.getString("holdingsRecordId"), updatedItem.getString("holdingsRecordId"));
+    Assert.assertEquals(IN_PROCESS.value(), updatedItem.getJsonObject(STATUS_KEY).getString("name"));
+    Assert.assertNotNull(eventPayload.getContext().get(HOLDINGS.value()));
+  }
+
+
+  @Test(expected = ExecutionException.class)
+  public void shouldReturnFailedWhenOLError()
+    throws UnsupportedEncodingException, InterruptedException, ExecutionException, TimeoutException {
+    // given
+    doAnswer(invocationOnMock -> {
+      MultipleRecords<Item> result = new MultipleRecords<>(new ArrayList<>(), 0);
+      Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
+      return null;
+    }).when(mockedItemCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure("Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", 409));
+      return null;
+    }).when(mockedItemCollection).update(any(), any(), any());
+
+    Item returnedItem = new Item(existingItemJson.getString("id"), "2", UUID.randomUUID().toString(), "test", new Status(AVAILABLE),
+      UUID.randomUUID().toString(), UUID.randomUUID().toString(), new JsonObject());
+
+    when(mockedItemCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(returnedItem));
+
+    HashMap<String, String> payloadContext = new HashMap<>();
+    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+    payloadContext.put(ITEM.value(), existingItemJson.encode());
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_ITEM_MATCHED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    // when
+    CompletableFuture<DataImportEventPayload> future = updateItemHandler.handle(dataImportEventPayload);
+
+    // then
+    future.get(5, TimeUnit.SECONDS);
   }
 
   @Test(expected = ExecutionException.class)
@@ -190,7 +323,7 @@ public class UpdateItemEventHandlerTest {
     throws InterruptedException, ExecutionException, TimeoutException {
     // given
     MappingRule statusMappingRule = new MappingRule().withPath("item.status.name").withValue("\"statusExpression\"").withEnabled("true");
-    Mockito.when(fakeReader.read(eq(statusMappingRule))).thenReturn(StringValue.of("Invalid status"));
+    when(fakeReader.read(eq(statusMappingRule))).thenReturn(StringValue.of("Invalid status"));
 
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
@@ -213,7 +346,7 @@ public class UpdateItemEventHandlerTest {
   public void shouldReturnFailedFutureWhenBarcodeToUpdatedAssignedToAnotherItem()
     throws InterruptedException, ExecutionException, TimeoutException, UnsupportedEncodingException {
     // given
-    Mockito.doAnswer(invocationOnMock -> {
+    doAnswer(invocationOnMock -> {
       Item itemByCql = new Item(null, null, null, new Status(AVAILABLE), null, null, null);
       MultipleRecords<Item> result = new MultipleRecords<>(Collections.singletonList(itemByCql), 0);
       Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
@@ -242,7 +375,7 @@ public class UpdateItemEventHandlerTest {
   public void shouldNotRequestWhenUpdatedItemHasEmptyBarcode()
     throws UnsupportedEncodingException {
     // given
-    Mockito.doAnswer(invocationOnMock -> {
+    doAnswer(invocationOnMock -> {
       Item itemByCql = new Item(null, null, null, new Status(AVAILABLE), null, null, null);
       MultipleRecords<Item> result = new MultipleRecords<>(Collections.singletonList(itemByCql), 0);
       Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
@@ -330,7 +463,7 @@ public class UpdateItemEventHandlerTest {
   public void shouldReturnFailedFutureAndUpdateItemExceptStatusWhenStatusCanNotBeUpdated(String protectedItemStatus)
     throws UnsupportedEncodingException {
     // given
-    Mockito.doAnswer(invocationOnMock -> {
+    doAnswer(invocationOnMock -> {
       MultipleRecords<Item> result = new MultipleRecords<>(new ArrayList<>(), 0);
       Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
       successHandler.accept(new Success<>(result));
@@ -339,7 +472,7 @@ public class UpdateItemEventHandlerTest {
 
     String expectedItemBarcode = "BC-123123";
     MappingRule barcodeMappingRule = mappingProfile.getMappingDetails().getMappingFields().get(1);
-    Mockito.when(fakeReader.read(eq(barcodeMappingRule))).thenReturn(StringValue.of(expectedItemBarcode));
+    when(fakeReader.read(eq(barcodeMappingRule))).thenReturn(StringValue.of(expectedItemBarcode));
 
     existingItemJson.put(STATUS_KEY, new JsonObject().put("name", protectedItemStatus));
     HashMap<String, String> payloadContext = new HashMap<>();

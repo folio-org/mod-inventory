@@ -1,14 +1,15 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
+import static org.folio.ActionProfile.FolioRecord.INSTANCE;
+import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
-import org.folio.inventory.domain.instances.Instance;
-import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
 import org.folio.processing.events.services.handler.EventHandler;
@@ -17,13 +18,8 @@ import org.folio.processing.mapping.defaultmapper.RecordMapperBuilder;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.Record;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-
-import static java.lang.String.format;
-import static org.folio.ActionProfile.FolioRecord.INSTANCE;
-import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
 
 public abstract class AbstractInstanceEventHandler implements EventHandler {
   protected static final Logger LOGGER = LogManager.getLogger(AbstractInstanceEventHandler.class);
@@ -39,6 +35,9 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   }
 
   protected void prepareEvent(DataImportEventPayload dataImportEventPayload) {
+    dataImportEventPayload.getContext().put("CURRENT_EVENT_TYPE", dataImportEventPayload.getEventType());
+    dataImportEventPayload.getContext().put("CURRENT_NODE", Json.encode(dataImportEventPayload.getCurrentNode()));
+
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
     dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
     dataImportEventPayload.getContext().put(INSTANCE.value(), new JsonObject().encode());
@@ -58,15 +57,5 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
       LOGGER.error("Failed to map Record to Instance", e);
       throw new JsonMappingException("Error in default mapper.", e);
     }
-  }
-
-  protected Future<Void> updateInstance(Instance instance, InstanceCollection instanceCollection) {
-    Promise<Void> promise = Promise.promise();
-    instanceCollection.update(instance, success -> promise.complete(),
-      failure -> {
-        LOGGER.error(format("Error updating Instance cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
-        promise.fail(failure.getReason());
-      });
-    return promise.future();
   }
 }

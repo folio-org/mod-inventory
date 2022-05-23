@@ -64,6 +64,7 @@ public class Instances extends AbstractInstances {
   private static final String INSTANCES_CONTEXT_PATH = INSTANCES_PATH + "/context";
   private static final String BLOCKED_FIELDS_UPDATE_ERROR_MESSAGE = "Instance is controlled by MARC record, these fields are blocked and can not be updated: ";
   private static final String ID = "id";
+  private static final String INSTANCE_ID = "instanceId";
 
   public Instances(final Storage storage, final HttpClient client) {
     super(storage, client);
@@ -491,7 +492,7 @@ public class Instances extends AbstractInstances {
           } else {
             Map<String, String> holdingsToInstanceMap = new HashMap<>();
             for (JsonObject holdingsRecord : holdingsRecordList) {
-              holdingsToInstanceMap.put(holdingsRecord.getString("id"), holdingsRecord.getString("instanceId"));
+              holdingsToInstanceMap.put(holdingsRecord.getString(ID), holdingsRecord.getString(INSTANCE_ID));
             }
             ArrayList<String> holdingsIdsList = new ArrayList<>(holdingsToInstanceMap.keySet());
             return checkHoldingsForBoundWith(holdingsIdsList, routingContext, webContext)
@@ -523,7 +524,7 @@ public class Instances extends AbstractInstances {
 
     Instance instance = success.getResult();
     List<String> instanceIds = getInstanceIdsFromInstanceResult(success);
-    String query = createQueryForRelatedInstances(instanceIds);
+    String query = createQueryForInstanceRelationships(instanceIds);
     CollectionResourceClient relatedInstancesClient =
       createInstanceRelationshipsClient(routingContext, context);
 
@@ -582,7 +583,6 @@ public class Instances extends AbstractInstances {
     return completedFuture(instance);
   }
 
-
   private CompletableFuture<Instance> fetchPrecedingSucceedingTitles(
     Success<Instance> success, RoutingContext routingContext, WebContext context) {
 
@@ -603,7 +603,7 @@ public class Instances extends AbstractInstances {
   // Utilities
 
   private CqlQuery cqlMatchAnyByInstanceIds(List<String> instanceIds) {
-    return CqlQuery.exactMatchAny("instanceId", instanceIds);
+    return CqlQuery.exactMatchAny(INSTANCE_ID, instanceIds);
   }
 
   private CqlQuery cqlMatchAnyByHoldingsRecordIds(List<String> holdingsRecordIds) {

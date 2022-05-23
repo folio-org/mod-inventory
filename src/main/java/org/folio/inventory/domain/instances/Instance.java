@@ -321,8 +321,6 @@ public class Instance {
     return json;
   }
 
-
-
   public Instance setMatchKey(String matchKey) {
     this.matchKey = matchKey;
     return this;

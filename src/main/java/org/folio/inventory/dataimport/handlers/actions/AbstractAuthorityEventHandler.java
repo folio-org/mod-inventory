@@ -103,7 +103,7 @@ public abstract class AbstractAuthorityEventHandler implements EventHandler {
 
   @Override
   public boolean isPostProcessingNeeded() {
-    return false;
+    return true;
   }
 
   protected abstract Future<Authority> processAuthority(Authority authority, AuthorityRecordCollection authorityCollection, DataImportEventPayload payload);
@@ -117,6 +117,8 @@ public abstract class AbstractAuthorityEventHandler implements EventHandler {
   protected abstract ActionProfile.FolioRecord targetRecordType();
 
   protected abstract ProfileSnapshotWrapper.ContentType profileContentType();
+
+  protected abstract void publishEvent(DataImportEventPayload payload);
 
   private boolean isEligibleMappingProfile(MappingProfile mappingProfile) {
     return mappingProfile.getExistingRecordType() == EntityType.fromValue(sourceRecordType().value());
@@ -146,6 +148,7 @@ public abstract class AbstractAuthorityEventHandler implements EventHandler {
     return authority -> {
       LOGGER.info(constructMsg(format(ACTION_SUCCEED_MSG_PATTERN, profileAction(), targetRecordType()), payload));
       payload.getContext().put(targetRecordType().value(), Json.encode(authority));
+      publishEvent(payload);
       future.complete(payload);
     };
   }

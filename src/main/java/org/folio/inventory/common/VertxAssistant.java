@@ -26,6 +26,10 @@ public class VertxAssistant {
     }
   }
 
+  public Vertx getVertx() {
+    return vertx;
+  }
+
   public void stop() {
     CompletableFuture<Void> stopped = new CompletableFuture<>();
 

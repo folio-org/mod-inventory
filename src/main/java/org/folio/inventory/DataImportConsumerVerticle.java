@@ -15,6 +15,7 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_MATCHED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_NOT_MATCHED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_AUTHORITY_RECORD_CREATED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_AUTHORITY_RECORD_MODIFIED_READY_FOR_POST_PROCESSING;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_AUTHORITY_RECORD_NOT_MATCHED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MATCHED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MATCHED_READY_FOR_POST_PROCESSING;
@@ -22,6 +23,7 @@ import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_NOT_MATCHED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_HOLDING_RECORD_CREATED;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_AUTHORITY_RECORD_DELETED;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX_REQUEST_SIZE;
@@ -55,27 +57,37 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
-import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.json.JsonObject;
 
 public class DataImportConsumerVerticle extends AbstractVerticle {
 
   private static final Logger LOGGER = LogManager.getLogger(DataImportConsumerVerticle.class);
 
-  private static final int DEFAULT_HTTP_TIMEOUT_IN_MILLISECONDS = 3000;
-
   private static final List<DataImportEventTypes> EVENT_TYPES = List.of(
-    DI_SRS_MARC_BIB_RECORD_CREATED, DI_SRS_MARC_HOLDING_RECORD_CREATED,
-    DI_SRS_MARC_BIB_RECORD_MODIFIED, DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING,
-    DI_SRS_MARC_BIB_RECORD_MATCHED, DI_SRS_MARC_BIB_RECORD_NOT_MATCHED,
+    DI_INVENTORY_HOLDING_CREATED,
+    DI_INVENTORY_HOLDING_MATCHED,
+    DI_INVENTORY_HOLDING_NOT_MATCHED,
+    DI_INVENTORY_HOLDING_UPDATED,
+    DI_INVENTORY_INSTANCE_CREATED,
+    DI_INVENTORY_INSTANCE_MATCHED,
+    DI_INVENTORY_INSTANCE_NOT_MATCHED,
+    DI_INVENTORY_INSTANCE_UPDATED,
+    DI_INVENTORY_ITEM_CREATED,
+    DI_INVENTORY_ITEM_CREATED,
+    DI_INVENTORY_ITEM_MATCHED,
+    DI_INVENTORY_ITEM_NOT_MATCHED,
+    DI_SRS_MARC_AUTHORITY_RECORD_CREATED,
+    DI_SRS_MARC_AUTHORITY_RECORD_DELETED,
+    DI_SRS_MARC_AUTHORITY_RECORD_MODIFIED_READY_FOR_POST_PROCESSING,
+    DI_SRS_MARC_AUTHORITY_RECORD_NOT_MATCHED,
+    DI_SRS_MARC_BIB_RECORD_CREATED,
+    DI_SRS_MARC_BIB_RECORD_MATCHED,
     DI_SRS_MARC_BIB_RECORD_MATCHED_READY_FOR_POST_PROCESSING,
-    DI_INVENTORY_INSTANCE_CREATED, DI_INVENTORY_INSTANCE_UPDATED,
-    DI_INVENTORY_INSTANCE_MATCHED, DI_INVENTORY_INSTANCE_NOT_MATCHED,
-    DI_INVENTORY_HOLDING_CREATED, DI_INVENTORY_HOLDING_UPDATED,
-    DI_INVENTORY_HOLDING_MATCHED, DI_INVENTORY_HOLDING_NOT_MATCHED,
-    DI_INVENTORY_ITEM_CREATED, DI_INVENTORY_ITEM_MATCHED,
-    DI_INVENTORY_ITEM_NOT_MATCHED, DI_INVENTORY_ITEM_CREATED,
-    DI_SRS_MARC_AUTHORITY_RECORD_MODIFIED_READY_FOR_POST_PROCESSING, DI_SRS_MARC_AUTHORITY_RECORD_CREATED);
+    DI_SRS_MARC_BIB_RECORD_MODIFIED,
+    DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING,
+    DI_SRS_MARC_BIB_RECORD_NOT_MATCHED,
+    DI_SRS_MARC_HOLDING_RECORD_CREATED
+  );
 
   private final int loadLimit = getLoadLimit();
   private final int maxDistributionNumber = getMaxDistributionNumber();
@@ -95,8 +107,7 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
     LOGGER.info(format("kafkaConfig: %s", kafkaConfig));
     EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, maxDistributionNumber);
 
-    HttpClientOptions params = new HttpClientOptions().setConnectTimeout(DEFAULT_HTTP_TIMEOUT_IN_MILLISECONDS);
-    HttpClient client = vertx.createHttpClient(params);
+    HttpClient client = vertx.createHttpClient();
     Storage storage = Storage.basedUpon(vertx, config, client);
 
     String profileSnapshotExpirationTime = getCacheEnvVariable(config, "inventory.profile-snapshot-cache.expiration.time.seconds");
@@ -105,7 +116,7 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
     ProfileSnapshotCache profileSnapshotCache = new ProfileSnapshotCache(vertx, client, Long.parseLong(profileSnapshotExpirationTime));
     MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, client, Long.parseLong(mappingMetadataExpirationTime));
 
-    DataImportKafkaHandler dataImportKafkaHandler = new DataImportKafkaHandler(vertx, storage, client, profileSnapshotCache, mappingMetadataCache);
+    DataImportKafkaHandler dataImportKafkaHandler = new DataImportKafkaHandler(vertx, storage, client, profileSnapshotCache, kafkaConfig, mappingMetadataCache);
 
     List<Future> futures = EVENT_TYPES.stream()
       .map(eventType -> createKafkaConsumerWrapper(kafkaConfig, eventType, dataImportKafkaHandler))

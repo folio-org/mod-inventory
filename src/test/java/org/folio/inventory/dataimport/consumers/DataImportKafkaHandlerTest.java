@@ -9,7 +9,6 @@ import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
-import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
@@ -30,8 +29,9 @@ import org.folio.processing.events.EventManager;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.ClassRule;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -47,7 +47,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
-import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.useDefaults;
+import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
 import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
@@ -67,8 +67,7 @@ public class DataImportKafkaHandlerTest {
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
 
-  @ClassRule
-  public static EmbeddedKafkaCluster cluster = provisionWith(useDefaults());
+  public static EmbeddedKafkaCluster cluster;
 
   @Mock
   private Storage mockedStorage;
@@ -82,7 +81,8 @@ public class DataImportKafkaHandlerTest {
       .dynamicPort()
       .notifier(new Slf4jNotifier(true)));
 
-  private Vertx vertx = Vertx.vertx();
+  private static Vertx vertx;
+  private static KafkaConfig kafkaConfig;
   private DataImportKafkaHandler dataImportKafkaHandler;
 
   private JobProfile jobProfile = new JobProfile()
@@ -119,24 +119,41 @@ public class DataImportKafkaHandlerTest {
             .withContentType(MAPPING_PROFILE)
             .withContent(JsonObject.mapFrom(mappingProfile).getMap())))));
 
-  @Before
-  public void setUp() {
-    MockitoAnnotations.openMocks(this);
+  @BeforeClass
+  public static void setUpClass() {
+    vertx = Vertx.vertx();
+    cluster = provisionWith(defaultClusterConfig());
+    cluster.start();
     String[] hostAndPort = cluster.getBrokerList().split(":");
 
-    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(JOB_PROFILE_URL + "/.*"), true))
-      .willReturn(WireMock.ok().withBody(Json.encode(profileSnapshotWrapper))));
-
-    KafkaConfig kafkaConfig = KafkaConfig.builder()
+    kafkaConfig = KafkaConfig.builder()
       .kafkaHost(hostAndPort[0])
       .kafkaPort(hostAndPort[1])
       .maxRequestSize(1048576)
       .build();
+  }
 
-    HttpClient client = vertx.createHttpClient(new HttpClientOptions().setConnectTimeout(3000));
+  @AfterClass
+  public static void afterClass(TestContext context) {
+    Async async = context.async();
+    vertx.close(ar -> {
+      cluster.stop();
+      async.complete();
+    });
+  }
+
+  @Before
+  public void setUp() {
+    MockitoAnnotations.openMocks(this);
+
+    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(JOB_PROFILE_URL + "/.*"), true))
+      .willReturn(WireMock.ok().withBody(Json.encode(profileSnapshotWrapper))));
+
+    HttpClient client = vertx.createHttpClient();
     dataImportKafkaHandler = new DataImportKafkaHandler(vertx, mockedStorage, client,
       new ProfileSnapshotCache(vertx, client, 3600),
-      new MappingMetadataCache(vertx, client, 3600));
+      kafkaConfig, new MappingMetadataCache(vertx, client, 3600));
+
     EventManager.clearEventHandlers();
     EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, 1);
   }

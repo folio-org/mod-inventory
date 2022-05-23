@@ -1,7 +1,7 @@
 package org.folio.inventory.quickmarc.consumers;
 
 import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
-import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.useDefaults;
+import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
 
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
@@ -18,7 +18,6 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
 import org.junit.AfterClass;
-import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -30,18 +29,22 @@ public class QuickMarcConsumerVerticleTest {
   private static final String KAFKA_ENV_NAME = "test-env";
   private static final Vertx VERTX = Vertx.vertx();
 
-  @ClassRule
-  public static EmbeddedKafkaCluster cluster = provisionWith(useDefaults());
+  public static EmbeddedKafkaCluster cluster;
 
   @AfterClass
   public static void tearDownClass(TestContext context) {
     Async async = context.async();
-    VERTX.close(ar -> async.complete());
+    VERTX.close(ar -> {
+      cluster.stop();
+      async.complete();
+    });
   }
 
   @Test
   public void shouldDeployVerticle(TestContext context) {
     Async async = context.async();
+    cluster = provisionWith(defaultClusterConfig());
+    cluster.start();
     String[] hostAndPort = cluster.getBrokerList().split(":");
     DeploymentOptions options = new DeploymentOptions()
       .setConfig(new JsonObject()

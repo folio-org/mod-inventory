@@ -38,10 +38,8 @@ import api.items.MarkItemMissingApiTests;
 import api.items.MarkItemWithdrawnApiTests;
 import api.support.ControlledVocabularyPreparation;
 import api.support.http.ResourceClient;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.client.WebClient;
 import support.fakes.FakeOkapi;
 
 @RunWith(Suite.class)
@@ -68,7 +66,8 @@ import support.fakes.FakeOkapi;
   MarkItemUnknownApiTests.class,
   HoldingsApiMoveExamples.class,
   BoundWithTests.class,
-  TenantApiTest.class
+  TenantApiTest.class,
+  InventoryConfigApiTest.class
 })
 public class ApiTestSuite {
   public static final int INVENTORY_VERTICLE_TEST_PORT = 9603;
@@ -219,7 +218,7 @@ public class ApiTestSuite {
     throws MalformedURLException {
 
     return new OkapiHttpClient(
-      WebClient.wrap(vertxAssistant.createUsingVertx(Vertx::createHttpClient)),
+      vertxAssistant.getVertx(),
       new URL(storageOkapiUrl()), TENANT_ID, TOKEN, USER_ID, null,
       it -> System.out.println(String.format("Request failed: %s", it.toString())));
   }

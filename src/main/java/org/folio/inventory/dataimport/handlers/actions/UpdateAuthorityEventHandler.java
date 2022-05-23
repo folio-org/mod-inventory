@@ -6,6 +6,7 @@ import static org.folio.ActionProfile.Action.UPDATE;
 import static org.folio.ActionProfile.FolioRecord.AUTHORITY;
 import static org.folio.ActionProfile.FolioRecord.MARC_AUTHORITY;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_UPDATED;
+import static org.folio.rest.jaxrs.model.DataImportEventTypes.DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 
 import io.vertx.core.Future;
@@ -18,14 +19,17 @@ import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.exceptions.DataImportException;
 import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.storage.Storage;
+import org.folio.processing.events.services.publisher.KafkaEventPublisher;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 
 public class UpdateAuthorityEventHandler extends AbstractAuthorityEventHandler {
-
   protected static final String ERROR_UPDATING_AUTHORITY_MSG_TEMPLATE = "Failed updating Authority. Cause: %s, status: '%s'";
+  private final KafkaEventPublisher eventPublisher;
 
-  public UpdateAuthorityEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache) {
+  public UpdateAuthorityEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache,
+                                     KafkaEventPublisher publisher) {
     super(storage, mappingMetadataCache);
+    this.eventPublisher = publisher;
   }
 
   @Override
@@ -58,6 +62,21 @@ public class UpdateAuthorityEventHandler extends AbstractAuthorityEventHandler {
   @Override
   protected ProfileSnapshotWrapper.ContentType profileContentType() {
     return MAPPING_PROFILE;
+  }
+
+  @Override
+  protected void publishEvent(DataImportEventPayload payload) {
+    eventPublisher.publish(payload);
+  }
+
+  @Override
+  public boolean isPostProcessingNeeded() {
+    return false;
+  }
+
+  @Override
+  public String getPostProcessingInitializationEventType() {
+    return DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING.value();
   }
 
   private Future<Authority> updateAuthority(Authority authority, AuthorityRecordCollection authorityRecordCollection) {

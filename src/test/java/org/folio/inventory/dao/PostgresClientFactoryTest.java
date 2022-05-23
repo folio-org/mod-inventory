@@ -27,7 +27,7 @@ import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_USERNA
 import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_PASSWORD;
 import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_MAXPOOLSIZE;
 import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_SERVER_PEM;
-import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_QUERYTIMEOUT;
+import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_IDLETIMEOUT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
@@ -113,7 +113,7 @@ public class PostgresClientFactoryTest {
     optionsMap.put(DB_DATABASE, "test");
     optionsMap.put(DB_MAXPOOLSIZE, String.valueOf(MAX_POOL_SIZE));
     optionsMap.put(DB_SERVER_PEM, SERVER_PEM);
-    optionsMap.put(DB_QUERYTIMEOUT, String.valueOf(60000));
+    optionsMap.put(DB_IDLETIMEOUT, String.valueOf(60000));
 
     PostgresConnectionOptions.setSystemProperties(optionsMap);
     PgConnectOptions pgConnectOpts = PostgresConnectionOptions.getConnectionOptions(TENANT_ID);

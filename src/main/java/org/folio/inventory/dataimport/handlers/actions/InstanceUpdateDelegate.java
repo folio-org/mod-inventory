@@ -4,11 +4,14 @@ import static java.lang.String.format;
 
 import java.util.Map;
 
+import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
+import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
+import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.InstanceUtil;
 import org.folio.processing.mapping.defaultmapper.RecordMapper;
@@ -71,7 +74,14 @@ public class InstanceUpdateDelegate {
 
   private Future<Instance> getInstanceById(String instanceId, InstanceCollection instanceCollection) {
     Promise<Instance> promise = Promise.promise();
-    instanceCollection.findById(instanceId, success -> promise.complete(success.getResult()),
+    instanceCollection.findById(instanceId, success -> {
+        if (success.getResult() == null) {
+          LOGGER.error("Can't find Instance by id: {} ", instanceId);
+          promise.fail(new NotFoundException(format("Can't find Instance by id: %s ", instanceId)));
+        } else {
+          promise.complete(success.getResult());
+        }
+      },
       failure -> {
         LOGGER.error(format("Error retrieving Instance by id %s - %s, status code %s", instanceId, failure.getReason(), failure.getStatusCode()));
         promise.fail(failure.getReason());
@@ -97,8 +107,12 @@ public class InstanceUpdateDelegate {
     Promise<Instance> promise = Promise.promise();
     instanceCollection.update(instance, success -> promise.complete(instance),
       failure -> {
-        LOGGER.error(format("Error updating Instance - %s, status code %s", failure.getReason(), failure.getStatusCode()));
-        promise.fail(failure.getReason());
+        if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
+          promise.fail(new OptimisticLockingException(failure.getReason()));
+        } else {
+          LOGGER.error(format("Error updating Instance - %s, status code %s", failure.getReason(), failure.getStatusCode()));
+          promise.fail(failure.getReason());
+        }
       });
     return promise.future();
   }
