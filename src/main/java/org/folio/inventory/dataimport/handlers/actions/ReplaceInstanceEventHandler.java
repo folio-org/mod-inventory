@@ -9,7 +9,6 @@ import org.apache.http.HttpStatus;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.Record;
-import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
@@ -47,9 +46,8 @@ import static org.folio.inventory.domain.instances.Instance.METADATA_KEY;
 import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 
-public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler {
+public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { // NOSONAR
 
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC or INSTANCE data";
   static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to update an Instance requires a mapping profile";
@@ -61,6 +59,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler {
   private static final String CURRENT_EVENT_TYPE_PROPERTY = "CURRENT_EVENT_TYPE";
   private static final String CURRENT_NODE_PROPERTY = "CURRENT_NODE";
   private static final String MARC_INSTANCE_SOURCE = "MARC";
+  private static final String INSTANCE_ID_TYPE = "INSTANCE";
 
   private final PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
   private final MappingMetadataCache mappingMetadataCache;
@@ -226,9 +225,10 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler {
     SourceStorageRecordsClient client = new SourceStorageRecordsClient(dataImportEventPayload.getOkapiUrl(),
       dataImportEventPayload.getTenant(), dataImportEventPayload.getToken());
 
-      return client.getSourceStorageRecordsFormattedById(instanceId, "INSTANCE").compose(resp -> {
+    return client.getSourceStorageRecordsFormattedById(instanceId, INSTANCE_ID_TYPE).compose(resp -> {
       if (resp.statusCode() != 200) {
-        return Future.failedFuture(String.format("Failed to retrieve MARC record by instance id: '%s', status code: %s", instanceId, resp.statusCode()));
+        return Future.failedFuture(format("Failed to retrieve MARC record by instance id: '%s', status code: %s",
+          instanceId, resp.statusCode()));
       }
 
       return Future.succeededFuture(resp.bodyAsJson(Record.class));
@@ -269,11 +269,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler {
       .thenAccept(actualInstance -> {
         eventPayload.getContext().put(INSTANCE.value(), Json.encode(JsonObject.mapFrom(actualInstance)));
         eventPayload.getEventsChain().remove(eventPayload.getContext().get(CURRENT_EVENT_TYPE_PROPERTY));
-        try {
-          eventPayload.setCurrentNode(ObjectMapperTool.getMapper().readValue(eventPayload.getContext().get(CURRENT_NODE_PROPERTY), ProfileSnapshotWrapper.class));
-        } catch (JsonProcessingException e) {
-          LOGGER.error(format("Cannot map from CURRENT_NODE value %s", e.getCause()));
-        }
+        eventPayload.setCurrentNode(Json.decodeValue(eventPayload.getContext().get(CURRENT_NODE_PROPERTY), ProfileSnapshotWrapper.class));
         eventPayload.getContext().remove(CURRENT_EVENT_TYPE_PROPERTY);
         eventPayload.getContext().remove(CURRENT_NODE_PROPERTY);
 
@@ -287,8 +283,8 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler {
       })
       .exceptionally(e -> {
         eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
-        LOGGER.error(format("Cannot get actual Instance by id: %s", e.getCause()));
-        promise.fail(format("Cannot get actual Instance by id: %s", e.getCause()));
+        LOGGER.error("Cannot get actual Instance by id: {}", instance.getId(), e);
+        promise.fail(format("Cannot get actual Instance by id: %s, cause: %s", instance.getId(), e.getMessage()));
         return null;
       });
   }
