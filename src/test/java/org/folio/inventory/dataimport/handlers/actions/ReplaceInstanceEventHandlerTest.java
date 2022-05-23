@@ -183,7 +183,7 @@ public class ReplaceInstanceEventHandlerTest {
 
     Vertx vertx = Vertx.vertx();
     replaceInstanceEventHandler = new ReplaceInstanceEventHandler(storage, precedingSucceedingTitlesHelper, new MappingMetadataCache(vertx,
-      vertx.createHttpClient(), 3600));
+      vertx.createHttpClient(), 3600), vertx.createHttpClient());
 
 
     doAnswer(invocationOnMock -> {

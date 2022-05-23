@@ -2,6 +2,7 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
@@ -64,11 +65,16 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
   private final PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
   private final MappingMetadataCache mappingMetadataCache;
+  private final HttpClient httpClient;
 
-  public ReplaceInstanceEventHandler(Storage storage, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper, MappingMetadataCache mappingMetadataCache) {
+  public ReplaceInstanceEventHandler(Storage storage,
+                                     PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper,
+                                     MappingMetadataCache mappingMetadataCache,
+                                     HttpClient client) {
     super(storage);
     this.precedingSucceedingTitlesHelper = precedingSucceedingTitlesHelper;
     this.mappingMetadataCache = mappingMetadataCache;
+    this.httpClient = client;
   }
 
   @Override
@@ -225,7 +231,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   private Future<Record> getRecordByInstanceId(DataImportEventPayload dataImportEventPayload,
                                                String instanceId) {
     SourceStorageRecordsClient client = new SourceStorageRecordsClient(dataImportEventPayload.getOkapiUrl(),
-      dataImportEventPayload.getTenant(), dataImportEventPayload.getToken());
+      dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), httpClient);
 
     return client.getSourceStorageRecordsFormattedById(instanceId, INSTANCE_ID_TYPE).compose(resp -> {
       if (resp.statusCode() != 200) {
