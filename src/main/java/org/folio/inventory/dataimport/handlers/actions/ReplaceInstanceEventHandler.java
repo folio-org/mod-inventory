@@ -8,6 +8,7 @@ import io.vertx.core.json.JsonObject;
 import org.apache.http.HttpStatus;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
+import org.folio.MappingMetadataDto;
 import org.folio.Record;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
@@ -102,8 +103,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
       mappingMetadataCache.get(jobExecutionId, context)
         .compose(parametersOptional -> parametersOptional
-          .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()),
-            Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class), instanceToUpdate))
+          .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, mappingMetadata, instanceToUpdate))
           .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, jobExecutionId,
             recordId, chunkId))))
         .compose(e -> {
@@ -192,14 +192,16 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
     return instanceAsJson;
   }
 
-  private Future<Void> prepareAndExecuteMapping(DataImportEventPayload dataImportEventPayload, JsonObject mappingRules, MappingParameters mappingParameters, Instance instanceToUpdate) {
+  private Future<Void> prepareAndExecuteMapping(DataImportEventPayload dataImportEventPayload, MappingMetadataDto mappingMetadata, Instance instanceToUpdate) {
+    JsonObject mappingRules = new JsonObject(mappingMetadata.getMappingRules());
+    MappingParameters mappingParameters = Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class);
+
     return prepareRecordForMapping(dataImportEventPayload, mappingParameters.getMarcFieldProtectionSettings(), instanceToUpdate)
-      .compose(v -> {
+      .onSuccess(v -> {
         org.folio.Instance mapped = defaultMapRecordToInstance(dataImportEventPayload, mappingRules, mappingParameters);
         Instance mergedInstance = InstanceUtil.mergeFieldsWhichAreNotControlled(instanceToUpdate, mapped);
         dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(new JsonObject().put(INSTANCE_PATH, JsonObject.mapFrom(mergedInstance))));
         MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
-        return Future.succeededFuture();
       });
   }
 
@@ -230,7 +232,6 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         return Future.failedFuture(format("Failed to retrieve MARC record by instance id: '%s', status code: %s",
           instanceId, resp.statusCode()));
       }
-
       return Future.succeededFuture(resp.bodyAsJson(Record.class));
     });
   }
