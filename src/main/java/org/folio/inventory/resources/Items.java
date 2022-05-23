@@ -284,7 +284,7 @@ public class Items extends AbstractInventoryResource {
     WebContext context,
     MultipleRecords<Item> wrappedItems) {
     List<String> itemIds = wrappedItems.records.stream().map(Item::getId).collect(Collectors.toList());
-    if (itemIds.size() == 0) {
+    if (itemIds.isEmpty()) {
       JsonResponse.success(routingContext.response(),
       new ItemRepresentation(RELATIVE_ITEMS_PATH)
         .toJson(wrappedItems, null, null, null,

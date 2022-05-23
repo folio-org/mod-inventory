@@ -441,7 +441,7 @@ public class Instances extends AbstractInstances {
              .find( holdingsRecordIds, this::cqlMatchAnyByHoldingsRecordIds)
              .thenCompose(
                items -> {
-                 if (items.size() == 0) {
+                 if (items.isEmpty()) {
                   return CompletableFuture.completedFuture(Collections.emptyList());
                  }
                  List<String> itemIds = new ArrayList<>();
