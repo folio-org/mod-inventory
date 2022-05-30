@@ -2,6 +2,7 @@ package org.folio.inventory.support;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.folio.ChildInstance;
 import org.folio.ParentInstance;
 import org.folio.Tags;
@@ -47,6 +48,7 @@ public class InstanceUtil {
       .withPreviouslyHeld(existing.getPreviouslyHeld())
       .withCatalogedDate(existing.getCatalogedDate())
       .withStatusId(existing.getStatusId())
+      .withStatusUpdatedDate(existing.getStatusUpdatedDate())
       .withStatisticalCodeIds(existing.getStatisticalCodeIds())
       .withNatureOfContentTermIds(existing.getNatureOfContentTermIds())
       .withTags(new Tags().withTagList(existing.getTags()))
@@ -103,12 +105,8 @@ public class InstanceUtil {
   /**
    * Returns the value if s can be parsed as Integer. Returns null if s is null.
    *
-   * @throws NumberFormatException if s is not null and cannot be parsed as Integer.
    */
   private static Integer asIntegerOrNull(String s) {
-    if (s == null) {
-      return null;
-    }
-    return Integer.parseInt(s);
+    return NumberUtils.isParsable(s) ? Integer.parseInt(s) : null;
   }
 }
