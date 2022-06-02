@@ -1,3 +1,7 @@
+## 18.1.9 2022-06-02
+
+* Update instance import overwrites instance status update date when profile is not editing the instance status (MODINV-715)
+
 ## 18.1.8 2022-05-23
 
 * Fix DI process for Item update in case match for Item happened before Holdings update (MODINV-690)
