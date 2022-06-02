@@ -313,7 +313,7 @@ public class UpdateAuthorityEventHandlerTest {
     when(storage.getAuthorityRecordCollection(any())).thenReturn(authorityCollection);
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
-      failureHandler.accept(new Failure("Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", 409));
+      failureHandler.accept(new Failure("Cannot update Authority record because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", 409));
       return null;
     }).when(authorityCollection).update(any(), any(), any());
     when(authorityCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(new Authority().withId(UUID.randomUUID().toString()).withVersion(1)));
