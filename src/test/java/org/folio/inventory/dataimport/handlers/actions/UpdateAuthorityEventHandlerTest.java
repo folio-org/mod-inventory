@@ -49,10 +49,8 @@ import static org.folio.ActionProfile.Action.MODIFY;
 import static org.folio.ActionProfile.FolioRecord.AUTHORITY;
 import static org.folio.ActionProfile.FolioRecord.ITEM;
 import static org.folio.ActionProfile.FolioRecord.MARC_AUTHORITY;
-import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_MATCHED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_UPDATED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_UPDATED;
 import static org.folio.rest.jaxrs.model.DataImportEventTypes.DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
@@ -311,33 +309,28 @@ public class UpdateAuthorityEventHandlerTest {
   }
 
   @Test(expected = ExecutionException.class)
-  public void shouldNotProcessEventIfOLErrorExist() throws InterruptedException, ExecutionException, TimeoutException {
-    Authority authorityRecord = new Authority().withId(UUID.randomUUID().toString());
-    Authority returnedAuthority = new Authority().withId(authorityRecord.getId()).withVersion(1);
-
-    when(authorityCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(returnedAuthority));
-
+  public void shouldNotProcessEventIfOLErrorExist() throws IOException, ExecutionException, InterruptedException, TimeoutException {
+    when(storage.getAuthorityRecordCollection(any())).thenReturn(authorityCollection);
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
       failureHandler.accept(new Failure("Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", 409));
       return null;
     }).when(authorityCollection).update(any(), any(), any());
+    when(authorityCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(new Authority().withId(UUID.randomUUID().toString()).withVersion(1)));
 
-    when(storage.getAuthorityRecordCollection(any())).thenReturn(authorityCollection);
-
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_AUTHORITY_RECORD));
+    var parsedAuthorityRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_AUTHORITY_RECORD));
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedAuthorityRecord.encode()));
     HashMap<String, String> context = new HashMap<>();
-    context.put(AUTHORITY.value(), Json.encode(authorityRecord));
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(MARC_AUTHORITY.value(), Json.encode(record));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
+      .withEventType(DI_INVENTORY_AUTHORITY_MATCHED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl())
       .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.MILLISECONDS);
+    future.get(5, TimeUnit.SECONDS);
   }
 }

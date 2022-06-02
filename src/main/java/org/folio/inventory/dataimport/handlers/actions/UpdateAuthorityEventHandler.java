@@ -90,6 +90,14 @@ public class UpdateAuthorityEventHandler extends AbstractAuthorityEventHandler {
     return DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING.value();
   }
 
+  @Override
+  protected void prepareEvent(DataImportEventPayload payload) {
+    super.prepareEvent(payload);
+    payload.getContext().put(CURRENT_EVENT_TYPE_PROPERTY, payload.getEventType());
+    payload.getContext().put(CURRENT_NODE_PROPERTY, Json.encode(payload.getCurrentNode()));
+    payload.getContext().put(CURRENT_AUTHORITY_PROPERTY, Json.encode(payload.getContext().get(AUTHORITY.value())));
+  }
+
   private Future<Authority> updateAuthority(DataImportEventPayload payload, Authority authority, AuthorityRecordCollection authorityRecordCollection) {
     Promise<Authority> promise = Promise.promise();
     authorityRecordCollection.update(authority, success -> promise.complete(authority), failure -> {
