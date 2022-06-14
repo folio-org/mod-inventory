@@ -134,6 +134,7 @@ public class UpdateAuthorityEventHandlerTest {
   @Test
   public void shouldProcessEvent() throws IOException, InterruptedException, ExecutionException, TimeoutException {
     when(storage.getAuthorityRecordCollection(any())).thenReturn(authorityCollection);
+    when(authorityCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(new Authority().withVersion(1)));
 
     var parsedAuthorityRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_AUTHORITY_RECORD));
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedAuthorityRecord.encode()));
@@ -154,7 +155,9 @@ public class UpdateAuthorityEventHandlerTest {
 
     assertEquals(DI_INVENTORY_AUTHORITY_UPDATED.value(), actualDataImportEventPayload.getEventType());
     assertNotNull(actualDataImportEventPayload.getContext().get(AUTHORITY.value()));
-    assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(AUTHORITY.value())).getString("id"));
+    JsonObject authority = new JsonObject(actualDataImportEventPayload.getContext().get(AUTHORITY.value()));
+    assertNotNull(authority.getString("id"));
+    assertEquals("1", authority.getString("_version"));
   }
 
   @Test(expected = ExecutionException.class)

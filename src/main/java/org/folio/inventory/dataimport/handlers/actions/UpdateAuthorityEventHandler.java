@@ -98,18 +98,34 @@ public class UpdateAuthorityEventHandler extends AbstractAuthorityEventHandler {
     payload.getContext().put(CURRENT_AUTHORITY_PROPERTY, Json.encode(payload.getContext().get(AUTHORITY.value())));
   }
 
-  private Future<Authority> updateAuthority(DataImportEventPayload payload, Authority authority, AuthorityRecordCollection authorityRecordCollection) {
+  private Future<Authority> updateAuthority(DataImportEventPayload payload, Authority mappedRecord, AuthorityRecordCollection collection) {
     Promise<Authority> promise = Promise.promise();
-    authorityRecordCollection.update(authority, success -> promise.complete(authority), failure -> {
-      if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
-        processOLError(failure, payload, authority.getId(), authorityRecordCollection, promise);
-      } else {
-        promise.fail(new DataImportException(format(ERROR_UPDATING_AUTHORITY_MSG_TEMPLATE, failure.getReason(), failure.getStatusCode())));
-      }
-    });
+    collection.findById(mappedRecord.getId())
+      .thenAccept(actualRecord -> mappedRecord.setVersion(actualRecord.getVersion()))
+      .thenAccept(ar -> collection.update(
+        mappedRecord,
+        success -> promise.complete(mappedRecord),
+        failure -> failureUpdateHandler(payload, mappedRecord.getId(), collection, promise, failure))
+      );
     return promise.future();
   }
 
+  private void failureUpdateHandler(DataImportEventPayload payload, String id, AuthorityRecordCollection collection, Promise<Authority> promise, Failure failure) {
+    if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
+        processOLError(failure, payload, id, collection, promise);
+      } else {
+        promise.fail(new DataImportException(format(ERROR_UPDATING_AUTHORITY_MSG_TEMPLATE, failure.getReason(), failure.getStatusCode())));
+      }
+  }
+
+  /**
+   * This method handles the Optimistic Locking error.
+   * The Optimistic Locking error occurs when the updating record has matched and has not updated yet.
+   * In this time some another request wants to update the matched record. This happens rarely, however it has a place to be.
+   * In such case the method retries a record update:
+   * - it calls this 'UpdateAuthorityEventHandler' again keeping a number of calls(retries) in the event context;
+   * - when a number of retries exceeded the maximum limit (see <>MAX_RETRIES_COUNT</>) then event handling goes ahead as usual.
+   */
   private void processOLError(Failure failure, DataImportEventPayload payload, String recordId, AuthorityRecordCollection recordCollection, Promise<Authority> promise) {
     int currentRetryNumber = payload.getContext().get(CURRENT_RETRY_NUMBER)  == null ? 0 : Integer.parseInt(payload.getContext().get(CURRENT_RETRY_NUMBER));
     if (currentRetryNumber < MAX_RETRIES_COUNT) {
