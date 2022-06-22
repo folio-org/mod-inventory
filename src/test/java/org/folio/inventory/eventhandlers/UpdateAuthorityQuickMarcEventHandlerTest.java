@@ -12,6 +12,7 @@ import java.util.function.Consumer;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
+import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -138,6 +139,26 @@ public class UpdateAuthorityQuickMarcEventHandlerTest {
     Future<Authority> future = updateAuthorityQuickMarcEventHandler.handle(eventPayload);
 
     Assert.assertTrue(future.failed());
+  }
+
+  @Test
+  public void shouldFailOn_OL_Exception() {
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure("Error updating authority record", 409));
+      return null;
+    }).when(authorityRecordCollection).update(any(), any(), any());
+
+    HashMap<String, String> eventPayload = new HashMap<>();
+    eventPayload.put("RECORD_TYPE", "MARC_AUTHORITY");
+    eventPayload.put("MARC_AUTHORITY", record.encode());
+    eventPayload.put("MAPPING_RULES", mappingRules.encode());
+    eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
+
+    Future<Authority> future = updateAuthorityQuickMarcEventHandler.handle(eventPayload);
+
+    Assert.assertTrue(future.failed());
+    Assert.assertTrue(future.cause() instanceof OptimisticLockingException);
   }
 
 }

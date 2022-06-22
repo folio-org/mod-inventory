@@ -14,7 +14,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
 
 public class InstanceUtilTest {
 
@@ -45,8 +47,8 @@ public class InstanceUtilTest {
     statisticalCodeIds.add("30773a27-b485-4dab-aeb6-b8c04fa3cb18");
 
     List<String> natureOfContentTermIds = new ArrayList<>();
-    statisticalCodeIds.add("30773a27-b485-4dab-aeb6-b8c04fa3cb21");
-    statisticalCodeIds.add("30773a27-b485-4dab-aeb6-b8c04fa3cb22");
+    natureOfContentTermIds.add("30773a27-b485-4dab-aeb6-b8c04fa3cb21");
+    natureOfContentTermIds.add("30773a27-b485-4dab-aeb6-b8c04fa3cb22");
 
     List<InstanceRelationshipToParent> parents = new ArrayList<>();
     parents.add(new InstanceRelationshipToParent("30773a27-b485-4dab-aeb6-b8c04fa3cb19", "30773a27-b485-4dab-aeb6-b8c04fa3cb23", "30773a27-b485-4dab-aeb6-b8c04fa3cb24"));
@@ -67,6 +69,7 @@ public class InstanceUtilTest {
     existing.setPreviouslyHeld(true);
     existing.setCatalogedDate("");
     existing.setStatusId("30773a27-b485-4dab-aeb6-b8c04fa3cb26");
+    existing.setStatusUpdatedDate("2022-05-17T13:48:42.559+0000");
     existing.setNatureOfContentTermIds(natureOfContentTermIds);
     existing.setParentInstances(parents);
     existing.setChildInstances(children);
@@ -86,6 +89,7 @@ public class InstanceUtilTest {
     assertTrue(instance.getPreviouslyHeld());
     assertEquals("", instance.getCatalogedDate());
     assertEquals("30773a27-b485-4dab-aeb6-b8c04fa3cb26", instance.getStatusId());
+    assertEquals("2022-05-17T13:48:42.559+0000", instance.getStatusUpdatedDate());
     assertEquals(natureOfContentTermIds, instance.getNatureOfContentTermIds());
     assertNotNull(instance.getTags());
     assertEquals(tagList, instance.getTags());
@@ -102,7 +106,7 @@ public class InstanceUtilTest {
 
     org.folio.Instance mapped = new org.folio.Instance().withVersion(3);
     org.folio.inventory.domain.instances.Instance merged = InstanceUtil.mergeFieldsWhichAreNotControlled(existing, mapped);
-    assertEquals(merged.getId(), "id");
-    assertEquals(merged.getVersion(),"3");
+    assertEquals("id", merged.getId());
+    assertEquals("3", merged.getVersion());
   }
 }

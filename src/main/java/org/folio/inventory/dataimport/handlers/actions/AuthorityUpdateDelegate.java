@@ -1,18 +1,15 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import static java.lang.String.format;
-
-import java.util.Map;
-
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
+import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
 import org.folio.Authority;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.exceptions.DataImportException;
+import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.mapping.defaultmapper.RecordMapper;
@@ -20,6 +17,10 @@ import org.folio.processing.mapping.defaultmapper.RecordMapperBuilder;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.Record;
+
+import java.util.Map;
+
+import static java.lang.String.format;
 
 public class AuthorityUpdateDelegate {
 
@@ -110,15 +111,17 @@ public class AuthorityUpdateDelegate {
     }
   }
 
-  private Future<Authority> updateAuthorityRecord(Authority authorityRecord,
-                                                  AuthorityRecordCollection authorityRecordCollection) {
+  private Future<Authority> updateAuthorityRecord(Authority authorityRecord, AuthorityRecordCollection authorityRecordCollection) {
     Promise<Authority> promise = Promise.promise();
     authorityRecordCollection.update(authorityRecord, success -> promise.complete(authorityRecord),
-      failure -> completeExceptionally(promise, format("Error updating Authority - %s, status code %s",
-          failure.getReason(),
-          failure.getStatusCode()
-        )
-      ));
+      failure -> {
+        if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
+          promise.fail(new OptimisticLockingException(failure.getReason()));
+        } else {
+          LOGGER.error(format("Error updating authority record: %s, status code: %s", failure.getReason(), failure.getStatusCode()));
+          promise.fail(failure.getReason());
+        }
+    });
     return promise.future();
   }
 }

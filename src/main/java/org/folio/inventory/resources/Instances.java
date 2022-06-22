@@ -441,6 +441,9 @@ public class Instances extends AbstractInstances {
              .find( holdingsRecordIds, this::cqlMatchAnyByHoldingsRecordIds)
              .thenCompose(
                items -> {
+                 if (items.isEmpty()) {
+                  return CompletableFuture.completedFuture(Collections.emptyList());
+                 }
                  List<String> itemIds = new ArrayList<>();
                  Map<String,String> itemHoldingsMap = new HashMap<>();
                  for (JsonObject item : items) {
