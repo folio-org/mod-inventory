@@ -1,29 +1,38 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static org.folio.rest.jaxrs.model.DataImportEventTypes.DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.times;
-
-import static org.folio.ActionProfile.Action.MODIFY;
-import static org.folio.ActionProfile.FolioRecord.AUTHORITY;
-import static org.folio.ActionProfile.FolioRecord.ITEM;
-import static org.folio.ActionProfile.FolioRecord.MARC_AUTHORITY;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_MATCHED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_UPDATED;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.common.Slf4jNotifier;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.github.tomakehurst.wiremock.junit.WireMockRule;
+import com.github.tomakehurst.wiremock.matching.RegexPattern;
+import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
+import org.folio.ActionProfile;
+import org.folio.Authority;
+import org.folio.DataImportEventPayload;
+import org.folio.MappingMetadataDto;
+import org.folio.MappingProfile;
+import org.folio.inventory.TestUtil;
+import org.folio.inventory.common.domain.Failure;
+import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.domain.AuthorityRecordCollection;
+import org.folio.inventory.storage.Storage;
+import org.folio.processing.events.services.publisher.KafkaEventPublisher;
+import org.folio.processing.mapping.MappingManager;
+import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
+import org.folio.rest.jaxrs.model.EntityType;
+import org.folio.rest.jaxrs.model.MappingDetail;
+import org.folio.rest.jaxrs.model.ParsedRecord;
+import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.folio.rest.jaxrs.model.Record;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -35,38 +44,30 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
-import com.github.tomakehurst.wiremock.client.WireMock;
-import com.github.tomakehurst.wiremock.common.Slf4jNotifier;
-import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
-import com.github.tomakehurst.wiremock.junit.WireMockRule;
-import com.github.tomakehurst.wiremock.matching.RegexPattern;
-import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
-import io.vertx.core.Vertx;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
-import org.folio.processing.events.services.publisher.KafkaEventPublisher;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-
-import org.folio.ActionProfile;
-import org.folio.DataImportEventPayload;
-import org.folio.MappingMetadataDto;
-import org.folio.MappingProfile;
-import org.folio.inventory.TestUtil;
-import org.folio.inventory.common.domain.Success;
-import org.folio.inventory.dataimport.cache.MappingMetadataCache;
-import org.folio.inventory.domain.AuthorityRecordCollection;
-import org.folio.inventory.storage.Storage;
-import org.folio.processing.mapping.MappingManager;
-import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
-import org.folio.rest.jaxrs.model.EntityType;
-import org.folio.rest.jaxrs.model.MappingDetail;
-import org.folio.rest.jaxrs.model.ParsedRecord;
-import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
-import org.folio.rest.jaxrs.model.Record;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static org.folio.ActionProfile.Action.MODIFY;
+import static org.folio.ActionProfile.FolioRecord.AUTHORITY;
+import static org.folio.ActionProfile.FolioRecord.ITEM;
+import static org.folio.ActionProfile.FolioRecord.MARC_AUTHORITY;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_MATCHED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_UPDATED;
+import static org.folio.rest.jaxrs.model.DataImportEventTypes.DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class UpdateAuthorityEventHandlerTest {
 
@@ -133,6 +134,7 @@ public class UpdateAuthorityEventHandlerTest {
   @Test
   public void shouldProcessEvent() throws IOException, InterruptedException, ExecutionException, TimeoutException {
     when(storage.getAuthorityRecordCollection(any())).thenReturn(authorityCollection);
+    when(authorityCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(new Authority().withVersion(1)));
 
     var parsedAuthorityRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_AUTHORITY_RECORD));
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedAuthorityRecord.encode()));
@@ -153,7 +155,9 @@ public class UpdateAuthorityEventHandlerTest {
 
     assertEquals(DI_INVENTORY_AUTHORITY_UPDATED.value(), actualDataImportEventPayload.getEventType());
     assertNotNull(actualDataImportEventPayload.getContext().get(AUTHORITY.value()));
-    assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(AUTHORITY.value())).getString("id"));
+    JsonObject authority = new JsonObject(actualDataImportEventPayload.getContext().get(AUTHORITY.value()));
+    assertNotNull(authority.getString("id"));
+    assertEquals("1", authority.getString("_version"));
   }
 
   @Test(expected = ExecutionException.class)
@@ -305,5 +309,31 @@ public class UpdateAuthorityEventHandlerTest {
   @Test
   public void shouldReturnPostProcessingInitializationEventType() {
     assertEquals(DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING.value(), eventHandler.getPostProcessingInitializationEventType());
+  }
+
+  @Test(expected = ExecutionException.class)
+  public void shouldNotProcessEventIfOLErrorExist() throws IOException, ExecutionException, InterruptedException, TimeoutException {
+    when(storage.getAuthorityRecordCollection(any())).thenReturn(authorityCollection);
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure("Cannot update Authority record because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", 409));
+      return null;
+    }).when(authorityCollection).update(any(), any(), any());
+    when(authorityCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(new Authority().withId(UUID.randomUUID().toString()).withVersion(1)));
+
+    var parsedAuthorityRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_AUTHORITY_RECORD));
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedAuthorityRecord.encode()));
+    HashMap<String, String> context = new HashMap<>();
+    context.put(MARC_AUTHORITY.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_AUTHORITY_MATCHED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
+    future.get(5, TimeUnit.SECONDS);
   }
 }

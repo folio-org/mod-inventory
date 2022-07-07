@@ -38,10 +38,8 @@ import api.items.MarkItemMissingApiTests;
 import api.items.MarkItemWithdrawnApiTests;
 import api.support.ControlledVocabularyPreparation;
 import api.support.http.ResourceClient;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.client.WebClient;
 import support.fakes.FakeOkapi;
 
 @RunWith(Suite.class)

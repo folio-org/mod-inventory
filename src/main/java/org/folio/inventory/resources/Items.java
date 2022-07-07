@@ -283,6 +283,14 @@ public class Items extends AbstractInventoryResource {
     RoutingContext routingContext,
     WebContext context,
     MultipleRecords<Item> wrappedItems) {
+    List<String> itemIds = wrappedItems.records.stream().map(Item::getId).collect(Collectors.toList());
+    if (itemIds.isEmpty()) {
+      JsonResponse.success(routingContext.response(),
+      new ItemRepresentation(RELATIVE_ITEMS_PATH)
+        .toJson(wrappedItems, null, null, null,
+          null, null, context));
+      return;
+    }
 
     CollectionResourceClient holdingsClient;
     CollectionResourceClient instancesClient;

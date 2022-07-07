@@ -17,6 +17,7 @@ import org.folio.HoldingsRecord;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.inventory.domain.HoldingsRecordCollection;
+import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.services.HoldingsCollectionService;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.mapping.defaultmapper.RecordMapper;
@@ -78,7 +79,14 @@ public class HoldingsUpdateDelegate {
   private Future<HoldingsRecord> getHoldingsRecordById(String holdingsId,
                                                        HoldingsRecordCollection holdingsRecordCollection) {
     Promise<HoldingsRecord> promise = Promise.promise();
-    holdingsRecordCollection.findById(holdingsId, success -> promise.complete(success.getResult()),
+    holdingsRecordCollection.findById(holdingsId, success -> {
+        if (success.getResult() == null) {
+          LOGGER.error("Can't find Holdings by id: {} ", holdingsId);
+          promise.fail(new NotFoundException(format("Can't find Holdings by id: %s ", holdingsId)));
+        } else {
+          promise.complete(success.getResult());
+        }
+      },
       failure -> {
         LOGGER.error(format("Error retrieving Holdings by id %s - %s, status code %s", holdingsId, failure.getReason(),
           failure.getStatusCode()));

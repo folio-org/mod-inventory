@@ -2,13 +2,15 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
 import org.apache.http.HttpStatus;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
-import org.folio.dbschema.ObjectMapperTool;
+import org.folio.MappingMetadataDto;
+import org.folio.Record;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
@@ -21,6 +23,9 @@ import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.processing.mapping.mapper.MappingContext;
+import org.folio.processing.mapping.mapper.writer.marc.MarcRecordModifier;
+import org.folio.rest.client.SourceStorageRecordsClient;
+import org.folio.rest.jaxrs.model.MarcFieldProtectionSetting;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 
 import java.util.HashMap;
@@ -43,7 +48,6 @@ import static org.folio.inventory.domain.instances.Instance.METADATA_KEY;
 import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 
 public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { // NOSONAR
 
@@ -56,14 +60,21 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
   private static final String CURRENT_EVENT_TYPE_PROPERTY = "CURRENT_EVENT_TYPE";
   private static final String CURRENT_NODE_PROPERTY = "CURRENT_NODE";
+  private static final String MARC_INSTANCE_SOURCE = "MARC";
+  private static final String INSTANCE_ID_TYPE = "INSTANCE";
 
   private final PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
   private final MappingMetadataCache mappingMetadataCache;
+  private final HttpClient httpClient;
 
-  public ReplaceInstanceEventHandler(Storage storage, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper, MappingMetadataCache mappingMetadataCache) {
+  public ReplaceInstanceEventHandler(Storage storage,
+                                     PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper,
+                                     MappingMetadataCache mappingMetadataCache,
+                                     HttpClient client) {
     super(storage);
     this.precedingSucceedingTitlesHelper = precedingSucceedingTitlesHelper;
     this.mappingMetadataCache = mappingMetadataCache;
+    this.httpClient = client;
   }
 
   @Override
@@ -98,8 +109,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
       mappingMetadataCache.get(jobExecutionId, context)
         .compose(parametersOptional -> parametersOptional
-          .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()), new JsonObject(mappingMetadata.getMappingParams())
-            .mapTo(MappingParameters.class), instanceToUpdate))
+          .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, mappingMetadata, instanceToUpdate))
           .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, jobExecutionId,
             recordId, chunkId))))
         .compose(e -> {
@@ -188,16 +198,48 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
     return instanceAsJson;
   }
 
-  private Future<Void> prepareAndExecuteMapping(DataImportEventPayload dataImportEventPayload, JsonObject mappingRules, MappingParameters mappingParameters, Instance instanceToUpdate) {
-    try {
-      org.folio.Instance mapped = defaultMapRecordToInstance(dataImportEventPayload, mappingRules, mappingParameters);
-      Instance mergedInstance = InstanceUtil.mergeFieldsWhichAreNotControlled(instanceToUpdate, mapped);
-      dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(new JsonObject().put(INSTANCE_PATH, JsonObject.mapFrom(mergedInstance))));
-      MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
+  private Future<Void> prepareAndExecuteMapping(DataImportEventPayload dataImportEventPayload, MappingMetadataDto mappingMetadata, Instance instanceToUpdate) {
+    JsonObject mappingRules = new JsonObject(mappingMetadata.getMappingRules());
+    MappingParameters mappingParameters = Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class);
+
+    return prepareRecordForMapping(dataImportEventPayload, mappingParameters.getMarcFieldProtectionSettings(), instanceToUpdate)
+      .onSuccess(v -> {
+        org.folio.Instance mapped = defaultMapRecordToInstance(dataImportEventPayload, mappingRules, mappingParameters);
+        Instance mergedInstance = InstanceUtil.mergeFieldsWhichAreNotControlled(instanceToUpdate, mapped);
+        dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(new JsonObject().put(INSTANCE_PATH, JsonObject.mapFrom(mergedInstance))));
+        MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
+      });
+  }
+
+  private Future<Void> prepareRecordForMapping(DataImportEventPayload dataImportEventPayload,
+                                               List<MarcFieldProtectionSetting> marcFieldProtectionSettings,
+                                               Instance instance) {
+    if (!MARC_INSTANCE_SOURCE.equals(instance.getSource())) {
       return Future.succeededFuture();
-    } catch (Exception e) {
-      return Future.failedFuture(e);
     }
+
+    return getRecordByInstanceId(dataImportEventPayload, instance.getId())
+      .compose(existingRecord -> {
+        Record incomingRecord = Json.decodeValue(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()), Record.class);
+        String updatedContent = new MarcRecordModifier().updateRecord(incomingRecord, existingRecord, marcFieldProtectionSettings);
+        incomingRecord.getParsedRecord().setContent(updatedContent);
+        dataImportEventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(incomingRecord));
+        return Future.succeededFuture();
+      });
+  }
+
+  private Future<Record> getRecordByInstanceId(DataImportEventPayload dataImportEventPayload,
+                                               String instanceId) {
+    SourceStorageRecordsClient client = new SourceStorageRecordsClient(dataImportEventPayload.getOkapiUrl(),
+      dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), httpClient);
+
+    return client.getSourceStorageRecordsFormattedById(instanceId, INSTANCE_ID_TYPE).compose(resp -> {
+      if (resp.statusCode() != 200) {
+        return Future.failedFuture(format("Failed to retrieve MARC record by instance id: '%s', status code: %s",
+          instanceId, resp.statusCode()));
+      }
+      return Future.succeededFuture(resp.bodyAsJson(Record.class));
+    });
   }
 
   public Future<Instance> updateInstanceAndRetryIfOlExists(Instance instance, InstanceCollection instanceCollection, DataImportEventPayload eventPayload) {
@@ -234,11 +276,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       .thenAccept(actualInstance -> {
         eventPayload.getContext().put(INSTANCE.value(), Json.encode(JsonObject.mapFrom(actualInstance)));
         eventPayload.getEventsChain().remove(eventPayload.getContext().get(CURRENT_EVENT_TYPE_PROPERTY));
-        try {
-          eventPayload.setCurrentNode(ObjectMapperTool.getMapper().readValue(eventPayload.getContext().get(CURRENT_NODE_PROPERTY), ProfileSnapshotWrapper.class));
-        } catch (JsonProcessingException e) {
-          LOGGER.error(format("Cannot map from CURRENT_NODE value %s", e.getCause()));
-        }
+        eventPayload.setCurrentNode(Json.decodeValue(eventPayload.getContext().get(CURRENT_NODE_PROPERTY), ProfileSnapshotWrapper.class));
         eventPayload.getContext().remove(CURRENT_EVENT_TYPE_PROPERTY);
         eventPayload.getContext().remove(CURRENT_NODE_PROPERTY);
 
@@ -252,8 +290,8 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       })
       .exceptionally(e -> {
         eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
-        LOGGER.error(format("Cannot get actual Instance by id: %s", e.getCause()));
-        promise.fail(format("Cannot get actual Instance by id: %s", e.getCause()));
+        LOGGER.error("Cannot get actual Instance by id: {}", instance.getId(), e);
+        promise.fail(format("Cannot get actual Instance by id: %s, cause: %s", instance.getId(), e.getMessage()));
         return null;
       });
   }

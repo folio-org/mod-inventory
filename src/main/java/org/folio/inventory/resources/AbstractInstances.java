@@ -56,6 +56,13 @@ public abstract class AbstractInstances {
     this.config = new InventoryConfigurationImpl();
   }
 
+  protected CompletableFuture<List<Response>> updateRelatedRecords(
+    RoutingContext routingContext, WebContext context, Instance instance) {
+
+    return updateInstanceRelationships(instance, routingContext, context)
+      .thenCompose(r -> updatePrecedingSucceedingTitles(instance, routingContext, context));
+  }
+
   /**
    * Fetch existing relationships for the instance from storage, compare them to the request. Delete, add, and modify relations as needed.
    *
@@ -66,21 +73,21 @@ public abstract class AbstractInstances {
   protected CompletableFuture<List<Response>> updateInstanceRelationships(Instance instance,
     RoutingContext routingContext, WebContext context) {
 
-    CollectionResourceClient relatedInstancesClient = createInstanceRelationshipsClient(
+    CollectionResourceClient instanceRelationshipsClient = createInstanceRelationshipsClient(
       routingContext, context);
-    CollectionResourceRepository relatedInstancesRepository = new CollectionResourceRepository(relatedInstancesClient);
+    CollectionResourceRepository instanceRelationshipsRepository = new CollectionResourceRepository(instanceRelationshipsClient);
     List<String> instanceId = List.of(instance.getId());
-    String query = createQueryForRelatedInstances(instanceId);
+    String query = createQueryForInstanceRelationships(instanceId);
 
     CompletableFuture<Response> future = new CompletableFuture<>();
-    relatedInstancesClient.getAll(query, future::complete);
+    instanceRelationshipsClient.getAll(query, future::complete);
 
     return future.thenCompose(result ->
-      updateInstanceRelationships(instance, relatedInstancesRepository, result));
+      updateInstanceRelationships(instance, instanceRelationshipsRepository, result));
   }
 
   private CompletableFuture<List<Response>> updateInstanceRelationships(Instance instance,
-    CollectionResourceRepository relatedInstancesClient, Response result) {
+    CollectionResourceRepository instanceRelationshipsClient, Response result) {
 
     JsonObject json = result.getJson();
     List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("instanceRelationships"));
@@ -111,17 +118,10 @@ public abstract class AbstractInstances {
       });
     }
 
-    List<CompletableFuture<Response>> allFutures = update(relatedInstancesClient,
+    List<CompletableFuture<Response>> allFutures = update(instanceRelationshipsClient,
       existingRelationships, updatingRelationships);
 
     return allResultsOf(allFutures);
-  }
-
-  protected CompletableFuture<List<Response>> updateRelatedRecords(
-    RoutingContext routingContext, WebContext context, Instance instance) {
-
-    return updateInstanceRelationships(instance, routingContext, context)
-      .thenCompose(r -> updatePrecedingSucceedingTitles(instance, routingContext, context));
   }
 
   protected CompletableFuture<List<Response>> updatePrecedingSucceedingTitles(
@@ -288,7 +288,6 @@ public abstract class AbstractInstances {
 
 
   // Utilities
-
   protected CollectionResourceClient createInstanceRelationshipsClient(
     RoutingContext routingContext, WebContext context) {
 
@@ -351,7 +350,7 @@ public abstract class AbstractInstances {
         .map(CompletableFuture::join).collect(Collectors.toList()));
   }
 
-  protected String createQueryForRelatedInstances(List<String> instanceIds) {
+  protected String createQueryForInstanceRelationships(List<String> instanceIds) {
     String idList = instanceIds.stream().distinct().collect(Collectors.joining(" or "));
     return format("subInstanceId==(%s) or superInstanceId==(%s)", idList, idList);
   }

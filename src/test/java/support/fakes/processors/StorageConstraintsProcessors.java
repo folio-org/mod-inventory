@@ -1,7 +1,5 @@
 package support.fakes.processors;
 
-import api.ApiTestSuite;
-import api.support.http.StorageInterfaceUrls;
 import io.vertx.core.json.JsonObject;
 import org.folio.inventory.domain.instances.InstanceRelationship;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
@@ -12,13 +10,10 @@ import org.folio.util.StringUtil;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 
 import static api.ApiTestSuite.createOkapiHttpClient;
