@@ -24,7 +24,6 @@ import org.folio.inventory.support.http.client.Response;
 import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import lombok.SneakyThrows;
@@ -69,7 +68,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import static support.matchers.ResponseMatchers.hasValidationError;
-import static support.matchers.ResponseMatchers.hasValidationErrorMessage;
 
 public class InstancesApiExamples extends ApiTests {
 
@@ -502,7 +500,7 @@ public class InstancesApiExamples extends ApiTests {
   @Test
   public void canAddTagToExistingInstanceWithUnconnectedPrecedingSucceeding() {
     var smallAngryPlanet = smallAngryPlanet(UUID.randomUUID());
-    
+
     var precedingTitles = new JsonArray();
     precedingTitles.add(
       new JsonObject()
