@@ -17,6 +17,7 @@ import org.apache.http.message.BasicHeader;
 import org.folio.inventory.config.InventoryConfiguration;
 import org.folio.inventory.config.InventoryConfigurationImpl;
 import org.folio.inventory.domain.instances.PublicationPeriod;
+import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.ContentType;
 import org.folio.inventory.support.http.client.IndividualResource;
@@ -505,6 +506,9 @@ public class InstancesApiExamples extends ApiTests {
     precedingTitles.add(
       new JsonObject()
         .put("title", "Chilton's automotive industries")
+        .put("id", null)
+        .put(PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY, null)
+        .put(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY, null)
         .put("identifiers", new JsonArray().add(
           new JsonObject()
             .put("identifierTypeId", "913300b2-03ed-469a-8179-c1092c991227")
