@@ -506,9 +506,9 @@ public class InstancesApiExamples extends ApiTests {
     precedingTitles.add(
       new JsonObject()
         .put("title", "Chilton's automotive industries")
-        .put("id", null)
-        .put(PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY, null)
-        .put(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY, null)
+        .put("id", UUID.randomUUID().toString())
+        .put(PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY, UUID.randomUUID().toString())
+        .put(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY, UUID.randomUUID().toString())
         .put("identifiers", new JsonArray().add(
           new JsonObject()
             .put("identifierTypeId", "913300b2-03ed-469a-8179-c1092c991227")
