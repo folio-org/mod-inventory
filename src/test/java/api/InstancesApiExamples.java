@@ -518,10 +518,11 @@ public class InstancesApiExamples extends ApiTests {
             .put("identifierTypeId", "913300b2-03ed-469a-8179-c1092c991227")
             .put("value", "0273-656X"))
         ));
+    LOGGER.error("!!!!!! prec: ", precedingTitles);
     smallAngryPlanet.put(PRECEDING_TITLES_KEY, precedingTitles);
     smallAngryPlanet.put("source", "MARC");
 
-    LOGGER.error("!!!!! newInstance:", smallAngryPlanet.toString());
+    LOGGER.error("!!!!! newInstance:", smallAngryPlanet);
 
     final var postCompleted = okapiClient.post(ApiRoot.instances(), smallAngryPlanet);
 
