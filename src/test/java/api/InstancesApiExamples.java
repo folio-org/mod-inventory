@@ -14,9 +14,13 @@ import org.apache.http.Header;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
 import org.apache.http.message.BasicHeader;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.inventory.config.InventoryConfiguration;
 import org.folio.inventory.config.InventoryConfigurationImpl;
+import org.folio.inventory.dataimport.handlers.quickmarc.AbstractQuickMarcEventHandler;
 import org.folio.inventory.domain.instances.PublicationPeriod;
+import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.ContentType;
 import org.folio.inventory.support.http.client.IndividualResource;
@@ -70,6 +74,7 @@ import static org.junit.Assert.assertTrue;
 import static support.matchers.ResponseMatchers.hasValidationError;
 
 public class InstancesApiExamples extends ApiTests {
+  private static final Logger LOGGER = LogManager.getLogger(InstancesApiExamples.class);
 
   private static final InventoryConfiguration config = new InventoryConfigurationImpl();
   private final String tagNameOne = "important";
@@ -498,27 +503,53 @@ public class InstancesApiExamples extends ApiTests {
   }
 
   @Test
-  public void canAddTagToExistingInstanceWithUnconnectedPrecedingSucceeding() {
+  public void canAddTagToExistingInstanceWithUnconnectedPrecedingSucceeding() throws ExecutionException, InterruptedException, TimeoutException, MalformedURLException {
     var smallAngryPlanet = smallAngryPlanet(UUID.randomUUID());
 
     var precedingTitles = new JsonArray();
     precedingTitles.add(
       new JsonObject()
         .put("title", "Chilton's automotive industries")
+        .put("id", UUID.randomUUID().toString())
+        .put(PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY, UUID.randomUUID().toString())
+        .put(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY, UUID.randomUUID().toString())
         .put("identifiers", new JsonArray().add(
           new JsonObject()
             .put("identifierTypeId", "913300b2-03ed-469a-8179-c1092c991227")
             .put("value", "0273-656X"))
         ));
+    LOGGER.error("!!!!!! prec: ", precedingTitles);
     smallAngryPlanet.put(PRECEDING_TITLES_KEY, precedingTitles);
     smallAngryPlanet.put("source", "MARC");
 
-    var newInstance = createInstance(smallAngryPlanet);
+    LOGGER.error("!!!!! newInstance:", smallAngryPlanet);
+
+    final var postCompleted = okapiClient.post(ApiRoot.instances(), smallAngryPlanet);
+
+    Response postResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
+
+    LOGGER.error("!!!! body:", postResponse.getBody());
+    LOGGER.error("!!!! json:", postResponse.getJson());
+
+    assertThat("Failed to create instance",
+      postResponse.getStatusCode(), is(201));
+
+    final var getCompleted = okapiClient.get(postResponse.getLocation());
+
+    Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
+
+    assertThat("Failed to get instance",
+      getResponse.getStatusCode(), is(200));
+
+    var newInstance = getResponse.getJson();
 
     var updateInstanceRequest = newInstance.copy()
       .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add("test")));
 
     var putResponse = updateInstance(updateInstanceRequest);
+    LOGGER.error("!!! body:", putResponse.getBody());
+    LOGGER.error("!!! json:", putResponse.getJson());
+
 
     assertThat(putResponse.getStatusCode(), is(204));
   }
@@ -1003,6 +1034,7 @@ public class InstancesApiExamples extends ApiTests {
 
   @SneakyThrows
   private JsonObject createInstance(JsonObject newInstanceRequest) {
+    LOGGER.error("!!! new Instance Request: ", newInstanceRequest);
     return InstanceApiClient.createInstance(okapiClient, newInstanceRequest);
   }
 
