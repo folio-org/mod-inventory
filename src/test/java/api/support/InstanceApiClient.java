@@ -17,8 +17,6 @@ import org.folio.inventory.support.http.client.Response;
 import io.vertx.core.json.JsonObject;
 
 public class InstanceApiClient {
-  private static final Logger LOGGER = LogManager.getLogger(InstanceApiClient.class);
-
   public static JsonObject createInstance(
     OkapiHttpClient client,
     JsonObject newInstanceRequest)
@@ -30,9 +28,6 @@ public class InstanceApiClient {
     final var postCompleted = client.post(ApiRoot.instances(), newInstanceRequest);
 
     Response postResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
-
-    LOGGER.error("!!!! body:", postResponse.getBody());
-    LOGGER.error("!!!! json:", postResponse.getJson());
 
     assertThat("Failed to create instance",
       postResponse.getStatusCode(), is(201));

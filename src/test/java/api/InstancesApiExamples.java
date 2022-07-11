@@ -503,7 +503,7 @@ public class InstancesApiExamples extends ApiTests {
   }
 
   @Test
-  public void canAddTagToExistingInstanceWithUnconnectedPrecedingSucceeding() {
+  public void canAddTagToExistingInstanceWithUnconnectedPrecedingSucceeding() throws ExecutionException, InterruptedException, TimeoutException, MalformedURLException {
     var smallAngryPlanet = smallAngryPlanet(UUID.randomUUID());
 
     var precedingTitles = new JsonArray();
@@ -521,7 +521,26 @@ public class InstancesApiExamples extends ApiTests {
     smallAngryPlanet.put(PRECEDING_TITLES_KEY, precedingTitles);
     smallAngryPlanet.put("source", "MARC");
 
-    var newInstance = createInstance(smallAngryPlanet);
+    LOGGER.error("!!!!! newInstance:", smallAngryPlanet.toString());
+
+    final var postCompleted = okapiClient.post(ApiRoot.instances(), smallAngryPlanet);
+
+    Response postResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
+
+    LOGGER.error("!!!! body:", postResponse.getBody());
+    LOGGER.error("!!!! json:", postResponse.getJson());
+
+    assertThat("Failed to create instance",
+      postResponse.getStatusCode(), is(201));
+
+    final var getCompleted = okapiClient.get(postResponse.getLocation());
+
+    Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
+
+    assertThat("Failed to get instance",
+      getResponse.getStatusCode(), is(200));
+
+    var newInstance = getResponse.getJson();
 
     var updateInstanceRequest = newInstance.copy()
       .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add("test")));
