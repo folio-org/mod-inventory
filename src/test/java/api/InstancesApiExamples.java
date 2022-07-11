@@ -510,9 +510,6 @@ public class InstancesApiExamples extends ApiTests {
     precedingTitles.add(
       new JsonObject()
         .put("title", "Chilton's automotive industries")
-        .put("id", UUID.randomUUID().toString())
-        .put(PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY, smallAngryPlanet.getString("id"))
-        .put(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY, smallAngryPlanet.getString("id"))
         .put("identifiers", new JsonArray().add(
           new JsonObject()
             .put("identifierTypeId", "913300b2-03ed-469a-8179-c1092c991227")
@@ -523,8 +520,21 @@ public class InstancesApiExamples extends ApiTests {
 
     var newInstance = createInstance(smallAngryPlanet);
 
+    precedingTitles = new JsonArray();
+    precedingTitles.add(
+      new JsonObject()
+        .put("title", "Chilton's automotive industries")
+        .put("id", null)
+        .put(PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY, null)
+        .put(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY, null)
+        .put("identifiers", new JsonArray().add(
+          new JsonObject()
+            .put("identifierTypeId", "913300b2-03ed-469a-8179-c1092c991227")
+            .put("value", "0273-656X"))
+        ));
     var updateInstanceRequest = newInstance.copy()
-      .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add("test")));
+      .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add("test")))
+      .put(PRECEDING_TITLES_KEY, precedingTitles);
 
     var putResponse = updateInstance(updateInstanceRequest);
 
