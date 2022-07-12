@@ -467,7 +467,7 @@ public class InstancesApiExamples extends ApiTests {
   }
 
   @Test
-  public void canUpdateAnExistingInstanceWithPreceedingSucceedingTitlesMarcSource() {
+  public void canUpdateAnExistingInstanceWithPrecedingSucceedingTitlesMarcSource() {
     UUID id = UUID.randomUUID();
 
     JsonObject smallAngryPlanet = smallAngryPlanet(id);
@@ -475,8 +475,8 @@ public class InstancesApiExamples extends ApiTests {
       new JsonArray().add(ApiTestSuite.getBibliographyNatureOfContentTermId()));
     smallAngryPlanet.put(PUBLICATION_PERIOD_KEY, publicationPeriodToJson(new PublicationPeriod(1000, 2000)));
 
-    JsonArray procedingTitles = new JsonArray();
-    procedingTitles.add(
+    JsonArray precedingTitles = new JsonArray();
+    precedingTitles.add(
       new JsonObject()
         .put("title", "Chilton's automotive industries")
         .put("identifiers", new JsonArray().add(
@@ -484,16 +484,28 @@ public class InstancesApiExamples extends ApiTests {
             .put("identifierTypeId", "913300b2-03ed-469a-8179-c1092c991227")
             .put("value", "0273-656X"))
         ));
-    smallAngryPlanet.put(PRECEDING_TITLES_KEY, procedingTitles);
+    smallAngryPlanet.put(PRECEDING_TITLES_KEY, precedingTitles);
     smallAngryPlanet.put("source", "MARC");
 
     JsonObject newInstance = createInstance(smallAngryPlanet);
+
+    precedingTitles = new JsonArray();
+    precedingTitles.add(
+      new JsonObject()
+        .put("title", "Chilton's automotive industries")
+        .put("id", newInstance.getJsonArray("precedingTitles").getJsonObject(0).getString( "id" ))
+        .put(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY, smallAngryPlanet.getString("id"))
+        .put("identifiers", new JsonArray().add(
+          new JsonObject()
+            .put("identifierTypeId", "913300b2-03ed-469a-8179-c1092c991227")
+            .put("value", "0273-656X"))
+        ));
 
     JsonObject updateInstanceRequest = newInstance.copy()
       .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameTwo)))
       .put(PUBLICATION_PERIOD_KEY, publicationPeriodToJson(new PublicationPeriod(2000, 2012)))
       // Deliberately send update request with preceding title without an ID
-      .put(PRECEDING_TITLES_KEY, procedingTitles)
+      .put(PRECEDING_TITLES_KEY, precedingTitles)
       .put("natureOfContentTermIds",
         new JsonArray().add(ApiTestSuite.getAudiobookNatureOfContentTermId()));
 
