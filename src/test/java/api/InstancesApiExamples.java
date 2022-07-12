@@ -524,9 +524,9 @@ public class InstancesApiExamples extends ApiTests {
     precedingTitles.add(
       new JsonObject()
         .put("title", "Chilton's automotive industries")
-        .put("id", null)
+        .put("id", newInstance.getJsonArray("precedingTitles").getJsonObject(0).getString( "id" ))
         .put(PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY, null)
-        .put(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY, null)
+        .put(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY, smallAngryPlanet.getString("id"))
         .put("identifiers", new JsonArray().add(
           new JsonObject()
             .put("identifierTypeId", "913300b2-03ed-469a-8179-c1092c991227")
