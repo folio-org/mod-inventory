@@ -21,7 +21,7 @@ public class ResponseMatchers {
           return false;
         }
 
-        if (!response.getContentType().startsWith(ContentType.APPLICATION_JSON)) {
+        if (!isJsonContent(response)) {
           return false;
         }
 
@@ -50,12 +50,11 @@ public class ResponseMatchers {
       @Override
       protected void describeMismatchSafely(Response response,
         Description mismatchDescription) {
-        mismatchDescription.appendText("Status: ").appendValue(
-            response.getStatusCode())
+        mismatchDescription.appendText("Status: ")
+          .appendValue(response.getStatusCode())
           .appendText(", body: ");
 
-        if (response.getContentType().startsWith(
-          ContentType.APPLICATION_JSON)) {
+        if (isJsonContent(response)) {
           mismatchDescription.appendValue(response.getJson());
         } else {
           mismatchDescription.appendValue(response.getBody());
@@ -74,8 +73,7 @@ public class ResponseMatchers {
           return false;
         }
 
-        if (!response.getContentType().startsWith(
-          ContentType.APPLICATION_JSON)) {
+        if (!isJsonContent(response)) {
           return false;
         }
 
@@ -114,17 +112,20 @@ public class ResponseMatchers {
       @Override
       protected void describeMismatchSafely(Response response,
         Description mismatchDescription) {
-        mismatchDescription.appendText("Status: ").appendValue(
-            response.getStatusCode())
+        mismatchDescription.appendText("Status: ")
+          .appendValue(response.getStatusCode())
           .appendText(", body: ");
 
-        if (response.getContentType().startsWith(
-          ContentType.APPLICATION_JSON)) {
+        if (isJsonContent(response)) {
           mismatchDescription.appendValue(response.getJson());
         } else {
           mismatchDescription.appendValue(response.getBody());
         }
       }
     };
+  }
+
+  private static boolean isJsonContent(Response response) {
+    return response.getContentType().startsWith(ContentType.APPLICATION_JSON);
   }
 }

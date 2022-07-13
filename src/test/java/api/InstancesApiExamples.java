@@ -38,18 +38,35 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-import static api.support.InstanceSamples.*;
+import static api.support.InstanceSamples.leviathanWakes;
+import static api.support.InstanceSamples.marcInstanceWithDefaultBlockedFields;
+import static api.support.InstanceSamples.nod;
+import static api.support.InstanceSamples.smallAngryPlanet;
+import static api.support.InstanceSamples.taoOfPooh;
+import static api.support.InstanceSamples.temeraire;
+import static api.support.InstanceSamples.treasureIslandInstance;
+import static api.support.InstanceSamples.uprooted;
 import static io.vertx.core.http.HttpMethod.POST;
 import static io.vertx.core.http.HttpMethod.PUT;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.folio.inventory.domain.instances.Instance.*;
+import static org.folio.inventory.domain.instances.Instance.PRECEDING_TITLES_KEY;
+import static org.folio.inventory.domain.instances.Instance.PUBLICATION_PERIOD_KEY;
+import static org.folio.inventory.domain.instances.Instance.TAGS_KEY;
+import static org.folio.inventory.domain.instances.Instance.TAG_LIST_KEY;
 import static org.folio.inventory.domain.instances.PublicationPeriod.publicationPeriodToJson;
-import static org.hamcrest.CoreMatchers.*;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.CoreMatchers.hasItem;
+import static org.hamcrest.CoreMatchers.hasItems;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.joda.time.DateTimeZone.UTC;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import static support.matchers.ResponseMatchers.hasValidationError;
 
 public class InstancesApiExamples extends ApiTests {
@@ -481,7 +498,6 @@ public class InstancesApiExamples extends ApiTests {
     JsonObject updateInstanceRequest = newInstance.copy()
       .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameTwo)))
       .put(PUBLICATION_PERIOD_KEY, publicationPeriodToJson(new PublicationPeriod(2000, 2012)))
-      // Deliberately send update request with preceding title without an ID
       .put(PRECEDING_TITLES_KEY, precedingTitles)
       .put("natureOfContentTermIds",
         new JsonArray().add(ApiTestSuite.getAudiobookNatureOfContentTermId()));
