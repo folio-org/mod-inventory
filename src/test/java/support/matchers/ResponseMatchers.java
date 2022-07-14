@@ -13,17 +13,67 @@ import java.util.Objects;
 
 public class ResponseMatchers {
 
-  public static Matcher<Response> hasValidationError(
-    String expectedMessage, String expectedKey, String expectedValue) {
-
-    return new TypeSafeMatcher<Response>() {
+  public static Matcher<Response> hasValidationErrorMessage(String expectedMessage) {
+    return new TypeSafeMatcher<>() {
       @Override
       protected boolean matchesSafely(Response response) {
         if (response.getStatusCode() != 422) {
           return false;
         }
 
-        if (!response.getContentType().startsWith(ContentType.APPLICATION_JSON)) {
+        if (!isJsonContent(response)) {
+          return false;
+        }
+
+          JsonArray errors = response.getJson().getJsonArray("errors");
+          if (errors != null && errors.size() == 1) {
+            JsonObject error = errors.getJsonObject(0);
+            JsonArray parameters = error.getJsonArray("parameters");
+
+            if (parameters != null && parameters.size() == 1) {
+              String message = error.getString("message");
+
+              return Objects.equals(expectedMessage, message);
+            }
+          }
+
+          return false;
+      }
+
+      @Override
+      public void describeTo(Description description) {
+        description
+          .appendText("Response has 422 status and 'message' - ")
+          .appendValue(expectedMessage);
+      }
+
+      @Override
+      protected void describeMismatchSafely(Response response,
+        Description mismatchDescription) {
+        mismatchDescription.appendText("Status: ")
+          .appendValue(response.getStatusCode())
+          .appendText(", body: ");
+
+        if (isJsonContent(response)) {
+          mismatchDescription.appendValue(response.getJson());
+        } else {
+          mismatchDescription.appendValue(response.getBody());
+        }
+      }
+    };
+  }
+
+  public static Matcher<Response> hasValidationError(
+    String expectedMessage, String expectedKey, String expectedValue) {
+
+    return new TypeSafeMatcher<>() {
+      @Override
+      protected boolean matchesSafely(Response response) {
+        if (response.getStatusCode() != 422) {
+          return false;
+        }
+
+        if (!isJsonContent(response)) {
           return false;
         }
 
@@ -53,22 +103,29 @@ public class ResponseMatchers {
       @Override
       public void describeTo(Description description) {
         description
-          .appendText("Response has 422 status and 'message' - ").appendValue(expectedMessage)
+          .appendText("Response has 422 status and 'message' - ").appendValue(
+            expectedMessage)
           .appendText(", 'key' - ").appendValue(expectedKey)
           .appendText(" and 'value' - ").appendValue(expectedValue);
       }
 
       @Override
-      protected void describeMismatchSafely(Response response, Description mismatchDescription) {
-        mismatchDescription.appendText("Status: ").appendValue(response.getStatusCode())
+      protected void describeMismatchSafely(Response response,
+        Description mismatchDescription) {
+        mismatchDescription.appendText("Status: ")
+          .appendValue(response.getStatusCode())
           .appendText(", body: ");
 
-        if (response.getContentType().startsWith(ContentType.APPLICATION_JSON)) {
+        if (isJsonContent(response)) {
           mismatchDescription.appendValue(response.getJson());
         } else {
           mismatchDescription.appendValue(response.getBody());
         }
       }
     };
+  }
+
+  private static boolean isJsonContent(Response response) {
+    return response.getContentType().startsWith(ContentType.APPLICATION_JSON);
   }
 }
