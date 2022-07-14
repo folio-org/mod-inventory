@@ -269,10 +269,6 @@ public class Instances extends AbstractInstances {
   private boolean areInstanceBlockedFieldsChanged(Instance existingInstance, Instance updatedInstance) {
     JsonObject existingInstanceJson = JsonObject.mapFrom(existingInstance);
     JsonObject updatedInstanceJson = JsonObject.mapFrom(updatedInstance);
-
-    zeroingFields(existingInstanceJson.getJsonArray(Instance.PRECEDING_TITLES_KEY));
-    zeroingFields(existingInstanceJson.getJsonArray(Instance.SUCCEEDING_TITLES_KEY));
-
     Map<String, Object> existingBlockedFields = new HashMap<>();
     Map<String, Object> updatedBlockedFields = new HashMap<>();
     for (String blockedFieldCode : config.getInstanceBlockedFields()) {
@@ -280,18 +276,6 @@ public class Instances extends AbstractInstances {
       updatedBlockedFields.put(blockedFieldCode, updatedInstanceJson.getValue(blockedFieldCode));
     }
     return ObjectUtils.notEqual(existingBlockedFields, updatedBlockedFields);
-  }
-
-  private void zeroingFields(JsonArray precedingSucceedingTitles) {
-    if (precedingSucceedingTitles.isEmpty()) {
-      return;
-    }
-    for (int index = 0; index < precedingSucceedingTitles.size(); index++) {
-      JsonObject jsonObject = precedingSucceedingTitles.getJsonObject(index);
-      jsonObject.put(ID, null);
-      jsonObject.put(PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY, null);
-      jsonObject.put(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY, null);
-    }
   }
 
   private void deleteAll(RoutingContext routingContext) {

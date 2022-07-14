@@ -10,6 +10,7 @@ import com.github.jsonldjava.core.JsonLdProcessor;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import lombok.SneakyThrows;
 import org.apache.http.Header;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
@@ -17,6 +18,7 @@ import org.apache.http.message.BasicHeader;
 import org.folio.inventory.config.InventoryConfiguration;
 import org.folio.inventory.config.InventoryConfigurationImpl;
 import org.folio.inventory.domain.instances.PublicationPeriod;
+import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.ContentType;
 import org.folio.inventory.support.http.client.IndividualResource;
@@ -68,7 +70,6 @@ import static org.junit.Assert.assertTrue;
 import static support.matchers.ResponseMatchers.hasValidationError;
 
 public class InstancesApiExamples extends ApiTests {
-
   private static final InventoryConfiguration config = new InventoryConfigurationImpl();
   private final String tagNameOne = "important";
   private final String tagNameTwo = "very important";
@@ -460,12 +461,7 @@ public class InstancesApiExamples extends ApiTests {
   }
 
   @Test
-  public void canUpdateAnExistingInstanceWithPreceedingSucceedingTitlesMarcSource()
-    throws InterruptedException,
-    MalformedURLException,
-    TimeoutException,
-    ExecutionException {
-
+  public void canUpdateAnExistingInstanceWithPrecedingSucceedingTitlesMarcSource() {
     UUID id = UUID.randomUUID();
 
     JsonObject smallAngryPlanet = smallAngryPlanet(id);
@@ -473,8 +469,8 @@ public class InstancesApiExamples extends ApiTests {
       new JsonArray().add(ApiTestSuite.getBibliographyNatureOfContentTermId()));
     smallAngryPlanet.put(PUBLICATION_PERIOD_KEY, publicationPeriodToJson(new PublicationPeriod(1000, 2000)));
 
-    JsonArray procedingTitles = new JsonArray();
-    procedingTitles.add(
+    JsonArray precedingTitles = new JsonArray();
+    precedingTitles.add(
       new JsonObject()
         .put("title", "Chilton's automotive industries")
         .put("identifiers", new JsonArray().add(
@@ -482,15 +478,27 @@ public class InstancesApiExamples extends ApiTests {
             .put("identifierTypeId", "913300b2-03ed-469a-8179-c1092c991227")
             .put("value", "0273-656X"))
         ));
-    smallAngryPlanet.put(PRECEDING_TITLES_KEY, procedingTitles);
+    smallAngryPlanet.put(PRECEDING_TITLES_KEY, precedingTitles);
     smallAngryPlanet.put("source", "MARC");
 
     JsonObject newInstance = createInstance(smallAngryPlanet);
 
+    precedingTitles = new JsonArray();
+    precedingTitles.add(
+      new JsonObject()
+        .put("title", "Chilton's automotive industries")
+        .put("id", newInstance.getJsonArray("precedingTitles").getJsonObject(0).getString( "id" ))
+        .put(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY, smallAngryPlanet.getString("id"))
+        .put("identifiers", new JsonArray().add(
+          new JsonObject()
+            .put("identifierTypeId", "913300b2-03ed-469a-8179-c1092c991227")
+            .put("value", "0273-656X"))
+        ));
+
     JsonObject updateInstanceRequest = newInstance.copy()
       .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameTwo)))
       .put(PUBLICATION_PERIOD_KEY, publicationPeriodToJson(new PublicationPeriod(2000, 2012)))
-      .put(PRECEDING_TITLES_KEY, procedingTitles)
+      .put(PRECEDING_TITLES_KEY, precedingTitles)
       .put("natureOfContentTermIds",
         new JsonArray().add(ApiTestSuite.getAudiobookNatureOfContentTermId()));
 
@@ -500,12 +508,46 @@ public class InstancesApiExamples extends ApiTests {
   }
 
   @Test
-  public void cannotUpdateAnInstanceThatDoesNotExist()
-    throws InterruptedException,
-    MalformedURLException,
-    TimeoutException,
-    ExecutionException {
+  public void canAddTagToExistingInstanceWithUnconnectedPrecedingSucceeding() {
+    var smallAngryPlanet = smallAngryPlanet(UUID.randomUUID());
 
+    var precedingTitles = new JsonArray();
+    precedingTitles.add(
+      new JsonObject()
+        .put("title", "Chilton's automotive industries")
+        .put("identifiers", new JsonArray().add(
+          new JsonObject()
+            .put("identifierTypeId", "913300b2-03ed-469a-8179-c1092c991227")
+            .put("value", "0273-656X"))
+        ));
+    smallAngryPlanet.put(PRECEDING_TITLES_KEY, precedingTitles);
+    smallAngryPlanet.put("source", "MARC");
+
+    var newInstance = createInstance(smallAngryPlanet);
+
+    precedingTitles = new JsonArray();
+    precedingTitles.add(
+      new JsonObject()
+        .put("title", "Chilton's automotive industries")
+        .put("id", newInstance.getJsonArray("precedingTitles").getJsonObject(0).getString( "id" ))
+        .put(PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY, null)
+        .put(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY, smallAngryPlanet.getString("id"))
+        .put("identifiers", new JsonArray().add(
+          new JsonObject()
+            .put("identifierTypeId", "913300b2-03ed-469a-8179-c1092c991227")
+            .put("value", "0273-656X"))
+        ));
+    var updateInstanceRequest = newInstance.copy()
+      .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add("test")))
+      .put(PRECEDING_TITLES_KEY, precedingTitles);
+
+    var putResponse = updateInstance(updateInstanceRequest);
+
+    assertThat(putResponse.getStatusCode(), is(204));
+  }
+
+  @Test
+  public void cannotUpdateAnInstanceThatDoesNotExist() {
     JsonObject updateInstanceRequest = smallAngryPlanet(UUID.randomUUID());
 
     Response putResponse = updateInstance(updateInstanceRequest);
@@ -515,7 +557,7 @@ public class InstancesApiExamples extends ApiTests {
   }
 
   @Test
-  public void cannotUpdateAnInstanceWithOptimisticLockingFailure() throws Exception {
+  public void cannotUpdateAnInstanceWithOptimisticLockingFailure() {
 
     JsonObject instance = createInstance(smallAngryPlanet(ApiTestSuite.ID_FOR_OPTIMISTIC_LOCKING_FAILURE));
 
@@ -555,10 +597,7 @@ public class InstancesApiExamples extends ApiTests {
 
   @Test
   public void canNotUpdateAnExistingMARCInstanceIfBlockedFieldsAreChanged()
-    throws InterruptedException,
-    MalformedURLException,
-    TimeoutException,
-    ExecutionException {
+    throws MalformedURLException {
 
     UUID id = UUID.randomUUID();
     createInstance(treasureIslandInstance(id));
@@ -985,12 +1024,8 @@ public class InstancesApiExamples extends ApiTests {
       .get("@value").toString();
   }
 
-  private JsonObject createInstance(JsonObject newInstanceRequest)
-    throws InterruptedException,
-    MalformedURLException,
-    TimeoutException,
-    ExecutionException {
-
+  @SneakyThrows
+  private JsonObject createInstance(JsonObject newInstanceRequest) {
     return InstanceApiClient.createInstance(okapiClient, newInstanceRequest);
   }
 
@@ -1021,9 +1056,8 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(link.contains(ApiTestSuite.apiRoot()), is(true));
   }
 
-  private Response updateInstance(JsonObject instance) throws MalformedURLException,
-    InterruptedException, ExecutionException, TimeoutException {
-
+  @SneakyThrows
+  private Response updateInstance(JsonObject instance) {
     String instanceUpdateUri = String
       .format("%s/%s", ApiRoot.instances(), instance.getString("id"));
 
