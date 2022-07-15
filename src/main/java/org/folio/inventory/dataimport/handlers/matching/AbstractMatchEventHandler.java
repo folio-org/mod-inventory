@@ -33,6 +33,7 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
+    dataImportEventPayload.setEventType(getNotMatchedEventType());
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
     Context context = constructContext(dataImportEventPayload.getTenant(),
       dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
