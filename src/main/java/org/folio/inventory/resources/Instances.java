@@ -802,25 +802,4 @@ public class Instances extends AbstractInstances {
 
     return completedFuture(existingInstance);
   }
-
-/*  private void fillSucceedingPrecedingInstanceIdsIfExistsInInstance(JsonArray existingPrecedingSucceedingTitles, JsonArray updatedPrecedingSucceedingTitles) {
-    if (existingPrecedingSucceedingTitles.isEmpty()) {
-      return;
-    }
-    for (int index = 0; index < existingPrecedingSucceedingTitles.size(); index++) {
-      if(existingPrecedingSucceedingTitles.getJsonObject(index).getString(PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY) != null
-      && updatedPrecedingSucceedingTitles.getJsonObject(index).getString(PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY) == null) {
-        String existedPrecedingTitle = existingPrecedingSucceedingTitles.getJsonObject(index).getString(PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY);
-        JsonObject jsonObject = updatedPrecedingSucceedingTitles.getJsonObject(index);
-        jsonObject.put(PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY, existedPrecedingTitle);
-      }
-
-      if(existingPrecedingSucceedingTitles.getJsonObject(index).getString(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY) != null
-        && updatedPrecedingSucceedingTitles.getJsonObject(index).getString(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY) == null) {
-        String existedPrecedingTitle = existingPrecedingSucceedingTitles.getJsonObject(index).getString(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY);
-        JsonObject jsonObject = updatedPrecedingSucceedingTitles.getJsonObject(index);
-        jsonObject.put(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY, existedPrecedingTitle);
-      }
-    }
-  }*/
 }
