@@ -270,6 +270,9 @@ public class Instances extends AbstractInstances {
     JsonObject existingInstanceJson = JsonObject.mapFrom(existingInstance);
     JsonObject updatedInstanceJson = JsonObject.mapFrom(updatedInstance);
 
+    // We still need zeroing "succeedingInstanceId" in precedingTitles and "precedingInstanceId" in succeedingTitles
+    // because these fields are not provided for/from UI requests. We just ignore these fields on comparing as a blocked fields.
+    // Anyway they are filled after this comparing while fetching from DB in "updatePrecedingSucceedingTitles"-method.
     zeroingField(existingInstanceJson.getJsonArray(Instance.PRECEDING_TITLES_KEY), PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY);
     zeroingField(existingInstanceJson.getJsonArray(Instance.SUCCEEDING_TITLES_KEY), PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY);
 
