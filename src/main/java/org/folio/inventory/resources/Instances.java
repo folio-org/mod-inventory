@@ -269,6 +269,10 @@ public class Instances extends AbstractInstances {
   private boolean areInstanceBlockedFieldsChanged(Instance existingInstance, Instance updatedInstance) {
     JsonObject existingInstanceJson = JsonObject.mapFrom(existingInstance);
     JsonObject updatedInstanceJson = JsonObject.mapFrom(updatedInstance);
+
+    zeroingField(existingInstanceJson.getJsonArray(Instance.PRECEDING_TITLES_KEY), PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY);
+    zeroingField(existingInstanceJson.getJsonArray(Instance.SUCCEEDING_TITLES_KEY), PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY);
+
     Map<String, Object> existingBlockedFields = new HashMap<>();
     Map<String, Object> updatedBlockedFields = new HashMap<>();
     for (String blockedFieldCode : config.getInstanceBlockedFields()) {
@@ -276,6 +280,16 @@ public class Instances extends AbstractInstances {
       updatedBlockedFields.put(blockedFieldCode, updatedInstanceJson.getValue(blockedFieldCode));
     }
     return ObjectUtils.notEqual(existingBlockedFields, updatedBlockedFields);
+  }
+
+  private void zeroingField(JsonArray precedingSucceedingTitles, String precedingSucceedingInstanceId) {
+    if (precedingSucceedingTitles.isEmpty()) {
+      return;
+    }
+    for (int index = 0; index < precedingSucceedingTitles.size(); index++) {
+      JsonObject jsonObject = precedingSucceedingTitles.getJsonObject(index);
+      jsonObject.put(precedingSucceedingInstanceId, null);
+    }
   }
 
   private void deleteAll(RoutingContext routingContext) {
@@ -785,4 +799,25 @@ public class Instances extends AbstractInstances {
 
     return completedFuture(existingInstance);
   }
+
+/*  private void fillSucceedingPrecedingInstanceIdsIfExistsInInstance(JsonArray existingPrecedingSucceedingTitles, JsonArray updatedPrecedingSucceedingTitles) {
+    if (existingPrecedingSucceedingTitles.isEmpty()) {
+      return;
+    }
+    for (int index = 0; index < existingPrecedingSucceedingTitles.size(); index++) {
+      if(existingPrecedingSucceedingTitles.getJsonObject(index).getString(PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY) != null
+      && updatedPrecedingSucceedingTitles.getJsonObject(index).getString(PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY) == null) {
+        String existedPrecedingTitle = existingPrecedingSucceedingTitles.getJsonObject(index).getString(PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY);
+        JsonObject jsonObject = updatedPrecedingSucceedingTitles.getJsonObject(index);
+        jsonObject.put(PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY, existedPrecedingTitle);
+      }
+
+      if(existingPrecedingSucceedingTitles.getJsonObject(index).getString(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY) != null
+        && updatedPrecedingSucceedingTitles.getJsonObject(index).getString(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY) == null) {
+        String existedPrecedingTitle = existingPrecedingSucceedingTitles.getJsonObject(index).getString(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY);
+        JsonObject jsonObject = updatedPrecedingSucceedingTitles.getJsonObject(index);
+        jsonObject.put(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY, existedPrecedingTitle);
+      }
+    }
+  }*/
 }
