@@ -34,6 +34,7 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
+    dataImportEventPayload.setEventType(getNotMatchedEventType());
     Context context = constructContext(dataImportEventPayload.getTenant(),
       dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
 

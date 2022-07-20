@@ -264,6 +264,22 @@ public class MatchInstanceEventHandlerUnitTest {
   }
 
   @Test
+  public void shouldSetInstanceNotMatchedEventToEventPayloadOnHandleIfFailedToGetMappingMetadata(TestContext testContext) {
+    Async async = testContext.async();
+    when(mappingMetadataCache.get(anyString(), any(Context.class)))
+      .thenReturn(Future.failedFuture("test error"));
+
+    EventHandler eventHandler = new MatchInstanceEventHandler(mappingMetadataCache);
+    DataImportEventPayload eventPayload = createEventPayload();
+
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
+      testContext.assertNotNull(throwable);
+      testContext.assertEquals(DI_INVENTORY_INSTANCE_NOT_MATCHED.value(), eventPayload.getEventType());
+      async.complete();
+    });
+  }
+
+  @Test
   public void shouldReturnFalseOnIsEligibleIfNullCurrentNode() {
     EventHandler eventHandler = new MatchInstanceEventHandler(mappingMetadataCache);
     DataImportEventPayload eventPayload = new DataImportEventPayload();
