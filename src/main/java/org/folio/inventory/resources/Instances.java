@@ -269,6 +269,13 @@ public class Instances extends AbstractInstances {
   private boolean areInstanceBlockedFieldsChanged(Instance existingInstance, Instance updatedInstance) {
     JsonObject existingInstanceJson = JsonObject.mapFrom(existingInstance);
     JsonObject updatedInstanceJson = JsonObject.mapFrom(updatedInstance);
+
+    // We still need zeroing "succeedingInstanceId" in precedingTitles and "precedingInstanceId" in succeedingTitles
+    // because these fields are not provided for/from UI requests. We just ignore these fields on comparing as a blocked fields.
+    // Anyway they are filled after this comparing while fetching from DB in "updatePrecedingSucceedingTitles"-method.
+    zeroingField(existingInstanceJson.getJsonArray(Instance.PRECEDING_TITLES_KEY), PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY);
+    zeroingField(existingInstanceJson.getJsonArray(Instance.SUCCEEDING_TITLES_KEY), PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY);
+
     Map<String, Object> existingBlockedFields = new HashMap<>();
     Map<String, Object> updatedBlockedFields = new HashMap<>();
     for (String blockedFieldCode : config.getInstanceBlockedFields()) {
@@ -276,6 +283,16 @@ public class Instances extends AbstractInstances {
       updatedBlockedFields.put(blockedFieldCode, updatedInstanceJson.getValue(blockedFieldCode));
     }
     return ObjectUtils.notEqual(existingBlockedFields, updatedBlockedFields);
+  }
+
+  private void zeroingField(JsonArray precedingSucceedingTitles, String precedingSucceedingInstanceId) {
+    if (precedingSucceedingTitles.isEmpty()) {
+      return;
+    }
+    for (int index = 0; index < precedingSucceedingTitles.size(); index++) {
+      JsonObject jsonObject = precedingSucceedingTitles.getJsonObject(index);
+      jsonObject.put(precedingSucceedingInstanceId, null);
+    }
   }
 
   private void deleteAll(RoutingContext routingContext) {
