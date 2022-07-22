@@ -1,3 +1,8 @@
+## 18.2.1 2022-07-22
+
+* Pre-set event type to payload before processing event for entities matching ([MODINV-723](https://issues.folio.org/browse/MODINV-723))
+* Cannot add tag when unlinked preceding title ([MODINV-674](https://issues.folio.org/browse/MODINV-674))
+
 ## 18.2.0 2022-06-27
 
 * Add source record preparation before mapping to instance for instance update ([MODINV-686](https://issues.folio.org/browse/MODINV-686))
