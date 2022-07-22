@@ -160,7 +160,7 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
       var holdings = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
       return Future.succeededFuture(holdings);
     } catch (Exception e) {
-      LOGGER.error("Failed to map Record to Holding", e);
+      LOGGER.error("Failed to map Record to Holdings", e);
       return Future.failedFuture(new JsonMappingException("Error in default mapper.", e));
     }
   }
@@ -191,16 +191,16 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
                                     Promise<HoldingsRecord> promise) {
     mappedRecord.setVersion(actualRecord.getVersion());
     findInstanceIdByHrid(payload, mappedRecord, context)
-      .onSuccess(instanceId -> mappedRecord.setInstanceId(instanceId))
-      .onFailure(e -> promise.fail(e));
+      .onSuccess(mappedRecord::setInstanceId)
+      .onFailure(promise::fail);
   }
 
   private Future<String> findInstanceIdByHrid(DataImportEventPayload dataImportEventPayload, HoldingsRecord mappedRecord, Context context) {
     Promise<String> promise = Promise.promise();
     String instanceId = mappedRecord.getInstanceId();
     if (StringUtils.isBlank(instanceId)) {
-      var record = Json.decodeValue(getMarcHoldingRecordAsString(dataImportEventPayload), Record.class);
-      var instanceHrid = getControlFieldValue(record, INSTANCE_HRID_TAG);
+      var rec = Json.decodeValue(getMarcHoldingRecordAsString(dataImportEventPayload), Record.class);
+      var instanceHrid = getControlFieldValue(rec, INSTANCE_HRID_TAG);
       if (isBlank(instanceHrid)) {
         promise.fail(new EventProcessingException(FIELD_004_MARC_HOLDINGS_NOT_NULL));
       } else {
@@ -224,7 +224,7 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
   private Handler<Throwable> failureHandler(DataImportEventPayload payload,
                                             CompletableFuture<DataImportEventPayload> future) {
     return e -> {
-      LOGGER.error(constructMsg(format(ACTION_FAILED_MSG_PATTERN, UPDATE, HOLDINGS), payload), e);
+      LOGGER.error(() -> constructMsg(format(ACTION_FAILED_MSG_PATTERN, UPDATE, HOLDINGS), payload), e);
       future.completeExceptionally(e);
     };
   }
@@ -232,7 +232,7 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
   private Handler<HoldingsRecord> successHandler(DataImportEventPayload payload,
                                                  CompletableFuture<DataImportEventPayload> future) {
     return holdings -> {
-      LOGGER.info(constructMsg(format(ACTION_SUCCEED_MSG_PATTERN, UPDATE, HOLDINGS), payload));
+      LOGGER.info(() -> constructMsg(format(ACTION_SUCCEED_MSG_PATTERN, UPDATE, HOLDINGS), payload));
       publishEvent(payload);
       future.complete(payload);
     };
