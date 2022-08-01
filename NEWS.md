@@ -1,3 +1,7 @@
+## 18.3.0 IN-PROGRESS
+
+* Now supports interface users 15.0, 16.0 (MODINV-725)
+
 ## 18.2.0 2022-06-27
 
 * Add source record preparation before mapping to instance for instance update ([MODINV-686](https://issues.folio.org/browse/MODINV-686))
