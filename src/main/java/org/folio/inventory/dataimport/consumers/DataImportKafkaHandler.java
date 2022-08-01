@@ -41,6 +41,7 @@ import org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandl
 import org.folio.inventory.dataimport.handlers.actions.UpdateAuthorityEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.UpdateHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler;
+import org.folio.inventory.dataimport.handlers.actions.UpdateMarcHoldingsEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchAuthorityEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchInstanceEventHandler;
@@ -165,6 +166,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     EventManager.registerEventHandler(new CreateHoldingEventHandler(storage, mappingMetadataCache, new HoldingsIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx)))));
     EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, new InstanceIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx)))));
     EventManager.registerEventHandler(new CreateMarcHoldingsEventHandler(storage, mappingMetadataCache, new HoldingsIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))),new HoldingsCollectionService()));
+    EventManager.registerEventHandler(new UpdateMarcHoldingsEventHandler(storage, mappingMetadataCache, new HoldingsCollectionService(), new KafkaEventPublisher(kafkaConfig, vertx, 100)));
     EventManager.registerEventHandler(new CreateAuthorityEventHandler(storage, mappingMetadataCache, new AuthorityIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx)))));
     EventManager.registerEventHandler(new UpdateAuthorityEventHandler(storage, mappingMetadataCache, new KafkaEventPublisher(kafkaConfig, vertx, 100)));
     EventManager.registerEventHandler(new DeleteAuthorityEventHandler(storage));
