@@ -854,10 +854,12 @@ public class Instance {
     return addIdentifier(identifier);
   }
 
-  public Instance addContributor(String contributorNameTypeId, String name, String contributorTypeId, String contributorTypeText, Boolean primary) {
+  public Instance addContributor(String contributorNameTypeId, String name, String contributorTypeId,
+                                 String contributorTypeText, String authorityId, Boolean primary) {
     List<Contributor> newContributors = new ArrayList<>(this.contributors);
 
-    newContributors.add(new Contributor(contributorNameTypeId, name, contributorTypeId, contributorTypeText, primary));
+    newContributors.add(new Contributor(contributorNameTypeId, name, contributorTypeId, contributorTypeText,
+      authorityId, primary));
 
     return copyInstance().setContributors(newContributors);
   }

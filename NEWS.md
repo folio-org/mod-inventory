@@ -1,6 +1,7 @@
 ## 18.3.0 IN-PROGRESS
 
 * Now supports interface users 15.0, 16.0 (MODINV-725)
+* Extend instance contributors schema with Authority ID ([MODINV-729](https://issues.folio.org/browse/MODINV-729))
 
 ## 18.2.0 2022-06-27
 
