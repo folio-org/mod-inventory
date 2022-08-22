@@ -168,7 +168,7 @@ public class InstanceSamples {
       .put("identifiers", new JsonArray()
         .add(JsonObject.mapFrom(new Identifier("test identifier type id", "test identifier value"))))
       .put("contributors", new JsonArray()
-        .add(JsonObject.mapFrom(new Contributor("test name type id", "test name", "test type id", "test text", true))))
+        .add(JsonObject.mapFrom(new Contributor("test name type id", "test name", "test type id", "test text", "test authority id", true))))
       .put("publication", new JsonArray()
         .add(JsonObject.mapFrom(new Publication("test publisher", "test place", LocalDate.now().toString(), "test role"))))
       .put("editions", new JsonArray().add("test edition"))
