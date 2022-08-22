@@ -1,6 +1,6 @@
 #%RAML 1.0
 title: Inventory API
-version: v11.5
+version: v12.0
 protocols: [ HTTP, HTTPS ]
 baseUri: http://localhost
 
@@ -44,9 +44,20 @@ resourceTypes:
           ]
     post:
     delete:
+      is: [searchable: { description: "CQL to select items to delete, use cql.allRecords=1 to delete all", example: "barcode==\"123-0*\"" } ]
       responses:
         204:
-          description: "All items deleted"
+          description: "Selected items deleted"
+        400:
+          description: "Bad request, e.g. malformed query parameter"
+          body:
+            text/plain:
+              example: "query parameter is empty"
+        500:
+          description: "Internal server error, e.g. due to misconfiguration"
+          body:
+            text/plain:
+              example: "Internal server error, contact administrator"
     /{itemId}:
       type:
         collection-item:
@@ -335,9 +346,21 @@ resourceTypes:
     post:
       is: [validate]
     delete:
+      is: [searchable: { description: "CQL to select instances to delete, use cql.allRecords=1 to delete all. Deletes connected marc source records.",
+                         example: "hrid==\"in123-0*\"" } ]
       responses:
         204:
-          description: "All instances deleted"
+          description: "Selected instances deleted"
+        400:
+          description: "Bad request, e.g. malformed query parameter"
+          body:
+            text/plain:
+              example: "query parameter is empty"
+        500:
+          description: "Internal server error, e.g. due to misconfiguration"
+          body:
+            text/plain:
+              example: "Internal server error, contact administrator"
     /{instanceId}:
       type:
         collection-item:

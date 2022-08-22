@@ -19,11 +19,16 @@ public class InMemoryIngestJobCollection implements IngestJobCollection {
 
   @Override
   public void empty(
+    String cqlQuery,
     Consumer<Success<Void>> completionCallback,
     Consumer<Failure> failureCallback) {
 
-    items.clear();
-    completionCallback.accept(new Success<>(null));
+    if ("cql.allRecords=1".equals(cqlQuery)) {
+      items.clear();
+      completionCallback.accept(new Success<>(null));
+    } else {
+      failureCallback.accept(new Failure("DELETE query=" + cqlQuery + " is not implemented", 500));
+    }
   }
 
   @Override

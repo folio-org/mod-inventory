@@ -23,6 +23,7 @@ import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.ContentType;
 import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
+import org.folio.util.PercentCodec;
 import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Assert;
@@ -708,7 +709,8 @@ public class InstancesApiExamples extends ApiTests {
     createInstance(nod(UUID.randomUUID()));
     createInstance(leviathanWakes(UUID.randomUUID()));
 
-    final var deleteCompleted = okapiClient.delete(ApiRoot.instances());
+    final var deleteCompleted = okapiClient.delete(
+        ApiRoot.instances() + "?query=" + PercentCodec.encode("cql.allRecords=1"));
 
     Response deleteResponse = deleteCompleted.toCompletableFuture().get(5, SECONDS);
 

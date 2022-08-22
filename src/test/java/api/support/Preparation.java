@@ -11,6 +11,7 @@ import java.util.concurrent.TimeoutException;
 
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
+import org.folio.util.PercentCodec;
 
 public class Preparation {
   private final OkapiHttpClient client;
@@ -40,7 +41,8 @@ public class Preparation {
   private void deleteAll(URL root)
     throws InterruptedException, ExecutionException, TimeoutException {
 
-    final var deleteCompleted = client.delete(root);
+    final var deleteCompleted = client.delete(
+        root + "?query=" + PercentCodec.encode("cql.allRecords=1"));
 
     Response response = deleteCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
 

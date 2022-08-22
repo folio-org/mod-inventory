@@ -11,8 +11,14 @@ import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.exceptions.InternalServerErrorException;
 
 public interface AsynchronousCollection<T> {
-  void empty(Consumer<Success<Void>> completionCallback,
+  void empty(String cqlQuery,
+             Consumer<Success<Void>> completionCallback,
              Consumer<Failure> failureCallback);
+
+  default void empty(Consumer<Success<Void>> completionCallback,
+                     Consumer<Failure> failureCallback) {
+    empty("cql.allRecords=1", completionCallback, failureCallback);
+  }
 
   void add(T item,
            Consumer<Success<T>> resultCallback,

@@ -9,7 +9,6 @@ import org.junit.Test;
 
 import java.util.HashMap;
 import java.util.Map;
-
 import static api.ApiTestSuite.TENANT_ID;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.folio.HttpStatus.HTTP_INTERNAL_SERVER_ERROR;
@@ -80,7 +79,7 @@ public class TenantApiTest extends ApiTests {
       DB_PORT, String.valueOf(pgConnectOptions.getPort()),
       DB_USERNAME, pgConnectOptions.getUser(),
       DB_PASSWORD, pgConnectOptions.getPassword());
-    PostgresConnectionOptions.setSystemProperties(new HashMap<>());
+    PostgresConnectionOptions.setSystemProperties(Map.of(DB_HOST, "invalid"));
 
     final var deleteCompletedBefore = okapiClient
       .delete(ApiRoot.tenant());

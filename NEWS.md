@@ -2,6 +2,8 @@
 
 * Now supports interface users 15.0, 16.0 (MODINV-725)
 * Extend instance contributors schema with Authority ID ([MODINV-729](https://issues.folio.org/browse/MODINV-729))
+* Delete instance/item by CQL ([MODINV-731](https://issues.folio.org/browse/MODINV-731))
+* Provides inventory 12.0, supports instance-storage 9.0, holdings-storage 6.0, item-storage 10.0.
 
 ## 18.2.0 2022-06-27
 
