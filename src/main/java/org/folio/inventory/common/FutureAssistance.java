@@ -20,7 +20,7 @@ public class FutureAssistance {
   public static <T> T getOnCompletion(Consumer<CompletableFuture<T>> task)
       throws InterruptedException, ExecutionException, TimeoutException {
 
-    CompletableFuture<T> future = new CompletableFuture<T>();
+    CompletableFuture<T> future = new CompletableFuture<>();
     task.accept(future);
     return getOnCompletion(future);
   }
