@@ -12,15 +12,18 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import lombok.SneakyThrows;
 
 import static org.folio.inventory.common.FutureAssistance.complete;
 import static org.folio.inventory.common.FutureAssistance.fail;
 import static org.folio.inventory.common.FutureAssistance.getOnCompletion;
 import static org.folio.inventory.common.FutureAssistance.succeed;
 import static org.folio.inventory.common.FutureAssistance.waitForCompletion;
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertThrows;
 
 public class InMemoryIngestJobCollectionExamples {
 
@@ -143,5 +146,38 @@ public class InMemoryIngestJobCollectionExamples {
 
     assertThat(allJobs.size(), is(1));
     assertThat(allJobs.stream().findFirst().get().id, is(added.id));
+  }
+
+  @Test
+  public void canDeleteAllJobs() {
+    addJob();
+    addJob();
+    assertThat(jobCount(), is(2));
+    emptyJobs("cql.allRecords=1");
+    assertThat(jobCount(), is(0));
+  }
+
+  @Test
+  public void cannotDeleteWithUnsupportedQueryType() {
+    var e = assertThrows(ExecutionException.class, () -> emptyJobs("id==123"));
+    assertThat(e.getCause().getMessage(), containsString("Not implemented"));
+  }
+
+  @SneakyThrows
+  private String addJob() {
+    return getOnCompletion((CompletableFuture<IngestJob> add) ->
+        collection.add(new IngestJob(IngestJobState.REQUESTED), succeed(add), fail(add))).id;
+  }
+
+  @SneakyThrows
+  private void emptyJobs(String cqlQuery) {
+    waitForCompletion((CompletableFuture<Success<Void>> emptied) ->
+        collection.empty(cqlQuery, complete(emptied), fail(emptied)));
+  }
+
+  @SneakyThrows
+  private int jobCount() {
+    return getOnCompletion((CompletableFuture<MultipleRecords<IngestJob>> find) ->
+        collection.findAll(PagingParameters.defaults(), succeed(find), fail(find))).records.size();
   }
 }

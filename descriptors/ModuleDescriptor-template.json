@@ -551,11 +551,11 @@
   "requires": [
     {
       "id": "item-storage",
-      "version": "8.9 9.0 10.0"
+      "version": "10.0"
     },
     {
       "id": "instance-storage",
-      "version": "7.8 8.0 9.0"
+      "version": "9.0"
     },
     {
       "id": "instance-storage-batch",

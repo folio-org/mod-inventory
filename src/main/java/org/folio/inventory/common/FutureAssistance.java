@@ -12,15 +12,31 @@ import java.util.function.Consumer;
 
 public class FutureAssistance {
   public static <T> T getOnCompletion(CompletableFuture<T> future)
-    throws InterruptedException, ExecutionException, TimeoutException {
+      throws InterruptedException, ExecutionException, TimeoutException {
 
     return future.get(2000, TimeUnit.MILLISECONDS);
   }
 
-  public static void waitForCompletion(CompletableFuture future)
-    throws InterruptedException, ExecutionException, TimeoutException {
+  public static <T> T getOnCompletion(Consumer<CompletableFuture<T>> task)
+      throws InterruptedException, ExecutionException, TimeoutException {
+
+    CompletableFuture<T> future = new CompletableFuture<T>();
+    task.accept(future);
+    return getOnCompletion(future);
+  }
+
+  public static <T> void waitForCompletion(CompletableFuture<T> future)
+      throws InterruptedException, ExecutionException, TimeoutException {
 
     future.get(2000, TimeUnit.MILLISECONDS);
+  }
+
+  public static <T> void waitForCompletion(Consumer<CompletableFuture<T>> task)
+      throws InterruptedException, ExecutionException, TimeoutException {
+
+    CompletableFuture<T> future = new CompletableFuture<>();
+    task.accept(future);
+    waitForCompletion(future);
   }
 
   public static Consumer<Success<Void>> complete(final CompletableFuture<Success<Void>> future) {

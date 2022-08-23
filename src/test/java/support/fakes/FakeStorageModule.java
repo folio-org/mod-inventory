@@ -275,8 +275,14 @@ class FakeStorageModule extends AbstractVerticle {
     }
 
     Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
+    List<String> queries = routingContext.queryParam("query");
+    String query = queries.size() == 1 ? queries.get(0) : "";
 
-    resourcesForTenant.clear();
+    if (query.startsWith("id==")) {
+      resourcesForTenant.remove(query.substring(4));
+    } else {
+      resourcesForTenant.clear();
+    }
 
     SuccessResponse.noContent(routingContext.response());
   }
