@@ -7,6 +7,7 @@ import static org.folio.inventory.common.FutureAssistance.waitForCompletion;
 import static org.folio.inventory.storage.external.ExternalStorageSuite.getStorageAddress;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
@@ -87,6 +88,12 @@ public class ExternalInstanceCollectionExamples {
     assertThat(getSize(), is(1));
     empty("id==" + instance2.getId());
     assertThat(getSize(), is(0));
+  }
+
+  @Test
+  public void cannotEmptyIfCqlIsMissing() {
+    var e = assertThrows(ExecutionException.class, () -> empty(null));
+    assertThat(e.getCause().getMessage(), is("query parameter is required"));
   }
 
   @Test
