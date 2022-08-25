@@ -299,6 +299,7 @@ public class Instances extends AbstractInstances {
     WebContext context = new WebContext(routingContext);
 
     storage.getInstanceCollection(context).empty(
+      routingContext.request().getParam("query"),
       v -> noContent(routingContext.response()),
       FailureResponseConsumer.serverError(routingContext.response()));
   }

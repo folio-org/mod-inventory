@@ -6,6 +6,7 @@ import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
+import org.folio.util.PercentCodec;
 import org.joda.time.DateTime;
 import support.fakes.EndpointFailureDescriptor;
 
@@ -259,7 +260,8 @@ public class ResourceClient {
     ExecutionException,
     TimeoutException {
 
-    final var deleteCompleted = client.delete(urlMaker.combine(""));
+    final var deleteCompleted = client.delete(urlMaker.combine(
+        "?query=" + PercentCodec.encode("cql.allRecords=1")));
 
     Response response = deleteCompleted.toCompletableFuture().get(5, SECONDS);
 

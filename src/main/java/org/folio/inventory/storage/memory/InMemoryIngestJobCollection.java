@@ -6,7 +6,6 @@ import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.ingest.IngestJobCollection;
 import org.folio.inventory.resources.ingest.IngestJob;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -17,11 +16,19 @@ import java.util.stream.Collectors;
 public class InMemoryIngestJobCollection implements IngestJobCollection {
   private final List<IngestJob> items = new ArrayList<>();
 
+  /**
+   * This method is used by unit tests only.
+   */
   @Override
   public void empty(
+    String cqlQuery,
     Consumer<Success<Void>> completionCallback,
     Consumer<Failure> failureCallback) {
 
+    if (! "cql.allRecords=1".equals(cqlQuery)) {
+      failureCallback.accept(new Failure("Not implemented, query must be cql.allRecords=1", 400));
+      return;
+    }
     items.clear();
     completionCallback.accept(new Success<>(null));
   }

@@ -22,7 +22,7 @@ import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.Response;
-
+import org.folio.util.PercentCodec;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -143,10 +143,15 @@ abstract class ExternalStorageModuleCollection<T> {
   }
 
   public void empty(
+    String cqlQuery,
     Consumer<Success<Void>> completionCallback,
     Consumer<Failure> failureCallback) {
 
-    deleteLocation(storageAddress, completionCallback, failureCallback);
+    if (cqlQuery == null) {
+      failureCallback.accept(new Failure("query parameter is required", 400));
+      return;
+    }
+    deleteLocation(storageAddress + "?query=" + PercentCodec.encode(cqlQuery), completionCallback, failureCallback);
   }
 
   public void findByCql(String cqlQuery,

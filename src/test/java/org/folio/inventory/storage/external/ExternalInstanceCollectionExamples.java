@@ -7,6 +7,7 @@ import static org.folio.inventory.common.FutureAssistance.waitForCompletion;
 import static org.folio.inventory.storage.external.ExternalStorageSuite.getStorageAddress;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
@@ -15,7 +16,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-
+import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.common.WaitForAllFutures;
 import org.folio.inventory.common.api.request.PagingParameters;
@@ -72,6 +73,27 @@ public class ExternalInstanceCollectionExamples {
 
     assertThat(allInstances.size(), is(0));
     assertThat(allInstancesWrapped.totalRecords, is(0));
+  }
+
+  @Test
+  public void canBeEmptiedByCql() {
+    var instance1 = createInstance("foo");
+    var instance2 = createInstance("bar");
+    addInstance(instance1);
+    addInstance(instance2);
+    assertThat(getSize(), is(2));
+    empty("id==" + instance1.getId());
+    assertThat(getSize(), is(1));
+    empty("id==" + instance1.getId());
+    assertThat(getSize(), is(1));
+    empty("id==" + instance2.getId());
+    assertThat(getSize(), is(0));
+  }
+
+  @Test
+  public void cannotEmptyIfCqlIsMissing() {
+    var e = assertThrows(ExecutionException.class, () -> empty(null));
+    assertThat(e.getCause().getMessage(), is("query parameter is required"));
   }
 
   @Test
@@ -338,6 +360,24 @@ public class ExternalInstanceCollectionExamples {
                 .setAlternativeTitles(new ArrayList<>())
                 .setIdentifiers(new ArrayList<>())
                 .setContributors(new ArrayList<>());
+  }
+
+  @SneakyThrows
+  private void addInstance(Instance instance) {
+    waitForCompletion((CompletableFuture<Instance> add) -> collection.add(instance, succeed(add), fail(add)));
+  }
+
+  @SneakyThrows
+  private void empty(String cqlQuery) {
+    waitForCompletion((CompletableFuture<Void> emptied) ->
+        collection.empty(cqlQuery, succeed(emptied), fail(emptied)));
+  }
+
+  @SneakyThrows
+  private int getSize() {
+    return getOnCompletion((CompletableFuture<MultipleRecords<Instance>> find) ->
+        collection.findAll(PagingParameters.defaults(), succeed(find), fail(find)))
+        .records.size();
   }
 
   private static boolean hasIdentifier(

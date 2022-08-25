@@ -153,6 +153,7 @@ public class Items extends AbstractInventoryResource {
     WebContext context = new WebContext(routingContext);
 
     storage.getItemCollection(context).empty(
+      routingContext.request().getParam("query"),
       v -> SuccessResponse.noContent(routingContext.response()),
       FailureResponseConsumer.serverError(routingContext.response()));
   }
