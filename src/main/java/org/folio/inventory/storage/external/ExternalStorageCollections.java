@@ -5,18 +5,15 @@ import org.folio.inventory.domain.CollectionProvider;
 import org.folio.inventory.domain.HoldingCollection;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.HoldingsRecordsSourceCollection;
-import org.folio.inventory.domain.ingest.IngestJobCollection;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.user.UserCollection;
-import org.folio.inventory.storage.memory.InMemoryIngestJobCollection;
 
 import io.vertx.core.http.HttpClient;
 
 public class ExternalStorageCollections implements CollectionProvider {
   private final String baseAddress;
   private final HttpClient client;
-  private static final InMemoryIngestJobCollection ingestJobCollection = new InMemoryIngestJobCollection();
 
   public ExternalStorageCollections(String baseAddress, HttpClient client) {
     this.baseAddress = baseAddress;
@@ -51,12 +48,6 @@ public class ExternalStorageCollections implements CollectionProvider {
   public AuthorityRecordCollection getAuthorityCollection(String tenantId, String token) {
     return new ExternalStorageModuleAuthorityRecordCollection(baseAddress,
         tenantId, token, client);
-  }
-
-  @Override
-  public IngestJobCollection getIngestJobCollection(String tenantId, String token) {
-    //There is no external storage implementation for Jobs yet
-    return ingestJobCollection;
   }
 
   @Override

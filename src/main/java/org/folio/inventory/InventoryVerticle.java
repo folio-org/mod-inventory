@@ -1,18 +1,11 @@
 package org.folio.inventory;
 
-import io.vertx.core.AbstractVerticle;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
-import io.vertx.core.Promise;
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.http.HttpServer;
-import io.vertx.core.json.JsonObject;
+import java.lang.invoke.MethodHandles;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import io.vertx.ext.web.Router;
 import org.folio.inventory.common.WebRequestDiagnostics;
 import org.folio.inventory.common.dao.PostgresClientFactory;
-import org.folio.inventory.domain.ingest.IngestMessageProcessor;
 import org.folio.inventory.resources.Holdings;
 import org.folio.inventory.resources.Instances;
 import org.folio.inventory.resources.InstancesBatch;
@@ -22,10 +15,16 @@ import org.folio.inventory.resources.Items;
 import org.folio.inventory.resources.ItemsByHoldingsRecordId;
 import org.folio.inventory.resources.MoveApi;
 import org.folio.inventory.resources.TenantApi;
-import org.folio.inventory.resources.ingest.ModsIngestion;
 import org.folio.inventory.storage.Storage;
 
-import java.lang.invoke.MethodHandles;
+import io.vertx.core.AbstractVerticle;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
+import io.vertx.core.Promise;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpServer;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.Router;
 
 public class InventoryVerticle extends AbstractVerticle {
   private HttpServer server;
@@ -51,11 +50,8 @@ public class InventoryVerticle extends AbstractVerticle {
 
     Storage storage = Storage.basedUpon(config, client);
 
-    new IngestMessageProcessor(storage).register(vertx.eventBus());
-
     router.route().handler(WebRequestDiagnostics::outputDiagnostics);
 
-    new ModsIngestion(storage, client).register(router);
     new Items(storage, client).register(router);
     new MoveApi(storage, client).register(router);
     new Instances(storage, client).register(router);
@@ -68,7 +64,7 @@ public class InventoryVerticle extends AbstractVerticle {
 
     Handler<AsyncResult<HttpServer>> onHttpServerStart = result -> {
       if (result.succeeded()) {
-        log.info(String.format("Listening on %s", server.actualPort()));
+        log.info("Listening on {}", server.actualPort());
         started.complete();
       } else {
         started.fail(result.cause());
