@@ -16,8 +16,6 @@ types:
   instance: !include instance.json
   instances: !include instances.json
 
-  ingest-status: !include ingest-status.json
-
 traits:
   language: !include raml-util/traits/language.raml
   pageable: !include raml-util/traits/pageable.raml
@@ -369,38 +367,3 @@ resourceTypes:
       get:
       put:
         is: [validate]
-  /ingest:
-    /mods:
-      post:
-        body:
-          multipart/form-data:
-            properties:
-              file:
-                description: MODS file containing items to ingest
-                required: true
-                type: file
-        responses:
-          202:
-            headers:
-              location:
-                description: URI pointing to the location of ingest status
-          400:
-            body:
-              text/plain:
-                example: "Cannot parse multiple files in a single request"
-          500:
-            body:
-              text/plain:
-      /status:
-        /{id}:
-          get:
-            description: Status of a MODS ingest
-            responses:
-              200:
-                body:
-                  application/json:
-                    example: !include examples/ingest_status_get.json
-                    schema: ingest-status
-              500:
-                body:
-                  text/plain:
