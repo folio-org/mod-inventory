@@ -3,16 +3,14 @@ package org.folio.inventory.storage.external.failure;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.any;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
-import java.io.UnsupportedEncodingException;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import org.folio.inventory.common.VertxAssistant;
 import org.folio.inventory.common.api.request.PagingParameters;
@@ -22,43 +20,40 @@ import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.domain.items.Status;
 import org.folio.inventory.storage.external.ExternalStorageCollections;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.github.tomakehurst.wiremock.junit.WireMockRule;
+import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
+import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
+import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
+
+import lombok.SneakyThrows;
 
 public class ExternalItemCollectionBadRequestExamples {
   private static final VertxAssistant vertxAssistant = new VertxAssistant();
 
-  @ClassRule
-  public static WireMockRule wireMockServer = new WireMockRule();
+  @RegisterExtension
+  static WireMockExtension wireMockServer = WireMockExtension.newInstance()
+    .options(wireMockConfig().dynamicPort())
+    .build();
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeAll() {
     vertxAssistant.start();
-
-    final var badRequestResponse = aResponse()
-      .withStatus(400)
-      .withBody("Bad Request")
-      .withHeader("Content-Type", "text/plain");
-
-    wireMockServer.stubFor(any(urlPathMatching("/bad-request/item-storage/items"))
-      .willReturn(badRequestResponse));
-
-    wireMockServer.stubFor(any(urlPathMatching("/bad-request/item-storage/items/[a-z0-9/-]*"))
-      .willReturn(badRequestResponse));
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterAll() {
     vertxAssistant.stop();
   }
 
   @Test
-  public void badRequestWhenCreatingAnItemTriggersFailureCallback()
-    throws InterruptedException, ExecutionException, TimeoutException {
+  @SneakyThrows
+  void badRequestWhenCreatingAnItemTriggersFailureCallback() {
+    wireMockServer.stubFor(any(collectionRoot())
+      .willReturn(badRequestResponse()));
 
     ItemCollection collection = createCollection();
 
@@ -68,14 +63,16 @@ public class ExternalItemCollectionBadRequestExamples {
       success -> fail("Completion callback should not be called"),
       failureCalled::complete);
 
-    Failure failure = failureCalled.get(1000, TimeUnit.MILLISECONDS);
+    Failure failure = failureCalled.get(1000, MILLISECONDS);
 
     assertBadRequest(failure);
   }
 
   @Test
-  public void badRequestWhenUpdatingAnItemTriggersFailureCallback()
-    throws InterruptedException, ExecutionException, TimeoutException {
+  @SneakyThrows
+  void badRequestWhenUpdatingAnItemTriggersFailureCallback() {
+    wireMockServer.stubFor(any(individualItem())
+      .willReturn(badRequestResponse()));
 
     ItemCollection collection = createCollection();
 
@@ -85,14 +82,16 @@ public class ExternalItemCollectionBadRequestExamples {
       success -> fail("Completion callback should not be called"),
       failureCalled::complete);
 
-    Failure failure = failureCalled.get(1000, TimeUnit.MILLISECONDS);
+    Failure failure = failureCalled.get(1000, MILLISECONDS);
 
     assertBadRequest(failure);
   }
 
   @Test
-  public void badRequestWhenGettingAllItemsTriggersFailureCallback()
-    throws InterruptedException, ExecutionException, TimeoutException {
+  @SneakyThrows
+  void badRequestWhenGettingAllItemsTriggersFailureCallback() {
+    wireMockServer.stubFor(any(collectionRoot())
+      .willReturn(badRequestResponse()));
 
     ItemCollection collection = createCollection();
 
@@ -102,14 +101,16 @@ public class ExternalItemCollectionBadRequestExamples {
       success -> fail("Completion callback should not be called"),
       failureCalled::complete);
 
-    Failure failure = failureCalled.get(1000, TimeUnit.MILLISECONDS);
+    Failure failure = failureCalled.get(1000, MILLISECONDS);
 
     assertBadRequest(failure);
   }
 
   @Test
-  public void badRequestWhenGettingAnItemByIdTriggersFailureCallback()
-    throws InterruptedException, ExecutionException, TimeoutException {
+  @SneakyThrows
+  void badRequestWhenGettingAnItemByIdTriggersFailureCallback() {
+    wireMockServer.stubFor(any(individualItem())
+      .willReturn(badRequestResponse()));
 
     ItemCollection collection = createCollection();
 
@@ -119,14 +120,16 @@ public class ExternalItemCollectionBadRequestExamples {
       success -> fail("Completion callback should not be called"),
       failureCalled::complete);
 
-    Failure failure = failureCalled.get(1000, TimeUnit.MILLISECONDS);
+    Failure failure = failureCalled.get(1000, MILLISECONDS);
 
     assertBadRequest(failure);
   }
 
   @Test
-  public void badRequestWhenDeletingAnItemByIdTriggersFailureCallback()
-    throws InterruptedException, ExecutionException, TimeoutException {
+  @SneakyThrows
+  void badRequestWhenDeletingAnItemByIdTriggersFailureCallback() {
+    wireMockServer.stubFor(any(individualItem())
+      .willReturn(badRequestResponse()));
 
     ItemCollection collection = createCollection();
 
@@ -136,14 +139,16 @@ public class ExternalItemCollectionBadRequestExamples {
       success -> fail("Completion callback should not be called"),
       failureCalled::complete);
 
-    Failure failure = failureCalled.get(1000, TimeUnit.MILLISECONDS);
+    Failure failure = failureCalled.get(1000, MILLISECONDS);
 
     assertBadRequest(failure);
   }
 
   @Test
-  public void badRequestWhenDeletingAllItemsTriggersFailureCallback()
-    throws InterruptedException, ExecutionException, TimeoutException {
+  @SneakyThrows
+  void badRequestWhenDeletingAllItemsTriggersFailureCallback() {
+    wireMockServer.stubFor(any(collectionRoot())
+      .willReturn(badRequestResponse()));
 
     ItemCollection collection = createCollection();
 
@@ -153,17 +158,16 @@ public class ExternalItemCollectionBadRequestExamples {
       success -> fail("Completion callback should not be called"),
       failureCalled::complete);
 
-    Failure failure = failureCalled.get(1000, TimeUnit.MILLISECONDS);
+    Failure failure = failureCalled.get(1000, MILLISECONDS);
 
     assertBadRequest(failure);
   }
 
   @Test
-  public void badRequestWhenFindingItemsTriggersFailureCallback()
-    throws InterruptedException,
-    ExecutionException,
-    TimeoutException,
-    UnsupportedEncodingException {
+  @SneakyThrows
+  void badRequestWhenFindingItemsTriggersFailureCallback() {
+    wireMockServer.stubFor(any(collectionRoot())
+      .willReturn(badRequestResponse()));
 
     ItemCollection collection = createCollection();
 
@@ -174,7 +178,7 @@ public class ExternalItemCollectionBadRequestExamples {
       success -> fail("Completion callback should not be called"),
       failureCalled::complete);
 
-    Failure failure = failureCalled.get(1000, TimeUnit.MILLISECONDS);
+    Failure failure = failureCalled.get(1000, MILLISECONDS);
 
     assertBadRequest(failure);
   }
@@ -194,7 +198,7 @@ public class ExternalItemCollectionBadRequestExamples {
   private ItemCollection createCollection() {
     return vertxAssistant.createUsingVertx(
       it -> new ExternalStorageCollections(it,
-        wireMockServer.url("bad-request"),
+        wireMockServer.baseUrl(),
         it.createHttpClient()))
       .getItemCollection("test_tenant", "");
   }
@@ -202,5 +206,20 @@ public class ExternalItemCollectionBadRequestExamples {
   private void assertBadRequest(Failure failure) {
     assertThat(failure.getReason(), is("Bad Request"));
     assertThat(failure.getStatusCode(), is(400));
+  }
+
+  private ResponseDefinitionBuilder badRequestResponse() {
+    return aResponse()
+      .withStatus(400)
+      .withBody("Bad Request")
+      .withHeader("Content-Type", "text/plain");
+  }
+
+  private UrlPathPattern collectionRoot() {
+    return urlPathMatching("/item-storage/items");
+  }
+
+  private UrlPathPattern individualItem() {
+    return urlPathMatching("/item-storage/items/[a-z0-9/-]*");
   }
 }
