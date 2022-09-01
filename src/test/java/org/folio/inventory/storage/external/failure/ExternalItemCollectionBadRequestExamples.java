@@ -17,7 +17,6 @@ import java.util.concurrent.TimeoutException;
 import org.folio.inventory.common.VertxAssistant;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
-import org.folio.inventory.domain.CollectionProvider;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.ItemStatusName;
@@ -32,7 +31,6 @@ import com.github.tomakehurst.wiremock.junit.WireMockRule;
 
 public class ExternalItemCollectionBadRequestExamples {
   private static final VertxAssistant vertxAssistant = new VertxAssistant();
-  private static CollectionProvider collectionProvider;
 
   @ClassRule
   public static WireMockRule wireMockServer = new WireMockRule();
@@ -40,11 +38,6 @@ public class ExternalItemCollectionBadRequestExamples {
   @BeforeClass
   public static void beforeAll() {
     vertxAssistant.start();
-
-    collectionProvider = vertxAssistant.createUsingVertx(
-      it -> new ExternalStorageCollections(it,
-        wireMockServer.url("bad-request"),
-        it.createHttpClient()));
 
     final var badRequestResponse = aResponse()
       .withStatus(400)
@@ -199,7 +192,11 @@ public class ExternalItemCollectionBadRequestExamples {
   }
 
   private ItemCollection createCollection() {
-    return collectionProvider.getItemCollection("test_tenant", "");
+    return vertxAssistant.createUsingVertx(
+      it -> new ExternalStorageCollections(it,
+        wireMockServer.url("bad-request"),
+        it.createHttpClient()))
+      .getItemCollection("test_tenant", "");
   }
 
   private void assertBadRequest(Failure failure) {
