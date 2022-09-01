@@ -4,15 +4,9 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.any;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 
-import java.util.HashMap;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 
 import org.folio.inventory.common.VertxAssistant;
-import org.folio.inventory.storage.external.support.FailureInventoryStorageModule;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -35,7 +29,6 @@ import io.vertx.core.Vertx;
 })
 public class ExternalStorageFailureSuite {
   private static final VertxAssistant vertxAssistant = new VertxAssistant();
-  private static String storageModuleDeploymentId;
 
   @ClassRule
   @Rule
@@ -50,13 +43,11 @@ public class ExternalStorageFailureSuite {
   }
 
   public static String getBadRequestStorageAddress() {
-    return FailureInventoryStorageModule.getBadRequestAddress();
+    return wireMockServer.url("/bad-request");
   }
 
   @BeforeClass
-  public static void beforeAll()
-    throws InterruptedException, ExecutionException, TimeoutException {
-
+  public static void beforeAll() {
     vertxAssistant.start();
 
     final var errorResponse = aResponse()
@@ -82,28 +73,32 @@ public class ExternalStorageFailureSuite {
     wireMockServer.stubFor(any(urlPathMatching("/server-error/authority-storage/authorities/[a-z0-9/-]*"))
       .willReturn(errorResponse));
 
-    System.out.println("Starting Failing Storage Module");
+    final var badRequestResponse = aResponse()
+      .withStatus(400)
+      .withBody("Bad Request")
+      .withHeader("Content-Type", "text/plain");
 
-    CompletableFuture<String> deployed = new CompletableFuture<>();
+    wireMockServer.stubFor(any(urlPathMatching("/bad-request/item-storage/items"))
+      .willReturn(badRequestResponse));
 
-    vertxAssistant.deployVerticle(
-      FailureInventoryStorageModule.class.getName(),
-      new HashMap<>(),
-      deployed);
+    wireMockServer.stubFor(any(urlPathMatching("/bad-request/item-storage/items/[a-z0-9/-]*"))
+      .willReturn(badRequestResponse));
 
-    storageModuleDeploymentId = deployed.get(20000, TimeUnit.MILLISECONDS);
+    wireMockServer.stubFor(any(urlPathMatching("/bad-request/instance-storage/instances"))
+      .willReturn(badRequestResponse));
+
+    wireMockServer.stubFor(any(urlPathMatching("/bad-request/instance-storage/instances/[a-z0-9/-]*"))
+      .willReturn(badRequestResponse));
+
+    wireMockServer.stubFor(any(urlPathMatching("/bad-request/authority-storage/authorities"))
+      .willReturn(badRequestResponse));
+
+    wireMockServer.stubFor(any(urlPathMatching("/bad-request/authority-storage/authorities/[a-z0-9/-]*"))
+      .willReturn(badRequestResponse));
   }
 
   @AfterClass()
-  public static void afterAll()
-    throws InterruptedException, ExecutionException, TimeoutException {
-
-    CompletableFuture<Void> undeployed = new CompletableFuture<>();
-
-    vertxAssistant.undeployVerticle(storageModuleDeploymentId, undeployed);
-
-    undeployed.get(20000, TimeUnit.MILLISECONDS);
-
+  public static void afterAll() {
     vertxAssistant.stop();
   }
 }
