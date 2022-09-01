@@ -1,5 +1,8 @@
 package org.folio.inventory.storage.external.failure;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.any;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.fail;
@@ -11,6 +14,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.folio.inventory.common.VertxAssistant;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.domain.CollectionProvider;
@@ -19,21 +23,48 @@ import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.domain.items.Status;
 import org.folio.inventory.storage.external.ExternalStorageCollections;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 
+import com.github.tomakehurst.wiremock.junit.WireMockRule;
+
 public class ExternalItemCollectionBadRequestExamples {
+  private static final VertxAssistant vertxAssistant = new VertxAssistant();
+  private static CollectionProvider collectionProvider;
 
-  private final CollectionProvider collectionProvider;
+  @ClassRule
+  public static WireMockRule wireMockServer = new WireMockRule();
 
-  public ExternalItemCollectionBadRequestExamples() {
-    collectionProvider = ExternalStorageFailureSuite.createUsing(
+  @BeforeClass
+  public static void beforeAll() {
+    vertxAssistant.start();
+
+    collectionProvider = vertxAssistant.createUsingVertx(
       it -> new ExternalStorageCollections(it,
-        ExternalStorageFailureSuite.getBadRequestStorageAddress(),
+        wireMockServer.url("bad-request"),
         it.createHttpClient()));
+
+    final var badRequestResponse = aResponse()
+      .withStatus(400)
+      .withBody("Bad Request")
+      .withHeader("Content-Type", "text/plain");
+
+    wireMockServer.stubFor(any(urlPathMatching("/bad-request/item-storage/items"))
+      .willReturn(badRequestResponse));
+
+    wireMockServer.stubFor(any(urlPathMatching("/bad-request/item-storage/items/[a-z0-9/-]*"))
+      .willReturn(badRequestResponse));
+  }
+
+  @AfterClass
+  public static void afterAll() {
+    vertxAssistant.stop();
   }
 
   @Test
-  public void serverErrorWhenCreatingAnItemTriggersFailureCallback()
+  public void badRequestWhenCreatingAnItemTriggersFailureCallback()
     throws InterruptedException, ExecutionException, TimeoutException {
 
     ItemCollection collection = createCollection();
@@ -46,11 +77,11 @@ public class ExternalItemCollectionBadRequestExamples {
 
     Failure failure = failureCalled.get(1000, TimeUnit.MILLISECONDS);
 
-    check(failure);
+    assertBadRequest(failure);
   }
 
   @Test
-  public void serverErrorWhenUpdatingAnItemTriggersFailureCallback()
+  public void badRequestWhenUpdatingAnItemTriggersFailureCallback()
     throws InterruptedException, ExecutionException, TimeoutException {
 
     ItemCollection collection = createCollection();
@@ -63,11 +94,11 @@ public class ExternalItemCollectionBadRequestExamples {
 
     Failure failure = failureCalled.get(1000, TimeUnit.MILLISECONDS);
 
-    check(failure);
+    assertBadRequest(failure);
   }
 
   @Test
-  public void serverErrorWhenGettingAllItemsTriggersFailureCallback()
+  public void badRequestWhenGettingAllItemsTriggersFailureCallback()
     throws InterruptedException, ExecutionException, TimeoutException {
 
     ItemCollection collection = createCollection();
@@ -80,11 +111,11 @@ public class ExternalItemCollectionBadRequestExamples {
 
     Failure failure = failureCalled.get(1000, TimeUnit.MILLISECONDS);
 
-    check(failure);
+    assertBadRequest(failure);
   }
 
   @Test
-  public void serverErrorWhenGettingAnItemByIdTriggersFailureCallback()
+  public void badRequestWhenGettingAnItemByIdTriggersFailureCallback()
     throws InterruptedException, ExecutionException, TimeoutException {
 
     ItemCollection collection = createCollection();
@@ -97,11 +128,11 @@ public class ExternalItemCollectionBadRequestExamples {
 
     Failure failure = failureCalled.get(1000, TimeUnit.MILLISECONDS);
 
-    check(failure);
+    assertBadRequest(failure);
   }
 
   @Test
-  public void serverErrorWhenDeletingAnItemByIdTriggersFailureCallback()
+  public void badRequestWhenDeletingAnItemByIdTriggersFailureCallback()
     throws InterruptedException, ExecutionException, TimeoutException {
 
     ItemCollection collection = createCollection();
@@ -114,11 +145,11 @@ public class ExternalItemCollectionBadRequestExamples {
 
     Failure failure = failureCalled.get(1000, TimeUnit.MILLISECONDS);
 
-    check(failure);
+    assertBadRequest(failure);
   }
 
   @Test
-  public void serverErrorWhenDeletingAllItemsTriggersFailureCallback()
+  public void badRequestWhenDeletingAllItemsTriggersFailureCallback()
     throws InterruptedException, ExecutionException, TimeoutException {
 
     ItemCollection collection = createCollection();
@@ -131,11 +162,11 @@ public class ExternalItemCollectionBadRequestExamples {
 
     Failure failure = failureCalled.get(1000, TimeUnit.MILLISECONDS);
 
-    check(failure);
+    assertBadRequest(failure);
   }
 
   @Test
-  public void serverErrorWhenFindingItemsTriggersFailureCallback()
+  public void badRequestWhenFindingItemsTriggersFailureCallback()
     throws InterruptedException,
     ExecutionException,
     TimeoutException,
@@ -152,7 +183,7 @@ public class ExternalItemCollectionBadRequestExamples {
 
     Failure failure = failureCalled.get(1000, TimeUnit.MILLISECONDS);
 
-    check(failure);
+    assertBadRequest(failure);
   }
 
   private static Item createItem() {
@@ -171,7 +202,7 @@ public class ExternalItemCollectionBadRequestExamples {
     return collectionProvider.getItemCollection("test_tenant", "");
   }
 
-  private void check(Failure failure) {
+  private void assertBadRequest(Failure failure) {
     assertThat(failure.getReason(), is("Bad Request"));
     assertThat(failure.getStatusCode(), is(400));
   }
