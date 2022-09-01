@@ -1,5 +1,9 @@
 package org.folio.inventory.storage.external.failure;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.any;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
+
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -11,8 +15,12 @@ import org.folio.inventory.common.VertxAssistant;
 import org.folio.inventory.storage.external.support.FailureInventoryStorageModule;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
+
+import com.github.tomakehurst.wiremock.junit.WireMockRule;
 
 import io.vertx.core.Vertx;
 
@@ -29,12 +37,16 @@ public class ExternalStorageFailureSuite {
   private static final VertxAssistant vertxAssistant = new VertxAssistant();
   private static String storageModuleDeploymentId;
 
+  @ClassRule
+  @Rule
+  public static WireMockRule wireMockServer = new WireMockRule();
+
   public static <T> T createUsing(Function<Vertx, T> function) {
     return vertxAssistant.createUsingVertx(function);
   }
 
   public static String getServerErrorStorageAddress() {
-    return FailureInventoryStorageModule.getServerErrorAddress();
+    return wireMockServer.url("/server-error");
   }
 
   public static String getBadRequestStorageAddress() {
@@ -46,6 +58,29 @@ public class ExternalStorageFailureSuite {
     throws InterruptedException, ExecutionException, TimeoutException {
 
     vertxAssistant.start();
+
+    final var errorResponse = aResponse()
+      .withStatus(500)
+      .withBody("Server Error")
+      .withHeader("Content-Type", "text/plain");
+
+    wireMockServer.stubFor(any(urlPathMatching("/server-error/item-storage/items"))
+      .willReturn(errorResponse));
+
+    wireMockServer.stubFor(any(urlPathMatching("/server-error/item-storage/items/[a-z0-9/-]*"))
+      .willReturn(errorResponse));
+
+    wireMockServer.stubFor(any(urlPathMatching("/server-error/instance-storage/instances"))
+      .willReturn(errorResponse));
+
+    wireMockServer.stubFor(any(urlPathMatching("/server-error/instance-storage/instances/[a-z0-9/-]*"))
+      .willReturn(errorResponse));
+
+    wireMockServer.stubFor(any(urlPathMatching("/server-error/authority-storage/authorities"))
+      .willReturn(errorResponse));
+
+    wireMockServer.stubFor(any(urlPathMatching("/server-error/authority-storage/authorities/[a-z0-9/-]*"))
+      .willReturn(errorResponse));
 
     System.out.println("Starting Failing Storage Module");
 
