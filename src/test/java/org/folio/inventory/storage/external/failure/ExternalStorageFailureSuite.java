@@ -20,7 +20,6 @@ import io.vertx.core.Vertx;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-  ExternalInstanceCollectionBadRequestExamples.class,
   ExternalAuthorityCollectionBadRequestExamples.class,
   ExternalAuthorityCollectionServerErrorExamples.class
 })
@@ -52,12 +51,6 @@ public class ExternalStorageFailureSuite {
       .withBody("Server Error")
       .withHeader("Content-Type", "text/plain");
 
-    wireMockServer.stubFor(any(urlPathMatching("/server-error/instance-storage/instances"))
-      .willReturn(errorResponse));
-
-    wireMockServer.stubFor(any(urlPathMatching("/server-error/instance-storage/instances/[a-z0-9/-]*"))
-      .willReturn(errorResponse));
-
     wireMockServer.stubFor(any(urlPathMatching("/server-error/authority-storage/authorities"))
       .willReturn(errorResponse));
 
@@ -68,12 +61,6 @@ public class ExternalStorageFailureSuite {
       .withStatus(400)
       .withBody("Bad Request")
       .withHeader("Content-Type", "text/plain");
-
-    wireMockServer.stubFor(any(urlPathMatching("/bad-request/instance-storage/instances"))
-      .willReturn(badRequestResponse));
-
-    wireMockServer.stubFor(any(urlPathMatching("/bad-request/instance-storage/instances/[a-z0-9/-]*"))
-      .willReturn(badRequestResponse));
 
     wireMockServer.stubFor(any(urlPathMatching("/bad-request/authority-storage/authorities"))
       .willReturn(badRequestResponse));
