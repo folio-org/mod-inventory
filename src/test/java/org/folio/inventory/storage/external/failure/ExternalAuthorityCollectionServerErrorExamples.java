@@ -10,8 +10,8 @@ public class ExternalAuthorityCollectionServerErrorExamples extends ExternalAuth
 
   public ExternalAuthorityCollectionServerErrorExamples() {
     super(ExternalStorageFailureSuite.createUsing(
-        it -> new ExternalStorageCollections(it,
-            ExternalStorageFailureSuite.getServerErrorStorageAddress(), it.createHttpClient())));
+        it -> new ExternalStorageCollections(
+                ExternalStorageFailureSuite.getServerErrorStorageAddress(), it.createHttpClient())));
   }
 
   @Override

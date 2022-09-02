@@ -14,7 +14,8 @@ import static org.junit.Assert.assertNotNull;
 public class ExternalStorageModuleHoldingsRecordsSourceCollectionExamples {
   private final ExternalStorageModuleHoldingsRecordsSourceCollection storage =
     ExternalStorageSuite.useVertx(
-      it -> new ExternalStorageModuleHoldingsRecordsSourceCollection(it, getStorageAddress(),
+      it -> new ExternalStorageModuleHoldingsRecordsSourceCollection(
+              getStorageAddress(),
         ExternalStorageSuite.TENANT_ID, ExternalStorageSuite.TENANT_TOKEN, it.createHttpClient()));
 
   @Test

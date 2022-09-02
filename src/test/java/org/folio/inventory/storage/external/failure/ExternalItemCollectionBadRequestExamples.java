@@ -197,7 +197,7 @@ public class ExternalItemCollectionBadRequestExamples {
 
   private ItemCollection createCollection() {
     return vertxAssistant.createUsingVertx(
-      it -> new ExternalStorageCollections(it,
+      it -> new ExternalStorageCollections(
         wireMockServer.baseUrl(),
         it.createHttpClient()))
       .getItemCollection("test_tenant", "");

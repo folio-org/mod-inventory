@@ -10,8 +10,8 @@ public class ExternalAuthorityCollectionBadRequestExamples extends ExternalAutho
 
   public ExternalAuthorityCollectionBadRequestExamples() {
     super(ExternalStorageFailureSuite.createUsing(
-        it -> new ExternalStorageCollections(it,
-            ExternalStorageFailureSuite.getBadRequestStorageAddress(), it.createHttpClient())));
+        it -> new ExternalStorageCollections(
+                ExternalStorageFailureSuite.getBadRequestStorageAddress(), it.createHttpClient())));
   }
 
   @Override

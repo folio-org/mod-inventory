@@ -49,7 +49,7 @@ public class InventoryVerticle extends AbstractVerticle {
 
     HttpClient client = vertx.createHttpClient();
 
-    Storage storage = Storage.basedUpon(vertx, config, client);
+    Storage storage = Storage.basedUpon(config, client);
 
     new IngestMessageProcessor(storage).register(vertx.eventBus());
 

@@ -58,7 +58,7 @@ public class MarcHridSetConsumerVerticle extends AbstractVerticle {
     marcHoldingsConsumerWrapper = createConsumerByEvent(kafkaConfig, DI_SRS_MARC_HOLDINGS_HOLDING_HRID_SET);
 
     HttpClient client = vertx.createHttpClient();
-    Storage storage = Storage.basedUpon(vertx, config, client);
+    Storage storage = Storage.basedUpon(config, client);
     HoldingsCollectionService holdingsCollectionService = new HoldingsCollectionService();
     InstanceUpdateDelegate instanceUpdateDelegate = new InstanceUpdateDelegate(storage);
     HoldingsUpdateDelegate holdingsRecordUpdateDelegate = new HoldingsUpdateDelegate(storage, holdingsCollectionService);

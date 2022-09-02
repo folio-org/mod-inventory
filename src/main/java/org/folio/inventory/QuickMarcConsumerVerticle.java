@@ -43,7 +43,7 @@ public class QuickMarcConsumerVerticle extends AbstractVerticle {
     KafkaConfig kafkaConfig = getKafkaConfig(config);
 
     HttpClient client = vertx.createHttpClient();
-    Storage storage = Storage.basedUpon(vertx, config, client);
+    Storage storage = Storage.basedUpon(config, client);
 
     var precedingSucceedingTitlesHelper = new PrecedingSucceedingTitlesHelper(WebClient.wrap(client));
     HoldingsCollectionService holdingsCollectionService = new HoldingsCollectionService();

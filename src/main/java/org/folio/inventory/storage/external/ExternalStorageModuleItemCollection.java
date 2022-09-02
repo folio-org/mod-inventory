@@ -4,14 +4,18 @@ import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.support.ItemUtil;
 
-import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
 
-class ExternalStorageModuleItemCollection extends ExternalStorageModuleCollection<Item> implements ItemCollection {
+class ExternalStorageModuleItemCollection
+  extends ExternalStorageModuleCollection<Item>
+  implements ItemCollection {
 
-  ExternalStorageModuleItemCollection(Vertx vertx, String baseAddress, String tenant, String token, HttpClient client) {
-    super(String.format("%s/%s", baseAddress, "item-storage/items"), tenant, token, "items", client);
+  ExternalStorageModuleItemCollection(String baseAddress, String tenant,
+    String token, HttpClient client) {
+
+    super(String.format("%s/%s", baseAddress, "item-storage/items"),
+      tenant, token, "items", client);
   }
 
   @Override
