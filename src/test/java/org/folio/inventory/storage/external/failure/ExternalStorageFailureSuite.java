@@ -20,7 +20,6 @@ import io.vertx.core.Vertx;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-  ExternalInstanceCollectionServerErrorExamples.class,
   ExternalInstanceCollectionBadRequestExamples.class,
   ExternalAuthorityCollectionBadRequestExamples.class,
   ExternalAuthorityCollectionServerErrorExamples.class
