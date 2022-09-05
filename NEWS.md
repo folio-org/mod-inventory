@@ -1,3 +1,7 @@
+## 18.2.2 2022-09-05
+
+* PostgreSQL 42.5.0, jackson-databind 2.13.2.1, Vert.x 4.3.3 ([MODINV-732](https://issues.folio.org/browse/MODINV-732))
+
 ## 18.2.1 2022-07-22
 
 * Pre-set event type to payload before processing event for entities matching ([MODINV-723](https://issues.folio.org/browse/MODINV-723))
