@@ -203,7 +203,7 @@
     <dependency>
       <groupId>org.folio</groupId>
       <artifactId>mod-source-record-storage-client</artifactId>
-      <version>5.3.0</version>
+      <version>5.4.1</version>
       <exclusions>
         <!-- This is provided by JDK >= 9 causing a compile error (Eclipse doesn't suppress this compile error):
              "The package org.xml.sax is accessible from more than one module: <unnamed>, java.xml"
@@ -264,7 +264,6 @@
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-pg-client</artifactId>
-      <version>${vertx.version}</version>
     </dependency>
     <dependency>
       <groupId>org.postgresql</groupId>
@@ -282,11 +281,11 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <testcontainers.version>1.15.3</testcontainers.version>
-    <vertx.version>4.2.6</vertx.version>
+    <vertx.version>4.3.3</vertx.version>
     <jsonschema2pojo_output_dir>${project.build.directory}/generated-sources/jsonschema2pojo</jsonschema2pojo_output_dir>
     <httpcomponents.version>4.5.13</httpcomponents.version>
     <lombok.version>1.18.22</lombok.version>
-    <postgres.version>42.3.3</postgres.version>
+    <postgres.version>42.5.0</postgres.version>
     <liquibase.version>4.9.1</liquibase.version>
     <kafkaclients.version>3.1.0</kafkaclients.version>
     <junit.version>4.13.2</junit.version>
