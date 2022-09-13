@@ -12,8 +12,10 @@ class ExternalStorageModuleHoldingCollection
   extends ExternalStorageModuleCollection<Holding>
   implements HoldingCollection {
 
-  ExternalStorageModuleHoldingCollection(String baseAddress, String tenant,
-    String token, HttpClient client) {
+  ExternalStorageModuleHoldingCollection(String baseAddress,
+                                         String tenant,
+                                         String token,
+                                         HttpClient client) {
 
     super(String.format("%s/%s", baseAddress, "holdings-storage/holdings"),
       tenant, token, "holdingsRecords", client);

@@ -11,8 +11,11 @@ class ExternalStorageModuleUserCollection
   extends ExternalStorageModuleCollection<User>
   implements UserCollection {
 
-  ExternalStorageModuleUserCollection(String baseAddress, String tenant,
-    String token, HttpClient client) {
+  ExternalStorageModuleUserCollection(
+    String baseAddress,
+    String tenant,
+    String token,
+    HttpClient client) {
 
     super(String.format("%s/%s", baseAddress, "users"),
       tenant, token, "users", client);

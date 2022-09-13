@@ -36,8 +36,11 @@ class ExternalStorageModuleInstanceCollection
 
   private final String batchAddress;
 
-  ExternalStorageModuleInstanceCollection(String baseAddress, String tenant,
-    String token, HttpClient client) {
+  ExternalStorageModuleInstanceCollection(
+    String baseAddress,
+    String tenant,
+    String token,
+    HttpClient client) {
 
     super(String.format("%s/%s", baseAddress, "instance-storage/instances"),
       tenant, token, "instances", client);

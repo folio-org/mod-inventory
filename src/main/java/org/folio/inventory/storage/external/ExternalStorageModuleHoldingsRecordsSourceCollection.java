@@ -18,8 +18,12 @@ public class ExternalStorageModuleHoldingsRecordsSourceCollection
 
   private static final Logger LOGGER = LogManager.getLogger(ExternalStorageModuleHoldingsRecordsSourceCollection.class);
 
-  ExternalStorageModuleHoldingsRecordsSourceCollection(String baseAddress,
-    String tenant, String token, HttpClient client) {
+  ExternalStorageModuleHoldingsRecordsSourceCollection(
+    String baseAddress,
+    String tenant,
+    String token,
+    HttpClient client) {
+
     super(String.format("%s/%s", baseAddress, "holdings-sources"),
       tenant, token, "holdingsRecordsSources", client);
   }
