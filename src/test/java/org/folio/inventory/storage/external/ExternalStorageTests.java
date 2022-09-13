@@ -6,12 +6,14 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import org.folio.inventory.common.VertxAssistant;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
+import io.vertx.core.Vertx;
 import lombok.SneakyThrows;
 import support.fakes.FakeOkapi;
 
@@ -64,6 +66,10 @@ public abstract class ExternalStorageTests {
     }
 
     vertxAssistant.stop();
+  }
+
+  protected static <T> T useVertx(Function<Vertx, T> action) {
+    return vertxAssistant.createUsingVertx(action);
   }
 
   @SneakyThrows
