@@ -4,7 +4,6 @@ import org.folio.inventory.domain.user.Personal;
 import org.folio.inventory.domain.user.User;
 import org.folio.inventory.domain.user.UserCollection;
 
-import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
 
@@ -13,7 +12,6 @@ class ExternalStorageModuleUserCollection
   implements UserCollection {
 
   ExternalStorageModuleUserCollection(
-    Vertx vertx,
     String baseAddress,
     String tenant,
     String token,

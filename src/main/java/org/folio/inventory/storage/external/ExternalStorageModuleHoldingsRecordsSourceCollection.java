@@ -1,16 +1,16 @@
 package org.folio.inventory.storage.external;
 
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.JsonObject;
+import java.io.IOException;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.HoldingsRecordsSource;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.domain.HoldingsRecordsSourceCollection;
-import org.folio.HoldingsRecordsSource;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
 
-import java.io.IOException;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.JsonObject;
 
 public class ExternalStorageModuleHoldingsRecordsSourceCollection
   extends ExternalStorageModuleCollection<HoldingsRecordsSource>
@@ -19,12 +19,11 @@ public class ExternalStorageModuleHoldingsRecordsSourceCollection
   private static final Logger LOGGER = LogManager.getLogger(ExternalStorageModuleHoldingsRecordsSourceCollection.class);
 
   ExternalStorageModuleHoldingsRecordsSourceCollection(
-    Vertx vertx,
     String baseAddress,
     String tenant,
     String token,
-    HttpClient client
-  ) {
+    HttpClient client) {
+
     super(String.format("%s/%s", baseAddress, "holdings-sources"),
       tenant, token, "holdingsRecordsSources", client);
   }

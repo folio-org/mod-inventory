@@ -1,13 +1,15 @@
 package org.folio.inventory.storage.external;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Vertx;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.client.HttpRequest;
-import io.vertx.ext.web.client.HttpResponse;
+import static org.apache.http.HttpStatus.SC_CREATED;
+import static org.apache.http.HttpStatus.SC_INTERNAL_SERVER_ERROR;
+import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.domain.Failure;
@@ -18,16 +20,13 @@ import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.support.http.client.Response;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
-
-import static org.apache.http.HttpStatus.SC_CREATED;
-import static org.apache.http.HttpStatus.SC_INTERNAL_SERVER_ERROR;
-import static org.folio.inventory.support.JsonArrayHelper.toList;
-import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.HttpRequest;
+import io.vertx.ext.web.client.HttpResponse;
 
 class ExternalStorageModuleInstanceCollection
   extends ExternalStorageModuleCollection<Instance>
@@ -38,7 +37,6 @@ class ExternalStorageModuleInstanceCollection
   private final String batchAddress;
 
   ExternalStorageModuleInstanceCollection(
-    Vertx vertx,
     String baseAddress,
     String tenant,
     String token,
@@ -46,6 +44,7 @@ class ExternalStorageModuleInstanceCollection
 
     super(String.format("%s/%s", baseAddress, "instance-storage/instances"),
       tenant, token, "instances", client);
+
     batchAddress = String.format("%s/%s", baseAddress, "instance-storage/batch/instances");
   }
 

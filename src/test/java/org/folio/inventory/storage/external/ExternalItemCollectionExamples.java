@@ -35,8 +35,9 @@ public class ExternalItemCollectionExamples {
 
   private final ItemCollection collection =
     ExternalStorageSuite.useVertx(
-      it -> new ExternalStorageModuleItemCollection(it, getStorageAddress(),
-        ExternalStorageSuite.TENANT_ID, ExternalStorageSuite.TENANT_TOKEN, it.createHttpClient()));
+      it -> new ExternalStorageModuleItemCollection(getStorageAddress(),
+        ExternalStorageSuite.TENANT_ID, ExternalStorageSuite.TENANT_TOKEN,
+        it.createHttpClient()));
 
   private final Item smallAngryPlanet = smallAngryPlanet();
   private final Item nod = nod();

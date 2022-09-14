@@ -14,7 +14,6 @@ import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.user.UserCollection;
 import org.folio.inventory.storage.external.ExternalStorageCollections;
 
-import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
 
@@ -25,7 +24,7 @@ public class Storage {
     this.providerFactory = providerFactory;
   }
 
-  public static Storage basedUpon(Vertx vertx, JsonObject config, HttpClient client) {
+  public static Storage basedUpon(JsonObject config, HttpClient client) {
     String storageType = config.getString("storage.type", "okapi");
 
     switch(storageType) {
@@ -37,11 +36,11 @@ public class Storage {
             "For external storage, location must be provided.");
         }
 
-        return new Storage(context -> new ExternalStorageCollections(vertx, location, client));
+        return new Storage(context -> new ExternalStorageCollections(location, client));
 
       case "okapi":
         return new Storage(context ->
-          new ExternalStorageCollections(vertx, context.getOkapiLocation(), client));
+          new ExternalStorageCollections(context.getOkapiLocation(), client));
 
       default:
         throw new IllegalArgumentException("Storage type must be one of [external, okapi]");

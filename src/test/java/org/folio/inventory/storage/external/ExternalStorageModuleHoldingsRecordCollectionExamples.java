@@ -3,7 +3,6 @@ package org.folio.inventory.storage.external;
 import io.vertx.core.json.JsonObject;
 import org.folio.HoldingsRecord;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.UUID;
@@ -15,7 +14,7 @@ import static org.junit.Assert.assertNotNull;
 public class ExternalStorageModuleHoldingsRecordCollectionExamples {
   private final ExternalStorageModuleHoldingsRecordCollection storage =
     ExternalStorageSuite.useVertx(
-      it -> new ExternalStorageModuleHoldingsRecordCollection(it, getStorageAddress(),
+      it -> new ExternalStorageModuleHoldingsRecordCollection(getStorageAddress(),
         ExternalStorageSuite.TENANT_ID, ExternalStorageSuite.TENANT_TOKEN, it.createHttpClient()));
 
   @Test

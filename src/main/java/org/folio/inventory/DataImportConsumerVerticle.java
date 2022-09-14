@@ -114,7 +114,7 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
     EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, maxDistributionNumber);
 
     HttpClient client = vertx.createHttpClient();
-    Storage storage = Storage.basedUpon(vertx, config, client);
+    Storage storage = Storage.basedUpon(config, client);
 
     String profileSnapshotExpirationTime = getCacheEnvVariable(config, "inventory.profile-snapshot-cache.expiration.time.seconds");
     String mappingMetadataExpirationTime = getCacheEnvVariable(config, "inventory.mapping-metadata-cache.expiration.time.seconds");

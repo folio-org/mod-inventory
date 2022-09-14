@@ -1,19 +1,18 @@
 package org.folio.inventory.storage.external;
 
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.JsonObject;
+import java.util.UUID;
+
 import org.folio.inventory.domain.Holding;
 import org.folio.inventory.domain.HoldingCollection;
 
-import java.util.UUID;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.JsonObject;
 
 class ExternalStorageModuleHoldingCollection
   extends ExternalStorageModuleCollection<Holding>
   implements HoldingCollection {
 
-  ExternalStorageModuleHoldingCollection(Vertx vertx,
-                                         String baseAddress,
+  ExternalStorageModuleHoldingCollection(String baseAddress,
                                          String tenant,
                                          String token,
                                          HttpClient client) {
