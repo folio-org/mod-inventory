@@ -31,9 +31,9 @@ public class ExternalItemCollectionExamples extends ExternalStorageTests {
   private final String canCirculateLoanTypeId = UUID.randomUUID().toString();
   private final String annexLibraryLocationId = UUID.randomUUID().toString();
 
-  private final ItemCollection collection = useVertx(
-    it -> new ExternalStorageModuleItemCollection(getStorageAddress(),
-      TENANT_ID, TENANT_TOKEN, it.createHttpClient()));
+  private final ItemCollection collection = useHttpClient(
+    client -> new ExternalStorageModuleItemCollection(getStorageAddress(),
+      TENANT_ID, TENANT_TOKEN, client));
 
   private final Item smallAngryPlanet = smallAngryPlanet();
   private final Item nod = nod();

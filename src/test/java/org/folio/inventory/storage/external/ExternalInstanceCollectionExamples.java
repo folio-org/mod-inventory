@@ -34,8 +34,8 @@ public class ExternalInstanceCollectionExamples extends ExternalStorageTests {
   private static final String ASIN_IDENTIFIER_TYPE = UUID.randomUUID().toString();
 
   private final InstanceCollection collection =
-    useVertx(it -> new ExternalStorageModuleInstanceCollection(getStorageAddress(),
-        TENANT_ID, TENANT_TOKEN, it.createHttpClient()));
+    useHttpClient(client -> new ExternalStorageModuleInstanceCollection(
+      getStorageAddress(), TENANT_ID, TENANT_TOKEN, client));
 
   @Before
   @SneakyThrows

@@ -23,7 +23,6 @@ import support.fakes.FakeOkapi;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-  ExternalStorageModuleHoldingsRecordCollectionExamples.class,
   ExternalStorageModuleAuthorityRecordCollectionExamples.class,
   ExternalStorageModuleHoldingsRecordsSourceCollectionExamples.class
 })

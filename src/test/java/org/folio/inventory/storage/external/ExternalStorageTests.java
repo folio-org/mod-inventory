@@ -14,6 +14,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClient;
 import lombok.SneakyThrows;
 import support.fakes.FakeOkapi;
 
@@ -68,7 +69,11 @@ public abstract class ExternalStorageTests {
     vertxAssistant.stop();
   }
 
-  protected static <T> T useVertx(Function<Vertx, T> action) {
+  protected static <T> T useHttpClient(Function<HttpClient, T> action) {
+    return useVertx(vertx -> action.apply(vertx.createHttpClient()));
+  }
+
+  private static <T> T useVertx(Function<Vertx, T> action) {
     return vertxAssistant.createUsingVertx(action);
   }
 
