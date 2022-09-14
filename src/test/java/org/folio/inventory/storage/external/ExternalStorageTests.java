@@ -1,11 +1,11 @@
 package org.folio.inventory.storage.external;
 
 import static api.ApiTestSuite.USER_ID;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import java.net.URL;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import org.folio.inventory.common.VertxAssistant;
@@ -13,7 +13,6 @@ import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
-import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import lombok.SneakyThrows;
 import support.fakes.FakeOkapi;
@@ -27,11 +26,7 @@ public abstract class ExternalStorageTests {
   private static String storageModuleDeploymentId;
 
   protected static String getStorageAddress() {
-    if (!useFakeStorageModule()) {
-      return System.getProperty("inventory.storage.address");
-    } else {
-      return FakeOkapi.getAddress();
-    }
+    return FakeOkapi.getAddress();
   }
 
   @BeforeClass
@@ -39,42 +34,29 @@ public abstract class ExternalStorageTests {
   public static void beforeAll() {
     vertxAssistant.start();
 
-    if (useFakeStorageModule()) {
-      System.out.println("Starting Fake Storage Module");
+    final var deployed = new CompletableFuture<String>();
 
-      CompletableFuture<String> deployed = new CompletableFuture<>();
+    vertxAssistant.deployVerticle(FakeOkapi.class.getName(), new HashMap<>(),
+      deployed);
 
-      vertxAssistant.deployVerticle(FakeOkapi.class.getName(), new HashMap<>(),
-        deployed);
-
-      storageModuleDeploymentId = deployed.get(20000, TimeUnit.MILLISECONDS);
-    }
-  }
-
-  private static boolean useFakeStorageModule() {
-    return System.getProperty("inventory.storage.use", "fake").equals("fake");
+    storageModuleDeploymentId = deployed.get(20000, MILLISECONDS);
   }
 
   @AfterClass
   @SneakyThrows
   public static void afterAll() {
-    if (useFakeStorageModule()) {
-      CompletableFuture<Void> undeployed = new CompletableFuture<>();
+    final var undeployed = new CompletableFuture<Void>();
 
-      vertxAssistant.undeployVerticle(storageModuleDeploymentId, undeployed);
+    vertxAssistant.undeployVerticle(storageModuleDeploymentId, undeployed);
 
-      undeployed.get(20000, TimeUnit.MILLISECONDS);
-    }
+    undeployed.get(20000, MILLISECONDS);
 
     vertxAssistant.stop();
   }
 
   protected static <T> T useHttpClient(Function<HttpClient, T> action) {
-    return useVertx(vertx -> action.apply(vertx.createHttpClient()));
-  }
-
-  private static <T> T useVertx(Function<Vertx, T> action) {
-    return vertxAssistant.createUsingVertx(action);
+    return vertxAssistant.createUsingVertx(
+      vertx -> action.apply(vertx.createHttpClient()));
   }
 
   @SneakyThrows
