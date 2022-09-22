@@ -3,10 +3,6 @@
   "description": "An instance record",
   "type": "object",
   "properties": {
-    "@context": {
-      "description": "Instance context",
-      "type": "string"
-    },
     "id": {
       "type": "string",
       "description": "The system assigned unique ID of the instance record"
