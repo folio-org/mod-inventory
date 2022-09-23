@@ -1,22 +1,20 @@
 package org.folio.inventory.storage.external;
 
-import io.vertx.core.json.JsonObject;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
+import java.util.UUID;
+
 import org.folio.HoldingsRecordsSource;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
 import org.junit.Test;
 
-import java.util.UUID;
+import io.vertx.core.json.JsonObject;
 
-import static org.folio.inventory.storage.external.ExternalStorageSuite.getStorageAddress;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
-public class ExternalStorageModuleHoldingsRecordsSourceCollectionExamples {
+public class ExternalStorageModuleHoldingsRecordsSourceCollectionExamples extends ExternalStorageTests {
   private final ExternalStorageModuleHoldingsRecordsSourceCollection storage =
-    ExternalStorageSuite.useVertx(
-      it -> new ExternalStorageModuleHoldingsRecordsSourceCollection(
-              getStorageAddress(),
-        ExternalStorageSuite.TENANT_ID, ExternalStorageSuite.TENANT_TOKEN, it.createHttpClient()));
+    useHttpClient(client -> new ExternalStorageModuleHoldingsRecordsSourceCollection(
+      getStorageAddress(), TENANT_ID, TENANT_TOKEN, client));
 
   @Test
   public void shouldMapFromJson() {
