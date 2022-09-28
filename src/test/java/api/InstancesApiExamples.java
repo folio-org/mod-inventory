@@ -48,7 +48,6 @@ import org.folio.inventory.support.http.client.Response;
 import org.folio.util.PercentCodec;
 import org.joda.time.DateTime;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Test;
 
 import com.github.jsonldjava.core.JsonLdError;
@@ -160,9 +159,6 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(natureOfContentTermIds, hasItem(ApiTestSuite.getAudiobookNatureOfContentTermId()));
     assertThat(natureOfContentTermIds, hasItem(ApiTestSuite.getBibliographyNatureOfContentTermId()));
 
-    selfLinkRespectsWayResourceWasReached(createdInstance);
-    selfLinkShouldBeReachable(createdInstance);
-
     assertThat(createdInstance.getString("hrid"), notNullValue());
 
     var publicationPeriod = createdInstance.getJsonObject(PUBLICATION_PERIOD_KEY);
@@ -233,8 +229,6 @@ public class InstancesApiExamples extends ApiTests {
 
     assertThat(firstContributor.getString("name"), is("Chambers, Becky"));
 
-    selfLinkRespectsWayResourceWasReached(createdInstance);
-    selfLinkShouldBeReachable(createdInstance);
     assertThat(createdInstance.getString("hrid"), is(hrid));
   }
 
@@ -441,9 +435,6 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(natureOfContentTermIds.size(), is(1));
     assertThat(natureOfContentTermIds.getString(0), is(ApiTestSuite.getAudiobookNatureOfContentTermId()));
 
-    selfLinkRespectsWayResourceWasReached(updatedInstance);
-    selfLinkShouldBeReachable(updatedInstance);
-
     var publicationPeriod = updatedInstance.getJsonObject(PUBLICATION_PERIOD_KEY);
     assertThat(publicationPeriod.getInteger("start"), is(2000));
     assertThat(publicationPeriod.getInteger("end"), is(2012));
@@ -578,8 +569,6 @@ public class InstancesApiExamples extends ApiTests {
 
     JsonObject updatedInstance = getResponse.getJson();
     assertEquals(updatedInstance, newInstance);
-    selfLinkRespectsWayResourceWasReached(updatedInstance);
-    selfLinkShouldBeReachable(updatedInstance);
   }
 
   @Test
@@ -645,8 +634,6 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(updatedInstance.getString("source"), is(newInstance.getString("source")));
     assertThat(updatedInstance.getString("hrid"), is(newInstance.getString("hrid")));
     assertThat(updatedInstance.getString("statusId"), is(newInstance.getString("statusId")));
-    selfLinkRespectsWayResourceWasReached(updatedInstance);
-    selfLinkShouldBeReachable(updatedInstance);
   }
 
   @Test
@@ -682,8 +669,6 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(updatedInstance.getString("title"), is(newInstance.getString("title")));
     assertThat(updatedInstance.getString("source"), is(newInstance.getString("source")));
     assertThat(updatedInstance.getString("sourceRecordFormat"), is(instanceForUpdate.getString("sourceRecordFormat")));
-    selfLinkRespectsWayResourceWasReached(updatedInstance);
-    selfLinkShouldBeReachable(updatedInstance);
   }
 
   @Test
@@ -771,8 +756,6 @@ public class InstancesApiExamples extends ApiTests {
 
     assertThat(instances.size(), is(3));
     assertThat(getAllResponse.getJson().getInteger("totalRecords"), is(3));
-
-    hasCollectionProperties(instances);
   }
 
   @Test
@@ -806,15 +789,11 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(firstPageInstances.size(), is(3));
     assertThat(firstPageResponse.getJson().getInteger("totalRecords"), is(5));
 
-    hasCollectionProperties(firstPageInstances);
-
     List<JsonObject> secondPageInstances = JsonArrayHelper.toList(
       secondPageResponse.getJson().getJsonArray("instances"));
 
     assertThat(secondPageInstances.size(), is(2));
     assertThat(secondPageResponse.getJson().getInteger("totalRecords"), is(5));
-
-    hasCollectionProperties(secondPageInstances);
   }
 
   @Test
@@ -857,8 +836,6 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(instances.size(), is(1));
     assertThat(searchGetResponse.getJson().getInteger("totalRecords"), is(1));
     assertThat(instances.get(0).getString("title"), is("Long Way to a Small Angry Planet"));
-
-    hasCollectionProperties(instances);
   }
 
   @Test
@@ -956,38 +933,9 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(updateResponse.getBody(), is(expectedErrorMessage));
   }
 
-  private void hasCollectionProperties(List<JsonObject> instances) {
-    instances.forEach(InstancesApiExamples::selfLinkRespectsWayResourceWasReached);
-
-    instances.forEach(instance -> {
-      try {
-        selfLinkShouldBeReachable(instance);
-      } catch (Exception e) {
-        Assert.fail(e.toString());
-      }
-    });
-  }
-
   @SneakyThrows
   private JsonObject createInstance(JsonObject newInstanceRequest) {
     return InstanceApiClient.createInstance(okapiClient, newInstanceRequest);
-  }
-
-  private void selfLinkShouldBeReachable(JsonObject instance)
-    throws InterruptedException,
-    ExecutionException,
-    TimeoutException {
-
-    final var getCompleted
-      = okapiClient.get(instance.getJsonObject("links").getString("self"));
-
-    Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
-
-    assertThat(getResponse.getStatusCode(), is(200));
-  }
-
-  private static void selfLinkRespectsWayResourceWasReached(JsonObject instance) {
-    containsApiRoot(instance.getJsonObject("links").getString("self"));
   }
 
   private static void containsApiRoot(String link) {

@@ -5,14 +5,14 @@ import static org.folio.inventory.support.HoldingsSupport.holdingForItem;
 import static org.folio.inventory.support.HoldingsSupport.instanceForHolding;
 
 import java.lang.invoke.MethodHandles;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.domain.items.Item;
@@ -20,8 +20,6 @@ import org.folio.inventory.domain.items.Status;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 class ItemRepresentation {
   private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
@@ -160,15 +158,6 @@ class ItemRepresentation {
       item.getTemporaryLocationId());
 
     includeIfPresent(representation, "metadata", item.getMetadata());
-
-    try {
-      URL selfUrl = context.absoluteUrl(String.format("%s/%s",
-        relativeItemsPath, item.id));
-
-      representation.put("links", new JsonObject().put("self", selfUrl.toString()));
-    } catch (MalformedURLException e) {
-      log.warn(String.format("Failed to create self link for item: %s", e.toString()));
-    }
 
     if (item.getLastCheckIn() != null) {
       representation.put("lastCheckIn", item.getLastCheckIn().toJson());

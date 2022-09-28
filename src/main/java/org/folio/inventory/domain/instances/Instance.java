@@ -1,13 +1,10 @@
 package org.folio.inventory.domain.instances;
 
-import static java.lang.String.format;
 import static org.folio.inventory.domain.instances.PublicationPeriod.publicationPeriodFromJson;
 import static org.folio.inventory.domain.instances.PublicationPeriod.publicationPeriodToJson;
 import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
 
 import java.lang.invoke.MethodHandles;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -301,16 +298,6 @@ public class Instance {
       JsonArray succeedingTitlesJsonArray = new JsonArray();
       succeedingTitles.forEach(title -> succeedingTitlesJsonArray.add(title.toSucceedingTitleJson()));
       json.put(SUCCEEDING_TITLES_KEY, succeedingTitlesJsonArray );
-    }
-
-    try {
-      URL selfUrl = context.absoluteUrl(format("%s/%s",
-        INSTANCES_PATH, getId()));
-
-      json.put("links", new JsonObject().put("self", selfUrl.toString()));
-    } catch (MalformedURLException e) {
-      log.warn(
-        format("Failed to create self link for instance: %s", e.toString()));
     }
 
     return json;
