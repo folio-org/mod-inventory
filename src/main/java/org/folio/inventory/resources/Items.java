@@ -287,7 +287,7 @@ public class Items extends AbstractInventoryResource {
     List<String> itemIds = wrappedItems.records.stream().map(Item::getId).collect(Collectors.toList());
     if (itemIds.isEmpty()) {
       JsonResponse.success(routingContext.response(),
-      new ItemRepresentation(RELATIVE_ITEMS_PATH)
+      new ItemRepresentation()
         .toJson(wrappedItems, null, null, null,
           null, null, context));
       return;
@@ -474,7 +474,7 @@ public class Items extends AbstractInventoryResource {
             setBoundWithFlagsOnItems(wrappedItems, boundWithPartsFuture);
 
             JsonResponse.success(routingContext.response(),
-              new ItemRepresentation(RELATIVE_ITEMS_PATH)
+              new ItemRepresentation()
                 .toJson(wrappedItems, holdings, instances, foundMaterialTypes,
                   foundLoanTypes, foundLocations, context));
 
@@ -759,7 +759,7 @@ public class Items extends AbstractInventoryResource {
     JsonObject foundEffectiveLocation =
       referenceRecordFrom(item.getEffectiveLocationId(), effectiveLocationFuture);
 
-    return new ItemRepresentation(RELATIVE_ITEMS_PATH)
+    return new ItemRepresentation()
         .toJson(item,
           holding,
           instance,
@@ -768,8 +768,7 @@ public class Items extends AbstractInventoryResource {
           foundTemporaryLoanType,
           foundPermanentLocation,
           foundTemporaryLocation,
-          foundEffectiveLocation,
-          context);
+          foundEffectiveLocation);
   }
 
   private boolean hasSameBarcode(Item updatedItem, Item foundItem) {
