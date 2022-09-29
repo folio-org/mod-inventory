@@ -10,12 +10,19 @@ import static org.folio.inventory.support.EndpointFailureHandler.handleFailure;
 import static org.folio.inventory.support.http.server.SuccessResponse.noContent;
 import static org.folio.inventory.validation.InstancesValidators.refuseWhenHridChanged;
 
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.BodyHandler;
+import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
@@ -46,22 +53,15 @@ import org.folio.inventory.validation.InstancePrecedingSucceedingTitleValidators
 import org.folio.inventory.validation.InstancesValidators;
 import org.folio.rest.client.SourceStorageRecordsClient;
 
-import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import java.util.stream.Collectors;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
 
 
 public class Instances extends AbstractInstances {
-  private static final String INSTANCES_CONTEXT_PATH = INSTANCES_PATH + "/context";
   private static final String BLOCKED_FIELDS_UPDATE_ERROR_MESSAGE = "Instance is controlled by MARC record, these fields are blocked and can not be updated: ";
   private static final String ID = "id";
   private static final String INSTANCE_ID = "instanceId";
@@ -73,23 +73,12 @@ public class Instances extends AbstractInstances {
   public void register(Router router) {
     router.post(INSTANCES_PATH + "*").handler(BodyHandler.create());
     router.put(INSTANCES_PATH + "*").handler(BodyHandler.create());
-    router.get(INSTANCES_CONTEXT_PATH).handler(this::getMetadataContext);
     router.get(INSTANCES_PATH).handler(this::getAll);
     router.post(INSTANCES_PATH).handler(this::create);
     router.delete(INSTANCES_PATH).handler(this::deleteAll);
     router.get(INSTANCES_PATH + "/:id").handler(this::getById);
     router.put(INSTANCES_PATH + "/:id").handler(this::update);
     router.delete(INSTANCES_PATH + "/:id").handler(this::deleteById);
-  }
-
-  private void getMetadataContext(RoutingContext routingContext) {
-    JsonObject representation = new JsonObject();
-
-    representation.put("@context", new JsonObject()
-      .put("dcterms", "http://purl.org/dc/terms/")
-      .put(Instance.TITLE_KEY, "dcterms:title"));
-
-    JsonResponse.success(routingContext.response(), representation);
   }
 
   private void getAll(RoutingContext routingContext) {
