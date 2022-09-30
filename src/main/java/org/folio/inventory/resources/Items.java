@@ -296,9 +296,7 @@ public class Items extends AbstractInventoryResource {
     List<String> itemIds = wrappedItems.records.stream().map(Item::getId).collect(Collectors.toList());
     if (itemIds.isEmpty()) {
       JsonResponse.success(routingContext.response(),
-      new ItemRepresentation()
-        .toJson(wrappedItems, null, null, null,
-          null, null, context));
+        new ItemRepresentation().toJson(wrappedItems));
       return;
     }
 
@@ -485,7 +483,7 @@ public class Items extends AbstractInventoryResource {
             JsonResponse.success(routingContext.response(),
               new ItemRepresentation()
                 .toJson(wrappedItems, holdings, instances, foundMaterialTypes,
-                  foundLoanTypes, foundLocations, context));
+                  foundLoanTypes, foundLocations));
 
           } catch (Exception e) {
             ServerErrorResponse.internalError(routingContext.response(), e.toString());
@@ -494,7 +492,6 @@ public class Items extends AbstractInventoryResource {
       });
     });
   }
-
 
   private OkapiHttpClient createHttpClient(
     RoutingContext routingContext,
