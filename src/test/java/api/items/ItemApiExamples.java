@@ -22,13 +22,12 @@ import static org.folio.inventory.domain.user.Personal.LAST_NAME_KEY;
 import static org.folio.inventory.domain.user.User.ID_KEY;
 import static org.folio.inventory.domain.user.User.PERSONAL_KEY;
 import static org.folio.util.StringUtil.urlEncode;
-import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
-import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertFalse;
@@ -53,7 +52,6 @@ import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Seconds;
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -153,8 +151,6 @@ public class ItemApiExamples extends ApiTests {
     assertThat("Item should contain an effective shelving order",
       createdItem.containsKey("effectiveShelvingOrder"), is(true));
 
-    selfLinkRespectsWayResourceWasReached(createdItem);
-    selfLinkShouldBeReachable(createdItem);
     assertThat(createdItem.getString("hrid"), notNullValue());
     assertThat(createdItem.getString("copyNumber"), is("cp"));
   }
@@ -210,8 +206,6 @@ public class ItemApiExamples extends ApiTests {
 
     assertThat(createdItem.getJsonObject("temporaryLocation").getString("name"), is("Reading Room"));
 
-    selfLinkRespectsWayResourceWasReached(createdItem);
-    selfLinkShouldBeReachable(createdItem);
     assertThat(createdItem.getString("hrid"), is(hrid));
   }
 
@@ -331,9 +325,6 @@ public class ItemApiExamples extends ApiTests {
     assertThat(permanentLoanType.getString("name"), is("Can Circulate"));
 
     assertThat(createdItem.containsKey("temporaryLoanType"), is(false));
-
-    selfLinkRespectsWayResourceWasReached(createdItem);
-    selfLinkShouldBeReachable(createdItem);
   }
 
   @Test
@@ -457,8 +448,6 @@ public class ItemApiExamples extends ApiTests {
 
     assertThat(updatedItem.getJsonObject("temporaryLocation").getString("name"), is("Reading Room"));
 
-    selfLinkRespectsWayResourceWasReached(updatedItem);
-    selfLinkShouldBeReachable(updatedItem);
     assertThat(updatedItem.getString("copyNumber"), is("updatedCp"));
     assertThat(updatedItem.getString(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY),
       is(TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_UPDATE.toString()));
@@ -669,8 +658,6 @@ public class ItemApiExamples extends ApiTests {
     assertThat(secondPageItems.size(), is(2));
     assertThat(secondPageResponse.getJson().getInteger("totalRecords"), is(5));
 
-    firstPageItems.forEach(ItemApiExamples::selfLinkRespectsWayResourceWasReached);
-    firstPageItems.forEach(this::selfLinkShouldBeReachable);
     firstPageItems.forEach(ItemApiExamples::hasConsistentMaterialType);
     firstPageItems.forEach(ItemApiExamples::hasConsistentPermanentLoanType);
     firstPageItems.forEach(ItemApiExamples::hasConsistentTemporaryLoanType);
@@ -680,8 +667,6 @@ public class ItemApiExamples extends ApiTests {
     firstPageItems.forEach(ItemApiExamples::hasConsistentTemporaryLocation);
     firstPageItems.forEach(this::assertCallNumbers);
 
-    secondPageItems.forEach(ItemApiExamples::selfLinkRespectsWayResourceWasReached);
-    secondPageItems.forEach(this::selfLinkShouldBeReachable);
     secondPageItems.forEach(ItemApiExamples::hasConsistentMaterialType);
     secondPageItems.forEach(ItemApiExamples::hasConsistentPermanentLoanType);
     secondPageItems.forEach(ItemApiExamples::hasConsistentTemporaryLoanType);
@@ -1075,9 +1060,6 @@ public class ItemApiExamples extends ApiTests {
       is(source.getJsonObject(PERSONAL_KEY).getString(LAST_NAME_KEY)));
     assertThat(source.getJsonObject(PERSONAL_KEY).getString(FIRST_NAME_KEY),
       is(source.getJsonObject(PERSONAL_KEY).getString(FIRST_NAME_KEY)));
-
-    selfLinkRespectsWayResourceWasReached(createdItem);
-    selfLinkShouldBeReachable(createdItem);
   }
 
   @Test
@@ -1099,8 +1081,6 @@ public class ItemApiExamples extends ApiTests {
       .put(PERSONAL_KEY, new JsonObject()
         .put(LAST_NAME_KEY, "Smith")
         .put(FIRST_NAME_KEY, "John"));
-
-    JsonObject createdUser = usersClient.create(user).getJson();
 
     DateTime requestMade = DateTime.now();
 
@@ -1142,15 +1122,10 @@ public class ItemApiExamples extends ApiTests {
     JsonObject checkInNote = createdItem.getJsonArray(CIRCULATION_NOTES_KEY).getJsonObject(0);
     checkInNote.remove("source");
 
-    JsonObject source = checkInNote.getJsonObject(SOURCE_KEY);
-
     assertThat(checkInNote.getString(NOTE_TYPE_KEY), is("Check in"));
     assertThat(checkInNote.getString(NOTE_KEY), is("Please read this note before checking in the item"));
     assertThat(checkInNote.getBoolean(STAFF_ONLY_KEY), is(false));
     assertThat(checkInNote.getString(DATE_KEY), withinSecondsAfter(Seconds.seconds(2), requestMade));
-
-    selfLinkRespectsWayResourceWasReached(createdItem);
-    selfLinkShouldBeReachable(createdItem);
   }
 
   @Test
@@ -1224,9 +1199,6 @@ public class ItemApiExamples extends ApiTests {
 
     assertThat(checkInNote.getString(DATE_KEY), not(createdItemCirculationNoteDate));
     assertThat(checkInNote.getString(DATE_KEY), withinSecondsAfter(Seconds.seconds(2), createItemRequestMade));
-
-    selfLinkRespectsWayResourceWasReached(updatedItem);
-    selfLinkShouldBeReachable(updatedItem);
   }
 
   @Test
@@ -1627,28 +1599,6 @@ public class ItemApiExamples extends ApiTests {
     final var putItemCompleted = okapiClient.put(itemUpdateUri, item);
 
     return putItemCompleted.toCompletableFuture().get(5, SECONDS);
-  }
-
-  private static void selfLinkRespectsWayResourceWasReached(JsonObject item) {
-    containsApiRoot(item.getJsonObject("links").getString("self"));
-  }
-
-  private static void containsApiRoot(String link) {
-    assertThat(link, containsString(ApiTestSuite.apiRoot()));
-  }
-
-  private void selfLinkShouldBeReachable(JsonObject item) {
-    try {
-      final var getCompleted
-        = okapiClient.get(item.getJsonObject("links").getString("self"));
-
-      Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
-
-      assertThat(getResponse.getStatusCode(), is(200));
-    }
-    catch(Exception e) {
-      Assert.fail(e.toString());
-    }
   }
 
   private static void hasStatus(JsonObject item) {
