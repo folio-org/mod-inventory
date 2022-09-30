@@ -10,7 +10,7 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
-import org.folio.inventory.domain.HoldingCollection;
+import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.events.services.handler.EventHandler;
@@ -63,7 +63,7 @@ public class MarcBibMatchedPostProcessingEventHandler implements EventHandler {
       String instanceId = ParsedRecordUtil.getAdditionalSubfieldValue(matchedRecord.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.I);
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
-      HoldingCollection holdingCollection = storage.getHoldingCollection(context);
+      HoldingsRecordCollection holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
       if (isBlank(instanceId)) {
         future.complete(dataImportEventPayload);
         return future;
@@ -74,7 +74,7 @@ public class MarcBibMatchedPostProcessingEventHandler implements EventHandler {
           if (t == null && v != null) {
             dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(v));
             try {
-              holdingCollection.findByCql(format("instanceId=%s", v.getId()), PagingParameters.defaults(),
+              holdingsRecordCollection.findByCql(format("instanceId=%s", v.getId()), PagingParameters.defaults(),
                 findResult -> {
                   if (findResult.getResult() != null && findResult.getResult().totalRecords == 1) {
                     dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encode(findResult.getResult().records.get(0)));
