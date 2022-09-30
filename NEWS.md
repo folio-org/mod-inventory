@@ -2,6 +2,7 @@
 
 * Extend instance contributors schema with Authority ID ([MODINV-729](https://issues.folio.org/browse/MODINV-729))
 * Delete instance/item by CQL ([MODINV-731](https://issues.folio.org/browse/MODINV-731))
+* Removes minimal dublin core support for instances ([MODINV-734](https://issues.folio.org/browse/MODINV-734))
 * Provides `inventory 12.0`
 * Requires `instance-storage 9.0`
 * Requires `item-storage 10.0`
