@@ -9,13 +9,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 
-import java.net.MalformedURLException;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -92,15 +88,12 @@ public class ItemApiMoveExamples extends ApiTests {
         .withBarcode("645398607547")
         .withStatus(ItemStatusName.AVAILABLE.value()));
 
-    JsonObject itemsMoveRequestBody = new ItemsMoveRequestBuilder(newHoldingId,
-        new JsonArray(Arrays.asList(item.getId(), nonExistedItemId))).create();
+    final var moveItemsResponse = moveItems(newHoldingId, nonExistedItemId, item.getId());
 
-    Response postItemsMoveResponse = moveItems(itemsMoveRequestBody);
+    assertThat(moveItemsResponse.getStatusCode(), is(200));
+    assertThat(moveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
 
-    assertThat(postItemsMoveResponse.getStatusCode(), is(200));
-    assertThat(postItemsMoveResponse.getContentType(), containsString(APPLICATION_JSON));
-
-    List notFoundIds = postItemsMoveResponse.getJson()
+    final var notFoundIds = moveItemsResponse.getJson()
       .getJsonArray("nonUpdatedIds")
       .getList();
 
@@ -113,42 +106,27 @@ public class ItemApiMoveExamples extends ApiTests {
   }
 
   @Test
-  public void cannotMoveItemsToUnspecifiedHoldingsRecord()
-    throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+  public void cannotMoveItemsToUnspecifiedHoldingsRecord() {
+    final var moveItemsResponse = moveItems(null, UUID.randomUUID());
 
-    JsonObject itemMoveWithoutToHoldingsRecordId = new ItemsMoveRequestBuilder(null,
-        new JsonArray(Collections.singletonList(UUID.randomUUID()))).create();
+    assertThat(moveItemsResponse.getStatusCode(), is(422));
+    assertThat(moveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
 
-    final var postMoveItemsCompleted = okapiClient.post(
-      ApiRoot.moveItems(), itemMoveWithoutToHoldingsRecordId);
-
-    Response postMoveItemsResponse = postMoveItemsCompleted.toCompletableFuture().get(5, SECONDS);
-
-    assertThat(postMoveItemsResponse.getStatusCode(), is(422));
-    assertThat(postMoveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
-
-    assertThat(postMoveItemsResponse.getBody(), containsString("errors"));
-    assertThat(postMoveItemsResponse.getBody(), containsString("toHoldingsRecordId"));
-    assertThat(postMoveItemsResponse.getBody(), containsString("toHoldingsRecordId is a required field"));
+    assertThat(moveItemsResponse.getBody(), containsString("errors"));
+    assertThat(moveItemsResponse.getBody(), containsString("toHoldingsRecordId"));
+    assertThat(moveItemsResponse.getBody(), containsString("toHoldingsRecordId is a required field"));
   }
 
   @Test
-  public void cannotMoveUnspecifiedItems()
-    throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+  public void cannotMoveUnspecifiedItems() {
+    final var moveItemsResponse = moveItems(UUID.randomUUID(), List.of());
 
-    JsonObject itemMoveWithoutItemIds = new ItemsMoveRequestBuilder(UUID.randomUUID(), new JsonArray()).create();
+    assertThat(moveItemsResponse.getStatusCode(), is(422));
+    assertThat(moveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
 
-    final var postMoveItemsCompleted = okapiClient.post(
-      ApiRoot.moveItems(), itemMoveWithoutItemIds);
-
-    Response postMoveItemsResponse = postMoveItemsCompleted.toCompletableFuture().get(5, SECONDS);
-
-    assertThat(postMoveItemsResponse.getStatusCode(), is(422));
-    assertThat(postMoveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
-
-    assertThat(postMoveItemsResponse.getBody(), containsString("errors"));
-    assertThat(postMoveItemsResponse.getBody(), containsString("itemIds"));
-    assertThat(postMoveItemsResponse.getBody(), containsString("Item ids aren't specified"));
+    assertThat(moveItemsResponse.getBody(), containsString("errors"));
+    assertThat(moveItemsResponse.getBody(), containsString("itemIds"));
+    assertThat(moveItemsResponse.getBody(), containsString("Item ids aren't specified"));
   }
 
   @Test
@@ -164,16 +142,13 @@ public class ItemApiMoveExamples extends ApiTests {
         .withBarcode("645398607547")
         .withStatus(ItemStatusName.AVAILABLE.value()));
 
-    JsonObject itemsMoveRequestBody = new ItemsMoveRequestBuilder(newHoldingId,
-      new JsonArray(Collections.singletonList(item.getId()))).create();
+    final var moveItemsResponse = moveItems(newHoldingId, item);
 
-    Response postMoveItemsResponse = moveItems(itemsMoveRequestBody);
+    assertThat(moveItemsResponse.getStatusCode(), is(422));
+    assertThat(moveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
 
-    assertThat(postMoveItemsResponse.getStatusCode(), is(422));
-    assertThat(postMoveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
-
-    assertThat(postMoveItemsResponse.getBody(), containsString("errors"));
-    assertThat(postMoveItemsResponse.getBody(), containsString(newHoldingId.toString()));
+    assertThat(moveItemsResponse.getBody(), containsString("errors"));
+    assertThat(moveItemsResponse.getBody(), containsString(newHoldingId.toString()));
   }
 
   @Test
@@ -183,18 +158,15 @@ public class ItemApiMoveExamples extends ApiTests {
     final var existedHoldingId = createHoldingForInstance(instanceId);
     final var newHoldingId = createNonCompatibleHoldingForInstance(instanceId);
 
-    final var createItem = itemsClient.create(
+    final var item = itemsClient.create(
       new ItemRequestBuilder()
         .forHolding(existedHoldingId)
         .withBarcode("645398607547")
         .withStatus(ItemStatusName.AVAILABLE.value()));
 
-    JsonObject itemsMoveRequestBody = new ItemsMoveRequestBuilder(newHoldingId,
-      new JsonArray(Collections.singletonList(createItem.getId()))).create();
+    final var moveItemsResponse = moveItems(newHoldingId, item);
 
-    Response postMoveItemsResponse = moveItems(itemsMoveRequestBody);
-
-    assertThat(postMoveItemsResponse.getStatusCode(), is(200));
+    assertThat(moveItemsResponse.getStatusCode(), is(200));
   }
 
   @Test
@@ -219,7 +191,7 @@ public class ItemApiMoveExamples extends ApiTests {
 
     final var moveItemsResponse = moveItems(newHoldingId, firstItem, secondItem);
 
-    List nonUpdatedIdsIds = moveItemsResponse.getJson()
+    final var nonUpdatedIdsIds = moveItemsResponse.getJson()
       .getJsonArray("nonUpdatedIds")
       .getList();
 
@@ -243,6 +215,14 @@ public class ItemApiMoveExamples extends ApiTests {
       .map(IndividualResource::getId)
       .collect(Collectors.toList());
 
+    return moveItems(newHoldingsId, itemIds);
+  }
+
+  private Response moveItems(UUID newHoldingsId, UUID... itemIds) {
+    return moveItems(newHoldingsId, Arrays.asList(itemIds));
+  }
+
+  private Response moveItems(UUID newHoldingsId, List<UUID> itemIds) {
     final var body = new ItemsMoveRequestBuilder(newHoldingsId,
       new JsonArray(itemIds)).create();
 
@@ -250,9 +230,9 @@ public class ItemApiMoveExamples extends ApiTests {
   }
 
   @SneakyThrows
-  private Response moveItems(JsonObject itemsMoveRequestBody) {
-    final var postItemsMoveCompleted = okapiClient.post(ApiRoot.moveItems(), itemsMoveRequestBody);
-    return postItemsMoveCompleted.toCompletableFuture().get(5, SECONDS);
+  private Response moveItems(JsonObject body) {
+    return okapiClient.post(ApiRoot.moveItems(), body)
+      .toCompletableFuture().get(5, SECONDS);
   }
 
   private static UUID createInstance() {
@@ -276,7 +256,6 @@ public class ItemApiMoveExamples extends ApiTests {
     return holdingsStorageClient.create(builder).getId();
   }
   private static class InvalidHoldingRequestBuilder extends AbstractBuilder {
-
     private final UUID instanceId;
     private final UUID permanentLocationId;
 
