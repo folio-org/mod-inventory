@@ -42,13 +42,13 @@ public class ItemApiMoveExamples extends ApiTests {
   private static final String HOLDINGS_RECORD_ID = "holdingsRecordId";
 
   @Test
-  public void canMoveItemsToDifferentHoldingsRecord() throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+  public void canMoveItemsToDifferentHoldingsRecord()
+    throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
 
-    UUID instanceId = UUID.randomUUID();
-    InstanceApiClient.createInstance(okapiClient, smallAngryPlanet(instanceId));
+    final var instanceId = createInstance();
 
-    final UUID existedHoldingId = createHoldingForInstance(instanceId);
-    final UUID newHoldingId = createHoldingForInstance(instanceId);
+    final var existedHoldingId = createHoldingForInstance(instanceId);
+    final var newHoldingId = createHoldingForInstance(instanceId);
 
     Assert.assertNotEquals(existedHoldingId, newHoldingId);
 
@@ -81,8 +81,7 @@ public class ItemApiMoveExamples extends ApiTests {
   @Test
   public void shouldReportErrorsWhenOnlySomeRequestedItemsCouldNotBeMoved() throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
 
-    UUID instanceId = UUID.randomUUID();
-    InstanceApiClient.createInstance(okapiClient, smallAngryPlanet(instanceId));
+    UUID instanceId = createInstance();
 
     final UUID existedHoldingId = createHoldingForInstance(instanceId);
     final UUID newHoldingId = createHoldingForInstance(instanceId);
@@ -158,8 +157,7 @@ public class ItemApiMoveExamples extends ApiTests {
   public void cannotMoveToNonExistedHoldingsRecord()
     throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
 
-    UUID instanceId = UUID.randomUUID();
-    InstanceApiClient.createInstance(okapiClient, smallAngryPlanet(instanceId));
+    UUID instanceId = createInstance();
 
     final UUID existedHoldingId = createHoldingForInstance(instanceId);
     final UUID newHoldingId = UUID.randomUUID();
@@ -186,8 +184,7 @@ public class ItemApiMoveExamples extends ApiTests {
   public void canMoveToHoldingsRecordWithHoldingSchemasMismatching()
     throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException, IllegalAccessException {
 
-    UUID instanceId = UUID.randomUUID();
-    InstanceApiClient.createInstance(okapiClient, smallAngryPlanet(instanceId));
+    UUID instanceId = createInstance();
 
     final UUID existedHoldingId = createHoldingForInstance(instanceId);
     final UUID newHoldingId = createNonCompatibleHoldingForInstance(instanceId);
@@ -209,8 +206,7 @@ public class ItemApiMoveExamples extends ApiTests {
   @Test
   public void canMoveItemsDueToItemUpdateError() throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
 
-    UUID instanceId = UUID.randomUUID();
-    InstanceApiClient.createInstance(okapiClient, smallAngryPlanet(instanceId));
+    UUID instanceId = createInstance();
 
     final UUID existedHoldingId = createHoldingForInstance(instanceId);
     final UUID newHoldingId = createHoldingForInstance(instanceId);
@@ -253,6 +249,14 @@ public class ItemApiMoveExamples extends ApiTests {
   private Response moveItems(JsonObject itemsMoveRequestBody) throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
     final var postItemsMoveCompleted = okapiClient.post(ApiRoot.moveItems(), itemsMoveRequestBody);
     return postItemsMoveCompleted.toCompletableFuture().get(5, SECONDS);
+  }
+
+  private static UUID createInstance() {
+    final var instanceId = UUID.randomUUID();
+
+    InstanceApiClient.createInstance(okapiClient, smallAngryPlanet(instanceId));
+
+    return instanceId;
   }
 
   private UUID createHoldingForInstance(UUID instanceId)
