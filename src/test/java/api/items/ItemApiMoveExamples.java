@@ -16,6 +16,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.support.http.client.IndividualResource;
@@ -236,11 +238,13 @@ public class ItemApiMoveExamples extends ApiTests {
     assertThat(existedHoldingId.toString(), equalTo(updatedItem2.getString(HOLDINGS_RECORD_ID)));
   }
 
-  private Response moveItems(UUID newHoldingsId, IndividualResource firstItem,
-    IndividualResource secondItem) {
+  private Response moveItems(UUID newHoldingsId, IndividualResource... items) {
+    final var itemIds = Stream.of(items)
+      .map(IndividualResource::getId)
+      .collect(Collectors.toList());
 
     final var body = new ItemsMoveRequestBuilder(newHoldingsId,
-      new JsonArray(Arrays.asList(firstItem.getId(), secondItem.getId()))).create();
+      new JsonArray(itemIds)).create();
 
     return moveItems(body);
   }
