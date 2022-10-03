@@ -30,7 +30,6 @@ import api.support.builders.AbstractBuilder;
 import api.support.builders.HoldingRequestBuilder;
 import api.support.builders.ItemRequestBuilder;
 import api.support.builders.ItemsMoveRequestBuilder;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import junitparams.JUnitParamsRunner;
 import lombok.SneakyThrows;
@@ -223,10 +222,7 @@ public class ItemApiMoveExamples extends ApiTests {
   }
 
   private Response moveItems(UUID newHoldingsId, List<UUID> itemIds) {
-    final var body = new ItemsMoveRequestBuilder(newHoldingsId,
-      new JsonArray(itemIds)).create();
-
-    return moveItems(body);
+    return moveItems(new ItemsMoveRequestBuilder(newHoldingsId, itemIds).create());
   }
 
   @SneakyThrows
