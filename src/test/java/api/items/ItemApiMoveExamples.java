@@ -37,7 +37,6 @@ import junitparams.JUnitParamsRunner;
 
 @RunWith(JUnitParamsRunner.class)
 public class ItemApiMoveExamples extends ApiTests {
-
   private static final String HOLDINGS_RECORD_ID = "holdingsRecordId";
 
   @Test
@@ -264,15 +263,16 @@ public class ItemApiMoveExamples extends ApiTests {
     return instanceId;
   }
 
-  private UUID createHoldingForInstance(UUID instanceId)
-      throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
-    return holdingsStorageClient.create(new HoldingRequestBuilder().forInstance(instanceId))
+  private UUID createHoldingForInstance(UUID instanceId) {
+    return holdingsStorageClient.create(new HoldingRequestBuilder()
+      .forInstance(instanceId))
       .getId();
   }
 
-  private UUID createNonCompatibleHoldingForInstance(UUID instanceId)
-    throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
-    AbstractBuilder builder = new InvalidHoldingRequestBuilder().forInstance(instanceId);
+  private UUID createNonCompatibleHoldingForInstance(UUID instanceId) {
+    final var builder = new InvalidHoldingRequestBuilder()
+      .forInstance(instanceId);
+
     return holdingsStorageClient.create(builder).getId();
   }
 
