@@ -34,6 +34,7 @@ import api.support.builders.ItemsMoveRequestBuilder;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import junitparams.JUnitParamsRunner;
+import lombok.SneakyThrows;
 
 @RunWith(JUnitParamsRunner.class)
 public class ItemApiMoveExamples extends ApiTests {
@@ -250,7 +251,8 @@ public class ItemApiMoveExamples extends ApiTests {
     assertThat(existedHoldingId.toString(), equalTo(updatedItem2.getString(HOLDINGS_RECORD_ID)));
   }
 
-  private Response moveItems(JsonObject itemsMoveRequestBody) throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+  @SneakyThrows
+  private Response moveItems(JsonObject itemsMoveRequestBody) {
     final var postItemsMoveCompleted = okapiClient.post(ApiRoot.moveItems(), itemsMoveRequestBody);
     return postItemsMoveCompleted.toCompletableFuture().get(5, SECONDS);
   }
@@ -262,7 +264,7 @@ public class ItemApiMoveExamples extends ApiTests {
 
     return instanceId;
   }
-
+  
   private UUID createHoldingForInstance(UUID instanceId) {
     return holdingsStorageClient.create(new HoldingRequestBuilder()
       .forInstance(instanceId))
