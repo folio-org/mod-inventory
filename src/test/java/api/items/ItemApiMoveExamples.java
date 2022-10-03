@@ -18,6 +18,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import org.folio.inventory.domain.items.ItemStatusName;
+import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
 import org.junit.Assert;
 import org.junit.Test;
@@ -59,14 +60,11 @@ public class ItemApiMoveExamples extends ApiTests {
         .withBarcode("645398607546")
         .withStatus(ItemStatusName.AVAILABLE.value()));
 
-    JsonObject itemsMoveRequestBody = new ItemsMoveRequestBuilder(newHoldingId,
-        new JsonArray(Arrays.asList(firstItem.getId(), secondItem.getId()))).create();
+    final var moveItemsResponse = moveItems(newHoldingId, firstItem, secondItem);
 
-    Response postItemsMoveResponse = moveItems(itemsMoveRequestBody);
-
-    assertThat(postItemsMoveResponse.getStatusCode(), is(200));
-    assertThat(new JsonObject(postItemsMoveResponse.getBody()).getJsonArray("nonUpdatedIds").size(), is(0));
-    assertThat(postItemsMoveResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(moveItemsResponse.getStatusCode(), is(200));
+    assertThat(new JsonObject(moveItemsResponse.getBody()).getJsonArray("nonUpdatedIds").size(), is(0));
+    assertThat(moveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
 
     JsonObject updatedItem1 = itemsClient.getById(firstItem.getId())
       .getJson();
@@ -217,20 +215,17 @@ public class ItemApiMoveExamples extends ApiTests {
         .withId(ID_FOR_FAILURE)
         .withStatus(ItemStatusName.AVAILABLE.value()));
 
-    JsonObject itemsMoveRequestBody = new ItemsMoveRequestBuilder(newHoldingId,
-      new JsonArray(Arrays.asList(firstItem.getId(), secondItem.getId()))).create();
+    final var moveItemsResponse = moveItems(newHoldingId, firstItem, secondItem);
 
-    Response postItemsMoveResponse = moveItems(itemsMoveRequestBody);
-
-    List nonUpdatedIdsIds = postItemsMoveResponse.getJson()
+    List nonUpdatedIdsIds = moveItemsResponse.getJson()
       .getJsonArray("nonUpdatedIds")
       .getList();
 
     assertThat(nonUpdatedIdsIds.size(), is(1));
     assertThat(nonUpdatedIdsIds.get(0), equalTo(ID_FOR_FAILURE.toString()));
 
-    assertThat(postItemsMoveResponse.getStatusCode(), is(200));
-    assertThat(postItemsMoveResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(moveItemsResponse.getStatusCode(), is(200));
+    assertThat(moveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
 
     JsonObject updatedItem1 = itemsClient.getById(firstItem.getId())
       .getJson();
@@ -239,6 +234,15 @@ public class ItemApiMoveExamples extends ApiTests {
     JsonObject updatedItem2 = itemsClient.getById(secondItem.getId())
       .getJson();
     assertThat(existedHoldingId.toString(), equalTo(updatedItem2.getString(HOLDINGS_RECORD_ID)));
+  }
+
+  private Response moveItems(UUID newHoldingsId, IndividualResource firstItem,
+    IndividualResource secondItem) {
+
+    final var body = new ItemsMoveRequestBuilder(newHoldingsId,
+      new JsonArray(Arrays.asList(firstItem.getId(), secondItem.getId()))).create();
+
+    return moveItems(body);
   }
 
   @SneakyThrows
@@ -254,7 +258,7 @@ public class ItemApiMoveExamples extends ApiTests {
 
     return instanceId;
   }
-  
+
   private UUID createHoldingForInstance(UUID instanceId) {
     return holdingsStorageClient.create(new HoldingRequestBuilder()
       .forInstance(instanceId))
@@ -267,8 +271,8 @@ public class ItemApiMoveExamples extends ApiTests {
 
     return holdingsStorageClient.create(builder).getId();
   }
-
   private static class InvalidHoldingRequestBuilder extends AbstractBuilder {
+
     private final UUID instanceId;
     private final UUID permanentLocationId;
 
