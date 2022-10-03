@@ -104,12 +104,6 @@ After setup, it is good to check logs in all related modules for errors.
     * "_kafkacache.log.retention.ms_": 18000000
     * "_kafkacache.topic_": events_cache
 
-## Sample Data
-
-Importing/ingesting of sample data is done via Okapi, so modules must be registered prior to importing.
-
-To load some sample data run `./import-sample-data.sh` from the root directory.
-
 # Making Requests
 
 These modules provide HTTP based APIs rather than any UI themselves.

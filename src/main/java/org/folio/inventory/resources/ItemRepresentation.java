@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.Status;
@@ -19,6 +18,10 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 class ItemRepresentation {
+  JsonObject toJson(MultipleRecords<Item> wrappedItems) {
+    return toJson(wrappedItems, null, null, null, null, null);
+  }
+
   JsonObject toJson(
     Item item,
     JsonObject holding,
@@ -89,7 +92,7 @@ class ItemRepresentation {
       converterForClass(Status.class).toJson(item.getStatus()));
 
     List<JsonObject> contributorNames = new ArrayList<>();
-    instance.getJsonArray("contributors").forEach((contributor) -> {
+    instance.getJsonArray("contributors").forEach(contributor -> {
       JsonObject contributorName = new JsonObject();
       contributorName.put("name", ((JsonObject)contributor).getString("name"));
       contributorNames.add(contributorName);
@@ -172,8 +175,7 @@ class ItemRepresentation {
     Collection<JsonObject> instances,
     Map<String, JsonObject> materialTypes,
     Map<String, JsonObject> loanTypes,
-    Map<String, JsonObject> locations,
-    WebContext context) {
+    Map<String, JsonObject> locations) {
 
     JsonObject representation = new JsonObject();
 
