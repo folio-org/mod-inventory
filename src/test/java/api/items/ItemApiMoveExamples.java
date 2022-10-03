@@ -41,9 +41,7 @@ public class ItemApiMoveExamples extends ApiTests {
   private static final String HOLDINGS_RECORD_ID = "holdingsRecordId";
 
   @Test
-  public void canMoveItemsToDifferentHoldingsRecord()
-    throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
-
+  public void canMoveItemsToDifferentHoldingsRecord() {
     final var instanceId = createInstance();
 
     final var existedHoldingId = createHoldingForInstance(instanceId);
@@ -80,9 +78,7 @@ public class ItemApiMoveExamples extends ApiTests {
   }
 
   @Test
-  public void shouldReportErrorsWhenOnlySomeRequestedItemsCouldNotBeMoved()
-    throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
-
+  public void shouldReportErrorsWhenOnlySomeRequestedItemsCouldNotBeMoved() {
     final var instanceId = createInstance();
 
     final var existedHoldingId = createHoldingForInstance(instanceId);
@@ -156,9 +152,7 @@ public class ItemApiMoveExamples extends ApiTests {
   }
 
   @Test
-  public void cannotMoveToNonExistedHoldingsRecord()
-    throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
-
+  public void cannotMoveToNonExistedHoldingsRecord() {
     final var instanceId = createInstance();
 
     final var existedHoldingId = createHoldingForInstance(instanceId);
@@ -183,9 +177,7 @@ public class ItemApiMoveExamples extends ApiTests {
   }
 
   @Test
-  public void canMoveToHoldingsRecordWithHoldingSchemasMismatching()
-    throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
-
+  public void canMoveToHoldingsRecordWithHoldingSchemasMismatching() {
     final var instanceId = createInstance();
 
     final var existedHoldingId = createHoldingForInstance(instanceId);
@@ -206,9 +198,7 @@ public class ItemApiMoveExamples extends ApiTests {
   }
 
   @Test
-  public void canMoveItemsDueToItemUpdateError()
-    throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
-
+  public void canMoveItemsDueToItemUpdateError() {
     final var instanceId = createInstance();
 
     final var existedHoldingId = createHoldingForInstance(instanceId);

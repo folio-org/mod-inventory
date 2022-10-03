@@ -220,12 +220,8 @@ public class ResourceClient {
     return putCompleted.toCompletableFuture().get(5, SECONDS);
   }
 
-  public Response getById(UUID id)
-    throws MalformedURLException,
-    InterruptedException,
-    ExecutionException,
-    TimeoutException {
-
+  @SneakyThrows
+  public Response getById(UUID id) {
     final var getCompleted = client.get(urlMaker.combine(String.format("/%s", id)));
 
     return getCompleted.toCompletableFuture().get(5, SECONDS);
