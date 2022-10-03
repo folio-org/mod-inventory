@@ -3,11 +3,14 @@ package api.items;
 import static api.ApiTestSuite.ID_FOR_FAILURE;
 import static api.support.InstanceSamples.smallAngryPlanet;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.folio.inventory.support.JsonArrayHelper.toList;
+import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
 import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasSize;
 
 import java.util.Arrays;
 import java.util.List;
@@ -18,7 +21,6 @@ import java.util.stream.Stream;
 import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -60,16 +62,14 @@ public class ItemApiMoveExamples extends ApiTests {
     final var moveItemsResponse = moveItems(newHoldingId, firstItem, secondItem);
 
     assertThat(moveItemsResponse.getStatusCode(), is(200));
-    assertThat(new JsonObject(moveItemsResponse.getBody()).getJsonArray("nonUpdatedIds").size(), is(0));
+    assertThat(toList(moveItemsResponse.getJson(), "nonUpdatedIds"), hasSize(0));
     assertThat(moveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
 
-    JsonObject updatedItem1 = itemsClient.getById(firstItem.getId())
-      .getJson();
-    JsonObject updatedItem2 = itemsClient.getById(secondItem.getId())
-      .getJson();
+    final var firstUpdatedItem = itemsClient.getById(firstItem.getId()).getJson();
+    final var secondUpdatedItem = itemsClient.getById(secondItem.getId()).getJson();
 
-    Assert.assertEquals(newHoldingId.toString(), updatedItem1.getString(HOLDINGS_RECORD_ID));
-    Assert.assertEquals(newHoldingId.toString(), updatedItem2.getString(HOLDINGS_RECORD_ID));
+    assertThat(firstUpdatedItem.getString(HOLDINGS_RECORD_ID), is(newHoldingId.toString()));
+    assertThat(secondUpdatedItem.getString(HOLDINGS_RECORD_ID), is(newHoldingId.toString()));
   }
 
   @Test
@@ -92,11 +92,10 @@ public class ItemApiMoveExamples extends ApiTests {
     assertThat(moveItemsResponse.getStatusCode(), is(200));
     assertThat(moveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
 
-    final var notFoundIds = moveItemsResponse.getJson()
-      .getJsonArray("nonUpdatedIds")
-      .getList();
+    final var notFoundIds = toListOfStrings(moveItemsResponse.getJson(),
+      "nonUpdatedIds");
 
-    assertThat(notFoundIds.size(), is(1));
+    assertThat(notFoundIds, hasSize(1));
     assertThat(notFoundIds.get(0), equalTo(nonExistedItemId.toString()));
 
     JsonObject updatedItem1 = itemsClient.getById(item.getId())
@@ -190,11 +189,10 @@ public class ItemApiMoveExamples extends ApiTests {
 
     final var moveItemsResponse = moveItems(newHoldingId, firstItem, secondItem);
 
-    final var nonUpdatedIdsIds = moveItemsResponse.getJson()
-      .getJsonArray("nonUpdatedIds")
-      .getList();
+    final var nonUpdatedIdsIds = toListOfStrings(moveItemsResponse.getJson(),
+      "nonUpdatedIds");
 
-    assertThat(nonUpdatedIdsIds.size(), is(1));
+    assertThat(nonUpdatedIdsIds, hasSize(1));
     assertThat(nonUpdatedIdsIds.get(0), equalTo(ID_FOR_FAILURE.toString()));
 
     assertThat(moveItemsResponse.getStatusCode(), is(200));
