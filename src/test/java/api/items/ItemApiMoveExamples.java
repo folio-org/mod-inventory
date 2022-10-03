@@ -18,7 +18,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import org.folio.inventory.domain.items.ItemStatusName;
-import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
 import org.junit.Assert;
 import org.junit.Test;
@@ -50,18 +49,20 @@ public class ItemApiMoveExamples extends ApiTests {
     final var existedHoldingId = createHoldingForInstance(instanceId);
     final var newHoldingId = createHoldingForInstance(instanceId);
 
-    Assert.assertNotEquals(existedHoldingId, newHoldingId);
+    final var firstItem = itemsClient.create(
+      new ItemRequestBuilder()
+        .forHolding(existedHoldingId)
+        .withBarcode("645398607547")
+        .withStatus(ItemStatusName.AVAILABLE.value()));
 
-    final IndividualResource createItem1 = itemsClient.create(new ItemRequestBuilder().forHolding(existedHoldingId)
-      .withBarcode("645398607547")
-      .withStatus(ItemStatusName.AVAILABLE.value()));
-
-    final IndividualResource createItem2 = itemsClient.create(new ItemRequestBuilder().forHolding(existedHoldingId)
-      .withBarcode("645398607546")
-      .withStatus(ItemStatusName.AVAILABLE.value()));
+    final var secondItem = itemsClient.create(
+      new ItemRequestBuilder()
+        .forHolding(existedHoldingId)
+        .withBarcode("645398607546")
+        .withStatus(ItemStatusName.AVAILABLE.value()));
 
     JsonObject itemsMoveRequestBody = new ItemsMoveRequestBuilder(newHoldingId,
-        new JsonArray(Arrays.asList(createItem1.getId(), createItem2.getId()))).create();
+        new JsonArray(Arrays.asList(firstItem.getId(), secondItem.getId()))).create();
 
     Response postItemsMoveResponse = moveItems(itemsMoveRequestBody);
 
@@ -69,9 +70,9 @@ public class ItemApiMoveExamples extends ApiTests {
     assertThat(new JsonObject(postItemsMoveResponse.getBody()).getJsonArray("nonUpdatedIds").size(), is(0));
     assertThat(postItemsMoveResponse.getContentType(), containsString(APPLICATION_JSON));
 
-    JsonObject updatedItem1 = itemsClient.getById(createItem1.getId())
+    JsonObject updatedItem1 = itemsClient.getById(firstItem.getId())
       .getJson();
-    JsonObject updatedItem2 = itemsClient.getById(createItem2.getId())
+    JsonObject updatedItem2 = itemsClient.getById(secondItem.getId())
       .getJson();
 
     Assert.assertEquals(newHoldingId.toString(), updatedItem1.getString(HOLDINGS_RECORD_ID));
@@ -79,23 +80,24 @@ public class ItemApiMoveExamples extends ApiTests {
   }
 
   @Test
-  public void shouldReportErrorsWhenOnlySomeRequestedItemsCouldNotBeMoved() throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+  public void shouldReportErrorsWhenOnlySomeRequestedItemsCouldNotBeMoved()
+    throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
 
-    UUID instanceId = createInstance();
+    final var instanceId = createInstance();
 
-    final UUID existedHoldingId = createHoldingForInstance(instanceId);
-    final UUID newHoldingId = createHoldingForInstance(instanceId);
+    final var existedHoldingId = createHoldingForInstance(instanceId);
+    final var newHoldingId = createHoldingForInstance(instanceId);
 
-    Assert.assertNotEquals(existedHoldingId, newHoldingId);
+    final var nonExistedItemId = UUID.randomUUID();
 
-    final UUID nonExistedItemId = UUID.randomUUID();
-
-    final IndividualResource createItem1 = itemsClient.create(new ItemRequestBuilder().forHolding(existedHoldingId)
-      .withBarcode("645398607547")
-      .withStatus(ItemStatusName.AVAILABLE.value()));
+    final var item = itemsClient.create(
+      new ItemRequestBuilder()
+        .forHolding(existedHoldingId)
+        .withBarcode("645398607547")
+        .withStatus(ItemStatusName.AVAILABLE.value()));
 
     JsonObject itemsMoveRequestBody = new ItemsMoveRequestBuilder(newHoldingId,
-        new JsonArray(Arrays.asList(createItem1.getId(), nonExistedItemId))).create();
+        new JsonArray(Arrays.asList(item.getId(), nonExistedItemId))).create();
 
     Response postItemsMoveResponse = moveItems(itemsMoveRequestBody);
 
@@ -109,14 +111,14 @@ public class ItemApiMoveExamples extends ApiTests {
     assertThat(notFoundIds.size(), is(1));
     assertThat(notFoundIds.get(0), equalTo(nonExistedItemId.toString()));
 
-    JsonObject updatedItem1 = itemsClient.getById(createItem1.getId())
+    JsonObject updatedItem1 = itemsClient.getById(item.getId())
       .getJson();
     assertThat(newHoldingId.toString(), equalTo(updatedItem1.getString(HOLDINGS_RECORD_ID)));
   }
 
   @Test
   public void cannotMoveItemsToUnspecifiedHoldingsRecord()
-      throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+    throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
 
     JsonObject itemMoveWithoutToHoldingsRecordId = new ItemsMoveRequestBuilder(null,
         new JsonArray(Collections.singletonList(UUID.randomUUID()))).create();
@@ -136,7 +138,7 @@ public class ItemApiMoveExamples extends ApiTests {
 
   @Test
   public void cannotMoveUnspecifiedItems()
-      throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+    throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
 
     JsonObject itemMoveWithoutItemIds = new ItemsMoveRequestBuilder(UUID.randomUUID(), new JsonArray()).create();
 
@@ -157,19 +159,19 @@ public class ItemApiMoveExamples extends ApiTests {
   public void cannotMoveToNonExistedHoldingsRecord()
     throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
 
-    UUID instanceId = createInstance();
+    final var instanceId = createInstance();
 
-    final UUID existedHoldingId = createHoldingForInstance(instanceId);
-    final UUID newHoldingId = UUID.randomUUID();
+    final var existedHoldingId = createHoldingForInstance(instanceId);
+    final var newHoldingId = UUID.randomUUID();
 
-    Assert.assertNotEquals(existedHoldingId, newHoldingId);
-
-    final IndividualResource createItem = itemsClient.create(new ItemRequestBuilder().forHolding(existedHoldingId)
-      .withBarcode("645398607547")
-      .withStatus(ItemStatusName.AVAILABLE.value()));
+    final var item = itemsClient.create(
+      new ItemRequestBuilder()
+        .forHolding(existedHoldingId)
+        .withBarcode("645398607547")
+        .withStatus(ItemStatusName.AVAILABLE.value()));
 
     JsonObject itemsMoveRequestBody = new ItemsMoveRequestBuilder(newHoldingId,
-      new JsonArray(Collections.singletonList(createItem.getId()))).create();
+      new JsonArray(Collections.singletonList(item.getId()))).create();
 
     Response postMoveItemsResponse = moveItems(itemsMoveRequestBody);
 
@@ -182,18 +184,18 @@ public class ItemApiMoveExamples extends ApiTests {
 
   @Test
   public void canMoveToHoldingsRecordWithHoldingSchemasMismatching()
-    throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException, IllegalAccessException {
+    throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
 
-    UUID instanceId = createInstance();
+    final var instanceId = createInstance();
 
-    final UUID existedHoldingId = createHoldingForInstance(instanceId);
-    final UUID newHoldingId = createNonCompatibleHoldingForInstance(instanceId);
+    final var existedHoldingId = createHoldingForInstance(instanceId);
+    final var newHoldingId = createNonCompatibleHoldingForInstance(instanceId);
 
-    Assert.assertNotEquals(existedHoldingId, newHoldingId);
-
-    final IndividualResource createItem = itemsClient.create(new ItemRequestBuilder().forHolding(existedHoldingId)
-      .withBarcode("645398607547")
-      .withStatus(ItemStatusName.AVAILABLE.value()));
+    final var createItem = itemsClient.create(
+      new ItemRequestBuilder()
+        .forHolding(existedHoldingId)
+        .withBarcode("645398607547")
+        .withStatus(ItemStatusName.AVAILABLE.value()));
 
     JsonObject itemsMoveRequestBody = new ItemsMoveRequestBuilder(newHoldingId,
       new JsonArray(Collections.singletonList(createItem.getId()))).create();
@@ -204,26 +206,29 @@ public class ItemApiMoveExamples extends ApiTests {
   }
 
   @Test
-  public void canMoveItemsDueToItemUpdateError() throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+  public void canMoveItemsDueToItemUpdateError()
+    throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
 
-    UUID instanceId = createInstance();
+    final var instanceId = createInstance();
 
-    final UUID existedHoldingId = createHoldingForInstance(instanceId);
-    final UUID newHoldingId = createHoldingForInstance(instanceId);
+    final var existedHoldingId = createHoldingForInstance(instanceId);
+    final var newHoldingId = createHoldingForInstance(instanceId);
 
-    Assert.assertNotEquals(existedHoldingId, newHoldingId);
+    final var firstItem = itemsClient.create(
+      new ItemRequestBuilder()
+        .forHolding(existedHoldingId)
+        .withBarcode("645398607547")
+        .withStatus(ItemStatusName.AVAILABLE.value()));
 
-    final IndividualResource createItem1 = itemsClient.create(new ItemRequestBuilder().forHolding(existedHoldingId)
-      .withBarcode("645398607547")
-      .withStatus(ItemStatusName.AVAILABLE.value()));
-
-    final IndividualResource createItem2 = itemsClient.create(new ItemRequestBuilder().forHolding(existedHoldingId)
-      .withBarcode("645398607546")
-      .withId(ID_FOR_FAILURE)
-      .withStatus(ItemStatusName.AVAILABLE.value()));
+    final var secondItem = itemsClient.create(
+      new ItemRequestBuilder()
+        .forHolding(existedHoldingId)
+        .withBarcode("645398607546")
+        .withId(ID_FOR_FAILURE)
+        .withStatus(ItemStatusName.AVAILABLE.value()));
 
     JsonObject itemsMoveRequestBody = new ItemsMoveRequestBuilder(newHoldingId,
-      new JsonArray(Arrays.asList(createItem1.getId(), createItem2.getId()))).create();
+      new JsonArray(Arrays.asList(firstItem.getId(), secondItem.getId()))).create();
 
     Response postItemsMoveResponse = moveItems(itemsMoveRequestBody);
 
@@ -237,11 +242,11 @@ public class ItemApiMoveExamples extends ApiTests {
     assertThat(postItemsMoveResponse.getStatusCode(), is(200));
     assertThat(postItemsMoveResponse.getContentType(), containsString(APPLICATION_JSON));
 
-    JsonObject updatedItem1 = itemsClient.getById(createItem1.getId())
+    JsonObject updatedItem1 = itemsClient.getById(firstItem.getId())
       .getJson();
     assertThat(newHoldingId.toString(), equalTo(updatedItem1.getString(HOLDINGS_RECORD_ID)));
 
-    JsonObject updatedItem2 = itemsClient.getById(createItem2.getId())
+    JsonObject updatedItem2 = itemsClient.getById(secondItem.getId())
       .getJson();
     assertThat(existedHoldingId.toString(), equalTo(updatedItem2.getString(HOLDINGS_RECORD_ID)));
   }
@@ -272,7 +277,6 @@ public class ItemApiMoveExamples extends ApiTests {
   }
 
   private static class InvalidHoldingRequestBuilder extends AbstractBuilder {
-
     private final UUID instanceId;
     private final UUID permanentLocationId;
 
