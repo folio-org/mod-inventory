@@ -2,7 +2,6 @@ package org.folio.inventory.storage.external;
 
 import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.domain.CollectionProvider;
-import org.folio.inventory.domain.HoldingCollection;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.HoldingsRecordsSourceCollection;
 import org.folio.inventory.domain.instances.InstanceCollection;
@@ -24,12 +23,6 @@ public class ExternalStorageCollections implements CollectionProvider {
   public ItemCollection getItemCollection(String tenantId, String token) {
     return new ExternalStorageModuleItemCollection(baseAddress, tenantId, token,
       client);
-  }
-
-  @Override
-  public HoldingCollection getHoldingCollection(String tenantId, String token) {
-    return new ExternalStorageModuleHoldingCollection(baseAddress, tenantId,
-      token, client);
   }
 
   @Override
