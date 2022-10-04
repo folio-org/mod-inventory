@@ -11,7 +11,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -81,7 +80,7 @@ public class MoveApi extends AbstractInventoryResource {
     storage.getHoldingCollection(context)
       .findById(toHoldingsRecordId)
       .thenAccept(holding -> {
-        if (Objects.nonNull(holding)) {
+        if (holding != null) {
           try {
             final var itemsStorageClient = createItemStorageClient(routingContext, context);
             final var itemsFetchClient = createItemsFetchClient(itemsStorageClient);
