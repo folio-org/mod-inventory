@@ -75,7 +75,7 @@ public class MoveApi extends AbstractInventoryResource {
     }
 
     final var toHoldingsRecordId = itemsMoveJsonRequest.getString(TO_HOLDINGS_RECORD_ID);
-    final var itemIdsToUpdate = toListOfStrings(itemsMoveJsonRequest.getJsonArray(ITEM_IDS));
+    final var itemIdsToUpdate = toListOfStrings(itemsMoveJsonRequest, ITEM_IDS);
 
     storage.getHoldingCollection(context)
       .findById(toHoldingsRecordId)
