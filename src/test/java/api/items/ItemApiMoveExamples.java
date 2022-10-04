@@ -44,22 +44,22 @@ public class ItemApiMoveExamples extends ApiTests {
   public void canMoveItemsToDifferentHoldingsRecord() {
     final var instanceId = createInstance();
 
-    final var existedHoldingId = createHoldingForInstance(instanceId);
-    final var newHoldingId = createHoldingForInstance(instanceId);
+    final var existingHoldingsId = createHoldingsForInstance(instanceId);
+    final var newHoldingsId = createHoldingsForInstance(instanceId);
 
     final var firstItem = itemsClient.create(
       new ItemRequestBuilder()
-        .forHolding(existedHoldingId)
+        .forHolding(existingHoldingsId)
         .withBarcode("645398607547")
         .withStatus(ItemStatusName.AVAILABLE.value()));
 
     final var secondItem = itemsClient.create(
       new ItemRequestBuilder()
-        .forHolding(existedHoldingId)
+        .forHolding(existingHoldingsId)
         .withBarcode("645398607546")
         .withStatus(ItemStatusName.AVAILABLE.value()));
 
-    final var moveItemsResponse = moveItems(newHoldingId, firstItem, secondItem);
+    final var moveItemsResponse = moveItems(newHoldingsId, firstItem, secondItem);
 
     assertThat(moveItemsResponse.getStatusCode(), is(200));
     assertThat(toList(moveItemsResponse.getJson(), "nonUpdatedIds"), hasSize(0));
@@ -68,26 +68,26 @@ public class ItemApiMoveExamples extends ApiTests {
     final var firstUpdatedItem = itemsClient.getById(firstItem.getId()).getJson();
     final var secondUpdatedItem = itemsClient.getById(secondItem.getId()).getJson();
 
-    assertThat(firstUpdatedItem.getString(HOLDINGS_RECORD_ID), is(newHoldingId.toString()));
-    assertThat(secondUpdatedItem.getString(HOLDINGS_RECORD_ID), is(newHoldingId.toString()));
+    assertThat(firstUpdatedItem.getString(HOLDINGS_RECORD_ID), is(newHoldingsId.toString()));
+    assertThat(secondUpdatedItem.getString(HOLDINGS_RECORD_ID), is(newHoldingsId.toString()));
   }
 
   @Test
   public void shouldReportErrorsWhenOnlySomeRequestedItemsCouldNotBeMoved() {
     final var instanceId = createInstance();
 
-    final var existedHoldingId = createHoldingForInstance(instanceId);
-    final var newHoldingId = createHoldingForInstance(instanceId);
+    final var existingHoldingId = createHoldingsForInstance(instanceId);
+    final var newHoldingsId = createHoldingsForInstance(instanceId);
 
-    final var nonExistedItemId = UUID.randomUUID();
+    final var nonExistentItemId = UUID.randomUUID();
 
     final var item = itemsClient.create(
       new ItemRequestBuilder()
-        .forHolding(existedHoldingId)
+        .forHolding(existingHoldingId)
         .withBarcode("645398607547")
         .withStatus(ItemStatusName.AVAILABLE.value()));
 
-    final var moveItemsResponse = moveItems(newHoldingId, nonExistedItemId, item.getId());
+    final var moveItemsResponse = moveItems(newHoldingsId, nonExistentItemId, item.getId());
 
     assertThat(moveItemsResponse.getStatusCode(), is(200));
     assertThat(moveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
@@ -96,11 +96,11 @@ public class ItemApiMoveExamples extends ApiTests {
       "nonUpdatedIds");
 
     assertThat(notFoundIds, hasSize(1));
-    assertThat(notFoundIds.get(0), equalTo(nonExistedItemId.toString()));
+    assertThat(notFoundIds.get(0), equalTo(nonExistentItemId.toString()));
 
-    JsonObject updatedItem1 = itemsClient.getById(item.getId())
-      .getJson();
-    assertThat(newHoldingId.toString(), equalTo(updatedItem1.getString(HOLDINGS_RECORD_ID)));
+    final var updatedItem = itemsClient.getById(item.getId()).getJson();
+
+    assertThat(newHoldingsId.toString(), equalTo(updatedItem.getString(HOLDINGS_RECORD_ID)));
   }
 
   @Test
@@ -131,38 +131,38 @@ public class ItemApiMoveExamples extends ApiTests {
   public void cannotMoveToNonExistedHoldingsRecord() {
     final var instanceId = createInstance();
 
-    final var existedHoldingId = createHoldingForInstance(instanceId);
-    final var newHoldingId = UUID.randomUUID();
+    final var existingHoldingsId = createHoldingsForInstance(instanceId);
+    final var nonExistentHoldingsId = UUID.randomUUID();
 
     final var item = itemsClient.create(
       new ItemRequestBuilder()
-        .forHolding(existedHoldingId)
+        .forHolding(existingHoldingsId)
         .withBarcode("645398607547")
         .withStatus(ItemStatusName.AVAILABLE.value()));
 
-    final var moveItemsResponse = moveItems(newHoldingId, item);
+    final var moveItemsResponse = moveItems(nonExistentHoldingsId, item);
 
     assertThat(moveItemsResponse.getStatusCode(), is(422));
     assertThat(moveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
 
     assertThat(moveItemsResponse.getBody(), containsString("errors"));
-    assertThat(moveItemsResponse.getBody(), containsString(newHoldingId.toString()));
+    assertThat(moveItemsResponse.getBody(), containsString(nonExistentHoldingsId.toString()));
   }
 
   @Test
   public void canMoveToHoldingsRecordWithHoldingSchemasMismatching() {
     final var instanceId = createInstance();
 
-    final var existedHoldingId = createHoldingForInstance(instanceId);
-    final var newHoldingId = createNonCompatibleHoldingForInstance(instanceId);
+    final var existingHoldingsId = createHoldingsForInstance(instanceId);
+    final var newHoldingsId = createNonCompatibleHoldingForInstance(instanceId);
 
     final var item = itemsClient.create(
       new ItemRequestBuilder()
-        .forHolding(existedHoldingId)
+        .forHolding(existingHoldingsId)
         .withBarcode("645398607547")
         .withStatus(ItemStatusName.AVAILABLE.value()));
 
-    final var moveItemsResponse = moveItems(newHoldingId, item);
+    final var moveItemsResponse = moveItems(newHoldingsId, item);
 
     assertThat(moveItemsResponse.getStatusCode(), is(200));
   }
@@ -171,23 +171,24 @@ public class ItemApiMoveExamples extends ApiTests {
   public void canMoveItemsDueToItemUpdateError() {
     final var instanceId = createInstance();
 
-    final var existedHoldingId = createHoldingForInstance(instanceId);
-    final var newHoldingId = createHoldingForInstance(instanceId);
+    final var existingHoldingsId = createHoldingsForInstance(instanceId);
+    final var newHoldingsId = createHoldingsForInstance(instanceId);
 
     final var firstItem = itemsClient.create(
       new ItemRequestBuilder()
-        .forHolding(existedHoldingId)
+        .forHolding(existingHoldingsId)
         .withBarcode("645398607547")
         .withStatus(ItemStatusName.AVAILABLE.value()));
 
+    // Fake storage module fails updates to item's with the ID_FOR_FAILURE ID
     final var secondItem = itemsClient.create(
       new ItemRequestBuilder()
-        .forHolding(existedHoldingId)
+        .forHolding(existingHoldingsId)
         .withBarcode("645398607546")
         .withId(ID_FOR_FAILURE)
         .withStatus(ItemStatusName.AVAILABLE.value()));
 
-    final var moveItemsResponse = moveItems(newHoldingId, firstItem, secondItem);
+    final var moveItemsResponse = moveItems(newHoldingsId, firstItem, secondItem);
 
     final var nonUpdatedIdsIds = toListOfStrings(moveItemsResponse.getJson(),
       "nonUpdatedIds");
@@ -198,13 +199,13 @@ public class ItemApiMoveExamples extends ApiTests {
     assertThat(moveItemsResponse.getStatusCode(), is(200));
     assertThat(moveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
 
-    JsonObject updatedItem1 = itemsClient.getById(firstItem.getId())
-      .getJson();
-    assertThat(newHoldingId.toString(), equalTo(updatedItem1.getString(HOLDINGS_RECORD_ID)));
+    final var firstItemUpdated = itemsClient.getById(firstItem.getId()).getJson();
 
-    JsonObject updatedItem2 = itemsClient.getById(secondItem.getId())
-      .getJson();
-    assertThat(existedHoldingId.toString(), equalTo(updatedItem2.getString(HOLDINGS_RECORD_ID)));
+    assertThat(newHoldingsId.toString(), equalTo(firstItemUpdated.getString(HOLDINGS_RECORD_ID)));
+
+    final var secondUpdatedItem = itemsClient.getById(secondItem.getId()).getJson();
+
+    assertThat(existingHoldingsId.toString(), equalTo(secondUpdatedItem.getString(HOLDINGS_RECORD_ID)));
   }
 
   private Response moveItems(UUID newHoldingsId, IndividualResource... items) {
@@ -237,7 +238,7 @@ public class ItemApiMoveExamples extends ApiTests {
     return instanceId;
   }
 
-  private UUID createHoldingForInstance(UUID instanceId) {
+  private UUID createHoldingsForInstance(UUID instanceId) {
     return holdingsStorageClient.create(new HoldingRequestBuilder()
       .forInstance(instanceId))
       .getId();
