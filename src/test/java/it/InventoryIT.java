@@ -82,7 +82,8 @@ class InventoryIT {
       get("/admin/health").
     then().
       statusCode(200).
-      body(is("OK"));
+      body(is("OK")).
+      contentType(ContentType.TEXT);
   }
 
   /**

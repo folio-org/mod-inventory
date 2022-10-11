@@ -14,5 +14,6 @@ public class AdminApiTest extends ApiTests {
   public void health() throws Exception {
     var response = okapiClient.get(ApiRoot.health()).toCompletableFuture().get(10, SECONDS);
     assertThat(response.getStatusCode(), is(200));
+    assertThat(response.getContentType(), is("text/plain"));
   }
 }

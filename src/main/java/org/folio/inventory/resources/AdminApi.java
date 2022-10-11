@@ -1,5 +1,6 @@
 package org.folio.inventory.resources;
 
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 
@@ -11,6 +12,7 @@ public class AdminApi {
   }
 
   public void health(RoutingContext routingContext) {
-    routingContext.response().setStatusCode(200).end("OK");
+    routingContext.response().setStatusCode(200)
+    .putHeader(HttpHeaders.CONTENT_TYPE, "text/plain").end("OK");
   }
 }
