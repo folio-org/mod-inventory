@@ -6,6 +6,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.WebRequestDiagnostics;
 import org.folio.inventory.common.dao.PostgresClientFactory;
+import org.folio.inventory.resources.AdminApi;
 import org.folio.inventory.resources.Holdings;
 import org.folio.inventory.resources.Instances;
 import org.folio.inventory.resources.InstancesBatch;
@@ -52,6 +53,7 @@ public class InventoryVerticle extends AbstractVerticle {
 
     router.route().handler(WebRequestDiagnostics::outputDiagnostics);
 
+    new AdminApi().register(router);
     new Items(storage, client).register(router);
     new MoveApi(storage, client).register(router);
     new Instances(storage, client).register(router);
