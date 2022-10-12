@@ -66,6 +66,7 @@ import support.fakes.FakeOkapi;
   HoldingsApiMoveExamples.class,
   BoundWithTests.class,
   TenantApiTest.class,
+  AdminApiTest.class,
   InventoryConfigApiTest.class
 })
 public class ApiTestSuite {
