@@ -91,4 +91,7 @@ public class ApiRoot {
     return new URL(String.format("%s/_/tenant", ApiTestSuite.apiRoot()));
   }
 
+  public static URL health() throws MalformedURLException {
+    return new URL(String.format("%s/admin/health", ApiTestSuite.apiRoot()));
+  }
 }
