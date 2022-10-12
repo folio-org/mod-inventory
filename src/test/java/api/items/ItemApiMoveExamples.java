@@ -3,24 +3,24 @@ package api.items;
 import static api.ApiTestSuite.ID_FOR_FAILURE;
 import static api.support.InstanceSamples.smallAngryPlanet;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.folio.inventory.support.JsonArrayHelper.toList;
+import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
 import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasSize;
 
-import java.net.MalformedURLException;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -32,243 +32,225 @@ import api.support.builders.AbstractBuilder;
 import api.support.builders.HoldingRequestBuilder;
 import api.support.builders.ItemRequestBuilder;
 import api.support.builders.ItemsMoveRequestBuilder;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import junitparams.JUnitParamsRunner;
+import lombok.SneakyThrows;
 
 @RunWith(JUnitParamsRunner.class)
 public class ItemApiMoveExamples extends ApiTests {
-
   private static final String HOLDINGS_RECORD_ID = "holdingsRecordId";
 
   @Test
-  public void canMoveItemsToDifferentHoldingsRecord() throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+  public void canMoveItemsToDifferentHoldingsRecord() {
+    final var instanceId = createInstance();
 
-    UUID instanceId = UUID.randomUUID();
-    InstanceApiClient.createInstance(okapiClient, smallAngryPlanet(instanceId));
+    final var existingHoldingsId = createHoldingsForInstance(instanceId);
+    final var newHoldingsId = createHoldingsForInstance(instanceId);
 
-    final UUID existedHoldingId = createHoldingForInstance(instanceId);
-    final UUID newHoldingId = createHoldingForInstance(instanceId);
+    final var firstItem = itemsClient.create(
+      new ItemRequestBuilder()
+        .forHolding(existingHoldingsId)
+        .withBarcode("645398607547")
+        .withStatus(ItemStatusName.AVAILABLE.value()));
 
-    Assert.assertNotEquals(existedHoldingId, newHoldingId);
+    final var secondItem = itemsClient.create(
+      new ItemRequestBuilder()
+        .forHolding(existingHoldingsId)
+        .withBarcode("645398607546")
+        .withStatus(ItemStatusName.AVAILABLE.value()));
 
-    final IndividualResource createItem1 = itemsClient.create(new ItemRequestBuilder().forHolding(existedHoldingId)
-      .withBarcode("645398607547")
-      .withStatus(ItemStatusName.AVAILABLE.value()));
+    final var moveItemsResponse = moveItems(newHoldingsId, firstItem, secondItem);
 
-    final IndividualResource createItem2 = itemsClient.create(new ItemRequestBuilder().forHolding(existedHoldingId)
-      .withBarcode("645398607546")
-      .withStatus(ItemStatusName.AVAILABLE.value()));
+    assertThat(moveItemsResponse.getStatusCode(), is(200));
+    assertThat(toList(moveItemsResponse.getJson(), "nonUpdatedIds"), hasSize(0));
+    assertThat(moveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
 
-    JsonObject itemsMoveRequestBody = new ItemsMoveRequestBuilder(newHoldingId,
-        new JsonArray(Arrays.asList(createItem1.getId(), createItem2.getId()))).create();
+    final var firstUpdatedItem = itemsClient.getById(firstItem.getId()).getJson();
+    final var secondUpdatedItem = itemsClient.getById(secondItem.getId()).getJson();
 
-    Response postItemsMoveResponse = moveItems(itemsMoveRequestBody);
-
-    assertThat(postItemsMoveResponse.getStatusCode(), is(200));
-    assertThat(new JsonObject(postItemsMoveResponse.getBody()).getJsonArray("nonUpdatedIds").size(), is(0));
-    assertThat(postItemsMoveResponse.getContentType(), containsString(APPLICATION_JSON));
-
-    JsonObject updatedItem1 = itemsClient.getById(createItem1.getId())
-      .getJson();
-    JsonObject updatedItem2 = itemsClient.getById(createItem2.getId())
-      .getJson();
-
-    Assert.assertEquals(newHoldingId.toString(), updatedItem1.getString(HOLDINGS_RECORD_ID));
-    Assert.assertEquals(newHoldingId.toString(), updatedItem2.getString(HOLDINGS_RECORD_ID));
+    assertThat(firstUpdatedItem.getString(HOLDINGS_RECORD_ID), is(newHoldingsId.toString()));
+    assertThat(secondUpdatedItem.getString(HOLDINGS_RECORD_ID), is(newHoldingsId.toString()));
   }
 
   @Test
-  public void shouldReportErrorsWhenOnlySomeRequestedItemsCouldNotBeMoved() throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+  public void shouldReportErrorsWhenOnlySomeRequestedItemsCouldNotBeMoved() {
+    final var instanceId = createInstance();
 
-    UUID instanceId = UUID.randomUUID();
-    InstanceApiClient.createInstance(okapiClient, smallAngryPlanet(instanceId));
+    final var existingHoldingId = createHoldingsForInstance(instanceId);
+    final var newHoldingsId = createHoldingsForInstance(instanceId);
 
-    final UUID existedHoldingId = createHoldingForInstance(instanceId);
-    final UUID newHoldingId = createHoldingForInstance(instanceId);
+    final var nonExistentItemId = UUID.randomUUID();
 
-    Assert.assertNotEquals(existedHoldingId, newHoldingId);
+    final var item = itemsClient.create(
+      new ItemRequestBuilder()
+        .forHolding(existingHoldingId)
+        .withBarcode("645398607547")
+        .withStatus(ItemStatusName.AVAILABLE.value()));
 
-    final UUID nonExistedItemId = UUID.randomUUID();
+    final var moveItemsResponse = moveItems(newHoldingsId, nonExistentItemId, item.getId());
 
-    final IndividualResource createItem1 = itemsClient.create(new ItemRequestBuilder().forHolding(existedHoldingId)
-      .withBarcode("645398607547")
-      .withStatus(ItemStatusName.AVAILABLE.value()));
+    assertThat(moveItemsResponse.getStatusCode(), is(200));
+    assertThat(moveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
 
-    JsonObject itemsMoveRequestBody = new ItemsMoveRequestBuilder(newHoldingId,
-        new JsonArray(Arrays.asList(createItem1.getId(), nonExistedItemId))).create();
+    final var notFoundIds = toListOfStrings(moveItemsResponse.getJson(),
+      "nonUpdatedIds");
 
-    Response postItemsMoveResponse = moveItems(itemsMoveRequestBody);
+    assertThat(notFoundIds, hasSize(1));
+    assertThat(notFoundIds.get(0), equalTo(nonExistentItemId.toString()));
 
-    assertThat(postItemsMoveResponse.getStatusCode(), is(200));
-    assertThat(postItemsMoveResponse.getContentType(), containsString(APPLICATION_JSON));
+    final var updatedItem = itemsClient.getById(item.getId()).getJson();
 
-    List notFoundIds = postItemsMoveResponse.getJson()
-      .getJsonArray("nonUpdatedIds")
-      .getList();
-
-    assertThat(notFoundIds.size(), is(1));
-    assertThat(notFoundIds.get(0), equalTo(nonExistedItemId.toString()));
-
-    JsonObject updatedItem1 = itemsClient.getById(createItem1.getId())
-      .getJson();
-    assertThat(newHoldingId.toString(), equalTo(updatedItem1.getString(HOLDINGS_RECORD_ID)));
+    assertThat(newHoldingsId.toString(), equalTo(updatedItem.getString(HOLDINGS_RECORD_ID)));
   }
 
   @Test
-  public void cannotMoveItemsToUnspecifiedHoldingsRecord()
-      throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+  public void cannotMoveItemsToUnspecifiedHoldingsRecord() {
+    final var moveItemsResponse = moveItems(null, UUID.randomUUID());
 
-    JsonObject itemMoveWithoutToHoldingsRecordId = new ItemsMoveRequestBuilder(null,
-        new JsonArray(Collections.singletonList(UUID.randomUUID()))).create();
+    assertThat(moveItemsResponse.getStatusCode(), is(422));
+    assertThat(moveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
 
-    final var postMoveItemsCompleted = okapiClient.post(
-      ApiRoot.moveItems(), itemMoveWithoutToHoldingsRecordId);
-
-    Response postMoveItemsResponse = postMoveItemsCompleted.toCompletableFuture().get(5, SECONDS);
-
-    assertThat(postMoveItemsResponse.getStatusCode(), is(422));
-    assertThat(postMoveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
-
-    assertThat(postMoveItemsResponse.getBody(), containsString("errors"));
-    assertThat(postMoveItemsResponse.getBody(), containsString("toHoldingsRecordId"));
-    assertThat(postMoveItemsResponse.getBody(), containsString("toHoldingsRecordId is a required field"));
+    assertThat(moveItemsResponse.getBody(), containsString("errors"));
+    assertThat(moveItemsResponse.getBody(), containsString("toHoldingsRecordId"));
+    assertThat(moveItemsResponse.getBody(), containsString("toHoldingsRecordId is a required field"));
   }
 
   @Test
-  public void cannotMoveUnspecifiedItems()
-      throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+  public void cannotMoveUnspecifiedItems() {
+    final var moveItemsResponse = moveItems(UUID.randomUUID(), List.of());
 
-    JsonObject itemMoveWithoutItemIds = new ItemsMoveRequestBuilder(UUID.randomUUID(), new JsonArray()).create();
+    assertThat(moveItemsResponse.getStatusCode(), is(422));
+    assertThat(moveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
 
-    final var postMoveItemsCompleted = okapiClient.post(
-      ApiRoot.moveItems(), itemMoveWithoutItemIds);
-
-    Response postMoveItemsResponse = postMoveItemsCompleted.toCompletableFuture().get(5, SECONDS);
-
-    assertThat(postMoveItemsResponse.getStatusCode(), is(422));
-    assertThat(postMoveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
-
-    assertThat(postMoveItemsResponse.getBody(), containsString("errors"));
-    assertThat(postMoveItemsResponse.getBody(), containsString("itemIds"));
-    assertThat(postMoveItemsResponse.getBody(), containsString("Item ids aren't specified"));
+    assertThat(moveItemsResponse.getBody(), containsString("errors"));
+    assertThat(moveItemsResponse.getBody(), containsString("itemIds"));
+    assertThat(moveItemsResponse.getBody(), containsString("Item ids aren't specified"));
   }
 
   @Test
-  public void cannotMoveToNonExistedHoldingsRecord()
-    throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+  public void cannotMoveToNonExistedHoldingsRecord() {
+    final var instanceId = createInstance();
 
-    UUID instanceId = UUID.randomUUID();
-    InstanceApiClient.createInstance(okapiClient, smallAngryPlanet(instanceId));
+    final var existingHoldingsId = createHoldingsForInstance(instanceId);
+    final var nonExistentHoldingsId = UUID.randomUUID();
 
-    final UUID existedHoldingId = createHoldingForInstance(instanceId);
-    final UUID newHoldingId = UUID.randomUUID();
+    final var item = itemsClient.create(
+      new ItemRequestBuilder()
+        .forHolding(existingHoldingsId)
+        .withBarcode("645398607547")
+        .withStatus(ItemStatusName.AVAILABLE.value()));
 
-    Assert.assertNotEquals(existedHoldingId, newHoldingId);
+    final var moveItemsResponse = moveItems(nonExistentHoldingsId, item);
 
-    final IndividualResource createItem = itemsClient.create(new ItemRequestBuilder().forHolding(existedHoldingId)
-      .withBarcode("645398607547")
-      .withStatus(ItemStatusName.AVAILABLE.value()));
+    assertThat(moveItemsResponse.getStatusCode(), is(422));
+    assertThat(moveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
 
-    JsonObject itemsMoveRequestBody = new ItemsMoveRequestBuilder(newHoldingId,
-      new JsonArray(Collections.singletonList(createItem.getId()))).create();
-
-    Response postMoveItemsResponse = moveItems(itemsMoveRequestBody);
-
-    assertThat(postMoveItemsResponse.getStatusCode(), is(422));
-    assertThat(postMoveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
-
-    assertThat(postMoveItemsResponse.getBody(), containsString("errors"));
-    assertThat(postMoveItemsResponse.getBody(), containsString(newHoldingId.toString()));
+    assertThat(moveItemsResponse.getBody(), containsString("errors"));
+    assertThat(moveItemsResponse.getBody(), containsString(nonExistentHoldingsId.toString()));
   }
 
   @Test
-  public void canMoveToHoldingsRecordWithHoldingSchemasMismatching()
-    throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException, IllegalAccessException {
+  public void canMoveToHoldingsRecordWithHoldingSchemasMismatching() {
+    final var instanceId = createInstance();
 
-    UUID instanceId = UUID.randomUUID();
-    InstanceApiClient.createInstance(okapiClient, smallAngryPlanet(instanceId));
+    final var existingHoldingsId = createHoldingsForInstance(instanceId);
+    final var newHoldingsId = createNonCompatibleHoldingForInstance(instanceId);
 
-    final UUID existedHoldingId = createHoldingForInstance(instanceId);
-    final UUID newHoldingId = createNonCompatibleHoldingForInstance(instanceId);
+    final var item = itemsClient.create(
+      new ItemRequestBuilder()
+        .forHolding(existingHoldingsId)
+        .withBarcode("645398607547")
+        .withStatus(ItemStatusName.AVAILABLE.value()));
 
-    Assert.assertNotEquals(existedHoldingId, newHoldingId);
+    final var moveItemsResponse = moveItems(newHoldingsId, item);
 
-    final IndividualResource createItem = itemsClient.create(new ItemRequestBuilder().forHolding(existedHoldingId)
-      .withBarcode("645398607547")
-      .withStatus(ItemStatusName.AVAILABLE.value()));
-
-    JsonObject itemsMoveRequestBody = new ItemsMoveRequestBuilder(newHoldingId,
-      new JsonArray(Collections.singletonList(createItem.getId()))).create();
-
-    Response postMoveItemsResponse = moveItems(itemsMoveRequestBody);
-
-    assertThat(postMoveItemsResponse.getStatusCode(), is(200));
+    assertThat(moveItemsResponse.getStatusCode(), is(200));
   }
 
   @Test
-  public void canMoveItemsDueToItemUpdateError() throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+  public void canMoveItemsDueToItemUpdateError() {
+    final var instanceId = createInstance();
 
-    UUID instanceId = UUID.randomUUID();
-    InstanceApiClient.createInstance(okapiClient, smallAngryPlanet(instanceId));
+    final var existingHoldingsId = createHoldingsForInstance(instanceId);
+    final var newHoldingsId = createHoldingsForInstance(instanceId);
 
-    final UUID existedHoldingId = createHoldingForInstance(instanceId);
-    final UUID newHoldingId = createHoldingForInstance(instanceId);
+    final var firstItem = itemsClient.create(
+      new ItemRequestBuilder()
+        .forHolding(existingHoldingsId)
+        .withBarcode("645398607547")
+        .withStatus(ItemStatusName.AVAILABLE.value()));
 
-    Assert.assertNotEquals(existedHoldingId, newHoldingId);
+    // Fake storage module fails updates to item's with the ID_FOR_FAILURE ID
+    final var secondItem = itemsClient.create(
+      new ItemRequestBuilder()
+        .forHolding(existingHoldingsId)
+        .withBarcode("645398607546")
+        .withId(ID_FOR_FAILURE)
+        .withStatus(ItemStatusName.AVAILABLE.value()));
 
-    final IndividualResource createItem1 = itemsClient.create(new ItemRequestBuilder().forHolding(existedHoldingId)
-      .withBarcode("645398607547")
-      .withStatus(ItemStatusName.AVAILABLE.value()));
+    final var moveItemsResponse = moveItems(newHoldingsId, firstItem, secondItem);
 
-    final IndividualResource createItem2 = itemsClient.create(new ItemRequestBuilder().forHolding(existedHoldingId)
-      .withBarcode("645398607546")
-      .withId(ID_FOR_FAILURE)
-      .withStatus(ItemStatusName.AVAILABLE.value()));
+    final var nonUpdatedIdsIds = toListOfStrings(moveItemsResponse.getJson(),
+      "nonUpdatedIds");
 
-    JsonObject itemsMoveRequestBody = new ItemsMoveRequestBuilder(newHoldingId,
-      new JsonArray(Arrays.asList(createItem1.getId(), createItem2.getId()))).create();
-
-    Response postItemsMoveResponse = moveItems(itemsMoveRequestBody);
-
-    List nonUpdatedIdsIds = postItemsMoveResponse.getJson()
-      .getJsonArray("nonUpdatedIds")
-      .getList();
-
-    assertThat(nonUpdatedIdsIds.size(), is(1));
+    assertThat(nonUpdatedIdsIds, hasSize(1));
     assertThat(nonUpdatedIdsIds.get(0), equalTo(ID_FOR_FAILURE.toString()));
 
-    assertThat(postItemsMoveResponse.getStatusCode(), is(200));
-    assertThat(postItemsMoveResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(moveItemsResponse.getStatusCode(), is(200));
+    assertThat(moveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
 
-    JsonObject updatedItem1 = itemsClient.getById(createItem1.getId())
-      .getJson();
-    assertThat(newHoldingId.toString(), equalTo(updatedItem1.getString(HOLDINGS_RECORD_ID)));
+    final var firstItemUpdated = itemsClient.getById(firstItem.getId()).getJson();
 
-    JsonObject updatedItem2 = itemsClient.getById(createItem2.getId())
-      .getJson();
-    assertThat(existedHoldingId.toString(), equalTo(updatedItem2.getString(HOLDINGS_RECORD_ID)));
+    assertThat(newHoldingsId.toString(), equalTo(firstItemUpdated.getString(HOLDINGS_RECORD_ID)));
+
+    final var secondUpdatedItem = itemsClient.getById(secondItem.getId()).getJson();
+
+    assertThat(existingHoldingsId.toString(), equalTo(secondUpdatedItem.getString(HOLDINGS_RECORD_ID)));
   }
 
-  private Response moveItems(JsonObject itemsMoveRequestBody) throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
-    final var postItemsMoveCompleted = okapiClient.post(ApiRoot.moveItems(), itemsMoveRequestBody);
-    return postItemsMoveCompleted.toCompletableFuture().get(5, SECONDS);
+  private Response moveItems(UUID newHoldingsId, IndividualResource... items) {
+    final var itemIds = Stream.of(items)
+      .map(IndividualResource::getId)
+      .collect(Collectors.toList());
+
+    return moveItems(newHoldingsId, itemIds);
   }
 
-  private UUID createHoldingForInstance(UUID instanceId)
-      throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
-    return holdingsStorageClient.create(new HoldingRequestBuilder().forInstance(instanceId))
+  private Response moveItems(UUID newHoldingsId, UUID... itemIds) {
+    return moveItems(newHoldingsId, Arrays.asList(itemIds));
+  }
+
+  private Response moveItems(UUID newHoldingsId, List<UUID> itemIds) {
+    return moveItems(new ItemsMoveRequestBuilder(newHoldingsId, itemIds).create());
+  }
+
+  @SneakyThrows
+  private Response moveItems(JsonObject body) {
+    return okapiClient.post(ApiRoot.moveItems(), body)
+      .toCompletableFuture().get(5, SECONDS);
+  }
+
+  private static UUID createInstance() {
+    final var instanceId = UUID.randomUUID();
+
+    InstanceApiClient.createInstance(okapiClient, smallAngryPlanet(instanceId));
+
+    return instanceId;
+  }
+
+  private UUID createHoldingsForInstance(UUID instanceId) {
+    return holdingsStorageClient.create(new HoldingRequestBuilder()
+      .forInstance(instanceId))
       .getId();
   }
 
-  private UUID createNonCompatibleHoldingForInstance(UUID instanceId)
-    throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
-    AbstractBuilder builder = new InvalidHoldingRequestBuilder().forInstance(instanceId);
+  private UUID createNonCompatibleHoldingForInstance(UUID instanceId) {
+    final var builder = new InvalidHoldingRequestBuilder()
+      .forInstance(instanceId);
+
     return holdingsStorageClient.create(builder).getId();
   }
-
   private static class InvalidHoldingRequestBuilder extends AbstractBuilder {
-
     private final UUID instanceId;
     private final UUID permanentLocationId;
 

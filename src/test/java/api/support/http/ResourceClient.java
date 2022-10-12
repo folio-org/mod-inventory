@@ -1,14 +1,11 @@
 package api.support.http;
 
-import api.support.builders.Builder;
-import io.vertx.core.json.JsonObject;
-import org.folio.inventory.support.JsonArrayHelper;
-import org.folio.inventory.support.http.client.IndividualResource;
-import org.folio.inventory.support.http.client.OkapiHttpClient;
-import org.folio.inventory.support.http.client.Response;
-import org.folio.util.PercentCodec;
-import org.joda.time.DateTime;
-import support.fakes.EndpointFailureDescriptor;
+import static java.lang.String.format;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.folio.util.StringUtil.urlEncode;
+import static org.hamcrest.core.Is.is;
+import static org.hamcrest.core.IsNull.notNullValue;
+import static org.hamcrest.junit.MatcherAssert.assertThat;
 
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -18,12 +15,17 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-import static java.lang.String.format;
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.folio.util.StringUtil.urlEncode;
-import static org.hamcrest.core.Is.is;
-import static org.hamcrest.core.IsNull.notNullValue;
-import static org.hamcrest.junit.MatcherAssert.assertThat;
+import org.folio.inventory.support.JsonArrayHelper;
+import org.folio.inventory.support.http.client.IndividualResource;
+import org.folio.inventory.support.http.client.OkapiHttpClient;
+import org.folio.inventory.support.http.client.Response;
+import org.folio.util.PercentCodec;
+import org.joda.time.DateTime;
+
+import api.support.builders.Builder;
+import io.vertx.core.json.JsonObject;
+import lombok.SneakyThrows;
+import support.fakes.EndpointFailureDescriptor;
 
 public class ResourceClient {
 
@@ -152,21 +154,12 @@ public class ResourceClient {
     this.collectionArrayPropertyName = resourceName;
   }
 
-  public IndividualResource create(Builder builder)
-    throws InterruptedException,
-    MalformedURLException,
-    TimeoutException,
-    ExecutionException {
-
+  public IndividualResource create(Builder builder) {
     return create(builder.create());
   }
 
-  public IndividualResource create(JsonObject request)
-    throws MalformedURLException,
-    InterruptedException,
-    ExecutionException,
-    TimeoutException {
-
+  @SneakyThrows
+  public IndividualResource create(JsonObject request) {
     Response response = attemptToCreate(request);
 
     assertThat(
@@ -227,12 +220,8 @@ public class ResourceClient {
     return putCompleted.toCompletableFuture().get(5, SECONDS);
   }
 
-  public Response getById(UUID id)
-    throws MalformedURLException,
-    InterruptedException,
-    ExecutionException,
-    TimeoutException {
-
+  @SneakyThrows
+  public Response getById(UUID id) {
     final var getCompleted = client.get(urlMaker.combine(String.format("/%s", id)));
 
     return getCompleted.toCompletableFuture().get(5, SECONDS);
