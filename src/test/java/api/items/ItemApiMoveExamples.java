@@ -150,7 +150,7 @@ public class ItemApiMoveExamples extends ApiTests {
   }
 
   @Test
-  public void canMoveToHoldingsRecordWithHoldingSchemasMismatching() {
+  public void cannotMoveItemToHoldingsThatDoesNotMatchSchema() {
     final var instanceId = createInstance();
 
     final var existingHoldingsId = createHoldingsForInstance(instanceId);
@@ -164,7 +164,12 @@ public class ItemApiMoveExamples extends ApiTests {
 
     final var moveItemsResponse = moveItems(newHoldingsId, item);
 
-    assertThat(moveItemsResponse.getStatusCode(), is(200));
+    assertThat(moveItemsResponse.getStatusCode(), is(500));
+
+    final var updatedItem = itemsClient.getById(item.getId());
+
+    assertThat(updatedItem.getJson().getString(HOLDINGS_RECORD_ID),
+      is(existingHoldingsId.toString()));
   }
 
   @Test
