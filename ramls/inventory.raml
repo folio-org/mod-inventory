@@ -15,8 +15,6 @@ types:
   holdings: !include holdings-record.json
   instance: !include instance.json
   instances: !include instances.json
-  context: !include instance-context.json
-  ingest-status: !include ingest-status.json
 
 traits:
   language: !include raml-util/traits/language.raml
@@ -72,7 +70,7 @@ resourceTypes:
               body:
                 application/json:
                   example: !include examples/item_get.json
-                  schema: item
+                  type: item
             404:
               description: "Item not found"
               body:
@@ -82,7 +80,7 @@ resourceTypes:
               description: "Validation error"
               body:
                 application/json:
-                  schema: errors
+                  type: errors
             500:
               description: "Internal server error"
               body:
@@ -96,7 +94,7 @@ resourceTypes:
               body:
                 application/json:
                   example: !include examples/item_get.json
-                  schema: item
+                  type: item
             404:
               description: "Item not found"
               body:
@@ -106,7 +104,7 @@ resourceTypes:
               description: "Validation error"
               body:
                 application/json:
-                  schema: errors
+                  type: errors
             500:
               description: "Internal server error"
               body:
@@ -120,7 +118,7 @@ resourceTypes:
               body:
                 application/json:
                   example: !include examples/item_get.json
-                  schema: item
+                  type: item
             404:
               description: "Item not found"
               body:
@@ -130,7 +128,7 @@ resourceTypes:
               description: "Validation error"
               body:
                 application/json:
-                  schema: errors
+                  type: errors
             500:
               description: "Internal server error"
               body:
@@ -144,7 +142,7 @@ resourceTypes:
               body:
                 application/json:
                   example: !include examples/item_get.json
-                  schema: item
+                  type: item
             404:
               description: "Item not found"
               body:
@@ -154,7 +152,7 @@ resourceTypes:
               description: "Validation error"
               body:
                 application/json:
-                  schema: errors
+                  type: errors
             500:
               description: "Internal server error"
               body:
@@ -168,7 +166,7 @@ resourceTypes:
               body:
                 application/json:
                   example: !include examples/item_get.json
-                  schema: item
+                  type: item
             404:
               description: "Item not found"
               body:
@@ -178,7 +176,7 @@ resourceTypes:
               description: "Validation error"
               body:
                 application/json:
-                  schema: errors
+                  type: errors
             500:
               description: "Internal server error"
               body:
@@ -192,7 +190,7 @@ resourceTypes:
               body:
                 application/json:
                   example: !include examples/item_get.json
-                  schema: item
+                  type: item
             404:
               description: "Item not found"
               body:
@@ -202,7 +200,7 @@ resourceTypes:
               description: "Validation error"
               body:
                 application/json:
-                  schema: errors
+                  type: errors
             500:
               description: "Internal server error"
               body:
@@ -216,7 +214,7 @@ resourceTypes:
               body:
                 application/json:
                   example: !include examples/item_get.json
-                  schema: item
+                  type: item
             404:
               description: "Item not found"
               body:
@@ -226,7 +224,7 @@ resourceTypes:
               description: "Validation error"
               body:
                 application/json:
-                  schema: errors
+                  type: errors
             500:
               description: "Internal server error"
               body:
@@ -240,7 +238,7 @@ resourceTypes:
               body:
                 application/json:
                   example: !include examples/item_get.json
-                  schema: item
+                  type: item
             404:
               description: "Item not found"
               body:
@@ -250,7 +248,7 @@ resourceTypes:
               description: "Validation error"
               body:
                 application/json:
-                  schema: errors
+                  type: errors
             500:
               description: "Internal server error"
               body:
@@ -264,7 +262,7 @@ resourceTypes:
               body:
                 application/json:
                   example: !include examples/item_get.json
-                  schema: item
+                  type: item
             404:
               description: "Item not found"
               body:
@@ -274,7 +272,7 @@ resourceTypes:
               description: "Validation error"
               body:
                 application/json:
-                  schema: errors
+                  type: errors
             500:
               description: "Internal server error"
               body:
@@ -369,48 +367,3 @@ resourceTypes:
       get:
       put:
         is: [validate]
-    /context:
-      get:
-        description: "Provides Dublin Core context for instances"
-        responses:
-          200:
-            description: "Dublin Core context for instances"
-            body:
-              application/json:
-                example: !include examples/instance_context_get.json
-                schema: context
-  /ingest:
-    /mods:
-      post:
-        body:
-          multipart/form-data:
-            properties:
-              file:
-                description: MODS file containing items to ingest
-                required: true
-                type: file
-        responses:
-          202:
-            headers:
-              location:
-                description: URI pointing to the location of ingest status
-          400:
-            body:
-              text/plain:
-                example: "Cannot parse multiple files in a single request"
-          500:
-            body:
-              text/plain:
-      /status:
-        /{id}:
-          get:
-            description: Status of a MODS ingest
-            responses:
-              200:
-                body:
-                  application/json:
-                    example: !include examples/ingest_status_get.json
-                    schema: ingest-status
-              500:
-                body:
-                  text/plain:

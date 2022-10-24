@@ -16,13 +16,22 @@ import java.net.URL;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import io.vertx.core.json.JsonArray;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
@@ -52,9 +61,8 @@ import org.folio.inventory.support.http.server.ValidationError;
 import org.folio.inventory.validation.ItemsValidator;
 
 import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.WebClient;
@@ -66,7 +74,7 @@ public class Items extends AbstractInventoryResource {
 
   private static final String RELATIVE_ITEMS_PATH = "/inventory/items";
   private static final String RELATIVE_ITEMS_PATH_ID = RELATIVE_ITEMS_PATH+"/:id";
-
+  private static final String INSTANCE_ID_PROPERTY = "instanceId";
 
   private static final int STATUS_CREATED = 201;
   private static final int STATUS_SUCCESS = 200;
@@ -91,8 +99,9 @@ public class Items extends AbstractInventoryResource {
     router.put(RELATIVE_ITEMS_PATH_ID).handler(this::update);
     router.delete(RELATIVE_ITEMS_PATH_ID).handler(this::deleteById);
 
-    Arrays.stream(ItemStatusName.values()).map(itemStatusName -> ItemStatusURL.getUrlForItemStatusName(itemStatusName))
-      .filter(itemStatusUrl -> itemStatusUrl.isPresent())
+    Arrays.stream(ItemStatusName.values())
+      .map(ItemStatusURL::getUrlForItemStatusName)
+      .filter(Optional::isPresent)
       .forEach(itemStatusUrl -> registerMarkItemAsHandler(itemStatusUrl.get(), router));
   }
 
@@ -161,7 +170,7 @@ public class Items extends AbstractInventoryResource {
   private void create(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
 
-    JsonObject item = routingContext.getBodyAsJson();
+    JsonObject item = routingContext.body().asJsonObject();
 
     Optional<ValidationError> validationError = itemHasCorrectStatus(item);
     if (validationError.isPresent()) {
@@ -200,7 +209,7 @@ public class Items extends AbstractInventoryResource {
   private void update(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
 
-    JsonObject itemRequest = routingContext.getBodyAsJson();
+    JsonObject itemRequest = routingContext.body().asJsonObject();
 
     Optional<ValidationError> validationError = itemHasCorrectStatus(itemRequest);
     if (validationError.isPresent()) {
@@ -287,9 +296,7 @@ public class Items extends AbstractInventoryResource {
     List<String> itemIds = wrappedItems.records.stream().map(Item::getId).collect(Collectors.toList());
     if (itemIds.isEmpty()) {
       JsonResponse.success(routingContext.response(),
-      new ItemRepresentation(RELATIVE_ITEMS_PATH)
-        .toJson(wrappedItems, null, null, null,
-          null, null, context));
+        new ItemRepresentation().toJson(wrappedItems));
       return;
     }
 
@@ -346,7 +353,7 @@ public class Items extends AbstractInventoryResource {
         holdingsResponse.getJson().getJsonArray("holdingsRecords"));
 
       List<String> instanceIds = holdings.stream()
-        .map(holding -> holding.getString("instanceId"))
+        .map(holding -> holding.getString(INSTANCE_ID_PROPERTY))
         .filter(Objects::nonNull)
         .distinct()
         .collect(Collectors.toList());
@@ -474,9 +481,9 @@ public class Items extends AbstractInventoryResource {
             setBoundWithFlagsOnItems(wrappedItems, boundWithPartsFuture);
 
             JsonResponse.success(routingContext.response(),
-              new ItemRepresentation(RELATIVE_ITEMS_PATH)
+              new ItemRepresentation()
                 .toJson(wrappedItems, holdings, instances, foundMaterialTypes,
-                  foundLoanTypes, foundLocations, context));
+                  foundLoanTypes, foundLocations));
 
           } catch (Exception e) {
             ServerErrorResponse.internalError(routingContext.response(), e.toString());
@@ -485,7 +492,6 @@ public class Items extends AbstractInventoryResource {
       });
     });
   }
-
 
   private OkapiHttpClient createHttpClient(
     RoutingContext routingContext,
@@ -640,7 +646,7 @@ public class Items extends AbstractInventoryResource {
         : null;
 
       String instanceId = holdingResponse.getStatusCode() == 200
-        ? holdingResponse.getJson().getString("instanceId")
+        ? holdingResponse.getJson().getString(INSTANCE_ID_PROPERTY)
         : null;
 
       instancesClient.get(instanceId, (Response instanceResponse) -> {
@@ -677,13 +683,15 @@ public class Items extends AbstractInventoryResource {
         allDoneFuture.thenAccept(v -> {
           try {
             JsonObject representation = includeReferenceRecordInformationInItem(
-                      webContext, item, holding, instance,
-                      materialTypeFuture,
-                      permanentLoanTypeFuture,
-                      temporaryLoanTypeFuture,
-                      temporaryLocationFuture,
-                      permanentLocationFuture,
-                      effectiveLocationFuture);
+              item,
+              holding,
+              instance,
+              materialTypeFuture,
+              permanentLoanTypeFuture,
+              temporaryLoanTypeFuture,
+              temporaryLocationFuture,
+              permanentLocationFuture,
+              effectiveLocationFuture);
 
             switch (responseStatus) {
               case STATUS_CREATED :
@@ -730,7 +738,6 @@ public class Items extends AbstractInventoryResource {
   }
 
   private JsonObject includeReferenceRecordInformationInItem(
-    WebContext context,
     Item item,
     JsonObject holding,
     JsonObject instance,
@@ -759,7 +766,7 @@ public class Items extends AbstractInventoryResource {
     JsonObject foundEffectiveLocation =
       referenceRecordFrom(item.getEffectiveLocationId(), effectiveLocationFuture);
 
-    return new ItemRepresentation(RELATIVE_ITEMS_PATH)
+    return new ItemRepresentation()
         .toJson(item,
           holding,
           instance,
@@ -768,8 +775,7 @@ public class Items extends AbstractInventoryResource {
           foundTemporaryLoanType,
           foundPermanentLocation,
           foundTemporaryLocation,
-          foundEffectiveLocation,
-          context);
+          foundEffectiveLocation);
   }
 
   private boolean hasSameBarcode(Item updatedItem, Item foundItem) {
@@ -906,18 +912,18 @@ public class Items extends AbstractInventoryResource {
   private JsonArray buildBoundWithTitlesArray (JsonArray holdingsRecords, JsonArray instances) {
     JsonArray boundWithTitles = new JsonArray();
 
-    Map<String, JsonObject> instancesByIdMap = new HashMap();
-    instances.stream().forEach( instance -> {
-      instancesByIdMap.put( ( (JsonObject) instance ).getString( "id" ),
-        (JsonObject) instance );
-    } );
+    final var instancesByIdMap = new HashMap<String, JsonObject>();
 
-    holdingsRecords.stream().forEach( record -> {
-      JsonObject holdingsRecord = (JsonObject) record;
+    instances.stream().forEach( instance ->
+      instancesByIdMap.put( ( (JsonObject) instance ).getString( "id" ),
+        (JsonObject) instance ));
+
+    holdingsRecords.stream().forEach( holdings -> {
+      JsonObject holdingsRecord = (JsonObject) holdings;
       JsonObject boundWithTitle = new JsonObject();
       JsonObject briefHoldingsRecord = new JsonObject();
       JsonObject briefInstance = new JsonObject();
-      String instanceId = holdingsRecord.getString( "instanceId" );
+      String instanceId = holdingsRecord.getString(INSTANCE_ID_PROPERTY);
       briefHoldingsRecord.put( "id", holdingsRecord.getString( "id" ) );
       briefHoldingsRecord.put( "hrid", holdingsRecord.getString( "hrid" ) );
       briefInstance.put( "id", instanceId );
@@ -957,7 +963,7 @@ public class Items extends AbstractInventoryResource {
    */
   private CompletableFuture<JsonArray> fetchInstancesByForeignKeys( JsonArray entities, CollectionResourceClient instancesClient) {
     List<String> instanceIds = getStringPropertyFromJsonArray(
-      entities, "instanceId" );
+      entities, INSTANCE_ID_PROPERTY);
     CompletableFuture<Response> instancesFetched = new CompletableFuture<>();
     instancesClient.getMany( multipleRecordsCqlQuery( instanceIds ),
       instanceIds.size(), 0, instancesFetched::complete );
@@ -1018,9 +1024,9 @@ public class Items extends AbstractInventoryResource {
         }
       }
     } else {
-      log.error("Failed to retrieve bound-with parts, status code:  " + (response != null ? response.getStatusCode() : "null response"));
+      log.error("Failed to retrieve bound-with parts, status code: {}",
+        () -> response != null ? response.getStatusCode() : "null response");
     }
-
   }
 
   private CompletableFuture<Response> getBoundWithPartsForMultipleItemsFuture(

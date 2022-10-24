@@ -1,9 +1,15 @@
-## 18.3.0 IN-PROGRESS
+## 19.0.0 IN-PROGRESS
 
-* Now supports interface users 15.0, 16.0 (MODINV-725)
 * Extend instance contributors schema with Authority ID ([MODINV-729](https://issues.folio.org/browse/MODINV-729))
 * Delete instance/item by CQL ([MODINV-731](https://issues.folio.org/browse/MODINV-731))
-* Provides inventory 12.0, requires instance-storage 9.0, item-storage 10.0, holdings-storage 2.0 ... 6.0.
+* Removes MODS ingest process ([MODINV-735](https://issues.folio.org/browse/MODINV-735))
+* Removes minimal dublin core support for instances ([MODINV-734](https://issues.folio.org/browse/MODINV-734))
+* Removes self links from instances and items ([MODINV-734](https://issues.folio.org/browse/MODINV-734))
+* Provides `inventory 12.0`
+* Requires `instance-storage 9.0`
+* Requires `item-storage 10.0`
+* Requires `holdings-storage 2.0 3.0 4.0 5.0 6.0`
+* Requires `users 15.0 16.0`
 
 ## 18.2.0 2022-06-27
 

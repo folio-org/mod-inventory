@@ -415,26 +415,6 @@
           "pathPattern": "/inventory/instances",
           "permissionsRequired": ["inventory.instances.collection.delete"],
           "modulePermissions": ["inventory-storage.instances.collection.delete"]
-        }, {
-          "methods": ["POST"],
-          "pathPattern": "/inventory/ingest/mods",
-          "permissionsRequired": ["inventory.ingest.mods.post"],
-          "modulePermissions": [
-            "inventory-storage.items.item.post",
-            "inventory-storage.instances.item.post",
-            "inventory-storage.instances.collection.get",
-            "inventory-storage.holdings.item.post",
-            "inventory-storage.holdings.collection.get",
-            "inventory-storage.material-types.collection.get",
-            "inventory-storage.loan-types.collection.get",
-            "inventory-storage.locations.collection.get",
-            "inventory-storage.instance-types.collection.get",
-            "inventory-storage.identifier-types.collection.get",
-            "inventory-storage.contributor-name-types.collection.get"]
-        }, {
-          "methods": ["GET"],
-          "pathPattern": "/inventory/ingest/mods/status/{id}",
-          "permissionsRequired": ["inventory.ingest.mods.status.get"]
         }
       ]
     },
@@ -752,16 +732,6 @@
       "description": "Delete individual instance"
     },
     {
-      "permissionName": "inventory.ingest.mods.post",
-      "displayName": "Inventory - ingest a MODS format file",
-      "description": "Request ingestion of a MODS format file"
-    },
-    {
-      "permissionName": "inventory.ingest.mods.status.get",
-      "displayName": "Inventory - MODS ingest status",
-      "description": "Check the status of a MODS format file ingestion"
-    },
-    {
       "permissionName": "inventory.config.instances.blocked-fields.get",
       "displayName": "Inventory - get configuration for blocked fields of instances",
       "description": "Get configuration for blocked fields of instances"
@@ -790,8 +760,6 @@
         "inventory.instances.item.put",
         "inventory.instances.item.delete",
         "inventory.instances.collection.delete",
-        "inventory.ingest.mods.post",
-        "inventory.ingest.mods.status.get",
         "inventory.config.instances.blocked-fields.get",
         "inventory.config.holdings.blocked-fields.get",
         "inventory.items.item.mark-withdrawn.post",

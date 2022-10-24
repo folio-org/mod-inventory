@@ -1,18 +1,20 @@
 package api.support;
 
-import api.ApiTestSuite;
-
 import java.net.MalformedURLException;
 import java.net.URL;
 
+import api.ApiTestSuite;
+import lombok.SneakyThrows;
+
 public class ApiRoot {
+  private ApiRoot() { }
+
   public static String inventory() {
     return String.format("%s/inventory", ApiTestSuite.apiRoot());
   }
 
-  public static URL instances()
-    throws MalformedURLException {
-
+  @SneakyThrows
+  public static URL instances() {
     return new URL(String.format("%s/instances", inventory()));
   }
 
@@ -89,4 +91,7 @@ public class ApiRoot {
     return new URL(String.format("%s/_/tenant", ApiTestSuite.apiRoot()));
   }
 
+  public static URL health() throws MalformedURLException {
+    return new URL(String.format("%s/admin/health", ApiTestSuite.apiRoot()));
+  }
 }

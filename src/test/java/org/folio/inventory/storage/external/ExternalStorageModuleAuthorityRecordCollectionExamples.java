@@ -4,7 +4,6 @@ import static org.folio.inventory.common.FutureAssistance.fail;
 import static org.folio.inventory.common.FutureAssistance.getOnCompletion;
 import static org.folio.inventory.common.FutureAssistance.succeed;
 import static org.folio.inventory.common.FutureAssistance.waitForCompletion;
-import static org.folio.inventory.storage.external.ExternalStorageSuite.getStorageAddress;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
@@ -13,8 +12,6 @@ import static org.junit.Assert.assertNotNull;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 
 import org.folio.Authority;
 import org.folio.inventory.common.WaitForAllFutures;
@@ -25,16 +22,16 @@ import org.folio.inventory.validation.exceptions.JsonMappingException;
 import org.junit.Test;
 
 import io.vertx.core.json.JsonObject;
+import lombok.SneakyThrows;
 
-public class ExternalStorageModuleAuthorityRecordCollectionExamples {
+public class ExternalStorageModuleAuthorityRecordCollectionExamples extends ExternalStorageTests {
   private static final String AUTHORITY_ID = UUID.randomUUID().toString();
   private static final String CORPORATE_NAME = UUID.randomUUID().toString();
   private static final Integer VERSION = 3;
 
   private final ExternalStorageModuleAuthorityRecordCollection storage =
-    ExternalStorageSuite.useVertx(
-      it -> new ExternalStorageModuleAuthorityRecordCollection(getStorageAddress(),
-        ExternalStorageSuite.TENANT_ID, ExternalStorageSuite.TENANT_TOKEN, it.createHttpClient()));
+    useHttpClient(client -> new ExternalStorageModuleAuthorityRecordCollection(
+      getStorageAddress(), TENANT_ID, TENANT_TOKEN, client));
 
   @Test
   public void shouldMapFromJson() {
@@ -70,7 +67,7 @@ public class ExternalStorageModuleAuthorityRecordCollectionExamples {
   public void shouldMapToRequest() {
     Authority authority = new Authority()
       .withId(AUTHORITY_ID)
-      .withVersion(Integer.valueOf(VERSION))
+      .withVersion(VERSION)
       .withCorporateName(CORPORATE_NAME);
 
     JsonObject jsonObject = storage.mapToRequest(authority);
@@ -81,8 +78,8 @@ public class ExternalStorageModuleAuthorityRecordCollectionExamples {
   }
 
   @Test
-  public void canBeEmptied() throws InterruptedException, ExecutionException, TimeoutException {
-
+  @SneakyThrows
+  public void canBeEmptied() {
     addSomeExamples(storage);
 
     CompletableFuture<Void> emptied = new CompletableFuture<>();
@@ -101,8 +98,8 @@ public class ExternalStorageModuleAuthorityRecordCollectionExamples {
     assertThat(allInstancesWrapped.totalRecords, is(0));
   }
 
-  private static void addSomeExamples(AuthorityRecordCollection authorityCollection) throws InterruptedException, ExecutionException, TimeoutException {
-
+  @SneakyThrows
+  private static void addSomeExamples(AuthorityRecordCollection authorityCollection) {
     WaitForAllFutures<Authority> allAdded = new WaitForAllFutures<>();
     authorityCollection.add(createAuthority(), allAdded.notifySuccess(), v -> {});
     authorityCollection.add(createAuthority(), allAdded.notifySuccess(), v -> {});

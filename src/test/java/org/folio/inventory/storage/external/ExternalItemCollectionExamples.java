@@ -4,18 +4,14 @@ import static org.folio.inventory.common.FutureAssistance.fail;
 import static org.folio.inventory.common.FutureAssistance.getOnCompletion;
 import static org.folio.inventory.common.FutureAssistance.succeed;
 import static org.folio.inventory.common.FutureAssistance.waitForCompletion;
-import static org.folio.inventory.storage.external.ExternalStorageSuite.getStorageAddress;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 
-import java.io.UnsupportedEncodingException;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.common.WaitForAllFutures;
@@ -28,16 +24,16 @@ import org.folio.inventory.domain.items.Status;
 import org.junit.Before;
 import org.junit.Test;
 
-public class ExternalItemCollectionExamples {
+import lombok.SneakyThrows;
+
+public class ExternalItemCollectionExamples extends ExternalStorageTests {
   private final String bookMaterialTypeId = UUID.randomUUID().toString();
   private final String canCirculateLoanTypeId = UUID.randomUUID().toString();
   private final String annexLibraryLocationId = UUID.randomUUID().toString();
 
-  private final ItemCollection collection =
-    ExternalStorageSuite.useVertx(
-      it -> new ExternalStorageModuleItemCollection(getStorageAddress(),
-        ExternalStorageSuite.TENANT_ID, ExternalStorageSuite.TENANT_TOKEN,
-        it.createHttpClient()));
+  private final ItemCollection collection = useHttpClient(
+    client -> new ExternalStorageModuleItemCollection(getStorageAddress(),
+      TENANT_ID, TENANT_TOKEN, client));
 
   private final Item smallAngryPlanet = smallAngryPlanet();
   private final Item nod = nod();
@@ -46,9 +42,8 @@ public class ExternalItemCollectionExamples {
   private final Item interestingTimes = interestingTimes();
 
   @Before
-  public void before()
-    throws InterruptedException, ExecutionException, TimeoutException {
-
+  @SneakyThrows
+  public void before() {
     CompletableFuture<Void> emptied = new CompletableFuture<>();
 
     collection.empty(succeed(emptied), fail(emptied));
@@ -57,9 +52,8 @@ public class ExternalItemCollectionExamples {
   }
 
   @Test
-  public void canBeEmptied()
-    throws InterruptedException, ExecutionException, TimeoutException {
-
+  @SneakyThrows
+  public void canBeEmptied() {
     addSomeExamples(collection);
 
     CompletableFuture<Void> emptied = new CompletableFuture<>();
@@ -82,9 +76,8 @@ public class ExternalItemCollectionExamples {
   }
 
   @Test
-  public void anItemCanBeAdded()
-    throws InterruptedException, ExecutionException, TimeoutException {
-
+  @SneakyThrows
+  public void anItemCanBeAdded() {
     addSomeExamples(collection);
 
     CompletableFuture<MultipleRecords<Item>> findFuture = new CompletableFuture<>();
@@ -125,9 +118,8 @@ public class ExternalItemCollectionExamples {
   }
 
   @Test
-  public void anItemCanBeAddedWithAnId()
-    throws InterruptedException, ExecutionException, TimeoutException {
-
+  @SneakyThrows
+  public void anItemCanBeAddedWithAnId() {
     CompletableFuture<Item> addFinished = new CompletableFuture<>();
 
     String itemId = UUID.randomUUID().toString();
@@ -142,9 +134,8 @@ public class ExternalItemCollectionExamples {
   }
 
   @Test
-  public void anItemCanBeUpdated()
-    throws InterruptedException, ExecutionException, TimeoutException {
-
+  @SneakyThrows
+  public void anItemCanBeUpdated() {
     CompletableFuture<Item> addFinished = new CompletableFuture<>();
 
     collection.add(smallAngryPlanet, succeed(addFinished), fail(addFinished));
@@ -176,9 +167,8 @@ public class ExternalItemCollectionExamples {
   }
 
   @Test
-  public void anItemCanBeDeleted()
-    throws InterruptedException, ExecutionException, TimeoutException {
-
+  @SneakyThrows
+  public void anItemCanBeDeleted() {
     addSomeExamples(collection);
 
     CompletableFuture<Item> itemToBeDeletedFuture = new CompletableFuture<>();
@@ -216,9 +206,8 @@ public class ExternalItemCollectionExamples {
   }
 
   @Test
-  public void allItemsCanBePaged()
-    throws InterruptedException, ExecutionException, TimeoutException {
-
+  @SneakyThrows
+  public void allItemsCanBePaged() {
     WaitForAllFutures<Item> allAdded = new WaitForAllFutures<>();
 
     collection.add(smallAngryPlanet, allAdded.notifySuccess(), v -> {});
@@ -249,12 +238,8 @@ public class ExternalItemCollectionExamples {
   }
 
   @Test
-  public void itemsCanBeFoundByBarcode()
-    throws InterruptedException,
-    ExecutionException,
-    TimeoutException,
-    UnsupportedEncodingException {
-
+  @SneakyThrows
+  public void itemsCanBeFoundByBarcode() {
     CompletableFuture<Item> firstAddFuture = new CompletableFuture<>();
     CompletableFuture<Item> secondAddFuture = new CompletableFuture<>();
     CompletableFuture<Item> thirdAddFuture = new CompletableFuture<>();
@@ -287,9 +272,8 @@ public class ExternalItemCollectionExamples {
   }
 
   @Test
-  public void anItemCanBeFoundById()
-    throws InterruptedException, ExecutionException, TimeoutException {
-
+  @SneakyThrows
+  public void anItemCanBeFoundById() {
     CompletableFuture<Item> firstAddFuture = new CompletableFuture<>();
     CompletableFuture<Item> secondAddFuture = new CompletableFuture<>();
 
@@ -329,9 +313,8 @@ public class ExternalItemCollectionExamples {
     assertThat(otherFoundItem.getTemporaryLocationId(), is(annexLibraryLocationId));
   }
 
-  private void addSomeExamples(ItemCollection itemCollection)
-    throws InterruptedException, ExecutionException, TimeoutException {
-
+  @SneakyThrows
+  private void addSomeExamples(ItemCollection itemCollection) {
     WaitForAllFutures<Item> allAdded = new WaitForAllFutures<>();
 
     itemCollection.add(smallAngryPlanet, allAdded.notifySuccess(), v -> { });

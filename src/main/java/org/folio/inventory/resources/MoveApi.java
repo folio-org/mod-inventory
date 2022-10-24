@@ -11,7 +11,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -41,7 +40,6 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.handler.BodyHandler;
 
 public class MoveApi extends AbstractInventoryResource {
-
   public static final String TO_HOLDINGS_RECORD_ID = "toHoldingsRecordId";
   public static final String TO_INSTANCE_ID = "toInstanceId";
   public static final String ITEM_IDS = "itemIds";
@@ -66,25 +64,26 @@ public class MoveApi extends AbstractInventoryResource {
   }
 
   private void moveItems(RoutingContext routingContext) {
+    final var context = new WebContext(routingContext);
+    final var itemsMoveJsonRequest = routingContext.body().asJsonObject();
 
-    WebContext context = new WebContext(routingContext);
-    JsonObject itemsMoveJsonRequest = routingContext.getBodyAsJson();
+    final var validationError = itemsMoveHasRequiredFields(itemsMoveJsonRequest);
 
-    Optional<ValidationError> validationError = itemsMoveHasRequiredFields(itemsMoveJsonRequest);
     if (validationError.isPresent()) {
       unprocessableEntity(routingContext.response(), validationError.get());
       return;
     }
-    String toHoldingsRecordId = itemsMoveJsonRequest.getString(TO_HOLDINGS_RECORD_ID);
-    List<String> itemIdsToUpdate = toListOfStrings(itemsMoveJsonRequest.getJsonArray(ITEM_IDS));
-    storage.getHoldingCollection(context)
+
+    final var toHoldingsRecordId = itemsMoveJsonRequest.getString(TO_HOLDINGS_RECORD_ID);
+    final var itemIdsToUpdate = toListOfStrings(itemsMoveJsonRequest, ITEM_IDS);
+
+    storage.getHoldingsRecordCollection(context)
       .findById(toHoldingsRecordId)
       .thenAccept(holding -> {
-        if (Objects.nonNull(holding)) {
+        if (holding != null) {
           try {
-            CollectionResourceClient itemsStorageClient = createItemStorageClient(createHttpClient(routingContext, context),
-                context);
-            MultipleRecordsFetchClient itemsFetchClient = createItemsFetchClient(itemsStorageClient);
+            final var itemsStorageClient = createItemStorageClient(routingContext, context);
+            final var itemsFetchClient = createItemsFetchClient(itemsStorageClient);
 
             itemsFetchClient.find(itemIdsToUpdate, this::fetchByIdCql)
               .thenAccept(jsons -> {
@@ -110,9 +109,8 @@ public class MoveApi extends AbstractInventoryResource {
   }
 
   private void moveHoldings(RoutingContext routingContext) {
-
     WebContext context = new WebContext(routingContext);
-    JsonObject holdingsMoveJsonRequest = routingContext.getBodyAsJson();
+    JsonObject holdingsMoveJsonRequest = routingContext.body().asJsonObject();
 
     Optional<ValidationError> validationError = holdingsMoveHasRequiredFields(holdingsMoveJsonRequest);
     if (validationError.isPresent()) {
@@ -221,9 +219,11 @@ public class MoveApi extends AbstractInventoryResource {
     return new CollectionResourceClient(client, new URL(context.getOkapiLocation() + storageUrl));
   }
 
-  private CollectionResourceClient createItemStorageClient(OkapiHttpClient client, WebContext context)
-      throws MalformedURLException {
-    return createStorageClient(client, context, ITEM_STORAGE);
+  private CollectionResourceClient createItemStorageClient(
+    RoutingContext routingContext, WebContext context) throws MalformedURLException {
+
+    return createStorageClient(createHttpClient(routingContext, context),
+      context, ITEM_STORAGE);
   }
 
   private CollectionResourceClient createHoldingsStorageClient(OkapiHttpClient client, WebContext context)

@@ -1,22 +1,16 @@
 package org.folio.inventory.domain.instances;
 
-import static java.lang.String.format;
 import static org.folio.inventory.domain.instances.PublicationPeriod.publicationPeriodFromJson;
 import static org.folio.inventory.domain.instances.PublicationPeriod.publicationPeriodToJson;
 import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 import java.lang.invoke.MethodHandles;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -25,6 +19,12 @@ import org.folio.inventory.domain.Metadata;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 import org.folio.inventory.support.JsonArrayHelper;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 public class Instance {
   // JSON property names
@@ -240,20 +240,12 @@ public class Instance {
 
   /**
    *
-   * @param context
+   * @param context context of the incoming web request
    * @return JSON representation of the Instance, compatible with Inventory's
    * Instance schema
    */
   public JsonObject getJsonForResponse(WebContext context) {
     JsonObject json = new JsonObject();
-
-    try {
-      json.put("@context", context.absoluteUrl(
-        INSTANCES_PATH + "/context").toString());
-    } catch (MalformedURLException e) {
-      log.warn(
-        format("Failed to create context link for instance: %s", e.toString()));
-    }
 
     json.put("id", getId());
     putIfNotNull(json, VERSION_KEY, version);
@@ -306,16 +298,6 @@ public class Instance {
       JsonArray succeedingTitlesJsonArray = new JsonArray();
       succeedingTitles.forEach(title -> succeedingTitlesJsonArray.add(title.toSucceedingTitleJson()));
       json.put(SUCCEEDING_TITLES_KEY, succeedingTitlesJsonArray );
-    }
-
-    try {
-      URL selfUrl = context.absoluteUrl(format("%s/%s",
-        INSTANCES_PATH, getId()));
-
-      json.put("links", new JsonObject().put("self", selfUrl.toString()));
-    } catch (MalformedURLException e) {
-      log.warn(
-        format("Failed to create self link for instance: %s", e.toString()));
     }
 
     return json;
@@ -601,10 +583,6 @@ public class Instance {
   public Instance setNatureOfContentTermIds(List<String> natureOfContentTermIds) {
     this.natureOfContentTermIds = natureOfContentTermIds;
     return this;
-  }
-
-  public boolean hasMetadata () {
-    return this.metadata != null;
   }
 
   public String getId() {

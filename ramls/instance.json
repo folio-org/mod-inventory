@@ -3,10 +3,6 @@
   "description": "An instance record",
   "type": "object",
   "properties": {
-    "@context": {
-      "description": "Instance context",
-      "type": "string"
-    },
     "id": {
       "type": "string",
       "description": "The system assigned unique ID of the instance record"
@@ -410,20 +406,6 @@
       "type": "object",
       "$ref": "raml-util/schemas/metadata.schema",
       "readonly": true
-    },
-    "links": {
-        "description": "Links",
-        "type": "object",
-        "properties": {
-          "self": {
-            "description": "self",
-            "type": "string"
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "self"
-        ]
     },
     "natureOfContentTermIds": {
       "type": "array",

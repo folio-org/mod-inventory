@@ -1,6 +1,6 @@
 # mod-inventory
 
-Copyright (C) 2016-2020 The Open Library Foundation
+Copyright (C) 2016-2022 The Open Library Foundation
 
 This software is distributed under the terms of the Apache License,
 Version 2.0. See the file "[LICENSE](LICENSE)" for more information.
@@ -103,12 +103,6 @@ After setup, it is good to check logs in all related modules for errors.
     * "_kafkacache.topic.replication.factor_": 1
     * "_kafkacache.log.retention.ms_": 18000000
     * "_kafkacache.topic_": events_cache
-
-## Sample Data
-
-Importing/ingesting of sample data is done via Okapi, so modules must be registered prior to importing.
-
-To load some sample data run `./import-sample-data.sh` from the root directory.
 
 # Making Requests
 
