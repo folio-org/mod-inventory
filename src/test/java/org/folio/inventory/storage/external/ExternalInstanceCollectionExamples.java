@@ -4,19 +4,16 @@ import static org.folio.inventory.common.FutureAssistance.fail;
 import static org.folio.inventory.common.FutureAssistance.getOnCompletion;
 import static org.folio.inventory.common.FutureAssistance.succeed;
 import static org.folio.inventory.common.FutureAssistance.waitForCompletion;
-import static org.folio.inventory.storage.external.ExternalStorageSuite.getStorageAddress;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
-import lombok.SneakyThrows;
+
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.common.WaitForAllFutures;
 import org.folio.inventory.common.api.request.PagingParameters;
@@ -27,7 +24,9 @@ import org.hamcrest.CoreMatchers;
 import org.junit.Before;
 import org.junit.Test;
 
-public class ExternalInstanceCollectionExamples {
+import lombok.SneakyThrows;
+
+public class ExternalInstanceCollectionExamples extends ExternalStorageTests {
   private static final String BOOKS_INSTANCE_TYPE = UUID.randomUUID().toString();
   private static final String PERSONAL_CONTRIBUTOR_NAME_TYPE = UUID.randomUUID().toString();
   private static final String AUTHOR_CONTRIBUTOR_TYPE = UUID.randomUUID().toString();
@@ -35,14 +34,12 @@ public class ExternalInstanceCollectionExamples {
   private static final String ASIN_IDENTIFIER_TYPE = UUID.randomUUID().toString();
 
   private final InstanceCollection collection =
-    ExternalStorageSuite.useVertx(
-      it -> new ExternalStorageModuleInstanceCollection(getStorageAddress(),
-        ExternalStorageSuite.TENANT_ID, ExternalStorageSuite.TENANT_TOKEN, it.createHttpClient()));
+    useHttpClient(client -> new ExternalStorageModuleInstanceCollection(
+      getStorageAddress(), TENANT_ID, TENANT_TOKEN, client));
 
   @Before
-  public void before()
-    throws InterruptedException, ExecutionException, TimeoutException {
-
+  @SneakyThrows
+  public void before() {
     CompletableFuture<Void> emptied = new CompletableFuture<Void>();
 
     collection.empty(succeed(emptied), fail(emptied));
@@ -51,9 +48,8 @@ public class ExternalInstanceCollectionExamples {
   }
 
   @Test
-  public void canBeEmptied()
-    throws InterruptedException, ExecutionException, TimeoutException {
-
+  @SneakyThrows
+  public void canBeEmptied() {
     addSomeExamples(collection);
 
     CompletableFuture<Void> emptied = new CompletableFuture<>();
@@ -97,9 +93,8 @@ public class ExternalInstanceCollectionExamples {
   }
 
   @Test
-  public void anInstanceCanBeAdded()
-    throws InterruptedException, ExecutionException, TimeoutException {
-
+  @SneakyThrows
+  public void anInstanceCanBeAdded() {
     addSomeExamples(collection);
 
     CompletableFuture<MultipleRecords<Instance>> findFuture = new CompletableFuture<MultipleRecords<Instance>>();
@@ -124,9 +119,8 @@ public class ExternalInstanceCollectionExamples {
   }
 
   @Test
-  public void anInstanceCanBeAddedWithAnId()
-    throws InterruptedException, ExecutionException, TimeoutException {
-
+  @SneakyThrows
+  public void anInstanceCanBeAddedWithAnId() {
     CompletableFuture<Instance> addFinished = new CompletableFuture<>();
 
     String instanceId = UUID.randomUUID().toString();
@@ -141,9 +135,8 @@ public class ExternalInstanceCollectionExamples {
   }
 
   @Test
-  public void anInstanceCanBeFoundById()
-    throws InterruptedException, ExecutionException, TimeoutException {
-
+  @SneakyThrows
+  public void anInstanceCanBeFoundById() {
     CompletableFuture<Instance> firstAddFuture = new CompletableFuture<Instance>();
     CompletableFuture<Instance> secondAddFuture = new CompletableFuture<Instance>();
 
@@ -171,9 +164,8 @@ public class ExternalInstanceCollectionExamples {
   }
 
   @Test
-  public void allInstancesCanBePaged()
-    throws InterruptedException, ExecutionException, TimeoutException {
-
+  @SneakyThrows
+  public void allInstancesCanBePaged() {
     WaitForAllFutures<Instance> allAdded = new WaitForAllFutures<>();
 
     collection.add(smallAngryPlanet(), allAdded.notifySuccess(), v -> {});
@@ -204,9 +196,8 @@ public class ExternalInstanceCollectionExamples {
   }
 
   @Test
-  public void anInstanceCanBeDeleted()
-    throws ExecutionException, InterruptedException, TimeoutException {
-
+  @SneakyThrows
+  public void anInstanceCanBeDeleted() {
     addSomeExamples(collection);
 
     CompletableFuture<Instance> instanceToBeDeletedFuture = new CompletableFuture<Instance>();
@@ -215,7 +206,7 @@ public class ExternalInstanceCollectionExamples {
 
     Instance instanceToBeDeleted = instanceToBeDeletedFuture.get();
 
-    CompletableFuture deleted = new CompletableFuture();
+    final var deleted = new CompletableFuture<Void>();
 
     collection.delete(instanceToBeDeleted.getId(), succeed(deleted), fail(deleted));
 
@@ -240,9 +231,8 @@ public class ExternalInstanceCollectionExamples {
   }
 
   @Test
-  public void anInstanceCanBeUpdated()
-    throws InterruptedException, ExecutionException, TimeoutException {
-
+  @SneakyThrows
+  public void anInstanceCanBeUpdated() {
     CompletableFuture<Instance> addFinished = new CompletableFuture<Instance>();
 
     collection.add(smallAngryPlanet(), succeed(addFinished), fail(addFinished));
@@ -269,12 +259,8 @@ public class ExternalInstanceCollectionExamples {
   }
 
   @Test
-  public void instancesCanBeFoundByByPartialName()
-    throws InterruptedException,
-    ExecutionException,
-    TimeoutException,
-    UnsupportedEncodingException {
-
+  @SneakyThrows
+  public void instancesCanBeFoundByByPartialName() {
     CompletableFuture<Instance> firstAddFuture = new CompletableFuture<Instance>();
     CompletableFuture<Instance> secondAddFuture = new CompletableFuture<Instance>();
     CompletableFuture<Instance> thirdAddFuture = new CompletableFuture<Instance>();
@@ -304,9 +290,8 @@ public class ExternalInstanceCollectionExamples {
     assertThat(findByNameResults.get(0).getId(), is(addedSmallAngryPlanet.getId()));
   }
 
-  private static void addSomeExamples(InstanceCollection instanceCollection)
-    throws InterruptedException, ExecutionException, TimeoutException {
-
+  @SneakyThrows
+  private static void addSomeExamples(InstanceCollection instanceCollection) {
     WaitForAllFutures<Instance> allAdded = new WaitForAllFutures<>();
 
     instanceCollection.add(smallAngryPlanet(), allAdded.notifySuccess(), v -> {});

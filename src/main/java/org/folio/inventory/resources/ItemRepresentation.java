@@ -4,32 +4,22 @@ import static org.folio.inventory.domain.converters.EntityConverters.converterFo
 import static org.folio.inventory.support.HoldingsSupport.holdingForItem;
 import static org.folio.inventory.support.HoldingsSupport.instanceForHolding;
 
-import java.lang.invoke.MethodHandles;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.Status;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 class ItemRepresentation {
-  private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
-
-  private final String relativeItemsPath;
-
-  ItemRepresentation(String relativeItemsPath) {
-    this.relativeItemsPath = relativeItemsPath;
+  JsonObject toJson(MultipleRecords<Item> wrappedItems) {
+    return toJson(wrappedItems, null, null, null, null, null);
   }
 
   JsonObject toJson(
@@ -41,10 +31,9 @@ class ItemRepresentation {
     JsonObject temporaryLoanType,
     JsonObject permanentLocation,
     JsonObject temporaryLocation,
-    JsonObject effectiveLocation,
-    WebContext context) {
+    JsonObject effectiveLocation) {
 
-    JsonObject representation = toJson(item, holding, instance, context);
+    JsonObject representation = toJson(item, holding, instance);
 
     if(materialType != null) {
       representation.getJsonObject("materialType")
@@ -93,8 +82,7 @@ class ItemRepresentation {
   private JsonObject toJson(
     Item item,
     JsonObject holding,
-    JsonObject instance,
-    WebContext context) {
+    JsonObject instance) {
 
     JsonObject representation = new JsonObject();
     representation.put("id", item.id);
@@ -104,7 +92,7 @@ class ItemRepresentation {
       converterForClass(Status.class).toJson(item.getStatus()));
 
     List<JsonObject> contributorNames = new ArrayList<>();
-    instance.getJsonArray("contributors").forEach((contributor) -> {
+    instance.getJsonArray("contributors").forEach(contributor -> {
       JsonObject contributorName = new JsonObject();
       contributorName.put("name", ((JsonObject)contributor).getString("name"));
       contributorNames.add(contributorName);
@@ -161,15 +149,6 @@ class ItemRepresentation {
 
     includeIfPresent(representation, "metadata", item.getMetadata());
 
-    try {
-      URL selfUrl = context.absoluteUrl(String.format("%s/%s",
-        relativeItemsPath, item.id));
-
-      representation.put("links", new JsonObject().put("self", selfUrl.toString()));
-    } catch (MalformedURLException e) {
-      log.warn(String.format("Failed to create self link for item: %s", e.toString()));
-    }
-
     if (item.getLastCheckIn() != null) {
       representation.put("lastCheckIn", item.getLastCheckIn().toJson());
     }
@@ -196,8 +175,7 @@ class ItemRepresentation {
     Collection<JsonObject> instances,
     Map<String, JsonObject> materialTypes,
     Map<String, JsonObject> loanTypes,
-    Map<String, JsonObject> locations,
-    WebContext context) {
+    Map<String, JsonObject> locations) {
 
     JsonObject representation = new JsonObject();
 
@@ -219,7 +197,7 @@ class ItemRepresentation {
       JsonObject temporaryLocation = locations.get(item.getTemporaryLocationId());
 
       results.add(toJson(item, holding, instance, materialType, permanentLoanType,
-        temporaryLoanType, permanentLocation, temporaryLocation, effectiveLocation, context));
+        temporaryLoanType, permanentLocation, temporaryLocation, effectiveLocation));
     });
 
     representation

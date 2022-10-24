@@ -5,10 +5,8 @@ import java.util.function.Function;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.domain.CollectionProvider;
-import org.folio.inventory.domain.HoldingCollection;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.HoldingsRecordsSourceCollection;
-import org.folio.inventory.domain.ingest.IngestJobCollection;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.user.UserCollection;
@@ -54,16 +52,6 @@ public class Storage {
 
   public InstanceCollection getInstanceCollection(Context context) {
     return providerFactory.apply(context).getInstanceCollection(
-      context.getTenantId(), context.getToken());
-  }
-
-  public IngestJobCollection getIngestJobCollection(Context context) {
-    return providerFactory.apply(context).getIngestJobCollection(
-      context.getTenantId(), context.getToken());
-  }
-
-  public HoldingCollection getHoldingCollection(Context context) {
-    return providerFactory.apply(context).getHoldingCollection(
       context.getTenantId(), context.getToken());
   }
 

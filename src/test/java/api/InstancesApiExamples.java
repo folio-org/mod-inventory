@@ -1,44 +1,5 @@
 package api;
 
-import api.support.ApiRoot;
-import api.support.ApiTests;
-import api.support.InstanceApiClient;
-import com.github.jsonldjava.core.DocumentLoader;
-import com.github.jsonldjava.core.JsonLdError;
-import com.github.jsonldjava.core.JsonLdOptions;
-import com.github.jsonldjava.core.JsonLdProcessor;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import lombok.SneakyThrows;
-import org.apache.http.Header;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
-import org.apache.http.message.BasicHeader;
-import org.folio.inventory.config.InventoryConfiguration;
-import org.folio.inventory.config.InventoryConfigurationImpl;
-import org.folio.inventory.domain.instances.PublicationPeriod;
-import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
-import org.folio.inventory.support.JsonArrayHelper;
-import org.folio.inventory.support.http.ContentType;
-import org.folio.inventory.support.http.client.IndividualResource;
-import org.folio.inventory.support.http.client.Response;
-import org.folio.util.PercentCodec;
-import org.joda.time.DateTime;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
-import support.fakes.EndpointFailureDescriptor;
-
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
-
 import static api.support.InstanceSamples.leviathanWakes;
 import static api.support.InstanceSamples.marcInstanceWithDefaultBlockedFields;
 import static api.support.InstanceSamples.nod;
@@ -61,14 +22,44 @@ import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
-import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.joda.time.DateTimeZone.UTC;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-
 import static support.matchers.ResponseMatchers.hasValidationError;
+
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+
+import org.folio.inventory.config.InventoryConfiguration;
+import org.folio.inventory.config.InventoryConfigurationImpl;
+import org.folio.inventory.domain.instances.PublicationPeriod;
+import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
+import org.folio.inventory.support.JsonArrayHelper;
+import org.folio.inventory.support.http.ContentType;
+import org.folio.inventory.support.http.client.IndividualResource;
+import org.folio.inventory.support.http.client.Response;
+import org.folio.util.PercentCodec;
+import org.joda.time.DateTime;
+import org.junit.After;
+import org.junit.Test;
+
+import com.github.jsonldjava.core.JsonLdError;
+
+import api.support.ApiRoot;
+import api.support.ApiTests;
+import api.support.InstanceApiClient;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import lombok.SneakyThrows;
+import support.fakes.EndpointFailureDescriptor;
 
 public class InstancesApiExamples extends ApiTests {
   private static final InventoryConfiguration config = new InventoryConfigurationImpl();
@@ -168,11 +159,6 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(natureOfContentTermIds, hasItem(ApiTestSuite.getAudiobookNatureOfContentTermId()));
     assertThat(natureOfContentTermIds, hasItem(ApiTestSuite.getBibliographyNatureOfContentTermId()));
 
-    expressesDublinCoreMetadata(createdInstance);
-    dublinCoreContextLinkRespectsWayResourceWasReached(createdInstance);
-    selfLinkRespectsWayResourceWasReached(createdInstance);
-    selfLinkShouldBeReachable(createdInstance);
-
     assertThat(createdInstance.getString("hrid"), notNullValue());
 
     var publicationPeriod = createdInstance.getJsonObject(PUBLICATION_PERIOD_KEY);
@@ -243,10 +229,6 @@ public class InstancesApiExamples extends ApiTests {
 
     assertThat(firstContributor.getString("name"), is("Chambers, Becky"));
 
-    expressesDublinCoreMetadata(createdInstance);
-    dublinCoreContextLinkRespectsWayResourceWasReached(createdInstance);
-    selfLinkRespectsWayResourceWasReached(createdInstance);
-    selfLinkShouldBeReachable(createdInstance);
     assertThat(createdInstance.getString("hrid"), is(hrid));
   }
 
@@ -453,9 +435,6 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(natureOfContentTermIds.size(), is(1));
     assertThat(natureOfContentTermIds.getString(0), is(ApiTestSuite.getAudiobookNatureOfContentTermId()));
 
-    selfLinkRespectsWayResourceWasReached(updatedInstance);
-    selfLinkShouldBeReachable(updatedInstance);
-
     var publicationPeriod = updatedInstance.getJsonObject(PUBLICATION_PERIOD_KEY);
     assertThat(publicationPeriod.getInteger("start"), is(2000));
     assertThat(publicationPeriod.getInteger("end"), is(2012));
@@ -590,8 +569,6 @@ public class InstancesApiExamples extends ApiTests {
 
     JsonObject updatedInstance = getResponse.getJson();
     assertEquals(updatedInstance, newInstance);
-    selfLinkRespectsWayResourceWasReached(updatedInstance);
-    selfLinkShouldBeReachable(updatedInstance);
   }
 
   @Test
@@ -657,8 +634,6 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(updatedInstance.getString("source"), is(newInstance.getString("source")));
     assertThat(updatedInstance.getString("hrid"), is(newInstance.getString("hrid")));
     assertThat(updatedInstance.getString("statusId"), is(newInstance.getString("statusId")));
-    selfLinkRespectsWayResourceWasReached(updatedInstance);
-    selfLinkShouldBeReachable(updatedInstance);
   }
 
   @Test
@@ -694,8 +669,6 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(updatedInstance.getString("title"), is(newInstance.getString("title")));
     assertThat(updatedInstance.getString("source"), is(newInstance.getString("source")));
     assertThat(updatedInstance.getString("sourceRecordFormat"), is(instanceForUpdate.getString("sourceRecordFormat")));
-    selfLinkRespectsWayResourceWasReached(updatedInstance);
-    selfLinkShouldBeReachable(updatedInstance);
   }
 
   @Test
@@ -783,8 +756,6 @@ public class InstancesApiExamples extends ApiTests {
 
     assertThat(instances.size(), is(3));
     assertThat(getAllResponse.getJson().getInteger("totalRecords"), is(3));
-
-    hasCollectionProperties(instances);
   }
 
   @Test
@@ -818,15 +789,11 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(firstPageInstances.size(), is(3));
     assertThat(firstPageResponse.getJson().getInteger("totalRecords"), is(5));
 
-    hasCollectionProperties(firstPageInstances);
-
     List<JsonObject> secondPageInstances = JsonArrayHelper.toList(
       secondPageResponse.getJson().getJsonArray("instances"));
 
     assertThat(secondPageInstances.size(), is(2));
     assertThat(secondPageResponse.getJson().getInteger("totalRecords"), is(5));
-
-    hasCollectionProperties(secondPageInstances);
   }
 
   @Test
@@ -869,8 +836,6 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(instances.size(), is(1));
     assertThat(searchGetResponse.getJson().getInteger("totalRecords"), is(1));
     assertThat(instances.get(0).getString("title"), is("Long Way to a Small Angry Planet"));
-
-    hasCollectionProperties(instances);
   }
 
   @Test
@@ -968,88 +933,9 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(updateResponse.getBody(), is(expectedErrorMessage));
   }
 
-  private void hasCollectionProperties(List<JsonObject> instances) {
-    instances.forEach(instance -> {
-      try {
-        expressesDublinCoreMetadata(instance);
-      } catch (JsonLdError jsonLdError) {
-        Assert.fail(jsonLdError.toString());
-      }
-    });
-
-    instances.forEach(InstancesApiExamples::dublinCoreContextLinkRespectsWayResourceWasReached);
-
-    instances.forEach(InstancesApiExamples::selfLinkRespectsWayResourceWasReached);
-
-    instances.forEach(instance -> {
-      try {
-        selfLinkShouldBeReachable(instance);
-      } catch (Exception e) {
-        Assert.fail(e.toString());
-      }
-    });
-  }
-
-  private static void expressesDublinCoreMetadata(JsonObject instance)
-    throws JsonLdError {
-
-    JsonLdOptions options = new JsonLdOptions();
-    DocumentLoader documentLoader = new DocumentLoader();
-
-    ArrayList<Header> headers = new ArrayList<>();
-
-    headers.add(new BasicHeader("X-Okapi-Tenant", ApiTestSuite.TENANT_ID));
-
-    CloseableHttpClient httpClient = CachingHttpClientBuilder
-      .create()
-      .setDefaultHeaders(headers)
-      .build();
-
-    documentLoader.setHttpClient(httpClient);
-
-    options.setDocumentLoader(documentLoader);
-
-    List<Object> expandedLinkedData = JsonLdProcessor.expand(instance.getMap(), options);
-
-    assertThat("No Linked Data present", expandedLinkedData.isEmpty(), is(false));
-    assertThat(LinkedDataValue(expandedLinkedData,
-      "http://purl.org/dc/terms/title"), is(instance.getString("title")));
-  }
-
-  private static String LinkedDataValue(List<Object> expanded, String field) {
-    //TODO: improve on how to traverse JSON-LD results
-    return ((Map<String, Object>) ((ArrayList<Map>)
-      ((Map<String, Object>) expanded.get(0))
-        .get(field)).get(0))
-      .get("@value").toString();
-  }
-
   @SneakyThrows
   private JsonObject createInstance(JsonObject newInstanceRequest) {
     return InstanceApiClient.createInstance(okapiClient, newInstanceRequest);
-  }
-
-  private void selfLinkShouldBeReachable(JsonObject instance)
-    throws InterruptedException,
-    ExecutionException,
-    TimeoutException {
-
-    final var getCompleted
-      = okapiClient.get(instance.getJsonObject("links").getString("self"));
-
-    Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
-
-    assertThat(getResponse.getStatusCode(), is(200));
-  }
-
-  private static void dublinCoreContextLinkRespectsWayResourceWasReached(
-    JsonObject instance) {
-
-    containsApiRoot(instance.getString("@context"));
-  }
-
-  private static void selfLinkRespectsWayResourceWasReached(JsonObject instance) {
-    containsApiRoot(instance.getJsonObject("links").getString("self"));
   }
 
   private static void containsApiRoot(String link) {
