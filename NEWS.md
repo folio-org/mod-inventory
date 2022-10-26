@@ -1,10 +1,15 @@
-## 19.0.0 IN-PROGRESS
+## 19.0.0 2022-10-25
 
 * Extend instance contributors schema with Authority ID ([MODINV-729](https://issues.folio.org/browse/MODINV-729))
 * Delete instance/item by CQL ([MODINV-731](https://issues.folio.org/browse/MODINV-731))
 * Removes MODS ingest process ([MODINV-735](https://issues.folio.org/browse/MODINV-735))
 * Removes minimal dublin core support for instances ([MODINV-734](https://issues.folio.org/browse/MODINV-734))
 * Removes self links from instances and items ([MODINV-734](https://issues.folio.org/browse/MODINV-734))
+* Pre-set event type to payload before processing event for entities matching ([MODINV-723](https://issues.folio.org/browse/MODINV-723))
+* Cannot add tags to Instance when unlinked preceding/succeeding titles are present ([MODINV-674](https://issues.folio.org/browse/MODINV-674))
+* Support MARC-MARC Holdings update action ([MODINV-719](https://issues.folio.org/browse/MODINV-719))
+* Use ExternalStorageModuleHoldingsRecordCollection for DI processes ([MODINV-740](https://issues.folio.org/browse/MODINV-740))
+* Add new endpoint "/admin/health" ([MODINV-749](https://issues.folio.org/browse/MODINV-749))
 * Provides `inventory 12.0`
 * Requires `instance-storage 9.0`
 * Requires `item-storage 10.0`
