@@ -46,6 +46,8 @@ import org.folio.inventory.services.MoveItemIntoStatusService;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.Clients;
 import org.folio.inventory.storage.external.CollectionResourceClient;
+import org.folio.inventory.storage.external.CqlQuery;
+import org.folio.inventory.storage.external.MultipleRecordsFetchClient;
 import org.folio.inventory.support.CqlHelper;
 import org.folio.inventory.support.ItemUtil;
 import org.folio.inventory.support.JsonArrayHelper;
@@ -676,7 +678,7 @@ public class Items extends AbstractInventoryResource {
 
         allFutures.add(
           setBoundWithTitlesOnItem( item,
-            boundWithPartsClient, holdingsClient, instancesClient));
+            boundWithPartsClient, routingContext));
 
         CompletableFuture<Void> allDoneFuture = allOf(allFutures);
 
@@ -871,35 +873,46 @@ public class Items extends AbstractInventoryResource {
   /**
    * Fetches bound-with parts and referenced holdingsRecords and Instances
    * and builds a list of bound-with titles that is set on the provided Item.
-   * NOTE: This method will mutate the argument item (adding data to it)
+   * The method will mutate the argument 'item'.
    *
    * @param item The Item to set bound-with titles on
    * @param boundWithPartsClient Client for retrieving bound-with parts from storage
-   * @param holdingsClient Client for retrieving holdings from storage
-   * @param instancesClient Client for retrieving Instance from storage
-   * @return Future with null Response (Using Response return type in order to
-   * add this future to a list of other futures returning Response)
-   */
+  */
   private CompletableFuture<Response> setBoundWithTitlesOnItem(
     Item item,
     CollectionResourceClient boundWithPartsClient,
-    CollectionResourceClient holdingsClient,
-    CollectionResourceClient instancesClient
+    RoutingContext routingContext
   ) {
-    return getBoundWithPartsForItemFuture( item, boundWithPartsClient ).thenCompose( partsResponse -> {
-      JsonArray boundWithParts = partsResponse.getJson().getJsonArray("boundWithParts" );
-      if ( boundWithParts.isEmpty() ) {
-        item.withIsBoundWith( false );
-        return CompletableFuture.completedFuture( null );
-      } else {
-        return fetchHoldingsByForeignKeys( boundWithParts, holdingsClient ).thenCompose(
-          holdingsRecords -> fetchInstancesByForeignKeys( holdingsRecords, instancesClient ).thenCompose(
-            instances -> {
-              JsonArray boundWithTitles = buildBoundWithTitlesArray( holdingsRecords, instances );
-              item.withBoundWithTitles( boundWithTitles ).withIsBoundWith( true );
-              return CompletableFuture.completedFuture( null );
-            } ) );
-      }});
+    return getBoundWithPartsForItemFuture( item, boundWithPartsClient )
+      .thenCompose(
+        partsResponse -> {
+          JsonArray boundWithParts =
+            partsResponse.getJson().getJsonArray("boundWithParts" );
+          if ( boundWithParts.isEmpty() ) {
+            item.withIsBoundWith( false );
+            return CompletableFuture.completedFuture( null );
+          } else {
+            List<JsonObject> boundWithPartList = boundWithParts
+              .stream()
+              .map(part -> (JsonObject) part)
+              .collect(Collectors.toList());
+
+            return joinWithHoldings(boundWithPartList, routingContext)
+              .thenCompose(
+                holdingsRecords ->
+                  joinWithInstances(holdingsRecords, routingContext)
+                    .thenCompose(
+                      instances -> {
+                        JsonArray boundWithTitles =
+                          buildBoundWithTitlesArray(holdingsRecords, instances);
+                        item
+                          .withBoundWithTitles(boundWithTitles)
+                          .withIsBoundWith(true);
+                        return CompletableFuture.completedFuture(null);
+                      })
+              );
+          }
+        });
   }
 
   /**
@@ -909,17 +922,15 @@ public class Items extends AbstractInventoryResource {
    * @param instances The Instances that should populate the array
    * @return JSON array of boundWithTitles
    */
-  private JsonArray buildBoundWithTitlesArray (JsonArray holdingsRecords, JsonArray instances) {
+  private JsonArray buildBoundWithTitlesArray (List<JsonObject> holdingsRecords, List<JsonObject> instances) {
     JsonArray boundWithTitles = new JsonArray();
 
     final var instancesByIdMap = new HashMap<String, JsonObject>();
 
-    instances.stream().forEach( instance ->
-      instancesByIdMap.put( ( (JsonObject) instance ).getString( "id" ),
-        (JsonObject) instance ));
+    instances.forEach( instance ->
+      instancesByIdMap.put( instance.getString( "id" ), instance ));
 
-    holdingsRecords.stream().forEach( holdings -> {
-      JsonObject holdingsRecord = (JsonObject) holdings;
+    holdingsRecords.forEach( holdingsRecord -> {
       JsonObject boundWithTitle = new JsonObject();
       JsonObject briefHoldingsRecord = new JsonObject();
       JsonObject briefInstance = new JsonObject();
@@ -932,58 +943,93 @@ public class Items extends AbstractInventoryResource {
       boundWithTitle.put( "briefHoldingsRecord", briefHoldingsRecord );
       boundWithTitle.put( "briefInstance", briefInstance );
       boundWithTitles.add( boundWithTitle );
-    } );
+    });
     return boundWithTitles;
   }
 
-  /**
-   * For a set of entities with a 'holdingsRecordId' property, this method fetches holdingsRecords from storage by those holdingsRecordIds
-   * @param entities  Array of records with a property named 'holdingsRecordId'
-   * @param holdingsClient Client for fetching holdings records from storage
-   * @return Array of holdings records found by provided entities' holdingsRecordIds
-   */
-  private CompletableFuture<JsonArray> fetchHoldingsByForeignKeys( JsonArray entities, CollectionResourceClient holdingsClient) {
-    List<String> holdingsRecordIds = getStringPropertyFromJsonArray(
-      entities, "holdingsRecordId" );
-    CompletableFuture<Response> holdingsFetched = new CompletableFuture<>();
-    holdingsClient.getMany( multipleRecordsCqlQuery( holdingsRecordIds ),
-      holdingsRecordIds.size(), 0, holdingsFetched::complete );
-    return holdingsFetched.thenCompose( holdingsResponse -> {
-      JsonArray holdingsRecords = holdingsResponse.getJson().getJsonArray(
-        "holdingsRecords" );
-      return CompletableFuture.completedFuture( holdingsRecords );
-    });
+  private CompletableFuture<List<JsonObject>> joinWithHoldings(
+    List<JsonObject> referencingRecords,
+    RoutingContext routingContext) {
+    return partitionedJoin(
+      referencingRecords,
+      "holdingsRecordId",
+      "/holdings-storage/holdings",
+      "holdingsRecords",
+      routingContext);
+  }
+
+  private CompletableFuture<List<JsonObject>> joinWithInstances(
+    List<JsonObject> referencingRecords,
+    RoutingContext routingContext) {
+    return partitionedJoin(
+      referencingRecords,
+      "instanceId",
+      "/instance-storage/instances",
+      "instances",
+      routingContext);
   }
 
   /**
-   * "Joins" Instances from storage with a JSON array of entities with 'instanceId's
-   * @param entities  Array of records with a property named 'instanceId'
-   * @param instancesClient Client for fetching Instances from storage
-   * @return Array of Instances found by the provided entities' instanceIds
+   * Uses MultipleRecordsFetchClient to construct and execute a "join" between
+   * master/detail APIs over REST.
+   * The join is constructed using the provided name of a foreign key in the
+   * detail entities. The foreign key is assumed to be referencing
+   * the primary key - by FOLIO convention named "id" - of the master entities.
+   * The master entities are looked up at the provided API path and
+   * by the provided property name.
+   * @param referencingEntities Detail entities with a foreign key property.
+   * @param referencingPropertyName Name of the foreign key property.
+   * @param referencedApiPath The API path to the master entities.
+   * @param referencedCollectionName Property name of the master entity array.
+   * @return List of master entities.
    */
-  private CompletableFuture<JsonArray> fetchInstancesByForeignKeys( JsonArray entities, CollectionResourceClient instancesClient) {
-    List<String> instanceIds = getStringPropertyFromJsonArray(
-      entities, INSTANCE_ID_PROPERTY);
-    CompletableFuture<Response> instancesFetched = new CompletableFuture<>();
-    instancesClient.getMany( multipleRecordsCqlQuery( instanceIds ),
-      instanceIds.size(), 0, instancesFetched::complete );
-    return instancesFetched.thenCompose( instancesResponse -> {
-      JsonArray instances = instancesResponse.getJson().getJsonArray(
-        "instances" );
-      return CompletableFuture.completedFuture( instances );
-    });
-  }
+  private CompletableFuture<List<JsonObject>> partitionedJoin(
+    List<JsonObject> referencingEntities,
+    String referencingPropertyName,
+    String referencedApiPath,
+    String referencedCollectionName,
+    RoutingContext routingContext) {
 
-  /**
-   * Picks select String property from JSON array of records
-   * @param entities  The records to pick the property from
-   * @param propertyName Name of the property to retrieve
-   * @return List of values for the provided property name
-   */
-  private List<String> getStringPropertyFromJsonArray( JsonArray entities, String propertyName) {
-    return entities.stream()
-      .map(o -> ((JsonObject)o).getString(propertyName))
+    List<String> referencedIds = referencingEntities
+      .stream()
+      .map(o -> o.getString(referencingPropertyName))
       .collect( Collectors.toList());
+
+    MultipleRecordsFetchClient partitionedRequestsClient =
+      buildPartitionedFetchClient(
+        referencedApiPath,
+        referencedCollectionName,
+        routingContext);
+
+    return partitionedRequestsClient.find(referencedIds,this::cqlMatchAnyByIds);
+  }
+
+  private CqlQuery cqlMatchAnyByIds(List<String> ids) {
+    return CqlQuery.exactMatchAny("id", ids);
+  }
+
+  private MultipleRecordsFetchClient buildPartitionedFetchClient(
+    String apiPath,
+    String collectionPropertyName,
+    RoutingContext routingContext) {
+      WebContext webContext = new WebContext(routingContext);
+
+      CollectionResourceClient baseClient = null;
+      try {
+        URL api = new URL(webContext.getOkapiLocation() + apiPath);
+        baseClient =
+          new CollectionResourceClient(
+            createHttpClient(routingContext, webContext), api);
+      } catch (MalformedURLException mue) {
+        log.error(
+          "Could not create CollectionResourceClient due to malformed URL"
+            + webContext.getOkapiLocation() + apiPath);
+      }
+      return MultipleRecordsFetchClient.builder()
+        .withCollectionPropertyName(collectionPropertyName)
+        .withExpectedStatus(200)
+        .withCollectionResourceClient(baseClient)
+        .build();
   }
 
   private CompletableFuture<Response> getBoundWithPartsForItemFuture(
