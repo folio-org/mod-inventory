@@ -963,7 +963,7 @@ public class Items extends AbstractInventoryResource {
     RoutingContext routingContext) {
     return partitionedJoin(
       referencingRecords,
-      "instanceId",
+      INSTANCE_ID_PROPERTY,
       "/instance-storage/instances",
       "instances",
       routingContext);
@@ -1022,8 +1022,9 @@ public class Items extends AbstractInventoryResource {
             createHttpClient(routingContext, webContext), api);
       } catch (MalformedURLException mue) {
         log.error(
-          "Could not create CollectionResourceClient due to malformed URL"
-            + webContext.getOkapiLocation() + apiPath);
+          String.format(
+            "Could not create CollectionResourceClient due to malformed URL %s%s",
+            webContext.getOkapiLocation(), apiPath));
       }
       return MultipleRecordsFetchClient.builder()
         .withCollectionPropertyName(collectionPropertyName)
