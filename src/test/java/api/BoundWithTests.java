@@ -247,7 +247,7 @@ public class BoundWithTests extends ApiTests
       itemResponse.getJson().getJsonArray( "boundWithTitles" ).size(), is(200));
   }
 
-    @Test
+  @Test
   public void mustQueryBoundWithItemsByHoldingsRecordIdId()
     throws InterruptedException, TimeoutException, ExecutionException {
 
