@@ -50,6 +50,15 @@ public class MappingMetadataCache {
     }
   }
 
+  public Future<Optional<MappingMetadataDto>> getByRecordType(String jobExecutionId, Context context, String recordType) {
+    try {
+      return Future.fromCompletionStage(cache.get(jobExecutionId, (key, executor) -> loadMappingMetadata(recordType, context)));
+    } catch (Exception e) {
+      LOGGER.warn("Error loading MappingMetadata by jobExecutionId: '{}'", jobExecutionId, e);
+      return Future.failedFuture(e);
+    }
+  }
+
   @SneakyThrows
   private CompletableFuture<Optional<MappingMetadataDto>> loadJobProfileSnapshot(String jobExecutionId, Context context) {
     LOGGER.debug("Trying to load MappingMetadata by jobExecutionId  '{}' for cache, okapi url: {}, tenantId: {}", jobExecutionId, context.getOkapiLocation(), context.getTenantId());
@@ -68,6 +77,30 @@ public class MappingMetadataCache {
         } else {
           String message = String.format("Error loading MappingMetadata by id: '%s', status code: %s, response message: %s",
             jobExecutionId, httpResponse.getStatusCode(), httpResponse.getBody());
+          LOGGER.warn(message);
+          return CompletableFuture.failedFuture(new CacheLoadingException(message));
+        }
+      });
+  }
+
+  @SneakyThrows
+  private CompletableFuture<Optional<MappingMetadataDto>> loadMappingMetadata(String recordType, Context context) {
+    LOGGER.debug("Trying to load MappingMetadata by recordType  '{}' for cache, okapi url: {}, tenantId: {}", recordType, context.getOkapiLocation(), context.getTenantId());
+
+    OkapiHttpClient client = new OkapiHttpClient(WebClient.wrap(httpClient), new URL(context.getOkapiLocation()), context.getTenantId(), context.getToken(), null, null, null);
+
+    return client.get(context.getOkapiLocation() + "/mapping-metadata/type/" + recordType)
+      .toCompletableFuture()
+      .thenCompose(httpResponse -> {
+        if (httpResponse.getStatusCode() == HttpStatus.SC_OK) {
+          LOGGER.info("MappingMetadata was loaded by recordType '{}'", recordType);
+          return CompletableFuture.completedFuture(Optional.of(Json.decodeValue(httpResponse.getBody(), MappingMetadataDto.class)));
+        } else if (httpResponse.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
+          LOGGER.warn("MappingMetadata was not found by recordType '{}'", recordType);
+          return CompletableFuture.completedFuture(Optional.empty());
+        } else {
+          String message = String.format("Error loading MappingMetadata by recordType: '%s', status code: %s, response message: %s",
+            recordType, httpResponse.getStatusCode(), httpResponse.getBody());
           LOGGER.warn(message);
           return CompletableFuture.failedFuture(new CacheLoadingException(message));
         }

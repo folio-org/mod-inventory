@@ -103,6 +103,9 @@ After setup, it is good to check logs in all related modules for errors.
     * "_kafkacache.topic.replication.factor_": 1
     * "_kafkacache.log.retention.ms_": 18000000
     * "_kafkacache.topic_": events_cache
+* These variables are relevant from the **XXXXX** release. Module version from X.X.X:
+    * "_inventory.kafka.MarcBibUpdateConsumerVerticle.instancesNumber_": 1
+    * "_inventory.kafka.MarcBibUpdateConsumer.loadLimit_": 5
 
 # Making Requests
 
