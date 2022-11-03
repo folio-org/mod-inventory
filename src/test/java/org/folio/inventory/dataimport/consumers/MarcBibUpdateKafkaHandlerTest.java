@@ -50,6 +50,8 @@ public class MarcBibUpdateKafkaHandlerTest {
   private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
   private static final String RECORD_KEY = "record";
   private static final String JOB_ID = "jobId";
+  private static final String TYPE_KEY = "type";
+  private static final String TENANT_KEY = "tenant";
 
   @Mock
   private Storage mockedStorage;
@@ -106,14 +108,10 @@ public class MarcBibUpdateKafkaHandlerTest {
   public void shouldReturnSucceededFutureWithObtainedRecordKey(TestContext context) throws IOException {
     // given
     Async async = context.async();
-    Map<String, String> payload = new HashMap<>();
-    payload.put(RECORD_KEY, Json.encode(record));
-    payload.put(JOB_ID, UUID.randomUUID().toString());
-
-    Event event = new Event().withId("test_id").withEventPayload(Json.encode(payload));
+    Map<String, String> payload = preparePayload(record, UUID.randomUUID().toString(), "diku", "UPDATE");
     String expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
-    when(kafkaRecord.value()).thenReturn(Json.encode(event));
+    when(kafkaRecord.value()).thenReturn(Json.encode(payload));
 
     // when
     Future<String> future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
@@ -136,20 +134,16 @@ public class MarcBibUpdateKafkaHandlerTest {
     Async async = context.async();
     Mockito.when(mappingMetadataCache.getByRecordType(anyString(), any(Context.class), anyString()))
       .thenReturn(Future.succeededFuture(Optional.empty()));
-    Map<String, String> payload = new HashMap<>();
-    payload.put(RECORD_KEY, Json.encode(record));
-    payload.put(JOB_ID, UUID.randomUUID().toString());
+    Map<String, String> payload = preparePayload(record, UUID.randomUUID().toString(), "diku", "UPDATE");
 
-    Event event = new Event().withId("test_id").withEventPayload(Json.encode(payload));
-    when(kafkaRecord.value()).thenReturn(Json.encode(event));
-
+    when(kafkaRecord.value()).thenReturn(Json.encode(payload));
     // when
     Future<String> future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
 
     // then
     future.onComplete(ar -> {
       context.assertTrue(ar.failed());
-      context.assertTrue(ar.cause().getMessage().contains("MappingParameters and mapping rules snapshots were not found by jobExecutionId"));
+      context.assertTrue(ar.cause().getMessage().contains("MappingParameters and mapping rules snapshots were not found by jobId"));
       async.complete();
     });
 
@@ -162,8 +156,9 @@ public class MarcBibUpdateKafkaHandlerTest {
   public void shouldReturnFailedFutureWhenPayloadCanNotBeMapped(TestContext context) {
     // given
     Async async = context.async();
-    Event event = new Event().withId("test_id").withEventPayload(null);
-    when(kafkaRecord.value()).thenReturn(Json.encode(event));
+    Map<String, String> payload = preparePayload(record, UUID.randomUUID().toString(), "diku", "UPDATE");
+    payload.put(RECORD_KEY, "");
+    when(kafkaRecord.value()).thenReturn(Json.encode(payload));
 
     // when
     Future<String> future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
@@ -171,12 +166,22 @@ public class MarcBibUpdateKafkaHandlerTest {
     // then
     future.onComplete(ar -> {
       context.assertTrue(ar.failed());
+      context.assertTrue(ar.cause().getMessage().contains("Event message does not contain required data to update Instance by jobId"));
       async.complete();
     });
 
     verify(mockedInstanceCollection, times(0)).findById(anyString(), any(), any());
     verify(mockedInstanceCollection, times(0)).update(any(Instance.class), any(), any());
     verify(mappingMetadataCache, times(0)).getByRecordType(anyString(), any(Context.class), anyString());
+  }
+
+  private Map<String, String> preparePayload(Record record, String jobId, String tenant, String eventType){
+    Map<String, String> payload = new HashMap<>();
+    payload.put(RECORD_KEY, Json.encode(record));
+    payload.put(JOB_ID, jobId);
+    payload.put(TENANT_KEY, tenant);
+    payload.put(TYPE_KEY, eventType);
+    return payload;
   }
 
 }

@@ -49,9 +49,11 @@ public class MarcBibUpdateConsumerVerticle extends AbstractVerticle {
       .onSuccess(ar -> startPromise.complete());
   }
 
-  private KafkaConsumerWrapper<String, String> createConsumer(KafkaConfig kafkaConfig, String srsMarcBibTopicName) {
-    SubscriptionDefinition subscriptionDefinition = KafkaTopicNameHelper.createSubscriptionDefinition(
-        kafkaConfig.getEnvId(), KafkaTopicNameHelper.getDefaultNameSpace(), srsMarcBibTopicName);
+  private KafkaConsumerWrapper<String, String> createConsumer(KafkaConfig kafkaConfig, String topicEventType) {
+    SubscriptionDefinition subscriptionDefinition = SubscriptionDefinition.builder()
+      .eventType(topicEventType)
+      .subscriptionPattern(formatSubscriptionPattern(kafkaConfig.getEnvId(), topicEventType))
+      .build();
 
     return KafkaConsumerWrapper.<String, String>builder()
       .context(context)
@@ -92,5 +94,9 @@ public class MarcBibUpdateConsumerVerticle extends AbstractVerticle {
       cacheExpirationTime = "3600";
     }
     return cacheExpirationTime;
+  }
+
+  public static String formatSubscriptionPattern(String env, String eventType) {
+    return String.join("\\.", env, "\\w{1,}", eventType);
   }
 }
