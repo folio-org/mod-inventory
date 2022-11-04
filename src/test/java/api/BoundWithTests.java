@@ -239,15 +239,15 @@ public class BoundWithTests extends ApiTests
       boundWithPartsStorageClient.create(
         makeObjectBoundWithPart( item.getJson().getString("id"), holdings.getJson().getString( "id" ) ));
     }
-    Response itemResponse = okapiClient.get(ApiTestSuite.apiRoot()+
-        "/inventory/items/"+item.getId())
+    Response itemResponse = okapiClient.get(ApiTestSuite.apiRoot() +
+        "/inventory/items/" + item.getId())
       .toCompletableFuture().get(5, SECONDS);
 
     assertThat("Item has boundWithTitles array with 200 titles",
       itemResponse.getJson().getJsonArray( "boundWithTitles" ).size(), is(200));
   }
 
-    @Test
+  @Test
   public void mustQueryBoundWithItemsByHoldingsRecordIdId()
     throws InterruptedException, TimeoutException, ExecutionException {
 
