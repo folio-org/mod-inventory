@@ -1,3 +1,7 @@
+## 19.0.1 2022-11-04
+
+* Support large bound-withs (100+ titles) in GET Item (([MODINV-752](https://issues.folio.org/browse/MODINV-752))
+
 ## 19.0.0 2022-10-25
 
 * Extend instance contributors schema with Authority ID ([MODINV-729](https://issues.folio.org/browse/MODINV-729))
