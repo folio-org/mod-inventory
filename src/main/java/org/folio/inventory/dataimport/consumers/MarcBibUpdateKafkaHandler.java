@@ -20,6 +20,7 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
+import org.folio.inventory.domain.dto.InstanceEvent;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaHeaderUtils;
 import org.folio.processing.exceptions.EventProcessingException;
@@ -29,13 +30,9 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
 
   private static final Logger LOGGER = LogManager.getLogger(MarcBibUpdateKafkaHandler.class);
   private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingParameters and mapping rules snapshots were not found by jobId '%s'";
-  private static final String RECORD_KEY = "record";
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
   private static final ObjectMapper OBJECT_MAPPER = ObjectMapperTool.getMapper();
-  private static final String JOB_ID = "jobId";
-  private static final String TYPE_KEY = "type";
-  private static final String TENANT_KEY = "tenant";
   private static final String MARC_BIB_RECORD_TYPE = "marc-bib";
 
   private final InstanceUpdateDelegate instanceUpdateDelegate;
@@ -51,30 +48,30 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
     try {
       Promise<String> promise = Promise.promise();
       @SuppressWarnings("unchecked")
-      HashMap<String, String> payloadMap = OBJECT_MAPPER.readValue(record.value(), HashMap.class);
+      InstanceEvent instanceEvent = OBJECT_MAPPER.readValue(record.value(), InstanceEvent.class);
       Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(record.headers());
-      String jobId = payloadMap.get(JOB_ID);
-      String type = payloadMap.get(TYPE_KEY);
-      LOGGER.info("Event payload has been received with event type: {} by jobId: {}", type, jobId);
+      HashMap<String, String> metaDataPayload = new HashMap<>();
 
-      if (isEmpty(payloadMap.get(RECORD_KEY))) {
-        String message = String.format("Event message does not contain required data to update Instance by jobId: '%s'", jobId);
+      LOGGER.info("Event payload has been received with event type: {} by jobId: {}", instanceEvent.getType(), instanceEvent.getJobId());
+
+      if (isEmpty(instanceEvent.getRecord()) || !InstanceEvent.EventType.UPDATE.equals(instanceEvent.getType())) {
+        String message = String.format("Event message does not contain required data to update Instance by jobId: '%s'", instanceEvent.getJobId());
         LOGGER.error(message);
         return Future.failedFuture(message);
       }
-      Context context = EventHandlingUtil.constructContext(payloadMap.get(TENANT_KEY), headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER));
-      Record marcBibRecord = new JsonObject(payloadMap.get(RECORD_KEY)).mapTo(Record.class);
+      Context context = EventHandlingUtil.constructContext(instanceEvent.getTenant(), headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER));
+      Record marcBibRecord = new JsonObject(instanceEvent.getRecord()).mapTo(Record.class);
 
-      mappingMetadataCache.getByRecordType(jobId, context, MARC_BIB_RECORD_TYPE)
+      mappingMetadataCache.getByRecordType(instanceEvent.getJobId(), context, MARC_BIB_RECORD_TYPE)
         .map(metadataOptional -> metadataOptional.orElseThrow(() ->
-          new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobId))))
-        .onSuccess(mappingMetadataDto -> ensureEventPayloadWithMappingMetadata(payloadMap, mappingMetadataDto))
-        .compose(v -> instanceUpdateDelegate.handle(payloadMap, marcBibRecord, context))
+          new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, instanceEvent.getJobId()))))
+        .onSuccess(mappingMetadataDto -> ensureEventPayloadWithMappingMetadata(metaDataPayload, mappingMetadataDto))
+        .compose(v -> instanceUpdateDelegate.handle(metaDataPayload, marcBibRecord, context))
         .onComplete(ar -> {
           if (ar.succeeded()) {
             promise.complete(record.key());
           } else {
-            LOGGER.error("Failed to update instance by jobId {}:{}", jobId, ar.cause());
+            LOGGER.error("Failed to update instance by jobId {}:{}", instanceEvent.getJobId(), ar.cause());
             promise.fail(ar.cause());
           }
         });
