@@ -103,7 +103,7 @@ public class BoundWithTests extends ApiTests
   }
 
   @Test
-  public void boundWithTitlesArePresentInBoundWithItem () throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException
+  public void boundWithTitlesArePresentInBoundWithItem () throws InterruptedException, TimeoutException, ExecutionException
   {
     IndividualResource instance1 = instancesStorageClient.create( InstanceSamples.smallAngryPlanet( UUID.randomUUID() ) );
     IndividualResource holdings1a = holdingsStorageClient.create(new HoldingRequestBuilder()
@@ -219,6 +219,32 @@ public class BoundWithTests extends ApiTests
       .toCompletableFuture().get(5, SECONDS);
     assertThat("One item is found for 'holdings3a' (non-bound-with) with relations criterion: ", itemsResponse4.getJson().getInteger( "totalRecords" ), is(1));
 
+  }
+
+  @Test
+  public void canFetchBoundWithItemWithManyParts() throws InterruptedException, TimeoutException, ExecutionException
+  {
+    IndividualResource instance1 = instancesStorageClient.create( InstanceSamples.smallAngryPlanet( UUID.randomUUID() ).put("title", "Instance 1") );
+    IndividualResource holdings1 = holdingsStorageClient.create(new HoldingRequestBuilder()
+      .forInstance(instance1.getId()).permanentlyInMainLibrary().withCallNumber( "HOLDINGS 1" ));
+    IndividualResource item = itemsClient.create(new ItemRequestBuilder()
+      .forHolding( holdings1.getId() ).withBarcode( "ITEM" ));
+    boundWithPartsStorageClient.create(
+      makeObjectBoundWithPart( item.getJson().getString("id"), holdings1.getJson().getString( "id" ) ));
+
+    for (int i=2; i<=200; i++) {
+      IndividualResource instance = instancesStorageClient.create( InstanceSamples.smallAngryPlanet( UUID.randomUUID() ).put("title", "Instance " + i) );
+      IndividualResource holdings = holdingsStorageClient.create(new HoldingRequestBuilder()
+        .forInstance(instance.getId()).permanentlyInMainLibrary().withCallNumber( "HOLDINGS " + i ));
+      boundWithPartsStorageClient.create(
+        makeObjectBoundWithPart( item.getJson().getString("id"), holdings.getJson().getString( "id" ) ));
+    }
+    Response itemResponse = okapiClient.get(ApiTestSuite.apiRoot() +
+        "/inventory/items/" + item.getId())
+      .toCompletableFuture().get(5, SECONDS);
+
+    assertThat("Item has boundWithTitles array with 200 titles",
+      itemResponse.getJson().getJsonArray( "boundWithTitles" ).size(), is(200));
   }
 
   @Test
