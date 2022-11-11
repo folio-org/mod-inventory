@@ -122,8 +122,10 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
           .orElse(CompletableFuture.failedFuture(new EventProcessingException(format("Job profile snapshot with id '%s' does not exist", jobProfileSnapshotId)))))
         .whenComplete((processedPayload, throwable) -> {
           if (throwable != null) {
+            LOGGER.error(throwable.getMessage());
             promise.fail(throwable);
           } else if (DI_ERROR.value().equals(processedPayload.getEventType())) {
+            LOGGER.warn("Failed to process data import event payload: {}", processedPayload.getEventType());
             promise.fail("Failed to process data import event payload");
           } else {
             promise.complete(record.key());

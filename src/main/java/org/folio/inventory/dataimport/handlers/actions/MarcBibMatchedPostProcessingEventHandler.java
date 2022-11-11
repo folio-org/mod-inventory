@@ -27,6 +27,7 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MATCHED_READY_FOR_POST_PROCESSING;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 
 public class MarcBibMatchedPostProcessingEventHandler implements EventHandler {
 
@@ -45,6 +46,7 @@ public class MarcBibMatchedPostProcessingEventHandler implements EventHandler {
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
+    logParametersEventHandler(LOGGER, dataImportEventPayload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();

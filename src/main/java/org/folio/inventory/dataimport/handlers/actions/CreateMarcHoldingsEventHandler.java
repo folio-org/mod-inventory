@@ -10,6 +10,7 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDINGS_CREATED_READY
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.inventory.dataimport.util.ParsedRecordUtil.getControlFieldValue;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
@@ -82,6 +83,7 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
+    logParametersEventHandler(LOGGER, dataImportEventPayload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
       dataImportEventPayload.setEventType(DI_INVENTORY_HOLDING_CREATED.value());
@@ -89,6 +91,7 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
       if (payloadContext == null || payloadContext.isEmpty()
         || StringUtils.isEmpty(payloadContext.get(MARC_HOLDINGS.value()))) {
+        LOGGER.warn("Can`t create Holding entity for context: {}", payloadContext);
         return CompletableFuture.failedFuture(new EventProcessingException(CONTEXT_EMPTY_ERROR_MESSAGE));
       }
       if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
@@ -103,6 +106,7 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
       String jobExecutionId = dataImportEventPayload.getJobExecutionId();
       String recordId = payloadContext.get(RECORD_ID_HEADER);
       String chunkId = payloadContext.get(CHUNK_ID_HEADER);
+      LOGGER.info("Create marc holding with jobExecutionId: {} , recordId: {} , chunkId: {}", jobExecutionId, recordId, chunkId);
 
       Future<RecordToEntity> recordToHoldingsFuture = idStorageService.store(targetRecord.getId(), UUID.randomUUID().toString(), dataImportEventPayload.getTenant());
       recordToHoldingsFuture.onSuccess(res -> {
@@ -197,6 +201,7 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
       var record = Json.decodeValue(recordAsString, Record.class);
       var instanceHrid = getControlFieldValue(record, "004");
       if (isBlank(instanceHrid)) {
+        LOGGER.warn(FIELD_004_MARC_HOLDINGS_NOT_NULL);
         throw new EventProcessingException(FIELD_004_MARC_HOLDINGS_NOT_NULL);
       }
       var instanceCollection = storage.getInstanceCollection(context);
@@ -228,6 +233,7 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
 
   private void checkIfPermanentLocationIdExists(JsonObject holdingAsJson) {
     if (isEmpty(holdingAsJson.getString(PERMANENT_LOCATION_ID_FIELD))) {
+      LOGGER.warn(PERMANENT_LOCATION_ID_ERROR_MESSAGE);
       throw new EventProcessingException(PERMANENT_LOCATION_ID_ERROR_MESSAGE);
     }
   }

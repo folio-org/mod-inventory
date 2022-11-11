@@ -45,6 +45,7 @@ public class PrecedingSucceedingTitlesHelper {
   }
 
   public Future<List<JsonObject>> getExistingPrecedingSucceedingTitles(Instance instance, Context context) {
+    LOGGER.trace("getExistingPrecedingSucceedingTitles:: parameters instance: {} , context: {} ", instance, context);
     CollectionResourceClient precedingSucceedingTitlesClient = createPrecedingSucceedingTitlesClient(context);
 
     Promise<List<JsonObject>> promise = Promise.promise();
@@ -67,6 +68,8 @@ public class PrecedingSucceedingTitlesHelper {
   }
 
   public Future<Void> deletePrecedingSucceedingTitles(Set<String> titlesIds, Context context) {
+    LOGGER.info("deletePrecedingSucceedingTitles:: parameters titlesIds: {} , context: {} ", titlesIds, context);
+
     CollectionResourceClient precedingSucceedingTitlesClient = createPrecedingSucceedingTitlesClient(context);
     CollectionResourceRepository precedingSucceedingTitlesRepository = new CollectionResourceRepository(precedingSucceedingTitlesClient);
 
@@ -84,6 +87,7 @@ public class PrecedingSucceedingTitlesHelper {
   }
 
   public Future<Void> createPrecedingSucceedingTitles(Instance instance, Context context) {
+    LOGGER.info("createPrecedingSucceedingTitles:: parameters instance: {} , context: {} ", instance, context);
     CollectionResourceClient precedingSucceedingTitlesClient = createPrecedingSucceedingTitlesClient(context);
     CollectionResourceRepository precedingSucceedingTitlesRepository = new CollectionResourceRepository(precedingSucceedingTitlesClient);
 
@@ -104,6 +108,7 @@ public class PrecedingSucceedingTitlesHelper {
   }
 
   public Future<Void> updatePrecedingSucceedingTitles(Instance instance, Context context) {
+    LOGGER.info("updatePrecedingSucceedingTitles:: parameters instance: {} , context: {} ", instance, context);
     Promise<Void> promise = Promise.promise();
 
     List<PrecedingSucceedingTitle> titlesList = new ArrayList<>();
@@ -172,6 +177,7 @@ public class PrecedingSucceedingTitlesHelper {
     try {
       return new URL(context.getOkapiLocation() + "/preceding-succeeding-titles");
     } catch (MalformedURLException e) {
+      LOGGER.warn("Error during creating precedingSucceedingTitlesClient", e);
       throw new EventProcessingException("Error during creating precedingSucceedingTitlesClient", e);
     }
   }
