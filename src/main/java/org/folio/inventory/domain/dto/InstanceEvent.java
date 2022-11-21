@@ -86,16 +86,17 @@ public class InstanceEvent {
     return this;
   }
 
-  public static enum EventType {
+  public enum EventType {
     UPDATE("UPDATE"),
     DELETE("DELETE");
     private final String value;
-    private static final Map<String, InstanceEvent.EventType> CONSTANTS = new HashMap();
+    private static final Map<String, InstanceEvent.EventType> CONSTANTS = new HashMap<>();
 
-    private EventType(String value) {
+    EventType(String value) {
       this.value = value;
     }
 
+    @Override
     public String toString() {
       return this.value;
     }
@@ -116,11 +117,7 @@ public class InstanceEvent {
     }
 
     static {
-      InstanceEvent.EventType[] var0 = values();
-      int var1 = var0.length;
-
-      for(int var2 = 0; var2 < var1; ++var2) {
-        InstanceEvent.EventType c = var0[var2];
+      for (EventType c : values()) {
         CONSTANTS.put(c.value, c);
       }
     }

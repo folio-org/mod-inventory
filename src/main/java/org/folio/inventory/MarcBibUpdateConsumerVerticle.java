@@ -21,7 +21,6 @@ import org.folio.inventory.storage.Storage;
 import org.folio.kafka.GlobalLoadSensor;
 import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaConsumerWrapper;
-import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.kafka.SubscriptionDefinition;
 
 public class MarcBibUpdateConsumerVerticle extends AbstractVerticle {
