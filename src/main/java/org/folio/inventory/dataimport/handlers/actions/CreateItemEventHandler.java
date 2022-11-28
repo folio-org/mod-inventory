@@ -40,6 +40,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -236,12 +237,17 @@ public class CreateItemEventHandler implements EventHandler {
   }
 
   private Future<Item> addItem(Item item, ItemCollection itemCollection) {
+    Map<String, String> validNotes = Map.of(
+      "Check in note", "Check in",
+      "Check out note", "Check out");
+
     Promise<Item> promise = Promise.promise();
     List<CirculationNote> notes = item.getCirculationNotes()
       .stream()
       .map(note -> note.withId(UUID.randomUUID().toString()))
       .map(note -> note.withSource(null))
       .map(note -> note.withDate(dateTimeFormatter.format(ZonedDateTime.now())))
+      .map(note -> note.withNoteType(validNotes.getOrDefault(note.getNoteType(), note.getNoteType())))
       .collect(Collectors.toList());
 
     itemCollection.add(item.withCirculationNotes(notes), success -> promise.complete(success.getResult()),
