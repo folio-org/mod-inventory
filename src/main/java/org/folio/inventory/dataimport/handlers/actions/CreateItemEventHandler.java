@@ -47,6 +47,7 @@ import java.util.stream.Collectors;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.ITEM;
@@ -87,6 +88,7 @@ public class CreateItemEventHandler implements EventHandler {
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
+    logParametersEventHandler(LOG, dataImportEventPayload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
       dataImportEventPayload.setEventType(DI_INVENTORY_ITEM_CREATED.value());
@@ -108,6 +110,7 @@ public class CreateItemEventHandler implements EventHandler {
       String jobExecutionId = dataImportEventPayload.getJobExecutionId();
       String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
       String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
+      LOG.info("Create item with jobExecutionId: {} , recordId: {} , chunkId: {}", jobExecutionId, recordId, chunkId);
 
       Future<RecordToEntity> recordToItemFuture = idStorageService.store(recordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant());
       recordToItemFuture.onSuccess(res -> {

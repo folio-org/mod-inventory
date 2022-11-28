@@ -121,6 +121,7 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
       eventPayload.put(QM_RELATED_RECORD_VERSION_KEY, parsedRecordDto.getRelatedRecordVersion());
       return getQuickMarcEventHandler(context, recordType).handle(eventPayload).map(recordType);
     } catch (Exception e) {
+      LOGGER.warn("Error during processPayload: ", e);
       return Future.failedFuture(e);
     }
   }
@@ -133,6 +134,7 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
     } else if (Record.RecordType.MARC_AUTHORITY == recordType){
       return new UpdateAuthorityQuickMarcEventHandler(authorityUpdateDelegate, context);
     } else {
+      LOGGER.warn("Can't process record type {}", recordType);
       throw new EventProcessingException("Can't process record type " + recordType);
     }
   }
@@ -149,6 +151,7 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
       var eventPayload = Json.decodeValue(event.getEventPayload(), HashMap.class);
       return Future.succeededFuture(eventPayload);
     } catch (Exception e) {
+      LOGGER.warn("Error during decode {} : {}", event.getEventPayload(), e);
       return Future.failedFuture(e);
     }
   }

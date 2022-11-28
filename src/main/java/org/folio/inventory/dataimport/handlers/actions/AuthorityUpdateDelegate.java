@@ -21,6 +21,7 @@ import org.folio.rest.jaxrs.model.Record;
 import java.util.Map;
 
 import static java.lang.String.format;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersUpdateDelegate;
 
 public class AuthorityUpdateDelegate {
 
@@ -38,6 +39,7 @@ public class AuthorityUpdateDelegate {
   }
 
   public Future<Authority> handle(Map<String, String> eventPayload, Record marcRecord, Context context) {
+    logParametersUpdateDelegate(LOGGER, eventPayload, marcRecord, context);
     try {
       JsonObject mappingRules = new JsonObject(eventPayload.get(MAPPING_RULES_KEY));
       MappingParameters mappingParameters =
@@ -45,6 +47,7 @@ public class AuthorityUpdateDelegate {
 
       JsonObject parsedRecord = retrieveParsedContent(marcRecord.getParsedRecord());
       String authorityId = marcRecord.getExternalIdsHolder().getAuthorityId();
+      LOGGER.info("Authority update with authorityId: {}", authorityId);
       RecordMapper<Authority> recordMapper = RecordMapperBuilder.buildMapper(MARC_FORMAT);
       var mappedAuthority = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
       AuthorityRecordCollection authorityRecordCollection = storage.getAuthorityRecordCollection(context);

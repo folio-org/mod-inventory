@@ -10,6 +10,7 @@ import static org.folio.ActionProfile.FolioRecord.MARC_HOLDINGS;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDINGS_UPDATED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_UPDATED;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.inventory.dataimport.util.ParsedRecordUtil.getControlFieldValue;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 
@@ -90,9 +91,11 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload payload) {
+    logParametersEventHandler(LOGGER, payload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
       if (!isExpectedPayload(payload)) {
+        LOGGER.warn("Payload is not expected");
         throw new EventProcessingException(UNEXPECTED_PAYLOAD_MSG);
       }
 
@@ -100,6 +103,8 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
 
       var context = constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl());
       var jobExecutionId = payload.getJobExecutionId();
+      LOGGER.info("Update marc holding with jobExecutionId: {}", jobExecutionId);
+
       mappingMetadataCache.get(jobExecutionId, context)
         .map(mapMetadataOrFail())
         .compose(mappingMetadata -> mapHolding(payload, mappingMetadata))
@@ -202,6 +207,7 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
       var rec = Json.decodeValue(getMarcHoldingRecordAsString(dataImportEventPayload), Record.class);
       var instanceHrid = getControlFieldValue(rec, INSTANCE_HRID_TAG);
       if (isBlank(instanceHrid)) {
+        LOGGER.warn("FIELD_004_MARC_HOLDINGS_NOT_NULL");
         promise.fail(new EventProcessingException(FIELD_004_MARC_HOLDINGS_NOT_NULL));
       } else {
         var instanceCollection = storage.getInstanceCollection(context);

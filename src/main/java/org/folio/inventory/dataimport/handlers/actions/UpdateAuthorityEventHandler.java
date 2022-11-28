@@ -114,7 +114,9 @@ public class UpdateAuthorityEventHandler extends AbstractAuthorityEventHandler {
     if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
         processOLError(failure, payload, id, collection, promise);
       } else {
-        promise.fail(new DataImportException(format(ERROR_UPDATING_AUTHORITY_MSG_TEMPLATE, failure.getReason(), failure.getStatusCode())));
+        String msg = format(ERROR_UPDATING_AUTHORITY_MSG_TEMPLATE, failure.getReason(), failure.getStatusCode());
+        LOGGER.warn(msg);
+        promise.fail(new DataImportException(msg));
       }
   }
 
