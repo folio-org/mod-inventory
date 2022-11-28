@@ -87,4 +87,8 @@ public class CirculationNote {
   public CirculationNote withDate(String date) {
     return new CirculationNote(id, noteType, note, staffOnly, source, date);
   }
+
+  public CirculationNote withNoteType(String noteType) {
+    return new CirculationNote(id, noteType, note, staffOnly, source, date);
+  }
 }
