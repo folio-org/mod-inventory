@@ -120,11 +120,16 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
 
   @Override
   public boolean isEligible(DataImportEventPayload payload) {
+    LOGGER.info("TEMP DEBUG:isEligible---: getCurrentNode: {}", payload.getCurrentNode());
+    if (payload.getCurrentNode()!= null) {
+      LOGGER.info("TEMP DEBUG:isEligible---: getContentType: {}", payload.getCurrentNode().getContentType());
+    }
+    LOGGER.info("TEMP DEBUG:isEligible---: getContext: {}", payload.getContext());
     if (payload.getCurrentNode() != null && getMarcHoldingRecordAsString(payload) != null
       && MAPPING_PROFILE == payload.getCurrentNode().getContentType()) {
       LOGGER.info("TEMP DEBUG:isEligible---: getContentType: {}", payload.getCurrentNode().getContentType());
       var mappingProfile = mapFrom(payload.getCurrentNode().getContent()).mapTo(MappingProfile.class);
-      LOGGER.info("TEMP DEBUG:isEligible---: getExistingRecordType: {}", mappingProfile.getExistingRecordType().value());
+      LOGGER.info("TEMP DEBUG:isEligible---: getExistingRecordType: {}", mappingProfile.getExistingRecordType());
       return mappingProfile.getExistingRecordType() == EntityType.fromValue(MARC_HOLDINGS.value());
     }
     LOGGER.info("TEMP DEBUG:isEligible---: FALSE");
