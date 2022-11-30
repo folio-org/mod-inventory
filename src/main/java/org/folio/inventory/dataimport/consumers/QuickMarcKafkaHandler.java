@@ -84,9 +84,11 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
 
   @Override
   public Future<String> handle(KafkaConsumerRecord<String, String> record) {
+    LOGGER.info("TEMP DEBUG handle--- record: {}", record);
     var params = new OkapiConnectionParams(kafkaHeadersToMap(record.headers()), vertx);
     var context = constructContext(params.getTenantId(), params.getToken(), params.getOkapiUrl());
     Event event = Json.decodeValue(record.value(), Event.class);
+    LOGGER.info("TEMP DEBUG handle--- event: {}, {}", event.getEventPayload(), event.getEventType());
     LOGGER.info("Quick marc event payload has been received with event type: {}", event.getEventType());
     return getEventPayload(event)
       .compose(eventPayload -> processPayload(eventPayload, context)
