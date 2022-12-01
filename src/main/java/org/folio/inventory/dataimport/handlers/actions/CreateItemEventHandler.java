@@ -69,6 +69,9 @@ public class CreateItemEventHandler implements EventHandler {
   public static final String ITEM_ID_FIELD = "id";
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
+  private static final Map<String, String> validNotes = Map.of(
+    "Check in note", "Check in",
+    "Check out note", "Check out");
 
   private static final Logger LOG = LogManager.getLogger(CreateItemEventHandler.class);
 
@@ -240,10 +243,6 @@ public class CreateItemEventHandler implements EventHandler {
   }
 
   private Future<Item> addItem(Item item, ItemCollection itemCollection) {
-    Map<String, String> validNotes = Map.of(
-      "Check in note", "Check in",
-      "Check out note", "Check out");
-
     Promise<Item> promise = Promise.promise();
     List<CirculationNote> notes = item.getCirculationNotes()
       .stream()
@@ -253,14 +252,18 @@ public class CreateItemEventHandler implements EventHandler {
       .map(note -> note.withNoteType(validNotes.getOrDefault(note.getNoteType(), note.getNoteType())))
       .collect(Collectors.toList());
 
+    if (LOG.isTraceEnabled()) {
+      notes.forEach(note -> LOG.trace("addItem:: circulation note with id : {} added to item with itemId: {}", note.getId(), item.getId()));
+    }
+
     itemCollection.add(item.withCirculationNotes(notes), success -> promise.complete(success.getResult()),
       failure -> {
         //This is temporary solution (verify by error message). It will be improved via another solution by https://issues.folio.org/browse/RMB-899.
         if (isNotBlank(failure.getReason()) && failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
-          LOG.info("Duplicated event received by ItemId: {}. Ignoring...", item.getId());
+          LOG.info("addItem:: Duplicated event received by ItemId: {}. Ignoring...", item.getId());
           promise.fail(new DuplicateEventException(format("Duplicated event by Item id: %s", item.getId())));
         } else {
-          LOG.error(format("Error posting Item cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
+          LOG.error(format("addItem:: Error posting Item cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
           promise.fail(failure.getReason());
         }
       });
