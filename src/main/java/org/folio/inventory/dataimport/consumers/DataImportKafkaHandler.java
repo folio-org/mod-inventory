@@ -112,16 +112,12 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       LOGGER.info("Data import event payload has been received with event type: {}, recordId: {} by jobExecution: {} and chunkId: {}", eventPayload.getEventType(), recordId, jobExecutionId, chunkId);
       eventPayload.getContext().put(RECORD_ID_HEADER, recordId);
       eventPayload.getContext().put(CHUNK_ID_HEADER, chunkId);
-      LOGGER.info("TEMP DEBUG:handle---eventPayload: {}, {}", eventPayload, eventPayload.getContext());
-      LOGGER.info("TEMP DEBUG:handle---eventPayload.eventType: {}", eventPayload.getEventType());
       Context context = EventHandlingUtil.constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl());
       String jobProfileSnapshotId = eventPayload.getContext().get(PROFILE_SNAPSHOT_ID_KEY);
       profileSnapshotCache.get(jobProfileSnapshotId, context)
         .toCompletionStage()
         .thenCompose(snapshotOptional -> snapshotOptional
           .map(profileSnapshot -> {
-            LOGGER.info("TEMP DEBUG:handle---profileSnapshot: {}", profileSnapshot.getContentType());
-            LOGGER.info("TEMP DEBUG:handle---profileSnapshot: {}", profileSnapshot.getChildSnapshotWrappers());
             return EventManager.handleEvent(eventPayload, profileSnapshot);})
           .orElse(CompletableFuture.failedFuture(new EventProcessingException(format("Job profile snapshot with id '%s' does not exist", jobProfileSnapshotId)))))
         .whenComplete((processedPayload, throwable) -> {

@@ -50,6 +50,7 @@ import org.folio.processing.mapping.defaultmapper.RecordMapper;
 import org.folio.processing.mapping.defaultmapper.RecordMapperBuilder;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.EntityType;
+import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
 
@@ -120,19 +121,11 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
 
   @Override
   public boolean isEligible(DataImportEventPayload payload) {
-    LOGGER.info("TEMP DEBUG:isEligible---: getCurrentNode: {}", payload.getCurrentNode());
-    if (payload.getCurrentNode()!= null) {
-      LOGGER.info("TEMP DEBUG:isEligible---: getContentType: {}", payload.getCurrentNode().getContentType());
-    }
-    LOGGER.info("TEMP DEBUG:isEligible---: getContext: {}", payload.getContext());
-    if (payload.getCurrentNode() != null && getMarcHoldingRecordAsString(payload) != null
+     if (payload.getCurrentNode() != null && getMarcHoldingRecordAsString(payload) != null
       && MAPPING_PROFILE == payload.getCurrentNode().getContentType()) {
-      LOGGER.info("TEMP DEBUG:isEligible---: getContentType: {}", payload.getCurrentNode().getContentType());
       var mappingProfile = mapFrom(payload.getCurrentNode().getContent()).mapTo(MappingProfile.class);
-      LOGGER.info("TEMP DEBUG:isEligible---: getExistingRecordType: {}", mappingProfile.getExistingRecordType());
       return mappingProfile.getExistingRecordType() == EntityType.fromValue(MARC_HOLDINGS.value());
     }
-    LOGGER.info("TEMP DEBUG:isEligible---: FALSE");
     return false;
   }
 
@@ -167,15 +160,24 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
     try {
       var mappingRules = new JsonObject(mappingMetadata.getMappingRules());
       var mappingParameters = Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class);
-      var parsedRecord = new JsonObject((String) new JsonObject(getMarcHoldingRecordAsString(payload))
-        .mapTo(Record.class).getParsedRecord().getContent());
+      var marcRecord = new JsonObject(getMarcHoldingRecordAsString(payload)).mapTo(Record.class);
+      var parsedRecord = retrieveParsedContent(marcRecord.getParsedRecord());
+      String holdingsId = marcRecord.getExternalIdsHolder().getHoldingsId();
+      LOGGER.info("Holdings update with holdingId: {}", holdingsId);
       RecordMapper<Holdings> recordMapper = RecordMapperBuilder.buildMapper(MARC_HOLDINGS.value());
-      var holdings = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
-      return Future.succeededFuture(holdings);
+      var mappedHoldings = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
+      mappedHoldings.setId(holdingsId);
+      return Future.succeededFuture(mappedHoldings);
     } catch (Exception e) {
       LOGGER.error("Failed to map Record to Holdings", e);
       return Future.failedFuture(new JsonMappingException("Error in default mapper.", e));
     }
+  }
+
+  private JsonObject retrieveParsedContent(ParsedRecord parsedRecord) {
+    return parsedRecord.getContent() instanceof String
+      ? new JsonObject(parsedRecord.getContent().toString())
+      : JsonObject.mapFrom(parsedRecord.getContent());
   }
 
   private Future<HoldingsRecord> processHolding(Holdings holdings, Context context, DataImportEventPayload payload) {
@@ -203,6 +205,7 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
                                     HoldingsRecord actualRecord,
                                     Promise<HoldingsRecord> promise) {
     mappedRecord.setVersion(actualRecord.getVersion());
+    mappedRecord.setId(actualRecord.getId());
     findInstanceIdByHrid(payload, mappedRecord, context)
       .onSuccess(mappedRecord::setInstanceId)
       .onFailure(promise::fail);
