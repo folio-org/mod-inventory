@@ -47,6 +47,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import org.folio.rest.jaxrs.model.ExternalIdsHolder;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -153,9 +154,10 @@ public class UpdateMarcHoldingsEventHandlerTest {
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
     when(holdingsCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(new HoldingsRecord().withVersion(1)));
     when(holdingsCollectionService.findInstanceIdByHrid(any(InstanceCollection.class), any())).thenReturn(Future.succeededFuture(UUID.randomUUID().toString()));
-
+    var holdingsId = UUID.randomUUID();
     var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
+    record.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
     HashMap<String, String> context = new HashMap<>();
     context.put(MARC_HOLDINGS.value(), Json.encode(record));
 
@@ -175,6 +177,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
     assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
     JsonObject holdings = new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
     assertNotNull(holdings.getString("id"));
+    assertEquals(holdingsId.toString(), holdings.getString("id"));
     assertEquals("1", holdings.getString("_version"));
 
     assertNotNull(holdings.getString("id"));
@@ -199,6 +202,8 @@ public class UpdateMarcHoldingsEventHandlerTest {
       .withPermanentLocationId(PERMANENT_LOCATION_ID);
 
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_004_FIELD));
+    var holdingsId = UUID.randomUUID();
+    record.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
     HashMap<String, String> context = new HashMap<>();
     context.put("HOLDINGS", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(holdings)).encode());
     context.put(MARC_HOLDINGS.value(), Json.encode(record));
