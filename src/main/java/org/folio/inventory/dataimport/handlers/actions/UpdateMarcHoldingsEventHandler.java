@@ -186,17 +186,17 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
     HoldingsRecord mappedRecord = Json.decodeValue(Json.encode(JsonObject.mapFrom(holdings)), HoldingsRecord.class);
 
     Promise<HoldingsRecord> promise = Promise.promise();
-    collection.findById(mappedRecord.getId())
-      .thenAccept(actualRecord -> updateHoldingsRecord(payload, context, mappedRecord, actualRecord, promise))
-      .thenAccept(ar -> collection.update(mappedRecord,
-        success -> {
-          holdings.setVersion(mappedRecord.getVersion());
-          holdings.setInstanceId(mappedRecord.getInstanceId());
-          payload.getContext().put(HOLDINGS.value(), Json.encode(holdings));
-          promise.complete(mappedRecord);
-        },
-        failure -> failureUpdateHandler(payload, mappedRecord.getId(), collection, promise, failure))
-      );
+    CompletableFuture<HoldingsRecord> base = collection.findById(mappedRecord.getId());
+    CompletableFuture<Void> next = base.thenAccept(actualRecord -> updateHoldingsRecord(payload, context, mappedRecord, actualRecord, promise));
+    base.thenAcceptBoth(next, (actualRecord, ignored) -> collection.update(mappedRecord,
+      success -> {
+        holdings.setVersion(mappedRecord.getVersion());
+        holdings.setInstanceId(mappedRecord.getInstanceId());
+        payload.getContext().put(HOLDINGS.value(), Json.encode(holdings));
+        promise.complete(mappedRecord);
+      },
+      failure -> failureUpdateHandler(payload, mappedRecord.getId(), collection, promise, failure)));
+
     return promise.future();
   }
 
