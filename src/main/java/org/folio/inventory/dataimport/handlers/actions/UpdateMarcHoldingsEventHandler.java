@@ -252,7 +252,7 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
   }
 
   private Handler<Throwable> failureHandler(DataImportEventPayload payload,
-    CompletableFuture<DataImportEventPayload> future) {
+                                            CompletableFuture<DataImportEventPayload> future) {
     return e -> {
       LOGGER.error(() -> constructMsg(format(ACTION_FAILED_MSG_PATTERN, UPDATE, HOLDINGS), payload), e);
       future.completeExceptionally(e);
@@ -260,7 +260,7 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
   }
 
   private Handler<HoldingsRecord> successHandler(DataImportEventPayload payload,
-    CompletableFuture<DataImportEventPayload> future) {
+                                                 CompletableFuture<DataImportEventPayload> future) {
     return holdings -> {
       LOGGER.info(() -> constructMsg(format(ACTION_SUCCEED_MSG_PATTERN, UPDATE, HOLDINGS), payload));
       publishEvent(payload);
