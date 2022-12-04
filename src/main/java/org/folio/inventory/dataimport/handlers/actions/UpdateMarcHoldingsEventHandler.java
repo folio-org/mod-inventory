@@ -201,8 +201,7 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
 
   private Future<Holdings> fillInstanceIdByHrid(DataImportEventPayload dataImportEventPayload, Holdings holdings, Context context) {
     Promise<Holdings> promise = Promise.promise();
-    String instanceId = holdings.getInstanceId();
-    if (StringUtils.isBlank(instanceId)) {
+    if (StringUtils.isBlank(holdings.getInstanceId())) {
       var rec = Json.decodeValue(getMarcHoldingRecordAsString(dataImportEventPayload), Record.class);
       var instanceHrid = getControlFieldValue(rec, INSTANCE_HRID_TAG);
       if (isBlank(instanceHrid)) {
@@ -228,7 +227,7 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
             var instanceIdFromDb = findResult.getResult().records.get(0).getId();
             holdings.setInstanceId(instanceIdFromDb);
             promise.complete(holdings);
-          }else{
+          } else {
             promise.fail(new EventProcessingException("No instance id found for marc holdings with hrid: " + instanceHrid));
           }
         },

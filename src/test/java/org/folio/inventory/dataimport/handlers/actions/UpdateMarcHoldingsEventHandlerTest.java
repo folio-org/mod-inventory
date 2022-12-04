@@ -80,6 +80,8 @@ import org.folio.rest.jaxrs.model.MappingDetail;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 public class UpdateMarcHoldingsEventHandlerTest {
 
@@ -442,6 +444,50 @@ public class UpdateMarcHoldingsEventHandlerTest {
     ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
     assertThat(exception.getCause().getMessage(), containsString("Error updating Holding by holdingId " + holdingsId));
     verify(publisher, times(0)).publish(dataImportEventPayload);
+  }
+
+  @Test
+  public void shouldProcessEventSecondRetryIfOLErrorExist() throws IOException, ExecutionException, InterruptedException, TimeoutException {
+    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsCollection);
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+    var instanceId = String.valueOf(UUID.randomUUID());
+    mockSuccessFindByCql(instanceId, instanceRecordCollection);
+    doAnswer(new Answer() {
+      private int count = 0;
+      @Override
+      public Object answer(InvocationOnMock invocation) throws Throwable {
+        if (count++ == 0) {
+          Consumer<Failure> failureHandler = invocation.getArgument(2);
+          failureHandler.accept(new Failure(
+            "Cannot update Holdings record because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1",
+            409));
+        } else {
+          Consumer<Success<Void>> successConsumer = invocation.getArgument(1);
+          successConsumer.accept(new Success<>(null));
+        }
+        return null;
+      }
+    }).when(holdingsCollection).update(any(), any(), any());
+
+    when(holdingsCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(new HoldingsRecord().withId(UUID.randomUUID().toString()).withVersion(1)));
+
+    var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
+    var holdingsId = UUID.randomUUID();
+    record.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
+    HashMap<String, String> context = new HashMap<>();
+    context.put(MARC_HOLDINGS.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    var future = eventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.SECONDS);
+    verify(publisher, times(2)).publish(actualDataImportEventPayload);
   }
 
   @SneakyThrows
