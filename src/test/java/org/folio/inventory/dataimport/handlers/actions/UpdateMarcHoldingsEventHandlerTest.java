@@ -138,7 +138,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
     MockitoAnnotations.openMocks(this);
     MappingManager.clearReaderFactories();
     MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, vertx.createHttpClient(), 3600);
-    eventHandler = new UpdateMarcHoldingsEventHandler(storage, mappingMetadataCache, holdingsCollectionService, publisher);
+    eventHandler = new UpdateMarcHoldingsEventHandler(storage, mappingMetadataCache, publisher);
     mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
 
     doAnswer(invocationOnMock -> {

@@ -26,7 +26,6 @@ import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -80,16 +79,13 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
 
   private final Storage storage;
   private final MappingMetadataCache mappingMetadataCache;
-  private final HoldingsCollectionService holdingsCollectionService;
   private final KafkaEventPublisher eventPublisher;
 
   public UpdateMarcHoldingsEventHandler(Storage storage,
                                         MappingMetadataCache mappingMetadataCache,
-                                        HoldingsCollectionService holdingsCollectionService,
                                         KafkaEventPublisher eventPublisher) {
     this.storage = storage;
     this.mappingMetadataCache = mappingMetadataCache;
-    this.holdingsCollectionService = holdingsCollectionService;
     this.eventPublisher = eventPublisher;
   }
 
@@ -198,8 +194,7 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
             payload.getContext().put(HOLDINGS.value(), Json.encode(holdings));
             promise.complete(mappedRecord);
           },
-          failure -> failureUpdateHandler(payload, mappedRecord.getId(),
-            collection, promise, failure));
+          failure -> failureUpdateHandler(payload, mappedRecord.getId(), collection, promise, failure));
       });
     return promise.future();
   }
