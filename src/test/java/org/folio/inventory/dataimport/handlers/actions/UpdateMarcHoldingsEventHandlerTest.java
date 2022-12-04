@@ -29,6 +29,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPP
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -43,10 +44,14 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import com.github.tomakehurst.wiremock.matching.RegexPattern;
 import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
-import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import lombok.SneakyThrows;
+import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.domain.instances.Instance;
+import org.folio.rest.jaxrs.model.ExternalIdsHolder;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -132,7 +137,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
     MockitoAnnotations.openMocks(this);
     MappingManager.clearReaderFactories();
     MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, vertx.createHttpClient(), 3600);
-    eventHandler = new UpdateMarcHoldingsEventHandler(storage, mappingMetadataCache, holdingsCollectionService, publisher);
+    eventHandler = new UpdateMarcHoldingsEventHandler(storage, mappingMetadataCache, publisher);
     mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
 
     doAnswer(invocationOnMock -> {
@@ -152,10 +157,12 @@ public class UpdateMarcHoldingsEventHandlerTest {
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsCollection);
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
     when(holdingsCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(new HoldingsRecord().withVersion(1)));
-    when(holdingsCollectionService.findInstanceIdByHrid(any(InstanceCollection.class), any())).thenReturn(Future.succeededFuture(UUID.randomUUID().toString()));
-
+    var instanceId = String.valueOf(UUID.randomUUID());
+    mockSuccessFindByCql(instanceId, instanceRecordCollection);
+    var holdingsId = UUID.randomUUID();
     var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
+    record.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
     HashMap<String, String> context = new HashMap<>();
     context.put(MARC_HOLDINGS.value(), Json.encode(record));
 
@@ -175,6 +182,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
     assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
     JsonObject holdings = new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
     assertNotNull(holdings.getString("id"));
+    assertEquals(holdingsId.toString(), holdings.getString("id"));
     assertEquals("1", holdings.getString("_version"));
 
     assertNotNull(holdings.getString("id"));
@@ -185,10 +193,6 @@ public class UpdateMarcHoldingsEventHandlerTest {
 
   @Test
   public void shouldNotProcessEventIfMarcHoldingDoesNotHave004Field() throws IOException {
-    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsCollection);
-    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
-    when(holdingsCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(new HoldingsRecord().withVersion(1)));
-    when(holdingsCollectionService.findInstanceIdByHrid(any(InstanceCollection.class), any())).thenReturn(Future.succeededFuture(UUID.randomUUID().toString()));
 
     HoldingsRecord holdings = new HoldingsRecord()
       .withId(String.valueOf(UUID.randomUUID()))
@@ -199,6 +203,8 @@ public class UpdateMarcHoldingsEventHandlerTest {
       .withPermanentLocationId(PERMANENT_LOCATION_ID);
 
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_004_FIELD));
+    var holdingsId = UUID.randomUUID();
+    record.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
     HashMap<String, String> context = new HashMap<>();
     context.put("HOLDINGS", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(holdings)).encode());
     context.put(MARC_HOLDINGS.value(), Json.encode(record));
@@ -370,11 +376,12 @@ public class UpdateMarcHoldingsEventHandlerTest {
     assertEquals("DI_INVENTORY_HOLDINGS_UPDATED_READY_FOR_POST_PROCESSING", eventHandler.getPostProcessingInitializationEventType());
   }
 
-  @Test(expected = ExecutionException.class)
-  public void shouldNotProcessEventIfOLErrorExist() throws IOException, ExecutionException, InterruptedException, TimeoutException {
+  @Test
+  public void shouldNotProcessEventIfOptimisticLockingErrorExist() throws IOException, ExecutionException, InterruptedException, TimeoutException {
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsCollection);
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
-    when(holdingsCollectionService.findInstanceIdByHrid(any(InstanceCollection.class), any())).thenReturn(Future.succeededFuture(UUID.randomUUID().toString()));
+    var instanceId = String.valueOf(UUID.randomUUID());
+    mockSuccessFindByCql(instanceId, instanceRecordCollection);
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
       failureHandler.accept(new Failure("Cannot update Holdings record because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", 409));
@@ -384,6 +391,43 @@ public class UpdateMarcHoldingsEventHandlerTest {
 
     var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
+    var holdingsId = UUID.randomUUID();
+    record.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
+    HashMap<String, String> context = new HashMap<>();
+    context.put(MARC_HOLDINGS.value(), Json.encode(record));
+    context.put("CURRENT_RETRY_NUMBER", "2");
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    var future = eventHandler.handle(dataImportEventPayload);
+    ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
+    assertThat(exception.getCause().getMessage(),
+      containsString("Current retry number 1 exceeded or equal given number 2 for the Holding update"));
+    verify(publisher, times(0)).publish(dataImportEventPayload);
+  }
+
+  @Test
+  public void shouldNotProcessEventIfHoldingsNotUpdatedToInventoryStorage() throws IOException, ExecutionException, InterruptedException, TimeoutException {
+    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsCollection);
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+    var instanceId = String.valueOf(UUID.randomUUID());
+    mockSuccessFindByCql(instanceId, instanceRecordCollection);
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure("Unprocessable Entity", 422));
+      return null;
+    }).when(holdingsCollection).update(any(), any(), any());
+    when(holdingsCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(new HoldingsRecord().withId(UUID.randomUUID().toString()).withVersion(1)));
+
+    var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
+    var holdingsId = UUID.randomUUID();
+    record.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
     HashMap<String, String> context = new HashMap<>();
     context.put(MARC_HOLDINGS.value(), Json.encode(record));
 
@@ -394,7 +438,22 @@ public class UpdateMarcHoldingsEventHandlerTest {
       .withContext(context)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
-    CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.SECONDS);
+    var future = eventHandler.handle(dataImportEventPayload);
+    ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
+    assertThat(exception.getCause().getMessage(), containsString("Error updating Holding by holdingId " + holdingsId));
+    verify(publisher, times(0)).publish(dataImportEventPayload);
+  }
+
+  @SneakyThrows
+  private void mockSuccessFindByCql(String instanceId, InstanceCollection instanceRecordCollection) {
+    doAnswer(invocationOnMock -> {
+      Instance instance = new Instance(instanceId, "2", String.valueOf(UUID.randomUUID()),
+        String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
+      List<Instance> instanceList = Collections.singletonList(instance);
+      MultipleRecords<Instance> result = new MultipleRecords<>(instanceList, 1);
+      Consumer<Success<MultipleRecords<Instance>>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
+      return null;
+    }).when(instanceRecordCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
   }
 }
