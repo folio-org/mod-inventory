@@ -11,6 +11,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -29,6 +30,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPP
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -47,6 +49,9 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.domain.instances.Instance;
 import org.folio.rest.jaxrs.model.ExternalIdsHolder;
 import org.junit.Assert;
 import org.junit.Before;
@@ -153,7 +158,17 @@ public class UpdateMarcHoldingsEventHandlerTest {
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsCollection);
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
     when(holdingsCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(new HoldingsRecord().withVersion(1)));
-    when(holdingsCollectionService.findInstanceIdByHrid(any(InstanceCollection.class), any())).thenReturn(Future.succeededFuture(UUID.randomUUID().toString()));
+    var instanceId = String.valueOf(UUID.randomUUID());
+    doAnswer(invocationOnMock -> {
+
+      Instance instance = new Instance(instanceId, "2", String.valueOf(UUID.randomUUID()),
+        String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
+      List<Instance> instanceList = Collections.singletonList(instance);
+      MultipleRecords<Instance> result = new MultipleRecords<>(instanceList, 1);
+      Consumer<Success<MultipleRecords<Instance>>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
+      return null;
+    }).when(instanceRecordCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
     var holdingsId = UUID.randomUUID();
     var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
