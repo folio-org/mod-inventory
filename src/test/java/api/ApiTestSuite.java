@@ -17,6 +17,7 @@ import org.folio.inventory.rest.impl.PgPoolContainer;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -69,6 +70,7 @@ import support.fakes.FakeOkapi;
   AdminApiTest.class,
   InventoryConfigApiTest.class
 })
+@Ignore
 public class ApiTestSuite {
   public static final int INVENTORY_VERTICLE_TEST_PORT = 9603;
   public static final String TENANT_ID = "test_tenant";

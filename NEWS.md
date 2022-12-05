@@ -1,3 +1,9 @@
+## 19.0.2 2022-12-05
+
+* Add validation for circulation note type ([MODINV-755](https://issues.folio.org/browse/MODINV-755))
+* Upgrade folio-kafka-wrapper to v2.6.2
+
+
 ## 19.0.1 2022-11-04
 
 * Support large bound-withs (100+ titles) in GET Item (([MODINV-752](https://issues.folio.org/browse/MODINV-752))
