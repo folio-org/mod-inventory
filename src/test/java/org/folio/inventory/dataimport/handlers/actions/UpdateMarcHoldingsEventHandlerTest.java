@@ -11,6 +11,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -27,6 +28,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -489,6 +491,129 @@ public class UpdateMarcHoldingsEventHandlerTest {
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.SECONDS);
     verify(publisher, times(2)).publish(actualDataImportEventPayload);
   }
+
+  @Test
+  public void shouldNotProcessEventIfMarcHoldingDoesNotHaveParsedRecord() throws IOException {
+
+    HoldingsRecord holdings = new HoldingsRecord()
+      .withId(String.valueOf(UUID.randomUUID()))
+      .withHrid(String.valueOf(UUID.randomUUID()))
+      .withInstanceId(String.valueOf(UUID.randomUUID()))
+      .withSourceId(String.valueOf(UUID.randomUUID()))
+      .withHoldingsTypeId(String.valueOf(UUID.randomUUID()))
+      .withPermanentLocationId(PERMANENT_LOCATION_ID);
+
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(null));
+    HashMap<String, String> context = new HashMap<>();
+    context.put("HOLDINGS", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(holdings)).encode());
+    context.put(MARC_HOLDINGS.value(), Json.encode(record));
+    context.put("MAPPING_RULES", mappingRules.encode());
+    context.put("MAPPING_PARAMS", new JsonObject().encode());
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl())
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
+
+    ExecutionException exception = Assert.assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
+    Assert.assertEquals("Error in default mapper.", exception.getCause().getMessage());
+    verify(publisher, times(0)).publish(dataImportEventPayload);
+  }
+
+  @Test
+  public void shouldNotProcessEventIfFindByCQLHasInternalServerError() throws IOException, ExecutionException, InterruptedException, TimeoutException {
+    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsCollection);
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(3);
+      failureHandler.accept(new Failure("Internal Server Error", 500));
+      return null;
+    }).when(instanceRecordCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+    var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
+    var holdingsId = UUID.randomUUID();
+    record.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
+    HashMap<String, String> context = new HashMap<>();
+    context.put(MARC_HOLDINGS.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    var future = eventHandler.handle(dataImportEventPayload);
+
+    ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
+    assertThat(exception.getCause().getMessage(), containsString("Internal Server Error"));
+    verify(publisher, times(0)).publish(dataImportEventPayload);
+  }
+
+  @Test
+  public void shouldNotProcessEventIfFindByCQLTotalRecordsIsZero() throws IOException, ExecutionException, InterruptedException, TimeoutException {
+    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsCollection);
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+    doAnswer(invocationOnMock -> {
+      List<Instance> instanceList = Collections.emptyList();
+      MultipleRecords<Instance> result = new MultipleRecords<>(instanceList, 0);
+      Consumer<Success<MultipleRecords<Instance>>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
+      return null;
+    }).when(instanceRecordCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
+    var holdingsId = UUID.randomUUID();
+    record.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
+    HashMap<String, String> context = new HashMap<>();
+    context.put(MARC_HOLDINGS.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    var future = eventHandler.handle(dataImportEventPayload);
+
+    ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
+    assertThat(exception.getCause().getMessage(), containsString("No instance id found for marc holdings with hrid: in00000000315"));
+    verify(publisher, times(0)).publish(dataImportEventPayload);
+  }
+
+  @Test
+  public void shouldNotProcessEventIfFindByCQLThrowsUnsupportedEncodingException() throws IOException, ExecutionException, InterruptedException, TimeoutException {
+    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsCollection);
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+    doThrow(new UnsupportedEncodingException("Unsupported encoding.")).when(instanceRecordCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+    var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
+    var holdingsId = UUID.randomUUID();
+    record.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
+    HashMap<String, String> context = new HashMap<>();
+    context.put(MARC_HOLDINGS.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    var future = eventHandler.handle(dataImportEventPayload);
+
+    ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
+    assertThat(exception.getCause().getMessage(), containsString("Unsupported encoding."));
+    verify(publisher, times(0)).publish(dataImportEventPayload);
+  }
+
 
   @SneakyThrows
   private void mockSuccessFindByCql(String instanceId, InstanceCollection instanceRecordCollection) {
