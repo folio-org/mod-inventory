@@ -14,6 +14,7 @@ import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventH
 import static org.folio.inventory.dataimport.util.ParsedRecordUtil.getControlFieldValue;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 
+import java.io.UnsupportedEncodingException;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -36,11 +37,12 @@ import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.exceptions.DataImportException;
 import org.folio.inventory.domain.HoldingsRecordCollection;
-import org.folio.inventory.services.HoldingsCollectionService;
+import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
 import org.folio.processing.events.services.handler.EventHandler;
@@ -50,6 +52,7 @@ import org.folio.processing.mapping.defaultmapper.RecordMapper;
 import org.folio.processing.mapping.defaultmapper.RecordMapperBuilder;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.EntityType;
+import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
 
@@ -71,21 +74,18 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
   private static final String ACTION_SUCCEED_MSG_PATTERN = "Action '%s' for record '%s' succeed.";
   private static final String ACTION_FAILED_MSG_PATTERN = "Action '%s' for record '%s' failed.";
   private static final String UNEXPECTED_PAYLOAD_MSG = "Unexpected payload";
-  private static final String CANNOT_UPDATE_HOLDING_ERROR_MESSAGE = "Error updating Holding by holdingId '%s' and jobExecution '%s' recordId '%s' chunkId '%s' - %s, status code %s";
-
+  private static final String CANNOT_UPDATE_HOLDING_ERROR_MESSAGE = "Error updating Holding by holdingId %s and jobExecution '%s', failure reason: %s, status code %s";
+  private static final String ERROR_HOLDING_MSG = "Error loading inventory holdings for MARC BIB";
 
   private final Storage storage;
   private final MappingMetadataCache mappingMetadataCache;
-  private final HoldingsCollectionService holdingsCollectionService;
   private final KafkaEventPublisher eventPublisher;
 
   public UpdateMarcHoldingsEventHandler(Storage storage,
-                                        MappingMetadataCache mappingMetadataCache,
-                                        HoldingsCollectionService holdingsCollectionService,
-                                        KafkaEventPublisher eventPublisher) {
+    MappingMetadataCache mappingMetadataCache,
+    KafkaEventPublisher eventPublisher) {
     this.storage = storage;
     this.mappingMetadataCache = mappingMetadataCache;
-    this.holdingsCollectionService = holdingsCollectionService;
     this.eventPublisher = eventPublisher;
   }
 
@@ -108,6 +108,7 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
       mappingMetadataCache.get(jobExecutionId, context)
         .map(mapMetadataOrFail())
         .compose(mappingMetadata -> mapHolding(payload, mappingMetadata))
+        .compose(holdings -> fillInstanceIdByHrid(payload, holdings, context))
         .compose(holdings -> processHolding(holdings, context, payload))
         .onSuccess(successHandler(payload, future))
         .onFailure(failureHandler(payload, future));
@@ -159,10 +160,13 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
     try {
       var mappingRules = new JsonObject(mappingMetadata.getMappingRules());
       var mappingParameters = Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class);
-      var parsedRecord = new JsonObject((String) new JsonObject(getMarcHoldingRecordAsString(payload))
-        .mapTo(Record.class).getParsedRecord().getContent());
+      var marcRecord = new JsonObject(getMarcHoldingRecordAsString(payload)).mapTo(Record.class);
+      var parsedRecord = retrieveParsedContent(marcRecord.getParsedRecord());
+      String holdingsId = marcRecord.getExternalIdsHolder().getHoldingsId();
+      LOGGER.info("Holdings update with holdingId: {}", holdingsId);
       RecordMapper<Holdings> recordMapper = RecordMapperBuilder.buildMapper(MARC_HOLDINGS.value());
       var holdings = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
+      holdings.setId(holdingsId);
       return Future.succeededFuture(holdings);
     } catch (Exception e) {
       LOGGER.error("Failed to map Record to Holdings", e);
@@ -170,40 +174,34 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
     }
   }
 
+  private JsonObject retrieveParsedContent(ParsedRecord parsedRecord) {
+    return parsedRecord.getContent() instanceof String
+      ? new JsonObject(parsedRecord.getContent().toString())
+      : JsonObject.mapFrom(parsedRecord.getContent());
+  }
+
   private Future<HoldingsRecord> processHolding(Holdings holdings, Context context, DataImportEventPayload payload) {
-    var collection = storage.getHoldingsRecordCollection(context);
-
+    var holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
     HoldingsRecord mappedRecord = Json.decodeValue(Json.encode(JsonObject.mapFrom(holdings)), HoldingsRecord.class);
-
     Promise<HoldingsRecord> promise = Promise.promise();
-    collection.findById(mappedRecord.getId())
-      .thenAccept(actualRecord -> updateHoldingsRecord(payload, context, mappedRecord, actualRecord, promise))
-      .thenAccept(ar -> collection.update(mappedRecord,
-        success -> {
-          holdings.setVersion(mappedRecord.getVersion());
-          holdings.setInstanceId(mappedRecord.getInstanceId());
-          payload.getContext().put(HOLDINGS.value(), Json.encode(holdings));
-          promise.complete(mappedRecord);
-        },
-        failure -> failureUpdateHandler(payload, mappedRecord.getId(), collection, promise, failure))
-      );
+    holdingsRecordCollection.findById(mappedRecord.getId())
+      .thenAccept(actualRecord -> {
+        mappedRecord.setVersion(actualRecord.getVersion());
+        holdingsRecordCollection.update(mappedRecord,
+          success -> {
+            holdings.setVersion(mappedRecord.getVersion());
+            holdings.setInstanceId(mappedRecord.getInstanceId());
+            payload.getContext().put(HOLDINGS.value(), Json.encode(holdings));
+            promise.complete(mappedRecord);
+          },
+          failure -> failureUpdateHandler(payload, mappedRecord.getId(), holdingsRecordCollection, promise, failure));
+      });
     return promise.future();
   }
 
-  private void updateHoldingsRecord(DataImportEventPayload payload, Context context,
-                                    HoldingsRecord mappedRecord,
-                                    HoldingsRecord actualRecord,
-                                    Promise<HoldingsRecord> promise) {
-    mappedRecord.setVersion(actualRecord.getVersion());
-    findInstanceIdByHrid(payload, mappedRecord, context)
-      .onSuccess(mappedRecord::setInstanceId)
-      .onFailure(promise::fail);
-  }
-
-  private Future<String> findInstanceIdByHrid(DataImportEventPayload dataImportEventPayload, HoldingsRecord mappedRecord, Context context) {
-    Promise<String> promise = Promise.promise();
-    String instanceId = mappedRecord.getInstanceId();
-    if (StringUtils.isBlank(instanceId)) {
+  private Future<Holdings> fillInstanceIdByHrid(DataImportEventPayload dataImportEventPayload, Holdings holdings, Context context) {
+    Promise<Holdings> promise = Promise.promise();
+    if (StringUtils.isBlank(holdings.getInstanceId())) {
       var rec = Json.decodeValue(getMarcHoldingRecordAsString(dataImportEventPayload), Record.class);
       var instanceHrid = getControlFieldValue(rec, INSTANCE_HRID_TAG);
       if (isBlank(instanceHrid)) {
@@ -211,19 +209,44 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
         promise.fail(new EventProcessingException(FIELD_004_MARC_HOLDINGS_NOT_NULL));
       } else {
         var instanceCollection = storage.getInstanceCollection(context);
-        return holdingsCollectionService.findInstanceIdByHrid(instanceCollection, instanceHrid);
+        fillInstanceIdSearchingByHrid(instanceCollection, instanceHrid, holdings, promise);
       }
     } else {
-      promise.complete(instanceId);
+      promise.complete(holdings);
     }
     return promise.future();
+  }
+
+  private void fillInstanceIdSearchingByHrid(InstanceCollection instanceCollection,
+                                             String instanceHrid, Holdings holdings,
+                                             Promise<Holdings> promise) {
+    try {
+      instanceCollection.findByCql(format("hrid==%s", instanceHrid), PagingParameters.defaults(),
+        findResult -> {
+          if (findResult.getResult() != null && findResult.getResult().totalRecords == 1) {
+            var instanceIdFromDb = findResult.getResult().records.get(0).getId();
+            holdings.setInstanceId(instanceIdFromDb);
+            promise.complete(holdings);
+          } else {
+            promise.fail(new EventProcessingException("No instance id found for marc holdings with hrid: " + instanceHrid));
+          }
+        },
+        failure -> {
+          LOGGER.error(format(ERROR_HOLDING_MSG + ". StatusCode: %s. Message: %s", failure.getStatusCode(), failure.getReason()));
+          promise.fail(new EventProcessingException(failure.getReason()));
+        });
+    } catch (UnsupportedEncodingException e) {
+      LOGGER.error(ERROR_HOLDING_MSG, e);
+      promise.fail(e);
+    }
   }
 
   private void failureUpdateHandler(DataImportEventPayload payload, String id, HoldingsRecordCollection collection, Promise<HoldingsRecord> promise, Failure failure) {
     if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
       processOLError(failure, payload, id, collection, promise);
     } else {
-      promise.fail(new DataImportException(format(CANNOT_UPDATE_HOLDING_ERROR_MESSAGE, failure.getReason(), failure.getStatusCode())));
+      promise.fail(new DataImportException(format(CANNOT_UPDATE_HOLDING_ERROR_MESSAGE,
+        id, payload.getJobExecutionId(), failure.getReason(), failure.getStatusCode())));
     }
   }
 
