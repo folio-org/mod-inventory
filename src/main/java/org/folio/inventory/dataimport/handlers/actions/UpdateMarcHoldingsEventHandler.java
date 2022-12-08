@@ -262,17 +262,12 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
                                                  CompletableFuture<DataImportEventPayload> future) {
     return holdings -> {
       LOGGER.info(() -> constructMsg(format(ACTION_SUCCEED_MSG_PATTERN, UPDATE, HOLDINGS), payload));
-      publishEvent(payload);
       future.complete(payload);
     };
   }
 
   private String getMarcHoldingRecordAsString(DataImportEventPayload dataImportEventPayload) {
     return dataImportEventPayload.getContext().get(MARC_HOLDINGS.value());
-  }
-
-  private void publishEvent(DataImportEventPayload payload) {
-    eventPublisher.publish(payload);
   }
 
   /**
