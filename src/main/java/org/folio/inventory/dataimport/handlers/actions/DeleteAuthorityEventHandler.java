@@ -23,6 +23,7 @@ import static java.lang.String.format;
 import static org.folio.ActionProfile.Action.DELETE;
 import static org.folio.ActionProfile.FolioRecord.MARC_AUTHORITY;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 public class DeleteAuthorityEventHandler implements EventHandler {
@@ -45,15 +46,18 @@ public class DeleteAuthorityEventHandler implements EventHandler {
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload payload) {
+    logParametersEventHandler(LOGGER, payload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
       if (!isExpectedPayload(payload)) {
+        LOGGER.warn("Payload is not expected");
         throw new EventProcessingException(UNEXPECTED_PAYLOAD_MSG);
       }
 
       var context = constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl());
       AuthorityRecordCollection authorityRecordCollection = storage.getAuthorityRecordCollection(context);
       String id = payload.getContext().get(AUTHORITY_RECORD_ID);
+      LOGGER.info("Delete authority with id: {}", id);
 
       deleteAuthorityRecord(id, authorityRecordCollection)
         .onSuccess(successHandler(payload, future))

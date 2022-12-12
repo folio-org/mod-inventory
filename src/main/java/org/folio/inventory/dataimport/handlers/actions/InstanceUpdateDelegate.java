@@ -1,6 +1,7 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
 import static java.lang.String.format;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersUpdateDelegate;
 
 import java.util.Map;
 
@@ -40,12 +41,14 @@ public class InstanceUpdateDelegate {
   }
 
   public Future<Instance> handle(Map<String, String> eventPayload, Record marcRecord, Context context) {
+    logParametersUpdateDelegate(LOGGER, eventPayload, marcRecord, context);
     try {
       JsonObject mappingRules = new JsonObject(eventPayload.get(MAPPING_RULES_KEY));
       MappingParameters mappingParameters = new JsonObject(eventPayload.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
 
       JsonObject parsedRecord = retrieveParsedContent(marcRecord.getParsedRecord());
       String instanceId = marcRecord.getExternalIdsHolder().getInstanceId();
+      LOGGER.info("Instance update with instanceId: {}", instanceId);
       RecordMapper<org.folio.Instance> recordMapper = RecordMapperBuilder.buildMapper(MARC_FORMAT);
       var mappedInstance = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);

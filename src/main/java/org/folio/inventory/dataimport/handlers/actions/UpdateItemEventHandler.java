@@ -6,6 +6,7 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.ActionProfile.Action.UPDATE;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_UPDATED;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.inventory.domain.items.Item.STATUS_KEY;
 import static org.folio.rest.jaxrs.model.EntityType.HOLDINGS;
 import static org.folio.rest.jaxrs.model.EntityType.ITEM;
@@ -90,6 +91,7 @@ public class UpdateItemEventHandler implements EventHandler {
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
+    logParametersEventHandler(LOG, dataImportEventPayload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
       dataImportEventPayload.setEventType(DI_INVENTORY_ITEM_UPDATED.value());
@@ -112,6 +114,7 @@ public class UpdateItemEventHandler implements EventHandler {
 
       String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
       String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
+
       mappingMetadataCache.get(jobExecutionId, context)
         .map(parametersOptional -> parametersOptional
           .orElseThrow(() -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId,
@@ -247,6 +250,7 @@ public class UpdateItemEventHandler implements EventHandler {
           if (findResult.getResult().records.isEmpty()) {
             promise.complete(findResult.getResult().records.isEmpty());
           } else {
+            LOG.warn("Barcode must be unique, {} is already assigned to another item", item.getBarcode());
             promise.fail(format("Barcode must be unique, %s is already assigned to another item", item.getBarcode()));
           }
         },

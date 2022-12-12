@@ -40,6 +40,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -47,6 +48,7 @@ import java.util.stream.Collectors;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.ITEM;
@@ -67,6 +69,9 @@ public class CreateItemEventHandler implements EventHandler {
   public static final String ITEM_ID_FIELD = "id";
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
+  private static final Map<String, String> validNotes = Map.of(
+    "Check in note", "Check in",
+    "Check out note", "Check out");
 
   private static final Logger LOG = LogManager.getLogger(CreateItemEventHandler.class);
 
@@ -87,6 +92,7 @@ public class CreateItemEventHandler implements EventHandler {
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
+    logParametersEventHandler(LOG, dataImportEventPayload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
       dataImportEventPayload.setEventType(DI_INVENTORY_ITEM_CREATED.value());
@@ -108,6 +114,7 @@ public class CreateItemEventHandler implements EventHandler {
       String jobExecutionId = dataImportEventPayload.getJobExecutionId();
       String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
       String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
+      LOG.info("Create item with jobExecutionId: {} , recordId: {} , chunkId: {}", jobExecutionId, recordId, chunkId);
 
       Future<RecordToEntity> recordToItemFuture = idStorageService.store(recordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant());
       recordToItemFuture.onSuccess(res -> {
@@ -242,16 +249,21 @@ public class CreateItemEventHandler implements EventHandler {
       .map(note -> note.withId(UUID.randomUUID().toString()))
       .map(note -> note.withSource(null))
       .map(note -> note.withDate(dateTimeFormatter.format(ZonedDateTime.now())))
+      .map(note -> note.withNoteType(validNotes.getOrDefault(note.getNoteType(), note.getNoteType())))
       .collect(Collectors.toList());
+
+    if (LOG.isTraceEnabled()) {
+      notes.forEach(note -> LOG.trace("addItem:: circulation note with id : {} added to item with itemId: {}", note.getId(), item.getId()));
+    }
 
     itemCollection.add(item.withCirculationNotes(notes), success -> promise.complete(success.getResult()),
       failure -> {
         //This is temporary solution (verify by error message). It will be improved via another solution by https://issues.folio.org/browse/RMB-899.
         if (isNotBlank(failure.getReason()) && failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
-          LOG.info("Duplicated event received by ItemId: {}. Ignoring...", item.getId());
+          LOG.info("addItem:: Duplicated event received by ItemId: {}. Ignoring...", item.getId());
           promise.fail(new DuplicateEventException(format("Duplicated event by Item id: %s", item.getId())));
         } else {
-          LOG.error(format("Error posting Item cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
+          LOG.error(format("addItem:: Error posting Item cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
           promise.fail(failure.getReason());
         }
       });

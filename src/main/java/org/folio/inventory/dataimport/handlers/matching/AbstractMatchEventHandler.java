@@ -2,6 +2,8 @@ package org.folio.inventory.dataimport.handlers.matching;
 
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
 import org.folio.MatchProfile;
 import org.folio.inventory.common.Context;
@@ -16,10 +18,11 @@ import org.folio.MappingMetadataDto;
 import java.util.concurrent.CompletableFuture;
 
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MATCH_PROFILE;
 
 public abstract class AbstractMatchEventHandler implements EventHandler {
-
+  private static final Logger LOGGER = LogManager.getLogger(AbstractMatchEventHandler.class);
   private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingMetadata snapshot was not found by jobExecutionId '%s'";
   private static final String MATCHING_RELATIONS = "MATCHING_PARAMETERS_RELATIONS";
   private static final String MAPPING_PARAMS = "MAPPING_PARAMS";
@@ -32,6 +35,7 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
+    logParametersEventHandler(LOGGER, dataImportEventPayload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
     dataImportEventPayload.setEventType(getNotMatchedEventType());

@@ -43,6 +43,7 @@ import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
 import static org.folio.inventory.domain.instances.Instance.METADATA_KEY;
 import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
@@ -79,6 +80,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) { // NOSONAR
+    logParametersEventHandler(LOGGER, dataImportEventPayload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
       dataImportEventPayload.setEventType(DI_INVENTORY_INSTANCE_UPDATED.value());
@@ -107,6 +109,8 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
       String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
       String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
+      LOGGER.info("Replace instance with jobExecutionId: {} , recordId: {} , chunkId: {}", jobExecutionId, recordId, chunkId);
+
       mappingMetadataCache.get(jobExecutionId, context)
         .compose(parametersOptional -> parametersOptional
           .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, mappingMetadata, instanceToUpdate))
@@ -282,6 +286,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
         handle(eventPayload).whenComplete((res, e) -> {
           if (e != null) {
+
             promise.fail(e.getMessage());
           } else {
             promise.complete();

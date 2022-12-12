@@ -37,6 +37,7 @@ import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_UPDATED;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.rest.jaxrs.model.EntityType.ITEM;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
@@ -73,6 +74,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
+    logParametersEventHandler(LOGGER, dataImportEventPayload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
       dataImportEventPayload.setEventType(DI_INVENTORY_HOLDING_UPDATED.value());
@@ -80,6 +82,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
       if (dataImportEventPayload.getContext() == null
         || isEmpty(dataImportEventPayload.getContext().get(HOLDINGS.value()))
         || isEmpty(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()))) {
+        LOGGER.warn("Can`t update Holding entity context: {}", dataImportEventPayload.getContext());
         throw new EventProcessingException(CONTEXT_EMPTY_ERROR_MESSAGE);
       }
       if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
@@ -96,6 +99,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
       String instanceId = tmpHoldingsRecord.getInstanceId();
       String permanentLocationId = tmpHoldingsRecord.getPermanentLocationId();
       if (StringUtils.isAnyBlank(hrid, instanceId, permanentLocationId, holdingId)) {
+        LOGGER.warn("Can`t update Holding entity hrid: {}, instanceId: {}, permanentLocationId: {}, holdingId: {}", hrid, instanceId, permanentLocationId, holdingId);
         throw new EventProcessingException(EMPTY_REQUIRED_FIELDS_ERROR_MESSAGE);
       }
 
@@ -104,6 +108,8 @@ public class UpdateHoldingEventHandler implements EventHandler {
 
       String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
       String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
+      LOGGER.info("Update holding with jobExecutionId: {} , recordId: {} , chunkId: {}", jobExecutionId, recordId, chunkId);
+
       mappingMetadataCache.get(jobExecutionId, context)
         .map(parametersOptional -> parametersOptional
           .orElseThrow(() -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MESSAGE, jobExecutionId,

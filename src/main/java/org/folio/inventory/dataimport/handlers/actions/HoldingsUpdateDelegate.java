@@ -1,6 +1,7 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
 import static java.lang.String.format;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersUpdateDelegate;
 
 import java.util.Map;
 
@@ -45,6 +46,7 @@ public class HoldingsUpdateDelegate {
   }
 
   public Future<HoldingsRecord> handle(Map<String, String> eventPayload, Record marcRecord, Context context) {
+    logParametersUpdateDelegate(LOGGER, eventPayload, marcRecord, context);
     try {
       JsonObject mappingRules = new JsonObject(eventPayload.get(MAPPING_RULES_KEY));
       MappingParameters mappingParameters =
@@ -52,6 +54,7 @@ public class HoldingsUpdateDelegate {
 
       JsonObject parsedRecord = retrieveParsedContent(marcRecord.getParsedRecord());
       String holdingsId = marcRecord.getExternalIdsHolder().getHoldingsId();
+      LOGGER.info("Holdings update with holdingId: {}", holdingsId);
       RecordMapper<Holdings> recordMapper = RecordMapperBuilder.buildMapper(MARC_FORMAT);
       var mappedHoldings = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
       HoldingsRecordCollection holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
