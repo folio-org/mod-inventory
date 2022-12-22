@@ -1,7 +1,9 @@
 package org.folio.inventory.eventhandlers;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -18,6 +20,7 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
 import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
+import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -124,8 +127,7 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
         .orElse(null));
     Assert.assertNotNull(updatedInstance.getSubjects());
     Assert.assertEquals(1, updatedInstance.getSubjects().size());
-    Assert.assertTrue(updatedInstance.getSubjects().get(0).contains("additional subfield"));
-    Assert.assertFalse(updatedInstance.getSubjects().get(0).contains("Environmentalism in literature"));
+    assertThat(updatedInstance.getSubjects().get(0).getValue(), Matchers.containsString("additional subfield"));
     Assert.assertNotNull(updatedInstance.getNotes());
     Assert.assertEquals("Adding a note", updatedInstance.getNotes().get(0).note);
 

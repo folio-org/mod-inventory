@@ -23,8 +23,12 @@
   },
   "statusId": "9634a5ab-9228-4703-baf2-4d12ebc77d56",
   "subjects": [
-    "English literature--19th century--History and criticism",
-    "Environmentalism in literature"
+    {
+      "value": "English literature--19th century--History and criticism"
+    },
+    {
+      "value": "Environmentalism in literature"
+    }
   ],
   "languages": [
     "eng"

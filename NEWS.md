@@ -1,3 +1,10 @@
+## 20.0.0 IN PROGRESS
+* Extend subjects, alternativeTitles, series with Authority ID ([MODINV-761](https://issues.folio.org/browse/MODINV-761))
+* Provides `inventory 13.0`
+* Provides `inventory-batch 2.0`
+* Requires `instance-storage 10.0`
+* Requires `instance-storage-batch 2.0`
+
 ## 19.0.0 2022-10-25
 
 * Extend instance contributors schema with Authority ID ([MODINV-729](https://issues.folio.org/browse/MODINV-729))

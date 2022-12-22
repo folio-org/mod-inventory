@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -77,36 +78,36 @@ public class Instance {
   private final String hrid;
   private String matchKey;
   private final String source;
-  private List<InstanceRelationshipToParent> parentInstances = new ArrayList();
-  private List<InstanceRelationshipToChild> childInstances = new ArrayList();
+  private List<InstanceRelationshipToParent> parentInstances = new ArrayList<>();
+  private List<InstanceRelationshipToChild> childInstances = new ArrayList<>();
   private List<PrecedingSucceedingTitle> precedingTitles = new ArrayList<>();
   private List<PrecedingSucceedingTitle> succeedingTitles = new ArrayList<>();
   private boolean isBoundWith = false;
   private final String title;
   private String indexTitle;
-  private List<AlternativeTitle> alternativeTitles = new ArrayList();
-  private List<String> editions = new ArrayList();
-  private List<String> series = new ArrayList();
-  private List<Identifier> identifiers = new ArrayList();
-  private List<Contributor> contributors = new ArrayList();
-  private List<String> subjects = new ArrayList();
-  private List<Classification> classifications = new ArrayList();
-  private List<Publication> publication = new ArrayList();
-  private List<String> publicationFrequency = new ArrayList();
-  private List<String> publicationRange = new ArrayList();
-  private List<String> administrativeNotes = new ArrayList();
-  private List<ElectronicAccess> electronicAccess = new ArrayList();
+  private List<AlternativeTitle> alternativeTitles = new ArrayList<>();
+  private List<String> editions = new ArrayList<>();
+  private List<SeriesItem> series = new ArrayList<>();
+  private List<Identifier> identifiers = new ArrayList<>();
+  private List<Contributor> contributors = new ArrayList<>();
+  private List<Subject> subjects = new ArrayList<>();
+  private List<Classification> classifications = new ArrayList<>();
+  private List<Publication> publication = new ArrayList<>();
+  private List<String> publicationFrequency = new ArrayList<>();
+  private List<String> publicationRange = new ArrayList<>();
+  private List<String> administrativeNotes = new ArrayList<>();
+  private List<ElectronicAccess> electronicAccess = new ArrayList<>();
   private final String instanceTypeId;
   private List<String> instanceFormatIds;
-  private List<String> physicalDescriptions = new ArrayList();
-  private List<String> languages = new ArrayList();
-  private List<Note> notes = new ArrayList();
+  private List<String> physicalDescriptions = new ArrayList<>();
+  private List<String> languages = new ArrayList<>();
+  private List<Note> notes = new ArrayList<>();
   private String modeOfIssuanceId;
   private String catalogedDate;
   private Boolean previouslyHeld;
   private Boolean staffSuppress;
   private Boolean discoverySuppress;
-  private List<String> statisticalCodeIds = new ArrayList();
+  private List<String> statisticalCodeIds = new ArrayList<>();
   private String sourceRecordFormat;
   private String statusId;
   private String statusUpdatedDate;
@@ -160,11 +161,11 @@ public class Instance {
       .setIsBoundWith(instanceJson.containsKey(IS_BOUND_WITH_KEY) ? instanceJson.getBoolean(IS_BOUND_WITH_KEY) : false)
       .setAlternativeTitles(instanceJson.getJsonArray(ALTERNATIVE_TITLES_KEY))
       .setEditions(toListOfStrings(instanceJson.getJsonArray(EDITIONS_KEY)))
-      .setSeries(toListOfStrings(instanceJson.getJsonArray(SERIES_KEY)))
+      .setSeries(instanceJson.getJsonArray(SERIES_KEY))
       .setAdministrativeNotes(toListOfStrings(instanceJson.getJsonArray(ADMININSTRATIVE_NOTES_KEY)))
       .setIdentifiers(instanceJson.getJsonArray(IDENTIFIERS_KEY))
       .setContributors(instanceJson.getJsonArray(CONTRIBUTORS_KEY))
-      .setSubjects(toListOfStrings(instanceJson.getJsonArray(SUBJECTS_KEY)))
+      .setSubjects(instanceJson.getJsonArray(SUBJECTS_KEY))
       .setClassifications(instanceJson.getJsonArray(CLASSIFICATIONS_KEY))
       .setPublication(instanceJson.getJsonArray(PUBLICATION_KEY))
       .setPublicationFrequency(toListOfStrings(instanceJson.getJsonArray(PUBLICATION_FREQUENCY_KEY)))
@@ -290,13 +291,13 @@ public class Instance {
 
     if (precedingTitles != null) {
       JsonArray precedingTitlesJsonArray = new JsonArray();
-      precedingTitles.forEach(title -> precedingTitlesJsonArray.add(title.toPrecedingTitleJson()));
+      precedingTitles.forEach(precedingTitle -> precedingTitlesJsonArray.add(precedingTitle.toPrecedingTitleJson()));
       json.put(PRECEDING_TITLES_KEY, precedingTitlesJsonArray );
     }
 
     if (succeedingTitles != null) {
       JsonArray succeedingTitlesJsonArray = new JsonArray();
-      succeedingTitles.forEach(title -> succeedingTitlesJsonArray.add(title.toSucceedingTitleJson()));
+      succeedingTitles.forEach(succeedingTitle -> succeedingTitlesJsonArray.add(succeedingTitle.toSucceedingTitleJson()));
       json.put(SUCCEEDING_TITLES_KEY, succeedingTitlesJsonArray );
     }
 
@@ -319,12 +320,7 @@ public class Instance {
   }
 
   public Instance setParentInstances(JsonArray parentInstances) {
-    this.parentInstances = parentInstances != null
-      ? JsonArrayHelper.toList(parentInstances).stream()
-      .map(InstanceRelationshipToParent::new)
-      .collect(Collectors.toList())
-      : new ArrayList<>();
-
+    this.parentInstances = toListOfObjects(parentInstances, InstanceRelationshipToParent::new);
     return this;
   }
 
@@ -334,12 +330,7 @@ public class Instance {
   }
 
   public Instance setChildInstances(JsonArray childInstances) {
-    this.childInstances =
-      childInstances != null
-      ? JsonArrayHelper.toList(childInstances).stream()
-              .map(InstanceRelationshipToChild::new)
-              .collect(Collectors.toList())
-      : new ArrayList<>();
+    this.childInstances = toListOfObjects(childInstances, InstanceRelationshipToChild::new);
     return this;
   }
 
@@ -349,11 +340,7 @@ public class Instance {
   }
 
   public Instance setPrecedingTitles(JsonArray precedingTitles) {
-    this.precedingTitles =  precedingTitles != null
-      ? JsonArrayHelper.toList(precedingTitles).stream()
-      .map(PrecedingSucceedingTitle::from)
-      .collect(Collectors.toList())
-      : new ArrayList<>();
+    this.precedingTitles = toListOfObjects(precedingTitles, PrecedingSucceedingTitle::from);
     return this;
   }
 
@@ -363,11 +350,7 @@ public class Instance {
   }
 
   public Instance setSucceedingTitles(JsonArray succeedingTitles) {
-    this.succeedingTitles = succeedingTitles != null
-    ? JsonArrayHelper.toList(succeedingTitles).stream()
-      .map(PrecedingSucceedingTitle::from)
-      .collect(Collectors.toList())
-      : new ArrayList<>();
+    this.succeedingTitles = toListOfObjects(succeedingTitles, PrecedingSucceedingTitle::from);
     return this;
   }
 
@@ -382,11 +365,7 @@ public class Instance {
   }
 
   public Instance setAlternativeTitles(JsonArray array) {
-    this.alternativeTitles = array != null
-      ? JsonArrayHelper.toList(array).stream()
-      .map(AlternativeTitle::new)
-      .collect(Collectors.toList())
-      : new ArrayList<>();
+    this.alternativeTitles = toListOfObjects(array, AlternativeTitle::new);
     return this;
   }
 
@@ -395,8 +374,13 @@ public class Instance {
     return this;
   }
 
-  public Instance setSeries(List<String> series) {
+  public Instance setSeries(List<SeriesItem> series) {
     this.series = series;
+    return this;
+  }
+
+  public Instance setSeries(JsonArray array) {
+    this.series = toListOfObjects(array, SeriesItem::new);
     return this;
   }
 
@@ -405,12 +389,8 @@ public class Instance {
     return this;
   }
 
-  public Instance setIdentifiers (JsonArray array) {
-    this.identifiers = array != null
-      ? JsonArrayHelper.toList(array).stream()
-      .map(Identifier::new)
-      .collect(Collectors.toList())
-      : new ArrayList<>();
+  public Instance setIdentifiers(JsonArray array) {
+    this.identifiers = toListOfObjects(array, Identifier::new);
     return this;
   }
 
@@ -419,17 +399,18 @@ public class Instance {
     return this;
   }
 
-  public Instance setContributors (JsonArray array) {
-    this.contributors = array != null
-      ? JsonArrayHelper.toList(array).stream()
-      .map(Contributor::new)
-      .collect(Collectors.toList())
-      : new ArrayList<>();
+  public Instance setContributors(JsonArray array) {
+    this.contributors = toListOfObjects(array, Contributor::new);
     return this;
   }
 
-  public Instance setSubjects(List<String> subjects) {
+  public Instance setSubjects(List<Subject> subjects) {
     this.subjects = subjects;
+    return this;
+  }
+
+  public Instance setSubjects(JsonArray array) {
+    this.subjects = toListOfObjects(array, Subject::new);
     return this;
   }
 
@@ -439,11 +420,7 @@ public class Instance {
   }
 
   public Instance setClassifications(JsonArray array) {
-    this.classifications = array != null
-      ? JsonArrayHelper.toList(array).stream()
-      .map(Classification::new)
-      .collect(Collectors.toList())
-      : new ArrayList<>();
+    this.classifications = toListOfObjects(array, Classification::new);
     return this;
   }
 
@@ -453,11 +430,7 @@ public class Instance {
   }
 
   public Instance setPublication(JsonArray array) {
-    this.publication = array != null
-      ? JsonArrayHelper.toList(array).stream()
-      .map(Publication::new)
-      .collect(Collectors.toList())
-      : new ArrayList<>();
+    this.publication = toListOfObjects(array, Publication::new);
     return this;
   }
 
@@ -482,11 +455,7 @@ public class Instance {
   }
 
   public Instance setElectronicAccess (JsonArray array) {
-    this.electronicAccess = array != null
-      ? JsonArrayHelper.toList(array).stream()
-      .map(ElectronicAccess::new)
-      .collect(Collectors.toList())
-      : new ArrayList<>();
+    this.electronicAccess = toListOfObjects(array, ElectronicAccess::new);
     return this;
   }
 
@@ -510,13 +479,8 @@ public class Instance {
     return this;
   }
 
-  public Instance setNotes (JsonArray array) {
-    this.notes =  array != null
-      ? JsonArrayHelper.toList(array).stream()
-      .map(Note::new)
-      .collect(Collectors.toList())
-      : new ArrayList<>();
-
+  public Instance setNotes(JsonArray array) {
+    this.notes = toListOfObjects(array, Note::new);
     return this;
   }
 
@@ -645,7 +609,7 @@ public class Instance {
     return editions;
   }
 
-  public List<String> getSeries() {
+  public List<SeriesItem> getSeries() {
     return series;
   }
 
@@ -657,7 +621,7 @@ public class Instance {
     return contributors;
   }
 
-  public List<String> getSubjects() {
+  public List<Subject> getSubjects() {
     return subjects;
   }
 
@@ -899,4 +863,12 @@ public class Instance {
     }
   }
 
+
+  private static <T> List<T> toListOfObjects(JsonArray array, Function<JsonObject, T> objectMapper) {
+    return array != null
+           ? JsonArrayHelper.toList(array).stream()
+             .map(objectMapper)
+             .collect(Collectors.toList())
+           : new ArrayList<>();
+  }
 }

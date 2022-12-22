@@ -25,6 +25,7 @@ import org.folio.MappingMetadataDto;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
+import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -51,6 +52,7 @@ import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -169,8 +171,7 @@ public class MarcBibModifiedPostProcessingEventHandlerTest {
     Assert.assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0cf", updatedInstance.getNatureOfContentTermIds().get(0));
     Assert.assertNotNull(updatedInstance.getSubjects());
     Assert.assertEquals(1, updatedInstance.getSubjects().size());
-    Assert.assertTrue(updatedInstance.getSubjects().get(0).contains("additional subfield"));
-    Assert.assertFalse(updatedInstance.getSubjects().get(0).contains("Environmentalism in literature"));
+    assertThat(updatedInstance.getSubjects().get(0).getValue(), Matchers.containsString("additional subfield"));
     Assert.assertNotNull(updatedInstance.getNotes());
     Assert.assertEquals("Adding a note", updatedInstance.getNotes().get(0).note);
   }
