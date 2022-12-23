@@ -133,7 +133,7 @@ public class CreateHoldingEventHandlerTest {
   public void setUp() throws UnsupportedEncodingException {
     MockitoAnnotations.initMocks(this);
     MappingManager.clearReaderFactories();
-    createHoldingEventHandler = new CreateHoldingEventHandler(storage, mappingMetadataCache, holdingsIdStorageService);
+    createHoldingEventHandler = new CreateHoldingEventHandler(storage, mappingMetadataCache, holdingsIdStorageService, null);
     doAnswer(invocationOnMock -> {
       MultipleRecords result = new MultipleRecords<>(new ArrayList<>(), 0);
       Consumer<Success<MultipleRecords>> successHandler = invocationOnMock.getArgument(2);

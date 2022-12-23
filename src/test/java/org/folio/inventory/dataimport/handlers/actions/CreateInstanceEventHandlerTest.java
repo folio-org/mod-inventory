@@ -169,7 +169,7 @@ public class CreateInstanceEventHandlerTest {
     createInstanceEventHandler = new CreateInstanceEventHandler(storage,
       new PrecedingSucceedingTitlesHelper(context -> mockedClient), new MappingMetadataCache(vertx,
       vertx.createHttpClient(), 3600),
-      instanceIdStorageService);
+      instanceIdStorageService, null);
 
 
     doAnswer(invocationOnMock -> {

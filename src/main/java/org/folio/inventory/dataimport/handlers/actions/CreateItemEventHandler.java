@@ -13,6 +13,7 @@ import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.services.OrderEventService;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.folio.inventory.domain.items.CirculationNote;
@@ -84,7 +85,11 @@ public class CreateItemEventHandler implements EventHandler {
   private final MappingMetadataCache mappingMetadataCache;
   private IdStorageService idStorageService;
 
-  public CreateItemEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache, IdStorageService idStorageService) {
+  private OrderEventService orderEventService;
+
+  public CreateItemEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache, IdStorageService idStorageService,
+                                OrderEventService orderEventService) {
+    this.orderEventService = orderEventService;
     this.storage = storage;
     this.mappingMetadataCache = mappingMetadataCache;
     this.idStorageService = idStorageService;
@@ -149,6 +154,7 @@ public class CreateItemEventHandler implements EventHandler {
           .onComplete(ar -> {
             if (ar.succeeded()) {
               dataImportEventPayload.getContext().put(ITEM.value(), Json.encode(ar.result()));
+              orderEventService.executeOrderLogicIfNeeded(dataImportEventPayload);
               future.complete(dataImportEventPayload);
             } else {
               if (!(ar.cause() instanceof DuplicateEventException)) {

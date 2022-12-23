@@ -11,6 +11,7 @@ import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.services.OrderEventService;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
@@ -57,9 +58,12 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
   private PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
   private MappingMetadataCache mappingMetadataCache;
   private IdStorageService idStorageService;
+  private OrderEventService orderEventService;
 
-  public CreateInstanceEventHandler(Storage storage, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper, MappingMetadataCache mappingMetadataCache, IdStorageService idStorageService) {
+  public CreateInstanceEventHandler(Storage storage, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper, MappingMetadataCache mappingMetadataCache, IdStorageService idStorageService,
+                                    OrderEventService orderEventService) {
     super(storage);
+    this.orderEventService = orderEventService;
     this.mappingMetadataCache = mappingMetadataCache;
     this.precedingSucceedingTitlesHelper = precedingSucceedingTitlesHelper;
     this.idStorageService = idStorageService;
@@ -116,6 +120,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
             })
             .onSuccess(ar -> {
               dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(ar));
+              orderEventService.executeOrderLogicIfNeeded(dataImportEventPayload);
               future.complete(dataImportEventPayload);
             })
             .onFailure(e -> {
