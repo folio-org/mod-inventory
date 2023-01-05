@@ -262,7 +262,9 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
                                                  CompletableFuture<DataImportEventPayload> future) {
     return holdings -> {
       LOGGER.info(() -> constructMsg(format(ACTION_SUCCEED_MSG_PATTERN, UPDATE, HOLDINGS), payload));
-      future.complete(payload);
+      DataImportEventPayload copiedPayload = copyEventPayloadWithoutCurrentNode(payload);
+      eventPublisher.publish(copiedPayload);
+      future.complete(copiedPayload);
     };
   }
 
@@ -343,6 +345,19 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
 
   private String getRecordIdHeader(DataImportEventPayload payload) {
     return payload.getContext() == null ? "-" : payload.getContext().get(RECORD_ID_HEADER);
+  }
+
+  private DataImportEventPayload copyEventPayloadWithoutCurrentNode(DataImportEventPayload payload) {
+    DataImportEventPayload newPayload = new DataImportEventPayload();
+    newPayload.setEventType(payload.getEventType());
+    newPayload.setEventsChain(payload.getEventsChain());
+    newPayload.setContext(payload.getContext());
+    newPayload.setToken(payload.getToken());
+    newPayload.setJobExecutionId(payload.getJobExecutionId());
+    newPayload.setOkapiUrl(payload.getOkapiUrl());
+    newPayload.setProfileSnapshot(payload.getProfileSnapshot());
+    newPayload.setTenant(payload.getTenant());
+    return newPayload;
   }
 
 }

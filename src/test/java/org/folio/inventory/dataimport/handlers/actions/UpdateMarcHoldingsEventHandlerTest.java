@@ -6,12 +6,15 @@ import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import static org.folio.ActionProfile.Action.MODIFY;
@@ -175,6 +178,8 @@ public class UpdateMarcHoldingsEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.SECONDS);
 
+    verify(publisher, times(1)).publish(actualDataImportEventPayload);
+    assertNull(actualDataImportEventPayload.getCurrentNode());
     assertEquals(DI_INVENTORY_HOLDING_UPDATED.value(), actualDataImportEventPayload.getEventType());
     assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
     JsonObject holdings = new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
@@ -299,6 +304,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
 
     ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
     assertThat(exception.getCause().getMessage(), containsString("Unexpected payload"));
+    verify(publisher, times(0)).publish(any());
   }
 
   @Test
@@ -404,6 +410,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
     ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
     assertThat(exception.getCause().getMessage(),
       containsString("Current retry number 1 exceeded or equal given number 2 for the Holding update"));
+    verify(publisher, times(0)).publish(any());
   }
 
   @Test
@@ -436,6 +443,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
     var future = eventHandler.handle(dataImportEventPayload);
     ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
     assertThat(exception.getCause().getMessage(), containsString("Error updating Holding by holdingId " + holdingsId));
+    verify(publisher, times(0)).publish(any());
   }
 
   @Test
@@ -479,6 +487,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
 
     var future = eventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.SECONDS);
+    verify(publisher, times(2)).publish(actualDataImportEventPayload);
   }
 
   @Test
@@ -511,6 +520,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
 
     ExecutionException exception = Assert.assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
     Assert.assertEquals("Error in default mapper.", exception.getCause().getMessage());
+    verify(publisher, times(0)).publish(any());
   }
 
   @Test
@@ -540,6 +550,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
 
     ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
     assertThat(exception.getCause().getMessage(), containsString("Internal Server Error"));
+    verify(publisher, times(0)).publish(any());
   }
 
   @Test
@@ -572,6 +583,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
 
     ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
     assertThat(exception.getCause().getMessage(), containsString("No instance id found for marc holdings with hrid: in00000000315"));
+    verify(publisher, times(0)).publish(any());
   }
 
   @Test
@@ -597,6 +609,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
 
     ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
     assertThat(exception.getCause().getMessage(), containsString("Unsupported encoding."));
+    verify(publisher, times(0)).publish(any());
   }
 
 
