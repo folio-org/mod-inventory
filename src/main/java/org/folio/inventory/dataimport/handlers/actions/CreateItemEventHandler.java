@@ -154,7 +154,7 @@ public class CreateItemEventHandler implements EventHandler {
           .onComplete(ar -> {
             if (ar.succeeded()) {
               dataImportEventPayload.getContext().put(ITEM.value(), Json.encode(ar.result()));
-              orderEventService.executeOrderLogicIfNeeded(dataImportEventPayload);
+              orderEventService.executeOrderLogicIfNeeded(dataImportEventPayload, context);
               future.complete(dataImportEventPayload);
             } else {
               if (!(ar.cause() instanceof DuplicateEventException)) {

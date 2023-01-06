@@ -1,6 +1,7 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
@@ -14,6 +15,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
+import org.folio.MappingProfile;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.services.OrderEventService;
@@ -29,6 +31,7 @@ import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.processing.mapping.mapper.MappingContext;
 import org.folio.rest.jaxrs.model.EntityType;
+import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
 
 import java.util.UUID;
@@ -45,6 +48,7 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 
 public class CreateHoldingEventHandler implements EventHandler {
 
@@ -132,7 +136,7 @@ public class CreateHoldingEventHandler implements EventHandler {
               LOGGER.info("Created Holding record by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}'",
                 jobExecutionId, recordId, chunkId);
               payloadContext.put(HOLDINGS.value(), Json.encodePrettily(createdHoldings));
-              orderEventService.executeOrderLogicIfNeeded(dataImportEventPayload);
+              orderEventService.executeOrderLogicIfNeeded(dataImportEventPayload, context);
               future.complete(dataImportEventPayload);
             })
             .onFailure(e -> {
@@ -169,7 +173,6 @@ public class CreateHoldingEventHandler implements EventHandler {
     dataImportEventPayload.getContext().put(HOLDINGS.value(), new JsonObject().encode());
     dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
 
-/*
     dataImportEventPayload.getContext().remove(HOLDINGS.value());
     dataImportEventPayload.getContext().put("ORDER", new JsonObject().encode());
     MappingProfile improvedMappingProfile = new ObjectMapper().readValue(ORDER_JOB_PROFILE_LITE, MappingProfile.class);
@@ -179,7 +182,7 @@ public class CreateHoldingEventHandler implements EventHandler {
     dataImportEventPayload.setCurrentNode(mappingProfileWrapper);
     dataImportEventPayload.setEventType("DI_INVENTORY_ORDER_CREATED");
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
-    dataImportEventPayload.getContext().put("CURRENT_NODE", ORDER_JOB_PROFILE);*/
+    dataImportEventPayload.getContext().put("CURRENT_NODE", ORDER_JOB_PROFILE);
 
 
   }

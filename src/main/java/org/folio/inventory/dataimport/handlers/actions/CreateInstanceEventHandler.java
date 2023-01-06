@@ -120,7 +120,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
             })
             .onSuccess(ar -> {
               dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(ar));
-              orderEventService.executeOrderLogicIfNeeded(dataImportEventPayload);
+              orderEventService.executeOrderLogicIfNeeded(dataImportEventPayload, context);
               future.complete(dataImportEventPayload);
             })
             .onFailure(e -> {

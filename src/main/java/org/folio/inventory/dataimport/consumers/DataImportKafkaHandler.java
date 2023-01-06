@@ -99,7 +99,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     this.profileSnapshotCache = profileSnapshotCache;
     this.mappingMetadataCache = mappingMetadataCache;
     this.kafkaConfig = kafkaConfig;
-    orderEventService = new OrderEventService(vertx, kafkaConfig);
+    orderEventService = new OrderEventService(vertx, kafkaConfig, profileSnapshotCache);
     registerDataImportProcessingHandlers(storage, client);
   }
 
