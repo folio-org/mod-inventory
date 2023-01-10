@@ -154,7 +154,6 @@ public class CreateItemEventHandler implements EventHandler {
           .onComplete(ar -> {
             if (ar.succeeded()) {
               dataImportEventPayload.getContext().put(ITEM.value(), Json.encode(ar.result()));
-              orderEventService.executeOrderLogicIfNeeded(dataImportEventPayload, context);
               future.complete(dataImportEventPayload);
             } else {
               if (!(ar.cause() instanceof DuplicateEventException)) {
@@ -163,7 +162,8 @@ public class CreateItemEventHandler implements EventHandler {
               }
               future.completeExceptionally(ar.cause());
             }
-          });
+          })
+          .compose(e -> orderEventService.executeOrderLogicIfNeeded(dataImportEventPayload, context));
       }).onFailure(failure -> {
         LOG.error("Error creating inventory recordId and itemId relationship by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId, recordId,
           chunkId, failure);

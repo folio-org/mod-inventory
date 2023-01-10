@@ -120,9 +120,9 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
             })
             .onSuccess(ar -> {
               dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(ar));
-              orderEventService.executeOrderLogicIfNeeded(dataImportEventPayload, context);
               future.complete(dataImportEventPayload);
             })
+            .compose(e -> orderEventService.executeOrderLogicIfNeeded(dataImportEventPayload, context))
             .onFailure(e -> {
               if (!(e instanceof DuplicateEventException)) {
                 LOGGER.error("Error creating inventory Instance by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,

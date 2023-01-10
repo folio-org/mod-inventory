@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -41,6 +42,13 @@ public class OrderEventService {
   private static final AtomicInteger indexer = new AtomicInteger();
   public static final String ORDER_POST_PROCESSING_PRODUCER_NAME = "DI_ORDER_READY_FOR_POST_PROCESSING_Producer";
   public static final String JOB_PROFILE_SNAPSHOT_ID = "JOB_PROFILE_SNAPSHOT_ID";
+  public static final String DI_ORDER_READY_FOR_POST_PROCESSING = "DI_ORDER_READY_FOR_POST_PROCESSING";
+  public static final String ORDER_TYPE = "ORDER";
+  public static final String FOLIO_RECORD = "folioRecord";
+  public static final String ACTION_FIELD = "action";
+  public static final String CREATE_ACTION = "CREATE";
+  public static final String DI_ERROR = "DI_ERROR";
+  public static final String ERROR_KEY = "ERROR";
   private final int maxDistributionNumber = Integer.parseInt(System.getProperty("inventory.kafka.DataImportConsumerVerticle.maxDistributionNumber", "100"));
   private final Vertx vertx;
   private final KafkaConfig kafkaConfig;
@@ -58,19 +66,24 @@ public class OrderEventService {
     this.producer = createShared(vertx, ORDER_POST_PROCESSING_PRODUCER_NAME, kafkaConfig.getProducerProps());
   }
 
-  public void executeOrderLogicIfNeeded(DataImportEventPayload eventPayload, Context context) {
-    profileSnapshotCache.get(eventPayload.getContext().get(JOB_PROFILE_SNAPSHOT_ID), context)
+  public Future<Void> executeOrderLogicIfNeeded(DataImportEventPayload eventPayload, Context context) {
+    Promise<Void> promise = Promise.promise();
+    String jobProfileSnapshotId = eventPayload.getContext().get(JOB_PROFILE_SNAPSHOT_ID);
+    profileSnapshotCache.get(jobProfileSnapshotId, context)
       .toCompletionStage()
       .thenCompose(snapshotOptional -> snapshotOptional
-        .map(profileSnapshot -> checkIfOrderLogicIsNeeded(eventPayload, profileSnapshot))
+        .map(profileSnapshot -> checkIfOrderLogicExistsAndSendPostProcessingEventIfNeeded(eventPayload, profileSnapshot))
         .orElse(CompletableFuture.failedFuture((new EventProcessingException(format("Job profile snapshot with id '%s' does not exist", eventPayload.getContext().get("JOB_PROFILE_SNAPSHOT_ID")))))))
       .whenComplete((processed, throwable) -> {
         if (throwable != null) {
+          promise.fail(throwable);
           LOGGER.error(throwable.getMessage());
         } else {
-          LOGGER.debug(format("Job profile snapshot with id '%s' was retrieved from cache", eventPayload.getContext().get("JOB_PROFILE_SNAPSHOT_ID")));
+          promise.complete();
+          LOGGER.debug(format("Job profile snapshot with id '%s' was retrieved from cache", jobProfileSnapshotId));
         }
       });
+    return promise.future();
   }
 
   private Future<Boolean> sendEvent(DataImportEventPayload eventPayload, String eventType) {
@@ -94,15 +107,15 @@ public class OrderEventService {
     return params;
   }
 
-  private CompletableFuture<Void> checkIfOrderLogicIsNeeded(DataImportEventPayload eventPayload, ProfileSnapshotWrapper profileSnapshotWrapper) {
+  private CompletableFuture<Void> checkIfOrderLogicExistsAndSendPostProcessingEventIfNeeded(DataImportEventPayload eventPayload, ProfileSnapshotWrapper profileSnapshotWrapper) {
     List<ProfileSnapshotWrapper> actionProfiles = profileSnapshotWrapper
       .getChildSnapshotWrappers()
       .stream()
       .filter(e -> e.getContentType() == ProfileSnapshotWrapper.ContentType.ACTION_PROFILE)
       .collect(Collectors.toList());
 
-    if (checkIfOrderActionProfileExists(actionProfiles) && checkIfCurrentProfileIsTheLastOne(eventPayload, actionProfiles)) {
-      sendEvent(eventPayload, "DI_ORDER_READY_FOR_POST_PROCESSING")
+    if (!actionProfiles.isEmpty() && checkIfOrderActionProfileExists(actionProfiles) && checkIfCurrentProfileIsTheLastOne(eventPayload, actionProfiles)) {
+      sendEvent(eventPayload, DI_ORDER_READY_FOR_POST_PROCESSING)
         .recover(throwable -> sendErrorEvent(eventPayload, throwable));
     }
     return CompletableFuture.completedFuture(null);
@@ -113,10 +126,8 @@ public class OrderEventService {
     ProfileSnapshotWrapper lastActionProfile = actionProfiles.get(actionProfiles.size() - 1);
     List<ProfileSnapshotWrapper> childSnapshotWrappers = lastActionProfile.getChildSnapshotWrappers();
     String mappingProfileId = StringUtils.EMPTY;
-    if(childSnapshotWrappers != null){
-      for (ProfileSnapshotWrapper childSnapshotWrapper : childSnapshotWrappers) {
-        mappingProfileId = childSnapshotWrapper.getProfileId();
-      }
+    if (childSnapshotWrappers != null && childSnapshotWrappers.get(0) != null && Objects.equals(childSnapshotWrappers.get(0).getContentType().value(), "MAPPING_PROFILE")) {
+      mappingProfileId = childSnapshotWrappers.get(0).getProfileId();
     }
     return mappingProfileId.equals(currentMappingProfileId);
   }
@@ -124,7 +135,7 @@ public class OrderEventService {
   private static boolean checkIfOrderActionProfileExists(List<ProfileSnapshotWrapper> actionProfiles) {
     for (ProfileSnapshotWrapper actionProfile : actionProfiles) {
       LinkedHashMap<String, String> content = new ObjectMapper().convertValue(actionProfile.getContent(), LinkedHashMap.class);
-      if (content.get("folioRecord").equals("ORDER") && content.get("action").equals("CREATE")) {
+      if (content.get(FOLIO_RECORD).equals(ORDER_TYPE) && content.get(ACTION_FIELD).equals(CREATE_ACTION)) {
         return true;
       }
     }
@@ -150,8 +161,8 @@ public class OrderEventService {
   }
 
   private Future<Boolean> sendErrorEvent(DataImportEventPayload eventPayload, Throwable throwable) {
-    eventPayload.getContext().put("ERROR", throwable.getMessage());
-    return sendEvent(eventPayload, "DI_ORDER_ERROR");
+    eventPayload.getContext().put(ERROR_KEY, throwable.getMessage());
+    return sendEvent(eventPayload, DI_ERROR);
   }
 
   private KafkaProducerRecord<String, String> createRecord(String eventPayload, String eventType, String key,
