@@ -103,6 +103,7 @@ public class AuthorityUpdateDelegate {
   private Future<Authority> mergeRecords(Authority existingRecord, Authority mappedRecord) {
     try {
       mappedRecord.setId(existingRecord.getId());
+      mappedRecord.setVersion(existingRecord.getVersion());
       JsonObject mapped = JsonObject.mapFrom(mappedRecord);
       Authority mergedAuthorityRecord = mapped.mapTo(Authority.class);
       return Future.succeededFuture(mergedAuthorityRecord);
