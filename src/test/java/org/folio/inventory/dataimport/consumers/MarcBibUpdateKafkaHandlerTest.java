@@ -15,8 +15,6 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -54,8 +52,6 @@ public class MarcBibUpdateKafkaHandlerTest {
   private KafkaConsumerRecord<String, String> kafkaRecord;
   @Mock
   private MappingMetadataCache mappingMetadataCache;
-
-  private JsonObject mappingRules;
   private Record record;
   private Instance existingInstance;
   private MarcBibUpdateKafkaHandler marcBibUpdateKafkaHandler;
@@ -63,7 +59,7 @@ public class MarcBibUpdateKafkaHandlerTest {
 
   @Before
   public void setUp() throws IOException {
-    mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
+    JsonObject mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
     existingInstance = Instance.fromJson(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
     record = Json.decodeValue(TestUtil.readFileFromPath(RECORD_PATH), Record.class);
     record.getParsedRecord().withContent(JsonObject.mapFrom(record.getParsedRecord().getContent()).encode());
@@ -98,7 +94,7 @@ public class MarcBibUpdateKafkaHandlerTest {
   }
 
   @Test
-  public void shouldReturnSucceededFutureWithObtainedRecordKey(TestContext context) throws IOException {
+  public void shouldReturnSucceededFutureWithObtainedRecordKey(TestContext context) {
     // given
     Async async = context.async();
     InstanceEvent payload = new InstanceEvent()
@@ -127,7 +123,7 @@ public class MarcBibUpdateKafkaHandlerTest {
   }
 
   @Test
-  public void shouldReturnFailedFutureWhenMappingRulesNotFound(TestContext context) throws IOException {
+  public void shouldReturnFailedFutureWhenMappingRulesNotFound(TestContext context) {
     // given
     Async async = context.async();
     Mockito.when(mappingMetadataCache.getByRecordType(anyString(), any(Context.class), anyString()))
