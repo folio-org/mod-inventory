@@ -11,6 +11,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
+import org.folio.DataImportEventTypes;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
 import org.folio.inventory.dataimport.util.ConsumerWrapperUtil;
@@ -31,6 +32,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import static org.folio.DataImportEventTypes.DI_ERROR;
 import static io.vertx.kafka.client.producer.KafkaProducer.createShared;
 import static java.lang.String.format;
 import static org.folio.kafka.KafkaHeaderUtils.kafkaHeadersFromMap;
@@ -162,7 +164,7 @@ public class OrderHelperServiceImpl implements OrderHelperService {
 
   private Future<Boolean> sendErrorEvent(DataImportEventPayload eventPayload, Throwable throwable) {
     eventPayload.getContext().put(ERROR_KEY, throwable.getMessage());
-    return sendEvent(eventPayload, DI_ERROR);
+    return sendEvent(eventPayload, DataImportEventTypes.DI_ERROR.value());
   }
 
   private KafkaProducerRecord<String, String> createRecord(String eventPayload, String eventType, String key,
