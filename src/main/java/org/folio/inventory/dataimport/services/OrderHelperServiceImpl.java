@@ -62,7 +62,7 @@ public class OrderHelperServiceImpl implements OrderHelperService {
     this.profileSnapshotCache = profileSnapshotCache;
   }
 
-  public Future<Void> executeOrderLogicIfNeeded(DataImportEventPayload eventPayload, Context context) {
+  public Future<Void> sendOrderPostProcessingEventIfNeeded(DataImportEventPayload eventPayload, Context context) {
     Promise<Void> promise = Promise.promise();
     String jobProfileSnapshotId = eventPayload.getContext().get(JOB_PROFILE_SNAPSHOT_ID);
     profileSnapshotCache.get(jobProfileSnapshotId, context)

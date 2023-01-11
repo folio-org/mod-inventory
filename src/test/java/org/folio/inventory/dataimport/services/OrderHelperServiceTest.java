@@ -189,7 +189,7 @@ public class OrderHelperServiceTest {
       .willReturn(WireMock.ok().withBody(Json.encode(profileSnapshotWrapper))));
 
     //when
-    Future<Void> future = orderHelperService.executeOrderLogicIfNeeded(dataImportEventPayload, context);
+    Future<Void> future = orderHelperService.sendOrderPostProcessingEventIfNeeded(dataImportEventPayload, context);
 
     // then
     String observeTopic = formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), TENANT_ID, DI_ORDER_READY_FOR_POST_PROCESSING);
@@ -281,7 +281,7 @@ public class OrderHelperServiceTest {
       .willReturn(WireMock.ok().withBody(Json.encode(profileSnapshotWrapper))));
 
     //when
-    Future<Void> future = orderHelperService.executeOrderLogicIfNeeded(dataImportEventPayload, context);
+    Future<Void> future = orderHelperService.sendOrderPostProcessingEventIfNeeded(dataImportEventPayload, context);
 
     // then
     String observeTopic = formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), TENANT_ID, DI_ORDER_READY_FOR_POST_PROCESSING);
@@ -373,7 +373,7 @@ public class OrderHelperServiceTest {
       .willReturn(WireMock.ok().withBody(Json.encode(profileSnapshotWrapper))));
 
     //when
-    Future<Void> future = orderHelperService.executeOrderLogicIfNeeded(dataImportEventPayload, context);
+    Future<Void> future = orderHelperService.sendOrderPostProcessingEventIfNeeded(dataImportEventPayload, context);
 
     // then
     String observeTopic = formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), TENANT_ID, DI_ORDER_READY_FOR_POST_PROCESSING);

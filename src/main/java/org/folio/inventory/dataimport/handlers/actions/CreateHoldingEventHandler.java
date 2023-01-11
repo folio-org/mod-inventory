@@ -128,7 +128,7 @@ public class CreateHoldingEventHandler implements EventHandler {
               payloadContext.put(HOLDINGS.value(), Json.encodePrettily(createdHoldings));
               future.complete(dataImportEventPayload);
             })
-            .compose(e -> orderHelperService.executeOrderLogicIfNeeded(dataImportEventPayload, context))
+            .compose(e -> orderHelperService.sendOrderPostProcessingEventIfNeeded(dataImportEventPayload, context))
             .onFailure(e -> {
               if (!(e instanceof DuplicateEventException)) {
                 LOGGER.error("Error creating inventory Holding record by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,

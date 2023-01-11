@@ -162,7 +162,7 @@ public class CreateItemEventHandler implements EventHandler {
               future.completeExceptionally(ar.cause());
             }
           })
-          .compose(e -> orderHelperServiceImpl.executeOrderLogicIfNeeded(dataImportEventPayload, context));
+          .compose(e -> orderHelperServiceImpl.sendOrderPostProcessingEventIfNeeded(dataImportEventPayload, context));
       }).onFailure(failure -> {
         LOG.error("Error creating inventory recordId and itemId relationship by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId, recordId,
           chunkId, failure);
