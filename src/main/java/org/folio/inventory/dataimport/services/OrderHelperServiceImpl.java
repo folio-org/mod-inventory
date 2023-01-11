@@ -37,7 +37,7 @@ import static org.folio.kafka.KafkaHeaderUtils.kafkaHeadersFromMap;
 import static org.folio.kafka.KafkaTopicNameHelper.formatTopicName;
 import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
 
-public class OrderEventService {
+public class OrderHelperServiceImpl implements OrderHelperService {
   private static final Logger LOGGER = LogManager.getLogger();
   private static final AtomicInteger indexer = new AtomicInteger();
   public static final String ORDER_POST_PROCESSING_PRODUCER_NAME = "DI_ORDER_READY_FOR_POST_PROCESSING_Producer";
@@ -55,15 +55,11 @@ public class OrderEventService {
   private KafkaProducer<String, String> producer;
   private final ProfileSnapshotCache profileSnapshotCache;
 
-  public OrderEventService(Vertx vertx, KafkaConfig kafkaConfig, ProfileSnapshotCache profileSnapshotCache) {
+  public OrderHelperServiceImpl(Vertx vertx, KafkaConfig kafkaConfig, ProfileSnapshotCache profileSnapshotCache) {
     this.vertx = vertx;
     this.kafkaConfig = kafkaConfig;
     createProducer(kafkaConfig);
     this.profileSnapshotCache = profileSnapshotCache;
-  }
-
-  private void createProducer(KafkaConfig kafkaConfig) {
-    this.producer = createShared(vertx, ORDER_POST_PROCESSING_PRODUCER_NAME, kafkaConfig.getProducerProps());
   }
 
   public Future<Void> executeOrderLogicIfNeeded(DataImportEventPayload eventPayload, Context context) {
@@ -84,6 +80,10 @@ public class OrderEventService {
         }
       });
     return promise.future();
+  }
+
+  private void createProducer(KafkaConfig kafkaConfig) {
+    this.producer = createShared(vertx, ORDER_POST_PROCESSING_PRODUCER_NAME, kafkaConfig.getProducerProps());
   }
 
   private Future<Boolean> sendEvent(DataImportEventPayload eventPayload, String eventType) {

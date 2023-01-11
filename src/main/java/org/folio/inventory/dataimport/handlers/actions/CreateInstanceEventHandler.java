@@ -4,15 +4,14 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
-import org.folio.inventory.dataimport.services.OrderEventService;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
+import org.folio.inventory.dataimport.services.OrderHelperService;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.domain.relationship.RecordToEntity;
@@ -58,12 +57,12 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
   private PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
   private MappingMetadataCache mappingMetadataCache;
   private IdStorageService idStorageService;
-  private OrderEventService orderEventService;
+  private OrderHelperService orderHelperService;
 
   public CreateInstanceEventHandler(Storage storage, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper, MappingMetadataCache mappingMetadataCache, IdStorageService idStorageService,
-                                    OrderEventService orderEventService) {
+                                    OrderHelperService orderHelperService) {
     super(storage);
-    this.orderEventService = orderEventService;
+    this.orderHelperService = orderHelperService;
     this.mappingMetadataCache = mappingMetadataCache;
     this.precedingSucceedingTitlesHelper = precedingSucceedingTitlesHelper;
     this.idStorageService = idStorageService;
@@ -122,7 +121,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
               dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(ar));
               future.complete(dataImportEventPayload);
             })
-            .compose(e -> orderEventService.executeOrderLogicIfNeeded(dataImportEventPayload, context))
+            .compose(e -> orderHelperService.executeOrderLogicIfNeeded(dataImportEventPayload, context))
             .onFailure(e -> {
               if (!(e instanceof DuplicateEventException)) {
                 LOGGER.error("Error creating inventory Instance by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,

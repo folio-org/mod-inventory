@@ -57,7 +57,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 
 @RunWith(VertxUnitRunner.class)
-public class OrderEventServiceTest {
+public class OrderHelperServiceTest {
   private static final String JOB_PROFILE_URL = "/data-import-profiles/jobProfileSnapshots";
   private static final String TENANT_ID = "diku";
   public static final String JOB_PROFILE_SNAPSHOT_ID = "JOB_PROFILE_SNAPSHOT_ID";
@@ -65,7 +65,7 @@ public class OrderEventServiceTest {
   private static KafkaConfig kafkaConfig;
   private static EmbeddedKafkaCluster cluster;
   private static Vertx vertx;
-  private OrderEventService orderEventService;
+  private OrderHelperService orderHelperService;
 
 
   @Rule
@@ -104,7 +104,7 @@ public class OrderEventServiceTest {
     MockitoAnnotations.openMocks(this);
 
     HttpClient client = vertx.createHttpClient();
-    orderEventService = new OrderEventService(vertx, kafkaConfig, new ProfileSnapshotCache(vertx, client, 3600));
+    orderHelperService = new OrderHelperServiceImpl(vertx, kafkaConfig, new ProfileSnapshotCache(vertx, client, 3600));
 
     EventManager.clearEventHandlers();
     EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, 1);
@@ -189,7 +189,7 @@ public class OrderEventServiceTest {
       .willReturn(WireMock.ok().withBody(Json.encode(profileSnapshotWrapper))));
 
     //when
-    Future<Void> future = orderEventService.executeOrderLogicIfNeeded(dataImportEventPayload, context);
+    Future<Void> future = orderHelperService.executeOrderLogicIfNeeded(dataImportEventPayload, context);
 
     // then
     String observeTopic = formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), TENANT_ID, DI_ORDER_READY_FOR_POST_PROCESSING);
@@ -281,7 +281,7 @@ public class OrderEventServiceTest {
       .willReturn(WireMock.ok().withBody(Json.encode(profileSnapshotWrapper))));
 
     //when
-    Future<Void> future = orderEventService.executeOrderLogicIfNeeded(dataImportEventPayload, context);
+    Future<Void> future = orderHelperService.executeOrderLogicIfNeeded(dataImportEventPayload, context);
 
     // then
     String observeTopic = formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), TENANT_ID, DI_ORDER_READY_FOR_POST_PROCESSING);
@@ -373,7 +373,7 @@ public class OrderEventServiceTest {
       .willReturn(WireMock.ok().withBody(Json.encode(profileSnapshotWrapper))));
 
     //when
-    Future<Void> future = orderEventService.executeOrderLogicIfNeeded(dataImportEventPayload, context);
+    Future<Void> future = orderHelperService.executeOrderLogicIfNeeded(dataImportEventPayload, context);
 
     // then
     String observeTopic = formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), TENANT_ID, DI_ORDER_READY_FOR_POST_PROCESSING);
