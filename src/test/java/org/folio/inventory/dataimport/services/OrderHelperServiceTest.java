@@ -29,6 +29,7 @@ import org.folio.processing.events.EventManager;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -66,7 +67,8 @@ public class OrderHelperServiceTest {
   private static EmbeddedKafkaCluster cluster;
   private static Vertx vertx;
   private OrderHelperService orderHelperService;
-
+  private AutoCloseable mocks;
+  private HttpClient client;
 
   @Rule
   public WireMockRule mockServer = new WireMockRule(
@@ -101,13 +103,17 @@ public class OrderHelperServiceTest {
 
   @Before
   public void setUp() {
-    MockitoAnnotations.openMocks(this);
+    mocks = MockitoAnnotations.openMocks(this);
 
-    HttpClient client = vertx.createHttpClient();
-    orderHelperService = new OrderHelperServiceImpl(vertx, kafkaConfig, new ProfileSnapshotCache(vertx, client, 3600));
+    client = vertx.createHttpClient();
 
     EventManager.clearEventHandlers();
     EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, 1);
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    mocks.close();
   }
 
 
@@ -187,6 +193,9 @@ public class OrderHelperServiceTest {
 
     WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(JOB_PROFILE_URL + "/.*"), true))
       .willReturn(WireMock.ok().withBody(Json.encode(profileSnapshotWrapper))));
+
+    orderHelperService = new OrderHelperServiceImpl(vertx, kafkaConfig, new ProfileSnapshotCache(vertx, client, 3600));
+
 
     //when
     Future<Void> future = orderHelperService.sendOrderPostProcessingEventIfNeeded(dataImportEventPayload, context);
@@ -280,6 +289,7 @@ public class OrderHelperServiceTest {
     WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(JOB_PROFILE_URL + "/.*"), true))
       .willReturn(WireMock.ok().withBody(Json.encode(profileSnapshotWrapper))));
 
+    orderHelperService = new OrderHelperServiceImpl(vertx, kafkaConfig, new ProfileSnapshotCache(vertx, client, 3600));
     //when
     Future<Void> future = orderHelperService.sendOrderPostProcessingEventIfNeeded(dataImportEventPayload, context);
 
@@ -371,6 +381,8 @@ public class OrderHelperServiceTest {
 
     WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(JOB_PROFILE_URL + "/.*"), true))
       .willReturn(WireMock.ok().withBody(Json.encode(profileSnapshotWrapper))));
+
+    orderHelperService = new OrderHelperServiceImpl(vertx, kafkaConfig, new ProfileSnapshotCache(vertx, client, 3600));
 
     //when
     Future<Void> future = orderHelperService.sendOrderPostProcessingEventIfNeeded(dataImportEventPayload, context);
