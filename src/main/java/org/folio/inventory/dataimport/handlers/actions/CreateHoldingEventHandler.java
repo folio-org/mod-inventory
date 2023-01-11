@@ -103,11 +103,7 @@ public class CreateHoldingEventHandler implements EventHandler {
               new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG,
                 jobExecutionId, recordId, chunkId))))
             .map(mappingMetadataDto -> {
-              try {
-                prepareEvent(dataImportEventPayload);
-              } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
-              }
+              prepareEvent(dataImportEventPayload);
               MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
               MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
 
@@ -158,7 +154,7 @@ public class CreateHoldingEventHandler implements EventHandler {
     return false;
   }
 
-  private void prepareEvent(DataImportEventPayload dataImportEventPayload) throws JsonProcessingException {
+  private void prepareEvent(DataImportEventPayload dataImportEventPayload) {
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
     dataImportEventPayload.getContext().put(HOLDINGS.value(), new JsonObject().encode());
     dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
