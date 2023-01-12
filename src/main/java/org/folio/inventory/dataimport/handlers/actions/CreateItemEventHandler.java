@@ -84,11 +84,11 @@ public class CreateItemEventHandler implements EventHandler {
   private final MappingMetadataCache mappingMetadataCache;
   private IdStorageService idStorageService;
 
-  private OrderHelperService orderHelperServiceImpl;
+  private OrderHelperService orderHelperService;
 
   public CreateItemEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache, IdStorageService idStorageService,
-                                OrderHelperService orderHelperServiceImpl) {
-    this.orderHelperServiceImpl = orderHelperServiceImpl;
+                                OrderHelperService orderHelperService) {
+    this.orderHelperService = orderHelperService;
     this.storage = storage;
     this.mappingMetadataCache = mappingMetadataCache;
     this.idStorageService = idStorageService;
@@ -153,7 +153,11 @@ public class CreateItemEventHandler implements EventHandler {
           .onComplete(ar -> {
             if (ar.succeeded()) {
               dataImportEventPayload.getContext().put(ITEM.value(), Json.encode(ar.result()));
-              future.complete(dataImportEventPayload);
+              orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload, context)
+                .onComplete(result -> {
+                    future.complete(dataImportEventPayload);
+                  }
+                );
             } else {
               if (!(ar.cause() instanceof DuplicateEventException)) {
                 LOG.error("Error creating inventory Item by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
@@ -161,8 +165,7 @@ public class CreateItemEventHandler implements EventHandler {
               }
               future.completeExceptionally(ar.cause());
             }
-          })
-          .compose(e -> orderHelperServiceImpl.sendOrderPostProcessingEventIfNeeded(dataImportEventPayload, context));
+          });
       }).onFailure(failure -> {
         LOG.error("Error creating inventory recordId and itemId relationship by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId, recordId,
           chunkId, failure);

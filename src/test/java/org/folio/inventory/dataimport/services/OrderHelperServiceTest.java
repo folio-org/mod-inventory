@@ -15,8 +15,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
-import net.mguenther.kafka.junit.ObserveKeyValues;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.JobProfile;
@@ -24,8 +22,6 @@ import org.folio.MappingProfile;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
-import org.folio.kafka.KafkaConfig;
-import org.folio.processing.events.EventManager;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
@@ -41,14 +37,10 @@ import org.mockito.MockitoAnnotations;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
-import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
 import static org.folio.ActionProfile.Action.CREATE;
-import static org.folio.kafka.KafkaTopicNameHelper.formatTopicName;
-import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
 import static org.folio.rest.jaxrs.model.EntityType.HOLDINGS;
 import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
@@ -56,6 +48,8 @@ import static org.folio.rest.jaxrs.model.EntityType.ORDER;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 @RunWith(VertxUnitRunner.class)
 public class OrderHelperServiceTest {
@@ -63,10 +57,8 @@ public class OrderHelperServiceTest {
   private static final String TENANT_ID = "diku";
   public static final String JOB_PROFILE_SNAPSHOT_ID = "JOB_PROFILE_SNAPSHOT_ID";
   public static final String DI_ORDER_READY_FOR_POST_PROCESSING = "DI_ORDER_READY_FOR_POST_PROCESSING";
-  private static KafkaConfig kafkaConfig;
-  private static EmbeddedKafkaCluster cluster;
-  private static Vertx vertx;
   private OrderHelperService orderHelperService;
+  private static Vertx vertx;
   private AutoCloseable mocks;
   private HttpClient client;
 
@@ -79,25 +71,10 @@ public class OrderHelperServiceTest {
   @BeforeClass
   public static void setUpClass() {
     vertx = Vertx.vertx();
-    cluster = provisionWith(defaultClusterConfig());
-    cluster.start();
-    String[] hostAndPort = cluster.getBrokerList().split(":");
-    kafkaConfig = KafkaConfig.builder()
-      .envId("env")
-      .kafkaHost(hostAndPort[0])
-      .kafkaPort(hostAndPort[1])
-      .maxRequestSize(1048576)
-      .build();
-
   }
 
   @AfterClass
   public static void tearDownClass(TestContext context) {
-    Async async = context.async();
-    vertx.close(ar -> {
-      cluster.stop();
-      async.complete();
-    });
 
   }
 
@@ -107,8 +84,6 @@ public class OrderHelperServiceTest {
 
     client = vertx.createHttpClient();
 
-    EventManager.clearEventHandlers();
-    EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, 1);
   }
 
   @After
@@ -118,7 +93,7 @@ public class OrderHelperServiceTest {
 
 
   @Test
-  public void shouldSendEventIfOrderActionProfileExistsAndCurrentProfileIsTheLastOne(TestContext testContext) throws InterruptedException {
+  public void shouldFillPayloadIfOrderActionProfileExistsAndCurrentProfileIsTheLastOne(TestContext testContext) throws InterruptedException {
     Async async = testContext.async();
 
     JobProfile jobProfile = new JobProfile()
@@ -194,26 +169,22 @@ public class OrderHelperServiceTest {
     WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(JOB_PROFILE_URL + "/.*"), true))
       .willReturn(WireMock.ok().withBody(Json.encode(profileSnapshotWrapper))));
 
-    orderHelperService = new OrderHelperServiceImpl(vertx, kafkaConfig, new ProfileSnapshotCache(vertx, client, 3600));
-
-
+    orderHelperService = new OrderHelperServiceImpl(new ProfileSnapshotCache(vertx, client, 3600));
     //when
-    Future<Void> future = orderHelperService.sendOrderPostProcessingEventIfNeeded(dataImportEventPayload, context);
+    Future<Void> future = orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload, context);
 
     // then
-    String observeTopic = formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), TENANT_ID, DI_ORDER_READY_FOR_POST_PROCESSING);
-    cluster.observeValues(ObserveKeyValues.on(observeTopic, 1)
-      .observeFor(30, TimeUnit.SECONDS)
-      .build());
 
     future.onComplete(ar -> {
       testContext.assertTrue(ar.succeeded());
+      assertEquals(dataImportEventPayload.getEventType(), "DI_ORDER_READY_FOR_POST_PROCESSING");
+      assertEquals(dataImportEventPayload.getContext().get("POST_PROCESSING"), "true");
       async.complete();
     });
   }
 
   @Test
-  public void shouldNotSendEventIfOrderActionProfileNotExistsAndCurrentProfileIsTheLastOne(TestContext testContext) throws InterruptedException {
+  public void shouldNotFillPayloadEventIfOrderActionProfileNotExistsAndCurrentProfileIsTheLastOne(TestContext testContext) throws InterruptedException {
     Async async = testContext.async();
 
     JobProfile jobProfile = new JobProfile()
@@ -289,24 +260,21 @@ public class OrderHelperServiceTest {
     WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(JOB_PROFILE_URL + "/.*"), true))
       .willReturn(WireMock.ok().withBody(Json.encode(profileSnapshotWrapper))));
 
-    orderHelperService = new OrderHelperServiceImpl(vertx, kafkaConfig, new ProfileSnapshotCache(vertx, client, 3600));
+    orderHelperService = new OrderHelperServiceImpl(new ProfileSnapshotCache(vertx, client, 3600));
     //when
-    Future<Void> future = orderHelperService.sendOrderPostProcessingEventIfNeeded(dataImportEventPayload, context);
+    Future<Void> future = orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload, context);
 
     // then
-    String observeTopic = formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), TENANT_ID, DI_ORDER_READY_FOR_POST_PROCESSING);
-    cluster.observeValues(ObserveKeyValues.on(observeTopic, 0)
-      .observeFor(30, TimeUnit.SECONDS)
-      .build());
-
     future.onComplete(ar -> {
       testContext.assertTrue(ar.succeeded());
+      assertEquals(dataImportEventPayload.getEventType(), "TEST_EVENT");
+      assertNull(dataImportEventPayload.getContext().get("POST_PROCESSING"));
       async.complete();
     });
   }
 
   @Test
-  public void shouldNotSendEventIfOrderActionProfileExistsAndCurrentProfileIsNotTheLastOne(TestContext testContext) throws InterruptedException {
+  public void shouldNotFillPayloadIfOrderActionProfileExistsAndCurrentProfileIsNotTheLastOne(TestContext testContext) throws InterruptedException {
     Async async = testContext.async();
 
     JobProfile jobProfile = new JobProfile()
@@ -382,19 +350,16 @@ public class OrderHelperServiceTest {
     WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(JOB_PROFILE_URL + "/.*"), true))
       .willReturn(WireMock.ok().withBody(Json.encode(profileSnapshotWrapper))));
 
-    orderHelperService = new OrderHelperServiceImpl(vertx, kafkaConfig, new ProfileSnapshotCache(vertx, client, 3600));
+    orderHelperService = new OrderHelperServiceImpl(new ProfileSnapshotCache(vertx, client, 3600));
 
     //when
-    Future<Void> future = orderHelperService.sendOrderPostProcessingEventIfNeeded(dataImportEventPayload, context);
+    Future<Void> future = orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload, context);
 
     // then
-    String observeTopic = formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), TENANT_ID, DI_ORDER_READY_FOR_POST_PROCESSING);
-    cluster.observeValues(ObserveKeyValues.on(observeTopic, 0)
-      .observeFor(30, TimeUnit.SECONDS)
-      .build());
-
     future.onComplete(ar -> {
       testContext.assertTrue(ar.succeeded());
+      assertEquals(dataImportEventPayload.getEventType(), "TEST_EVENT");
+      assertNull(dataImportEventPayload.getContext().get("POST_PROCESSING"));
       async.complete();
     });
   }

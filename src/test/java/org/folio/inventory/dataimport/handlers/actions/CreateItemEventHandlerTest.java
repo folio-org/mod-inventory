@@ -14,6 +14,7 @@ import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.ItemWriterFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.services.OrderHelperServiceImpl;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.Status;
@@ -88,6 +89,8 @@ public class CreateItemEventHandlerTest {
   private MappingMetadataCache mappingMetadataCache;
   @Mock
   private IdStorageService itemIdStorageService;
+  @Mock
+  private OrderHelperServiceImpl orderHelperService;
   @Spy
   private MarcBibReaderFactory fakeReaderFactory = new MarcBibReaderFactory();
 
@@ -146,8 +149,9 @@ public class CreateItemEventHandlerTest {
         .withMappingRules(new JsonObject().encode())
         .withMappingParams(Json.encode(new MappingParameters())))));
 
-    createItemHandler = new CreateItemEventHandler(mockedStorage, mappingMetadataCache, itemIdStorageService, null);
+    createItemHandler = new CreateItemEventHandler(mockedStorage, mappingMetadataCache, itemIdStorageService, orderHelperService);
     MappingManager.clearReaderFactories();
+    when(orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(any(), any())).thenReturn(Future.succeededFuture());
   }
 
   @Test
@@ -384,7 +388,7 @@ public class CreateItemEventHandlerTest {
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new ItemWriterFactory());
 
-    CreateItemEventHandler createItemHandler = new CreateItemEventHandler(mockedStorage, mappingMetadataCache, itemIdStorageService, null);
+    CreateItemEventHandler createItemHandler = new CreateItemEventHandler(mockedStorage, mappingMetadataCache, itemIdStorageService, orderHelperService);
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_HOLDING_ID));
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
@@ -578,7 +582,7 @@ public class CreateItemEventHandlerTest {
   @Test
   public void shouldReturnFailedFutureWhenCurrentActionProfileHasNoMappingProfile() {
     // given
-    CreateItemEventHandler createItemHandler = new CreateItemEventHandler(mockedStorage, mappingMetadataCache, itemIdStorageService, null);
+    CreateItemEventHandler createItemHandler = new CreateItemEventHandler(mockedStorage, mappingMetadataCache, itemIdStorageService, orderHelperService);
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_HOLDING_ID));
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(record));

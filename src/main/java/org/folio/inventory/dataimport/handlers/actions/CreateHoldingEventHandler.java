@@ -1,6 +1,5 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
@@ -122,9 +121,12 @@ public class CreateHoldingEventHandler implements EventHandler {
               LOGGER.info("Created Holding record by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}'",
                 jobExecutionId, recordId, chunkId);
               payloadContext.put(HOLDINGS.value(), Json.encodePrettily(createdHoldings));
-              future.complete(dataImportEventPayload);
+              orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload, context)
+                .onComplete(result -> {
+                    future.complete(dataImportEventPayload);
+                  }
+                );
             })
-            .compose(e -> orderHelperService.sendOrderPostProcessingEventIfNeeded(dataImportEventPayload, context))
             .onFailure(e -> {
               if (!(e instanceof DuplicateEventException)) {
                 LOGGER.error("Error creating inventory Holding record by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
