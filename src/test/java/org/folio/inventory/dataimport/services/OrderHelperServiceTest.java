@@ -26,7 +26,6 @@ import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -39,7 +38,6 @@ import java.util.HashMap;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.rest.jaxrs.model.EntityType.HOLDINGS;
 import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
@@ -71,11 +69,6 @@ public class OrderHelperServiceTest {
   @BeforeClass
   public static void setUpClass() {
     vertx = Vertx.vertx();
-  }
-
-  @AfterClass
-  public static void tearDownClass(TestContext context) {
-
   }
 
   @Before
@@ -151,7 +144,7 @@ public class OrderHelperServiceTest {
               .withProfileId(instanceMappingProfile.getId())
               .withContentType(MAPPING_PROFILE)
               .withContent(JsonObject.mapFrom(instanceMappingProfile).getMap())))
-        ));
+      ));
 
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
@@ -177,14 +170,14 @@ public class OrderHelperServiceTest {
 
     future.onComplete(ar -> {
       testContext.assertTrue(ar.succeeded());
-      assertEquals(dataImportEventPayload.getEventType(), "DI_ORDER_READY_FOR_POST_PROCESSING");
-      assertEquals(dataImportEventPayload.getContext().get("POST_PROCESSING"), "true");
+      assertEquals(dataImportEventPayload.getEventType(), "DI_ORDER_CREATED_READY_FOR_POST_PROCESSING");
+      assertEquals(dataImportEventPayload.getEventsChain().get(0), "DI_INVENTORY_INSTANCE_CREATED");
       async.complete();
     });
   }
 
   @Test
-  public void shouldNotFillPayloadEventIfOrderActionProfileNotExistsAndCurrentProfileIsTheLastOne(TestContext testContext) throws InterruptedException {
+  public void shouldNotFillPayloadEventIfOrderActionProfileNotExistsAndCurrentProfileIsTheLastOne(TestContext testContext) {
     Async async = testContext.async();
 
     JobProfile jobProfile = new JobProfile()
@@ -268,13 +261,13 @@ public class OrderHelperServiceTest {
     future.onComplete(ar -> {
       testContext.assertTrue(ar.succeeded());
       assertEquals(dataImportEventPayload.getEventType(), "TEST_EVENT");
-      assertNull(dataImportEventPayload.getContext().get("POST_PROCESSING"));
+      assertEquals(dataImportEventPayload.getEventsChain().size(), 0);
       async.complete();
     });
   }
 
   @Test
-  public void shouldNotFillPayloadIfOrderActionProfileExistsAndCurrentProfileIsNotTheLastOne(TestContext testContext) throws InterruptedException {
+  public void shouldNotFillPayloadIfOrderActionProfileExistsAndCurrentProfileIsNotTheLastOne(TestContext testContext) {
     Async async = testContext.async();
 
     JobProfile jobProfile = new JobProfile()
@@ -359,7 +352,7 @@ public class OrderHelperServiceTest {
     future.onComplete(ar -> {
       testContext.assertTrue(ar.succeeded());
       assertEquals(dataImportEventPayload.getEventType(), "TEST_EVENT");
-      assertNull(dataImportEventPayload.getContext().get("POST_PROCESSING"));
+      assertEquals(dataImportEventPayload.getEventsChain().size(), 0);
       async.complete();
     });
   }
