@@ -69,7 +69,7 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
         return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
       }
 
-      LOGGER.info("Processing ReplaceInstanceEventHandler starting with jobExecutionId: {}.", dataImportEventPayload.getJobExecutionId());
+      LOGGER.info("Processing starting with jobExecutionId: {}.", dataImportEventPayload.getJobExecutionId());
 
       Record record = new JsonObject(payloadContext.get(MARC_BIBLIOGRAPHIC.value())).mapTo(Record.class);
       String instanceId = ParsedRecordUtil.getAdditionalSubfieldValue(record.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.I);
