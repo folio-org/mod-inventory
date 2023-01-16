@@ -80,7 +80,7 @@ public class InstanceUpdateDelegate {
     instanceCollection.findById(instanceId, success -> {
         if (success.getResult() == null) {
           LOGGER.error("Can't find Instance by id: {} ", instanceId);
-          promise.fail(new NotFoundException(format("Can't find Instance by id: %s ", instanceId)));
+          promise.fail(new NotFoundException(format("Can't find Instance by id: %s", instanceId)));
         } else {
           promise.complete(success.getResult());
         }

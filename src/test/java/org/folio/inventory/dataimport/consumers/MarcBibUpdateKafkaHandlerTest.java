@@ -2,12 +2,15 @@ package org.folio.inventory.dataimport.consumers;
 
 import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
 import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
+import static org.folio.LinkUpdateReport.Status.FAIL;
+import static org.folio.LinkUpdateReport.Status.SUCCESS;
 import static org.folio.inventory.EntityLinksKafkaTopic.LINKS_STATS;
-import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_INSTANCE_UPDATED;
 import static org.folio.kafka.KafkaTopicNameHelper.formatTopicName;
 import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
+import static org.mockito.AdditionalMatchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -22,8 +25,7 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -31,6 +33,8 @@ import java.util.function.Consumer;
 
 import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
 import net.mguenther.kafka.junit.ObserveKeyValues;
+import net.mguenther.kafka.junit.ReadKeyValues;
+import org.folio.LinkUpdateReport;
 import org.folio.MappingMetadataDto;
 import org.folio.MarcBibUpdate;
 import org.folio.inventory.TestUtil;
@@ -43,11 +47,10 @@ import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.KafkaConfig;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
-import org.folio.rest.jaxrs.model.Event;
-import org.folio.rest.jaxrs.model.ParsedRecordDto;
 import org.folio.rest.jaxrs.model.Record;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -60,6 +63,7 @@ import org.mockito.MockitoAnnotations;
 public class MarcBibUpdateKafkaHandlerTest {
 
   private static final String TENANT_ID = "test";
+  private static final String INVALID_INSTANCE_ID = "02e54bce-9588-11ed-a1eb-0242ac120002";
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/bib-rules.json";
   private static final String RECORD_PATH = "src/test/resources/handlers/bib-record.json";
   private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
@@ -113,9 +117,15 @@ public class MarcBibUpdateKafkaHandlerTest {
 
     doAnswer(invocationOnMock -> {
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(null));
+      return null;
+    }).when(mockedInstanceCollection).findById(eq(INVALID_INSTANCE_ID), any(), any());
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(existingInstance));
       return null;
-    }).when(mockedInstanceCollection).findById(anyString(), any(), any());
+    }).when(mockedInstanceCollection).findById(not(eq(INVALID_INSTANCE_ID)), any(), any());
 
     doAnswer(invocationOnMock -> {
       Instance instance = invocationOnMock.getArgument(0);
@@ -223,12 +233,14 @@ public class MarcBibUpdateKafkaHandlerTest {
   }
 
   @Test
-  public void shouldSendSuccessLinkReportEvent(TestContext context) throws InterruptedException {
+  public void shouldSendSuccessLinkReportEvent() throws InterruptedException {
     // given
-    Async async = context.async();
+    var topic = formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), TENANT_ID, LINKS_STATS.topicName());
+    var expectedReportsCount = cluster.readValues(ReadKeyValues.from(topic)).size() + 1;
+
     MarcBibUpdate payload = new MarcBibUpdate()
       .withRecord(Json.encode(record))
-      .withLinkIds(null)
+      .withLinkIds(List.of(1, 2, 3))
       .withType(MarcBibUpdate.Type.UPDATE)
       .withTenant(TENANT_ID)
       .withJobId(UUID.randomUUID().toString());
@@ -238,28 +250,38 @@ public class MarcBibUpdateKafkaHandlerTest {
     when(kafkaRecord.value()).thenReturn(Json.encode(payload));
 
     // when
-    Future<String> future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
+    marcBibUpdateKafkaHandler.handle(kafkaRecord);
 
     // then
-    String observeTopic =
-      formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), TENANT_ID, LINKS_STATS.topicName());
-    cluster.observeValues(ObserveKeyValues.on(observeTopic, 1)
+    var reports = cluster.observeValues(ObserveKeyValues.on(topic, expectedReportsCount)
       .observeFor(30, TimeUnit.SECONDS)
       .build());
-    future.onComplete(ar -> {
-      context.assertTrue(ar.succeeded());
-      context.assertEquals(expectedKafkaRecordKey, ar.result());
-      async.complete();
-    });
+
+    var report = reports.stream()
+      .map(value -> new JsonObject(value).mapTo(LinkUpdateReport.class))
+      .filter(event -> payload.getJobId().equals(event.getJobId()))
+      .findAny()
+      .orElse(null);
+
+    Assert.assertNotNull(report);
+    Assert.assertEquals(record.getId(), report.getInstanceId());
+    Assert.assertEquals(SUCCESS, report.getStatus());
+    Assert.assertEquals(payload.getLinkIds(), report.getLinkIds());
+    Assert.assertEquals(payload.getTenant(), report.getTenant());
+    Assert.assertNull(report.getFailCause());
   }
 
   @Test
-  public void shouldSendFailedLinkReportEvent(TestContext context) throws InterruptedException {
+  public void shouldSendFailedLinkReportEvent() throws InterruptedException {
     // given
-    Async async = context.async();
+    var topic = formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), TENANT_ID, LINKS_STATS.topicName());
+    var expectedReportsCount = cluster.readValues(ReadKeyValues.from(topic)).size() + 1;
+
+    record.setId(INVALID_INSTANCE_ID);
+    record.getExternalIdsHolder().setInstanceId(INVALID_INSTANCE_ID);
     MarcBibUpdate payload = new MarcBibUpdate()
       .withRecord(Json.encode(record))
-      .withLinkIds(null)
+      .withLinkIds(List.of(1, 3))
       .withType(MarcBibUpdate.Type.UPDATE)
       .withTenant(TENANT_ID)
       .withJobId(UUID.randomUUID().toString());
@@ -269,18 +291,24 @@ public class MarcBibUpdateKafkaHandlerTest {
     when(kafkaRecord.value()).thenReturn(Json.encode(payload));
 
     // when
-    Future<String> future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
+    marcBibUpdateKafkaHandler.handle(kafkaRecord);
 
     // then
-    String observeTopic =
-      formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), TENANT_ID, LINKS_STATS.topicName());
-    cluster.observeValues(ObserveKeyValues.on(observeTopic, 1)
+    var reports = cluster.observeValues(ObserveKeyValues.on(topic, expectedReportsCount)
       .observeFor(30, TimeUnit.SECONDS)
       .build());
-    future.onComplete(ar -> {
-      context.assertTrue(ar.succeeded());
-      context.assertEquals(expectedKafkaRecordKey, ar.result());
-      async.complete();
-    });
+
+    var report = reports.stream()
+      .map(value -> new JsonObject(value).mapTo(LinkUpdateReport.class))
+      .filter(event -> payload.getJobId().equals(event.getJobId()))
+      .findAny()
+      .orElse(null);
+
+    Assert.assertNotNull(report);
+    Assert.assertEquals(record.getId(), report.getInstanceId());
+    Assert.assertEquals(FAIL, report.getStatus());
+    Assert.assertEquals(payload.getTenant(), report.getTenant());
+    Assert.assertEquals(payload.getLinkIds(), report.getLinkIds());
+    Assert.assertEquals("Can't find Instance by id: " + record.getId(), report.getFailCause());
   }
 }
