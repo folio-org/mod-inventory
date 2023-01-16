@@ -153,7 +153,7 @@ public class CreateItemEventHandler implements EventHandler {
           .onComplete(ar -> {
             if (ar.succeeded()) {
               dataImportEventPayload.getContext().put(ITEM.value(), Json.encode(ar.result()));
-              orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload, context)
+              orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload, DI_INVENTORY_ITEM_CREATED, context)
                 .onComplete(result -> {
                     future.complete(dataImportEventPayload);
                   }

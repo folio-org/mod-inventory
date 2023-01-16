@@ -121,7 +121,7 @@ public class CreateHoldingEventHandler implements EventHandler {
               LOGGER.info("Created Holding record by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}'",
                 jobExecutionId, recordId, chunkId);
               payloadContext.put(HOLDINGS.value(), Json.encodePrettily(createdHoldings));
-              orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload, context)
+              orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload, DI_INVENTORY_HOLDING_CREATED, context)
                 .onComplete(result -> {
                     future.complete(dataImportEventPayload);
                   }

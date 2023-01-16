@@ -151,7 +151,7 @@ public class CreateItemEventHandlerTest {
 
     createItemHandler = new CreateItemEventHandler(mockedStorage, mappingMetadataCache, itemIdStorageService, orderHelperService);
     MappingManager.clearReaderFactories();
-    when(orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(any(), any())).thenReturn(Future.succeededFuture());
+    when(orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(any(), any(), any())).thenReturn(Future.succeededFuture());
   }
 
   @Test

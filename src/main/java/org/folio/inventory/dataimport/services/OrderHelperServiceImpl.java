@@ -7,6 +7,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
+import org.folio.DataImportEventTypes;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
 import org.folio.processing.exceptions.EventProcessingException;
@@ -35,13 +36,13 @@ public class OrderHelperServiceImpl implements OrderHelperService {
     this.profileSnapshotCache = profileSnapshotCache;
   }
 
-  public Future<Void> fillPayloadForOrderPostProcessingIfNeeded(DataImportEventPayload eventPayload, Context context) {
+  public Future<Void> fillPayloadForOrderPostProcessingIfNeeded(DataImportEventPayload eventPayload, DataImportEventTypes targetEventType, Context context) {
     Promise<Void> promise = Promise.promise();
     String jobProfileSnapshotId = eventPayload.getContext().get(JOB_PROFILE_SNAPSHOT_ID);
     profileSnapshotCache.get(jobProfileSnapshotId, context)
       .toCompletionStage()
       .thenCompose(snapshotOptional -> snapshotOptional
-        .map(profileSnapshot -> checkIfOrderLogicExistsAndFillPayloadIfNeeded(eventPayload, profileSnapshot))
+        .map(profileSnapshot -> checkIfOrderLogicExistsAndFillPayloadIfNeeded(eventPayload, targetEventType, profileSnapshot))
         .orElse(CompletableFuture.failedFuture((new EventProcessingException(format("Job profile snapshot with id '%s' does not exist", eventPayload.getContext().get("JOB_PROFILE_SNAPSHOT_ID")))))))
       .whenComplete((processed, throwable) -> {
         if (throwable != null) {
@@ -55,7 +56,7 @@ public class OrderHelperServiceImpl implements OrderHelperService {
     return promise.future();
   }
 
-  private CompletableFuture<Void> checkIfOrderLogicExistsAndFillPayloadIfNeeded(DataImportEventPayload eventPayload, ProfileSnapshotWrapper profileSnapshotWrapper) {
+  private CompletableFuture<Void> checkIfOrderLogicExistsAndFillPayloadIfNeeded(DataImportEventPayload eventPayload, DataImportEventTypes targetEventType, ProfileSnapshotWrapper profileSnapshotWrapper) {
     List<ProfileSnapshotWrapper> actionProfiles = profileSnapshotWrapper
       .getChildSnapshotWrappers()
       .stream()
@@ -63,7 +64,7 @@ public class OrderHelperServiceImpl implements OrderHelperService {
       .collect(Collectors.toList());
 
     if (!actionProfiles.isEmpty() && checkIfOrderActionProfileExists(actionProfiles) && checkIfCurrentProfileIsTheLastOne(eventPayload, actionProfiles)) {
-      eventPayload.getEventsChain().add(DI_INVENTORY_INSTANCE_CREATED.value());
+      eventPayload.getEventsChain().add(targetEventType.value());
       eventPayload.setEventType(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value());
     }
     return CompletableFuture.completedFuture(null);

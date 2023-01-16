@@ -161,7 +161,7 @@ public class CreateHoldingEventHandlerTest {
         .withMappingRules(new JsonObject().encode())
         .withMappingParams(Json.encode(new MappingParameters())))));
 
-    when(orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(any(), any())).thenReturn(Future.succeededFuture());
+    when(orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(any(), any(), any())).thenReturn(Future.succeededFuture());
   }
 
   @Test

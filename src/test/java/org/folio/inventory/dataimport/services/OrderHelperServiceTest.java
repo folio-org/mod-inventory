@@ -39,6 +39,7 @@ import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static org.folio.ActionProfile.Action.CREATE;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
 import static org.folio.rest.jaxrs.model.EntityType.HOLDINGS;
 import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
@@ -164,7 +165,7 @@ public class OrderHelperServiceTest {
 
     orderHelperService = new OrderHelperServiceImpl(new ProfileSnapshotCache(vertx, client, 3600));
     //when
-    Future<Void> future = orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload, context);
+    Future<Void> future = orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload, DI_INVENTORY_INSTANCE_CREATED, context);
 
     // then
 
@@ -255,7 +256,7 @@ public class OrderHelperServiceTest {
 
     orderHelperService = new OrderHelperServiceImpl(new ProfileSnapshotCache(vertx, client, 3600));
     //when
-    Future<Void> future = orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload, context);
+    Future<Void> future = orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload, DI_INVENTORY_INSTANCE_CREATED, context);
 
     // then
     future.onComplete(ar -> {
@@ -346,7 +347,7 @@ public class OrderHelperServiceTest {
     orderHelperService = new OrderHelperServiceImpl(new ProfileSnapshotCache(vertx, client, 3600));
 
     //when
-    Future<Void> future = orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload, context);
+    Future<Void> future = orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload, DI_INVENTORY_INSTANCE_CREATED, context);
 
     // then
     future.onComplete(ar -> {
