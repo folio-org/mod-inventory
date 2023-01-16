@@ -55,18 +55,19 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
 
   private final InstanceUpdateDelegate instanceUpdateDelegate;
   private final MappingMetadataCache mappingMetadataCache;
-  private final KafkaConfig kafkaConfig;
   private final KafkaProducer<String, String> producer;
+  private final KafkaConfig kafkaConfig;
+  private final Vertx vertx;
   private final int maxDistributionNumber;
 
-  public MarcBibUpdateKafkaHandler(InstanceUpdateDelegate instanceUpdateDelegate,
-                                   MappingMetadataCache mappingMetadataCache,
-                                   int maxDistributionNumber,
-                                   KafkaConfig kafkaConfig) {
+  public MarcBibUpdateKafkaHandler(Vertx vertx, int maxDistributionNumber, KafkaConfig kafkaConfig,
+                                   InstanceUpdateDelegate instanceUpdateDelegate,
+                                   MappingMetadataCache mappingMetadataCache) {
+    this.vertx = vertx;
+    this.kafkaConfig = kafkaConfig;
     this.instanceUpdateDelegate = instanceUpdateDelegate;
     this.maxDistributionNumber = maxDistributionNumber;
     this.mappingMetadataCache = mappingMetadataCache;
-    this.kafkaConfig = kafkaConfig;
 
     producer = createProducer(LINKS_STATS.topicName(), kafkaConfig);
   }
@@ -150,7 +151,7 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
 
   private KafkaProducer<String, String> createProducer(String eventType, KafkaConfig kafkaConfig) {
     String producerName = eventType + "_Producer";
-    return KafkaProducer.createShared(Vertx.currentContext().owner(), producerName, kafkaConfig.getProducerProps());
+    return KafkaProducer.createShared(vertx, producerName, kafkaConfig.getProducerProps());
   }
 
   private LinkUpdateReport mapToLinkReport(MarcBibUpdate marcBibUpdate, String instanceId, String errMessage) {

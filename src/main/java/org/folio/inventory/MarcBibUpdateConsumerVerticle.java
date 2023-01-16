@@ -27,6 +27,7 @@ public class MarcBibUpdateConsumerVerticle extends AbstractVerticle {
   private static final Logger LOGGER = LogManager.getLogger(MarcBibUpdateConsumerVerticle.class);
   private static final GlobalLoadSensor GLOBAL_LOAD_SENSOR = new GlobalLoadSensor();
   private static final String SRS_MARC_BIB_TOPIC_NAME = "srs.marc-bib";
+  private static final String METADATA_EXPIRATION_TIME = "inventory.mapping-metadata-cache.expiration.time.seconds";
   private final int loadLimit = getLoadLimit();
   private KafkaConsumerWrapper<String, String> marcBibUpdateConsumerWrapper;
 
@@ -34,15 +35,17 @@ public class MarcBibUpdateConsumerVerticle extends AbstractVerticle {
   public void start(Promise<Void> startPromise) {
     JsonObject config = vertx.getOrCreateContext().config();
     KafkaConfig kafkaConfig = getKafkaConfig(config);
-    marcBibUpdateConsumerWrapper = createConsumer(kafkaConfig, SRS_MARC_BIB_TOPIC_NAME);
+
     HttpClient client = vertx.createHttpClient();
     Storage storage = Storage.basedUpon(config, client);
     InstanceUpdateDelegate instanceUpdateDelegate = new InstanceUpdateDelegate(storage);
-    String mappingMetadataExpirationTime = getCacheEnvVariable(config,"inventory.mapping-metadata-cache.expiration.time.seconds");
+
+    var mappingMetadataExpirationTime = getCacheEnvVariable(config, METADATA_EXPIRATION_TIME);
     MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, client, Long.parseLong(mappingMetadataExpirationTime));
 
-    MarcBibUpdateKafkaHandler marcBibUpdateKafkaHandler = new MarcBibUpdateKafkaHandler(instanceUpdateDelegate, mappingMetadataCache,  getMaxDistributionNumber(), kafkaConfig);
+    var marcBibUpdateKafkaHandler = new MarcBibUpdateKafkaHandler(vertx, getMaxDistributionNumber(), kafkaConfig, instanceUpdateDelegate, mappingMetadataCache);
 
+    marcBibUpdateConsumerWrapper = createConsumer(kafkaConfig, SRS_MARC_BIB_TOPIC_NAME);
     marcBibUpdateConsumerWrapper.start(marcBibUpdateKafkaHandler, constructModuleName())
       .onFailure(startPromise::fail)
       .onSuccess(ar -> startPromise.complete());

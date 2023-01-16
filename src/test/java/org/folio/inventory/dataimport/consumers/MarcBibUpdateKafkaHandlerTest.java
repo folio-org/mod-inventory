@@ -1,12 +1,28 @@
 package org.folio.inventory.dataimport.consumers;
 
+import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
+import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
+import java.io.IOException;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.function.Consumer;
+
+import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
 import org.folio.MappingMetadataDto;
 import org.folio.MarcBibUpdate;
 import org.folio.inventory.TestUtil;
@@ -17,30 +33,17 @@ import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
+import org.folio.kafka.KafkaConfig;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.Record;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
-
-import java.io.IOException;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.function.Consumer;
-
-import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
-import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
-import static org.folio.inventory.dataimport.consumers.DataImportKafkaHandlerTest.cluster;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @RunWith(VertxUnitRunner.class)
 public class MarcBibUpdateKafkaHandlerTest {
@@ -48,7 +51,9 @@ public class MarcBibUpdateKafkaHandlerTest {
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/bib-rules.json";
   private static final String RECORD_PATH = "src/test/resources/handlers/bib-record.json";
   private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
-  private static org.folio.kafka.KafkaConfig kafkaConfig;
+  private static EmbeddedKafkaCluster cluster;
+  private static KafkaConfig kafkaConfig;
+  private static final Vertx vertx = Vertx.vertx();
   @Mock
   private Storage mockedStorage;
   @Mock
@@ -62,22 +67,25 @@ public class MarcBibUpdateKafkaHandlerTest {
   private MarcBibUpdateKafkaHandler marcBibUpdateKafkaHandler;
   private AutoCloseable mocks;
 
+  @BeforeClass
+  public static void beforeClass() {
+    cluster = provisionWith(defaultClusterConfig());
+    cluster.start();
+    String[] hostAndPort = cluster.getBrokerList().split(":");
+    kafkaConfig = KafkaConfig.builder()
+      .envId("env")
+      .kafkaHost(hostAndPort[0])
+      .kafkaPort(hostAndPort[1])
+      .maxRequestSize(1048576)
+      .build();
+  }
+
   @Before
   public void setUp() throws IOException {
     JsonObject mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
     existingInstance = Instance.fromJson(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
     record = Json.decodeValue(TestUtil.readFileFromPath(RECORD_PATH), Record.class);
     record.getParsedRecord().withContent(JsonObject.mapFrom(record.getParsedRecord().getContent()).encode());
-
-    cluster = provisionWith(defaultClusterConfig());
-    cluster.start();
-    String[] hostAndPort = cluster.getBrokerList().split(":");
-
-    kafkaConfig = org.folio.kafka.KafkaConfig.builder()
-      .kafkaHost(hostAndPort[0])
-      .kafkaPort(hostAndPort[1])
-      .maxRequestSize(1048576)
-      .build();
 
     mocks = MockitoAnnotations.openMocks(this);
     when(mockedStorage.getInstanceCollection(any(Context.class))).thenReturn(mockedInstanceCollection);
@@ -100,7 +108,7 @@ public class MarcBibUpdateKafkaHandlerTest {
         .withMappingRules(mappingRules.encode())
         .withMappingParams(Json.encode(new MappingParameters())))));
 
-    marcBibUpdateKafkaHandler = new MarcBibUpdateKafkaHandler(new InstanceUpdateDelegate(mockedStorage), mappingMetadataCache, 100, kafkaConfig);
+    marcBibUpdateKafkaHandler = new MarcBibUpdateKafkaHandler(vertx, 100, kafkaConfig, new InstanceUpdateDelegate(mockedStorage), mappingMetadataCache);
   }
 
   @After
