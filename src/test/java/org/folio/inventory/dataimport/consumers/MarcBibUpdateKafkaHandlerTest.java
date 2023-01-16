@@ -1,12 +1,5 @@
 package org.folio.inventory.dataimport.consumers;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
@@ -14,17 +7,13 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
-import java.io.IOException;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.function.Consumer;
 import org.folio.MappingMetadataDto;
+import org.folio.MarcBibUpdate;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
-import org.folio.inventory.domain.dto.InstanceEvent;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
@@ -38,12 +27,28 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
+import java.io.IOException;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.function.Consumer;
+
+import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
+import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
+import static org.folio.inventory.dataimport.consumers.DataImportKafkaHandlerTest.cluster;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 @RunWith(VertxUnitRunner.class)
 public class MarcBibUpdateKafkaHandlerTest {
 
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/bib-rules.json";
   private static final String RECORD_PATH = "src/test/resources/handlers/bib-record.json";
   private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
+  private static org.folio.kafka.KafkaConfig kafkaConfig;
   @Mock
   private Storage mockedStorage;
   @Mock
@@ -63,6 +68,16 @@ public class MarcBibUpdateKafkaHandlerTest {
     existingInstance = Instance.fromJson(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
     record = Json.decodeValue(TestUtil.readFileFromPath(RECORD_PATH), Record.class);
     record.getParsedRecord().withContent(JsonObject.mapFrom(record.getParsedRecord().getContent()).encode());
+
+    cluster = provisionWith(defaultClusterConfig());
+    cluster.start();
+    String[] hostAndPort = cluster.getBrokerList().split(":");
+
+    kafkaConfig = org.folio.kafka.KafkaConfig.builder()
+      .kafkaHost(hostAndPort[0])
+      .kafkaPort(hostAndPort[1])
+      .maxRequestSize(1048576)
+      .build();
 
     mocks = MockitoAnnotations.openMocks(this);
     when(mockedStorage.getInstanceCollection(any(Context.class))).thenReturn(mockedInstanceCollection);
@@ -85,7 +100,7 @@ public class MarcBibUpdateKafkaHandlerTest {
         .withMappingRules(mappingRules.encode())
         .withMappingParams(Json.encode(new MappingParameters())))));
 
-    marcBibUpdateKafkaHandler = new MarcBibUpdateKafkaHandler(new InstanceUpdateDelegate(mockedStorage), mappingMetadataCache);
+    marcBibUpdateKafkaHandler = new MarcBibUpdateKafkaHandler(new InstanceUpdateDelegate(mockedStorage), mappingMetadataCache, 100, kafkaConfig);
   }
 
   @After
@@ -97,9 +112,10 @@ public class MarcBibUpdateKafkaHandlerTest {
   public void shouldReturnSucceededFutureWithObtainedRecordKey(TestContext context) {
     // given
     Async async = context.async();
-    InstanceEvent payload = new InstanceEvent()
+    MarcBibUpdate payload = new MarcBibUpdate()
       .withRecord(Json.encode(record))
-      .withType(InstanceEvent.EventType.UPDATE)
+      .withLinkIds(null)
+      .withType(MarcBibUpdate.Type.UPDATE)
       .withTenant("diku")
       .withJobId(UUID.randomUUID().toString());
 
@@ -129,9 +145,9 @@ public class MarcBibUpdateKafkaHandlerTest {
     Mockito.when(mappingMetadataCache.getByRecordType(anyString(), any(Context.class), anyString()))
       .thenReturn(Future.succeededFuture(Optional.empty()));
 
-    InstanceEvent payload = new InstanceEvent()
+    MarcBibUpdate payload = new MarcBibUpdate()
       .withRecord(Json.encode(record))
-      .withType(InstanceEvent.EventType.UPDATE)
+      .withType(MarcBibUpdate.Type.UPDATE)
       .withTenant("diku")
       .withJobId(UUID.randomUUID().toString());
     when(kafkaRecord.value()).thenReturn(Json.encode(payload));
@@ -155,9 +171,9 @@ public class MarcBibUpdateKafkaHandlerTest {
   public void shouldReturnFailedFutureWhenPayloadCanNotBeMapped(TestContext context) {
     // given
     Async async = context.async();
-    InstanceEvent payload = new InstanceEvent()
+    MarcBibUpdate payload = new MarcBibUpdate()
       .withRecord("")
-      .withType(InstanceEvent.EventType.UPDATE)
+      .withType(MarcBibUpdate.Type.UPDATE)
       .withTenant("diku")
       .withJobId(UUID.randomUUID().toString());
     when(kafkaRecord.value()).thenReturn(Json.encode(payload));

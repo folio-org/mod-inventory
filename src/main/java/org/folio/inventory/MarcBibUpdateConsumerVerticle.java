@@ -41,7 +41,7 @@ public class MarcBibUpdateConsumerVerticle extends AbstractVerticle {
     String mappingMetadataExpirationTime = getCacheEnvVariable(config,"inventory.mapping-metadata-cache.expiration.time.seconds");
     MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, client, Long.parseLong(mappingMetadataExpirationTime));
 
-    MarcBibUpdateKafkaHandler marcBibUpdateKafkaHandler = new MarcBibUpdateKafkaHandler(instanceUpdateDelegate, mappingMetadataCache);
+    MarcBibUpdateKafkaHandler marcBibUpdateKafkaHandler = new MarcBibUpdateKafkaHandler(instanceUpdateDelegate, mappingMetadataCache,  getMaxDistributionNumber(), kafkaConfig);
 
     marcBibUpdateConsumerWrapper.start(marcBibUpdateKafkaHandler, constructModuleName())
       .onFailure(startPromise::fail)
@@ -72,6 +72,10 @@ public class MarcBibUpdateConsumerVerticle extends AbstractVerticle {
 
   private int getLoadLimit() {
     return Integer.parseInt(System.getProperty("inventory.kafka.MarcBibUpdateConsumer.loadLimit","5"));
+  }
+
+  private int getMaxDistributionNumber() {
+    return Integer.parseInt(System.getProperty("inventory.kafka.MarcBibUpdateConsumer.maxDistributionNumber", "100"));
   }
 
   private KafkaConfig getKafkaConfig(JsonObject config) {
