@@ -1,10 +1,14 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "description": "Marc bib update event, caused by linked authority update, schema",
+  "description": "Link update report",
   "type": "object",
   "properties": {
     "jobId": {
       "description": "Data import job id, UUID",
+      "$ref": "uuid.json"
+    },
+    "instanceId": {
+      "description": "Instance id, UUID",
       "$ref": "uuid.json"
     },
     "linkIds": {
@@ -14,16 +18,16 @@
         "type": "integer"
       }
     },
-    "record": {
+    "failCause": {
       "description": "Marc bib record",
       "type": "string"
     },
-    "type": {
-      "description": "Marc bib event type",
+    "status": {
+      "description": "Link update status",
       "type": "string",
       "enum": [
-        "UPDATE",
-        "DELETE"
+        "SUCCESS",
+        "FAIL"
       ]
     },
     "tenant": {
