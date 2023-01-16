@@ -2,6 +2,10 @@ package org.folio.inventory.dataimport.consumers;
 
 import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
 import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
+import static org.folio.inventory.EntityLinksKafkaTopic.LINKS_STATS;
+import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_INSTANCE_UPDATED;
+import static org.folio.kafka.KafkaTopicNameHelper.formatTopicName;
+import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -18,11 +22,15 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
+import net.mguenther.kafka.junit.ObserveKeyValues;
 import org.folio.MappingMetadataDto;
 import org.folio.MarcBibUpdate;
 import org.folio.inventory.TestUtil;
@@ -35,8 +43,11 @@ import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.KafkaConfig;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
+import org.folio.rest.jaxrs.model.Event;
+import org.folio.rest.jaxrs.model.ParsedRecordDto;
 import org.folio.rest.jaxrs.model.Record;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -48,6 +59,7 @@ import org.mockito.MockitoAnnotations;
 @RunWith(VertxUnitRunner.class)
 public class MarcBibUpdateKafkaHandlerTest {
 
+  private static final String TENANT_ID = "test";
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/bib-rules.json";
   private static final String RECORD_PATH = "src/test/resources/handlers/bib-record.json";
   private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
@@ -78,6 +90,15 @@ public class MarcBibUpdateKafkaHandlerTest {
       .kafkaPort(hostAndPort[1])
       .maxRequestSize(1048576)
       .build();
+  }
+
+  @AfterClass
+  public static void tearDownClass(TestContext context) {
+    Async async = context.async();
+    vertx.close(ar -> {
+      cluster.stop();
+      async.complete();
+    });
   }
 
   @Before
@@ -124,7 +145,7 @@ public class MarcBibUpdateKafkaHandlerTest {
       .withRecord(Json.encode(record))
       .withLinkIds(null)
       .withType(MarcBibUpdate.Type.UPDATE)
-      .withTenant("diku")
+      .withTenant(TENANT_ID)
       .withJobId(UUID.randomUUID().toString());
 
     String expectedKafkaRecordKey = "test_key";
@@ -156,7 +177,7 @@ public class MarcBibUpdateKafkaHandlerTest {
     MarcBibUpdate payload = new MarcBibUpdate()
       .withRecord(Json.encode(record))
       .withType(MarcBibUpdate.Type.UPDATE)
-      .withTenant("diku")
+      .withTenant(TENANT_ID)
       .withJobId(UUID.randomUUID().toString());
     when(kafkaRecord.value()).thenReturn(Json.encode(payload));
 
@@ -182,7 +203,7 @@ public class MarcBibUpdateKafkaHandlerTest {
     MarcBibUpdate payload = new MarcBibUpdate()
       .withRecord("")
       .withType(MarcBibUpdate.Type.UPDATE)
-      .withTenant("diku")
+      .withTenant(TENANT_ID)
       .withJobId(UUID.randomUUID().toString());
     when(kafkaRecord.value()).thenReturn(Json.encode(payload));
 
@@ -199,5 +220,67 @@ public class MarcBibUpdateKafkaHandlerTest {
     verify(mockedInstanceCollection, times(0)).findById(anyString(), any(), any());
     verify(mockedInstanceCollection, times(0)).update(any(Instance.class), any(), any());
     verify(mappingMetadataCache, times(0)).getByRecordType(anyString(), any(Context.class), anyString());
+  }
+
+  @Test
+  public void shouldSendSuccessLinkReportEvent(TestContext context) throws InterruptedException {
+    // given
+    Async async = context.async();
+    MarcBibUpdate payload = new MarcBibUpdate()
+      .withRecord(Json.encode(record))
+      .withLinkIds(null)
+      .withType(MarcBibUpdate.Type.UPDATE)
+      .withTenant(TENANT_ID)
+      .withJobId(UUID.randomUUID().toString());
+
+    String expectedKafkaRecordKey = "test_key";
+    when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
+    when(kafkaRecord.value()).thenReturn(Json.encode(payload));
+
+    // when
+    Future<String> future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
+
+    // then
+    String observeTopic =
+      formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), TENANT_ID, LINKS_STATS.topicName());
+    cluster.observeValues(ObserveKeyValues.on(observeTopic, 1)
+      .observeFor(30, TimeUnit.SECONDS)
+      .build());
+    future.onComplete(ar -> {
+      context.assertTrue(ar.succeeded());
+      context.assertEquals(expectedKafkaRecordKey, ar.result());
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldSendFailedLinkReportEvent(TestContext context) throws InterruptedException {
+    // given
+    Async async = context.async();
+    MarcBibUpdate payload = new MarcBibUpdate()
+      .withRecord(Json.encode(record))
+      .withLinkIds(null)
+      .withType(MarcBibUpdate.Type.UPDATE)
+      .withTenant(TENANT_ID)
+      .withJobId(UUID.randomUUID().toString());
+
+    String expectedKafkaRecordKey = "test_key";
+    when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
+    when(kafkaRecord.value()).thenReturn(Json.encode(payload));
+
+    // when
+    Future<String> future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
+
+    // then
+    String observeTopic =
+      formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), TENANT_ID, LINKS_STATS.topicName());
+    cluster.observeValues(ObserveKeyValues.on(observeTopic, 1)
+      .observeFor(30, TimeUnit.SECONDS)
+      .build());
+    future.onComplete(ar -> {
+      context.assertTrue(ar.succeeded());
+      context.assertEquals(expectedKafkaRecordKey, ar.result());
+      async.complete();
+    });
   }
 }
