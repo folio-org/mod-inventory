@@ -15,6 +15,7 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import java.io.IOException;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -99,6 +100,7 @@ public class MarcBibUpdateKafkaHandlerTest {
     Async async = context.async();
     InstanceEvent payload = new InstanceEvent()
       .withRecord(Json.encode(record))
+      .withLinkIds(List.of(1, 2, 3))
       .withType(InstanceEvent.EventType.UPDATE)
       .withTenant("diku")
       .withJobId(UUID.randomUUID().toString());
