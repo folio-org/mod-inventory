@@ -23,6 +23,7 @@ import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.InstanceWriterFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.services.OrderHelperServiceImpl;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.domain.relationship.RecordToEntity;
@@ -81,7 +82,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -104,6 +104,8 @@ public class CreateInstanceEventHandlerTest {
   OkapiHttpClient mockedClient;
   @Mock
   private InstanceIdStorageService instanceIdStorageService;
+  @Mock
+  private OrderHelperServiceImpl orderHelperService;
   @Spy
   private MarcBibReaderFactory fakeReaderFactory = new MarcBibReaderFactory();
 
@@ -169,7 +171,7 @@ public class CreateInstanceEventHandlerTest {
     createInstanceEventHandler = new CreateInstanceEventHandler(storage,
       new PrecedingSucceedingTitlesHelper(context -> mockedClient), new MappingMetadataCache(vertx,
       vertx.createHttpClient(), 3600),
-      instanceIdStorageService);
+      instanceIdStorageService, orderHelperService);
 
 
     doAnswer(invocationOnMock -> {
@@ -181,6 +183,8 @@ public class CreateInstanceEventHandlerTest {
 
     doAnswer(invocationOnMock -> completedStage(createdResponse()))
       .when(mockedClient).post(any(URL.class), any(JsonObject.class));
+
+    when(orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(any(), any(), any())).thenReturn(Future.succeededFuture());
   }
 
   @Test

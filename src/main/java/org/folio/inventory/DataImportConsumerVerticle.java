@@ -14,6 +14,7 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_CREATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_MATCHED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_NOT_MATCHED;
 import static org.folio.DataImportEventTypes.DI_MARC_FOR_UPDATE_RECEIVED;
+import static org.folio.DataImportEventTypes.DI_PENDING_ORDER_CREATED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_AUTHORITY_RECORD_CREATED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_AUTHORITY_RECORD_MODIFIED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_AUTHORITY_RECORD_NOT_MATCHED;
@@ -92,7 +93,8 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
     DI_SRS_MARC_BIB_RECORD_NOT_MATCHED,
     DI_SRS_MARC_HOLDING_RECORD_CREATED,
     DI_SRS_MARC_HOLDINGS_RECORD_MODIFIED_READY_FOR_POST_PROCESSING,
-    DI_SRS_MARC_HOLDINGS_RECORD_NOT_MATCHED
+    DI_SRS_MARC_HOLDINGS_RECORD_NOT_MATCHED,
+    DI_PENDING_ORDER_CREATED
   );
 
   private final int loadLimit = getLoadLimit();
