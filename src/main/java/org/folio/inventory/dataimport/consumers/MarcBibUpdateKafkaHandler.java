@@ -155,14 +155,13 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
   }
 
   private LinkUpdateReport mapToLinkReport(MarcBibUpdate marcBibUpdate, String instanceId, String errMessage) {
-    var report = new LinkUpdateReport();
-    report.setJobId(marcBibUpdate.getJobId());
-    report.setInstanceId(instanceId);
-    report.setLinkIds(marcBibUpdate.getLinkIds());
-    report.setStatus(errMessage == null ? SUCCESS : FAIL);
-    report.setFailCause(errMessage);
-    report.setTenant(marcBibUpdate.getTenant());
-    report.setTs(marcBibUpdate.getTs());
-    return report;
+    return new LinkUpdateReport()
+      .withJobId(marcBibUpdate.getJobId())
+      .withInstanceId(instanceId)
+      .withLinkIds(marcBibUpdate.getLinkIds())
+      .withStatus(errMessage == null ? SUCCESS : FAIL)
+      .withFailCause(errMessage)
+      .withTenant(marcBibUpdate.getTenant())
+      .withTs(marcBibUpdate.getTs());
   }
 }
