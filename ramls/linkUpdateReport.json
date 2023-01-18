@@ -4,7 +4,7 @@
   "type": "object",
   "properties": {
     "jobId": {
-      "description": "Data import job id, UUID",
+      "description": "Quick marc job id, UUID",
       "$ref": "uuid.json"
     },
     "instanceId": {
