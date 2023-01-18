@@ -4,9 +4,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-
-import java.util.HashMap;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -15,6 +12,7 @@ import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.services.OrderHelperService;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.relationship.RecordToEntity;
@@ -29,6 +27,7 @@ import org.folio.processing.mapping.mapper.MappingContext;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Record;
 
+import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -42,7 +41,6 @@ import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
-import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 public class CreateHoldingEventHandler implements EventHandler {
@@ -60,12 +58,14 @@ public class CreateHoldingEventHandler implements EventHandler {
   private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingMetadata snapshot was not found by jobExecutionId '%s'. RecordId: '%s', chunkId: '%s' ";
   static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create a Holding entity requires a mapping profile";
   private static final String FOLIO_SOURCE_ID = "f32d531e-df79-46b3-8932-cdd35f7a2264";
-
   private final Storage storage;
   private final MappingMetadataCache mappingMetadataCache;
   private final IdStorageService idStorageService;
+  private OrderHelperService orderHelperService;
 
-  public CreateHoldingEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache, IdStorageService idStorageService) {
+  public CreateHoldingEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache, IdStorageService idStorageService,
+                                   OrderHelperService orderHelperServiceImpl) {
+    this.orderHelperService = orderHelperServiceImpl;
     this.storage = storage;
     this.mappingMetadataCache = mappingMetadataCache;
     this.idStorageService = idStorageService;
@@ -73,7 +73,6 @@ public class CreateHoldingEventHandler implements EventHandler {
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
-    logParametersEventHandler(LOGGER, dataImportEventPayload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
       dataImportEventPayload.setEventType(DI_INVENTORY_HOLDING_CREATED.value());
@@ -122,7 +121,11 @@ public class CreateHoldingEventHandler implements EventHandler {
               LOGGER.info("Created Holding record by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}'",
                 jobExecutionId, recordId, chunkId);
               payloadContext.put(HOLDINGS.value(), Json.encodePrettily(createdHoldings));
-              future.complete(dataImportEventPayload);
+              orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload, DI_INVENTORY_HOLDING_CREATED, context)
+                .onComplete(result -> {
+                    future.complete(dataImportEventPayload);
+                  }
+                );
             })
             .onFailure(e -> {
               if (!(e instanceof DuplicateEventException)) {

@@ -1,12 +1,5 @@
 package org.folio.inventory.dataimport.consumers;
 
-import static java.lang.String.format;
-
-import static org.folio.DataImportEventTypes.DI_ERROR;
-
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -16,7 +9,6 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.client.OrdersClient;
 import org.folio.inventory.common.Context;
@@ -55,6 +47,8 @@ import org.folio.inventory.dataimport.handlers.matching.preloaders.InstancePrelo
 import org.folio.inventory.dataimport.handlers.matching.preloaders.ItemPreloader;
 import org.folio.inventory.dataimport.handlers.matching.preloaders.OrdersPreloaderHelper;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
+import org.folio.inventory.dataimport.services.OrderHelperService;
+import org.folio.inventory.dataimport.services.OrderHelperServiceImpl;
 import org.folio.inventory.services.AuthorityIdStorageService;
 import org.folio.inventory.services.HoldingsCollectionService;
 import org.folio.inventory.services.HoldingsIdStorageService;
@@ -76,6 +70,12 @@ import org.folio.processing.matching.reader.MatchValueReaderFactory;
 import org.folio.processing.matching.reader.StaticValueReaderImpl;
 import org.folio.rest.jaxrs.model.Event;
 
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
+import static java.lang.String.format;
+import static org.folio.DataImportEventTypes.DI_ERROR;
+
 public class DataImportKafkaHandler implements AsyncRecordHandler<String, String> {
 
   private static final Logger LOGGER = LogManager.getLogger(DataImportKafkaHandler.class);
@@ -87,6 +87,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
   private ProfileSnapshotCache profileSnapshotCache;
   private MappingMetadataCache mappingMetadataCache;
   private KafkaConfig kafkaConfig;
+  private OrderHelperService orderHelperService;
 
   public DataImportKafkaHandler(Vertx vertx, Storage storage, HttpClient client,
                                 ProfileSnapshotCache profileSnapshotCache,
@@ -96,6 +97,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     this.profileSnapshotCache = profileSnapshotCache;
     this.mappingMetadataCache = mappingMetadataCache;
     this.kafkaConfig = kafkaConfig;
+    orderHelperService = new OrderHelperServiceImpl(profileSnapshotCache);
     registerDataImportProcessingHandlers(storage, client);
   }
 
@@ -164,9 +166,9 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     EventManager.registerEventHandler(new MatchItemEventHandler(mappingMetadataCache));
     EventManager.registerEventHandler(new MatchHoldingEventHandler(mappingMetadataCache));
     EventManager.registerEventHandler(new MatchAuthorityEventHandler(mappingMetadataCache));
-    EventManager.registerEventHandler(new CreateItemEventHandler(storage, mappingMetadataCache, new ItemIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx)))));
-    EventManager.registerEventHandler(new CreateHoldingEventHandler(storage, mappingMetadataCache, new HoldingsIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx)))));
-    EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, new InstanceIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx)))));
+    EventManager.registerEventHandler(new CreateItemEventHandler(storage, mappingMetadataCache, new ItemIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))), orderHelperService));
+    EventManager.registerEventHandler(new CreateHoldingEventHandler(storage, mappingMetadataCache, new HoldingsIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))), orderHelperService));
+    EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, new InstanceIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))), orderHelperService));
     EventManager.registerEventHandler(new CreateMarcHoldingsEventHandler(storage, mappingMetadataCache, new HoldingsIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))), new HoldingsCollectionService()));
     EventManager.registerEventHandler(new UpdateMarcHoldingsEventHandler(storage, mappingMetadataCache, new KafkaEventPublisher(kafkaConfig, vertx, 100)));
     EventManager.registerEventHandler(new CreateAuthorityEventHandler(storage, mappingMetadataCache, new AuthorityIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx)))));
