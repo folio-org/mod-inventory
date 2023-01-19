@@ -6,12 +6,16 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonValue;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({"jobId", "record", "type", "tenant", "ts"})
 public class InstanceEvent {
   @JsonProperty("jobId")
   private String jobId;
+  @JsonProperty("linkIds")
+  private List<Integer> linkIds = new LinkedList<>();
   @JsonProperty("record")
   private String record;
   @JsonProperty("type")
@@ -31,6 +35,19 @@ public class InstanceEvent {
 
   public InstanceEvent withJobId(String jobId) {
     this.jobId = jobId;
+    return this;
+  }
+
+  public List<Integer> getLinkIds() {
+    return linkIds;
+  }
+
+  public void setLinkIds(List<Integer> linkIds) {
+    this.linkIds = linkIds;
+  }
+
+  public InstanceEvent withLinkIds(List<Integer> linkIds) {
+    this.linkIds = linkIds;
     return this;
   }
 
