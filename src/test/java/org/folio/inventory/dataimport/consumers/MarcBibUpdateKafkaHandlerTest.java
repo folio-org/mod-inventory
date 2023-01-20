@@ -62,14 +62,15 @@ import org.mockito.MockitoAnnotations;
 @RunWith(VertxUnitRunner.class)
 public class MarcBibUpdateKafkaHandlerTest {
 
-  private static final String TENANT_ID = "test";
-  private static final String INVALID_INSTANCE_ID = "02e54bce-9588-11ed-a1eb-0242ac120002";
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/bib-rules.json";
   private static final String RECORD_PATH = "src/test/resources/handlers/bib-record.json";
   private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
+  private static final String INVALID_INSTANCE_ID = "02e54bce-9588-11ed-a1eb-0242ac120002";
+  private static final String TENANT_ID = "test";
+  private static final Vertx vertx = Vertx.vertx();
   private static EmbeddedKafkaCluster cluster;
   private static KafkaConfig kafkaConfig;
-  private static final Vertx vertx = Vertx.vertx();
+
   @Mock
   private Storage mockedStorage;
   @Mock
@@ -153,7 +154,7 @@ public class MarcBibUpdateKafkaHandlerTest {
     Async async = context.async();
     MarcBibUpdate payload = new MarcBibUpdate()
       .withRecord(Json.encode(record))
-      .withLinkIds(null)
+      .withLinkIds(List.of(1, 2, 3))
       .withType(MarcBibUpdate.Type.UPDATE)
       .withTenant(TENANT_ID)
       .withJobId(UUID.randomUUID().toString());
