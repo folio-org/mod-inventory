@@ -122,10 +122,10 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
       var kafkaRecord = createKafkaProducerRecord(linkUpdateReport, kafkaHeaders);
       producer.write(kafkaRecord, ar -> {
         if (ar.succeeded()) {
-          LOGGER.debug("Event with type {}, jobId {} was sent to kafka", LINKS_STATS.topicName(), linkUpdateReport.getJobId());
+          LOGGER.info("Event with type {}, jobId {} was sent to kafka", LINKS_STATS.topicName(), linkUpdateReport.getJobId());
         } else {
           var cause = ar.cause();
-          LOGGER.error("Failed to sent event {} for jobId {}, cause: {}", LINKS_STATS.topicName(), linkUpdateReport.getJobId(), cause);
+          LOGGER.info("Failed to sent event {} for jobId {}, cause: {}", LINKS_STATS.topicName(), linkUpdateReport.getJobId(), cause);
         }
       });
     } catch (Exception e) {
