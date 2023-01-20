@@ -219,7 +219,7 @@
     <dependency>
       <groupId>org.folio</groupId>
       <artifactId>mod-source-record-storage-client</artifactId>
-      <version>5.4.1</version>
+      <version>5.6.0-SNAPSHOT</version>
       <exclusions>
         <!-- This is provided by JDK >= 9 causing a compile error (Eclipse doesn't suppress this compile error):
              "The package org.xml.sax is accessible from more than one module: <unnamed>, java.xml"
@@ -427,8 +427,6 @@
                 <path>${basedir}/ramls/holdings-record.json</path>
                 <path>${basedir}/ramls/holdings-records-source.json</path>
                 <path>${basedir}/ramls/mappingMetadataDto.json</path>
-                <path>${basedir}/ramls/marcBibUpdate.json</path>
-                <path>${basedir}/ramls/linkUpdateReport.json</path>
               </sourcePaths>
               <targetPackage>org.folio</targetPackage>
               <generateBuilders>true</generateBuilders>
