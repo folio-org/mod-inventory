@@ -36,7 +36,6 @@ import net.mguenther.kafka.junit.ObserveKeyValues;
 import net.mguenther.kafka.junit.ReadKeyValues;
 import org.folio.LinkUpdateReport;
 import org.folio.MappingMetadataDto;
-import org.folio.MarcBibUpdate;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Success;
@@ -47,6 +46,7 @@ import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.KafkaConfig;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
+import org.folio.rest.jaxrs.model.MarcBibUpdate;
 import org.folio.rest.jaxrs.model.Record;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -153,7 +153,7 @@ public class MarcBibUpdateKafkaHandlerTest {
     // given
     Async async = context.async();
     MarcBibUpdate payload = new MarcBibUpdate()
-      .withRecord(Json.encode(record))
+      .withRecord(record)
       .withLinkIds(List.of(1, 2, 3))
       .withType(MarcBibUpdate.Type.UPDATE)
       .withTenant(TENANT_ID)
@@ -186,7 +186,7 @@ public class MarcBibUpdateKafkaHandlerTest {
       .thenReturn(Future.succeededFuture(Optional.empty()));
 
     MarcBibUpdate payload = new MarcBibUpdate()
-      .withRecord(Json.encode(record))
+      .withRecord(record)
       .withType(MarcBibUpdate.Type.UPDATE)
       .withTenant(TENANT_ID)
       .withJobId(UUID.randomUUID().toString());
@@ -212,7 +212,7 @@ public class MarcBibUpdateKafkaHandlerTest {
     // given
     Async async = context.async();
     MarcBibUpdate payload = new MarcBibUpdate()
-      .withRecord("")
+      .withRecord(null)
       .withType(MarcBibUpdate.Type.UPDATE)
       .withTenant(TENANT_ID)
       .withJobId(UUID.randomUUID().toString());
@@ -240,7 +240,7 @@ public class MarcBibUpdateKafkaHandlerTest {
     var expectedReportsCount = cluster.readValues(ReadKeyValues.from(topic)).size() + 1;
 
     MarcBibUpdate payload = new MarcBibUpdate()
-      .withRecord(Json.encode(record))
+      .withRecord(record)
       .withLinkIds(List.of(1, 2, 3))
       .withType(MarcBibUpdate.Type.UPDATE)
       .withTenant(TENANT_ID)
@@ -281,7 +281,7 @@ public class MarcBibUpdateKafkaHandlerTest {
     record.setId(INVALID_INSTANCE_ID);
     record.getExternalIdsHolder().setInstanceId(INVALID_INSTANCE_ID);
     MarcBibUpdate payload = new MarcBibUpdate()
-      .withRecord(Json.encode(record))
+      .withRecord(record)
       .withLinkIds(List.of(1, 3))
       .withType(MarcBibUpdate.Type.UPDATE)
       .withTenant(TENANT_ID)

@@ -1,5 +1,15 @@
 package org.folio.inventory.dataimport.consumers;
 
+import static java.lang.String.format;
+import static java.util.Objects.isNull;
+import static org.folio.LinkUpdateReport.Status.FAIL;
+import static org.folio.LinkUpdateReport.Status.SUCCESS;
+import static org.folio.inventory.EntityLinksKafkaTopic.LINKS_STATS;
+import static org.folio.kafka.KafkaTopicNameHelper.formatTopicName;
+import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -10,6 +20,10 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
 import io.vertx.kafka.client.producer.KafkaProducer;
 import io.vertx.kafka.client.producer.KafkaProducerRecord;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.LinkUpdateReport;
@@ -26,21 +40,6 @@ import org.folio.kafka.KafkaHeaderUtils;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.MarcBibUpdate;
 import org.folio.rest.jaxrs.model.Record;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
-
-import static java.lang.String.format;
-import static java.util.Objects.isNull;
-import static org.folio.LinkUpdateReport.Status.FAIL;
-import static org.folio.LinkUpdateReport.Status.SUCCESS;
-import static org.folio.inventory.EntityLinksKafkaTopic.LINKS_STATS;
-import static org.folio.kafka.KafkaTopicNameHelper.formatTopicName;
-import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
 
 public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, String> {
 
