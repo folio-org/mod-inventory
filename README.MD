@@ -106,6 +106,7 @@ After setup, it is good to check logs in all related modules for errors.
 * These variables are relevant from the **XXXXX** release. Module version from X.X.X:
     * "_inventory.kafka.MarcBibUpdateConsumerVerticle.instancesNumber_": 3
     * "_inventory.kafka.MarcBibUpdateConsumer.loadLimit_": 5
+    * "_inventory.kafka.MarcBibUpdateConsumer.maxDistributionNumber_": 100
 
 # Making Requests
 
