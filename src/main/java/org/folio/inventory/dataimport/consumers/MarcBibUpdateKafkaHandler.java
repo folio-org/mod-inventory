@@ -2,11 +2,11 @@ package org.folio.inventory.dataimport.consumers;
 
 import static java.lang.String.format;
 import static java.util.Objects.isNull;
-import static org.folio.LinkUpdateReport.Status.FAIL;
-import static org.folio.LinkUpdateReport.Status.SUCCESS;
 import static org.folio.inventory.EntityLinksKafkaTopic.LINKS_STATS;
 import static org.folio.kafka.KafkaTopicNameHelper.formatTopicName;
 import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
+import static org.folio.rest.jaxrs.model.LinkUpdateReport.Status.FAIL;
+import static org.folio.rest.jaxrs.model.LinkUpdateReport.Status.SUCCESS;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
 
@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.LinkUpdateReport;
 import org.folio.MappingMetadataDto;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
@@ -38,6 +37,7 @@ import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaHeaderUtils;
 import org.folio.processing.exceptions.EventProcessingException;
+import org.folio.rest.jaxrs.model.LinkUpdateReport;
 import org.folio.rest.jaxrs.model.MarcBibUpdate;
 import org.folio.rest.jaxrs.model.Record;
 
