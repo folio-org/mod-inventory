@@ -562,6 +562,10 @@
       "version": "1.0 2.0"
     },
     {
+      "id": "instance-authority-links",
+      "version": "1.0"
+    },
+    {
       "id": "identifier-types",
       "version": "1.0"
     },
