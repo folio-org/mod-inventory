@@ -61,12 +61,14 @@ public class CreateItemEventHandler implements EventHandler {
 
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
   private static final String PAYLOAD_DATA_HAS_NO_HOLDING_ID_MSG = "Failed to extract holdingsRecordId from holdingsRecord entity or parsed record";
+  private static final String PAYLOAD_DATA_HAS_NO_PO_LINE_ID_MSG = "Failed to extract poLineId from poLine entity";
   private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingMetadata snapshot was not found by jobExecutionId '%s'. RecordId: '%s', chunkId: '%s' ";
   static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create an Item requires a mapping profile";
   public static final String HOLDINGS_RECORD_ID_FIELD = "holdingsRecordId";
   public static final String ITEM_PATH_FIELD = "item";
   public static final String HOLDING_ID_FIELD = "id";
   public static final String ITEM_ID_FIELD = "id";
+  public static final String PO_LINE_ID_FIELD = "id";
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
   private static final Map<String, String> validNotes = Map.of(
@@ -183,6 +185,7 @@ public class CreateItemEventHandler implements EventHandler {
     if (itemAsJson.getJsonObject(ITEM_PATH_FIELD) != null) {
       itemAsJson = itemAsJson.getJsonObject(ITEM_PATH_FIELD);
     }
+    fillPoLineIdIfNecessary(dataImportEventPayload, itemAsJson);
     fillHoldingsRecordIdIfNecessary(dataImportEventPayload, itemAsJson);
     itemAsJson.put(ITEM_ID_FIELD, itemId);
     return itemAsJson;
@@ -195,6 +198,23 @@ public class CreateItemEventHandler implements EventHandler {
       return actionProfile.getAction() == CREATE && actionProfile.getFolioRecord() == ITEM;
     }
     return false;
+  }
+
+  private void fillPoLineIdIfNecessary(DataImportEventPayload dataImportEventPayload, JsonObject itemAsJson) {
+    if (isBlank(itemAsJson.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER))) {
+      String poLineAsString = dataImportEventPayload.getContext().get(EntityType.PO_LINE.value());
+      if (StringUtils.isNotEmpty(poLineAsString)) {
+        JsonObject poLineAsJson = new JsonObject(poLineAsString);
+        String poLineId = poLineAsJson.getString(PO_LINE_ID_FIELD);
+
+        if (isBlank(poLineId)) {
+          LOG.error(PAYLOAD_DATA_HAS_NO_PO_LINE_ID_MSG);
+          throw new EventProcessingException(PAYLOAD_DATA_HAS_NO_PO_LINE_ID_MSG);
+        }
+
+        itemAsJson.put(Item.PURCHASE_ORDER_LINE_IDENTIFIER, poLineId);
+      }
+    }
   }
 
   private void fillHoldingsRecordIdIfNecessary(DataImportEventPayload dataImportEventPayload, JsonObject itemAsJson) {
