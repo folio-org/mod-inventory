@@ -2,39 +2,37 @@ package org.folio.inventory.domain.instances;
 
 import io.vertx.core.json.JsonObject;
 
-public class Contributor {
+public class Contributor extends Authorized {
   // JSON property names
   public static final String CONTRIBUTOR_NAME_TYPE_ID_KEY = "contributorNameTypeId";
   public static final String NAME_KEY = "name";
   public static final String CONTRIBUTOR_TYPE_ID_KEY = "contributorTypeId";
   public static final String CONTRIBUTOR_TYPE_TEXT_KEY = "contributorTypeText";
-  public static final String AUTHORITY_ID_KEY = "authorityId";
   public static final String PRIMARY_KEY = "primary";
 
   public final String contributorNameTypeId;
   public final String name;
   public final String contributorTypeId;
   public final String contributorTypeText;
-  public final String authorityId;
   public final Boolean primary;
 
   public Contributor(String contributorNameTypeId, String name, String contributorTypeId, String contributorTypeText,
                      String authorityId, Boolean primary) {
+    super(authorityId);
     this.contributorNameTypeId = contributorNameTypeId;
     this.name = name;
     this.contributorTypeId = contributorTypeId;
     this.contributorTypeText = contributorTypeText;
-    this.authorityId = authorityId;
     this.primary = primary;
   }
 
   public Contributor(JsonObject json) {
     this(json.getString(CONTRIBUTOR_NAME_TYPE_ID_KEY),
-         json.getString(NAME_KEY),
-         json.getString(CONTRIBUTOR_TYPE_ID_KEY),
-         json.getString(CONTRIBUTOR_TYPE_TEXT_KEY),
-         json.getString(AUTHORITY_ID_KEY),
-         json.getBoolean(PRIMARY_KEY));
+      json.getString(NAME_KEY),
+      json.getString(CONTRIBUTOR_TYPE_ID_KEY),
+      json.getString(CONTRIBUTOR_TYPE_TEXT_KEY),
+      json.getString(AUTHORITY_ID_KEY),
+      json.getBoolean(PRIMARY_KEY));
   }
 
 }

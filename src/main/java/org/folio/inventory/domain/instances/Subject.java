@@ -2,17 +2,15 @@ package org.folio.inventory.domain.instances;
 
 import io.vertx.core.json.JsonObject;
 
-public class Subject {
+public class Subject extends Authorized {
   // JSON property names
   public static final String VALUE_KEY = "value";
-  public static final String AUTHORITY_ID_KEY = "authorityId";
 
   private final String value;
-  private final String authorityId;
 
   public Subject(String value, String authorityId) {
+    super(authorityId);
     this.value = value;
-    this.authorityId = authorityId;
   }
 
   public Subject(JsonObject json) {
