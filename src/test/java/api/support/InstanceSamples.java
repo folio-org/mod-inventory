@@ -162,7 +162,7 @@ public class InstanceSamples {
       // blocked fields
       .put("hrid", UUID.randomUUID().toString())
       .put("alternativeTitles", new JsonArray()
-        .add(JsonObject.mapFrom(new AlternativeTitle("test id", "test title"))))
+        .add(JsonObject.mapFrom(new AlternativeTitle("test id", "test title", null))))
       .put("series", new JsonArray().add("test series"))
       .put("source", "MARC")
       .put("identifiers", new JsonArray()
