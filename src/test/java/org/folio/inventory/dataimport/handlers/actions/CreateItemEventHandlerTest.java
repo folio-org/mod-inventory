@@ -155,7 +155,7 @@ public class CreateItemEventHandlerTest {
   }
 
   @Test
-  public void shouldCreateItemAndFillInHoldingsRecordIdFromHoldingsEntity()
+  public void shouldCreateItemAndFillInHoldingsRecordIdFromHoldingsEntityAndFillInPurchaseOrderLineIdentifierFromPoLineEntity()
     throws UnsupportedEncodingException,
     InterruptedException,
     ExecutionException,
@@ -183,9 +183,12 @@ public class CreateItemEventHandlerTest {
 
     String expectedHoldingId = UUID.randomUUID().toString();
     JsonObject holdingAsJson = new JsonObject().put("id", expectedHoldingId);
+    String expectedPoLineId = UUID.randomUUID().toString();
+    JsonObject poLineAsJson = new JsonObject().put("id", expectedPoLineId);
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
     payloadContext.put(EntityType.HOLDINGS.value(), holdingAsJson.encode());
+    payloadContext.put(EntityType.PO_LINE.value(), poLineAsJson.encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
@@ -206,6 +209,7 @@ public class CreateItemEventHandlerTest {
     Assert.assertNotNull(createdItem.getString("permanentLoanTypeId"));
     Assert.assertNotNull(createdItem.getString("materialTypeId"));
     Assert.assertEquals(expectedHoldingId, createdItem.getString("holdingId"));
+    Assert.assertEquals(expectedPoLineId, createdItem.getString("purchaseOrderLineIdentifier"));
   }
 
   @Test
@@ -562,6 +566,53 @@ public class CreateItemEventHandlerTest {
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
     payloadContext.put(EntityType.HOLDINGS.value(), new JsonObject().encode());
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    // when
+    CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
+
+    // then
+    future.get(5, TimeUnit.SECONDS);
+  }
+
+  @Test(expected = ExecutionException.class)
+  public void shouldReturnFailedFutureWhenCouldNotFindPoLineIdInEventPayload()
+    throws
+    InterruptedException,
+    ExecutionException,
+    TimeoutException, UnsupportedEncodingException {
+
+    // given
+    RecordToEntity recordToItem = RecordToEntity.builder().recordId(RECORD_ID).entityId(ITEM_ID).build();
+    when(itemIdStorageService.store(any(), any(), any())).thenReturn(Future.succeededFuture(recordToItem));
+
+    Mockito.doAnswer(invocationOnMock -> {
+      MultipleRecords<Item> result = new MultipleRecords<>(new ArrayList<>(), 0);
+      Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
+      return null;
+    }).when(mockedItemCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    Mockito.doAnswer(invocationOnMock -> {
+      Item item = invocationOnMock.getArgument(0);
+      Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(item));
+      return null;
+    }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new ItemWriterFactory());
+
+    String expectedHoldingId = UUID.randomUUID().toString();
+    JsonObject holdingAsJson = new JsonObject().put("id", expectedHoldingId);
+    HashMap<String, String> payloadContext = new HashMap<>();
+    payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+    payloadContext.put(EntityType.HOLDINGS.value(), holdingAsJson.encode());
+    payloadContext.put(EntityType.PO_LINE.value(), new JsonObject().encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
