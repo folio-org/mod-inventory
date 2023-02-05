@@ -3,8 +3,6 @@ package org.folio.inventory.dataimport.consumers;
 import static java.lang.String.format;
 import static java.util.Objects.isNull;
 import static org.folio.inventory.EntityLinksKafkaTopic.LINKS_STATS;
-import static org.folio.kafka.KafkaTopicNameHelper.formatTopicName;
-import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
 import static org.folio.rest.jaxrs.model.LinkUpdateReport.Status.FAIL;
 import static org.folio.rest.jaxrs.model.LinkUpdateReport.Status.SUCCESS;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
@@ -71,11 +69,11 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
   }
 
   @Override
-  public Future<String> handle(KafkaConsumerRecord<String, String> record) {
+  public Future<String> handle(KafkaConsumerRecord<String, String> consumerRecord) {
     try {
       Promise<String> promise = Promise.promise();
-      MarcBibUpdate instanceEvent = OBJECT_MAPPER.readValue(record.value(), MarcBibUpdate.class);
-      Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(record.headers());
+      MarcBibUpdate instanceEvent = OBJECT_MAPPER.readValue(consumerRecord.value(), MarcBibUpdate.class);
+      Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(consumerRecord.headers());
       HashMap<String, String> metaDataPayload = new HashMap<>();
 
       LOGGER.info("Event payload has been received with event type: {} by jobId: {}", instanceEvent.getType(), instanceEvent.getJobId());
@@ -93,10 +91,10 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
           new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, instanceEvent.getJobId()))))
         .onSuccess(mappingMetadataDto -> ensureEventPayloadWithMappingMetadata(metaDataPayload, mappingMetadataDto))
         .compose(v -> instanceUpdateDelegate.handle(metaDataPayload, marcBibRecord, context))
-        .onComplete(ar -> processUpdateResult(ar, promise, record, instanceEvent, marcBibRecord));
+        .onComplete(ar -> processUpdateResult(ar, promise, consumerRecord, instanceEvent, marcBibRecord));
       return promise.future();
     } catch (Exception e) {
-      LOGGER.error(format("Failed to process data import kafka record from topic %s", record.topic()), e);
+      LOGGER.error(format("Failed to process data import kafka record from topic %s", consumerRecord.topic()), e);
       return Future.failedFuture(e);
     }
   }
@@ -134,12 +132,16 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
   }
 
   private KafkaProducerRecord<String, String> createKafkaProducerRecord(LinkUpdateReport linkUpdateReport, List<KafkaHeader> kafkaHeaders) {
-    var topicName = formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), linkUpdateReport.getTenant(), LINKS_STATS.topicName());
+    var topicName = formatTopicName(kafkaConfig.getEnvId(), linkUpdateReport.getTenant(), LINKS_STATS.topicName());
     var key = String.valueOf(INDEXER.incrementAndGet() % maxDistributionNumber);
     var kafkaRecord = KafkaProducerRecord.create(topicName, key, Json.encode(linkUpdateReport));
     kafkaRecord.addHeaders(kafkaHeaders);
 
     return kafkaRecord;
+  }
+
+  private static String formatTopicName(String env, String tenant, String eventType) {
+    return String.join(".", env, tenant, eventType);
   }
 
   private void ensureEventPayloadWithMappingMetadata(HashMap<String, String> eventPayload, MappingMetadataDto mappingMetadataDto) {
