@@ -3,8 +3,6 @@ package org.folio.inventory.dataimport.consumers;
 import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
 import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
 import static org.folio.inventory.EntityLinksKafkaTopic.LINKS_STATS;
-import static org.folio.kafka.KafkaTopicNameHelper.formatTopicName;
-import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
 import static org.folio.rest.jaxrs.model.LinkUpdateReport.Status.FAIL;
 import static org.folio.rest.jaxrs.model.LinkUpdateReport.Status.SUCCESS;
 import static org.mockito.AdditionalMatchers.not;
@@ -236,7 +234,7 @@ public class MarcBibUpdateKafkaHandlerTest {
   @Test
   public void shouldSendSuccessLinkReportEvent() throws InterruptedException {
     // given
-    var topic = formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), TENANT_ID, LINKS_STATS.topicName());
+    var topic = String.join(".", kafkaConfig.getEnvId(), TENANT_ID, LINKS_STATS.topicName());
     var expectedReportsCount = cluster.readValues(ReadKeyValues.from(topic)).size() + 1;
 
     MarcBibUpdate payload = new MarcBibUpdate()
@@ -275,7 +273,7 @@ public class MarcBibUpdateKafkaHandlerTest {
   @Test
   public void shouldSendFailedLinkReportEvent() throws InterruptedException {
     // given
-    var topic = formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), TENANT_ID, LINKS_STATS.topicName());
+    var topic = String.join(".", kafkaConfig.getEnvId(), TENANT_ID, LINKS_STATS.topicName());
     var expectedReportsCount = cluster.readValues(ReadKeyValues.from(topic)).size() + 1;
 
     record.setId(INVALID_INSTANCE_ID);
