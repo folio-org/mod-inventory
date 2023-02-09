@@ -22,7 +22,6 @@ import org.folio.MappingProfile;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
-import org.folio.processing.events.EventManager;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
@@ -176,8 +175,8 @@ public class OrderHelperServiceTest {
 
     future.onComplete(ar -> {
       testContext.assertTrue(ar.succeeded());
-      assertEquals(dataImportEventPayload.getEventType(), "DI_ORDER_CREATED_READY_FOR_POST_PROCESSING");
-      assertEquals(dataImportEventPayload.getEventsChain().get(0), "DI_INVENTORY_INSTANCE_CREATED");
+      testContext.assertEquals(dataImportEventPayload.getEventType(), DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value());
+      testContext.assertEquals(dataImportEventPayload.getEventsChain().get(0), DI_INVENTORY_INSTANCE_CREATED.value());
       testContext.assertTrue(parseBoolean(dataImportEventPayload.getContext().get(POST_PROCESSING_INDICATOR)));
       async.complete();
     });
