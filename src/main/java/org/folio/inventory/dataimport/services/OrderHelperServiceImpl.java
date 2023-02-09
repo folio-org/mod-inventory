@@ -10,6 +10,7 @@ import org.folio.DataImportEventPayload;
 import org.folio.DataImportEventTypes;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
+import org.folio.processing.events.EventManager;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 
@@ -22,6 +23,7 @@ import java.util.stream.Collectors;
 import static java.lang.String.format;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PROCESSING;
+import static org.folio.processing.events.EventManager.POST_PROCESSING_INDICATOR;
 
 public class OrderHelperServiceImpl implements OrderHelperService {
   private static final Logger LOGGER = LogManager.getLogger();
@@ -65,6 +67,7 @@ public class OrderHelperServiceImpl implements OrderHelperService {
 
     if (!actionProfiles.isEmpty() && checkIfOrderActionProfileExists(actionProfiles) && checkIfCurrentProfileIsTheLastOne(eventPayload, actionProfiles)) {
       eventPayload.getEventsChain().add(targetEventType.value());
+      eventPayload.getContext().put(POST_PROCESSING_INDICATOR, Boolean.TRUE.toString());
       eventPayload.setEventType(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value());
     }
     return CompletableFuture.completedFuture(null);

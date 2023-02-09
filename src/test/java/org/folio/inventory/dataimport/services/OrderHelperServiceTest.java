@@ -22,6 +22,7 @@ import org.folio.MappingProfile;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
+import org.folio.processing.events.EventManager;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
@@ -38,8 +39,11 @@ import java.util.HashMap;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static java.lang.Boolean.parseBoolean;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
+import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PROCESSING;
+import static org.folio.processing.events.EventManager.POST_PROCESSING_INDICATOR;
 import static org.folio.rest.jaxrs.model.EntityType.HOLDINGS;
 import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
@@ -49,6 +53,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 @RunWith(VertxUnitRunner.class)
 public class OrderHelperServiceTest {
@@ -87,7 +92,7 @@ public class OrderHelperServiceTest {
 
 
   @Test
-  public void shouldFillPayloadIfOrderActionProfileExistsAndCurrentProfileIsTheLastOne(TestContext testContext) throws InterruptedException {
+  public void shouldFillPayloadIfOrderActionProfileExistsAndCurrentProfileIsTheLastOne(TestContext testContext) {
     Async async = testContext.async();
 
     JobProfile jobProfile = new JobProfile()
@@ -173,6 +178,7 @@ public class OrderHelperServiceTest {
       testContext.assertTrue(ar.succeeded());
       assertEquals(dataImportEventPayload.getEventType(), "DI_ORDER_CREATED_READY_FOR_POST_PROCESSING");
       assertEquals(dataImportEventPayload.getEventsChain().get(0), "DI_INVENTORY_INSTANCE_CREATED");
+      testContext.assertTrue(parseBoolean(dataImportEventPayload.getContext().get(POST_PROCESSING_INDICATOR)));
       async.complete();
     });
   }
