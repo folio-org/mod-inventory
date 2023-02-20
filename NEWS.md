@@ -1,4 +1,6 @@
-## 20.0.0 IN PROGRESS
+## 20.0.0 2023-02-20
+* Controlled Instance's field properly reflects updates made by user in MARC Authority's 1XX fields ([MODINV-773] (https://issues.folio.org/browse/MODINV-773))
+* POLine ID now set correctly when present in batch imports ([MODINV-774] (https://issues.folio.org/browse/MODINV-774))
 * Extend subjects, alternativeTitles, series with Authority ID ([MODINV-761](https://issues.folio.org/browse/MODINV-761))
 * Provides `inventory 13.0`
 * Provides `inventory-batch 2.0`
