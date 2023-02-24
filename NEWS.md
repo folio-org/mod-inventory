@@ -1,3 +1,8 @@
+## 20.0.1 2023-02-24
+* Update data-import-processing-core dependency ([MODDICORE-306](https://issues.folio.org/browse/MODDICORE-306))
+* Add a warning block to the log when the module starts without consumers ([MODINV-711](https://issues.folio.org/browse/MODINV-711))
+* Fix Type Mismatch Error on record_id column in db log ([MODINV-778](https://issues.folio.org/browse/MODINV-778))
+
 ## 20.0.0 2023-02-20
 * Controlled Instance's field properly reflects updates made by user in MARC Authority's 1XX fields ([MODINV-773] (https://issues.folio.org/browse/MODINV-773))
 * POLine ID now set correctly when present in batch imports ([MODINV-774] (https://issues.folio.org/browse/MODINV-774))
