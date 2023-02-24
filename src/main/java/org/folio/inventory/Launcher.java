@@ -62,6 +62,9 @@ public class Launcher {
     if(Boolean.parseBoolean(kafkaConsumersToBeInitialized)){
       Map<String, Object> consumerVerticlesConfig = getConsumerVerticleConfig();
       startConsumerVerticles(consumerVerticlesConfig);
+    } else {
+      final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
+      log.warn("\n*******\n*  WARNING: The module is running in Traffics Diversion mode (there is no Consumers to accept DI Kafka messages)\n*******");
     }
   }
 
