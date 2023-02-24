@@ -15,13 +15,13 @@ public class EntityIdStorageDaoImpl implements EntityIdStorageDao {
   private static final Logger LOGGER = LogManager.getLogger(EntityIdStorageDaoImpl.class);
 
   private static final String INSERT_FUNCTION = "WITH input_rows({recordIdFieldName}, {entityIdFieldName}) AS (\n" +
-    "   VALUES ($1,$2)\n" +
+    "   VALUES ($1::uuid,$2::uuid)\n" +
     ")\n" +
     ", ins AS (\n" +
     "   INSERT INTO {schemaName}.{tableName}({recordIdFieldName}, {entityIdFieldName})\n" +
     "   SELECT * FROM input_rows\n" +
-    "   ON CONFLICT ({recordIdFieldName}) DO NOTHING\n" +
-    "   RETURNING {recordIdFieldName}, {entityIdFieldName}\n" +
+    "   ON CONFLICT ({recordIdFieldName}) DO UPDATE SET {recordIdFieldName}=EXCLUDED.{recordIdFieldName}\n" +
+    "   RETURNING {recordIdFieldName}::uuid, {entityIdFieldName}::uuid\n" +
     "   )\n" +
     "SELECT {recordIdFieldName}, {entityIdFieldName}\n" +
     "FROM   ins\n" +
