@@ -76,6 +76,7 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
   private static final String UNEXPECTED_PAYLOAD_MSG = "Unexpected payload";
   private static final String CANNOT_UPDATE_HOLDING_ERROR_MESSAGE = "Error updating Holding by holdingId %s and jobExecution '%s', failure reason: %s, status code %s";
   private static final String ERROR_HOLDING_MSG = "Error loading inventory holdings for MARC BIB";
+  private static final String HOLDING_NOT_FOUND_ERROR_MESSAGE = "Holdings record was not found by id: %s";
 
   private final Storage storage;
   private final MappingMetadataCache mappingMetadataCache;
@@ -184,18 +185,22 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
     var holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
     HoldingsRecord mappedRecord = Json.decodeValue(Json.encode(JsonObject.mapFrom(holdings)), HoldingsRecord.class);
     Promise<HoldingsRecord> promise = Promise.promise();
-    holdingsRecordCollection.findById(mappedRecord.getId())
-      .thenAccept(actualRecord -> {
-        mappedRecord.setVersion(actualRecord.getVersion());
-        holdingsRecordCollection.update(mappedRecord,
-          success -> {
-            holdings.setVersion(mappedRecord.getVersion());
-            holdings.setInstanceId(mappedRecord.getInstanceId());
-            payload.getContext().put(HOLDINGS.value(), Json.encode(holdings));
-            promise.complete(mappedRecord);
-          },
-          failure -> failureUpdateHandler(payload, mappedRecord.getId(), holdingsRecordCollection, promise, failure));
-      });
+    holdingsRecordCollection.findById(mappedRecord.getId()).thenAccept(actualRecord -> {
+      if (actualRecord == null) {
+        promise.fail(new EventProcessingException(format(HOLDING_NOT_FOUND_ERROR_MESSAGE, mappedRecord.getId())));
+        return;
+      }
+
+      mappedRecord.setVersion(actualRecord.getVersion());
+      holdingsRecordCollection.update(mappedRecord,
+        success -> {
+          holdings.setVersion(mappedRecord.getVersion());
+          holdings.setInstanceId(mappedRecord.getInstanceId());
+          payload.getContext().put(HOLDINGS.value(), Json.encode(holdings));
+          promise.complete(mappedRecord);
+        },
+        failure -> failureUpdateHandler(payload, mappedRecord.getId(), holdingsRecordCollection, promise, failure));
+    });
     return promise.future();
   }
 

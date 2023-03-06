@@ -241,6 +241,30 @@ public class UpdateAuthorityEventHandlerTest {
   }
 
   @Test
+  public void shouldReturnFailedFutureIfSourceHasNoAuthorityByIdFromSourceRecord() throws IOException {
+    when(storage.getAuthorityRecordCollection(any())).thenReturn(authorityCollection);
+    when(authorityCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(null));
+
+    var parsedAuthorityRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_AUTHORITY_RECORD));
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedAuthorityRecord.encode()));
+    HashMap<String, String> context = new HashMap<>();
+    context.put(MARC_AUTHORITY.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_AUTHORITY_MATCHED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
+    ExecutionException exception = assertThrows(ExecutionException.class, future::get);
+    assertThat(exception.getCause().getMessage(), containsString("Authority record was not found"));
+    verify(publisher, times(0)).publish(dataImportEventPayload);
+
+  }
+
+  @Test
   public void isEligibleShouldReturnTrue() throws IOException {
     var parsedAuthorityRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_AUTHORITY_RECORD));
 
