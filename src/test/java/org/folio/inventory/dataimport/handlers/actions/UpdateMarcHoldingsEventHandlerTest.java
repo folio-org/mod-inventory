@@ -612,6 +612,34 @@ public class UpdateMarcHoldingsEventHandlerTest {
     verify(publisher, times(0)).publish(any());
   }
 
+  @Test
+  public void shouldReturnFailedFutureIfHasNoHoldingByIdFromSourceRecord() throws IOException {
+    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsCollection);
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+    when(holdingsCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(null));
+    var instanceId = String.valueOf(UUID.randomUUID());
+    mockSuccessFindByCql(instanceId, instanceRecordCollection);
+    var holdingsId = UUID.randomUUID();
+    var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
+    record.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
+    HashMap<String, String> context = new HashMap<>();
+    context.put(MARC_HOLDINGS.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
+
+    ExecutionException exception = assertThrows(ExecutionException.class, future::get);
+    assertThat(exception.getCause().getMessage(), containsString("Holdings record was not found"));
+    verify(publisher, times(0)).publish(any());
+  }
+
 
   @SneakyThrows
   private void mockSuccessFindByCql(String instanceId, InstanceCollection instanceRecordCollection) {
