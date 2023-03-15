@@ -1,3 +1,7 @@
+## 20.0.2 2023-03-15
+* Fix import job being stuck while updating Marc-Authority/Marc-Holdings records with invalid external id ([MODINV-783](https://issues.folio.org/browse/MODINV-783))
+* Update folio-kafka-wrapper library to v2.7.1 [KAFKAWRAP-35](https://issues.folio.org/browse/KAFKAWRAP-35)
+
 ## 20.0.1 2023-02-24
 * Update data-import-processing-core dependency ([MODDICORE-306](https://issues.folio.org/browse/MODDICORE-306))
 * Add a warning block to the log when the module starts without consumers ([MODINV-711](https://issues.folio.org/browse/MODINV-711))
