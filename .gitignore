@@ -12,3 +12,4 @@ target/
 file-uploads/
 out/
 /bin/
+.DS_Store
