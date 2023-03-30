@@ -1,3 +1,6 @@
+## 20.0.4 2023-03-30
+* Update data-import-processing-core to v4.0.5 ([MODDICORE-322](https://issues.folio.org/browse/MODDICORE-322))
+
 ## 20.0.3 2023-03-24
 * Update data-import-processing-core to v4.0.4 ([MODDICORE-304](https://issues.folio.org/browse/MODDICORE-304))
 
