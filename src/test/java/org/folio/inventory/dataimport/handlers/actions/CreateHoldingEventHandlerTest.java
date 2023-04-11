@@ -3,6 +3,7 @@ package org.folio.inventory.dataimport.handlers.actions;
 import com.google.common.collect.Lists;
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.folio.ActionProfile;
@@ -38,6 +39,7 @@ import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -80,6 +82,7 @@ public class CreateHoldingEventHandlerTest {
   private static final String FOLIO_SOURCE_ID = "f32d531e-df79-46b3-8932-cdd35f7a2264";
   private static final String RECORD_ID = UUID.randomUUID().toString();
   private static final String ITEM_ID = UUID.randomUUID().toString();
+  private static final String ERRORS = "ERRORS";
 
   @Mock
   private Storage storage;
@@ -199,10 +202,111 @@ public class CreateHoldingEventHandlerTest {
 
     Assert.assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
-    Assert.assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("id"));
-    Assert.assertEquals(instanceId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("instanceId"));
-    Assert.assertEquals(permanentLocationId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("permanentLocationId"));
-    Assert.assertEquals(FOLIO_SOURCE_ID, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("sourceId"));
+    JsonObject holding = new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getJsonObject(0);
+    JsonArray errors = new JsonArray(actualDataImportEventPayload.getContext().get(ERRORS));
+    Assert.assertEquals(0, errors.size());
+    Assert.assertNotNull(holding.getString("id"));
+    Assert.assertEquals(instanceId, holding.getString("instanceId"));
+    Assert.assertEquals(permanentLocationId, holding.getString("permanentLocationId"));
+    Assert.assertEquals(FOLIO_SOURCE_ID, holding.getString("sourceId"));
+  }
+
+  @Test
+  public void shouldProcessEventAndReturnErrorsInContext() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    String permanentLocationId = UUID.randomUUID().toString();
+    String testError = "testError";
+
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
+
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+
+    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new HoldingWriterFactory());
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure(testError, 400));
+      return null;
+    }).when(holdingsRecordsCollection).add(any(), any(), any());
+
+
+    String instanceId = String.valueOf(UUID.randomUUID());
+    Instance instance = new Instance(instanceId, "5", String.valueOf(UUID.randomUUID()),
+      String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    HashMap<String, String> context = new HashMap<>();
+    context.put("INSTANCE", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
+
+    Assert.assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
+    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
+    JsonArray holdings = new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
+    JsonArray errors = new JsonArray(actualDataImportEventPayload.getContext().get(ERRORS));
+    Assert.assertEquals(0, holdings.size());
+    Assert.assertEquals(1, errors.size());
+    Assert.assertEquals(testError, errors.getString(0));
+  }
+
+  @Ignore
+  @Test
+  public void shouldProcessEventAndCreateMultipleHoldings() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    String permanentLocationId = UUID.randomUUID().toString();
+
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
+
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+
+    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new HoldingWriterFactory());
+
+    String instanceId = String.valueOf(UUID.randomUUID());
+    Instance instance = new Instance(instanceId, "5", String.valueOf(UUID.randomUUID()),
+      String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    HashMap<String, String> context = new HashMap<>();
+    context.put("INSTANCE", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
+
+    Assert.assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
+    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
+    JsonArray holdingsList = new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
+    Assert.assertEquals(2, holdingsList.size());
+
+    holdingsList.forEach(holdings -> {
+      JsonObject holdingsAsJson = (JsonObject) holdings;
+      Assert.assertNotNull(holdingsAsJson.getString("id"));
+      Assert.assertEquals(instanceId, holdingsAsJson.getString("instanceId"));
+      Assert.assertEquals(permanentLocationId, holdingsAsJson.getString("permanentLocationId"));
+      Assert.assertEquals(FOLIO_SOURCE_ID, holdingsAsJson.getString("sourceId"));
+    });
   }
 
   @Test
@@ -241,10 +345,11 @@ public class CreateHoldingEventHandlerTest {
 
     Assert.assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
-    Assert.assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("id"));
-    Assert.assertEquals(expectedInstanceId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("instanceId"));
-    Assert.assertEquals(permanentLocationId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("permanentLocationId"));
-    Assert.assertEquals(FOLIO_SOURCE_ID, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("sourceId"));
+    JsonObject holding = new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getJsonObject(0);
+    Assert.assertNotNull(holding.getString("id"));
+    Assert.assertEquals(expectedInstanceId, holding.getString("instanceId"));
+    Assert.assertEquals(permanentLocationId, holding.getString("permanentLocationId"));
+    Assert.assertEquals(FOLIO_SOURCE_ID, holding.getString("sourceId"));
   }
 
   @Test
@@ -279,9 +384,10 @@ public class CreateHoldingEventHandlerTest {
 
     Assert.assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
-    Assert.assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("id"));
-    Assert.assertEquals(permanentLocationId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("permanentLocationId"));
-    Assert.assertEquals(FOLIO_SOURCE_ID, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("sourceId"));
+    JsonObject holding = new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getJsonObject(0);
+    Assert.assertNotNull(holding.getString("id"));
+    Assert.assertEquals(permanentLocationId, holding.getString("permanentLocationId"));
+    Assert.assertEquals(FOLIO_SOURCE_ID, holding.getString("sourceId"));
   }
 
   @Test(expected = Exception.class)

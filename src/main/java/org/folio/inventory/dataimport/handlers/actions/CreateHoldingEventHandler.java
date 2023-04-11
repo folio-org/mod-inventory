@@ -1,8 +1,10 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -27,7 +29,9 @@ import org.folio.processing.mapping.mapper.MappingContext;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Record;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -58,6 +62,7 @@ public class CreateHoldingEventHandler implements EventHandler {
   private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingMetadata snapshot was not found by jobExecutionId '%s'. RecordId: '%s', chunkId: '%s' ";
   static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create a Holding entity requires a mapping profile";
   private static final String FOLIO_SOURCE_ID = "f32d531e-df79-46b3-8932-cdd35f7a2264";
+  private static final String ERRORS = "ERRORS";
   private final Storage storage;
   private final MappingMetadataCache mappingMetadataCache;
   private final IdStorageService idStorageService;
@@ -105,27 +110,35 @@ public class CreateHoldingEventHandler implements EventHandler {
               prepareEvent(dataImportEventPayload);
               MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
               MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
-
-              JsonObject holdingAsJson = new JsonObject(payloadContext.get(HOLDINGS.value()));
-              if (holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD) != null) {
-                holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD);
+              // TO DELETE
+              JsonObject holdingsJson = new JsonObject(payloadContext.get(HOLDINGS.value()));
+              JsonArray holdings;
+              if (holdingsJson.getJsonObject(HOLDINGS_PATH_FIELD) == null) {
+                holdings = new JsonArray(List.of(holdingsJson));
+              } else {
+                holdings = new JsonArray(List.of(holdingsJson.getJsonObject(HOLDINGS_PATH_FIELD)));
               }
-              holdingAsJson.put("id", holdingsId);
-              holdingAsJson.put("sourceId", FOLIO_SOURCE_ID);
-              fillInstanceIdIfNeeded(dataImportEventPayload, holdingAsJson);
-              checkIfPermanentLocationIdExists(holdingAsJson);
-              return Json.decodeValue(payloadContext.get(HOLDINGS.value()), HoldingsRecord.class);
+              payloadContext.put(HOLDINGS.value(), holdings.toString());
+              // TO DELETE
+              JsonArray holdingsList = new JsonArray(payloadContext.get(HOLDINGS.value()));
+              holdingsList.forEach(e -> {
+                JsonObject holdingAsJson = (JsonObject) e;
+                holdingAsJson.put("id", holdingsId);
+                holdingAsJson.put("sourceId", FOLIO_SOURCE_ID);
+                fillInstanceIdIfNeeded(dataImportEventPayload, holdingAsJson);
+                checkIfPermanentLocationIdExists(holdingAsJson);
+              });
+
+              dataImportEventPayload.getContext().put(HOLDINGS.value(), holdingsList.encode());
+              return List.of(Json.decodeValue(payloadContext.get(HOLDINGS.value()), HoldingsRecord[].class));
             })
-            .compose(holdingToCreate -> addHoldings(holdingToCreate, context))
+            .compose(holdingsToCreate -> addHoldings(holdingsToCreate, payloadContext, context))
             .onSuccess(createdHoldings -> {
-              LOGGER.info("Created Holding record by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}'",
+              LOGGER.info("Created Holdings records by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}'",
                 jobExecutionId, recordId, chunkId);
-              payloadContext.put(HOLDINGS.value(), Json.encodePrettily(createdHoldings));
+              payloadContext.put(HOLDINGS.value(), Json.encode(createdHoldings));
               orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload, DI_INVENTORY_HOLDING_CREATED, context)
-                .onComplete(result -> {
-                    future.complete(dataImportEventPayload);
-                  }
-                );
+                .onComplete(result -> future.complete(dataImportEventPayload));
             })
             .onFailure(e -> {
               if (!(e instanceof DuplicateEventException)) {
@@ -179,7 +192,7 @@ public class CreateHoldingEventHandler implements EventHandler {
       if (isBlank(instanceId)) {
         throw new EventProcessingException(PAYLOAD_DATA_HAS_NO_INSTANCE_ID_ERROR_MSG);
       }
-      fillInstanceId(dataImportEventPayload, holdingAsJson, instanceId);
+      fillInstanceId(holdingAsJson, instanceId);
     }
   }
 
@@ -189,26 +202,45 @@ public class CreateHoldingEventHandler implements EventHandler {
     }
   }
 
-  private void fillInstanceId(DataImportEventPayload dataImportEventPayload, JsonObject holdingAsJson, String instanceId) {
+  private void fillInstanceId(JsonObject holdingAsJson, String instanceId) {
     holdingAsJson.put(INSTANCE_ID_FIELD, instanceId);
-    dataImportEventPayload.getContext().put(HOLDINGS.value(), holdingAsJson.encode());
   }
 
-  private Future<HoldingsRecord> addHoldings(HoldingsRecord holdings, Context context) {
-    Promise<HoldingsRecord> promise = Promise.promise();
+  private Future<List<HoldingsRecord>> addHoldings(List<HoldingsRecord> holdingsList, HashMap<String, String> payloadContext, Context context) {
+    Promise<List<HoldingsRecord>> holdingsPromise = Promise.promise();
+    List<HoldingsRecord> createdHoldingsRecord = new ArrayList<>();
+    List<String> errors = new ArrayList<>();
+    List<Future> createHoldingsRecordFutures = new ArrayList<>();
+
     HoldingsRecordCollection holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
-    holdingsRecordCollection.add(holdings,
-      success -> promise.complete(success.getResult()),
-      failure -> {
-        //for now there is a solution via error-message contains. It will be improved via another solution by https://issues.folio.org/browse/RMB-899.
-        if (isNotBlank(failure.getReason()) && failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
-          LOGGER.info("Duplicated event received by InstanceId: {}. Ignoring...", holdings.getId());
-          promise.fail(new DuplicateEventException(format("Duplicated event by Holding id: %s", holdings.getId())));
-        } else {
-          LOGGER.error(format("Error posting Holdings cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
-          promise.fail(failure.getReason());
-        }
-      });
-    return promise.future();
+    holdingsList.forEach(holdings -> {
+      Promise<Void> createPromise = Promise.promise();
+      createHoldingsRecordFutures.add(createPromise.future());
+
+      holdingsRecordCollection.add(holdings,
+        success -> {
+          createdHoldingsRecord.add(success.getResult());
+          createPromise.complete();
+        },
+        failure -> {
+          errors.add(failure.getReason());
+          if (isNotBlank(failure.getReason()) && failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
+            LOGGER.info("Duplicated event received by Holding id: {}. Ignoring...", holdings.getId());
+            createPromise.fail(new DuplicateEventException(format("Duplicated event by Holding id: %s", holdings.getId())));
+          } else {
+            LOGGER.warn(format("Error posting Holdings cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
+            createPromise.complete();
+          }
+        });
+    });
+    CompositeFuture.all(createHoldingsRecordFutures).onComplete(ar -> {
+      payloadContext.put(ERRORS, Json.encode(errors));
+      if (ar.succeeded()) {
+        holdingsPromise.complete(createdHoldingsRecord);
+      } else {
+        holdingsPromise.fail(ar.cause());
+      }
+    });
+    return holdingsPromise.future();
   }
 }
