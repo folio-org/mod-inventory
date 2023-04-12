@@ -123,6 +123,9 @@ public class CreateHoldingEventHandler implements EventHandler {
               JsonArray holdingsList = new JsonArray(payloadContext.get(HOLDINGS.value()));
               holdingsList.forEach(e -> {
                 JsonObject holdingAsJson = (JsonObject) e;
+                if (holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD) != null) {
+                  holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD);
+                }
                 holdingAsJson.put("id", holdingsId);
                 holdingAsJson.put("sourceId", FOLIO_SOURCE_ID);
                 fillInstanceIdIfNeeded(dataImportEventPayload, holdingAsJson);
