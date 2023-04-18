@@ -15,6 +15,7 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.common.dao.EntityIdStorageDaoImpl;
 import org.folio.inventory.common.dao.PostgresClientFactory;
 import org.folio.inventory.dataimport.HoldingWriterFactory;
+import org.folio.inventory.dataimport.HoldingsMapperFactory;
 import org.folio.inventory.dataimport.InstanceWriterFactory;
 import org.folio.inventory.dataimport.ItemWriterFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
@@ -160,6 +161,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     MappingManager.registerWriterFactory(new ItemWriterFactory());
     MappingManager.registerWriterFactory(new HoldingWriterFactory());
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
+    MappingManager.registerMapperFactory(new HoldingsMapperFactory());
 
     PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper = new PrecedingSucceedingTitlesHelper(WebClient.wrap(client));
     EventManager.registerEventHandler(new MatchInstanceEventHandler(mappingMetadataCache));
