@@ -34,6 +34,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
@@ -110,27 +111,18 @@ public class CreateHoldingEventHandler implements EventHandler {
               prepareEvent(dataImportEventPayload);
               MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
               MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
-              // TO DELETE
-              JsonObject holdingsJson = new JsonObject(payloadContext.get(HOLDINGS.value()));
-              JsonArray holdings;
-              if (holdingsJson.getJsonObject(HOLDINGS_PATH_FIELD) == null) {
-                holdings = new JsonArray(List.of(holdingsJson));
-              } else {
-                holdings = new JsonArray(List.of(holdingsJson.getJsonObject(HOLDINGS_PATH_FIELD)));
-              }
-              payloadContext.put(HOLDINGS.value(), holdings.toString());
-              // TO DELETE
               JsonArray holdingsList = new JsonArray(payloadContext.get(HOLDINGS.value()));
-              holdingsList.forEach(e -> {
-                JsonObject holdingAsJson = (JsonObject) e;
+              for (int i = 0; i < holdingsList.size(); i++) {
+                JsonObject holdingAsJson = holdingsList.getJsonObject(i);
                 if (holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD) != null) {
                   holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD);
+                  holdingsList.set(i, holdingAsJson);
                 }
                 holdingAsJson.put("id", holdingsId);
                 holdingAsJson.put("sourceId", FOLIO_SOURCE_ID);
                 fillInstanceIdIfNeeded(dataImportEventPayload, holdingAsJson);
                 checkIfPermanentLocationIdExists(holdingAsJson);
-              });
+              }
 
               dataImportEventPayload.getContext().put(HOLDINGS.value(), holdingsList.encode());
               return List.of(Json.decodeValue(payloadContext.get(HOLDINGS.value()), HoldingsRecord[].class));

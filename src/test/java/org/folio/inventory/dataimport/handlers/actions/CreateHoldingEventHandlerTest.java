@@ -17,6 +17,7 @@ import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.HoldingWriterFactory;
+import org.folio.inventory.dataimport.HoldingsMapperFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.services.OrderHelperServiceImpl;
 import org.folio.inventory.domain.HoldingsRecordCollection;
@@ -28,6 +29,7 @@ import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.processing.mapping.mapper.reader.Reader;
 import org.folio.processing.mapping.mapper.reader.record.marc.MarcBibReaderFactory;
+import org.folio.processing.value.ListValue;
 import org.folio.processing.value.StringValue;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.ExternalIdsHolder;
@@ -39,7 +41,6 @@ import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -51,6 +52,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -72,6 +74,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
@@ -83,6 +86,8 @@ public class CreateHoldingEventHandlerTest {
   private static final String RECORD_ID = UUID.randomUUID().toString();
   private static final String ITEM_ID = UUID.randomUUID().toString();
   private static final String ERRORS = "ERRORS";
+  private static Reader fakeReader;
+  private static final String permanentLocationId = UUID.randomUUID().toString();
 
   @Mock
   private Storage storage;
@@ -115,7 +120,7 @@ public class CreateHoldingEventHandlerTest {
     .withExistingRecordType(EntityType.HOLDINGS)
     .withMappingDetails(new MappingDetail()
       .withMappingFields(Collections.singletonList(
-        new MappingRule().withPath("permanentLocationId").withValue("permanentLocationExpression").withEnabled("true"))));
+        new MappingRule().withName("permanentLocationId").withPath("permanentLocationId").withValue("permanentLocationExpression").withEnabled("true"))));
 
   private ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
     .withId(UUID.randomUUID().toString())
@@ -165,23 +170,18 @@ public class CreateHoldingEventHandlerTest {
         .withMappingParams(Json.encode(new MappingParameters())))));
 
     when(orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(any(), any(), any())).thenReturn(Future.succeededFuture());
-  }
-
-  @Test
-  public void shouldProcessEvent() throws IOException, InterruptedException, ExecutionException, TimeoutException {
-    Reader fakeReader = Mockito.mock(Reader.class);
-
-    String permanentLocationId = UUID.randomUUID().toString();
-
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
-
+    fakeReader = Mockito.mock(Reader.class);
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(ListValue.of(List.of(permanentLocationId)));
     when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
 
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new HoldingWriterFactory());
+    MappingManager.registerMapperFactory(new HoldingsMapperFactory());
+  }
 
+  @Test
+  public void shouldProcessEvent() throws IOException, InterruptedException, ExecutionException, TimeoutException {
     String instanceId = String.valueOf(UUID.randomUUID());
     Instance instance = new Instance(instanceId, "5", String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
@@ -213,20 +213,7 @@ public class CreateHoldingEventHandlerTest {
 
   @Test
   public void shouldProcessEventAndReturnErrorsInContext() throws IOException, InterruptedException, ExecutionException, TimeoutException {
-    Reader fakeReader = Mockito.mock(Reader.class);
-
-    String permanentLocationId = UUID.randomUUID().toString();
     String testError = "testError";
-
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
-
-    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-
-    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
-
-    MappingManager.registerReaderFactory(fakeReaderFactory);
-    MappingManager.registerWriterFactory(new HoldingWriterFactory());
-
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
       failureHandler.accept(new Failure(testError, 400));
@@ -261,22 +248,10 @@ public class CreateHoldingEventHandlerTest {
     Assert.assertEquals(testError, errors.getString(0));
   }
 
-  @Ignore
   @Test
   public void shouldProcessEventAndCreateMultipleHoldings() throws IOException, InterruptedException, ExecutionException, TimeoutException {
-    Reader fakeReader = Mockito.mock(Reader.class);
-
-    String permanentLocationId = UUID.randomUUID().toString();
-
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
-
-    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-
-    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
-
-    MappingManager.registerReaderFactory(fakeReaderFactory);
-    MappingManager.registerWriterFactory(new HoldingWriterFactory());
-
+    List<String> locations = List.of(permanentLocationId, UUID.randomUUID().toString());
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(ListValue.of(locations));
     String instanceId = String.valueOf(UUID.randomUUID());
     Instance instance = new Instance(instanceId, "5", String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
@@ -300,6 +275,55 @@ public class CreateHoldingEventHandlerTest {
     JsonArray holdingsList = new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
     Assert.assertEquals(2, holdingsList.size());
 
+    for (int i = 0; i < holdingsList.size(); i++) {
+      JsonObject holdingsAsJson = holdingsList.getJsonObject(i);
+      Assert.assertNotNull(holdingsAsJson.getString("id"));
+      Assert.assertEquals(instanceId, holdingsAsJson.getString("instanceId"));
+      Assert.assertEquals(locations.get(i), holdingsAsJson.getString("permanentLocationId"));
+      Assert.assertEquals(FOLIO_SOURCE_ID, holdingsAsJson.getString("sourceId"));
+    }
+  }
+
+  @Test
+  public void shouldProcessEventAndCreateMultipleHoldingsAndPopulateErrorMessagesForFailedHoldings() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    String permanentLocationId2 = UUID.randomUUID().toString();
+
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(ListValue.of(List.of(permanentLocationId, permanentLocationId2)));
+
+    String testError = "testError";
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure(testError, 400));
+      return null;
+    }).when(holdingsRecordsCollection).add(argThat(holdingsRecord -> holdingsRecord.getPermanentLocationId().equals(permanentLocationId2)), any(), any());
+
+    String instanceId = String.valueOf(UUID.randomUUID());
+    Instance instance = new Instance(instanceId, "5", String.valueOf(UUID.randomUUID()),
+      String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    HashMap<String, String> context = new HashMap<>();
+    context.put("INSTANCE", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
+
+    Assert.assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
+    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
+    JsonArray holdingsList = new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
+    Assert.assertEquals(1, holdingsList.size());
+    JsonArray errors = new JsonArray(actualDataImportEventPayload.getContext().get(ERRORS));
+    Assert.assertEquals(1, errors.size());
+    Assert.assertEquals(testError, errors.getString(0));
+
     holdingsList.forEach(holdings -> {
       JsonObject holdingsAsJson = (JsonObject) holdings;
       Assert.assertNotNull(holdingsAsJson.getString("id"));
@@ -311,19 +335,6 @@ public class CreateHoldingEventHandlerTest {
 
   @Test
   public void shouldProcessEventIfInstanceIdIsNotExistsInInstanceInContextButExistsInMarcBibliographicParsedRecords() throws InterruptedException, ExecutionException, TimeoutException {
-    Reader fakeReader = Mockito.mock(Reader.class);
-
-    String permanentLocationId = UUID.randomUUID().toString();
-
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
-
-    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-
-    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
-
-    MappingManager.registerReaderFactory(fakeReaderFactory);
-    MappingManager.registerWriterFactory(new HoldingWriterFactory());
-
     String expectedInstanceId = UUID.randomUUID().toString();
     JsonObject instanceAsJson = new JsonObject().put("id", expectedInstanceId);
 
@@ -354,19 +365,6 @@ public class CreateHoldingEventHandlerTest {
 
   @Test
   public void shouldProcessEventIfInstanceIdIsEmptyInInstanceInContextButExistsInMarcBibliographicParsedRecords() throws InterruptedException, ExecutionException, TimeoutException {
-    Reader fakeReader = Mockito.mock(Reader.class);
-
-    String permanentLocationId = UUID.randomUUID().toString();
-
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
-
-    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-
-    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
-
-    MappingManager.registerReaderFactory(fakeReaderFactory);
-    MappingManager.registerWriterFactory(new HoldingWriterFactory());
-
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
 
     HashMap<String, String> context = new HashMap<>();
@@ -390,26 +388,13 @@ public class CreateHoldingEventHandlerTest {
     Assert.assertEquals(FOLIO_SOURCE_ID, holding.getString("sourceId"));
   }
 
-  @Test(expected = Exception.class)
+  @Test(expected = ExecutionException.class)
   public void shouldNotProcessEventEvenIfDuplicatedInventoryStorageErrorExists() throws IOException, InterruptedException, ExecutionException, TimeoutException {
-    Reader fakeReader = Mockito.mock(Reader.class);
-
-    String permanentLocationId = UUID.randomUUID().toString();
-
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
-
-    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-
-    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
-
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
       failureHandler.accept(new Failure(UNIQUE_ID_ERROR_MESSAGE, 400));
       return null;
     }).when(holdingsRecordsCollection).add(any(), any(), any());
-
-    MappingManager.registerReaderFactory(fakeReaderFactory);
-    MappingManager.registerWriterFactory(new HoldingWriterFactory());
 
     String instanceId = String.valueOf(UUID.randomUUID());
     Instance instance = new Instance(instanceId, "5", String.valueOf(UUID.randomUUID()),
@@ -430,22 +415,8 @@ public class CreateHoldingEventHandlerTest {
     future.get(5, TimeUnit.SECONDS);
   }
 
-
   @Test(expected = ExecutionException.class)
-  public void shouldNotProcessEventIfInstanceIdIsNotExistsInInstanceInContextAndNotExistsInParsedRecords() throws InterruptedException, ExecutionException, TimeoutException {
-    Reader fakeReader = Mockito.mock(Reader.class);
-
-    String permanentLocationId = UUID.randomUUID().toString();
-
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
-
-    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-
-    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
-
-    MappingManager.registerReaderFactory(fakeReaderFactory);
-    MappingManager.registerWriterFactory(new HoldingWriterFactory());
-
+  public void shouldNotProcessEventIfInstanceIdIsNotExistsInInstanceInContextAndNotExistsInParsedRecords() throws InterruptedException, ExecutionException, TimeoutException  {
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITHOUT_INSTANCE_ID));
 
     HashMap<String, String> context = new HashMap<>();
@@ -463,22 +434,8 @@ public class CreateHoldingEventHandlerTest {
     future.get(5, TimeUnit.MILLISECONDS);
   }
 
-
   @Test(expected = ExecutionException.class)
   public void shouldNotProcessEventIfInstanceIdIsNotExistsInInstanceInContextAndMarcBibliographicNotExists() throws InterruptedException, ExecutionException, TimeoutException {
-    Reader fakeReader = Mockito.mock(Reader.class);
-
-    String permanentLocationId = UUID.randomUUID().toString();
-
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
-
-    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-
-    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
-
-    MappingManager.registerReaderFactory(fakeReaderFactory);
-    MappingManager.registerWriterFactory(new HoldingWriterFactory());
-
     String instanceId = String.valueOf(UUID.randomUUID());
     Record record = new Record().withExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId));
 
@@ -499,19 +456,6 @@ public class CreateHoldingEventHandlerTest {
 
   @Test(expected = ExecutionException.class)
   public void shouldNotProcessEventIfNoContextMarcBibliographic() throws IOException, InterruptedException, ExecutionException, TimeoutException {
-    Reader fakeReader = Mockito.mock(Reader.class);
-
-    String permanentLocationId = UUID.randomUUID().toString();
-
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
-
-    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-
-    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
-
-    MappingManager.registerReaderFactory(fakeReaderFactory);
-    MappingManager.registerWriterFactory(new HoldingWriterFactory());
-
     String instanceId = String.valueOf(UUID.randomUUID());
     Instance instance = new Instance(instanceId, "9", String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
@@ -530,19 +474,6 @@ public class CreateHoldingEventHandlerTest {
 
   @Test(expected = ExecutionException.class)
   public void shouldNotProcessEventIfContextIsNull() throws InterruptedException, ExecutionException, TimeoutException {
-    Reader fakeReader = Mockito.mock(Reader.class);
-
-    String permanentLocationId = UUID.randomUUID().toString();
-
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
-
-    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-
-    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
-
-    MappingManager.registerReaderFactory(fakeReaderFactory);
-    MappingManager.registerWriterFactory(new HoldingWriterFactory());
-
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
       .withContext(null)
@@ -555,19 +486,6 @@ public class CreateHoldingEventHandlerTest {
 
   @Test(expected = ExecutionException.class)
   public void shouldNotProcessEventIfContextIsEmpty() throws InterruptedException, ExecutionException, TimeoutException {
-    Reader fakeReader = Mockito.mock(Reader.class);
-
-    String permanentLocationId = UUID.randomUUID().toString();
-
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
-
-    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-
-    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
-
-    MappingManager.registerReaderFactory(fakeReaderFactory);
-    MappingManager.registerWriterFactory(new HoldingWriterFactory());
-
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
       .withContext(new HashMap<>())
@@ -580,16 +498,7 @@ public class CreateHoldingEventHandlerTest {
 
   @Test(expected = ExecutionException.class)
   public void shouldNotProcessEventIfPermanentLocationIdIsNotExistsInContext() throws IOException, InterruptedException, ExecutionException, TimeoutException {
-    Reader fakeReader = Mockito.mock(Reader.class);
-
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(""));
-
-    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-
-    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
-
-    MappingManager.registerReaderFactory(fakeReaderFactory);
-    MappingManager.registerWriterFactory(new HoldingWriterFactory());
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(ListValue.of(List.of("")));
 
     String instanceId = String.valueOf(UUID.randomUUID());
     Instance instance = new Instance(instanceId, "8", String.valueOf(UUID.randomUUID()),
@@ -612,8 +521,6 @@ public class CreateHoldingEventHandlerTest {
 
   @Test(expected = ExecutionException.class)
   public void shouldNotProcessEventIfHoldingRecordIsInvalid() throws IOException, InterruptedException, ExecutionException, TimeoutException {
-    Reader fakeReader = Mockito.mock(Reader.class);
-
     MappingProfile mappingProfile = new MappingProfile()
       .withId(UUID.randomUUID().toString())
       .withName("Prelim item from MARC")
@@ -641,13 +548,6 @@ public class CreateHoldingEventHandlerTest {
               .withContent(JsonObject.mapFrom(mappingProfile).getMap())))));
 
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(UUID.randomUUID().toString()), StringValue.of(UUID.randomUUID().toString()));
-
-    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-
-    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
-
-    MappingManager.registerReaderFactory(fakeReaderFactory);
-    MappingManager.registerWriterFactory(new HoldingWriterFactory());
 
     String instanceId = String.valueOf(UUID.randomUUID());
     Instance instance = new Instance(instanceId, "7", String.valueOf(UUID.randomUUID()),
