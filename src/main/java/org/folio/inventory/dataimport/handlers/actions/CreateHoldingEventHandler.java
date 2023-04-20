@@ -1,5 +1,7 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -13,7 +15,9 @@ import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.entities.PartialError;
 import org.folio.inventory.dataimport.services.OrderHelperService;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.folio.inventory.domain.HoldingsRecordCollection;
@@ -34,7 +38,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
@@ -64,6 +67,7 @@ public class CreateHoldingEventHandler implements EventHandler {
   static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create a Holding entity requires a mapping profile";
   private static final String FOLIO_SOURCE_ID = "f32d531e-df79-46b3-8932-cdd35f7a2264";
   private static final String ERRORS = "ERRORS";
+  private static final String BLANK = "";
   private final Storage storage;
   private final MappingMetadataCache mappingMetadataCache;
   private final IdStorageService idStorageService;
@@ -118,7 +122,7 @@ public class CreateHoldingEventHandler implements EventHandler {
                   holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD);
                   holdingsList.set(i, holdingAsJson);
                 }
-                holdingAsJson.put("id", holdingsId);
+                holdingAsJson.put("id", (i == 0) ? holdingsId : UUID.randomUUID().toString());
                 holdingAsJson.put("sourceId", FOLIO_SOURCE_ID);
                 fillInstanceIdIfNeeded(dataImportEventPayload, holdingAsJson);
                 checkIfPermanentLocationIdExists(holdingAsJson);
@@ -204,21 +208,21 @@ public class CreateHoldingEventHandler implements EventHandler {
   private Future<List<HoldingsRecord>> addHoldings(List<HoldingsRecord> holdingsList, HashMap<String, String> payloadContext, Context context) {
     Promise<List<HoldingsRecord>> holdingsPromise = Promise.promise();
     List<HoldingsRecord> createdHoldingsRecord = new ArrayList<>();
-    List<String> errors = new ArrayList<>();
+    List<PartialError> errors = new ArrayList<>();
     List<Future> createHoldingsRecordFutures = new ArrayList<>();
 
     HoldingsRecordCollection holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
     holdingsList.forEach(holdings -> {
       Promise<Void> createPromise = Promise.promise();
       createHoldingsRecordFutures.add(createPromise.future());
-
       holdingsRecordCollection.add(holdings,
         success -> {
           createdHoldingsRecord.add(success.getResult());
           createPromise.complete();
         },
         failure -> {
-          errors.add(failure.getReason());
+          String errorMsg = getErrorMsgFromBody(failure);
+          errors.add(new PartialError(holdings.getId() != null ? holdings.getId() : BLANK, errorMsg));
           if (isNotBlank(failure.getReason()) && failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
             LOGGER.info("Duplicated event received by Holding id: {}. Ignoring...", holdings.getId());
             createPromise.fail(new DuplicateEventException(format("Duplicated event by Holding id: %s", holdings.getId())));
@@ -237,5 +241,20 @@ public class CreateHoldingEventHandler implements EventHandler {
       }
     });
     return holdingsPromise.future();
+  }
+
+  private String getErrorMsgFromBody(Failure failure) {
+    if (failure.getStatusCode() == 201) {
+      return failure.getReason();
+    }
+
+    ObjectMapper objectMapper = new ObjectMapper();
+    String errorMsg = null;
+    try {
+      errorMsg = objectMapper.readTree(failure.getReason()).findValue("message").asText();
+    } catch (JsonProcessingException e) {
+      LOGGER.warn("getErrorMsgFromBody:: Error during processing error message from response body", e);
+    }
+    return errorMsg != null ? errorMsg : failure.getReason();
   }
 }

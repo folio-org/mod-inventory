@@ -83,6 +83,7 @@ public class CreateHoldingEventHandlerTest {
   private static final String PARSED_CONTENT_WITH_INSTANCE_ID = "{ \"leader\": \"01314nam  22003851a 4500\", \"fields\":[ {\"001\":\"ybp7406411\"}, {\"999\": {\"ind1\":\"f\", \"ind2\":\"f\", \"subfields\":[ { \"i\": \"957985c6-97e3-4038-b0e7-343ecd0b8120\"} ] } } ] }";
   private static final String PARSED_CONTENT_WITHOUT_INSTANCE_ID = "{ \"leader\":\"01314nam  22003851a 4500\", \"fields\":[ { \"001\":\"ybp7406411\" } ] }";
   private static final String FOLIO_SOURCE_ID = "f32d531e-df79-46b3-8932-cdd35f7a2264";
+  private static final String PARTIAL_ERROR = "{\"errors\":[{\"message\":\"%s\",\"type\":\"1\",\"code\":\"-1\",\"parameters\":[{\"key\":\"id\",\"value\":\"85227af5-adee-488d-9a3e-52f4c12c8f2c\"}]}]}";
   private static final String RECORD_ID = UUID.randomUUID().toString();
   private static final String ITEM_ID = UUID.randomUUID().toString();
   private static final String ERRORS = "ERRORS";
@@ -212,8 +213,9 @@ public class CreateHoldingEventHandlerTest {
   }
 
   @Test
-  public void shouldProcessEventAndReturnErrorsInContext() throws IOException, InterruptedException, ExecutionException, TimeoutException {
-    String testError = "testError";
+  public void shouldProcessEventAndReturnPartialErrorsInContext() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    String errorMsg = "testError";
+    String testError = String.format(PARTIAL_ERROR, errorMsg);
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
       failureHandler.accept(new Failure(testError, 400));
@@ -245,7 +247,9 @@ public class CreateHoldingEventHandlerTest {
     JsonArray errors = new JsonArray(actualDataImportEventPayload.getContext().get(ERRORS));
     Assert.assertEquals(0, holdings.size());
     Assert.assertEquals(1, errors.size());
-    Assert.assertEquals(testError, errors.getString(0));
+    JsonObject partialError = errors.getJsonObject(0);
+    Assert.assertEquals(errorMsg, partialError.getString("error"));
+    Assert.assertEquals(ITEM_ID, partialError.getString("id"));
   }
 
   @Test
@@ -285,7 +289,7 @@ public class CreateHoldingEventHandlerTest {
   }
 
   @Test
-  public void shouldProcessEventAndCreateMultipleHoldingsAndPopulateErrorMessagesForFailedHoldings() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+  public void shouldProcessEventAndCreateMultipleHoldingsAndPopulatePartialErrorsForFailedHoldings() throws IOException, InterruptedException, ExecutionException, TimeoutException {
     String permanentLocationId2 = UUID.randomUUID().toString();
 
     when(fakeReader.read(any(MappingRule.class))).thenReturn(ListValue.of(List.of(permanentLocationId, permanentLocationId2)));
@@ -322,7 +326,9 @@ public class CreateHoldingEventHandlerTest {
     Assert.assertEquals(1, holdingsList.size());
     JsonArray errors = new JsonArray(actualDataImportEventPayload.getContext().get(ERRORS));
     Assert.assertEquals(1, errors.size());
-    Assert.assertEquals(testError, errors.getString(0));
+    JsonObject partialError = errors.getJsonObject(0);
+    Assert.assertEquals(testError, partialError.getString("error"));
+    Assert.assertNotEquals(ITEM_ID, partialError.getString("id"));
 
     holdingsList.forEach(holdings -> {
       JsonObject holdingsAsJson = (JsonObject) holdings;
