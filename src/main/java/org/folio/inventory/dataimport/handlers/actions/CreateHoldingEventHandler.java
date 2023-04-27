@@ -125,7 +125,6 @@ public class CreateHoldingEventHandler implements EventHandler {
                 holdingAsJson.put("id", (i == 0) ? holdingsId : UUID.randomUUID().toString());
                 holdingAsJson.put("sourceId", FOLIO_SOURCE_ID);
                 fillInstanceIdIfNeeded(dataImportEventPayload, holdingAsJson);
-                checkIfPermanentLocationIdExists(holdingAsJson);
               }
 
               dataImportEventPayload.getContext().put(HOLDINGS.value(), holdingsList.encode());
@@ -192,12 +191,6 @@ public class CreateHoldingEventHandler implements EventHandler {
         throw new EventProcessingException(PAYLOAD_DATA_HAS_NO_INSTANCE_ID_ERROR_MSG);
       }
       fillInstanceId(holdingAsJson, instanceId);
-    }
-  }
-
-  private void checkIfPermanentLocationIdExists(JsonObject holdingAsJson) {
-    if (isEmpty(holdingAsJson.getString(PERMANENT_LOCATION_ID_FIELD))) {
-      throw new EventProcessingException(PERMANENT_LOCATION_ID_ERROR_MESSAGE);
     }
   }
 
