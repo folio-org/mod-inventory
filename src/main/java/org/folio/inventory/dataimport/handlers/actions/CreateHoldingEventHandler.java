@@ -221,8 +221,7 @@ public class CreateHoldingEventHandler implements EventHandler {
           createPromise.complete();
         },
         failure -> {
-          String errorMsg = getErrorMsgFromBody(failure);
-          errors.add(new PartialError(holdings.getId() != null ? holdings.getId() : BLANK, errorMsg));
+          errors.add(new PartialError(holdings.getId() != null ? holdings.getId() : BLANK, failure.getReason()));
           if (isNotBlank(failure.getReason()) && failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
             LOGGER.info("Duplicated event received by Holding id: {}. Ignoring...", holdings.getId());
             createPromise.fail(new DuplicateEventException(format("Duplicated event by Holding id: %s", holdings.getId())));
@@ -241,20 +240,5 @@ public class CreateHoldingEventHandler implements EventHandler {
       }
     });
     return holdingsPromise.future();
-  }
-
-  private String getErrorMsgFromBody(Failure failure) {
-    if (failure.getStatusCode() == 201) {
-      return failure.getReason();
-    }
-
-    ObjectMapper objectMapper = new ObjectMapper();
-    String errorMsg = null;
-    try {
-      errorMsg = objectMapper.readTree(failure.getReason()).findValue("message").asText();
-    } catch (JsonProcessingException e) {
-      LOGGER.warn("getErrorMsgFromBody:: Error during processing error message from response body", e);
-    }
-    return errorMsg != null ? errorMsg : failure.getReason();
   }
 }

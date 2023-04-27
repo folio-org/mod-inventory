@@ -29,7 +29,6 @@ import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.processing.mapping.mapper.reader.Reader;
 import org.folio.processing.mapping.mapper.reader.record.marc.MarcBibReaderFactory;
-import org.folio.processing.value.ListValue;
 import org.folio.processing.value.StringValue;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.ExternalIdsHolder;
@@ -80,10 +79,9 @@ import static org.mockito.Mockito.when;
 
 public class CreateHoldingEventHandlerTest {
 
-  private static final String PARSED_CONTENT_WITH_INSTANCE_ID = "{ \"leader\": \"01314nam  22003851a 4500\", \"fields\":[ {\"001\":\"ybp7406411\"}, {\"999\": {\"ind1\":\"f\", \"ind2\":\"f\", \"subfields\":[ { \"i\": \"957985c6-97e3-4038-b0e7-343ecd0b8120\"} ] } } ] }";
-  private static final String PARSED_CONTENT_WITHOUT_INSTANCE_ID = "{ \"leader\":\"01314nam  22003851a 4500\", \"fields\":[ { \"001\":\"ybp7406411\" } ] }";
+  private static final String PARSED_CONTENT_WITH_INSTANCE_ID = "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"945\":{\"subfields\":[{\"a\":\"OM\"},{\"h\":\"KU/CC/DI/M\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"945\":{\"subfields\":[{\"a\":\"AM\"},{\"h\":\"KU/CC/DI/M\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"945\":{\"subfields\":[{\"a\":\"asdf\"},{\"h\":\"fcd64ce1-6995-48f0-840e-89ffa2288371\"}],\"ind1\":\" \",\"ind2\":\" \"}}, {\"999\": {\"ind1\":\"f\", \"ind2\":\"f\", \"subfields\":[ { \"i\": \"957985c6-97e3-4038-b0e7-343ecd0b8120\"} ] } }]}";
+  private static final String PARSED_CONTENT_WITHOUT_INSTANCE_ID = "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"945\":{\"subfields\":[{\"a\":\"OM\"},{\"h\":\"KU/CC/DI/M\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"945\":{\"subfields\":[{\"a\":\"AM\"},{\"h\":\"KU/CC/DI/M\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"945\":{\"subfields\":[{\"a\":\"asdf\"},{\"h\":\"fcd64ce1-6995-48f0-840e-89ffa2288371\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
   private static final String FOLIO_SOURCE_ID = "f32d531e-df79-46b3-8932-cdd35f7a2264";
-  private static final String PARTIAL_ERROR = "{\"errors\":[{\"message\":\"%s\",\"type\":\"1\",\"code\":\"-1\",\"parameters\":[{\"key\":\"id\",\"value\":\"85227af5-adee-488d-9a3e-52f4c12c8f2c\"}]}]}";
   private static final String RECORD_ID = UUID.randomUUID().toString();
   private static final String ITEM_ID = UUID.randomUUID().toString();
   private static final String ERRORS = "ERRORS";
@@ -121,7 +119,7 @@ public class CreateHoldingEventHandlerTest {
     .withExistingRecordType(EntityType.HOLDINGS)
     .withMappingDetails(new MappingDetail()
       .withMappingFields(Collections.singletonList(
-        new MappingRule().withName("permanentLocationId").withPath("permanentLocationId").withValue("permanentLocationExpression").withEnabled("true"))));
+        new MappingRule().withName("permanentLocationId").withPath("permanentLocationId").withValue("945$h").withEnabled("true"))));
 
   private ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
     .withId(UUID.randomUUID().toString())
@@ -172,7 +170,7 @@ public class CreateHoldingEventHandlerTest {
 
     when(orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(any(), any(), any())).thenReturn(Future.succeededFuture());
     fakeReader = Mockito.mock(Reader.class);
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(ListValue.of(List.of(permanentLocationId)));
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
     when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
 
@@ -215,10 +213,9 @@ public class CreateHoldingEventHandlerTest {
   @Test
   public void shouldProcessEventAndReturnPartialErrorsInContext() throws IOException, InterruptedException, ExecutionException, TimeoutException {
     String errorMsg = "testError";
-    String testError = String.format(PARTIAL_ERROR, errorMsg);
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
-      failureHandler.accept(new Failure(testError, 400));
+      failureHandler.accept(new Failure(errorMsg, 400));
       return null;
     }).when(holdingsRecordsCollection).add(any(), any(), any());
 
@@ -255,7 +252,7 @@ public class CreateHoldingEventHandlerTest {
   @Test
   public void shouldProcessEventAndCreateMultipleHoldings() throws IOException, InterruptedException, ExecutionException, TimeoutException {
     List<String> locations = List.of(permanentLocationId, UUID.randomUUID().toString());
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(ListValue.of(locations));
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.get(0)), StringValue.of(locations.get(1)));
     String instanceId = String.valueOf(UUID.randomUUID());
     Instance instance = new Instance(instanceId, "5", String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
@@ -292,7 +289,7 @@ public class CreateHoldingEventHandlerTest {
   public void shouldProcessEventAndCreateMultipleHoldingsAndPopulatePartialErrorsForFailedHoldings() throws IOException, InterruptedException, ExecutionException, TimeoutException {
     String permanentLocationId2 = UUID.randomUUID().toString();
 
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(ListValue.of(List.of(permanentLocationId, permanentLocationId2)));
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId), StringValue.of(permanentLocationId2));
 
     String testError = "testError";
 
@@ -504,7 +501,7 @@ public class CreateHoldingEventHandlerTest {
 
   @Test(expected = ExecutionException.class)
   public void shouldNotProcessEventIfPermanentLocationIdIsNotExistsInContext() throws IOException, InterruptedException, ExecutionException, TimeoutException {
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(ListValue.of(List.of("")));
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(""));
 
     String instanceId = String.valueOf(UUID.randomUUID());
     Instance instance = new Instance(instanceId, "8", String.valueOf(UUID.randomUUID()),
