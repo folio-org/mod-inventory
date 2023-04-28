@@ -2,6 +2,7 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
@@ -25,6 +26,7 @@ import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.processing.mapping.mapper.reader.Reader;
 import org.folio.processing.mapping.mapper.reader.record.marc.MarcBibReaderFactory;
+import org.folio.processing.value.ListValue;
 import org.folio.processing.value.StringValue;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.MappingDetail;
@@ -35,6 +37,7 @@ import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -49,6 +52,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -78,6 +82,10 @@ public class CreateItemEventHandlerTest {
   private static final String PARSED_CONTENT_WITHOUT_HOLDING_ID = "{ \"leader\":\"01314nam  22003851a 4500\", \"fields\":[ { \"001\":\"ybp7406411\" } ] }";
   private static final String RECORD_ID = UUID.randomUUID().toString();
   private static final String ITEM_ID = UUID.randomUUID().toString();
+  private static final String PERMANENT_LOCATION_ID = "ff4524ee-89b2-461d-82d6-2b4127b801f9";
+  private static final String ERRORS = "ERRORS";
+  private static final String HOLDINGS_IDENTIFIERS = "HOLDINGS_IDENTIFIERS";
+
 
   @Mock
   private Storage mockedStorage;
@@ -137,7 +145,7 @@ public class CreateItemEventHandlerTest {
   private CreateItemEventHandler createItemHandler;
 
   @Before
-  public void setUp() {
+  public void setUp() throws UnsupportedEncodingException {
     MockitoAnnotations.initMocks(this);
     Mockito.when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
     Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(AVAILABLE.value()), StringValue.of(UUID.randomUUID().toString()),
@@ -149,6 +157,16 @@ public class CreateItemEventHandlerTest {
         .withMappingRules(new JsonObject().encode())
         .withMappingParams(Json.encode(new MappingParameters())))));
 
+    RecordToEntity recordToItem = RecordToEntity.builder().recordId(RECORD_ID).entityId(ITEM_ID).build();
+    when(itemIdStorageService.store(any(), any(), any())).thenReturn(Future.succeededFuture(recordToItem));
+
+    Mockito.doAnswer(invocationOnMock -> {
+      MultipleRecords<Item> result = new MultipleRecords<>(new ArrayList<>(), 0);
+      Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
+      return null;
+    }).when(mockedItemCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
     createItemHandler = new CreateItemEventHandler(mockedStorage, mappingMetadataCache, itemIdStorageService, orderHelperService);
     MappingManager.clearReaderFactories();
     when(orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(any(), any(), any())).thenReturn(Future.succeededFuture());
@@ -156,22 +174,11 @@ public class CreateItemEventHandlerTest {
 
   @Test
   public void shouldCreateItemAndFillInHoldingsRecordIdFromHoldingsEntityAndFillInPurchaseOrderLineIdentifierFromPoLineEntity()
-    throws UnsupportedEncodingException,
-    InterruptedException,
+    throws InterruptedException,
     ExecutionException,
     TimeoutException {
 
     // given
-    RecordToEntity recordToItem = RecordToEntity.builder().recordId(RECORD_ID).entityId(ITEM_ID).build();
-    when(itemIdStorageService.store(any(), any(), any())).thenReturn(Future.succeededFuture(recordToItem));
-
-    Mockito.doAnswer(invocationOnMock -> {
-      MultipleRecords<Item> result = new MultipleRecords<>(new ArrayList<>(), 0);
-      Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
-      successHandler.accept(new Success<>(result));
-      return null;
-    }).when(mockedItemCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
-
     Mockito.doAnswer(invocationOnMock -> {
       Item item = invocationOnMock.getArgument(0);
       Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
@@ -182,13 +189,22 @@ public class CreateItemEventHandlerTest {
     MappingManager.registerWriterFactory(new ItemWriterFactory());
 
     String expectedHoldingId = UUID.randomUUID().toString();
-    JsonObject holdingAsJson = new JsonObject().put("id", expectedHoldingId);
+    JsonArray holdingsAsJson = new JsonArray(List.of(
+      new JsonObject()
+        .put("id", UUID.randomUUID())
+        .put("permanentLocationId", UUID.randomUUID())
+        .encode(),
+      new JsonObject()
+        .put("id", expectedHoldingId)
+        .put("permanentLocationId", PERMANENT_LOCATION_ID)
+        .encode()));
     String expectedPoLineId = UUID.randomUUID().toString();
     JsonObject poLineAsJson = new JsonObject().put("id", expectedPoLineId);
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
-    payloadContext.put(EntityType.HOLDINGS.value(), holdingAsJson.encode());
+    payloadContext.put(EntityType.HOLDINGS.value(), holdingsAsJson.encode());
     payloadContext.put(EntityType.PO_LINE.value(), poLineAsJson.encode());
+    payloadContext.put(HOLDINGS_IDENTIFIERS, Json.encode(List.of(PERMANENT_LOCATION_ID)));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
@@ -204,7 +220,11 @@ public class CreateItemEventHandlerTest {
     Assert.assertEquals(DI_INVENTORY_ITEM_CREATED.value(), eventPayload.getEventType());
     Assert.assertNotNull(eventPayload.getContext().get(ITEM.value()));
 
-    JsonObject createdItem = new JsonObject(eventPayload.getContext().get(ITEM.value()));
+    JsonArray createdItems = new JsonArray(eventPayload.getContext().get(ITEM.value()));
+    JsonArray errors = new JsonArray(eventPayload.getContext().get(ERRORS));
+    Assert.assertEquals(1, createdItems.size());
+    Assert.assertEquals(0, errors.size());
+    JsonObject createdItem = createdItems.getJsonObject(0);
     Assert.assertNotNull(createdItem.getJsonObject("status").getString("name"));
     Assert.assertNotNull(createdItem.getString("permanentLoanTypeId"));
     Assert.assertNotNull(createdItem.getString("materialTypeId"));
@@ -212,24 +232,14 @@ public class CreateItemEventHandlerTest {
     Assert.assertEquals(expectedPoLineId, createdItem.getString("purchaseOrderLineIdentifier"));
   }
 
+  @Ignore
   @Test
-  public void shouldCreateItemAndFillInHoldingsRecordIdFromParsedRecordContent()
-    throws UnsupportedEncodingException,
-    InterruptedException,
+  public void shouldCreateMultipleItems()
+    throws InterruptedException,
     ExecutionException,
     TimeoutException {
 
     // given
-    RecordToEntity recordToItem = RecordToEntity.builder().recordId(RECORD_ID).entityId(ITEM_ID).build();
-    when(itemIdStorageService.store(any(), any(), any())).thenReturn(Future.succeededFuture(recordToItem));
-
-    Mockito.doAnswer(invocationOnMock -> {
-      MultipleRecords<Item> result = new MultipleRecords<>(new ArrayList<>(), 0);
-      Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
-      successHandler.accept(new Success<>(result));
-      return null;
-    }).when(mockedItemCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
-
     Mockito.doAnswer(invocationOnMock -> {
       Item item = invocationOnMock.getArgument(0);
       Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
@@ -237,12 +247,33 @@ public class CreateItemEventHandlerTest {
       return null;
     }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
 
+
+    Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(ListValue.of(List.of(AVAILABLE.value(), AVAILABLE.value())),
+      ListValue.of(List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString())),
+      ListValue.of(List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString())), ListValue.of(List.of("645398607547", "745398607547")));
+
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new ItemWriterFactory());
+    String permanentLocationId2 = UUID.randomUUID().toString();
 
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_HOLDING_ID));
+    String expectedHoldingId2 = UUID.randomUUID().toString();
+    String expectedHoldingId1 = UUID.randomUUID().toString();
+    JsonArray holdingsAsJson = new JsonArray(List.of(
+      new JsonObject()
+        .put("id", expectedHoldingId1)
+        .put("permanentLocationId", PERMANENT_LOCATION_ID)
+        .encode(),
+      new JsonObject()
+        .put("id", expectedHoldingId2)
+        .put("permanentLocationId", permanentLocationId2)
+        .encode()));
+    String expectedPoLineId = UUID.randomUUID().toString();
+    JsonObject poLineAsJson = new JsonObject().put("id", expectedPoLineId);
     HashMap<String, String> payloadContext = new HashMap<>();
-    payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+    payloadContext.put(EntityType.HOLDINGS.value(), holdingsAsJson.encode());
+    payloadContext.put(EntityType.PO_LINE.value(), poLineAsJson.encode());
+    payloadContext.put(HOLDINGS_IDENTIFIERS, Json.encode(List.of(PERMANENT_LOCATION_ID, permanentLocationId2)));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
@@ -258,33 +289,331 @@ public class CreateItemEventHandlerTest {
     Assert.assertEquals(DI_INVENTORY_ITEM_CREATED.value(), eventPayload.getEventType());
     Assert.assertNotNull(eventPayload.getContext().get(ITEM.value()));
 
-    JsonObject createdItem = new JsonObject(eventPayload.getContext().get(ITEM.value()));
+    JsonArray createdItems = new JsonArray(eventPayload.getContext().get(ITEM.value()));
+    JsonArray errors = new JsonArray(eventPayload.getContext().get(ERRORS));
+    Assert.assertEquals(2, createdItems.size());
+    Assert.assertEquals(0, errors.size());
+
+    for (int i = 0; i < createdItems.size(); i++) {
+      JsonObject createdItem = createdItems.getJsonObject(i);
+      Assert.assertNotNull(createdItem.getJsonObject("status").getString("name"));
+      Assert.assertNotNull(createdItem.getString("permanentLoanTypeId"));
+      Assert.assertNotNull(createdItem.getString("materialTypeId"));
+      Assert.assertEquals(holdingsAsJson.getJsonObject(i).getString("id"), createdItem.getString("holdingId"));
+      Assert.assertEquals(expectedPoLineId, createdItem.getString("purchaseOrderLineIdentifier"));
+    }
+  }
+
+  @Ignore
+  @Test
+  public void shouldCreateMultipleItemsAndPopulatePartialErrorsForFailedItems()
+    throws InterruptedException,
+    ExecutionException,
+    TimeoutException {
+
+    // given
+    Mockito.doAnswer(invocationOnMock -> {
+      Item item = invocationOnMock.getArgument(0);
+      Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(item));
+      return null;
+    }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
+
+
+    Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(ListValue.of(List.of(AVAILABLE.value(), AVAILABLE.value())),
+      ListValue.of(List.of("", UUID.randomUUID().toString())),
+      ListValue.of(List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString())), ListValue.of(List.of("645398607547", "745398607547")));
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new ItemWriterFactory());
+    String permanentLocationId2 = UUID.randomUUID().toString();
+
+    String expectedHoldingId2 = UUID.randomUUID().toString();
+    String expectedHoldingId1 = UUID.randomUUID().toString();
+    JsonArray holdingsAsJson = new JsonArray(List.of(
+      new JsonObject()
+        .put("id", expectedHoldingId1)
+        .put("permanentLocationId", PERMANENT_LOCATION_ID)
+        .encode(),
+      new JsonObject()
+        .put("id", expectedHoldingId2)
+        .put("permanentLocationId", permanentLocationId2)
+        .encode()));
+    String expectedPoLineId = UUID.randomUUID().toString();
+    JsonObject poLineAsJson = new JsonObject().put("id", expectedPoLineId);
+    HashMap<String, String> payloadContext = new HashMap<>();
+    payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+    payloadContext.put(EntityType.HOLDINGS.value(), holdingsAsJson.encode());
+    payloadContext.put(EntityType.PO_LINE.value(), poLineAsJson.encode());
+    payloadContext.put(HOLDINGS_IDENTIFIERS, Json.encode(List.of(PERMANENT_LOCATION_ID, permanentLocationId2)));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    // when
+    CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
+
+    // then
+    DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
+    Assert.assertEquals(DI_INVENTORY_ITEM_CREATED.value(), eventPayload.getEventType());
+    Assert.assertNotNull(eventPayload.getContext().get(ITEM.value()));
+
+    JsonArray createdItems = new JsonArray(eventPayload.getContext().get(ITEM.value()));
+    JsonArray errors = new JsonArray(eventPayload.getContext().get(ERRORS));
+    Assert.assertEquals(1, createdItems.size());
+    Assert.assertEquals(1, errors.size());
+    Assert.assertEquals(errors.getJsonObject(0).getString("id"), ITEM_ID);
+
+    for (int i = 0; i < createdItems.size(); i++) {
+      JsonObject createdItem = createdItems.getJsonObject(i);
+      Assert.assertNotNull(createdItem.getJsonObject("status").getString("name"));
+      Assert.assertNotNull(createdItem.getString("permanentLoanTypeId"));
+      Assert.assertNotNull(createdItem.getString("materialTypeId"));
+      Assert.assertEquals(holdingsAsJson.getJsonObject(i).getString("id"), createdItem.getString("holdingId"));
+      Assert.assertEquals(expectedPoLineId, createdItem.getString("purchaseOrderLineIdentifier"));
+    }
+  }
+
+  @Ignore
+  @Test
+  public void shouldPopulateSameHoldingsItForAllItemsIfOnlyOneHoldingExist()
+    throws InterruptedException,
+    ExecutionException,
+    TimeoutException {
+
+    // given
+    Mockito.doAnswer(invocationOnMock -> {
+      Item item = invocationOnMock.getArgument(0);
+      Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(item));
+      return null;
+    }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
+
+
+    Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(ListValue.of(List.of(AVAILABLE.value(), AVAILABLE.value())),
+      ListValue.of(List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString())),
+      ListValue.of(List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString())), ListValue.of(List.of("645398607547", "745398607547")));
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new ItemWriterFactory());
+    String expectedHoldingId1 = UUID.randomUUID().toString();
+    JsonArray holdingsAsJson = new JsonArray(List.of(
+      new JsonObject()
+        .put("id", expectedHoldingId1)
+        .put("permanentLocationId", PERMANENT_LOCATION_ID)
+        .encode()));
+    String expectedPoLineId = UUID.randomUUID().toString();
+    JsonObject poLineAsJson = new JsonObject().put("id", expectedPoLineId);
+    HashMap<String, String> payloadContext = new HashMap<>();
+    payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+    payloadContext.put(EntityType.HOLDINGS.value(), holdingsAsJson.encode());
+    payloadContext.put(EntityType.PO_LINE.value(), poLineAsJson.encode());
+    payloadContext.put(HOLDINGS_IDENTIFIERS, Json.encode(List.of(PERMANENT_LOCATION_ID)));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    // when
+    CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
+
+    // then
+    DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
+    Assert.assertEquals(DI_INVENTORY_ITEM_CREATED.value(), eventPayload.getEventType());
+    Assert.assertNotNull(eventPayload.getContext().get(ITEM.value()));
+
+    JsonArray createdItems = new JsonArray(eventPayload.getContext().get(ITEM.value()));
+    JsonArray errors = new JsonArray(eventPayload.getContext().get(ERRORS));
+    Assert.assertEquals(2, createdItems.size());
+    Assert.assertEquals(0, errors.size());
+
+    for (int i = 0; i < createdItems.size(); i++) {
+      JsonObject createdItem = createdItems.getJsonObject(i);
+      Assert.assertNotNull(createdItem.getJsonObject("status").getString("name"));
+      Assert.assertNotNull(createdItem.getString("permanentLoanTypeId"));
+      Assert.assertNotNull(createdItem.getString("materialTypeId"));
+      Assert.assertEquals(expectedHoldingId1, createdItem.getString("holdingId"));
+      Assert.assertEquals(expectedPoLineId, createdItem.getString("purchaseOrderLineIdentifier"));
+    }
+  }
+
+  @Ignore
+  @Test(expected = ExecutionException.class)
+  public void shouldReturnFailedFutureIfHoldingsIdentifiersLessThanItems()
+    throws InterruptedException,
+    ExecutionException,
+    TimeoutException {
+
+    // given
+    Mockito.doAnswer(invocationOnMock -> {
+      Item item = invocationOnMock.getArgument(0);
+      Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(item));
+      return null;
+    }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
+
+
+    Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(ListValue.of(List.of(AVAILABLE.value(), AVAILABLE.value())),
+      ListValue.of(List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString())),
+      ListValue.of(List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString())), ListValue.of(List.of("645398607547", "745398607547")));
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new ItemWriterFactory());
+    String expectedHoldingId1 = UUID.randomUUID().toString();
+    String permanentLocationId2 = UUID.randomUUID().toString();
+    String expectedHoldingId2 = UUID.randomUUID().toString();
+    JsonArray holdingsAsJson = new JsonArray(List.of(
+      new JsonObject()
+        .put("id", expectedHoldingId1)
+        .put("permanentLocationId", PERMANENT_LOCATION_ID)
+        .encode(),
+      new JsonObject()
+        .put("id", expectedHoldingId2)
+        .put("permanentLocationId", permanentLocationId2)
+        .encode()));
+    String expectedPoLineId = UUID.randomUUID().toString();
+    JsonObject poLineAsJson = new JsonObject().put("id", expectedPoLineId);
+    HashMap<String, String> payloadContext = new HashMap<>();
+    payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+    payloadContext.put(EntityType.HOLDINGS.value(), holdingsAsJson.encode());
+    payloadContext.put(EntityType.PO_LINE.value(), poLineAsJson.encode());
+    payloadContext.put(HOLDINGS_IDENTIFIERS, Json.encode(List.of(PERMANENT_LOCATION_ID)));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    // when
+    CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
+
+    // then
+    future.get(5, TimeUnit.SECONDS);
+  }
+
+  @Ignore
+  @Test(expected = ExecutionException.class)
+  public void shouldReturnFailedFutureIfHoldingsIdentifiersDoNotHaveCorrespondingHolding()
+    throws InterruptedException,
+    ExecutionException,
+    TimeoutException {
+
+    // given
+    Mockito.doAnswer(invocationOnMock -> {
+      Item item = invocationOnMock.getArgument(0);
+      Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(item));
+      return null;
+    }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
+
+
+    Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(ListValue.of(List.of(AVAILABLE.value(), AVAILABLE.value())),
+      ListValue.of(List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString())),
+      ListValue.of(List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString())), ListValue.of(List.of("645398607547", "745398607547")));
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new ItemWriterFactory());
+    String expectedHoldingId1 = UUID.randomUUID().toString();
+    String permanentLocationId2 = UUID.randomUUID().toString();
+    String expectedHoldingId2 = UUID.randomUUID().toString();
+    JsonArray holdingsAsJson = new JsonArray(List.of(
+      new JsonObject()
+        .put("id", expectedHoldingId1)
+        .put("permanentLocationId", PERMANENT_LOCATION_ID)
+        .encode(),
+      new JsonObject()
+        .put("id", expectedHoldingId2)
+        .put("permanentLocationId", permanentLocationId2)
+        .encode()));
+    String expectedPoLineId = UUID.randomUUID().toString();
+    JsonObject poLineAsJson = new JsonObject().put("id", expectedPoLineId);
+    HashMap<String, String> payloadContext = new HashMap<>();
+    payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+    payloadContext.put(EntityType.HOLDINGS.value(), holdingsAsJson.encode());
+    payloadContext.put(EntityType.PO_LINE.value(), poLineAsJson.encode());
+    payloadContext.put(HOLDINGS_IDENTIFIERS, Json.encode(List.of(PERMANENT_LOCATION_ID, UUID.randomUUID().toString())));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    // when
+    CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
+
+    // then
+    future.get(5, TimeUnit.SECONDS);
+  }
+
+  @Test
+  public void shouldCreateItemAndFillInHoldingsRecordIdFromParsedRecordContent()
+    throws InterruptedException,
+    ExecutionException,
+    TimeoutException {
+
+    // given
+    Mockito.doAnswer(invocationOnMock -> {
+      Item item = invocationOnMock.getArgument(0);
+      Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(item));
+      return null;
+    }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new ItemWriterFactory());
+
+    String expectedHoldingId = UUID.randomUUID().toString();
+    JsonObject holdingAsJson = new JsonObject().put("id", expectedHoldingId);
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_HOLDING_ID));
+    HashMap<String, String> payloadContext = new HashMap<>();
+    payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    payloadContext.put(EntityType.HOLDINGS.value(), Json.encode(List.of(holdingAsJson)));
+    payloadContext.put(HOLDINGS_IDENTIFIERS, Json.encode(List.of(PERMANENT_LOCATION_ID)));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    // when
+    CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
+
+    // then
+    DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
+    Assert.assertEquals(DI_INVENTORY_ITEM_CREATED.value(), eventPayload.getEventType());
+    Assert.assertNotNull(eventPayload.getContext().get(ITEM.value()));
+
+    JsonArray createdItems = new JsonArray(eventPayload.getContext().get(ITEM.value()));
+    JsonArray errors = new JsonArray(eventPayload.getContext().get(ERRORS));
+    Assert.assertEquals(1, createdItems.size());
+    Assert.assertEquals(0, errors.size());
+    JsonObject createdItem = createdItems.getJsonObject(0);
     Assert.assertNotNull(createdItem.getJsonObject("status").getString("name"));
     Assert.assertNotNull(createdItem.getString("permanentLoanTypeId"));
     Assert.assertNotNull(createdItem.getString("materialTypeId"));
-    Assert.assertNotNull(createdItem.getString("holdingId"));
+    Assert.assertEquals(createdItem.getString("holdingId"), expectedHoldingId);
   }
 
-  @Test(expected = ExecutionException.class)
-  public void shouldReturnFailedFutureIfDuplicatedErrorExists()
+  @Test
+  public void shouldNotReturnFailedFutureIfInventoryStorageErrorExists()
     throws InterruptedException,
     ExecutionException,
-    TimeoutException, UnsupportedEncodingException {
+    TimeoutException {
 
     // given
-    RecordToEntity recordToItem = RecordToEntity.builder().recordId(RECORD_ID).entityId(ITEM_ID).build();
-    when(itemIdStorageService.store(any(), any(), any())).thenReturn(Future.succeededFuture(recordToItem));
-
-    Mockito.doAnswer(invocationOnMock -> {
-      MultipleRecords<Item> result = new MultipleRecords<>(new ArrayList<>(), 0);
-      Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
-      successHandler.accept(new Success<>(result));
-      return null;
-    }).when(mockedItemCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+    String errorMsg = "Smth error";
 
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
-      failureHandler.accept(new Failure(UNIQUE_ID_ERROR_MESSAGE, 400));
+      failureHandler.accept(new Failure(errorMsg, 400));
       return null;
     }).when(mockedItemCollection).add(any(), any(), any());
 
@@ -295,7 +624,8 @@ public class CreateItemEventHandlerTest {
     JsonObject holdingAsJson = new JsonObject().put("id", expectedHoldingId);
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
-    payloadContext.put(EntityType.HOLDINGS.value(), holdingAsJson.encode());
+    payloadContext.put(EntityType.HOLDINGS.value(), Json.encode(List.of(holdingAsJson)));
+    payloadContext.put(HOLDINGS_IDENTIFIERS, Json.encode(List.of(PERMANENT_LOCATION_ID)));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
@@ -305,54 +635,21 @@ public class CreateItemEventHandlerTest {
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
+
+    DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
+    Assert.assertEquals(DI_INVENTORY_ITEM_CREATED.value(), eventPayload.getEventType());
+    Assert.assertNotNull(eventPayload.getContext().get(ITEM.value()));
     future.get(5, TimeUnit.SECONDS);
+    JsonArray createdItems = new JsonArray(eventPayload.getContext().get(ITEM.value()));
+    JsonArray errors = new JsonArray(eventPayload.getContext().get(ERRORS));
+    Assert.assertEquals(0, createdItems.size());
+    Assert.assertEquals(1, errors.size());
+    Assert.assertEquals(errorMsg, errors.getJsonObject(0).getString("error"));
+    Assert.assertEquals(ITEM_ID, errors.getJsonObject(0).getString("id"));
   }
 
-  @Test(expected = ExecutionException.class)
-  public void shouldReturnFailedFutureIfInventoryStorageErrorExists()
-    throws InterruptedException,
-    ExecutionException,
-    TimeoutException, UnsupportedEncodingException {
-
-    // given
-    RecordToEntity recordToItem = RecordToEntity.builder().recordId(RECORD_ID).entityId(ITEM_ID).build();
-    when(itemIdStorageService.store(any(), any(), any())).thenReturn(Future.succeededFuture(recordToItem));
-
-    Mockito.doAnswer(invocationOnMock -> {
-      MultipleRecords<Item> result = new MultipleRecords<>(new ArrayList<>(), 0);
-      Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
-      successHandler.accept(new Success<>(result));
-      return null;
-    }).when(mockedItemCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
-
-    doAnswer(invocationOnMock -> {
-      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
-      failureHandler.accept(new Failure("Smth error", 400));
-      return null;
-    }).when(mockedItemCollection).add(any(), any(), any());
-
-    MappingManager.registerReaderFactory(fakeReaderFactory);
-    MappingManager.registerWriterFactory(new ItemWriterFactory());
-
-    String expectedHoldingId = UUID.randomUUID().toString();
-    JsonObject holdingAsJson = new JsonObject().put("id", expectedHoldingId);
-    HashMap<String, String> payloadContext = new HashMap<>();
-    payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
-    payloadContext.put(EntityType.HOLDINGS.value(), holdingAsJson.encode());
-
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
-      .withJobExecutionId(UUID.randomUUID().toString())
-      .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
-
-    // when
-    CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.SECONDS);
-  }
-
-  @Test(expected = ExecutionException.class)
-  public void shouldReturnFailedFutureWhenMappedItemWithoutStatus()
+  @Test
+  public void shouldCompleteFutureAmdReturnErrorsWhenMappedItemWithoutStatus()
     throws InterruptedException,
     ExecutionException,
     TimeoutException {
@@ -365,7 +662,11 @@ public class CreateItemEventHandlerTest {
 
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_HOLDING_ID));
     HashMap<String, String> payloadContext = new HashMap<>();
+    String expectedHoldingId = UUID.randomUUID().toString();
+    JsonObject holdingAsJson = new JsonObject().put("id", expectedHoldingId);
     payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    payloadContext.put(EntityType.HOLDINGS.value(), Json.encode(List.of(holdingAsJson)));
+    payloadContext.put(HOLDINGS_IDENTIFIERS, Json.encode(List.of(PERMANENT_LOCATION_ID)));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
@@ -377,11 +678,15 @@ public class CreateItemEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
 
     // thenitem.getBarcode()
-    future.get(5, TimeUnit.SECONDS);
+    DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
+    JsonArray createdItems = new JsonArray(eventPayload.getContext().get(ITEM.value()));
+    JsonArray errors = new JsonArray(eventPayload.getContext().get(ERRORS));
+    Assert.assertEquals(0, createdItems.size());
+    Assert.assertEquals(1, errors.size());
   }
 
-  @Test(expected = ExecutionException.class)
-  public void shouldReturnFailedFutureWhenMappedItemWithUnrecognizedStatusName()
+  @Test
+  public void shouldCompleteAndReturnErrorWhenMappedItemWithUnrecognizedStatusName()
     throws InterruptedException,
     ExecutionException,
     TimeoutException {
@@ -395,7 +700,11 @@ public class CreateItemEventHandlerTest {
     CreateItemEventHandler createItemHandler = new CreateItemEventHandler(mockedStorage, mappingMetadataCache, itemIdStorageService, orderHelperService);
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_HOLDING_ID));
     HashMap<String, String> payloadContext = new HashMap<>();
+    String expectedHoldingId = UUID.randomUUID().toString();
+    JsonObject holdingAsJson = new JsonObject().put("id", expectedHoldingId);
     payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    payloadContext.put(EntityType.HOLDINGS.value(), Json.encode(List.of(holdingAsJson)));
+    payloadContext.put(HOLDINGS_IDENTIFIERS, Json.encode(List.of(PERMANENT_LOCATION_ID)));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
@@ -407,11 +716,15 @@ public class CreateItemEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
 
     // then
-    future.get(5, TimeUnit.SECONDS);
+    DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
+    JsonArray createdItems = new JsonArray(eventPayload.getContext().get(ITEM.value()));
+    JsonArray errors = new JsonArray(eventPayload.getContext().get(ERRORS));
+    Assert.assertEquals(0, createdItems.size());
+    Assert.assertEquals(1, errors.size());
   }
 
-  @Test(expected = ExecutionException.class)
-  public void shouldReturnFailedFutureWhenCreatedItemHasExistingBarcode()
+  @Test
+  public void shouldCompleteAndReturnErrorWhenCreatedItemHasExistingBarcode()
     throws InterruptedException,
     ExecutionException,
     TimeoutException,
@@ -432,7 +745,8 @@ public class CreateItemEventHandlerTest {
     JsonObject holdingAsJson = new JsonObject().put("id", UUID.randomUUID().toString());
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
-    payloadContext.put(EntityType.HOLDINGS.value(), holdingAsJson.encode());
+    payloadContext.put(EntityType.HOLDINGS.value(), Json.encode(List.of(holdingAsJson)));
+    payloadContext.put(HOLDINGS_IDENTIFIERS, Json.encode(List.of(PERMANENT_LOCATION_ID)));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
@@ -444,6 +758,80 @@ public class CreateItemEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
 
     // then
+    DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
+    JsonArray createdItems = new JsonArray(eventPayload.getContext().get(ITEM.value()));
+    JsonArray errors = new JsonArray(eventPayload.getContext().get(ERRORS));
+    Assert.assertEquals(0, createdItems.size());
+    Assert.assertEquals(1, errors.size());
+  }
+
+  @Test
+  public void shouldCompleteReturnErrorWhenMappedItemWithoutPermanentLoanType()
+    throws InterruptedException,
+    ExecutionException,
+    TimeoutException {
+
+    // given
+    Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(AVAILABLE.value()), StringValue.of(""), StringValue.of(UUID.randomUUID().toString()));
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new ItemWriterFactory());
+
+    JsonObject holdingAsJson = new JsonObject().put("id", UUID.randomUUID().toString());
+    HashMap<String, String> payloadContext = new HashMap<>();
+    payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+    payloadContext.put(EntityType.HOLDINGS.value(), Json.encode(List.of(holdingAsJson)));
+    payloadContext.put(HOLDINGS_IDENTIFIERS, Json.encode(List.of(PERMANENT_LOCATION_ID)));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    // when
+    CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
+
+    // then
+    DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
+    JsonArray createdItems = new JsonArray(eventPayload.getContext().get(ITEM.value()));
+    JsonArray errors = new JsonArray(eventPayload.getContext().get(ERRORS));
+    Assert.assertEquals(0, createdItems.size());
+    Assert.assertEquals(1, errors.size());
+  }
+
+
+  @Test(expected = ExecutionException.class)
+  public void shouldReturnFailedFutureIfDuplicatedErrorExists()
+    throws InterruptedException,
+    ExecutionException,
+    TimeoutException {
+
+    // given
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure(UNIQUE_ID_ERROR_MESSAGE, 400));
+      return null;
+    }).when(mockedItemCollection).add(any(), any(), any());
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new ItemWriterFactory());
+
+    String expectedHoldingId = UUID.randomUUID().toString();
+    JsonObject holdingAsJson = new JsonObject().put("id", expectedHoldingId);
+    HashMap<String, String> payloadContext = new HashMap<>();
+    payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+    payloadContext.put(EntityType.HOLDINGS.value(), Json.encode(List.of(holdingAsJson)));
+    payloadContext.put(HOLDINGS_IDENTIFIERS, Json.encode(List.of(PERMANENT_LOCATION_ID)));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    // when
+    CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.SECONDS);
   }
 
@@ -503,36 +891,6 @@ public class CreateItemEventHandlerTest {
   }
 
   @Test(expected = ExecutionException.class)
-  public void shouldReturnFailedFutureWhenMappedItemWithoutPermanentLoanType()
-    throws InterruptedException,
-    ExecutionException,
-    TimeoutException {
-
-    // given
-    Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(AVAILABLE.value()), StringValue.of(""), StringValue.of(UUID.randomUUID().toString()));
-
-    MappingManager.registerReaderFactory(fakeReaderFactory);
-    MappingManager.registerWriterFactory(new ItemWriterFactory());
-
-    JsonObject holdingAsJson = new JsonObject().put("id", UUID.randomUUID().toString());
-    HashMap<String, String> payloadContext = new HashMap<>();
-    payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
-    payloadContext.put(EntityType.HOLDINGS.value(), holdingAsJson.encode());
-
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
-      .withJobExecutionId(UUID.randomUUID().toString())
-      .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
-
-    // when
-    CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
-
-    // then
-    future.get(5, TimeUnit.SECONDS);
-  }
-
-  @Test(expected = ExecutionException.class)
   public void shouldReturnFailedFutureWhenHasNoMarcRecord()
     throws InterruptedException,
     ExecutionException,
@@ -565,7 +923,7 @@ public class CreateItemEventHandlerTest {
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITHOUT_HOLDING_ID));
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
-    payloadContext.put(EntityType.HOLDINGS.value(), new JsonObject().encode());
+    payloadContext.put(HOLDINGS_IDENTIFIERS, Json.encode(List.of(PERMANENT_LOCATION_ID)));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
@@ -585,19 +943,9 @@ public class CreateItemEventHandlerTest {
     throws
     InterruptedException,
     ExecutionException,
-    TimeoutException, UnsupportedEncodingException {
+    TimeoutException {
 
     // given
-    RecordToEntity recordToItem = RecordToEntity.builder().recordId(RECORD_ID).entityId(ITEM_ID).build();
-    when(itemIdStorageService.store(any(), any(), any())).thenReturn(Future.succeededFuture(recordToItem));
-
-    Mockito.doAnswer(invocationOnMock -> {
-      MultipleRecords<Item> result = new MultipleRecords<>(new ArrayList<>(), 0);
-      Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
-      successHandler.accept(new Success<>(result));
-      return null;
-    }).when(mockedItemCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
-
     Mockito.doAnswer(invocationOnMock -> {
       Item item = invocationOnMock.getArgument(0);
       Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
@@ -611,7 +959,8 @@ public class CreateItemEventHandlerTest {
     JsonObject holdingAsJson = new JsonObject().put("id", expectedHoldingId);
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
-    payloadContext.put(EntityType.HOLDINGS.value(), holdingAsJson.encode());
+    payloadContext.put(EntityType.HOLDINGS.value(), Json.encode(List.of(holdingAsJson)));
+    payloadContext.put(HOLDINGS_IDENTIFIERS, Json.encode(List.of(PERMANENT_LOCATION_ID)));
     payloadContext.put(EntityType.PO_LINE.value(), new JsonObject().encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()

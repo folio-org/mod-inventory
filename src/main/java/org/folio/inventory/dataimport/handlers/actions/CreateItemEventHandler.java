@@ -1,8 +1,10 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -12,9 +14,9 @@ import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.entities.PartialError;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.dataimport.services.OrderHelperService;
-import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.folio.inventory.domain.items.CirculationNote;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
@@ -32,16 +34,17 @@ import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.processing.mapping.mapper.MappingContext;
 import org.folio.rest.jaxrs.model.EntityType;
-import org.folio.rest.jaxrs.model.Record;
 
 import java.io.UnsupportedEncodingException;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -60,7 +63,9 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTI
 public class CreateItemEventHandler implements EventHandler {
 
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
-  private static final String PAYLOAD_DATA_HAS_NO_HOLDING_ID_MSG = "Failed to extract holdingsRecordId from holdingsRecord entity or parsed record";
+  private static final String PAYLOAD_DATA_HAS_NO_HOLDINGS = "Failed to extract holdingsRecord from payload";
+  private static final String PAYLOAD_DATA_HAS_NO_HOLDING_WITH_CORRESPONDING_IDENTIFIER = "Holdings record with identifier: %s does not exist";
+  private static final String HOLDING_PERMANENT_LOCATION_SHOULD_NOT_BE_BLANK = "Holding permanent location id should not be blank";
   private static final String PAYLOAD_DATA_HAS_NO_PO_LINE_ID_MSG = "Failed to extract poLineId from poLine entity";
   private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingMetadata snapshot was not found by jobExecutionId '%s'. RecordId: '%s', chunkId: '%s' ";
   static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create an Item requires a mapping profile";
@@ -71,6 +76,10 @@ public class CreateItemEventHandler implements EventHandler {
   public static final String PO_LINE_ID_FIELD = "id";
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
+  private static final String ERRORS = "ERRORS";
+  private static final String HOLDING_PERMANENT_LOCATION_ID = "permanentLocationId";
+  private static final String HOLDING_IDENTIFIERS = "HOLDINGS_IDENTIFIERS";
+  private static final String BLANK = "";
   private static final Map<String, String> validNotes = Map.of(
     "Check in note", "Check in",
     "Check out note", "Check out");
@@ -124,7 +133,7 @@ public class CreateItemEventHandler implements EventHandler {
 
       Future<RecordToEntity> recordToItemFuture = idStorageService.store(recordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant());
       recordToItemFuture.onSuccess(res -> {
-        String itemId = res.getEntityId();
+        String deduplicationItemId = res.getEntityId();
         Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
         ItemCollection itemCollection = storage.getItemCollection(context);
 
@@ -135,30 +144,62 @@ public class CreateItemEventHandler implements EventHandler {
           .map(mappingMetadataDto -> {
             MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
             MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
-            return processMappingResult(dataImportEventPayload, itemId);
-          })
-          .compose(mappedItemJson -> {
-            List<String> errors = validateItem(mappedItemJson, requiredFields);
-            if (!errors.isEmpty()) {
-              String msg = format("Mapped Item is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", errors,
-                jobExecutionId, recordId, chunkId);
-              LOG.error(msg);
-              return Future.failedFuture(msg);
-            }
 
-            Item mappedItem = ItemUtil.jsonToItem(mappedItemJson);
-            return isItemBarcodeUnique(mappedItemJson.getString("barcode"), itemCollection)
-              .compose(isUnique -> isUnique
-                ? addItem(mappedItem, itemCollection)
-                : Future.failedFuture(format("Barcode must be unique, %s is already assigned to another item", mappedItemJson.getString("barcode"))));
+            // TO DELETE
+            JsonObject itemsJson = new JsonObject(payloadContext.get(ITEM.value()));
+            JsonArray items;
+            if (itemsJson.getJsonObject(ITEM_PATH_FIELD) == null) {
+              items = new JsonArray(List.of(itemsJson));
+            } else {
+              items = new JsonArray(List.of(itemsJson.getJsonObject(ITEM_PATH_FIELD)));
+            }
+            payloadContext.put(ITEM.value(), items.toString());
+            // TO DELETE
+
+            return processMappingResult(dataImportEventPayload, deduplicationItemId);
+          })
+          .compose(mappedItemList -> {
+            Promise<List<Item>> createMultipleItemsPromise = Promise.promise();
+            List<PartialError> multipleItemsCreateErrors = new ArrayList<>();
+            List<Future> createItemsFutures = new ArrayList<>();
+            List<Item> createdItems = new ArrayList<>();
+
+            mappedItemList.forEach(e -> {
+              JsonObject itemAsJson = (JsonObject) e;
+              Promise<Item> createItemPromise = Promise.promise();
+              processSingleItem(jobExecutionId, recordId, chunkId, itemCollection, itemAsJson)
+                .onSuccess(item -> {
+                  createdItems.add(item);
+                  createItemPromise.complete();
+                })
+                .onFailure(cause -> {
+                  String itemId = itemAsJson.getString(ITEM_ID_FIELD) != null ? itemAsJson.getString(ITEM_ID_FIELD) : BLANK;
+                  multipleItemsCreateErrors.add(new PartialError(itemId, cause.getMessage()));
+                  if (cause instanceof DuplicateEventException) {
+                    createItemPromise.fail(cause);
+                  } else {
+                    createItemPromise.complete();
+                  }
+                });
+
+              createItemsFutures.add(createItemPromise.future());
+            });
+
+            CompositeFuture.all(createItemsFutures).onComplete(ar -> {
+              payloadContext.put(ERRORS, Json.encode(multipleItemsCreateErrors));
+              if (ar.succeeded()) {
+                createMultipleItemsPromise.complete(createdItems);
+              } else {
+                createMultipleItemsPromise.fail(ar.cause());
+              }
+            });
+            return createMultipleItemsPromise.future();
           })
           .onComplete(ar -> {
             if (ar.succeeded()) {
               dataImportEventPayload.getContext().put(ITEM.value(), Json.encode(ar.result()));
               orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload, DI_INVENTORY_ITEM_CREATED, context)
-                .onComplete(result -> {
-                    future.complete(dataImportEventPayload);
-                  }
+                .onComplete(result -> future.complete(dataImportEventPayload)
                 );
             } else {
               if (!(ar.cause() instanceof DuplicateEventException)) {
@@ -180,15 +221,34 @@ public class CreateItemEventHandler implements EventHandler {
     return future;
   }
 
-  private JsonObject processMappingResult(DataImportEventPayload dataImportEventPayload, String itemId) {
-    JsonObject itemAsJson = new JsonObject(dataImportEventPayload.getContext().get(ITEM.value()));
-    if (itemAsJson.getJsonObject(ITEM_PATH_FIELD) != null) {
-      itemAsJson = itemAsJson.getJsonObject(ITEM_PATH_FIELD);
+  private Future<Item> processSingleItem(String jobExecutionId, String recordId, String chunkId, ItemCollection itemCollection, JsonObject mappedItemJson) {
+    List<String> errors = validateItem(mappedItemJson, requiredFields);
+    if (!errors.isEmpty()) {
+      String msg = format("Mapped Item is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", errors,
+        jobExecutionId, recordId, chunkId);
+      LOG.warn(msg);
+      return Future.failedFuture(msg);
     }
-    fillPoLineIdIfNecessary(dataImportEventPayload, itemAsJson);
-    fillHoldingsRecordIdIfNecessary(dataImportEventPayload, itemAsJson);
-    itemAsJson.put(ITEM_ID_FIELD, itemId);
-    return itemAsJson;
+    Item mappedItem = ItemUtil.jsonToItem(mappedItemJson);
+    return isItemBarcodeUnique(mappedItemJson.getString("barcode"), itemCollection)
+      .compose(isUnique -> isUnique
+        ? addItem(mappedItem, itemCollection)
+        : Future.failedFuture(format("Barcode must be unique, %s is already assigned to another item", mappedItemJson.getString("barcode"))));
+  }
+
+  private JsonArray processMappingResult(DataImportEventPayload dataImportEventPayload, String deduplicationItemId) {
+    JsonArray itemsList = new JsonArray(dataImportEventPayload.getContext().get(ITEM.value()));
+    JsonArray holdingsIdentifiers = new JsonArray(dataImportEventPayload.getContext().get(HOLDING_IDENTIFIERS));
+    String holdingsAsString = dataImportEventPayload.getContext().get(EntityType.HOLDINGS.value());
+
+    for (int i = 0; i < itemsList.size(); i++) {
+      JsonObject itemAsJson = itemsList.getJsonObject(i);
+      String holdingPermanentLocation = holdingsIdentifiers.size() > i ? holdingsIdentifiers.getString(i) : null;
+      fillPoLineIdIfNecessary(dataImportEventPayload, itemAsJson);
+      fillHoldingsRecordIdIfNecessary(itemAsJson, holdingsAsString, holdingPermanentLocation);
+      itemAsJson.put(ITEM_ID_FIELD, (i == 0) ? deduplicationItemId : UUID.randomUUID().toString());
+    }
+    return itemsList;
   }
 
   @Override
@@ -217,26 +277,39 @@ public class CreateItemEventHandler implements EventHandler {
     }
   }
 
-  private void fillHoldingsRecordIdIfNecessary(DataImportEventPayload dataImportEventPayload, JsonObject itemAsJson) {
+  private void fillHoldingsRecordIdIfNecessary(JsonObject itemAsJson, String holdingsAsString, String holdingPermanentLocation) {
     if (isBlank(itemAsJson.getString(HOLDINGS_RECORD_ID_FIELD))) {
-      String holdingsId = null;
-      String holdingAsString = dataImportEventPayload.getContext().get(EntityType.HOLDINGS.value());
-
-      if (StringUtils.isNotEmpty(holdingAsString)) {
-        JsonObject holdingsRecord = new JsonObject(holdingAsString);
-        holdingsId = holdingsRecord.getString(HOLDING_ID_FIELD);
+      String holdingId;
+      if (StringUtils.isNotEmpty(holdingsAsString)) {
+        holdingId = getHoldingByPermanentLocation(holdingsAsString, holdingPermanentLocation);
+      } else {
+        LOG.warn(PAYLOAD_DATA_HAS_NO_HOLDINGS);
+        throw new EventProcessingException(PAYLOAD_DATA_HAS_NO_HOLDINGS);
       }
-      if (isBlank(holdingsId)) {
-        String recordAsString = dataImportEventPayload.getContext().get(EntityType.MARC_BIBLIOGRAPHIC.value());
-        Record record = Json.decodeValue(recordAsString, Record.class);
-        holdingsId = ParsedRecordUtil.getAdditionalSubfieldValue(record.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.H);
-      }
-      if (isBlank(holdingsId)) {
-        LOG.error(PAYLOAD_DATA_HAS_NO_HOLDING_ID_MSG);
-        throw new EventProcessingException(PAYLOAD_DATA_HAS_NO_HOLDING_ID_MSG);
-      }
-      itemAsJson.put(HOLDINGS_RECORD_ID_FIELD, holdingsId);
+      itemAsJson.put(HOLDINGS_RECORD_ID_FIELD, holdingId);
     }
+  }
+
+  private static String getHoldingByPermanentLocation(String holdingsAsString, String holdingPermanentLocation) {
+    JsonArray holdingsRecords = new JsonArray(holdingsAsString);
+    if (holdingsRecords.size() == 1) {
+      return holdingsRecords.getJsonObject(0).getString(HOLDING_ID_FIELD);
+    }
+
+    if (holdingPermanentLocation == null) {
+      LOG.warn(HOLDING_PERMANENT_LOCATION_SHOULD_NOT_BE_BLANK);
+      throw new EventProcessingException(HOLDING_PERMANENT_LOCATION_SHOULD_NOT_BE_BLANK);
+    }
+
+    Optional<JsonObject> correspondingHolding = holdingsRecords.stream()
+      .map(e -> new JsonObject((String) e))
+      .filter(holding -> StringUtils.equals(holding.getString(HOLDING_PERMANENT_LOCATION_ID), holdingPermanentLocation)).findFirst();
+
+    return correspondingHolding.orElseThrow(() -> {
+      String errorMsg = format(PAYLOAD_DATA_HAS_NO_HOLDING_WITH_CORRESPONDING_IDENTIFIER, holdingPermanentLocation);
+      LOG.warn(errorMsg);
+      throw new EventProcessingException(errorMsg);
+    }).getString(HOLDING_ID_FIELD);
   }
 
   private void validateStatusName(JsonObject itemAsJson, List<String> errors) {
@@ -291,7 +364,7 @@ public class CreateItemEventHandler implements EventHandler {
           LOG.info("addItem:: Duplicated event received by ItemId: {}. Ignoring...", item.getId());
           promise.fail(new DuplicateEventException(format("Duplicated event by Item id: %s", item.getId())));
         } else {
-          LOG.error(format("addItem:: Error posting Item cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
+          LOG.warn(format("addItem:: Error posting Item cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
           promise.fail(failure.getReason());
         }
       });
