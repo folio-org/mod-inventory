@@ -64,7 +64,6 @@ public class CreateItemEventHandler implements EventHandler {
 
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
   private static final String PAYLOAD_DATA_HAS_NO_HOLDINGS = "Failed to extract holdingsRecord from payload";
-  private static final String PAYLOAD_DATA_HAS_NO_HOLDING_WITH_CORRESPONDING_IDENTIFIER = "Holdings record with identifier: %s does not exist";
   private static final String HOLDING_PERMANENT_LOCATION_SHOULD_NOT_BE_BLANK = "Holding permanent location id should not be blank";
   private static final String PAYLOAD_DATA_HAS_NO_PO_LINE_ID_MSG = "Failed to extract poLineId from poLine entity";
   private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingMetadata snapshot was not found by jobExecutionId '%s'. RecordId: '%s', chunkId: '%s' ";
@@ -144,18 +143,6 @@ public class CreateItemEventHandler implements EventHandler {
           .map(mappingMetadataDto -> {
             MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
             MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
-
-            // TO DELETE
-            JsonObject itemsJson = new JsonObject(payloadContext.get(ITEM.value()));
-            JsonArray items;
-            if (itemsJson.getJsonObject(ITEM_PATH_FIELD) == null) {
-              items = new JsonArray(List.of(itemsJson));
-            } else {
-              items = new JsonArray(List.of(itemsJson.getJsonObject(ITEM_PATH_FIELD)));
-            }
-            payloadContext.put(ITEM.value(), items.toString());
-            // TO DELETE
-
             return processMappingResult(dataImportEventPayload, deduplicationItemId);
           })
           .compose(mappedItemList -> {
@@ -165,7 +152,7 @@ public class CreateItemEventHandler implements EventHandler {
             List<Item> createdItems = new ArrayList<>();
 
             mappedItemList.forEach(e -> {
-              JsonObject itemAsJson = (JsonObject) e;
+              JsonObject itemAsJson = getItemFromJson((JsonObject) e);
               Promise<Item> createItemPromise = Promise.promise();
               processSingleItem(jobExecutionId, recordId, chunkId, itemCollection, itemAsJson)
                 .onSuccess(item -> {
@@ -237,18 +224,25 @@ public class CreateItemEventHandler implements EventHandler {
   }
 
   private JsonArray processMappingResult(DataImportEventPayload dataImportEventPayload, String deduplicationItemId) {
-    JsonArray itemsList = new JsonArray(dataImportEventPayload.getContext().get(ITEM.value()));
+    JsonArray items = new JsonArray(dataImportEventPayload.getContext().get(ITEM.value()));
+    JsonArray mappedItems = new JsonArray();
     JsonArray holdingsIdentifiers = new JsonArray(dataImportEventPayload.getContext().get(HOLDING_IDENTIFIERS));
     String holdingsAsString = dataImportEventPayload.getContext().get(EntityType.HOLDINGS.value());
 
-    for (int i = 0; i < itemsList.size(); i++) {
-      JsonObject itemAsJson = itemsList.getJsonObject(i);
+    for (int i = 0; i < items.size(); i++) {
+      JsonObject itemAsJson = getItemFromJson(items.getJsonObject(i));
       String holdingPermanentLocation = holdingsIdentifiers.size() > i ? holdingsIdentifiers.getString(i) : null;
       fillPoLineIdIfNecessary(dataImportEventPayload, itemAsJson);
-      fillHoldingsRecordIdIfNecessary(itemAsJson, holdingsAsString, holdingPermanentLocation);
+      if (fillHoldingsRecordIdIfNecessary(itemAsJson, holdingsAsString, holdingPermanentLocation)) {
+        mappedItems.add(itemAsJson);
+      }
+    }
+
+    for (int i = 0; i < mappedItems.size(); i++) {
+      JsonObject itemAsJson = getItemFromJson(mappedItems.getJsonObject(i));
       itemAsJson.put(ITEM_ID_FIELD, (i == 0) ? deduplicationItemId : UUID.randomUUID().toString());
     }
-    return itemsList;
+    return mappedItems;
   }
 
   @Override
@@ -277,7 +271,7 @@ public class CreateItemEventHandler implements EventHandler {
     }
   }
 
-  private void fillHoldingsRecordIdIfNecessary(JsonObject itemAsJson, String holdingsAsString, String holdingPermanentLocation) {
+  private boolean fillHoldingsRecordIdIfNecessary(JsonObject itemAsJson, String holdingsAsString, String holdingPermanentLocation) {
     if (isBlank(itemAsJson.getString(HOLDINGS_RECORD_ID_FIELD))) {
       String holdingId;
       if (StringUtils.isNotEmpty(holdingsAsString)) {
@@ -286,8 +280,10 @@ public class CreateItemEventHandler implements EventHandler {
         LOG.warn(PAYLOAD_DATA_HAS_NO_HOLDINGS);
         throw new EventProcessingException(PAYLOAD_DATA_HAS_NO_HOLDINGS);
       }
+      if (holdingId == null) return false;
       itemAsJson.put(HOLDINGS_RECORD_ID_FIELD, holdingId);
     }
+    return true;
   }
 
   private static String getHoldingByPermanentLocation(String holdingsAsString, String holdingPermanentLocation) {
@@ -297,19 +293,15 @@ public class CreateItemEventHandler implements EventHandler {
     }
 
     if (holdingPermanentLocation == null) {
-      LOG.warn(HOLDING_PERMANENT_LOCATION_SHOULD_NOT_BE_BLANK);
-      throw new EventProcessingException(HOLDING_PERMANENT_LOCATION_SHOULD_NOT_BE_BLANK);
+      LOG.debug("getHoldingByPermanentLocation:: " + HOLDING_PERMANENT_LOCATION_SHOULD_NOT_BE_BLANK);
+      return null;
     }
 
     Optional<JsonObject> correspondingHolding = holdingsRecords.stream()
-      .map(e -> new JsonObject((String) e))
+      .map(e -> (JsonObject) e)
       .filter(holding -> StringUtils.equals(holding.getString(HOLDING_PERMANENT_LOCATION_ID), holdingPermanentLocation)).findFirst();
 
-    return correspondingHolding.orElseThrow(() -> {
-      String errorMsg = format(PAYLOAD_DATA_HAS_NO_HOLDING_WITH_CORRESPONDING_IDENTIFIER, holdingPermanentLocation);
-      LOG.warn(errorMsg);
-      throw new EventProcessingException(errorMsg);
-    }).getString(HOLDING_ID_FIELD);
+    return correspondingHolding.map(entries -> entries.getString(HOLDING_ID_FIELD)).orElse(null);
   }
 
   private void validateStatusName(JsonObject itemAsJson, List<String> errors) {
@@ -369,5 +361,12 @@ public class CreateItemEventHandler implements EventHandler {
         }
       });
     return promise.future();
+  }
+
+  private JsonObject getItemFromJson(JsonObject itemAsJson) {
+    if (itemAsJson.getJsonObject(ITEM_PATH_FIELD) != null) {
+      return itemAsJson.getJsonObject(ITEM_PATH_FIELD);
+    }
+    return itemAsJson;
   }
 }
