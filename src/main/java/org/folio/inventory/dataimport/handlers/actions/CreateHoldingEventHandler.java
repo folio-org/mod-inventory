@@ -225,7 +225,9 @@ public class CreateHoldingEventHandler implements EventHandler {
         });
     });
     CompositeFuture.all(createHoldingsRecordFutures).onComplete(ar -> {
-      payloadContext.put(ERRORS, Json.encode(errors));
+      if (payloadContext.containsKey(ERRORS) || !errors.isEmpty()) {
+        payloadContext.put(ERRORS, Json.encode(errors));
+      }
       if (ar.succeeded()) {
         holdingsPromise.complete(createdHoldingsRecord);
       } else {
