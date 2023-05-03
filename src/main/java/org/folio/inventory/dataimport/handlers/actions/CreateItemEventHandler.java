@@ -173,7 +173,9 @@ public class CreateItemEventHandler implements EventHandler {
             });
 
             CompositeFuture.all(createItemsFutures).onComplete(ar -> {
-              payloadContext.put(ERRORS, Json.encode(multipleItemsCreateErrors));
+              if (payloadContext.containsKey(ERRORS) || !multipleItemsCreateErrors.isEmpty()) {
+                payloadContext.put(ERRORS, Json.encode(multipleItemsCreateErrors));
+              }
               if (ar.succeeded()) {
                 createMultipleItemsPromise.complete(createdItems);
               } else {

@@ -17,6 +17,7 @@ import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.ItemWriterFactory;
 import org.folio.inventory.dataimport.ItemsMapperFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.entities.PartialError;
 import org.folio.inventory.dataimport.services.OrderHelperServiceImpl;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
@@ -28,7 +29,6 @@ import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.processing.mapping.mapper.reader.Reader;
 import org.folio.processing.mapping.mapper.reader.record.marc.MarcBibReaderFactory;
-import org.folio.processing.value.ListValue;
 import org.folio.processing.value.StringValue;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.MappingDetail;
@@ -39,7 +39,6 @@ import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -223,9 +222,8 @@ public class CreateItemEventHandlerTest {
     Assert.assertNotNull(eventPayload.getContext().get(ITEM.value()));
 
     JsonArray createdItems = new JsonArray(eventPayload.getContext().get(ITEM.value()));
-    JsonArray errors = new JsonArray(eventPayload.getContext().get(ERRORS));
+    Assert.assertNull(eventPayload.getContext().get(ERRORS));
     Assert.assertEquals(1, createdItems.size());
-    Assert.assertEquals(0, errors.size());
     JsonObject createdItem = createdItems.getJsonObject(0);
     Assert.assertNotNull(createdItem.getJsonObject("status").getString("name"));
     Assert.assertNotNull(createdItem.getString("permanentLoanTypeId"));
@@ -293,9 +291,8 @@ public class CreateItemEventHandlerTest {
     Assert.assertNotNull(eventPayload.getContext().get(ITEM.value()));
 
     JsonArray createdItems = new JsonArray(eventPayload.getContext().get(ITEM.value()));
-    JsonArray errors = new JsonArray(eventPayload.getContext().get(ERRORS));
+    Assert.assertNull(eventPayload.getContext().get(ERRORS));
     Assert.assertEquals(2, createdItems.size());
-    Assert.assertEquals(0, errors.size());
 
     for (int i = 0; i < createdItems.size(); i++) {
       JsonObject createdItem = createdItems.getJsonObject(i);
@@ -374,9 +371,8 @@ public class CreateItemEventHandlerTest {
     Assert.assertNotNull(eventPayload.getContext().get(ITEM.value()));
 
     JsonArray createdItems = new JsonArray(eventPayload.getContext().get(ITEM.value()));
-    JsonArray errors = new JsonArray(eventPayload.getContext().get(ERRORS));
+    Assert.assertNull(eventPayload.getContext().get(ERRORS));
     Assert.assertEquals(2, createdItems.size());
-    Assert.assertEquals(0, errors.size());
 
     Assert.assertEquals(createdItems.getJsonObject(0).getString("id"), ITEM_ID);
     for (int i = 0; i < createdItems.size(); i++) {
@@ -526,9 +522,8 @@ public class CreateItemEventHandlerTest {
     Assert.assertNotNull(eventPayload.getContext().get(ITEM.value()));
 
     JsonArray createdItems = new JsonArray(eventPayload.getContext().get(ITEM.value()));
-    JsonArray errors = new JsonArray(eventPayload.getContext().get(ERRORS));
+    Assert.assertNull(eventPayload.getContext().get(ERRORS));
     Assert.assertEquals(2, createdItems.size());
-    Assert.assertEquals(0, errors.size());
 
     for (int i = 0; i < createdItems.size(); i++) {
       JsonObject createdItem = createdItems.getJsonObject(i);
@@ -561,6 +556,7 @@ public class CreateItemEventHandlerTest {
     payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
     payloadContext.put(EntityType.HOLDINGS.value(), Json.encode(List.of(holdingAsJson)));
     payloadContext.put(HOLDINGS_IDENTIFIERS, Json.encode(List.of(PERMANENT_LOCATION_ID)));
+    payloadContext.put(ERRORS, Json.encode(new PartialError(null, "testError")));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
@@ -578,8 +574,8 @@ public class CreateItemEventHandlerTest {
 
     JsonArray createdItems = new JsonArray(eventPayload.getContext().get(ITEM.value()));
     JsonArray errors = new JsonArray(eventPayload.getContext().get(ERRORS));
-    Assert.assertEquals(1, createdItems.size());
     Assert.assertEquals(0, errors.size());
+    Assert.assertEquals(1, createdItems.size());
     JsonObject createdItem = createdItems.getJsonObject(0);
     Assert.assertNotNull(createdItem.getJsonObject("status").getString("name"));
     Assert.assertNotNull(createdItem.getString("permanentLoanTypeId"));
