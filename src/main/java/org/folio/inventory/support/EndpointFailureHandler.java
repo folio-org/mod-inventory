@@ -63,6 +63,10 @@ public final class EndpointFailureHandler {
       return throwable.getCause();
     }
 
+    if (throwable.getCause() instanceof ExternalResourceFetchException) {
+      return throwable.getCause();
+    }
+
     return throwable;
   }
 }

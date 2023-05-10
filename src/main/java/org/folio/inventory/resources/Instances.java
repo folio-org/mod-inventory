@@ -165,11 +165,7 @@ public class Instances extends AbstractInstances {
           log.warn(
             format("Failed to create self link for instance: %s", e.toString()));
         }
-        }).exceptionally(error -> {
-          handleFailure(getKnownException(error), routingContext);
-
-          return null;
-        });
+        }).exceptionally(doExceptionally(routingContext));
   }
 
   private void update(RoutingContext rContext) {
