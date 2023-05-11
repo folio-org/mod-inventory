@@ -6,7 +6,7 @@ public class ExternalResourceFetchException extends AbstractInventoryException {
 
 
   public ExternalResourceFetchException(String body, int statusCode, String contentType) {
-    super("External resource fetch exception: " + body, body, statusCode, contentType);
+    super("External resource fetch exception: ", body, statusCode, contentType);
   }
 
   public ExternalResourceFetchException(Response response) {
