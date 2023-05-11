@@ -17,7 +17,7 @@ public abstract class AbstractInventoryException extends RuntimeException {
   }
 
   protected AbstractInventoryException(String message, String body, int statusCode, String contentType) {
-    super(message + body);
+    super(message + " " + body);
 
     this.body = body;
     this.statusCode = statusCode;
