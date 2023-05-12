@@ -7,6 +7,7 @@ import java.util.function.Function;
 
 import org.folio.inventory.exceptions.AbstractInventoryException;
 import org.folio.inventory.exceptions.ExternalResourceFetchException;
+import org.folio.inventory.exceptions.InternalServerErrorException;
 import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.exceptions.UnprocessableEntityException;
 import org.folio.inventory.support.http.server.ClientErrorResponse;
@@ -36,12 +37,13 @@ public final class EndpointFailureHandler {
         validationFailure.getPropertyName(), validationFailure.getPropertyValue());
     } else if (failureToHandle instanceof NotFoundException) {
       ClientErrorResponse.notFound(context.response(), failureToHandle.getMessage());
-    } else if (failureToHandle instanceof ExternalResourceFetchException) {
-      final ExternalResourceFetchException externalException =
-        (ExternalResourceFetchException) failureToHandle;
+    } else if (failureToHandle instanceof ExternalResourceFetchException
+        || failureToHandle instanceof InternalServerErrorException) {
+      final AbstractInventoryException exceptionToForward =
+        (AbstractInventoryException) failureToHandle;
 
-      forward(context.response(), externalException.getBody(), externalException.getStatusCode(),
-        externalException.getContentType());
+      forward(context.response(), exceptionToForward.getBody(), exceptionToForward.getStatusCode(),
+        exceptionToForward.getContentType());
     } else {
       ServerErrorResponse.internalError(context.response(), failureToHandle);
     }
