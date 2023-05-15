@@ -234,7 +234,7 @@ public class CreateItemEventHandler implements EventHandler {
   private JsonArray processMappingResult(DataImportEventPayload dataImportEventPayload, String deduplicationItemId) {
     JsonArray items = new JsonArray(dataImportEventPayload.getContext().get(ITEM.value()));
     JsonArray mappedItems = new JsonArray();
-    JsonArray holdingsIdentifiers = new JsonArray(dataImportEventPayload.getContext().get(HOLDING_IDENTIFIERS));
+    JsonArray holdingsIdentifiers = new JsonArray(dataImportEventPayload.getContext().remove(HOLDING_IDENTIFIERS));
     String holdingsAsString = dataImportEventPayload.getContext().get(EntityType.HOLDINGS.value());
 
     for (int i = 0; i < items.size(); i++) {
