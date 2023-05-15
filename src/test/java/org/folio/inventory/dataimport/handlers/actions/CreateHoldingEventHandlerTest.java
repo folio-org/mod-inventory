@@ -220,8 +220,10 @@ public class CreateHoldingEventHandlerTest {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
       failureHandler.accept(new Failure(errorMsg, 400));
       return null;
-    }).when(holdingsRecordsCollection).add(any(), any(), any());
+    }).when(holdingsRecordsCollection).add(argThat(holdingsRecord -> holdingsRecord.getPermanentLocationId().equals(permanentLocationId)), any(), any());
 
+    List<String> locations = List.of(permanentLocationId, UUID.randomUUID().toString());
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.get(0)), StringValue.of(locations.get(1)));
 
     String instanceId = String.valueOf(UUID.randomUUID());
     Instance instance = new Instance(instanceId, "5", String.valueOf(UUID.randomUUID()),
@@ -245,7 +247,7 @@ public class CreateHoldingEventHandlerTest {
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
     JsonArray holdings = new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
     JsonArray errors = new JsonArray(actualDataImportEventPayload.getContext().get(ERRORS));
-    Assert.assertEquals(0, holdings.size());
+    Assert.assertEquals(1, holdings.size());
     Assert.assertEquals(1, errors.size());
     JsonObject partialError = errors.getJsonObject(0);
     Assert.assertEquals(errorMsg, partialError.getString("error"));
@@ -421,6 +423,37 @@ public class CreateHoldingEventHandlerTest {
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
     JsonArray holdings = new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
     assertEquals(1, holdings.size());
+  }
+
+  @Test(expected = ExecutionException.class)
+  public void shouldNotProcessEventIfNoHoldingsSuccessfullyCreated() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    String errorMsg = "testError";
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure(errorMsg, 400));
+      return null;
+    }).when(holdingsRecordsCollection).add(any(), any(), any());
+
+    List<String> locations = List.of(permanentLocationId, UUID.randomUUID().toString());
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.get(0)), StringValue.of(locations.get(1)));
+
+    String instanceId = String.valueOf(UUID.randomUUID());
+    Instance instance = new Instance(instanceId, "5", String.valueOf(UUID.randomUUID()),
+      String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    HashMap<String, String> context = new HashMap<>();
+    context.put("INSTANCE", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
+    future.get(5, TimeUnit.MILLISECONDS);
   }
 
   @Test(expected = ExecutionException.class)

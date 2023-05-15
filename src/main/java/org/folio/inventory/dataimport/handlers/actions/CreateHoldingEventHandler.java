@@ -1,7 +1,5 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -15,7 +13,6 @@ import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.entities.PartialError;
 import org.folio.inventory.dataimport.services.OrderHelperService;
@@ -42,7 +39,6 @@ import java.util.concurrent.CompletableFuture;
 import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.logging.log4j.util.Strings.isNotEmpty;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
@@ -58,8 +54,6 @@ public class CreateHoldingEventHandler implements EventHandler {
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
   private static final String HOLDINGS_PATH_FIELD = "holdings";
-  private static final String PERMANENT_LOCATION_ID_FIELD = "permanentLocationId";
-  private static final String PERMANENT_LOCATION_ID_ERROR_MESSAGE = "Can`t create Holding entity: 'permanentLocationId' is empty";
   private static final String CREATE_HOLDING_ERROR_MESSAGE = "Failed to create Holdings";
   private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t create Holding entity: context is empty or doesn`t exists";
   private static final String PAYLOAD_DATA_HAS_NO_INSTANCE_ID_ERROR_MSG = "Failed to extract instanceId from instance entity or parsed record";
@@ -225,11 +219,14 @@ public class CreateHoldingEventHandler implements EventHandler {
         });
     });
     CompositeFuture.all(createHoldingsRecordFutures).onComplete(ar -> {
-      if (payloadContext.containsKey(ERRORS) || !errors.isEmpty()) {
-        payloadContext.put(ERRORS, Json.encode(errors));
-      }
       if (ar.succeeded()) {
-        holdingsPromise.complete(createdHoldingsRecord);
+        String errorsAsStringJson = Json.encode(errors);
+        if (createdHoldingsRecord.size() > 0) {
+          payloadContext.put(ERRORS, errorsAsStringJson);
+          holdingsPromise.complete(createdHoldingsRecord);
+        } else {
+          holdingsPromise.fail(errorsAsStringJson);
+        }
       } else {
         holdingsPromise.fail(ar.cause());
       }
