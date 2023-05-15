@@ -183,18 +183,21 @@ public class UpdateHoldingEventHandlerTest {
 
     String instanceId = String.valueOf(UUID.randomUUID());
     String holdingId = UUID.randomUUID().toString();
-    String hrid = UUID.randomUUID().toString();
+    String secondId = UUID.randomUUID().toString();
+    String firstHrid = UUID.randomUUID().toString();
+    String secondHrid = UUID.randomUUID().toString();
+
 
     HoldingsRecord firstHoldingsRecord = new HoldingsRecord()
       .withId(holdingId)
       .withInstanceId(instanceId)
-      .withHrid(hrid)
+      .withHrid(firstHrid)
       .withPermanentLocationId(permanentLocationId);
 
     HoldingsRecord secondHoldingsRecord = new HoldingsRecord()
-      .withId(holdingId)
+      .withId(secondId)
       .withInstanceId(instanceId)
-      .withHrid(hrid)
+      .withHrid(secondHrid)
       .withPermanentLocationId(permanentLocationId);
 
     JsonArray holdingsList = new JsonArray();
@@ -222,7 +225,7 @@ public class UpdateHoldingEventHandlerTest {
     Assert.assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("id"));
     Assert.assertEquals(instanceId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("instanceId"));
     Assert.assertEquals(permanentLocationId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("permanentLocationId"));
-    Assert.assertEquals(hrid, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("hrid"));
+    Assert.assertEquals(firstHrid, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("hrid"));
     Assert.assertEquals(holdingId, new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getString("id"));
   }
 
