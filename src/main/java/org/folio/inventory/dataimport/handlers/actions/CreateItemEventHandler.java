@@ -177,7 +177,13 @@ public class CreateItemEventHandler implements EventHandler {
                 payloadContext.put(ERRORS, Json.encode(multipleItemsCreateErrors));
               }
               if (ar.succeeded()) {
-                createMultipleItemsPromise.complete(createdItems);
+                String multipleItemsCreateErrorsAsStringJson = Json.encode(multipleItemsCreateErrors);
+                if (createdItems.size() > 0) {
+                  payloadContext.put(ERRORS, multipleItemsCreateErrorsAsStringJson);
+                  createMultipleItemsPromise.complete(createdItems);
+                } else {
+                  createMultipleItemsPromise.fail(multipleItemsCreateErrorsAsStringJson);
+                }
               } else {
                 createMultipleItemsPromise.fail(ar.cause());
               }
