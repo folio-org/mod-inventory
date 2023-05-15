@@ -2,7 +2,9 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import liquibase.pro.packaged.J;
 import org.folio.DataImportEventPayload;
 import org.folio.MappingMetadataDto;
 import org.folio.*;
@@ -10,6 +12,7 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.HoldingWriterFactory;
+import org.folio.inventory.dataimport.HoldingsMapperFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.instances.Instance;
@@ -54,6 +57,7 @@ import static org.mockito.Mockito.*;
 public class UpdateHoldingEventHandlerTest {
 
   private static final String PARSED_CONTENT_WITH_INSTANCE_ID = "{ \"leader\": \"01314nam  22003851a 4500\", \"fields\":[ {\"001\":\"ybp7406411\"}, {\"999\": {\"ind1\":\"f\", \"ind2\":\"f\", \"subfields\":[ { \"i\": \"957985c6-97e3-4038-b0e7-343ecd0b8120\"} ] } } ] }";
+  private static final String PARSED_CONTENT_WITH_INSTANCE_ID_AND_MULTIPLE_HOLDINGS = "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"945\":{\"ind1\":\"\",\"ind2\":\"\",\"subfields\":[{\"h\":\"Online\"}]}},{\"945\":{\"ind1\":\"\",\"ind2\":\"\",\"subfields\":[{\"h\":\"Online 2\"}]}},{\"999\":{\"ind1\":\"f\",\"ind2\":\"f\",\"subfields\":[{\"i\":\"957985c6-97e3-4038-b0e7-343ecd0b8120\"}]}}]}";
 
   @Mock
   private Storage storage;
@@ -73,7 +77,7 @@ public class UpdateHoldingEventHandlerTest {
 
   private ActionProfile actionProfile = new ActionProfile()
     .withId(UUID.randomUUID().toString())
-    .withName("Create preliminary Item")
+    .withName("Update preliminary Holdings")
     .withAction(ActionProfile.Action.UPDATE)
     .withFolioRecord(HOLDINGS);
 
@@ -84,7 +88,7 @@ public class UpdateHoldingEventHandlerTest {
     .withExistingRecordType(EntityType.HOLDINGS)
     .withMappingDetails(new MappingDetail()
       .withMappingFields(Collections.singletonList(
-        new MappingRule().withPath("permanentLocationId").withValue("permanentLocationExpression").withEnabled("true"))));
+        new MappingRule().withName("permanentLocationId").withPath("holdings.permanentLocationId[]").withValue("\"\\\"Main Library\\\"\"").withEnabled("true"))));
 
   private ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
     .withId(UUID.randomUUID().toString())
@@ -101,6 +105,42 @@ public class UpdateHoldingEventHandlerTest {
             .withProfileId(mappingProfile.getId())
             .withContentType(MAPPING_PROFILE)
             .withContent(JsonObject.mapFrom(mappingProfile).getMap())))));
+
+  private JobProfile jobProfileForMultipleHoldings = new JobProfile()
+    .withId(UUID.randomUUID().toString())
+    .withName("Replace MARC Bibs")
+    .withDataType(JobProfile.DataType.MARC);
+
+  private ActionProfile actionProfileForMultipleHoldings = new ActionProfile()
+    .withId(UUID.randomUUID().toString())
+    .withName("Update preliminary Holdings")
+    .withAction(ActionProfile.Action.UPDATE)
+    .withFolioRecord(HOLDINGS);
+
+  private MappingProfile mappingProfileForMultipleHoldings = new MappingProfile()
+    .withId(UUID.randomUUID().toString())
+    .withName("Prelim item from MARC")
+    .withIncomingRecordType(EntityType.MARC_BIBLIOGRAPHIC)
+    .withExistingRecordType(EntityType.HOLDINGS)
+    .withMappingDetails(new MappingDetail()
+      .withMappingFields(Collections.singletonList(
+        new MappingRule().withName("permanentLocationId").withPath("holdings.permanentLocationId").withValue("945$h").withEnabled("true"))));
+
+  private ProfileSnapshotWrapper profileSnapshotWrapperForMultipleHoldings = new ProfileSnapshotWrapper()
+    .withId(UUID.randomUUID().toString())
+    .withProfileId(jobProfileForMultipleHoldings.getId())
+    .withContentType(JOB_PROFILE)
+    .withContent(jobProfileForMultipleHoldings)
+    .withChildSnapshotWrappers(Collections.singletonList(
+      new ProfileSnapshotWrapper()
+        .withProfileId(actionProfileForMultipleHoldings.getId())
+        .withContentType(ACTION_PROFILE)
+        .withContent(actionProfileForMultipleHoldings)
+        .withChildSnapshotWrappers(Collections.singletonList(
+          new ProfileSnapshotWrapper()
+            .withProfileId(mappingProfileForMultipleHoldings.getId())
+            .withContentType(MAPPING_PROFILE)
+            .withContent(JsonObject.mapFrom(mappingProfileForMultipleHoldings).getMap())))));
 
   private UpdateHoldingEventHandler updateHoldingEventHandler;
 
@@ -127,7 +167,7 @@ public class UpdateHoldingEventHandlerTest {
   public void shouldProcessEvent() throws InterruptedException, ExecutionException, TimeoutException {
     Reader fakeReader = Mockito.mock(Reader.class);
 
-    String permanentLocationId = UUID.randomUUID().toString();
+    String permanentLocationId = "a1e7c35d-4835-430a-ba3c-f93d5f3cde5a";
 
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
 
@@ -138,28 +178,41 @@ public class UpdateHoldingEventHandlerTest {
 
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new HoldingWriterFactory());
+    MappingManager.registerMapperFactory(new HoldingsMapperFactory());
+
 
     String instanceId = String.valueOf(UUID.randomUUID());
     String holdingId = UUID.randomUUID().toString();
     String hrid = UUID.randomUUID().toString();
 
-    HoldingsRecord holdingsRecord = new HoldingsRecord()
+    HoldingsRecord firstHoldingsRecord = new HoldingsRecord()
       .withId(holdingId)
       .withInstanceId(instanceId)
       .withHrid(hrid)
       .withPermanentLocationId(permanentLocationId);
 
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    HoldingsRecord secondHoldingsRecord = new HoldingsRecord()
+      .withId(holdingId)
+      .withInstanceId(instanceId)
+      .withHrid(hrid)
+      .withPermanentLocationId(permanentLocationId);
+
+    JsonArray holdingsList = new JsonArray();
+    holdingsList.add(new JsonObject().put("holdings", firstHoldingsRecord));
+    holdingsList.add(new JsonObject().put("holdings", secondHoldingsRecord));
+
+
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID_AND_MULTIPLE_HOLDINGS));
     HashMap<String, String> context = new HashMap<>();
-    context.put(HOLDINGS.value(), Json.encode(holdingsRecord));
+    context.put(HOLDINGS.value(), Json.encode(holdingsList));
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withProfileSnapshot(profileSnapshotWrapperForMultipleHoldings)
+      .withCurrentNode(profileSnapshotWrapperForMultipleHoldings.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);

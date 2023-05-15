@@ -132,18 +132,17 @@ public class UpdateHoldingEventHandler implements EventHandler {
               success -> {
                 constructDataImportEventPayload(updatePromise, dataImportEventPayload, list, context, errors);
                 updatedHoldingsRecord.add(holdings);
-                updatePromise.complete();
               },
               failure -> {
                 errors.add(new PartialError(holdings.getId() != null ? holdings.getId() : BLANK, failure.getReason()));
-                if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
+/*                if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
                   processOLError(dataImportEventPayload, future, holdingsRecords, holdings, failure); // TODO !!!
-                } else {
+                } else {*/
                   dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
                   LOGGER.error(format(CANNOT_UPDATE_HOLDING_ERROR_MESSAGE, holdings.getId(), jobExecutionId, recordId, chunkId, failure.getReason(), failure.getStatusCode()));
                   updatePromise.fail(new EventProcessingException(format(UPDATE_HOLDING_ERROR_MESSAGE, jobExecutionId,
                     recordId, chunkId)));
-                }
+                //}
               });
           }
           CompositeFuture.all(updatedHoldingsRecordFutures).onComplete(ar -> {
@@ -257,7 +256,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
   }
 
   private void prepareDataAndReInvokeCurrentHandler(DataImportEventPayload dataImportEventPayload, CompletableFuture<DataImportEventPayload> future, HoldingsRecord actualHolding) {
-    dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encode(JsonObject.mapFrom(actualHolding)));
+    dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encode(JsonObject.mapFrom(actualHolding))); // Convert to Array (find by id specific Holdings in array and update just it)
     dataImportEventPayload.getEventsChain().remove(dataImportEventPayload.getContext().get(CURRENT_EVENT_TYPE_PROPERTY));
     try {
       dataImportEventPayload.setCurrentNode(ObjectMapperTool.getMapper().readValue(dataImportEventPayload.getContext().get(CURRENT_NODE_PROPERTY), ProfileSnapshotWrapper.class));
@@ -269,25 +268,27 @@ public class UpdateHoldingEventHandler implements EventHandler {
     dataImportEventPayload.getContext().remove(CURRENT_HOLDING_PROPERTY);
     handle(dataImportEventPayload).whenComplete((res, e) -> {
       if (e != null) {
-        future.completeExceptionally(new EventProcessingException(e.getMessage()));
+        future.complete(dataImportEventPayload);
+
+        //future.completeExceptionally(new EventProcessingException(e.getMessage()));
       } else {
         future.complete(dataImportEventPayload);
       }
     });
   }
 
-  private void constructDataImportEventPayload(Promise<Void> future, DataImportEventPayload dataImportEventPayload, List<HoldingsRecord> holdings, Context context, List<PartialError> errors) {
+  private void constructDataImportEventPayload(Promise<Void> promise, DataImportEventPayload dataImportEventPayload, List<HoldingsRecord> holdings, Context context, List<PartialError> errors) {
     if (!isPayloadConstructed) {
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
       payloadContext.put(HOLDINGS.value(), Json.encodePrettily(holdings));
       if (payloadContext.containsKey(ITEM.value())) {
         ItemCollection itemCollection = storage.getItemCollection(context);
-        updateDataImportEventPayloadItem(future, dataImportEventPayload, itemCollection, errors);
+        updateDataImportEventPayloadItem(promise, dataImportEventPayload, itemCollection, errors);
       } else {
-        future.complete();
+        promise.complete();
       }
     } else {
-      future.complete();
+      promise.complete();
     }
   }
 
