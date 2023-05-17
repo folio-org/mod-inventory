@@ -163,7 +163,7 @@ public class CreateHoldingEventHandler implements EventHandler {
 
   private void prepareEvent(DataImportEventPayload dataImportEventPayload) {
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
-    dataImportEventPayload.getContext().put(HOLDINGS.value(), new JsonObject().encode());
+    dataImportEventPayload.getContext().put(HOLDINGS.value(), new JsonArray().encode());
     dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
   }
 
