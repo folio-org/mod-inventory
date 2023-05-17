@@ -123,7 +123,7 @@ public class CreateItemEventHandler implements EventHandler {
 
       dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
       dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
-      dataImportEventPayload.getContext().put(ITEM.value(), new JsonObject().encode());
+      dataImportEventPayload.getContext().put(ITEM.value(), new JsonArray().encode());
 
       String jobExecutionId = dataImportEventPayload.getJobExecutionId();
       String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
