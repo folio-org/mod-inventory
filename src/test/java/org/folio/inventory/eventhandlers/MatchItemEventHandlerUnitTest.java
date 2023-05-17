@@ -3,6 +3,7 @@ package org.folio.inventory.eventhandlers;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static org.folio.rest.jaxrs.model.EntityType.HOLDINGS;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.junit.MatcherAssert.assertThat;
 import static org.junit.Assert.assertFalse;
@@ -43,6 +44,8 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+import org.folio.inventory.dataimport.HoldingsItemMatcherFactory;
+import org.folio.processing.matching.MatchingManager;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -116,6 +119,7 @@ public class MatchItemEventHandlerUnitTest {
       .thenReturn(StringValue.of(ITEM_HRID));
     MatchValueReaderFactory.register(marcValueReader);
     MatchValueLoaderFactory.register(itemLoader);
+    MatchingManager.registerMatcherFactory(new HoldingsItemMatcherFactory());
 
     when(mappingMetadataCache.get(anyString(), any(Context.class)))
       .thenReturn(Future.succeededFuture(Optional.of(new MappingMetadataDto()
@@ -463,6 +467,7 @@ public class MatchItemEventHandlerUnitTest {
           .withIncomingRecordType(MARC_BIBLIOGRAPHIC)
           .withMatchDetails(singletonList(new MatchDetail()
             .withMatchCriterion(EXACTLY_MATCHES)
+            .withExistingRecordType(HOLDINGS)
             .withExistingMatchExpression(new MatchExpression()
               .withDataValueType(VALUE_FROM_RECORD)
               .withFields(singletonList(
