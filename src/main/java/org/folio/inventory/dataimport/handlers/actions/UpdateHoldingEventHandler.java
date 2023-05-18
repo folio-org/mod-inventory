@@ -101,7 +101,13 @@ public class UpdateHoldingEventHandler implements EventHandler {
 
       LOGGER.info("Processing UpdateHoldingEventHandler starting with jobExecutionId: {}.", dataImportEventPayload.getJobExecutionId());
       List<PartialError> errors = new ArrayList<>();
+
       validateRequiredHoldingsFields(dataImportEventPayload, errors);
+      if (!errors.isEmpty()) {
+        dataImportEventPayload.getContext().put(ERRORS, Json.encode(errors));
+        future.complete(dataImportEventPayload);
+        return future;
+      }
       Context context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       String jobExecutionId = dataImportEventPayload.getJobExecutionId();
       String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
@@ -138,10 +144,10 @@ public class UpdateHoldingEventHandler implements EventHandler {
 /*                if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
                   processOLError(dataImportEventPayload, future, holdingsRecords, holdings, failure); // TODO !!!
                 } else {*/
-                  dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
-                  LOGGER.error(format(CANNOT_UPDATE_HOLDING_ERROR_MESSAGE, holdings.getId(), jobExecutionId, recordId, chunkId, failure.getReason(), failure.getStatusCode()));
-                  updatePromise.fail(new EventProcessingException(format(UPDATE_HOLDING_ERROR_MESSAGE, jobExecutionId,
-                    recordId, chunkId)));
+                dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
+                LOGGER.error(format(CANNOT_UPDATE_HOLDING_ERROR_MESSAGE, holdings.getId(), jobExecutionId, recordId, chunkId, failure.getReason(), failure.getStatusCode()));
+                updatePromise.fail(new EventProcessingException(format(UPDATE_HOLDING_ERROR_MESSAGE, jobExecutionId,
+                  recordId, chunkId)));
                 //}
               });
           }
@@ -195,7 +201,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
         if (StringUtils.isAnyBlank(hrid, instanceId, permanentLocationId, holdingId)) {
           LOGGER.warn("Can`t update Holding entity hrid: {}, instanceId: {}, permanentLocationId: {}, holdingId: {}", hrid, instanceId, permanentLocationId, holdingId);
           errors.add(new PartialError(holdingId != null ? holdingId : BLANK, EMPTY_REQUIRED_FIELDS_ERROR_MESSAGE));
-          throw new EventProcessingException(EMPTY_REQUIRED_FIELDS_ERROR_MESSAGE);
+          //throw new EventProcessingException(EMPTY_REQUIRED_FIELDS_ERROR_MESSAGE);
         }
       }
     }
@@ -256,7 +262,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
   }
 
   private void prepareDataAndReInvokeCurrentHandler(DataImportEventPayload dataImportEventPayload, CompletableFuture<DataImportEventPayload> future, HoldingsRecord actualHolding) {
-    dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encode(JsonObject.mapFrom(actualHolding))); // Convert to Array (find by id specific Holdings in array and update just it)
+    dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encode(JsonObject.mapFrom(actualHolding))); // Convert to Array (find by id specific Holdings in array and update just current entity by id and reinvoke one more time)
     dataImportEventPayload.getEventsChain().remove(dataImportEventPayload.getContext().get(CURRENT_EVENT_TYPE_PROPERTY));
     try {
       dataImportEventPayload.setCurrentNode(ObjectMapperTool.getMapper().readValue(dataImportEventPayload.getContext().get(CURRENT_NODE_PROPERTY), ProfileSnapshotWrapper.class));
@@ -279,6 +285,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
 
   private void constructDataImportEventPayload(Promise<Void> promise, DataImportEventPayload dataImportEventPayload, List<HoldingsRecord> holdings, Context context, List<PartialError> errors) {
     if (!isPayloadConstructed) {
+      isPayloadConstructed = true;
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
       payloadContext.put(HOLDINGS.value(), Json.encodePrettily(holdings));
       if (payloadContext.containsKey(ITEM.value())) {
@@ -298,7 +305,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
 
     for (int i = 0; i < oldItemsAsJson.size(); i++) {
       JsonObject singleItemAsJson = oldItemsAsJson.getJsonObject(i);
-      String itemId = singleItemAsJson.getString(ITEM_ID_HEADER);
+      String itemId = singleItemAsJson.getJsonObject("item").getString(ITEM_ID_HEADER);
       itemCollection.findById(itemId, findResult -> {
         if (Objects.nonNull(findResult)) {
           JsonObject itemAsJson = new JsonObject(ItemUtil.mapToMappingResultRepresentation(findResult.getResult()));
