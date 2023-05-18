@@ -26,5 +26,5 @@ public class Request {
   @JsonFormat(shape = JsonFormat.Shape.STRING)
   private Date requestDate = DateTime.now(DateTimeZone.UTC).toDate();
   @Builder.Default
-  private String fulfilmentPreference = "Hold Shelf";
+  private String fulfillmentPreference = "Hold Shelf";
 }
