@@ -29,7 +29,7 @@ public interface AsynchronousCollection<T> {
 
     add(item, success -> future.complete(success.getResult()),
       failure -> future.completeExceptionally(
-        new InternalServerErrorException(failure.getReason())));
+        new InternalServerErrorException(failure)));
 
     return future;
   }
@@ -63,7 +63,7 @@ public interface AsynchronousCollection<T> {
     final CompletableFuture<T> future = new CompletableFuture<>();
 
     update(item, success -> future.complete(item),
-      failure -> future.completeExceptionally(new InternalServerErrorException(failure.getReason())));
+      failure -> future.completeExceptionally(new InternalServerErrorException(failure)));
 
     return future;
   }

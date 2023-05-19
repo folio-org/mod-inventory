@@ -933,6 +933,45 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(updateResponse.getBody(), is(expectedErrorMessage));
   }
 
+  @Test
+  public void canFrowardInstanceCreateValidationErrorFromStorage() throws Exception {
+    final String expectedErrorMessage = "A note has exceeded the 32000 character limit.";
+
+    instancesStorageClient.emulateFailure(new EndpointFailureDescriptor()
+        .setFailureExpireDate(DateTime.now(UTC).plusSeconds(2).toDate())
+        .setBody(expectedErrorMessage)
+        .setContentType("plain/text")
+        .setStatusCode(422)
+        .setMethod(POST.name()));
+
+    final Response response = instancesClient.attemptToCreate(smallAngryPlanet(UUID.randomUUID()));
+
+    assertThat(response.getStatusCode(), is(422));
+    assertThat(response.getBody(), is(expectedErrorMessage));
+  }
+
+  @Test
+  public void canFrowardInstanceUpdateValidationErrorFromStorage() throws Exception {
+    final String expectedErrorMessage = "A note has exceeded the 32000 character limit.";
+
+    final IndividualResource instance = instancesClient
+        .create(smallAngryPlanet(UUID.randomUUID()));
+
+    instancesStorageClient.emulateFailure(new EndpointFailureDescriptor()
+        .setFailureExpireDate(DateTime.now(UTC).plusSeconds(2).toDate())
+        .setBody(expectedErrorMessage)
+        .setContentType("plain/text")
+        .setStatusCode(422)
+        .setMethod(PUT.name()));
+
+    final Response updateResponse = instancesClient
+        .attemptToReplace(instance.getId(), instance.getJson().copy()
+            .put("subjects", new JsonArray().add("Small angry planet subject")));
+
+    assertThat(updateResponse.getStatusCode(), is(422));
+    assertThat(updateResponse.getBody(), is(expectedErrorMessage));
+  }
+
   @SneakyThrows
   private JsonObject createInstance(JsonObject newInstanceRequest) {
     return InstanceApiClient.createInstance(okapiClient, newInstanceRequest);
