@@ -1,5 +1,6 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -16,9 +17,9 @@ import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.entities.PartialError;
+import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.storage.Storage;
@@ -123,7 +124,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
           MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
           MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
 
-          HoldingsRecordCollection holdingsRecords = storage.getHoldingsRecordCollection(context);
+          HoldingsRecordCollection holdingsRecordsCollection = storage.getHoldingsRecordCollection(context);
           List<HoldingsRecord> updatedHoldingsRecord = new ArrayList<>();
           List<Future> updatedHoldingsRecordFutures = new ArrayList<>();
           isPayloadConstructed = false;
@@ -131,27 +132,32 @@ public class UpdateHoldingEventHandler implements EventHandler {
           List<HoldingsRecord> list = List.of(Json.decodeValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), HoldingsRecord[].class));
 
           HoldingsRecordCollection holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
-          for (HoldingsRecord holdings : list) {
+          List<HoldingsRecord> expiredHoldings = new ArrayList<>();
+          for (HoldingsRecord holding : list) {
             Promise<Void> updatePromise = Promise.promise();
             updatedHoldingsRecordFutures.add(updatePromise.future());
-            holdingsRecordCollection.update(holdings,
+            holdingsRecordCollection.update(holding,
               success -> {
                 constructDataImportEventPayload(updatePromise, dataImportEventPayload, list, context, errors);
-                updatedHoldingsRecord.add(holdings);
+                updatedHoldingsRecord.add(holding);
               },
               failure -> {
-                errors.add(new PartialError(holdings.getId() != null ? holdings.getId() : BLANK, failure.getReason()));
-/*                if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
-                  processOLError(dataImportEventPayload, future, holdingsRecords, holdings, failure); // TODO !!!
-                } else {*/
-                dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
-                LOGGER.error(format(CANNOT_UPDATE_HOLDING_ERROR_MESSAGE, holdings.getId(), jobExecutionId, recordId, chunkId, failure.getReason(), failure.getStatusCode()));
-                updatePromise.fail(new EventProcessingException(format(UPDATE_HOLDING_ERROR_MESSAGE, jobExecutionId,
-                  recordId, chunkId)));
-                //}
+                errors.add(new PartialError(holding.getId() != null ? holding.getId() : BLANK, failure.getReason()));
+                if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
+                  expiredHoldings.add(holding);
+                  updatePromise.complete();
+                } else {
+                  dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
+                  LOGGER.error(format(CANNOT_UPDATE_HOLDING_ERROR_MESSAGE, holding.getId(), jobExecutionId, recordId, chunkId, failure.getReason(), failure.getStatusCode()));
+                  updatePromise.fail(new EventProcessingException(format(UPDATE_HOLDING_ERROR_MESSAGE, jobExecutionId,
+                    recordId, chunkId)));
+                }
               });
           }
           CompositeFuture.all(updatedHoldingsRecordFutures).onComplete(ar -> {
+            if (!expiredHoldings.isEmpty()) {
+              processOLError(dataImportEventPayload, future, holdingsRecordsCollection, expiredHoldings.get(0), errors);
+            }
             if (dataImportEventPayload.getContext().containsKey(ERRORS) || !errors.isEmpty()) {
               dataImportEventPayload.getContext().put(ERRORS, Json.encode(errors));
             }
@@ -239,30 +245,45 @@ public class UpdateHoldingEventHandler implements EventHandler {
     dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
   }
 
-  private void processOLError(DataImportEventPayload dataImportEventPayload, CompletableFuture<DataImportEventPayload> future, HoldingsRecordCollection holdingsRecords, HoldingsRecord holding, Failure failure) {
+  private void processOLError(DataImportEventPayload dataImportEventPayload, CompletableFuture<DataImportEventPayload> future, HoldingsRecordCollection holdingsRecords, HoldingsRecord holding, List<PartialError> errors) {
     int currentRetryNumber = dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER) == null ? 0 : Integer.parseInt(dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER));
     if (currentRetryNumber < MAX_RETRIES_COUNT) {
       dataImportEventPayload.getContext().put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
-      LOGGER.warn("Error updating Holding by id '{}' - '{}', status code '{}'. Retry UpdateHoldingEventHandler handler...", holding.getId(), failure.getReason(), failure.getStatusCode());
+      LOGGER.warn("Error updating Holding by id '{}'. Retry UpdateHoldingEventHandler handler...", holding.getId());
       holdingsRecords.findById(holding.getId())
         .thenAccept(actuaHoldings -> prepareDataAndReInvokeCurrentHandler(dataImportEventPayload, future, actuaHoldings))
         .exceptionally(e -> {
           dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
           String errMessage = format("Cannot get actual Holding by id: '%s' for jobExecutionId '%s'. Error: %s ", holding.getId(), dataImportEventPayload.getJobExecutionId(), e.getCause());
           LOGGER.error(errMessage);
-          future.completeExceptionally(new EventProcessingException(errMessage));
+          errors.add(new PartialError(holding.getId() != null ? holding.getId() : BLANK, errMessage));
+          future.complete(dataImportEventPayload);
           return null;
         });
     } else {
       dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
       String errMessage = format("Current retry number %s exceeded or equal given number %s for the Holding update for jobExecutionId '%s' ", MAX_RETRIES_COUNT, currentRetryNumber, dataImportEventPayload.getJobExecutionId());
       LOGGER.error(errMessage);
-      future.completeExceptionally(new EventProcessingException(errMessage));
+      errors.add(new PartialError(holding.getId() != null ? holding.getId() : BLANK, errMessage));
+      future.complete(dataImportEventPayload);
     }
   }
 
   private void prepareDataAndReInvokeCurrentHandler(DataImportEventPayload dataImportEventPayload, CompletableFuture<DataImportEventPayload> future, HoldingsRecord actualHolding) {
-    dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encode(JsonObject.mapFrom(actualHolding))); // Convert to Array (find by id specific Holdings in array and update just current entity by id and reinvoke one more time)
+    List<HoldingsRecord> holdingsList = List.of(Json.decodeValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), HoldingsRecord[].class));
+    List<HoldingsRecord> updatedHoldingsList = new ArrayList<>(holdingsList);
+    for (int i = 0; i < holdingsList.size(); i++) {
+      HoldingsRecord holdingsRecord = holdingsList.get(i);
+      if (holdingsRecord.getId().equals(actualHolding.getId())) {
+        updatedHoldingsList.set(i, actualHolding);
+      }
+    }
+
+    JsonArray resultedHoldings = new JsonArray();
+    for (HoldingsRecord currentHolding : updatedHoldingsList) {
+      resultedHoldings.add(new JsonObject().put("holdings", new JsonObject(Json.encode(currentHolding))));
+    }
+    dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encode(resultedHoldings)); // Convert to Array (find by id specific Holdings in array and update just current entity by id and reinvoke one more time)
     dataImportEventPayload.getEventsChain().remove(dataImportEventPayload.getContext().get(CURRENT_EVENT_TYPE_PROPERTY));
     try {
       dataImportEventPayload.setCurrentNode(ObjectMapperTool.getMapper().readValue(dataImportEventPayload.getContext().get(CURRENT_NODE_PROPERTY), ProfileSnapshotWrapper.class));
@@ -273,13 +294,15 @@ public class UpdateHoldingEventHandler implements EventHandler {
     dataImportEventPayload.getContext().remove(CURRENT_NODE_PROPERTY);
     dataImportEventPayload.getContext().remove(CURRENT_HOLDING_PROPERTY);
     handle(dataImportEventPayload).whenComplete((res, e) -> {
-      if (e != null) {
+      future.complete(dataImportEventPayload);
+
+/*      if (e != null) {
         future.complete(dataImportEventPayload);
 
         //future.completeExceptionally(new EventProcessingException(e.getMessage()));
       } else {
         future.complete(dataImportEventPayload);
-      }
+      }*/
     });
   }
 

@@ -482,8 +482,6 @@ public class UpdateHoldingEventHandlerTest {
 
     Assert.assertEquals(DI_INVENTORY_HOLDING_UPDATED.value(), actualDataImportEventPayload.getEventType());
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
-    Assert.assertEquals(DI_INVENTORY_HOLDING_UPDATED.value(), actualDataImportEventPayload.getEventType());
-    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
     JsonArray resultedHoldingsList = new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
     Assert.assertEquals(resultedHoldingsList.size(), 2);
     JsonObject firstResultedHoldings = resultedHoldingsList.getJsonObject(0);
@@ -507,28 +505,40 @@ public class UpdateHoldingEventHandlerTest {
 
   }
 
-/*  @Test(expected = ExecutionException.class)
-  public void shouldNotProcessEventIfOLErrorExist() throws InterruptedException, ExecutionException, TimeoutException {
+  @Test
+  public void shouldNotMapHoldingsAndAndFillPartialErrorsIfOptimisticLockingExists() throws InterruptedException, ExecutionException, TimeoutException {
     Reader fakeReader = mock(Reader.class);
 
     String permanentLocationId = UUID.randomUUID().toString();
 
-    String instanceId = String.valueOf(UUID.randomUUID());
-    String holdingId = UUID.randomUUID().toString();
-    String hrid = UUID.randomUUID().toString();
+    String instanceId = UUID.randomUUID().toString();
+    String firstId = UUID.randomUUID().toString();
+    String secondId = UUID.randomUUID().toString();
+    String firstHrid = UUID.randomUUID().toString();
+    String secondHrid = UUID.randomUUID().toString();
 
-    HoldingsRecord holdingsRecord = new HoldingsRecord()
-      .withId(holdingId)
+    HoldingsRecord firstHoldingsRecord = new HoldingsRecord()
+      .withId(firstId)
       .withInstanceId(instanceId)
-      .withHrid(hrid)
+      .withHrid(firstHrid)
       .withPermanentLocationId(permanentLocationId);
+
+    HoldingsRecord secondHoldingsRecord = new HoldingsRecord()
+      .withId(secondId)
+      .withInstanceId(instanceId)
+      .withHrid(secondHrid)
+      .withPermanentLocationId(permanentLocationId);
+
+    JsonArray holdingsList = new JsonArray();
+    holdingsList.add(new JsonObject().put("holdings", firstHoldingsRecord));
+    holdingsList.add(new JsonObject().put("holdings", secondHoldingsRecord));
 
 
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
 
-    HoldingsRecord returnedHoldings = new HoldingsRecord().withId(holdingId).withHrid(hrid).withInstanceId(instanceId).withPermanentLocationId(permanentLocationId).withVersion(1);
+    HoldingsRecord returnedHoldings = new HoldingsRecord().withId(firstId).withHrid(firstHrid).withInstanceId(instanceId).withPermanentLocationId(permanentLocationId).withVersion(1);
 
-    when(holdingsRecordsCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(returnedHoldings));
+    when(holdingsRecordsCollection.findById(firstId)).thenReturn(CompletableFuture.completedFuture(returnedHoldings));
 
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
@@ -546,19 +556,30 @@ public class UpdateHoldingEventHandlerTest {
 
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();
-    context.put(HOLDINGS.value(), Json.encode(holdingsRecord));
+    context.put(HOLDINGS.value(), Json.encode(holdingsList));
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withProfileSnapshot(profileSnapshotWrapperForMultipleHoldings)
+      .withCurrentNode(profileSnapshotWrapperForMultipleHoldings.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.MILLISECONDS);
-  }*/
+    DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
+
+    Assert.assertEquals(DI_INVENTORY_HOLDING_UPDATED.value(), actualDataImportEventPayload.getEventType());
+    Assert.assertEquals(0, new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).size());
+    JsonArray errors = new JsonArray(actualDataImportEventPayload.getContext().get(ERRORS));
+    Assert.assertEquals(2, errors.size());
+    JsonObject firstPartialError = errors.getJsonObject(0);
+    Assert.assertNotNull(firstPartialError.getString("error"));
+    Assert.assertEquals(firstId, firstPartialError.getString("id"));
+    JsonObject secondPartialError = errors.getJsonObject(1);
+    Assert.assertNotNull(secondPartialError.getString("error"));
+    Assert.assertEquals(secondId, secondPartialError.getString("id"));
+  }
 
   @Test
   public void shouldNotProcessEventIfHoldingIdIsNotExistsInContext() throws InterruptedException, ExecutionException, TimeoutException {
