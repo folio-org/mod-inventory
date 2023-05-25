@@ -36,6 +36,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
+import io.vertx.core.json.JsonArray;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.DataImportEventTypes;
@@ -49,6 +50,7 @@ import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.ItemWriterFactory;
+import org.folio.inventory.dataimport.ItemsMapperFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.items.Item;
@@ -189,6 +191,7 @@ public class UpdateItemEventHandlerTest {
     MappingManager.clearReaderFactories();
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new ItemWriterFactory());
+    MappingManager.registerMapperFactory(new ItemsMapperFactory());
     updateItemHandler = new UpdateItemEventHandler(mockedStorage, mappingMetadataCache);
 
     existingItemJson = new JsonObject()
@@ -210,9 +213,27 @@ public class UpdateItemEventHandlerTest {
       return null;
     }).when(mockedItemCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
+    JsonObject firstExistingItemJson = new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("status", new JsonObject().put("name", AVAILABLE.value()))
+      .put("materialType", new JsonObject().put("id", UUID.randomUUID().toString()))
+      .put("permanentLoanType", new JsonObject().put("id", UUID.randomUUID().toString()))
+      .put("holdingsRecordId", UUID.randomUUID().toString());
+
+    JsonObject secondExistingItemJson = new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("status", new JsonObject().put("name", AVAILABLE.value()))
+      .put("materialType", new JsonObject().put("id", UUID.randomUUID().toString()))
+      .put("permanentLoanType", new JsonObject().put("id", UUID.randomUUID().toString()))
+      .put("holdingsRecordId", UUID.randomUUID().toString());
+
+    JsonArray itemsList = new JsonArray();
+    itemsList.add(new JsonObject().put("item", firstExistingItemJson));
+    itemsList.add(new JsonObject().put("item", secondExistingItemJson));
+
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
-    payloadContext.put(ITEM.value(), existingItemJson.encode());
+    payloadContext.put(ITEM.value(), itemsList.encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_ITEM_MATCHED.value())
@@ -228,13 +249,13 @@ public class UpdateItemEventHandlerTest {
     Assert.assertEquals(DI_INVENTORY_ITEM_UPDATED, DataImportEventTypes.fromValue(eventPayload.getEventType()));
     Assert.assertNotNull(eventPayload.getContext().get(ITEM.value()));
 
-    JsonObject updatedItem = new JsonObject(eventPayload.getContext().get(ITEM.value()));
-    Assert.assertEquals(existingItemJson.getString("id"), updatedItem.getString("id"));
-    Assert.assertEquals(existingItemJson.getString(HRID_KEY), updatedItem.getString(HRID_KEY));
-    Assert.assertEquals(getNestedProperty(existingItemJson, "permanentLoanType", "id"), updatedItem.getString("permanentLoanTypeId"));
-    Assert.assertEquals(getNestedProperty(existingItemJson, "materialType", "id"), updatedItem.getString("materialTypeId"));
-    Assert.assertEquals(existingItemJson.getString("holdingsRecordId"), updatedItem.getString("holdingsRecordId"));
-    Assert.assertEquals(IN_PROCESS.value(), updatedItem.getJsonObject(STATUS_KEY).getString("name"));
+    JsonArray updatedItems = new JsonArray(eventPayload.getContext().get(ITEM.value()));
+    Assert.assertEquals(firstExistingItemJson.getString("id"), updatedItems.getJsonObject(0).getString("id"));
+    Assert.assertEquals(firstExistingItemJson.getString(HRID_KEY), updatedItems.getJsonObject(0).getString(HRID_KEY));
+    Assert.assertEquals(getNestedProperty(firstExistingItemJson, "permanentLoanType", "id"), updatedItems.getJsonObject(0).getString("permanentLoanTypeId"));
+    Assert.assertEquals(getNestedProperty(firstExistingItemJson, "materialType", "id"), updatedItems.getJsonObject(0).getString("materialTypeId"));
+    Assert.assertEquals(firstExistingItemJson.getString("holdingsRecordId"), updatedItems.getJsonObject(0).getString("holdingsRecordId"));
+    Assert.assertEquals(IN_PROCESS.value(), updatedItems.getJsonObject(0).getJsonObject(STATUS_KEY).getString("name"));
     Assert.assertNotNull(eventPayload.getContext().get(HOLDINGS.value()));
   }
 

@@ -17,15 +17,19 @@ import java.io.UnsupportedEncodingException;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.json.JsonArray;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
@@ -38,6 +42,7 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.entities.PartialError;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.items.Item;
@@ -63,7 +68,7 @@ import io.vertx.core.json.JsonObject;
 
 public class UpdateItemEventHandler implements EventHandler {
 
-  private static final Logger LOG = LogManager.getLogger(UpdateItemEventHandler.class);
+  private static final Logger LOGGER = LogManager.getLogger(UpdateItemEventHandler.class);
 
   static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to update an Item requires a mapping profile";
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data or ITEM to update";
@@ -77,6 +82,8 @@ public class UpdateItemEventHandler implements EventHandler {
   private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
   private static final String CURRENT_EVENT_TYPE_PROPERTY = "CURRENT_EVENT_TYPE";
   private static final String CURRENT_NODE_PROPERTY = "CURRENT_NODE";
+  private static final String ERRORS = "ERRORS";
+  private static final String BLANK = "";
 
   private final List<String> requiredFields = Arrays.asList("status.name", "materialType.id", "permanentLoanType.id", "holdingsRecordId");
   private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").withZone(ZoneOffset.UTC);
@@ -91,24 +98,25 @@ public class UpdateItemEventHandler implements EventHandler {
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
-    logParametersEventHandler(LOG, dataImportEventPayload);
+    logParametersEventHandler(LOGGER, dataImportEventPayload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
       dataImportEventPayload.setEventType(DI_INVENTORY_ITEM_UPDATED.value());
 
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
       if (isNull(payloadContext) || isBlank(payloadContext.get(MARC_BIBLIOGRAPHIC.value()))
-        || isBlank(payloadContext.get(ITEM.value()))) {
-        LOG.error(PAYLOAD_HAS_NO_DATA_MSG);
+        || isBlank(payloadContext.get(ITEM.value())) || new JsonArray(payloadContext.get(ITEM.value())).isEmpty()) {
+        LOGGER.error(PAYLOAD_HAS_NO_DATA_MSG);
         return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
       }
       if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
-        LOG.error(ACTION_HAS_NO_MAPPING_MSG);
+        LOGGER.error(ACTION_HAS_NO_MAPPING_MSG);
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
-      LOG.info("Processing UpdateItemEventHandler starting with jobExecutionId: {}.", dataImportEventPayload.getJobExecutionId());
+      LOGGER.info("Processing UpdateItemEventHandler starting with jobExecutionId: {}.", dataImportEventPayload.getJobExecutionId());
 
-      AtomicBoolean isProtectedStatusChanged = new AtomicBoolean();
+      Map<String, AtomicBoolean> itemsWithProtectedChangedStatues = new HashMap<>();
+      //AtomicBoolean isProtectedStatusChanged = new AtomicBoolean();
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       String jobExecutionId = dataImportEventPayload.getJobExecutionId();
 
@@ -119,52 +127,93 @@ public class UpdateItemEventHandler implements EventHandler {
         .map(parametersOptional -> parametersOptional
           .orElseThrow(() -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId,
             recordId, chunkId))))
-        .compose(mappingMetadataDto -> {
-          String oldItemStatus = preparePayloadAndGetStatus(dataImportEventPayload, payloadContext, mappingMetadataDto);
+        .onSuccess(mappingMetadataDto -> {
+          Map<String,String> oldItemStatuses = preparePayloadAndGetStatus(dataImportEventPayload, payloadContext, mappingMetadataDto);
+          MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
+          MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
 
-          JsonObject mappedItemAsJson = new JsonObject(payloadContext.get(ITEM.value()));
-          mappedItemAsJson = mappedItemAsJson.containsKey(ITEM_PATH_FIELD) ? mappedItemAsJson.getJsonObject(ITEM_PATH_FIELD) : mappedItemAsJson;
+          List<Future> updatedItemsRecordFutures = new ArrayList<>();
+          List<Item> updatedItemEntities = new ArrayList<>();
+          List<PartialError> errors = new ArrayList<>();
 
-          List<String> errors = validateItem(mappedItemAsJson, requiredFields);
-          if (!errors.isEmpty()) {
-            String msg = format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", errors,
-              jobExecutionId, recordId, chunkId);
-            LOG.error(msg);
-            return Future.failedFuture(msg);
-          }
+          JsonArray itemsJsonArray = new JsonArray(dataImportEventPayload.getContext().get(ITEM.value()));
+          for (int i = 0; i < itemsJsonArray.size(); i++) {
+            Promise<Void> updatePromise = Promise.promise();
+            updatedItemsRecordFutures.add(updatePromise.future());
 
-          String newItemStatus = mappedItemAsJson.getJsonObject(STATUS_KEY).getString("name");
-          isProtectedStatusChanged.set(isProtectedStatusChanged(oldItemStatus, newItemStatus));
-          if (isProtectedStatusChanged.get()) {
-            mappedItemAsJson.getJsonObject(STATUS_KEY).put("name", oldItemStatus);
-          }
+            JsonObject mappedItemAsJson = itemsJsonArray.getJsonObject(i);
+            mappedItemAsJson = mappedItemAsJson.getJsonObject(ITEM_PATH_FIELD);
 
-          ItemCollection itemCollection = storage.getItemCollection(context);
-          Item itemToUpdate = ItemUtil.jsonToItem(mappedItemAsJson);
-          return verifyItemBarcodeUniqueness(itemToUpdate, itemCollection)
-            .compose(v -> updateItemAndRetryIfOLExists(itemToUpdate, itemCollection, dataImportEventPayload))
-            .onSuccess(updatedItem -> {
+
+            //JsonObject mappedItemAsJson = new JsonObject(payloadContext.get(ITEM.value()));
+            //mappedItemAsJson = mappedItemAsJson.containsKey(ITEM_PATH_FIELD) ? mappedItemAsJson.getJsonObject(ITEM_PATH_FIELD) : mappedItemAsJson;
+
+            List<String> validationErrors = validateItem(mappedItemAsJson, requiredFields);
+            if (!validationErrors.isEmpty()) {
+              String msg = format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", validationErrors,
+                jobExecutionId, recordId, chunkId);
+              LOGGER.error(msg);
+              dataImportEventPayload.getContext().put(ERRORS, Json.encode(validationErrors));
+              errors.add(new PartialError(mappedItemAsJson.getString("id") != null ? mappedItemAsJson.getString("id") : BLANK, msg));
+              updatePromise.complete();
+              //future.complete(dataImportEventPayload);
+              //return future;
+            } else {
+              String newItemStatus = mappedItemAsJson.getJsonObject(STATUS_KEY).getString("name");
+              AtomicBoolean isProtectedStatusChanged = new AtomicBoolean();
+              isProtectedStatusChanged.set(isProtectedStatusChanged(oldItemStatuses.get(mappedItemAsJson.getString("id")), newItemStatus));
+              //itemsWithProtectedChangedStatues.put(mappedItemAsJson.getString("id"), isProtectedStatusChanged);
               if (isProtectedStatusChanged.get()) {
-                String msg = String.format(STATUS_UPDATE_ERROR_MSG, oldItemStatus, newItemStatus);
-                LOG.warn(msg);
-                dataImportEventPayload.getContext().put(ITEM.value(), ItemUtil.mapToJson(updatedItem).encode());
-                future.completeExceptionally(new EventProcessingException(msg));
-              } else {
-                addHoldingToPayloadIfNeeded(dataImportEventPayload, context, updatedItem)
-                  .onComplete(item -> {
-                    dataImportEventPayload.getContext().put(ITEM.value(), ItemUtil.mapToJson(updatedItem).encode());
-                    future.complete(dataImportEventPayload);
-                  });
+                mappedItemAsJson.getJsonObject(STATUS_KEY).put("name", oldItemStatuses.get(mappedItemAsJson.getString("id")));
               }
-            });
+
+              ItemCollection itemCollection = storage.getItemCollection(context);
+              Item itemToUpdate = ItemUtil.jsonToItem(mappedItemAsJson);
+              verifyItemBarcodeUniqueness(itemToUpdate, itemCollection, updatePromise, errors)
+                .compose(v -> updateItemAndRetryIfOLExists(itemToUpdate, itemCollection, dataImportEventPayload, updatePromise, errors))
+                .onSuccess(updatedItem -> {
+                  if (isProtectedStatusChanged.get()) {
+                    String msg = String.format(STATUS_UPDATE_ERROR_MSG, oldItemStatuses, newItemStatus);
+                    LOGGER.warn(msg);
+                    updatedItemEntities.add(updatedItem);
+                    //dataImportEventPayload.getContext().put(ITEM.value(), ItemUtil.mapToJson(updatedItem).encode()); //TODO
+                    errors.add(new PartialError(updatedItem.getId() != null ? updatedItem.getId() : BLANK, msg));
+                    updatePromise.complete();
+                  } else {
+                    addHoldingToPayloadIfNeeded(dataImportEventPayload, context, updatedItem)
+                      .onComplete(item -> {
+                        updatedItemEntities.add(updatedItem);
+                        //dataImportEventPayload.getContext().put(ITEM.value(), ItemUtil.mapToJson(updatedItem).encode()); // TODO
+                        updatePromise.complete();
+                        //future.complete(dataImportEventPayload);
+                      });
+                  }
+                });
+            }
+          }
+
+          CompositeFuture.all(updatedItemsRecordFutures).onComplete(ar -> {
+/*            if (!expiredHoldings.isEmpty()) {
+              processOLError(dataImportEventPayload, future, holdingsRecordsCollection, expiredHoldings.get(0), errors);
+            }*/
+            if (dataImportEventPayload.getContext().containsKey(ERRORS) || !errors.isEmpty()) {
+              dataImportEventPayload.getContext().put(ERRORS, Json.encode(errors));
+            }
+            if (ar.succeeded()) {
+              dataImportEventPayload.getContext().put(ITEM.value(), Json.encode(updatedItemEntities));
+              future.complete(dataImportEventPayload);
+            } else {
+              future.completeExceptionally(ar.cause());
+            }
+          });
         })
         .onFailure(e -> {
-          LOG.error("Failed to update inventory Item by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
+          LOGGER.error("Failed to update inventory Item by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
             recordId, chunkId, e);
           future.completeExceptionally(e);
         });
     } catch (Exception e) {
-      LOG.error("Error updating inventory Item", e);
+      LOGGER.error("Error updating inventory Item", e);
       future.completeExceptionally(e);
     }
     return future;
@@ -180,13 +229,19 @@ public class UpdateItemEventHandler implements EventHandler {
   }
 
 
-  private String preparePayloadAndGetStatus(DataImportEventPayload dataImportEventPayload, HashMap<String, String> payloadContext, MappingMetadataDto mappingMetadataDto) {
-    JsonObject itemAsJson = new JsonObject(payloadContext.get(ITEM.value()));
-    String oldItemStatus = itemAsJson.getJsonObject(STATUS_KEY).getString("name");
+  private Map<String,String> preparePayloadAndGetStatus(DataImportEventPayload dataImportEventPayload, HashMap<String, String> payloadContext, MappingMetadataDto mappingMetadataDto) {
+    Map<String,String> itemOldStatuses = new HashMap<>();
+
+
+    JsonArray itemsJsonArray = new JsonArray(dataImportEventPayload.getContext().get(ITEM.value()));
+    for (int i = 0; i < itemsJsonArray.size(); i++) {
+      JsonObject itemAsJson = itemsJsonArray.getJsonObject(i);
+      itemAsJson = itemAsJson.getJsonObject(ITEM_PATH_FIELD);
+      itemOldStatuses.put(itemAsJson.getString("id"), itemAsJson.getJsonObject(STATUS_KEY).getString("name"));
+    }
+    dataImportEventPayload.getContext().put(ITEM.value(), itemsJsonArray.encode());
     preparePayloadForMappingManager(dataImportEventPayload);
-    MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
-    MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
-    return oldItemStatus;
+    return itemOldStatuses;
   }
 
   private Future<DataImportEventPayload> addHoldingToPayloadIfNeeded(DataImportEventPayload dataImportEventPayload, Context context, Item updatedItem) {
@@ -195,16 +250,16 @@ public class UpdateItemEventHandler implements EventHandler {
       HoldingsRecordCollection holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
       holdingsRecordCollection.findById(updatedItem.getHoldingId(),
         success -> {
-          LOG.info("Successfully retrieved Holdings for the hotlink by id: {}", updatedItem.getHoldingId());
+          LOGGER.info("Successfully retrieved Holdings for the hotlink by id: {}", updatedItem.getHoldingId());
           dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encodePrettily(success.getResult()));
           promise.complete(dataImportEventPayload);
         },
         failure -> {
-          LOG.warn("Error retrieving Holdings for the hotlink by id {} cause {}, status code {}", updatedItem.getHoldingId(), failure.getReason(), failure.getStatusCode());
+          LOGGER.warn("Error retrieving Holdings for the hotlink by id {} cause {}, status code {}", updatedItem.getHoldingId(), failure.getReason(), failure.getStatusCode());
           promise.complete(dataImportEventPayload);
         });
     } else {
-      LOG.debug("Holdings already exists in payload with for the hotlink with id {}", updatedItem.getHoldingId());
+      LOGGER.debug("Holdings already exists in payload with for the hotlink with id {}", updatedItem.getHoldingId());
       promise.complete(dataImportEventPayload);
     }
     return promise.future();
@@ -218,8 +273,13 @@ public class UpdateItemEventHandler implements EventHandler {
     dataImportEventPayload.getContext().put(CURRENT_EVENT_TYPE_PROPERTY, dataImportEventPayload.getEventType());
     dataImportEventPayload.getContext().put(CURRENT_NODE_PROPERTY, Json.encode(dataImportEventPayload.getCurrentNode()));
 
-    JsonObject oldItemJson = new JsonObject(dataImportEventPayload.getContext().get(ITEM.value()));
-    dataImportEventPayload.getContext().put(ActionProfile.FolioRecord.ITEM.value(), new JsonObject().put(ITEM_PATH_FIELD, oldItemJson).encode());
+    JsonArray itemsJsonArray = new JsonArray(dataImportEventPayload.getContext().get(ITEM.value()));
+    for (int i = 0; i < itemsJsonArray.size(); i++) {
+      JsonObject itemAsJson = itemsJsonArray.getJsonObject(i);
+      itemAsJson = itemAsJson.getJsonObject(ITEM_PATH_FIELD);
+      itemsJsonArray.set(i, new JsonObject().put(ITEM_PATH_FIELD, itemAsJson));
+    }
+    dataImportEventPayload.getContext().put(ITEM.value(), itemsJsonArray.encode());
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
     dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
   }
@@ -237,46 +297,52 @@ public class UpdateItemEventHandler implements EventHandler {
     }
   }
 
-  private Future<Boolean> verifyItemBarcodeUniqueness(Item item, ItemCollection itemCollection) {
+  private Future<Void> verifyItemBarcodeUniqueness(Item item, ItemCollection itemCollection, Promise<Void> updatePromise, List<PartialError> errors) {
 
     if (isEmpty(item.getBarcode())) {
-      return Future.succeededFuture(true);
+      return Future.succeededFuture();
     }
 
-    Promise<Boolean> promise = Promise.promise();
     try {
       itemCollection.findByCql(CqlHelper.barcodeIs(item.getBarcode()) + " AND id <> " + item.id, PagingParameters.defaults(),
         findResult -> {
-          if (findResult.getResult().records.isEmpty()) {
-            promise.complete(findResult.getResult().records.isEmpty());
-          } else {
-            LOG.warn("Barcode must be unique, {} is already assigned to another item", item.getBarcode());
-            promise.fail(format("Barcode must be unique, %s is already assigned to another item", item.getBarcode()));
+          if (!findResult.getResult().records.isEmpty()) {
+            LOGGER.warn("Barcode must be unique, {} is already assigned to another item", item.getBarcode());
+            updatePromise.complete();
+            errors.add(new PartialError(item.getId() != null ? item.getId() : BLANK, format("Barcode must be unique, %s is already assigned to another item", item.getBarcode())));
           }
         },
-        failure -> promise.fail(failure.getReason()));
+        failure -> {
+          updatePromise.complete();
+          errors.add(new PartialError(item.getId() != null ? item.getId() : BLANK, failure.getReason()));
+        });
     } catch (UnsupportedEncodingException e) {
       String msg = format("Failed to find items by barcode '%s'", item.getBarcode());
-      LOG.error(msg, e);
-      promise.fail(msg);
+      LOGGER.error(msg, e);
+      updatePromise.complete();
+      errors.add(new PartialError(item.getId() != null ? item.getId() : BLANK, format("Failed to find items by barcode '%s'", item.getBarcode())));
     }
-    return promise.future();
+    return Future.succeededFuture();
   }
 
-  private Future<Item> updateItemAndRetryIfOLExists(Item item, ItemCollection itemCollection, DataImportEventPayload eventPayload) {
+  private Future<Item> updateItemAndRetryIfOLExists(Item item, ItemCollection itemCollection, DataImportEventPayload eventPayload, Promise<Void> updatePromise, List<PartialError> errors) {
     Promise<Item> promise = Promise.promise();
     item.getCirculationNotes().forEach(note -> note
       .withId(UUID.randomUUID().toString())
       .withSource(null)
       .withDate(dateTimeFormatter.format(ZonedDateTime.now())));
 
-    itemCollection.update(item, success -> promise.complete(item),
+    itemCollection.update(item, success -> {
+        promise.complete(item);
+      },
       failure -> {
         if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
-          processOLError(item, itemCollection, eventPayload, promise, failure);
+          //processOLError(item, itemCollection, eventPayload, promise, failure);
         } else {
+          updatePromise.complete();
+          errors.add(new PartialError(item.getId() != null ? item.getId() : BLANK, format("Error updating Item - %s, status code %s", failure.getReason(), failure.getStatusCode())));
           eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
-          LOG.error(format("Error updating Item - %s, status code %s", failure.getReason(), failure.getStatusCode()));
+          LOGGER.error(format("Error updating Item - %s, status code %s", failure.getReason(), failure.getStatusCode()));
           promise.fail(failure.getReason());
         }
       });
@@ -288,12 +354,12 @@ public class UpdateItemEventHandler implements EventHandler {
     int currentRetryNumber = eventPayload.getContext().get(CURRENT_RETRY_NUMBER) == null ? 0 : Integer.parseInt(eventPayload.getContext().get(CURRENT_RETRY_NUMBER));
     if (currentRetryNumber < MAX_RETRIES_COUNT) {
       eventPayload.getContext().put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
-      LOG.warn("OL error updating Item - {}, status code {}. Retry UpdateItemEventHandler handler...", failure.getReason(), failure.getStatusCode());
+      LOGGER.warn("OL error updating Item - {}, status code {}. Retry UpdateItemEventHandler handler...", failure.getReason(), failure.getStatusCode());
       getActualItemAndReInvokeCurrentHandler(instance, itemCollection, promise, eventPayload);
     } else {
       eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
       String errMessage = format("Current retry number %s exceeded or equal given number %s for the Item update for jobExecutionId '%s'", MAX_RETRIES_COUNT, currentRetryNumber, eventPayload.getJobExecutionId());
-      LOG.error(errMessage);
+      LOGGER.error(errMessage);
       promise.fail(errMessage);
     }
   }
@@ -308,7 +374,7 @@ public class UpdateItemEventHandler implements EventHandler {
         try {
           eventPayload.setCurrentNode(ObjectMapperTool.getMapper().readValue(eventPayload.getContext().get(CURRENT_NODE_PROPERTY), ProfileSnapshotWrapper.class));
         } catch (JsonProcessingException e) {
-          LOG.error("Cannot map from CURRENT_NODE value", e);
+          LOGGER.error("Cannot map from CURRENT_NODE value", e);
         }
         eventPayload.getContext().remove(CURRENT_EVENT_TYPE_PROPERTY);
         eventPayload.getContext().remove(CURRENT_NODE_PROPERTY);
@@ -322,7 +388,7 @@ public class UpdateItemEventHandler implements EventHandler {
       })
       .exceptionally(e -> {
         eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
-        LOG.error(format("Cannot get actual Item by id: %s", e.getCause()));
+        LOGGER.error(format("Cannot get actual Item by id: %s", e.getCause()));
         promise.fail(format("Cannot get actual Item by id: %s", e.getCause()));
         return null;
       });
