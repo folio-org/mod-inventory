@@ -128,7 +128,7 @@ public class UpdateItemEventHandler implements EventHandler {
           .orElseThrow(() -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId,
             recordId, chunkId))))
         .onSuccess(mappingMetadataDto -> {
-          Map<String,String> oldItemStatuses = preparePayloadAndGetStatus(dataImportEventPayload, payloadContext, mappingMetadataDto);
+          Map<String, String> oldItemStatuses = preparePayloadAndGetStatus(dataImportEventPayload, payloadContext, mappingMetadataDto);
           MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
           MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
 
@@ -173,7 +173,7 @@ public class UpdateItemEventHandler implements EventHandler {
                 .compose(v -> updateItemAndRetryIfOLExists(itemToUpdate, itemCollection, dataImportEventPayload, updatePromise, errors))
                 .onSuccess(updatedItem -> {
                   if (isProtectedStatusChanged.get()) {
-                    String msg = String.format(STATUS_UPDATE_ERROR_MSG, oldItemStatuses, newItemStatus);
+                    String msg = format(STATUS_UPDATE_ERROR_MSG, oldItemStatuses, newItemStatus);
                     LOGGER.warn(msg);
                     updatedItemEntities.add(updatedItem);
                     //dataImportEventPayload.getContext().put(ITEM.value(), ItemUtil.mapToJson(updatedItem).encode()); //TODO
@@ -200,7 +200,11 @@ public class UpdateItemEventHandler implements EventHandler {
               dataImportEventPayload.getContext().put(ERRORS, Json.encode(errors));
             }
             if (ar.succeeded()) {
-              dataImportEventPayload.getContext().put(ITEM.value(), Json.encode(updatedItemEntities));
+              List<JsonObject> itemsAsJsons = new ArrayList<>();
+              for (Item updatedItemEntity : updatedItemEntities) {
+                itemsAsJsons.add(ItemUtil.mapToJson(updatedItemEntity));
+              }
+              dataImportEventPayload.getContext().put(ITEM.value(), Json.encode(itemsAsJsons));
               future.complete(dataImportEventPayload);
             } else {
               future.completeExceptionally(ar.cause());
@@ -229,8 +233,8 @@ public class UpdateItemEventHandler implements EventHandler {
   }
 
 
-  private Map<String,String> preparePayloadAndGetStatus(DataImportEventPayload dataImportEventPayload, HashMap<String, String> payloadContext, MappingMetadataDto mappingMetadataDto) {
-    Map<String,String> itemOldStatuses = new HashMap<>();
+  private Map<String, String> preparePayloadAndGetStatus(DataImportEventPayload dataImportEventPayload, HashMap<String, String> payloadContext, MappingMetadataDto mappingMetadataDto) {
+    Map<String, String> itemOldStatuses = new HashMap<>();
 
 
     JsonArray itemsJsonArray = new JsonArray(dataImportEventPayload.getContext().get(ITEM.value()));
@@ -303,26 +307,32 @@ public class UpdateItemEventHandler implements EventHandler {
       return Future.succeededFuture();
     }
 
+    Promise<Void> promise = Promise.promise();
     try {
       itemCollection.findByCql(CqlHelper.barcodeIs(item.getBarcode()) + " AND id <> " + item.id, PagingParameters.defaults(),
         findResult -> {
-          if (!findResult.getResult().records.isEmpty()) {
+          if (findResult.getResult().records.isEmpty()) {
+            promise.complete(/*findResult.getResult().records.isEmpty()*/);
+          } else {
             LOGGER.warn("Barcode must be unique, {} is already assigned to another item", item.getBarcode());
             updatePromise.complete();
+            promise.fail(format("Barcode must be unique, %s is already assigned to another item", item.getBarcode()));
             errors.add(new PartialError(item.getId() != null ? item.getId() : BLANK, format("Barcode must be unique, %s is already assigned to another item", item.getBarcode())));
           }
         },
         failure -> {
+          promise.fail(failure.getReason());
           updatePromise.complete();
           errors.add(new PartialError(item.getId() != null ? item.getId() : BLANK, failure.getReason()));
         });
     } catch (UnsupportedEncodingException e) {
       String msg = format("Failed to find items by barcode '%s'", item.getBarcode());
       LOGGER.error(msg, e);
+      promise.fail(msg);
       updatePromise.complete();
       errors.add(new PartialError(item.getId() != null ? item.getId() : BLANK, format("Failed to find items by barcode '%s'", item.getBarcode())));
     }
-    return Future.succeededFuture();
+    return promise.future();
   }
 
   private Future<Item> updateItemAndRetryIfOLExists(Item item, ItemCollection itemCollection, DataImportEventPayload eventPayload, Promise<Void> updatePromise, List<PartialError> errors) {
