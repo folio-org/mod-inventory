@@ -821,7 +821,7 @@ public class UpdateItemEventHandlerTest {
   @Test
   @Parameters({"Aged to lost", "Awaiting delivery", "Awaiting pickup", "Checked out", "Claimed returned", "Declared lost", "Paged"})
   public void shouldReturnFailedFutureAndUpdateItemExceptStatusWhenStatusCanNotBeUpdated(String protectedItemStatus)
-    throws UnsupportedEncodingException {
+    throws UnsupportedEncodingException, ExecutionException, InterruptedException, TimeoutException {
     // given
     doAnswer(invocationOnMock -> {
       MultipleRecords<Item> result = new MultipleRecords<>(new ArrayList<>(), 0);
@@ -834,7 +834,6 @@ public class UpdateItemEventHandlerTest {
     MappingRule barcodeMappingRule = mappingProfile.getMappingDetails().getMappingFields().get(1);
     when(fakeReader.read(eq(barcodeMappingRule))).thenReturn(StringValue.of(expectedItemBarcode));
 
-    existingItemJson.put(STATUS_KEY, new JsonObject().put("name", protectedItemStatus));
     JsonObject firstExistingItemJson = new JsonObject()
       .put("id", UUID.randomUUID().toString())
       .put("status", new JsonObject().put("name", AVAILABLE.value()))
@@ -848,6 +847,10 @@ public class UpdateItemEventHandlerTest {
       .put("materialType", new JsonObject().put("id", UUID.randomUUID().toString()))
       .put("permanentLoanType", new JsonObject().put("id", UUID.randomUUID().toString()))
       .put("holdingsRecordId", UUID.randomUUID().toString());
+
+    firstExistingItemJson.put(STATUS_KEY, new JsonObject().put("name", protectedItemStatus));
+    secondExistingItemJson.put(STATUS_KEY, new JsonObject().put("name", protectedItemStatus));
+
 
     JsonArray itemsList = new JsonArray();
     itemsList.add(new JsonObject().put("item", firstExistingItemJson));
@@ -886,12 +889,23 @@ public class UpdateItemEventHandlerTest {
 
     // when
     CompletableFuture<DataImportEventPayload> future = updateItemHandler.handle(dataImportEventPayload);
-
+    DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
     // then
     //Assert.assertTrue(future.isCompletedExceptionally());
-    JsonArray updatedItem = new JsonArray(payloadContext.get(ITEM.value()));
+    JsonArray updatedItem = new JsonArray(eventPayload.getContext().get(ITEM.value()));
     Assert.assertEquals(protectedItemStatus, updatedItem.getJsonObject(0).getJsonObject(STATUS_KEY).getString("name"));
     Assert.assertEquals(expectedItemBarcode, updatedItem.getJsonObject(0).getString(ItemUtil.BARCODE));
+
+    Assert.assertEquals(2, new JsonArray(eventPayload.getContext().get(ITEM.value())).size());
+    JsonArray errors = new JsonArray(eventPayload.getContext().get(ERRORS));
+
+    JsonObject firstError = errors.getJsonObject(0);
+    Assert.assertEquals(firstExistingItemJson.getString("id"), firstError.getString("id"));
+    Assert.assertTrue(firstError.getString("error").contains("Could not change item status"));
+
+    JsonObject secondError = errors.getJsonObject(1);
+    Assert.assertEquals(secondExistingItemJson.getString("id"), secondError.getString("id"));
+    Assert.assertTrue(secondError.getString("error").contains("Could not change item status"));
   }
 
   @Test

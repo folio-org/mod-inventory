@@ -173,7 +173,7 @@ public class UpdateItemEventHandler implements EventHandler {
                 .compose(v -> updateItemAndRetryIfOLExists(itemToUpdate, itemCollection, dataImportEventPayload, updatePromise, errors))
                 .onSuccess(updatedItem -> {
                   if (isProtectedStatusChanged.get()) {
-                    String msg = format(STATUS_UPDATE_ERROR_MSG, oldItemStatuses, newItemStatus);
+                    String msg = format(STATUS_UPDATE_ERROR_MSG, oldItemStatuses.get(updatedItem.getId()), newItemStatus);
                     LOGGER.warn(msg);
                     updatedItemEntities.add(updatedItem);
                     //dataImportEventPayload.getContext().put(ITEM.value(), ItemUtil.mapToJson(updatedItem).encode()); //TODO
