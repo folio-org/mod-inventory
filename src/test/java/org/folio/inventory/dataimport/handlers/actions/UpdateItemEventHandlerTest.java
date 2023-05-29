@@ -465,12 +465,6 @@ public class UpdateItemEventHandlerTest {
         .put("permanentLocationId", permanentLocationId2)));
 
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_HOLDING_ID));
-/*
-
-    Item returnedItem = new Item().withId(firstId).withHrid(firstHrid).withInstanceId(instanceId).withPermanentLocationId(permanentLocationId).withVersion(1);
-
-    when(holdingsRecordsCollection.findById(firstId)).thenReturn(CompletableFuture.completedFuture(returnedHoldings));*/
-
     doAnswer(invocationOnMock -> {
       MultipleRecords<Item> result = new MultipleRecords<>(new ArrayList<>(), 0);
       Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);

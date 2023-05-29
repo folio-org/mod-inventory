@@ -23,7 +23,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -86,6 +85,7 @@ public class UpdateItemEventHandler implements EventHandler {
   private static final String BLANK = "";
   private static final String MULTIPLE_HOLDINGS_FIELD = "MULTIPLE_HOLDINGS_FIELD";
   private static final String TEMPORARY_MULTIPLE_HOLDINGS_FIELD = "TEMPORARY_MULTIPLE_HOLDINGS_FIELD";
+  public static final String ID_PATH_FIELD = "id";
 
   private final List<String> requiredFields = Arrays.asList("status.name", "materialType.id", "permanentLoanType.id", "holdingsRecordId");
   private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").withZone(ZoneOffset.UTC);
@@ -116,16 +116,8 @@ public class UpdateItemEventHandler implements EventHandler {
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
       LOGGER.info("Processing UpdateItemEventHandler starting with jobExecutionId: {}.", dataImportEventPayload.getJobExecutionId());
-      if (dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER) != null) {
-        JsonArray itemsJsonArray = new JsonArray(dataImportEventPayload.getContext().get(ITEM.value()));
-        for (int i = 0; i < itemsJsonArray.size(); i++) {
-
-
-        }
-      }
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       String jobExecutionId = dataImportEventPayload.getJobExecutionId();
-
       String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
       String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
 
@@ -159,14 +151,14 @@ public class UpdateItemEventHandler implements EventHandler {
                 jobExecutionId, recordId, chunkId);
               LOGGER.error(msg);
               dataImportEventPayload.getContext().put(ERRORS, Json.encode(validationErrors));
-              errors.add(new PartialError(mappedItemAsJson.getString("id") != null ? mappedItemAsJson.getString("id") : BLANK, msg));
+              errors.add(new PartialError(mappedItemAsJson.getString(ID_PATH_FIELD) != null ? mappedItemAsJson.getString(ID_PATH_FIELD) : BLANK, msg));
               updatePromise.complete();
             } else {
               String newItemStatus = mappedItemAsJson.getJsonObject(STATUS_KEY).getString("name");
               AtomicBoolean isProtectedStatusChanged = new AtomicBoolean();
-              isProtectedStatusChanged.set(isProtectedStatusChanged(oldItemStatuses.get(mappedItemAsJson.getString("id")), newItemStatus));
+              isProtectedStatusChanged.set(isProtectedStatusChanged(oldItemStatuses.get(mappedItemAsJson.getString(ID_PATH_FIELD)), newItemStatus));
               if (isProtectedStatusChanged.get()) {
-                mappedItemAsJson.getJsonObject(STATUS_KEY).put("name", oldItemStatuses.get(mappedItemAsJson.getString("id")));
+                mappedItemAsJson.getJsonObject(STATUS_KEY).put("name", oldItemStatuses.get(mappedItemAsJson.getString(ID_PATH_FIELD)));
               }
 
               Item itemToUpdate = ItemUtil.jsonToItem(mappedItemAsJson);
@@ -237,12 +229,11 @@ public class UpdateItemEventHandler implements EventHandler {
   private Map<String, String> preparePayloadAndGetStatus(DataImportEventPayload dataImportEventPayload, HashMap<String, String> payloadContext, MappingMetadataDto mappingMetadataDto) {
     Map<String, String> itemOldStatuses = new HashMap<>();
 
-
     JsonArray itemsJsonArray = new JsonArray(dataImportEventPayload.getContext().get(ITEM.value()));
     for (int i = 0; i < itemsJsonArray.size(); i++) {
       JsonObject itemAsJson = itemsJsonArray.getJsonObject(i);
       itemAsJson = itemAsJson.getJsonObject(ITEM_PATH_FIELD);
-      itemOldStatuses.put(itemAsJson.getString("id"), itemAsJson.getJsonObject(STATUS_KEY).getString("name"));
+      itemOldStatuses.put(itemAsJson.getString(ID_PATH_FIELD), itemAsJson.getJsonObject(STATUS_KEY).getString("name"));
     }
     dataImportEventPayload.getContext().put(ITEM.value(), itemsJsonArray.encode());
     preparePayloadForMappingManager(dataImportEventPayload);
@@ -303,7 +294,6 @@ public class UpdateItemEventHandler implements EventHandler {
   }
 
   private Future<Void> verifyItemBarcodeUniqueness(Item item, ItemCollection itemCollection, Promise<Void> updatePromise, List<PartialError> errors) {
-
     if (isEmpty(item.getBarcode())) {
       return Future.succeededFuture();
     }
@@ -347,13 +337,13 @@ public class UpdateItemEventHandler implements EventHandler {
         promise.complete(item);
       },
       failure -> {
+        errors.add(new PartialError(item.getId() != null ? item.getId() : BLANK, failure.getReason()));
         if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
           expiredItems.add(item);
           updatePromise.complete();
           promise.fail(failure.getReason());
         } else {
           updatePromise.complete();
-          errors.add(new PartialError(item.getId() != null ? item.getId() : BLANK, format("Error updating Item - %s, status code %s", failure.getReason(), failure.getStatusCode())));
           eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
           LOGGER.error(format("Error updating Item - %s, status code %s", failure.getReason(), failure.getStatusCode()));
           promise.fail(failure.getReason());
@@ -361,52 +351,6 @@ public class UpdateItemEventHandler implements EventHandler {
       });
     return promise.future();
   }
-
-
-/*  private void processOLError(Item item, ItemCollection itemCollection, DataImportEventPayload eventPayload, Promise<Item> promise, List<PartialError> errors) {
-    int currentRetryNumber = eventPayload.getContext().get(CURRENT_RETRY_NUMBER) == null ? 0 : Integer.parseInt(eventPayload.getContext().get(CURRENT_RETRY_NUMBER));
-    if (currentRetryNumber < MAX_RETRIES_COUNT) {
-      eventPayload.getContext().put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
-      LOGGER.warn("OL error updating Item - {}. Retry UpdateItemEventHandler handler...", item.getId());
-      getActualItemAndReInvokeCurrentHandler(item, itemCollection, promise, eventPayload, errors);
-    } else {
-      eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
-      String errMessage = format("Current retry number %s exceeded or equal given number %s for the Item update for jobExecutionId '%s'", MAX_RETRIES_COUNT, currentRetryNumber, eventPayload.getJobExecutionId());
-      LOGGER.error(errMessage);
-      promise.fail(errMessage);
-    }
-  }
-
-
-  private void getActualItemAndReInvokeCurrentHandler(Item item, ItemCollection itemCollection, Promise<Item> promise, DataImportEventPayload eventPayload, List<PartialError> errors) {
-    itemCollection.findById(item.getId())
-      .thenAccept(actualItem -> {
-        JsonObject itemAsJson = new JsonObject(ItemUtil.mapToMappingResultRepresentation(actualItem));
-        eventPayload.getContext().put(ITEM.value(), Json.encode(itemAsJson));
-        eventPayload.getEventsChain().remove(eventPayload.getContext().get(CURRENT_EVENT_TYPE_PROPERTY));
-        try {
-          eventPayload.setCurrentNode(ObjectMapperTool.getMapper().readValue(eventPayload.getContext().get(CURRENT_NODE_PROPERTY), ProfileSnapshotWrapper.class));
-        } catch (JsonProcessingException e) {
-          LOGGER.error("Cannot map from CURRENT_NODE value", e);
-        }
-        eventPayload.getContext().remove(CURRENT_EVENT_TYPE_PROPERTY);
-        eventPayload.getContext().remove(CURRENT_NODE_PROPERTY);
-        handle(eventPayload).whenComplete((res, e) -> {
-          if (e != null) {
-            promise.fail(e.getMessage());
-          } else {
-            promise.complete(item);
-          }
-        });
-      })
-      .exceptionally(e -> {
-        eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
-        LOGGER.error(format("Cannot get actual Item by id: %s", e.getCause()));
-        promise.fail(format("Cannot get actual Item by id: %s", e.getCause()));
-        errors.add(new PartialError(item.getId() != null ? item.getId() : BLANK, errMessage));
-        return null;
-      });
-  }*/
 
   private void processOLError(DataImportEventPayload dataImportEventPayload, CompletableFuture<DataImportEventPayload> future, ItemCollection itemCollection, Item item, List<PartialError> errors) {
     int currentRetryNumber = dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER) == null ? 0 : Integer.parseInt(dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER));
@@ -433,26 +377,7 @@ public class UpdateItemEventHandler implements EventHandler {
   }
 
   private void prepareDataAndReInvokeCurrentHandler(DataImportEventPayload dataImportEventPayload, CompletableFuture<DataImportEventPayload> future, Item actualItem) {
-    List<Item> initialItemList = new ArrayList<>();
-    JsonArray itemsJsonArray = new JsonArray(dataImportEventPayload.getContext().get(ITEM.value()));
-    for (int i = 0; i < itemsJsonArray.size(); i++) {
-      Item currentItem = ItemUtil.jsonToItem(itemsJsonArray.getJsonObject(i).getJsonObject("item"));
-      initialItemList.add(currentItem);
-    }
-    List<Item> itemsList = new ArrayList<>(initialItemList);
-
-    List<Item> updatedItemsList = new ArrayList<>(itemsList);
-    for (int i = 0; i < itemsList.size(); i++) {
-      Item item = itemsList.get(i);
-      if (item.getId().equals(actualItem.getId())) {
-        updatedItemsList.set(i, actualItem);
-      }
-    }
-
-    JsonArray resultedItems = new JsonArray();
-    for (Item currentItem : updatedItemsList) {
-      resultedItems.add(new JsonObject().put("item", new JsonObject(ItemUtil.mapToMappingResultRepresentation(currentItem))));
-    }
+    JsonArray resultedItems = updateActualItemAndConvertItemListAsJsonArray(dataImportEventPayload, actualItem);
     dataImportEventPayload.getContext().put(ITEM.value(), Json.encode(resultedItems));
     dataImportEventPayload.getEventsChain().remove(dataImportEventPayload.getContext().get(CURRENT_EVENT_TYPE_PROPERTY));
     try {
@@ -467,5 +392,29 @@ public class UpdateItemEventHandler implements EventHandler {
     handle(dataImportEventPayload).whenComplete((res, e) -> {
       future.complete(dataImportEventPayload);
     });
+  }
+
+  private static JsonArray updateActualItemAndConvertItemListAsJsonArray(DataImportEventPayload dataImportEventPayload, Item actualItem) {
+    List<Item> initialItemList = new ArrayList<>();
+    JsonArray itemsJsonArray = new JsonArray(dataImportEventPayload.getContext().get(ITEM.value()));
+    for (int i = 0; i < itemsJsonArray.size(); i++) {
+      Item currentItem = ItemUtil.jsonToItem(itemsJsonArray.getJsonObject(i).getJsonObject(ITEM_PATH_FIELD));
+      initialItemList.add(currentItem);
+    }
+    List<Item> itemsList = new ArrayList<>(initialItemList);
+
+    List<Item> updatedItemsList = new ArrayList<>(itemsList);
+    for (int i = 0; i < itemsList.size(); i++) {
+      Item item = itemsList.get(i);
+      if (item.getId().equals(actualItem.getId())) {
+        updatedItemsList.set(i, actualItem);
+      }
+    }
+
+    JsonArray resultedItems = new JsonArray();
+    for (Item currentItem : updatedItemsList) {
+      resultedItems.add(new JsonObject().put(ITEM_PATH_FIELD, new JsonObject(ItemUtil.mapToMappingResultRepresentation(currentItem))));
+    }
+    return resultedItems;
   }
 }
