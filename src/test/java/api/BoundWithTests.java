@@ -222,6 +222,24 @@ public class BoundWithTests extends ApiTests
   }
 
   @Test
+  public void canRetrieveManyItemsThroughItemsByHoldingsId() throws InterruptedException, TimeoutException, ExecutionException
+  {
+    IndividualResource instance1 = instancesStorageClient.create( InstanceSamples.smallAngryPlanet( UUID.randomUUID() ).put("title", "Instance 1") );
+    IndividualResource holdings1 = holdingsStorageClient.create(new HoldingRequestBuilder()
+      .forInstance(instance1.getId()).permanentlyInMainLibrary().withCallNumber( "HOLDINGS 1" ));
+    for (int i=1; i<=200; i++) {
+      itemsClient.create(new ItemRequestBuilder()
+        .forHolding( holdings1.getId() ).withBarcode("bc-" + i));
+
+    }
+    Response itemsResponse = okapiClient.get(ApiTestSuite.apiRoot()+
+        "/inventory/items-by-holdings-id?query=holdingsRecordId=="
+        +holdings1.getJson().getString( "id" ))
+      .toCompletableFuture().get(5, SECONDS);
+    assertThat("200 items found for 'holdings1': ", itemsResponse.getJson().getInteger( "totalRecords" ), is(200));
+  }
+
+  @Test
   public void canFetchBoundWithItemWithManyParts() throws InterruptedException, TimeoutException, ExecutionException
   {
     IndividualResource instance1 = instancesStorageClient.create( InstanceSamples.smallAngryPlanet( UUID.randomUUID() ).put("title", "Instance 1") );
