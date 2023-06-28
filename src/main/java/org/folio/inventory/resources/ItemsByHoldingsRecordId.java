@@ -37,8 +37,6 @@ public class ItemsByHoldingsRecordId extends Items
   // Supporting API
   private static final String BOUND_WITH_PARTS_STORAGE_PATH = "/inventory-storage/bound-with-parts";
   private static final String ITEM_STORAGE_PATH = "/item-storage/items";
-  private static final String BOUND_WITH_PARTS_JSON_ARRAY = "boundWithParts";
-  private static final int STATUS_SUCCESS = 200;
   private static final String RELATION_PARAM_ONLY_BOUND_WITHS  = "onlyBoundWiths";
   private static final String RELATION_PARAM_ONLY_BOUND_WITHS_SKIP_DIRECTLY_LINKED_ITEM = "onlyBoundWithsSkipDirectlyLinkedItem";
 
@@ -109,10 +107,8 @@ public class ItemsByHoldingsRecordId extends Items
 
         BoundWithPartsCql boundWithPartsCql = new BoundWithPartsCql(holdingsRecordId);
         itemsFetcher.find(holdingsRecordsItemIds, boundWithPartsCql::byHoldingsRecordIdOrListOfItemIds)
-            .thenAccept(boundWithParts -> {
-              joinAndRespondWithManyItems(routingContext, context, boundWithParts, holdingsRecordId, relationsParam);
-            });
-
+            .thenAccept(boundWithParts ->
+              joinAndRespondWithManyItems(routingContext, context, boundWithParts, holdingsRecordId, relationsParam));
       });
   }
 

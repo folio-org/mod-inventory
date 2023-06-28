@@ -149,13 +149,13 @@ public class BoundWithTests extends ApiTests
     IndividualResource instance2 = instancesStorageClient.create( InstanceSamples.girlOnTheTrain( UUID.randomUUID() ) );
     IndividualResource holdings2a = holdingsStorageClient.create(new HoldingRequestBuilder()
       .forInstance( instance2.getId()).permanentlyInMainLibrary().withCallNumber( "HOLDINGS 2A" ) );
-    IndividualResource item2a = itemsClient.create(new ItemRequestBuilder()
+    itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdings2a.getId()  ).withBarcode( "ITEM 2A" ) );
 
     IndividualResource instance3 = instancesStorageClient.create( InstanceSamples.leviathanWakes( UUID.randomUUID() ) );
     IndividualResource holdings3a = holdingsStorageClient.create(new HoldingRequestBuilder()
       .forInstance(instance3.getId()).permanentlyInMainLibrary().withCallNumber( "HOLDINGS 3A" ));
-    IndividualResource item3a = itemsClient.create(new ItemRequestBuilder()
+    itemsClient.create(new ItemRequestBuilder()
       .forHolding( holdings3a.getId() ).withBarcode( "ITEM 3A" ));
 
     boundWithPartsStorageClient.create(
@@ -217,7 +217,7 @@ public class BoundWithTests extends ApiTests
       "/inventory/items-by-holdings-id?query=holdingsRecordId=="
       +holdings3a.getJson().getString( "id" ))
       .toCompletableFuture().get(5, SECONDS);
-    assertThat("One item is found for 'holdings3a' (non-bound-with) with relations criterion: ", itemsResponse4.getJson().getInteger( "totalRecords" ), is(1));
+    assertThat("One item is found for 'holdings3a' (non-bound-with) with relations criterion: ", itemsResponse5.getJson().getInteger( "totalRecords" ), is(1));
 
   }
 
