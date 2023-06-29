@@ -237,6 +237,7 @@ public class BoundWithTests extends ApiTests
         +holdings1.getJson().getString( "id" ))
       .toCompletableFuture().get(5, SECONDS);
     assertThat("200 items found for 'holdings1': ", itemsResponse.getJson().getInteger( "totalRecords" ), is(200));
+    assertThat("200 items found for 'holdings1': ", itemsResponse.getJson().getJsonArray("items").size(), is(200));
   }
 
   @Test
