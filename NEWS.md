@@ -1,3 +1,6 @@
+## 20.0.5 2023-06-29
+* Partition large item query in items-by-holdings-id API, partition query of many item IDs to avoid 414-URI-too-long ([MODINV-829](https://issues.folio.org/browse/MODINV-829))
+
 ## 20.0.4 2023-03-30
 * Update data-import-processing-core to v4.0.5 ([MODDICORE-322](https://issues.folio.org/browse/MODDICORE-322))
 
