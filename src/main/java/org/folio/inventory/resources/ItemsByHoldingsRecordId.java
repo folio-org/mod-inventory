@@ -1,7 +1,6 @@
 package org.folio.inventory.resources;
 
 import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -12,8 +11,9 @@ import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
+import org.folio.inventory.storage.external.CqlQuery;
+import org.folio.inventory.storage.external.MultipleRecordsFetchClient;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
-import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.server.ClientErrorResponse;
 import org.folio.inventory.support.http.server.FailureResponseConsumer;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
@@ -22,7 +22,6 @@ import java.io.UnsupportedEncodingException;
 import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -38,8 +37,6 @@ public class ItemsByHoldingsRecordId extends Items
   // Supporting API
   private static final String BOUND_WITH_PARTS_STORAGE_PATH = "/inventory-storage/bound-with-parts";
   private static final String ITEM_STORAGE_PATH = "/item-storage/items";
-  private static final String BOUND_WITH_PARTS_JSON_ARRAY = "boundWithParts";
-  private static final int STATUS_SUCCESS = 200;
   private static final String RELATION_PARAM_ONLY_BOUND_WITHS  = "onlyBoundWiths";
   private static final String RELATION_PARAM_ONLY_BOUND_WITHS_SKIP_DIRECTLY_LINKED_ITEM = "onlyBoundWithsSkipDirectlyLinkedItem";
 
@@ -96,36 +93,32 @@ public class ItemsByHoldingsRecordId extends Items
           .map(item -> ((JsonObject) item).getString("id"))
           .collect( Collectors.toList());
 
-        String queryByHoldingsRecordsItemIds = "";
-        if (holdingsRecordsItemIds.size()>0) {
-          queryByHoldingsRecordsItemIds += " or " + buildQueryByItemIds( holdingsRecordsItemIds );
-        }
         CollectionResourceClient boundWithPartsClient =
           getCollectionResourceRepository(
             routingContext,
             context,
             BOUND_WITH_PARTS_STORAGE_PATH);
 
-        boundWithPartsClient.getMany(
-          queryByHoldingsRecordId + queryByHoldingsRecordsItemIds,
-          1000,
-          0,
-          response2 -> {
-            joinAndRespondWithManyItems( routingContext, context, response2, holdingsRecordId, relationsParam );
-          });
+        MultipleRecordsFetchClient itemsFetcher = MultipleRecordsFetchClient.builder()
+          .withCollectionPropertyName("boundWithParts")
+          .withExpectedStatus(200)
+          .withCollectionResourceClient(boundWithPartsClient)
+          .build();
 
+        BoundWithPartsCql boundWithPartsCql = new BoundWithPartsCql(holdingsRecordId);
+        itemsFetcher.find(holdingsRecordsItemIds, boundWithPartsCql::byHoldingsRecordIdOrListOfItemIds)
+            .thenAccept(boundWithParts ->
+              joinAndRespondWithManyItems(routingContext, context, boundWithParts, holdingsRecordId, relationsParam));
       });
-
   }
 
   private void joinAndRespondWithManyItems(RoutingContext routingContext,
                                            WebContext webContext,
-                                           Response boundWithParts,
+                                           List<JsonObject> boundWithParts,
                                            String holdingsRecordId,
                                            String relationsParam) {
-    String itemQuery = "id==(NOOP)";
-    List<String> itemIds = new ArrayList<>();
-
+    String itemQuery;
+    List<String> itemIds;
     boolean onlyBoundWiths = relationsParam != null &&
       ( relationsParam.equals(RELATION_PARAM_ONLY_BOUND_WITHS ) ||
         relationsParam.equals(
@@ -133,13 +126,7 @@ public class ItemsByHoldingsRecordId extends Items
     boolean skipDirectlyLinkedItem = relationsParam != null && relationsParam.equals(
       RELATION_PARAM_ONLY_BOUND_WITHS_SKIP_DIRECTLY_LINKED_ITEM );
 
-    JsonObject boundWithPartsJson = boundWithParts.getJson();
-
-    JsonArray boundWithPartRecords =
-      boundWithPartsJson.getJsonArray( BOUND_WITH_PARTS_JSON_ARRAY );
-
-    itemIds = boundWithPartRecords.stream()
-      .map( o -> (JsonObject) o )
+    itemIds = boundWithParts.stream()
       .map( part -> part.getString( "itemId" ) )
       .collect( Collectors.toList() );
 
@@ -164,18 +151,12 @@ public class ItemsByHoldingsRecordId extends Items
     }
     try {
       storage.getItemCollection(webContext).findByCql(itemQuery,
-          new PagingParameters(1000,0), success ->
+        new PagingParameters(1000,0), success ->
           respondWithManyItems(routingContext, webContext, success.getResult()),
         FailureResponseConsumer.serverError(routingContext.response()));
     } catch (UnsupportedEncodingException e) {
       ServerErrorResponse.internalError(routingContext.response(), e.toString());
     }
-  }
-  public static String buildQueryByItemIds(List<String> recordIds) {
-    return String.format("itemId==(%s)", recordIds.stream()
-      .map(String::toString)
-      .distinct()
-      .collect(Collectors.joining(" or ")));
   }
 
   private CollectionResourceClient getCollectionResourceRepository(
@@ -203,5 +184,20 @@ public class ItemsByHoldingsRecordId extends Items
         format("Failed to contact storage module: %s",
           exception.toString())));
   }
+
+  static class BoundWithPartsCql {
+    private final String holdingsId;
+
+    public BoundWithPartsCql(String holdingsRecordId) {
+      this.holdingsId = holdingsRecordId;
+    }
+
+    public CqlQuery byHoldingsRecordIdOrListOfItemIds(List<String> itemIds) {
+      return CqlQuery.exactMatchAny("id", itemIds)
+        .or(CqlQuery.exactMatch("holdingsRecordId", this.holdingsId));
+
+    }
+  }
+
 
 }
