@@ -106,11 +106,11 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
     when(context.getOkapiLocation()).thenReturn("http://localhost");
 
     mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
+    record = new JsonObject(TestUtil.readFileFromPath(RECORD_PATH));
   }
 
   @Test
-  public void shouldProcessEvent() throws IOException {
-    record = new JsonObject(TestUtil.readFileFromPath(RECORD_PATH));
+  public void shouldProcessEvent() {
     List<HoldingsType> holdings = new ArrayList<>();
     holdings.add(new HoldingsType().withName("testingnote$a").withId("fe19bae4-da28-472b-be90-d442e2428eadx"));
     MappingParameters mappingParameters = new MappingParameters();
