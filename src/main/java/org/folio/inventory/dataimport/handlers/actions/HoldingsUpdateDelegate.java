@@ -111,11 +111,21 @@ public class HoldingsUpdateDelegate {
       JsonObject mapped = JsonObject.mapFrom(mappedRecord);
       JsonObject merged = existing.mergeIn(mapped);
       HoldingsRecord mergedHoldingsRecord = merged.mapTo(HoldingsRecord.class);
+      updateCellNumberFields(mergedHoldingsRecord, mappedRecord);
       return Future.succeededFuture(mergedHoldingsRecord);
     } catch (Exception e) {
       LOGGER.error("Error updating holdings", e);
       return Future.failedFuture(e);
     }
+  }
+
+  private void updateCellNumberFields(HoldingsRecord existingRecord, Holdings mappedHoldings) {
+    existingRecord.setShelvingTitle(mappedHoldings.getShelvingTitle());
+    existingRecord.setCopyNumber(mappedHoldings.getCopyNumber());
+    existingRecord.setCallNumberTypeId(mappedHoldings.getCallNumberTypeId());
+    existingRecord.setCallNumberPrefix(mappedHoldings.getCallNumberPrefix());
+    existingRecord.setCallNumber(mappedHoldings.getCallNumber());
+    existingRecord.setCallNumberSuffix(mappedHoldings.getCallNumberSuffix());
   }
 
   private Future<HoldingsRecord> updateHoldingsRecord(HoldingsRecord holdingsRecord,
