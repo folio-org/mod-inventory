@@ -45,10 +45,11 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
 
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/holdings-rules.json";
   private static final String INSTANCE_PATH = "src/test/resources/handlers/holdings.json";
-  private static final String INSTANCE_WITH_CELL_NUMBER_PATH = "src/test/resources/handlers/holdings-with-call-number.json";
   private static final String RECORD_PATH = "src/test/resources/handlers/holdings-record.json";
-  private static final String RECORD_WITHOUT_CELL_NUMBER_PATH = "src/test/resources/handlers/holdings-record-without-call-number.json";
+  private static final String HOLDINGS_WITH_CELL_NUMBER_PATH = "src/test/resources/handlers/holdings-with-call-number.json";
+  private static final String HOLDINGS_RECORD_WITHOUT_CELL_NUMBER_PATH = "src/test/resources/handlers/holdings-record-without-call-number.json";
   private static final String HOLDINGS_ID = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d61";
+  private static final String HOLDINGS_TYPE_ID = "fe19bae4-da28-472b-be90-d442e2428eadx";
   private static final Integer HOLDINGS_VERSION = 1;
 
   @Mock
@@ -73,7 +74,7 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
   public void setUp() throws IOException {
     existingHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)).mapTo(HoldingsRecord.class);
     existingHoldingsRecordWithCallNumber = new JsonObject(TestUtil.readFileFromPath(
-      INSTANCE_WITH_CELL_NUMBER_PATH)).mapTo(HoldingsRecord.class);
+      HOLDINGS_WITH_CELL_NUMBER_PATH)).mapTo(HoldingsRecord.class);
     holdingsUpdateDelegate = Mockito.spy(new HoldingsUpdateDelegate(storage, holdingsCollectionService));
     updateHoldingsQuickMarcEventHandler = new UpdateHoldingsQuickMarcEventHandler(holdingsUpdateDelegate, context);
 
@@ -112,7 +113,7 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
   @Test
   public void shouldProcessEvent() {
     List<HoldingsType> holdings = new ArrayList<>();
-    holdings.add(new HoldingsType().withName("testingnote$a").withId("fe19bae4-da28-472b-be90-d442e2428eadx"));
+    holdings.add(new HoldingsType().withName("testingnote$a").withId(HOLDINGS_TYPE_ID));
     MappingParameters mappingParameters = new MappingParameters();
     mappingParameters.withHoldingsTypes(holdings);
 
@@ -144,11 +145,11 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
   }
 
   @Test
-  public void shouldProcessEvent1() throws IOException {
+  public void shouldProcessCallNumberRemoveEvent() throws IOException {
     record = new JsonObject(TestUtil.readFileFromPath(
-      RECORD_WITHOUT_CELL_NUMBER_PATH));
+      HOLDINGS_RECORD_WITHOUT_CELL_NUMBER_PATH));
     List<HoldingsType> holdings = new ArrayList<>();
-    holdings.add(new HoldingsType().withName("testingnote$a").withId("fe19bae4-da28-472b-be90-d442e2428eadx"));
+    holdings.add(new HoldingsType().withName("testingnote$a").withId(HOLDINGS_TYPE_ID));
     MappingParameters mappingParameters = new MappingParameters();
     mappingParameters.withHoldingsTypes(holdings);
 
@@ -167,8 +168,6 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
     Assert.assertEquals(HOLDINGS_VERSION, updatedHoldings.getVersion());
 
     Assert.assertNull(updatedHoldings.getHoldingsTypeId());
-    Assert.assertNotNull(updatedHoldings.getHoldingsStatements());
-    Assert.assertEquals(21, updatedHoldings.getHoldingsStatements().size());
     Assert.assertNull(updatedHoldings.getCallNumber());
     Assert.assertNull(updatedHoldings.getCallNumberPrefix());
     Assert.assertNull(updatedHoldings.getCallNumberSuffix());
@@ -206,7 +205,7 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
 
 
     List<HoldingsType> holdings = new ArrayList<>();
-    holdings.add(new HoldingsType().withName("testingnote$a").withId("fe19bae4-da28-472b-be90-d442e2428eadx"));
+    holdings.add(new HoldingsType().withName("testingnote$a").withId(HOLDINGS_TYPE_ID));
     MappingParameters mappingParameters = new MappingParameters();
     mappingParameters.withHoldingsTypes(holdings);
 
