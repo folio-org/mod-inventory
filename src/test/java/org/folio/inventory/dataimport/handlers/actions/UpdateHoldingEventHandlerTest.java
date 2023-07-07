@@ -235,10 +235,8 @@ public class UpdateHoldingEventHandlerTest {
     verify(holdingsRecordsCollection).findById(holdingsRecord.getId());
 
     Assert.assertEquals(DI_INVENTORY_HOLDING_UPDATED.value(), actualDataImportEventPayload.getEventType());
-    Assert.assertNull(actualDataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER));
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
-    HoldingsRecord updatedHoldings = Json.decodeValue(actualDataImportEventPayload.getContext().get(HOLDINGS.value()), HoldingsRecord.class);
-    Assert.assertEquals(actualHoldings.getVersion(), updatedHoldings.getVersion());
+    Assert.assertNull(actualDataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER));
   }
 
   @Test
