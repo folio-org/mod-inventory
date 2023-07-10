@@ -227,7 +227,7 @@ public class BoundWithTests extends ApiTests
     IndividualResource instance1 = instancesStorageClient.create( InstanceSamples.smallAngryPlanet( UUID.randomUUID() ).put("title", "Instance 1") );
     IndividualResource holdings1 = holdingsStorageClient.create(new HoldingRequestBuilder()
       .forInstance(instance1.getId()).permanentlyInMainLibrary().withCallNumber( "HOLDINGS 1" ));
-    for (int i=1; i<=200; i++) {
+    for (int i=1; i<=1100; i++) {
       itemsClient.create(new ItemRequestBuilder()
         .forHolding( holdings1.getId() ).withBarcode("bc-" + i));
 
@@ -236,8 +236,8 @@ public class BoundWithTests extends ApiTests
         "/inventory/items-by-holdings-id?query=holdingsRecordId=="
         +holdings1.getJson().getString( "id" ))
       .toCompletableFuture().get(5, SECONDS);
-    assertThat("200 items found for 'holdings1': ", itemsResponse.getJson().getInteger( "totalRecords" ), is(200));
-    assertThat("200 items found for 'holdings1': ", itemsResponse.getJson().getJsonArray("items").size(), is(200));
+    assertThat("200 items found for 'holdings1': ", itemsResponse.getJson().getInteger( "totalRecords" ), is(1100));
+    assertThat("200 items found for 'holdings1': ", itemsResponse.getJson().getJsonArray("items").size(), is(1100));
   }
 
   @Test
