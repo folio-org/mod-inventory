@@ -1,7 +1,7 @@
 package org.folio.inventory.eventhandlers;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -46,7 +46,10 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/holdings-rules.json";
   private static final String INSTANCE_PATH = "src/test/resources/handlers/holdings.json";
   private static final String RECORD_PATH = "src/test/resources/handlers/holdings-record.json";
+  private static final String HOLDINGS_WITH_CELL_NUMBER_PATH = "src/test/resources/handlers/holdings-with-call-number.json";
+  private static final String HOLDINGS_RECORD_WITHOUT_CELL_NUMBER_PATH = "src/test/resources/handlers/holdings-record-without-call-number.json";
   private static final String HOLDINGS_ID = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d61";
+  private static final String HOLDINGS_TYPE_ID = "fe19bae4-da28-472b-be90-d442e2428eadx";
   private static final Integer HOLDINGS_VERSION = 1;
 
   @Mock
@@ -65,10 +68,13 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
   private JsonObject mappingRules;
   private JsonObject record;
   private HoldingsRecord existingHoldingsRecord;
+  private HoldingsRecord existingHoldingsRecordWithCallNumber;
 
   @Before
   public void setUp() throws IOException {
     existingHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)).mapTo(HoldingsRecord.class);
+    existingHoldingsRecordWithCallNumber = new JsonObject(TestUtil.readFileFromPath(
+      HOLDINGS_WITH_CELL_NUMBER_PATH)).mapTo(HoldingsRecord.class);
     holdingsUpdateDelegate = Mockito.spy(new HoldingsUpdateDelegate(storage, holdingsCollectionService));
     updateHoldingsQuickMarcEventHandler = new UpdateHoldingsQuickMarcEventHandler(holdingsUpdateDelegate, context);
 
@@ -81,7 +87,13 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
       Consumer<Success<HoldingsRecord>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(existingHoldingsRecord));
       return null;
-    }).when(holdingsRecordCollection).findById(anyString(), any(), any());
+    }).when(holdingsRecordCollection).findById(eq("ddd266ef-07ac-4117-be13-d418b8cd6902"), any(), any());
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<HoldingsRecord>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(existingHoldingsRecordWithCallNumber));
+      return null;
+    }).when(holdingsRecordCollection).findById(eq("abc266ef-07ac-4117-be13-d418b8cd6902"), any(), any());
 
     doAnswer(invocationOnMock -> {
       HoldingsRecord holdingsRecord = invocationOnMock.getArgument(0);
@@ -101,7 +113,7 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
   @Test
   public void shouldProcessEvent() {
     List<HoldingsType> holdings = new ArrayList<>();
-    holdings.add(new HoldingsType().withName("testingnote$a").withId("fe19bae4-da28-472b-be90-d442e2428eadx"));
+    holdings.add(new HoldingsType().withName("testingnote$a").withId(HOLDINGS_TYPE_ID));
     MappingParameters mappingParameters = new MappingParameters();
     mappingParameters.withHoldingsTypes(holdings);
 
@@ -133,6 +145,44 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
   }
 
   @Test
+  public void shouldProcessCallNumberRemoveEvent() throws IOException {
+    record = new JsonObject(TestUtil.readFileFromPath(
+      HOLDINGS_RECORD_WITHOUT_CELL_NUMBER_PATH));
+    List<HoldingsType> holdings = new ArrayList<>();
+    holdings.add(new HoldingsType().withName("testingnote$a").withId(HOLDINGS_TYPE_ID));
+    MappingParameters mappingParameters = new MappingParameters();
+    mappingParameters.withHoldingsTypes(holdings);
+
+    HashMap<String, String> eventPayload = new HashMap<>();
+    eventPayload.put("RECORD_TYPE", "MARC_HOLDING");
+    eventPayload.put("MARC_HOLDING", record.encode());
+    eventPayload.put("MAPPING_RULES", mappingRules.encode());
+    eventPayload.put("MAPPING_PARAMS", Json.encode(mappingParameters));
+    eventPayload.put("RELATED_RECORD_VERSION", HOLDINGS_VERSION.toString());
+
+    Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(eventPayload);
+    HoldingsRecord updatedHoldings = future.result();
+
+    Assert.assertNotNull(updatedHoldings);
+    Assert.assertEquals(HOLDINGS_ID, updatedHoldings.getId());
+    Assert.assertEquals(HOLDINGS_VERSION, updatedHoldings.getVersion());
+
+    Assert.assertNull(updatedHoldings.getHoldingsTypeId());
+    Assert.assertNull(updatedHoldings.getCallNumber());
+    Assert.assertNull(updatedHoldings.getCallNumberPrefix());
+    Assert.assertNull(updatedHoldings.getCallNumberSuffix());
+    Assert.assertNull(updatedHoldings.getCallNumberTypeId());
+    Assert.assertNull(updatedHoldings.getCopyNumber());
+    Assert.assertNull(updatedHoldings.getShelvingTitle());
+
+    ArgumentCaptor<Context> argument = ArgumentCaptor.forClass(Context.class);
+    verify(holdingsUpdateDelegate).handle(any(), any(), argument.capture());
+    Assert.assertEquals("token", argument.getValue().getToken());
+    Assert.assertEquals("dummy", argument.getValue().getTenantId());
+    Assert.assertEquals("http://localhost", argument.getValue().getOkapiLocation());
+  }
+
+  @Test
   public void shouldCompleteExceptionally_whenRecordIsEmpty() {
     HashMap<String, String> eventPayload = new HashMap<>();
     eventPayload.put("RECORD_TYPE", "MARC_HOLDING");
@@ -155,7 +205,7 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
 
 
     List<HoldingsType> holdings = new ArrayList<>();
-    holdings.add(new HoldingsType().withName("testingnote$a").withId("fe19bae4-da28-472b-be90-d442e2428eadx"));
+    holdings.add(new HoldingsType().withName("testingnote$a").withId(HOLDINGS_TYPE_ID));
     MappingParameters mappingParameters = new MappingParameters();
     mappingParameters.withHoldingsTypes(holdings);
 
