@@ -50,6 +50,13 @@ public class ItemsByHoldingsRecordId extends Items
     router.get( RELATIVE_ITEMS_FOR_HOLDINGS_PATH ).handler(this::getBoundWithItems );
   }
 
+  /**
+   * Finds the item IDs of all items under the given holdings record ID;
+   * then also finds all bound-with parts that includes this holdings record/title;
+   * then passes the holdings record ID as well as the bound-with item IDs, if any, on to
+   * {@link #joinAndRespondWithManyItems(RoutingContext,WebContext,List,String,String) joinAndRespondWithManyItems}
+   * for that method to retrieve all the actual Item objects.
+   */
   private void getBoundWithItems( RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
 
@@ -85,7 +92,7 @@ public class ItemsByHoldingsRecordId extends Items
     CollectionResourceClient itemsClient =
       getCollectionResourceRepository( routingContext, context, ITEM_STORAGE_PATH );
     itemsClient.getMany("holdingsRecordId=="+holdingsRecordId,
-      1000,
+      1000000,
       0,
       response -> {
         List<String> holdingsRecordsItemIds = response.getJson()
@@ -112,6 +119,17 @@ public class ItemsByHoldingsRecordId extends Items
       });
   }
 
+  /**
+   * Retrieves Inventory Items that are directly related to the provided holdings record ID
+   * or that are bound-with items containing the holdings record ID/title.
+   * @param boundWithParts list of bound-with entries for bound-withs containing the
+   *                       given holdings record/title
+   * @param holdingsRecordId the ID of the given holdings record
+   * @param relationsParam optional parameter indicating a sub-set of items to retrieve -
+   *                       if omitted retrieve all, but otherwise retrieve only bound-with items
+   *                       -- that contains the holdings record/title -- with or without the bound-with
+   *                       directly linked to the given holdings-records.
+   */
   private void joinAndRespondWithManyItems(RoutingContext routingContext,
                                            WebContext webContext,
                                            List<JsonObject> boundWithParts,
@@ -151,7 +169,7 @@ public class ItemsByHoldingsRecordId extends Items
     }
     try {
       storage.getItemCollection(webContext).findByCql(itemQuery,
-        new PagingParameters(1000,0), success ->
+        new PagingParameters(1000000,0), success ->
           respondWithManyItems(routingContext, webContext, success.getResult()),
         FailureResponseConsumer.serverError(routingContext.response()));
     } catch (UnsupportedEncodingException e) {
