@@ -56,7 +56,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
   private static final String ITEM_ID_HEADER = "id";
-  private static final String CURRENT_RETRY_NUMBER = "CURRENT_RETRY_NUMBER";
+  static final String CURRENT_RETRY_NUMBER = "CURRENT_RETRY_NUMBER";
   private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
   private static final String CURRENT_EVENT_TYPE_PROPERTY = "CURRENT_EVENT_TYPE";
   private static final String CURRENT_HOLDING_PROPERTY = "CURRENT_HOLDING";
@@ -177,7 +177,8 @@ public class UpdateHoldingEventHandler implements EventHandler {
       dataImportEventPayload.getContext().put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
       LOGGER.warn("Error updating Holding by id '{}' - '{}', status code '{}'. Retry UpdateHoldingEventHandler handler...", holding.getId(), failure.getReason(), failure.getStatusCode());
       holdingsRecords.findById(holding.getId())
-        .thenAccept(actualInstance -> prepareDataAndReInvokeCurrentHandler(dataImportEventPayload, future, actualInstance))
+        .thenAccept(actualHolding -> prepareDataAndReInvokeCurrentHandler(dataImportEventPayload, future, actualHolding))
+        .thenAccept(v -> dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER))
         .exceptionally(e -> {
           dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
           String errMessage = format("Cannot get actual Holding by id: '%s' for jobExecutionId '%s'. Error: %s ", holding.getId(), dataImportEventPayload.getJobExecutionId(), e.getCause());
