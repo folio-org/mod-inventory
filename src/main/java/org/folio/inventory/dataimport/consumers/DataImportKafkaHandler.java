@@ -18,6 +18,7 @@ import org.folio.inventory.dataimport.HoldingWriterFactory;
 import org.folio.inventory.dataimport.HoldingsMapperFactory;
 import org.folio.inventory.dataimport.InstanceWriterFactory;
 import org.folio.inventory.dataimport.ItemWriterFactory;
+import org.folio.inventory.dataimport.ItemsMapperFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
 import org.folio.inventory.dataimport.handlers.actions.CreateAuthorityEventHandler;
@@ -162,6 +163,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     MappingManager.registerWriterFactory(new HoldingWriterFactory());
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
     MappingManager.registerMapperFactory(new HoldingsMapperFactory());
+    MappingManager.registerMapperFactory(new ItemsMapperFactory());
 
     PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper = new PrecedingSucceedingTitlesHelper(WebClient.wrap(client));
     EventManager.registerEventHandler(new MatchInstanceEventHandler(mappingMetadataCache));
