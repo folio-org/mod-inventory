@@ -1,7 +1,6 @@
 package org.folio.inventory.resources;
 
 import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -12,8 +11,9 @@ import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
+import org.folio.inventory.storage.external.CqlQuery;
+import org.folio.inventory.storage.external.MultipleRecordsFetchClient;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
-import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.server.ClientErrorResponse;
 import org.folio.inventory.support.http.server.FailureResponseConsumer;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
@@ -22,7 +22,6 @@ import java.io.UnsupportedEncodingException;
 import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -38,8 +37,6 @@ public class ItemsByHoldingsRecordId extends Items
   // Supporting API
   private static final String BOUND_WITH_PARTS_STORAGE_PATH = "/inventory-storage/bound-with-parts";
   private static final String ITEM_STORAGE_PATH = "/item-storage/items";
-  private static final String BOUND_WITH_PARTS_JSON_ARRAY = "boundWithParts";
-  private static final int STATUS_SUCCESS = 200;
   private static final String RELATION_PARAM_ONLY_BOUND_WITHS  = "onlyBoundWiths";
   private static final String RELATION_PARAM_ONLY_BOUND_WITHS_SKIP_DIRECTLY_LINKED_ITEM = "onlyBoundWithsSkipDirectlyLinkedItem";
 
@@ -53,6 +50,13 @@ public class ItemsByHoldingsRecordId extends Items
     router.get( RELATIVE_ITEMS_FOR_HOLDINGS_PATH ).handler(this::getBoundWithItems );
   }
 
+  /**
+   * Finds the item IDs of all items under the given holdings record ID;
+   * then also finds all bound-with parts that includes this holdings record/title;
+   * then passes the holdings record ID as well as the bound-with item IDs, if any, on to
+   * {@link #joinAndRespondWithManyItems(RoutingContext,WebContext,List,String,String) joinAndRespondWithManyItems}
+   * for that method to retrieve all the actual Item objects.
+   */
   private void getBoundWithItems( RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
 
@@ -88,7 +92,7 @@ public class ItemsByHoldingsRecordId extends Items
     CollectionResourceClient itemsClient =
       getCollectionResourceRepository( routingContext, context, ITEM_STORAGE_PATH );
     itemsClient.getMany("holdingsRecordId=="+holdingsRecordId,
-      1000,
+      1000000,
       0,
       response -> {
         List<String> holdingsRecordsItemIds = response.getJson()
@@ -96,36 +100,43 @@ public class ItemsByHoldingsRecordId extends Items
           .map(item -> ((JsonObject) item).getString("id"))
           .collect( Collectors.toList());
 
-        String queryByHoldingsRecordsItemIds = "";
-        if (holdingsRecordsItemIds.size()>0) {
-          queryByHoldingsRecordsItemIds += " or " + buildQueryByItemIds( holdingsRecordsItemIds );
-        }
         CollectionResourceClient boundWithPartsClient =
           getCollectionResourceRepository(
             routingContext,
             context,
             BOUND_WITH_PARTS_STORAGE_PATH);
 
-        boundWithPartsClient.getMany(
-          queryByHoldingsRecordId + queryByHoldingsRecordsItemIds,
-          1000,
-          0,
-          response2 -> {
-            joinAndRespondWithManyItems( routingContext, context, response2, holdingsRecordId, relationsParam );
-          });
+        MultipleRecordsFetchClient itemsFetcher = MultipleRecordsFetchClient.builder()
+          .withCollectionPropertyName("boundWithParts")
+          .withExpectedStatus(200)
+          .withCollectionResourceClient(boundWithPartsClient)
+          .build();
 
+        BoundWithPartsCql boundWithPartsCql = new BoundWithPartsCql(holdingsRecordId);
+        itemsFetcher.find(holdingsRecordsItemIds, boundWithPartsCql::byHoldingsRecordIdOrListOfItemIds)
+            .thenAccept(boundWithParts ->
+              joinAndRespondWithManyItems(routingContext, context, boundWithParts, holdingsRecordId, relationsParam));
       });
-
   }
 
+  /**
+   * Retrieves Inventory Items that are directly related to the provided holdings record ID
+   * or that are bound-with items containing the holdings record ID/title.
+   * @param boundWithParts list of bound-with entries for bound-withs containing the
+   *                       given holdings record/title
+   * @param holdingsRecordId the ID of the given holdings record
+   * @param relationsParam optional parameter indicating a sub-set of items to retrieve -
+   *                       if omitted retrieve all, but otherwise retrieve only bound-with items
+   *                       -- that contains the holdings record/title -- with or without the bound-with
+   *                       directly linked to the given holdings-records.
+   */
   private void joinAndRespondWithManyItems(RoutingContext routingContext,
                                            WebContext webContext,
-                                           Response boundWithParts,
+                                           List<JsonObject> boundWithParts,
                                            String holdingsRecordId,
                                            String relationsParam) {
-    String itemQuery = "id==(NOOP)";
-    List<String> itemIds = new ArrayList<>();
-
+    String itemQuery;
+    List<String> itemIds;
     boolean onlyBoundWiths = relationsParam != null &&
       ( relationsParam.equals(RELATION_PARAM_ONLY_BOUND_WITHS ) ||
         relationsParam.equals(
@@ -133,13 +144,7 @@ public class ItemsByHoldingsRecordId extends Items
     boolean skipDirectlyLinkedItem = relationsParam != null && relationsParam.equals(
       RELATION_PARAM_ONLY_BOUND_WITHS_SKIP_DIRECTLY_LINKED_ITEM );
 
-    JsonObject boundWithPartsJson = boundWithParts.getJson();
-
-    JsonArray boundWithPartRecords =
-      boundWithPartsJson.getJsonArray( BOUND_WITH_PARTS_JSON_ARRAY );
-
-    itemIds = boundWithPartRecords.stream()
-      .map( o -> (JsonObject) o )
+    itemIds = boundWithParts.stream()
       .map( part -> part.getString( "itemId" ) )
       .collect( Collectors.toList() );
 
@@ -164,18 +169,12 @@ public class ItemsByHoldingsRecordId extends Items
     }
     try {
       storage.getItemCollection(webContext).findByCql(itemQuery,
-          new PagingParameters(1000,0), success ->
+        new PagingParameters(1000000,0), success ->
           respondWithManyItems(routingContext, webContext, success.getResult()),
         FailureResponseConsumer.serverError(routingContext.response()));
     } catch (UnsupportedEncodingException e) {
       ServerErrorResponse.internalError(routingContext.response(), e.toString());
     }
-  }
-  public static String buildQueryByItemIds(List<String> recordIds) {
-    return String.format("itemId==(%s)", recordIds.stream()
-      .map(String::toString)
-      .distinct()
-      .collect(Collectors.joining(" or ")));
   }
 
   private CollectionResourceClient getCollectionResourceRepository(
@@ -203,5 +202,20 @@ public class ItemsByHoldingsRecordId extends Items
         format("Failed to contact storage module: %s",
           exception.toString())));
   }
+
+  static class BoundWithPartsCql {
+    private final String holdingsId;
+
+    public BoundWithPartsCql(String holdingsRecordId) {
+      this.holdingsId = holdingsRecordId;
+    }
+
+    public CqlQuery byHoldingsRecordIdOrListOfItemIds(List<String> itemIds) {
+      return CqlQuery.exactMatchAny("id", itemIds)
+        .or(CqlQuery.exactMatch("holdingsRecordId", this.holdingsId));
+
+    }
+  }
+
 
 }
