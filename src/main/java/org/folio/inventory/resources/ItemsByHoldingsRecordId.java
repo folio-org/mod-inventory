@@ -54,7 +54,6 @@ public class ItemsByHoldingsRecordId extends Items
    * for that method to retrieve the actual Item objects together with Items directly attached to the holdings record.
    */
   private void getBoundWithItems( RoutingContext routingContext) {
-    log.info("ID-NE: getBoundWithItems");
     WebContext context = new WebContext(routingContext);
 
     String queryByHoldingsRecordId = context.getStringParameter("query", null);
