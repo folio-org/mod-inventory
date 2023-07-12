@@ -93,21 +93,23 @@ public class ItemsByHoldingsRecordId extends Items
         context,
         BOUND_WITH_PARTS_STORAGE_PATH);
 
-    boundWithPartsClient.getMany("holdingsRecordId=="+holdingsRecordId,
-      100,
-      0,
-      response -> {
-        if (response.getJson().getInteger("totalRecords")>100) {
-          log.error("Found over 100 bound-withs that all contained holdings record {}." +
-              " Can only process up to 100 bound-with copies.",
-            holdingsRecordId);
-        }
-        List<String> boundWithItemIds = response.getJson()
-          .getJsonArray("boundWithParts").stream()
-          .map(part -> ((JsonObject) part).getString("itemId"))
-          .toList();
-        respondWithRegularItemsAndBoundWithItems(routingContext, context, boundWithItemIds, holdingsRecordId, relationsParam, pagingParameters);
-      });
+    if (boundWithPartsClient != null) {
+      boundWithPartsClient.getMany("holdingsRecordId==" + holdingsRecordId,
+        100,
+        0,
+        response -> {
+          if (response.getJson().getInteger("totalRecords") > 100) {
+            log.error("Found over 100 bound-withs that all contained holdings record {}." +
+                " Can only process up to 100 bound-with copies.",
+              holdingsRecordId);
+          }
+          List<String> boundWithItemIds = response.getJson()
+            .getJsonArray("boundWithParts").stream()
+            .map(part -> ((JsonObject) part).getString("itemId"))
+            .toList();
+          respondWithRegularItemsAndBoundWithItems(routingContext, context, boundWithItemIds, holdingsRecordId, relationsParam, pagingParameters);
+        });
+    }
 
   }
 
@@ -136,11 +138,9 @@ public class ItemsByHoldingsRecordId extends Items
     boolean skipDirectlyLinkedItem = relationsParam != null && relationsParam.equals(
       RELATION_PARAM_ONLY_BOUND_WITHS_SKIP_DIRECTLY_LINKED_ITEM );
 
-    boolean boundWithsFound = boundWithItemIds.size()>0;
-    log.info("NE-ID: Items found: " + boundWithsFound);
+    boolean boundWithsFound = boundWithItemIds.isEmpty();
     if (boundWithsFound) {
       itemQuery = buildQueryByIds( boundWithItemIds );
-      log.info("NE-ID: " + itemQuery);
       if (skipDirectlyLinkedItem)
       {
         itemQuery += " and holdingsRecordId <>" + holdingsRecordId;
@@ -213,7 +213,7 @@ public class ItemsByHoldingsRecordId extends Items
       offset = "0";
     }
     PagingParameters enforcedPaging = new PagingParameters(Integer.parseInt(limit), Integer.parseInt(offset));
-    log.debug("Paging resolved to limit: " + enforcedPaging.limit + " offset: " + enforcedPaging.offset);
+    log.debug("Paging resolved to limit: {}, offset: {}", enforcedPaging.limit, enforcedPaging.offset);
     return enforcedPaging;
   }
 }
