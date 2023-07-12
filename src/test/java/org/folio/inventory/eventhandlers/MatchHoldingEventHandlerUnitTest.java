@@ -44,6 +44,8 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+import org.folio.inventory.dataimport.HoldingsItemMatcherFactory;
+import org.folio.processing.matching.MatchingManager;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -116,6 +118,7 @@ public class MatchHoldingEventHandlerUnitTest {
       .thenReturn(StringValue.of(HOLDING_HRID));
     MatchValueReaderFactory.register(marcValueReader);
     MatchValueLoaderFactory.register(holdingLoader);
+    MatchingManager.registerMatcherFactory(new HoldingsItemMatcherFactory());
 
     when(mappingMetadataCache.get(anyString(), any(Context.class)))
       .thenReturn(Future.succeededFuture(Optional.of(new MappingMetadataDto()
@@ -401,7 +404,7 @@ public class MatchHoldingEventHandlerUnitTest {
       testContext.assertEquals(processedPayload.getEventsChain(), singletonList(DI_SRS_MARC_BIB_RECORD_CREATED.value()));
       testContext.assertEquals(DI_INVENTORY_HOLDING_MATCHED.value(), processedPayload.getEventType());
       testContext.assertEquals(
-        Json.decodeValue(processedPayload.getContext().get(HOLDINGS.value()), HoldingsRecord.class).getId(),
+        Json.decodeValue(new JsonArray(processedPayload.getContext().get(HOLDINGS.value())).getJsonObject(0).encode(), HoldingsRecord.class).getId(),
         expectedHolding.getId());
       async.complete();
     });
@@ -459,6 +462,7 @@ public class MatchHoldingEventHandlerUnitTest {
           .withIncomingRecordType(MARC_BIBLIOGRAPHIC)
           .withMatchDetails(singletonList(new MatchDetail()
             .withMatchCriterion(EXACTLY_MATCHES)
+            .withExistingRecordType(HOLDINGS)
             .withExistingMatchExpression(new MatchExpression()
               .withDataValueType(VALUE_FROM_RECORD)
               .withFields(singletonList(
