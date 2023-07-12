@@ -137,7 +137,7 @@ public class ItemsByHoldingsRecordId extends Items
     boolean skipDirectlyLinkedItem = relationsParam != null && relationsParam.equals(
       RELATION_PARAM_ONLY_BOUND_WITHS_SKIP_DIRECTLY_LINKED_ITEM );
 
-    boolean boundWithsFound = boundWithItemIds.isEmpty();
+    boolean boundWithsFound = !boundWithItemIds.isEmpty();
     if (boundWithsFound) {
       itemQuery = buildQueryByIds( boundWithItemIds );
       if (skipDirectlyLinkedItem)
