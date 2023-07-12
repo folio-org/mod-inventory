@@ -97,11 +97,6 @@ public class ItemsByHoldingsRecordId extends Items
         100,
         0,
         response -> {
-          if (response.getJson().getInteger("totalRecords") > 100) {
-            log.error("Found over 100 bound-withs that all contained holdings record {}." +
-                " Can only process up to 100 bound-with copies.",
-              holdingsRecordId);
-          }
           List<String> boundWithItemIds = response.getJson()
             .getJsonArray("boundWithParts").stream()
             .map(part -> ((JsonObject) part).getString("itemId"))
