@@ -5,14 +5,13 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.WebClient;
+import org.apache.commons.lang.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
-import org.folio.inventory.storage.external.CqlQuery;
-import org.folio.inventory.storage.external.MultipleRecordsFetchClient;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.server.ClientErrorResponse;
 import org.folio.inventory.support.http.server.FailureResponseConsumer;
@@ -24,7 +23,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.folio.inventory.support.CqlHelper.buildQueryByIds;
@@ -36,7 +34,6 @@ public class ItemsByHoldingsRecordId extends Items
   private static final String RELATIVE_ITEMS_FOR_HOLDINGS_PATH = "/inventory/items-by-holdings-id";
   // Supporting API
   private static final String BOUND_WITH_PARTS_STORAGE_PATH = "/inventory-storage/bound-with-parts";
-  private static final String ITEM_STORAGE_PATH = "/item-storage/items";
   private static final String RELATION_PARAM_ONLY_BOUND_WITHS  = "onlyBoundWiths";
   private static final String RELATION_PARAM_ONLY_BOUND_WITHS_SKIP_DIRECTLY_LINKED_ITEM = "onlyBoundWithsSkipDirectlyLinkedItem";
 
@@ -51,17 +48,18 @@ public class ItemsByHoldingsRecordId extends Items
   }
 
   /**
-   * Finds the item IDs of all items under the given holdings record ID;
-   * then also finds all bound-with parts that includes this holdings record/title;
-   * then passes the holdings record ID as well as the bound-with item IDs, if any, on to
-   * {@link #joinAndRespondWithManyItems(RoutingContext,WebContext,List,String,String) joinAndRespondWithManyItems}
-   * for that method to retrieve all the actual Item objects.
+   * Finds bound-with parts involving the given holdings record and passes
+   * the bound-with item IDs on to
+   * {@link #respondWithRegularItemsAndBoundWithItems(RoutingContext,WebContext,List,String,String,PagingParameters) joinAndRespondWithManyItems}
+   * for that method to retrieve the actual Item objects together with Items directly attached to the holdings record.
    */
   private void getBoundWithItems( RoutingContext routingContext) {
+    log.info("ID-NE: getBoundWithItems");
     WebContext context = new WebContext(routingContext);
 
     String queryByHoldingsRecordId = context.getStringParameter("query", null);
     String relationsParam = context.getStringParameter( "relations", null );
+    PagingParameters pagingParameters = getPagingParameters(context);
 
     if (queryByHoldingsRecordId == null || !queryByHoldingsRecordId.contains( "holdingsRecordId" )) {
       ClientErrorResponse.badRequest(routingContext.response(),
@@ -89,40 +87,34 @@ public class ItemsByHoldingsRecordId extends Items
 
     String holdingsRecordId = keyVal[1];
 
-    CollectionResourceClient itemsClient =
-      getCollectionResourceRepository( routingContext, context, ITEM_STORAGE_PATH );
-    itemsClient.getMany("holdingsRecordId=="+holdingsRecordId,
-      1000000,
+    CollectionResourceClient boundWithPartsClient =
+      getCollectionResourceRepository(
+        routingContext,
+        context,
+        BOUND_WITH_PARTS_STORAGE_PATH);
+
+    boundWithPartsClient.getMany("holdingsRecordId=="+holdingsRecordId,
+      100,
       0,
       response -> {
-        List<String> holdingsRecordsItemIds = response.getJson()
-          .getJsonArray( "items" ).stream()
-          .map(item -> ((JsonObject) item).getString("id"))
-          .collect( Collectors.toList());
-
-        CollectionResourceClient boundWithPartsClient =
-          getCollectionResourceRepository(
-            routingContext,
-            context,
-            BOUND_WITH_PARTS_STORAGE_PATH);
-
-        MultipleRecordsFetchClient itemsFetcher = MultipleRecordsFetchClient.builder()
-          .withCollectionPropertyName("boundWithParts")
-          .withExpectedStatus(200)
-          .withCollectionResourceClient(boundWithPartsClient)
-          .build();
-
-        BoundWithPartsCql boundWithPartsCql = new BoundWithPartsCql(holdingsRecordId);
-        itemsFetcher.find(holdingsRecordsItemIds, boundWithPartsCql::byHoldingsRecordIdOrListOfItemIds)
-            .thenAccept(boundWithParts ->
-              joinAndRespondWithManyItems(routingContext, context, boundWithParts, holdingsRecordId, relationsParam));
+        if (response.getJson().getInteger("totalRecords")>100) {
+          log.error("Found over 100 bound-withs that all contained holdings record {}." +
+              " Can only process up to 100 bound-with copies.",
+            holdingsRecordId);
+        }
+        List<String> boundWithItemIds = response.getJson()
+          .getJsonArray("boundWithParts").stream()
+          .map(part -> ((JsonObject) part).getString("itemId"))
+          .toList();
+        respondWithRegularItemsAndBoundWithItems(routingContext, context, boundWithItemIds, holdingsRecordId, relationsParam, pagingParameters);
       });
+
   }
 
   /**
    * Retrieves Inventory Items that are directly related to the provided holdings record ID
    * or that are bound-with items containing the holdings record ID/title.
-   * @param boundWithParts list of bound-with entries for bound-withs containing the
+   * @param boundWithItemIds list of bound-with entries for bound-withs containing the
    *                       given holdings record/title
    * @param holdingsRecordId the ID of the given holdings record
    * @param relationsParam optional parameter indicating a sub-set of items to retrieve -
@@ -130,13 +122,13 @@ public class ItemsByHoldingsRecordId extends Items
    *                       -- that contains the holdings record/title -- with or without the bound-with
    *                       directly linked to the given holdings-records.
    */
-  private void joinAndRespondWithManyItems(RoutingContext routingContext,
-                                           WebContext webContext,
-                                           List<JsonObject> boundWithParts,
-                                           String holdingsRecordId,
-                                           String relationsParam) {
+  private void respondWithRegularItemsAndBoundWithItems(RoutingContext routingContext,
+                                                        WebContext webContext,
+                                                        List<String> boundWithItemIds,
+                                                        String holdingsRecordId,
+                                                        String relationsParam,
+                                                        PagingParameters pagingParameters) {
     String itemQuery;
-    List<String> itemIds;
     boolean onlyBoundWiths = relationsParam != null &&
       ( relationsParam.equals(RELATION_PARAM_ONLY_BOUND_WITHS ) ||
         relationsParam.equals(
@@ -144,13 +136,11 @@ public class ItemsByHoldingsRecordId extends Items
     boolean skipDirectlyLinkedItem = relationsParam != null && relationsParam.equals(
       RELATION_PARAM_ONLY_BOUND_WITHS_SKIP_DIRECTLY_LINKED_ITEM );
 
-    itemIds = boundWithParts.stream()
-      .map( part -> part.getString( "itemId" ) )
-      .collect( Collectors.toList() );
-
-    boolean boundWithsFound = itemIds.size()>0;
+    boolean boundWithsFound = boundWithItemIds.size()>0;
+    log.info("NE-ID: Items found: " + boundWithsFound);
     if (boundWithsFound) {
-      itemQuery = buildQueryByIds( itemIds );
+      itemQuery = buildQueryByIds( boundWithItemIds );
+      log.info("NE-ID: " + itemQuery);
       if (skipDirectlyLinkedItem)
       {
         itemQuery += " and holdingsRecordId <>" + holdingsRecordId;
@@ -169,7 +159,7 @@ public class ItemsByHoldingsRecordId extends Items
     }
     try {
       storage.getItemCollection(webContext).findByCql(itemQuery,
-        new PagingParameters(1000000,0), success ->
+        pagingParameters, success ->
           respondWithManyItems(routingContext, webContext, success.getResult()),
         FailureResponseConsumer.serverError(routingContext.response()));
     } catch (UnsupportedEncodingException e) {
@@ -203,19 +193,27 @@ public class ItemsByHoldingsRecordId extends Items
           exception.toString())));
   }
 
-  static class BoundWithPartsCql {
-    private final String holdingsId;
-
-    public BoundWithPartsCql(String holdingsRecordId) {
-      this.holdingsId = holdingsRecordId;
+  /**
+   * Ensures a limit on the page size of no more than 10,000 items at a time,
+   * defaults to a limit of 200 items for a page.
+   * @param context The web context to extract requested paging from
+   * @return Adapted paging parameters.
+   */
+  private PagingParameters getPagingParameters (WebContext context) {
+    final String maxPageSize = "10000";
+    String limit = context.getStringParameter("limit", "200");
+    String offset = context.getStringParameter("offset", "0");
+    if (!StringUtils.isNumeric(limit) || StringUtils.isEmpty(limit)) {
+      limit = "200";
+    } else if (Integer.parseInt(limit) > Integer.parseInt(maxPageSize)) {
+      log.error("A paging of {} items was requested but the /items-by-holdings-id API cuts off the page at {} items.", limit, maxPageSize);
+      limit = maxPageSize;
     }
-
-    public CqlQuery byHoldingsRecordIdOrListOfItemIds(List<String> itemIds) {
-      return CqlQuery.exactMatchAny("id", itemIds)
-        .or(CqlQuery.exactMatch("holdingsRecordId", this.holdingsId));
-
+    if (!StringUtils.isNumeric(offset) || StringUtils.isEmpty(offset)) {
+      offset = "0";
     }
+    PagingParameters enforcedPaging = new PagingParameters(Integer.parseInt(limit), Integer.parseInt(offset));
+    log.debug("Paging resolved to limit: " + enforcedPaging.limit + " offset: " + enforcedPaging.offset);
+    return enforcedPaging;
   }
-
-
 }

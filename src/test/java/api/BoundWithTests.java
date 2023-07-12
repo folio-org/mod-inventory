@@ -234,7 +234,7 @@ public class BoundWithTests extends ApiTests
     }
     Response itemsResponse = okapiClient.get(ApiTestSuite.apiRoot()+
         "/inventory/items-by-holdings-id?query=holdingsRecordId=="
-        +holdings1.getJson().getString( "id" ))
+        +holdings1.getJson().getString( "id" )+"&offset=0&limit=1200")
       .toCompletableFuture().get(5, SECONDS);
     assertThat("1100 items found for 'holdings1': ", itemsResponse.getJson().getInteger( "totalRecords" ), is(1100));
     assertThat("1100 items found for 'holdings1': ", itemsResponse.getJson().getJsonArray("items").size(), is(1100));
