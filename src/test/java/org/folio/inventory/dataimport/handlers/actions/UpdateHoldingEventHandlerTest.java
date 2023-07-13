@@ -53,6 +53,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
+import static java.lang.String.format;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.ITEM;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
@@ -70,6 +71,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class UpdateHoldingEventHandlerTest {
@@ -109,7 +112,7 @@ public class UpdateHoldingEventHandlerTest {
     .withExistingRecordType(EntityType.HOLDINGS)
     .withMappingDetails(new MappingDetail()
       .withMappingFields(Collections.singletonList(
-        new MappingRule().withName("permanentLocationId").withPath("holdings.permanentLocationId[]").withValue("\"\\\"Main Library\\\"\"").withEnabled("true"))));
+        new MappingRule().withName("permanentLocationId").withPath("holdings.permanentLocationId").withValue("\"\\\"Main Library\\\"\"").withEnabled("true"))));
 
   private ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
     .withId(UUID.randomUUID().toString())
@@ -287,16 +290,19 @@ public class UpdateHoldingEventHandlerTest {
 
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new HoldingWriterFactory());
+    MappingManager.registerMapperFactory(new HoldingsMapperFactory());
 
     HoldingsRecord holdingsRecord = new HoldingsRecord()
       .withId(holdingId)
       .withInstanceId(instanceId)
       .withHrid(hrid)
       .withPermanentLocationId(permanentLocationId);
+    JsonArray holdingsList = new JsonArray();
+    holdingsList.add(new JsonObject().put("holdings", holdingsRecord));
 
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();
-    context.put(HOLDINGS.value(), Json.encode(holdingsRecord));
+    context.put(HOLDINGS.value(), Json.encode(holdingsList));
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
