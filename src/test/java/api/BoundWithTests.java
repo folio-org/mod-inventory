@@ -192,7 +192,7 @@ public class BoundWithTests extends ApiTests
 
     Response itemsResponse2 = okapiClient.get(ApiTestSuite.apiRoot()+
       "/inventory/items-by-holdings-id?query=holdingsRecordId=="
-      +holdings1a.getJson().getString( "id" ))
+      +holdings1a.getJson().getString( "id" )+"&offset=0&limit=20000")
       .toCompletableFuture().get(5, SECONDS);
 
     assertThat("One and only one bound-with item is found: ", itemsResponse2.getJson().getInteger( "totalRecords" ), is(1));
@@ -215,7 +215,7 @@ public class BoundWithTests extends ApiTests
 
     Response itemsResponse5 = okapiClient.get(ApiTestSuite.apiRoot()+
       "/inventory/items-by-holdings-id?query=holdingsRecordId=="
-      +holdings3a.getJson().getString( "id" ))
+      +holdings3a.getJson().getString( "id" )+"&offset=string&limit=string")
       .toCompletableFuture().get(5, SECONDS);
     assertThat("One item is found for 'holdings3a' (non-bound-with) with relations criterion: ", itemsResponse5.getJson().getInteger( "totalRecords" ), is(1));
 
@@ -227,17 +227,17 @@ public class BoundWithTests extends ApiTests
     IndividualResource instance1 = instancesStorageClient.create( InstanceSamples.smallAngryPlanet( UUID.randomUUID() ).put("title", "Instance 1") );
     IndividualResource holdings1 = holdingsStorageClient.create(new HoldingRequestBuilder()
       .forInstance(instance1.getId()).permanentlyInMainLibrary().withCallNumber( "HOLDINGS 1" ));
-    for (int i=1; i<=200; i++) {
+    for (int i=1; i<=1100; i++) {
       itemsClient.create(new ItemRequestBuilder()
         .forHolding( holdings1.getId() ).withBarcode("bc-" + i));
 
     }
     Response itemsResponse = okapiClient.get(ApiTestSuite.apiRoot()+
         "/inventory/items-by-holdings-id?query=holdingsRecordId=="
-        +holdings1.getJson().getString( "id" ))
+        +holdings1.getJson().getString( "id" )+"&offset=0&limit=1200")
       .toCompletableFuture().get(5, SECONDS);
-    assertThat("200 items found for 'holdings1': ", itemsResponse.getJson().getInteger( "totalRecords" ), is(200));
-    assertThat("200 items found for 'holdings1': ", itemsResponse.getJson().getJsonArray("items").size(), is(200));
+    assertThat("1100 items found for 'holdings1': ", itemsResponse.getJson().getInteger( "totalRecords" ), is(1100));
+    assertThat("1100 items found for 'holdings1': ", itemsResponse.getJson().getJsonArray("items").size(), is(1100));
   }
 
   @Test
@@ -284,6 +284,14 @@ public class BoundWithTests extends ApiTests
 
     assertThat("Response code 400 (bad request) expected when not querying by holdingsRecordId",
       itemsResponse3.getStatusCode(), is(400));
+
+    Response itemsResponse4 = okapiClient.get(ApiTestSuite.apiRoot()+
+        "/inventory/items-by-holdings-id/?query=holdingsRecordId")
+      .toCompletableFuture().get(5, SECONDS);
+
+    assertThat("Response code 400 (bad request) expected when not querying by holdingsRecordId",
+      itemsResponse4.getStatusCode(), is(400));
+
   }
 
   @Test
