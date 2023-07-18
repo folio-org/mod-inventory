@@ -287,7 +287,8 @@ resourceTypes:
         schemaItem: item
         exampleItem: !include examples/items_get.json
     get:
-      is: [searchable: {description: "query by holdings record ID. This is a mandatory query parameter.
+      is: [pageable: {description: "The default page size is 200. Maximum page size is 10000."},
+        searchable: {description: "query by holdings record ID. This is a mandatory query parameter.
        An optional parameter, 'relations', can be passed outside of the query to restrict what
        Items are returned based on their type of relationship with the holdings record.
        Possible values of the 'relations' parameter are: 'onlyBoundWiths', 'onlyBoundWithsSkipDirectlyLinkedItem'",
