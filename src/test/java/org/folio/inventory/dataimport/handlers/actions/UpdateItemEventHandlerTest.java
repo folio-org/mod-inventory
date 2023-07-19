@@ -361,19 +361,20 @@ public class UpdateItemEventHandlerTest {
       return null;
     }).when(mockedItemCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
+    String holdingsId = UUID.randomUUID().toString();
     JsonObject firstExistingItemJson = new JsonObject()
       .put("id", UUID.randomUUID().toString())
       .put("status", new JsonObject().put("name", AVAILABLE.value()))
       .put("materialType", new JsonObject().put("id", UUID.randomUUID().toString()))
       .put("permanentLoanType", new JsonObject().put("id", UUID.randomUUID().toString()))
-      .put("holdingsRecordId", UUID.randomUUID().toString());
+      .put("holdingsRecordId", holdingsId);
 
     JsonObject secondExistingItemJson = new JsonObject()
       .put("id", UUID.randomUUID().toString())
       .put("status", new JsonObject().put("name", AVAILABLE.value()))
       .put("materialType", new JsonObject().put("id", UUID.randomUUID().toString()))
       .put("permanentLoanType", new JsonObject().put("id", UUID.randomUUID().toString()))
-      .put("holdingsRecordId", UUID.randomUUID().toString());
+      .put("holdingsRecordId", holdingsId);
 
     JsonArray itemsList = new JsonArray();
     itemsList.add(new JsonObject().put("item", firstExistingItemJson));
@@ -385,7 +386,7 @@ public class UpdateItemEventHandlerTest {
 
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
-    payloadContext.put(HOLDINGS.value(), "{notEmptyValue}");
+    payloadContext.put(HOLDINGS.value(), new JsonArray().add(new JsonObject().put("id", holdingsId)).encode());
     payloadContext.put(ITEM.value(), itemsList.encode());
     payloadContext.put(MULTIPLE_HOLDINGS_FIELD, "945");
     payloadContext.put(HOLDINGS_IDENTIFIERS, Json.encode(List.of(PERMANENT_LOCATION_ID, permanentLocationId2)));
@@ -677,26 +678,6 @@ public class UpdateItemEventHandlerTest {
       return null;
     }).when(mockedItemCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    JsonObject firstExistingItemJson = new JsonObject()
-      .put("id", UUID.randomUUID().toString())
-      .put("status", new JsonObject().put("name", AVAILABLE.value()))
-      .put("materialType", new JsonObject().put("id", UUID.randomUUID().toString()))
-      .put("permanentLoanType", new JsonObject().put("id", UUID.randomUUID().toString()))
-      .put("holdingsRecordId", UUID.randomUUID().toString());
-
-    JsonObject secondExistingItemJson = new JsonObject()
-      .put("id", UUID.randomUUID().toString())
-      .put("status", new JsonObject().put("name", AVAILABLE.value()))
-      .put("materialType", new JsonObject().put("id", UUID.randomUUID().toString()))
-      .put("permanentLoanType", new JsonObject().put("id", UUID.randomUUID().toString()))
-      .put("holdingsRecordId", UUID.randomUUID().toString());
-
-    JsonArray itemsList = new JsonArray();
-    itemsList.add(new JsonObject().put("item", firstExistingItemJson));
-    itemsList.add(new JsonObject().put("item", secondExistingItemJson));
-
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_HOLDING_ID));
-
     String permanentLocationId2 = UUID.randomUUID().toString();
 
     String expectedHoldingId2 = UUID.randomUUID().toString();
@@ -708,6 +689,27 @@ public class UpdateItemEventHandlerTest {
       new JsonObject()
         .put("id", expectedHoldingId2)
         .put("permanentLocationId", permanentLocationId2)));
+
+    JsonObject firstExistingItemJson = new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("status", new JsonObject().put("name", AVAILABLE.value()))
+      .put("materialType", new JsonObject().put("id", UUID.randomUUID().toString()))
+      .put("permanentLoanType", new JsonObject().put("id", UUID.randomUUID().toString()))
+      .put("holdingsRecordId", expectedHoldingId1);
+
+    JsonObject secondExistingItemJson = new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("status", new JsonObject().put("name", AVAILABLE.value()))
+      .put("materialType", new JsonObject().put("id", UUID.randomUUID().toString()))
+      .put("permanentLoanType", new JsonObject().put("id", UUID.randomUUID().toString()))
+      .put("holdingsRecordId", expectedHoldingId2);
+
+    JsonArray itemsList = new JsonArray();
+    itemsList.add(new JsonObject().put("item", firstExistingItemJson));
+    itemsList.add(new JsonObject().put("item", secondExistingItemJson));
+
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_HOLDING_ID));
+
 
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
@@ -746,8 +748,7 @@ public class UpdateItemEventHandlerTest {
     DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
     Assert.assertEquals(DI_INVENTORY_ITEM_UPDATED, DataImportEventTypes.fromValue(eventPayload.getEventType()));
     Assert.assertEquals(2, new JsonArray(eventPayload.getContext().get(HOLDINGS.value())).size());
-    Assert.assertEquals(1, new JsonArray(eventPayload.getContext().get(ITEM.value())).size());
-
+    Assert.assertEquals(2, new JsonArray(eventPayload.getContext().get(ITEM.value())).size());
 
     // then
     verify(mockedItemCollection, Mockito.times(0))

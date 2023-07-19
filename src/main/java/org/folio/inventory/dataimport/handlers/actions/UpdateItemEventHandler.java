@@ -82,6 +82,7 @@ public class UpdateItemEventHandler implements EventHandler {
   private static final String CURRENT_NODE_PROPERTY = "CURRENT_NODE";
   private static final String ERRORS = "ERRORS";
   private static final String BLANK = "";
+  private static final String BLANK_JSON_ARRAY = "[]";
   private static final String MULTIPLE_HOLDINGS_FIELD = "MULTIPLE_HOLDINGS_FIELD";
   private static final String TEMPORARY_MULTIPLE_HOLDINGS_FIELD = "TEMPORARY_MULTIPLE_HOLDINGS_FIELD";
   public static final String ID_PATH_FIELD = "id";
@@ -127,7 +128,7 @@ public class UpdateItemEventHandler implements EventHandler {
           if (dataImportEventPayload.getContext().containsKey(MULTIPLE_HOLDINGS_FIELD)) {
             dataImportEventPayload.getContext().put(TEMPORARY_MULTIPLE_HOLDINGS_FIELD, dataImportEventPayload.getContext().get(MULTIPLE_HOLDINGS_FIELD));
           }
-          Map<String, String> oldItemStatuses = preparePayloadAndGetStatus(dataImportEventPayload, payloadContext, mappingMetadataDto);
+          Map<String, String> oldItemStatuses = preparePayloadAndGetStatus(dataImportEventPayload);
           MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
           MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
 
@@ -184,7 +185,7 @@ public class UpdateItemEventHandler implements EventHandler {
             if (!expiredItems.isEmpty()) {
               processOLError(dataImportEventPayload, future, itemCollection, expiredItems.get(0), errors);
             }
-            if (dataImportEventPayload.getContext().containsKey(ERRORS) ||!errors.isEmpty()) {
+            if (dataImportEventPayload.getContext().containsKey(ERRORS) || !errors.isEmpty()) {
               dataImportEventPayload.getContext().put(ERRORS, Json.encode(errors));
             }
             if (ar.succeeded()) {
@@ -223,14 +224,13 @@ public class UpdateItemEventHandler implements EventHandler {
     return false;
   }
 
-
-  private Map<String, String> preparePayloadAndGetStatus(DataImportEventPayload dataImportEventPayload, HashMap<String, String> payloadContext, MappingMetadataDto mappingMetadataDto) {
+  private Map<String, String> preparePayloadAndGetStatus(DataImportEventPayload dataImportEventPayload) {
     Map<String, String> itemOldStatuses = new HashMap<>();
 
     JsonArray itemsJsonArray = new JsonArray(dataImportEventPayload.getContext().get(ITEM.value()));
     for (int i = 0; i < itemsJsonArray.size(); i++) {
       JsonObject itemAsJson = itemsJsonArray.getJsonObject(i);
-      itemAsJson = itemAsJson.getJsonObject(ITEM_PATH_FIELD);
+      itemAsJson = itemAsJson.getJsonObject(ITEM_PATH_FIELD) != null ? itemAsJson.getJsonObject(ITEM_PATH_FIELD) : itemAsJson;
       itemOldStatuses.put(itemAsJson.getString(ID_PATH_FIELD), itemAsJson.getJsonObject(STATUS_KEY).getString("name"));
     }
     dataImportEventPayload.getContext().put(ITEM.value(), itemsJsonArray.encode());
@@ -240,12 +240,14 @@ public class UpdateItemEventHandler implements EventHandler {
 
   private Future<DataImportEventPayload> addHoldingToPayloadIfNeeded(DataImportEventPayload dataImportEventPayload, Context context, Item updatedItem) {
     Promise<DataImportEventPayload> promise = Promise.promise();
-    if (StringUtils.isBlank(dataImportEventPayload.getContext().get(HOLDINGS.value()))) {
-      HoldingsRecordCollection holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
+    HoldingsRecordCollection holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
+    JsonArray holdings = new JsonArray(dataImportEventPayload.getContext().get(HOLDINGS.value()) != null ? dataImportEventPayload.getContext().get(HOLDINGS.value()) : BLANK_JSON_ARRAY);
+    if (holdings.stream().noneMatch(holding -> StringUtils.equals(((JsonObject) holding).getString("id"), updatedItem.getHoldingId()))) {
       holdingsRecordCollection.findById(updatedItem.getHoldingId(),
         success -> {
           LOGGER.info("Successfully retrieved Holdings for the hotlink by id: {}", updatedItem.getHoldingId());
-          dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encodePrettily(success.getResult()));
+          holdings.add(success.getResult());
+          dataImportEventPayload.getContext().put(HOLDINGS.value(), holdings.encode());
           promise.complete(dataImportEventPayload);
         },
         failure -> {
@@ -270,7 +272,7 @@ public class UpdateItemEventHandler implements EventHandler {
     JsonArray itemsJsonArray = new JsonArray(dataImportEventPayload.getContext().get(ITEM.value()));
     for (int i = 0; i < itemsJsonArray.size(); i++) {
       JsonObject itemAsJson = itemsJsonArray.getJsonObject(i);
-      itemAsJson = itemAsJson.getJsonObject(ITEM_PATH_FIELD);
+      itemAsJson = itemAsJson.getJsonObject(ITEM_PATH_FIELD) != null ? itemAsJson.getJsonObject(ITEM_PATH_FIELD) : itemAsJson;
       itemsJsonArray.set(i, new JsonObject().put(ITEM_PATH_FIELD, itemAsJson));
     }
     dataImportEventPayload.getContext().put(ITEM.value(), itemsJsonArray.encode());
@@ -304,22 +306,22 @@ public class UpdateItemEventHandler implements EventHandler {
             promise.complete();
           } else {
             LOGGER.warn("Barcode must be unique, {} is already assigned to another item", item.getBarcode());
+            errors.add(new PartialError(item.getId() != null ? item.getId() : BLANK, format("Barcode must be unique, %s is already assigned to another item", item.getBarcode())));
             updatePromise.complete();
             promise.fail(format("Barcode must be unique, %s is already assigned to another item", item.getBarcode()));
-            errors.add(new PartialError(item.getId() != null ? item.getId() : BLANK, format("Barcode must be unique, %s is already assigned to another item", item.getBarcode())));
           }
         },
         failure -> {
-          promise.fail(failure.getReason());
-          updatePromise.complete();
           errors.add(new PartialError(item.getId() != null ? item.getId() : BLANK, failure.getReason()));
+          updatePromise.complete();
+          promise.fail(failure.getReason());
         });
     } catch (UnsupportedEncodingException e) {
       String msg = format("Failed to find items by barcode '%s'", item.getBarcode());
       LOGGER.error(msg, e);
-      promise.fail(msg);
-      updatePromise.complete();
       errors.add(new PartialError(item.getId() != null ? item.getId() : BLANK, format("Failed to find items by barcode '%s'", item.getBarcode())));
+      updatePromise.complete();
+      promise.fail(msg);
     }
     return promise.future();
   }
@@ -341,9 +343,9 @@ public class UpdateItemEventHandler implements EventHandler {
           updatePromise.complete();
           promise.fail(failure.getReason());
         } else {
-          updatePromise.complete();
           eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
           LOGGER.error(format("Error updating Item - %s, status code %s", failure.getReason(), failure.getStatusCode()));
+          updatePromise.complete();
           promise.fail(failure.getReason());
         }
       });

@@ -135,8 +135,8 @@ public class UpdateHoldingEventHandler implements EventHandler {
             updatedHoldingsRecordFutures.add(updatePromise.future());
             holdingsRecordCollection.update(holding,
               success -> {
-                constructDataImportEventPayload(updatePromise, dataImportEventPayload, list, context, errors);
                 updatedHoldingsRecord.add(holding);
+                constructDataImportEventPayload(updatePromise, dataImportEventPayload, list, context, errors);
               },
               failure -> {
                 errors.add(new PartialError(holding.getId() != null ? holding.getId() : BLANK, failure.getReason()));
@@ -228,7 +228,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
     JsonArray holdingsJsonArray = new JsonArray(dataImportEventPayload.getContext().get(HOLDINGS.value()));
     for (int i = 0; i < holdingsJsonArray.size(); i++) {
       JsonObject holdingAsJson = holdingsJsonArray.getJsonObject(i);
-      holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD);
+      holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD) != null ? holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD) : holdingAsJson;
       holdingsJsonArray.set(i, new JsonObject().put(HOLDINGS_PATH_FIELD, holdingAsJson));
     }
     dataImportEventPayload.getContext().put(HOLDINGS.value(), holdingsJsonArray.encode());
