@@ -50,6 +50,7 @@ import org.folio.inventory.support.http.server.JsonResponse;
 import org.folio.inventory.support.http.server.RedirectResponse;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
 import org.folio.inventory.validation.InstancePrecedingSucceedingTitleValidators;
+import org.folio.inventory.validation.InstanceSourceTypeValidator;
 import org.folio.inventory.validation.InstancesValidators;
 import org.folio.rest.client.SourceStorageRecordsClient;
 
@@ -148,6 +149,7 @@ public class Instances extends AbstractInstances {
 
     completedFuture(newInstance)
       .thenCompose(InstancePrecedingSucceedingTitleValidators::refuseWhenUnconnectedHasNoTitle)
+      .thenCompose(InstanceSourceTypeValidator::refuseWhenIncorrectSource)
       .thenCompose(instance -> storage.getInstanceCollection(context).add(instance))
       .thenCompose(response -> {
         response.setParentInstances(newInstance.getParentInstances());
