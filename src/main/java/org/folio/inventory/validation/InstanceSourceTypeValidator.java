@@ -13,7 +13,7 @@ import static org.folio.inventory.support.CompletableFutures.failedFuture;
 
 public final class InstanceSourceTypeValidator {
 
-  private final static String[] INSTANCE_SOURCE_TYPES = {"MARC", "FOLIO", "CONSORTIUM-MARC", "CONSORTIUM-FOLIO"};
+  private static final String[] INSTANCE_SOURCE_TYPES = {"MARC", "FOLIO", "CONSORTIUM-MARC", "CONSORTIUM-FOLIO"};
 
   private InstanceSourceTypeValidator() {}
 
