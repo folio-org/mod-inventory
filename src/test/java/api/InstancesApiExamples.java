@@ -29,6 +29,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static support.matchers.ResponseMatchers.hasValidationError;
+import static api.support.InstanceSamples.INSTANCE_SOURCE;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -91,7 +92,7 @@ public class InstancesApiExamples extends ApiTests {
       .put("contributors", new JsonArray().add(new JsonObject()
         .put("contributorNameTypeId", ApiTestSuite.getPersonalContributorNameType())
         .put("name", "Chambers, Becky")))
-      .put("source", "Local")
+      .put("source", INSTANCE_SOURCE)
       .put("administrativeNotes", adminNote)
       .put("instanceTypeId", ApiTestSuite.getTextInstanceType())
       .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameOne)))
@@ -129,7 +130,7 @@ public class InstancesApiExamples extends ApiTests {
 
     assertThat(createdInstance.containsKey("id"), is(true));
     assertThat(createdInstance.getString("title"), is("Long Way to a Small Angry Planet"));
-    assertThat(createdInstance.getString("source"), is("Local"));
+    assertThat(createdInstance.getString("source"), is(INSTANCE_SOURCE));
     assertThat(createdInstance.getString("instanceTypeId"), is(ApiTestSuite.getTextInstanceType()));
 
     JsonObject firstIdentifier = createdInstance.getJsonArray("identifiers")
@@ -187,7 +188,7 @@ public class InstancesApiExamples extends ApiTests {
       .put("contributors", new JsonArray().add(new JsonObject()
         .put("contributorNameTypeId", ApiTestSuite.getPersonalContributorNameType())
         .put("name", "Chambers, Becky")))
-      .put("source", "Local")
+      .put("source", INSTANCE_SOURCE)
       .put("instanceTypeId", ApiTestSuite.getTextInstanceType());
 
     final var postCompleted = okapiClient
@@ -210,7 +211,7 @@ public class InstancesApiExamples extends ApiTests {
 
     assertThat(createdInstance.containsKey("id"), is(true));
     assertThat(createdInstance.getString("title"), is("Long Way to a Small Angry Planet"));
-    assertThat(createdInstance.getString("source"), is("Local"));
+    assertThat(createdInstance.getString("source"), is(INSTANCE_SOURCE));
     assertThat(createdInstance.getString("instanceTypeId"), is(ApiTestSuite.getTextInstanceType()));
 
     JsonObject firstIdentifier = createdInstance.getJsonArray("identifiers")
@@ -239,7 +240,7 @@ public class InstancesApiExamples extends ApiTests {
     JsonObject angryPlanetInstance = new JsonObject()
       .put("id", angryPlanetInstanceId)
       .put("title", "Long Way to a Small Angry Planet")
-      .put("source", "Local")
+      .put("source", INSTANCE_SOURCE)
       .put("instanceTypeId", ApiTestSuite.getTextInstanceType())
       .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameOne).add(tagNameTwo)));
 
@@ -276,7 +277,7 @@ public class InstancesApiExamples extends ApiTests {
     JsonObject createdAngryPlanetInstance = getAngryPlanetInstanceResponse.getJson();
     assertEquals(createdAngryPlanetInstance.getString("id"), angryPlanetInstanceId);
     assertThat(createdAngryPlanetInstance.getString("title"), is("Long Way to a Small Angry Planet"));
-    assertThat(createdAngryPlanetInstance.getString("source"), is("Local"));
+    assertThat(createdAngryPlanetInstance.getString("source"), is(INSTANCE_SOURCE));
     assertThat(createdAngryPlanetInstance.getString("instanceTypeId"), is(ApiTestSuite.getTextInstanceType()));
 
     assertTrue(createdAngryPlanetInstance.containsKey(TAGS_KEY));
@@ -305,7 +306,7 @@ public class InstancesApiExamples extends ApiTests {
     String angryPlanetInstanceId = UUID.randomUUID().toString();
     JsonObject angryPlanetInstance = new JsonObject()
       .put("id", angryPlanetInstanceId)
-      .put("source", "Local")
+      .put("source", INSTANCE_SOURCE)
       .put("instanceTypeId", ApiTestSuite.getTextInstanceType());
     JsonObject request = new JsonObject();
     request.put("instances", new JsonArray().add(angryPlanetInstance));
@@ -330,7 +331,7 @@ public class InstancesApiExamples extends ApiTests {
     String angryPlanetInstanceId = UUID.randomUUID().toString();
     JsonObject angryPlanetInstance = new JsonObject()
       .put("id", angryPlanetInstanceId)
-      .put("source", "Local")
+      .put("source", INSTANCE_SOURCE)
       .put("instanceTypeId", ApiTestSuite.getTextInstanceType());
 
     String treasureIslandInstanceId = UUID.randomUUID().toString();
@@ -366,7 +367,6 @@ public class InstancesApiExamples extends ApiTests {
   @Test
   public void instanceTitleIsMandatory()
     throws InterruptedException,
-    MalformedURLException,
     TimeoutException,
     ExecutionException {
 
@@ -381,6 +381,31 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(postResponse.getContentType(), is(ContentType.TEXT_PLAIN));
     assertThat(postResponse.getLocation(), is(nullValue()));
     assertThat(postResponse.getBody(), is("Title must be provided for an instance"));
+  }
+
+  @Test
+  public void cannotCreateAnInstanceWithIncorrectSource()
+    throws InterruptedException, TimeoutException, ExecutionException {
+
+    JsonObject newInstance = new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("title", "The Long Way to a Small, Angry Planet")
+      .put("source", "INSTANCE_SOURCE")
+      .put("instanceTypeId", ApiTestSuite.getTextInstanceType());
+
+    final var postCompleted = okapiClient.post(
+      ApiRoot.instances(), newInstance);
+
+    Response postResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
+
+    assertThat(postResponse.getStatusCode(), is(422));
+    assertThat(postResponse.getContentType(), is("application/json; charset=utf-8"));
+    assertThat(postResponse.getLocation(), is(nullValue()));
+
+    JsonObject responseJson = postResponse.getJson();
+    assertThat(responseJson.getJsonArray("errors").size(), is(1));
+    assertThat(responseJson.getJsonArray("errors").getJsonObject(0)
+      .getString("message"), is("Instance source is incorrect"));
   }
 
   @Test
