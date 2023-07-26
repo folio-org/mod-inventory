@@ -367,7 +367,6 @@ public class InstancesApiExamples extends ApiTests {
   @Test
   public void instanceTitleIsMandatory()
     throws InterruptedException,
-    MalformedURLException,
     TimeoutException,
     ExecutionException {
 
@@ -382,6 +381,31 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(postResponse.getContentType(), is(ContentType.TEXT_PLAIN));
     assertThat(postResponse.getLocation(), is(nullValue()));
     assertThat(postResponse.getBody(), is("Title must be provided for an instance"));
+  }
+
+  @Test
+  public void cannotCreateAnInstanceWithIncorrectSource()
+    throws InterruptedException, TimeoutException, ExecutionException {
+
+    JsonObject newInstance = new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("title", "The Long Way to a Small, Angry Planet")
+      .put("source", "INSTANCE_SOURCE")
+      .put("instanceTypeId", ApiTestSuite.getTextInstanceType());
+
+    final var postCompleted = okapiClient.post(
+      ApiRoot.instances(), newInstance);
+
+    Response postResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
+
+    assertThat(postResponse.getStatusCode(), is(422));
+    assertThat(postResponse.getContentType(), is("application/json; charset=utf-8"));
+    assertThat(postResponse.getLocation(), is(nullValue()));
+
+    JsonObject responseJson = postResponse.getJson();
+    assertThat(responseJson.getJsonArray("errors").size(), is(1));
+    assertThat(responseJson.getJsonArray("errors").getJsonObject(0)
+      .getString("message"), is("Instance source is incorrect"));
   }
 
   @Test

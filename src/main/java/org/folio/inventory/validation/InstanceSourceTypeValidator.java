@@ -18,13 +18,14 @@ public final class InstanceSourceTypeValidator {
   private InstanceSourceTypeValidator() {}
 
   public static CompletableFuture<Instance> refuseWhenIncorrectSource(Instance instance) {
-
-    final ValidationError incorrectSourceError = new ValidationError(
-      "Instance source is incorrect", "source", instance.getSource());
-
     return isSourceTypeCorrect(instance.getSource())
       ? completedFuture(instance)
-      : failedFuture(new UnprocessableEntityException(incorrectSourceError));
+      : failedFuture(new UnprocessableEntityException(getExceptionMessage(instance)));
+  }
+
+  private static ValidationError getExceptionMessage(Instance instance) {
+    return new ValidationError("Instance source is incorrect",
+      "source", instance.getSource());
   }
 
   private static boolean isSourceTypeCorrect(String sourceType) {
