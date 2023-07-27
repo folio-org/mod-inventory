@@ -18,9 +18,6 @@ import static api.ApiTestSuite.getPersonalContributorNameType;
 import static api.ApiTestSuite.getTextInstanceType;
 
 public class InstanceSamples {
-
-  public static final String INSTANCE_SOURCE = "CONSORTIUM-MARC";
-
   public static JsonObject createInstanceRequest(
     UUID id,
     String title,
@@ -34,7 +31,7 @@ public class InstanceSamples {
       .put("identifiers", identifiers)
       .put("contributors", contributors)
       .put("notes", notes)
-      .put("source", INSTANCE_SOURCE)
+      .put("source", "Local")
       .put("instanceTypeId", getTextInstanceType());
   }
 

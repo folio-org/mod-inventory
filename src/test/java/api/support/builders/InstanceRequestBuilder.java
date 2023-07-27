@@ -6,8 +6,6 @@ import io.vertx.core.json.JsonObject;
 
 import java.util.UUID;
 
-import static api.support.InstanceSamples.INSTANCE_SOURCE;
-
 public class InstanceRequestBuilder extends AbstractBuilder {
   private final String title;
   private final String contributor;
@@ -33,7 +31,7 @@ public class InstanceRequestBuilder extends AbstractBuilder {
       .put("contributors", new JsonArray().add(new JsonObject()
         .put("contributorNameTypeId", ApiTestSuite.getPersonalContributorNameType())
         .put("name", contributor)))
-      .put("source", INSTANCE_SOURCE)
+      .put("source", "Local")
       .put("instanceTypeId", ApiTestSuite.getTextInstanceType());
   }
 
