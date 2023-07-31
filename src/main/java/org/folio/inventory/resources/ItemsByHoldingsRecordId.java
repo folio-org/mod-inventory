@@ -23,6 +23,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.folio.inventory.support.CqlHelper.buildQueryByIds;
@@ -100,7 +101,7 @@ public class ItemsByHoldingsRecordId extends Items
           List<String> boundWithItemIds = response.getJson()
             .getJsonArray("boundWithParts").stream()
             .map(part -> ((JsonObject) part).getString("itemId"))
-            .toList();
+                  .collect(Collectors.toList());
           respondWithRegularItemsAndBoundWithItems(routingContext, context, boundWithItemIds, holdingsRecordId, relationsParam, pagingParameters);
         });
     }
