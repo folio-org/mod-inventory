@@ -450,6 +450,7 @@ public class CreateItemEventHandlerTest {
     Assert.assertEquals(1, errors.size());
     Assert.assertEquals(errors.getJsonObject(0).getString("id"), ITEM_ID);
     Assert.assertEquals(errors.getJsonObject(0).getString("error"), testError);
+    Assert.assertEquals(errors.getJsonObject(0).getString("holdingId"), expectedHoldingId1);
 
     JsonObject createdItem = createdItems.getJsonObject(0);
     Assert.assertNotNull(createdItem.getJsonObject("status").getString("name"));

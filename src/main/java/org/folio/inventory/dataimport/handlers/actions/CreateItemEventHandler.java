@@ -161,7 +161,10 @@ public class CreateItemEventHandler implements EventHandler {
                 })
                 .onFailure(cause -> {
                   String itemId = itemAsJson.getString(ITEM_ID_FIELD) != null ? itemAsJson.getString(ITEM_ID_FIELD) : BLANK;
-                  multipleItemsCreateErrors.add(new PartialError(itemId, cause.getMessage()));
+                  String holdingId = itemAsJson.getString(HOLDINGS_RECORD_ID_FIELD) != null ? itemAsJson.getString(HOLDINGS_RECORD_ID_FIELD) : BLANK;
+                  PartialError partialError = new PartialError(itemId, cause.getMessage());
+                  partialError.setHoldingId(holdingId);
+                  multipleItemsCreateErrors.add(partialError);
                   if (cause instanceof DuplicateEventException) {
                     createItemPromise.fail(cause);
                   } else {
