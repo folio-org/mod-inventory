@@ -1,5 +1,6 @@
 ## 20.1.0-SNAPSHOT 2023-XX-XX
-* [MODINV-826](https://issues.folio.org/browse/MODINV-826) Upgrade mod-inventory to Java 17
+* Adjust Create Instance handler to use existing Instance UUID ([MODINV-840](https://issues.folio.org/browse/MODINV-840))
+* Upgrade mod-inventory to Java 17 ([MODINV-826](https://issues.folio.org/browse/MODINV-826))
 
 ## 20.0.0 2023-02-20
 * Controlled Instance's field properly reflects updates made by user in MARC Authority's 1XX fields ([MODINV-773] (https://issues.folio.org/browse/MODINV-773))
