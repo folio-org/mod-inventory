@@ -320,6 +320,7 @@ public class UpdateItemEventHandler implements EventHandler {
           }
         });
       })
+      .thenAccept(v -> eventPayload.getContext().remove(CURRENT_RETRY_NUMBER))
       .exceptionally(e -> {
         eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
         LOG.error(format("Cannot get actual Item by id: %s", e.getCause()));
