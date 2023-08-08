@@ -1,8 +1,10 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -12,9 +14,9 @@ import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.entities.PartialError;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.dataimport.services.OrderHelperService;
-import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.folio.inventory.domain.items.CirculationNote;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
@@ -32,16 +34,17 @@ import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.processing.mapping.mapper.MappingContext;
 import org.folio.rest.jaxrs.model.EntityType;
-import org.folio.rest.jaxrs.model.Record;
 
 import java.io.UnsupportedEncodingException;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -60,7 +63,8 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTI
 public class CreateItemEventHandler implements EventHandler {
 
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
-  private static final String PAYLOAD_DATA_HAS_NO_HOLDING_ID_MSG = "Failed to extract holdingsRecordId from holdingsRecord entity or parsed record";
+  private static final String PAYLOAD_DATA_HAS_NO_HOLDINGS = "Failed to extract holdingsRecord from payload";
+  private static final String HOLDING_PERMANENT_LOCATION_SHOULD_NOT_BE_BLANK = "Holding permanent location id should not be blank";
   private static final String PAYLOAD_DATA_HAS_NO_PO_LINE_ID_MSG = "Failed to extract poLineId from poLine entity";
   private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingMetadata snapshot was not found by jobExecutionId '%s'. RecordId: '%s', chunkId: '%s' ";
   static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create an Item requires a mapping profile";
@@ -71,11 +75,15 @@ public class CreateItemEventHandler implements EventHandler {
   public static final String PO_LINE_ID_FIELD = "id";
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
+  private static final String ERRORS = "ERRORS";
+  private static final String HOLDING_PERMANENT_LOCATION_ID = "permanentLocationId";
+  private static final String HOLDING_IDENTIFIERS = "HOLDINGS_IDENTIFIERS";
+  private static final String BLANK = "";
   private static final Map<String, String> validNotes = Map.of(
     "Check in note", "Check in",
     "Check out note", "Check out");
 
-  private static final Logger LOG = LogManager.getLogger(CreateItemEventHandler.class);
+  private static final Logger LOGGER = LogManager.getLogger(CreateItemEventHandler.class);
 
   private final DateTimeFormatter dateTimeFormatter =
     DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").withZone(ZoneOffset.UTC);
@@ -98,33 +106,33 @@ public class CreateItemEventHandler implements EventHandler {
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
-    logParametersEventHandler(LOG, dataImportEventPayload);
+    logParametersEventHandler(LOGGER, dataImportEventPayload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
       dataImportEventPayload.setEventType(DI_INVENTORY_ITEM_CREATED.value());
 
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
       if (payloadContext == null || isBlank(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()))) {
-        LOG.error(PAYLOAD_HAS_NO_DATA_MSG);
+        LOGGER.warn("handle:: " + PAYLOAD_HAS_NO_DATA_MSG);
         return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
       }
       if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
-        LOG.error(ACTION_HAS_NO_MAPPING_MSG);
+        LOGGER.warn("handle:: " + ACTION_HAS_NO_MAPPING_MSG);
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
 
       dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
       dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
-      dataImportEventPayload.getContext().put(ITEM.value(), new JsonObject().encode());
+      dataImportEventPayload.getContext().put(ITEM.value(), new JsonArray().encode());
 
       String jobExecutionId = dataImportEventPayload.getJobExecutionId();
       String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
       String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
-      LOG.info("Create item with jobExecutionId: {} , recordId: {} , chunkId: {}", jobExecutionId, recordId, chunkId);
+      LOGGER.info("handle:: Create items with jobExecutionId: {} , recordId: {} , chunkId: {}", jobExecutionId, recordId, chunkId);
 
       Future<RecordToEntity> recordToItemFuture = idStorageService.store(recordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant());
       recordToItemFuture.onSuccess(res -> {
-        String itemId = res.getEntityId();
+        String deduplicationItemId = res.getEntityId();
         Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
         ItemCollection itemCollection = storage.getItemCollection(context);
 
@@ -135,60 +143,119 @@ public class CreateItemEventHandler implements EventHandler {
           .map(mappingMetadataDto -> {
             MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
             MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
-            return processMappingResult(dataImportEventPayload, itemId);
+            return processMappingResult(dataImportEventPayload, deduplicationItemId);
           })
-          .compose(mappedItemJson -> {
-            List<String> errors = validateItem(mappedItemJson, requiredFields);
-            if (!errors.isEmpty()) {
-              String msg = format("Mapped Item is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", errors,
-                jobExecutionId, recordId, chunkId);
-              LOG.error(msg);
-              return Future.failedFuture(msg);
-            }
+          .compose(mappedItemList -> {
+            LOGGER.trace(format("handle:: Mapped items: %s", mappedItemList.encode()));
+            Promise<List<Item>> createMultipleItemsPromise = Promise.promise();
+            List<PartialError> multipleItemsCreateErrors = new ArrayList<>();
+            List<Future> createItemsFutures = new ArrayList<>();
+            List<Item> createdItems = new ArrayList<>();
 
-            Item mappedItem = ItemUtil.jsonToItem(mappedItemJson);
-            return isItemBarcodeUnique(mappedItemJson.getString("barcode"), itemCollection)
-              .compose(isUnique -> isUnique
-                ? addItem(mappedItem, itemCollection)
-                : Future.failedFuture(format("Barcode must be unique, %s is already assigned to another item", mappedItemJson.getString("barcode"))));
+            mappedItemList.forEach(e -> {
+              JsonObject itemAsJson = getItemFromJson((JsonObject) e);
+              Promise<Item> createItemPromise = Promise.promise();
+              processSingleItem(jobExecutionId, recordId, chunkId, itemCollection, itemAsJson)
+                .onSuccess(item -> {
+                  createdItems.add(item);
+                  createItemPromise.complete();
+                })
+                .onFailure(cause -> {
+                  String itemId = itemAsJson.getString(ITEM_ID_FIELD) != null ? itemAsJson.getString(ITEM_ID_FIELD) : BLANK;
+                  String holdingId = itemAsJson.getString(HOLDINGS_RECORD_ID_FIELD) != null ? itemAsJson.getString(HOLDINGS_RECORD_ID_FIELD) : BLANK;
+                  PartialError partialError = new PartialError(itemId, cause.getMessage());
+                  partialError.setHoldingId(holdingId);
+                  multipleItemsCreateErrors.add(partialError);
+                  if (cause instanceof DuplicateEventException) {
+                    createItemPromise.fail(cause);
+                  } else {
+                    createItemPromise.complete();
+                  }
+                });
+
+              createItemsFutures.add(createItemPromise.future());
+            });
+
+            CompositeFuture.all(createItemsFutures).onComplete(ar -> {
+              if (payloadContext.containsKey(ERRORS) || !multipleItemsCreateErrors.isEmpty()) {
+                payloadContext.put(ERRORS, Json.encode(multipleItemsCreateErrors));
+              }
+              if (ar.succeeded()) {
+                String multipleItemsCreateErrorsAsStringJson = Json.encode(multipleItemsCreateErrors);
+                if (!createdItems.isEmpty()) {
+                  payloadContext.put(ERRORS, multipleItemsCreateErrorsAsStringJson);
+                  createMultipleItemsPromise.complete(createdItems);
+                } else {
+                  createMultipleItemsPromise.fail(multipleItemsCreateErrorsAsStringJson);
+                }
+              } else {
+                createMultipleItemsPromise.fail(ar.cause());
+              }
+            });
+            return createMultipleItemsPromise.future();
           })
           .onComplete(ar -> {
             if (ar.succeeded()) {
               dataImportEventPayload.getContext().put(ITEM.value(), Json.encode(ar.result()));
               orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload, DI_INVENTORY_ITEM_CREATED, context)
-                .onComplete(result -> {
-                    future.complete(dataImportEventPayload);
-                  }
+                .onComplete(result -> future.complete(dataImportEventPayload)
                 );
             } else {
               if (!(ar.cause() instanceof DuplicateEventException)) {
-                LOG.error("Error creating inventory Item by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
+                LOGGER.warn("handle:: Error creating inventory Item by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
                   recordId, chunkId, ar.cause());
               }
               future.completeExceptionally(ar.cause());
             }
           });
       }).onFailure(failure -> {
-        LOG.error("Error creating inventory recordId and itemId relationship by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId, recordId,
+        LOGGER.warn("handle:: Error creating inventory recordId and itemId relationship by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId, recordId,
           chunkId, failure);
         future.completeExceptionally(failure);
       });
     } catch (Exception e) {
-      LOG.error("Error creating inventory Item", e);
+      LOGGER.warn("handle:: Error creating inventory Item", e);
       future.completeExceptionally(e);
     }
     return future;
   }
 
-  private JsonObject processMappingResult(DataImportEventPayload dataImportEventPayload, String itemId) {
-    JsonObject itemAsJson = new JsonObject(dataImportEventPayload.getContext().get(ITEM.value()));
-    if (itemAsJson.getJsonObject(ITEM_PATH_FIELD) != null) {
-      itemAsJson = itemAsJson.getJsonObject(ITEM_PATH_FIELD);
+  private Future<Item> processSingleItem(String jobExecutionId, String recordId, String chunkId, ItemCollection itemCollection, JsonObject mappedItemJson) {
+    List<String> errors = validateItem(mappedItemJson, requiredFields);
+    LOGGER.debug(format("processSingleItem:: Trying to create item with id: %s", mappedItemJson.getString("id")));
+    if (!errors.isEmpty()) {
+      String msg = format("Mapped Item is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", errors,
+        jobExecutionId, recordId, chunkId);
+      LOGGER.warn("processSingleItem:: " + msg);
+      return Future.failedFuture(msg);
     }
-    fillPoLineIdIfNecessary(dataImportEventPayload, itemAsJson);
-    fillHoldingsRecordIdIfNecessary(dataImportEventPayload, itemAsJson);
-    itemAsJson.put(ITEM_ID_FIELD, itemId);
-    return itemAsJson;
+    Item mappedItem = ItemUtil.jsonToItem(mappedItemJson);
+    return isItemBarcodeUnique(mappedItemJson.getString("barcode"), itemCollection)
+      .compose(isUnique -> isUnique
+        ? addItem(mappedItem, itemCollection)
+        : Future.failedFuture(format("Barcode must be unique, %s is already assigned to another item", mappedItemJson.getString("barcode"))));
+  }
+
+  private JsonArray processMappingResult(DataImportEventPayload dataImportEventPayload, String deduplicationItemId) {
+    JsonArray items = new JsonArray(dataImportEventPayload.getContext().get(ITEM.value()));
+    JsonArray mappedItems = new JsonArray();
+    JsonArray holdingsIdentifiers = new JsonArray(dataImportEventPayload.getContext().remove(HOLDING_IDENTIFIERS));
+    String holdingsAsString = dataImportEventPayload.getContext().get(EntityType.HOLDINGS.value());
+
+    for (int i = 0; i < items.size(); i++) {
+      JsonObject itemAsJson = getItemFromJson(items.getJsonObject(i));
+      String holdingPermanentLocation = holdingsIdentifiers.size() > i ? holdingsIdentifiers.getString(i) : null;
+      fillPoLineIdIfNecessary(dataImportEventPayload, itemAsJson);
+      if (fillHoldingsRecordIdIfNecessary(itemAsJson, holdingsAsString, holdingPermanentLocation)) {
+        mappedItems.add(itemAsJson);
+      }
+    }
+
+    for (int i = 0; i < mappedItems.size(); i++) {
+      JsonObject itemAsJson = getItemFromJson(mappedItems.getJsonObject(i));
+      itemAsJson.put(ITEM_ID_FIELD, (i == 0) ? deduplicationItemId : UUID.randomUUID().toString());
+    }
+    return mappedItems;
   }
 
   @Override
@@ -208,7 +275,7 @@ public class CreateItemEventHandler implements EventHandler {
         String poLineId = poLineAsJson.getString(PO_LINE_ID_FIELD);
 
         if (isBlank(poLineId)) {
-          LOG.error(PAYLOAD_DATA_HAS_NO_PO_LINE_ID_MSG);
+          LOGGER.warn("fillPoLineIdIfNecessary:: " + PAYLOAD_DATA_HAS_NO_PO_LINE_ID_MSG);
           throw new EventProcessingException(PAYLOAD_DATA_HAS_NO_PO_LINE_ID_MSG);
         }
 
@@ -217,26 +284,37 @@ public class CreateItemEventHandler implements EventHandler {
     }
   }
 
-  private void fillHoldingsRecordIdIfNecessary(DataImportEventPayload dataImportEventPayload, JsonObject itemAsJson) {
+  private boolean fillHoldingsRecordIdIfNecessary(JsonObject itemAsJson, String holdingsAsString, String holdingPermanentLocation) {
     if (isBlank(itemAsJson.getString(HOLDINGS_RECORD_ID_FIELD))) {
-      String holdingsId = null;
-      String holdingAsString = dataImportEventPayload.getContext().get(EntityType.HOLDINGS.value());
-
-      if (StringUtils.isNotEmpty(holdingAsString)) {
-        JsonObject holdingsRecord = new JsonObject(holdingAsString);
-        holdingsId = holdingsRecord.getString(HOLDING_ID_FIELD);
+      String holdingId;
+      if (StringUtils.isNotEmpty(holdingsAsString)) {
+        holdingId = getHoldingByPermanentLocation(holdingsAsString, holdingPermanentLocation);
+      } else {
+        LOGGER.warn("fillHoldingsRecordIdIfNecessary:: " + PAYLOAD_DATA_HAS_NO_HOLDINGS);
+        throw new EventProcessingException(PAYLOAD_DATA_HAS_NO_HOLDINGS);
       }
-      if (isBlank(holdingsId)) {
-        String recordAsString = dataImportEventPayload.getContext().get(EntityType.MARC_BIBLIOGRAPHIC.value());
-        Record record = Json.decodeValue(recordAsString, Record.class);
-        holdingsId = ParsedRecordUtil.getAdditionalSubfieldValue(record.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.H);
-      }
-      if (isBlank(holdingsId)) {
-        LOG.error(PAYLOAD_DATA_HAS_NO_HOLDING_ID_MSG);
-        throw new EventProcessingException(PAYLOAD_DATA_HAS_NO_HOLDING_ID_MSG);
-      }
-      itemAsJson.put(HOLDINGS_RECORD_ID_FIELD, holdingsId);
+      if (holdingId == null) return false;
+      itemAsJson.put(HOLDINGS_RECORD_ID_FIELD, holdingId);
     }
+    return true;
+  }
+
+  private static String getHoldingByPermanentLocation(String holdingsAsString, String holdingPermanentLocation) {
+    JsonArray holdingsRecords = new JsonArray(holdingsAsString);
+    if (holdingsRecords.size() == 1) {
+      return holdingsRecords.getJsonObject(0).getString(HOLDING_ID_FIELD);
+    }
+
+    if (holdingPermanentLocation == null) {
+      LOGGER.debug("getHoldingByPermanentLocation:: " + HOLDING_PERMANENT_LOCATION_SHOULD_NOT_BE_BLANK);
+      return null;
+    }
+
+    Optional<JsonObject> correspondingHolding = holdingsRecords.stream()
+      .map(e -> (JsonObject) e)
+      .filter(holding -> StringUtils.equals(holding.getString(HOLDING_PERMANENT_LOCATION_ID), holdingPermanentLocation)).findFirst();
+
+    return correspondingHolding.map(entries -> entries.getString(HOLDING_ID_FIELD)).orElse(null);
   }
 
   private void validateStatusName(JsonObject itemAsJson, List<String> errors) {
@@ -264,7 +342,7 @@ public class CreateItemEventHandler implements EventHandler {
         findResult -> promise.complete(findResult.getResult().records.isEmpty()),
         failure -> promise.fail(failure.getReason()));
     } catch (UnsupportedEncodingException e) {
-      LOG.error(format("Error to find items by barcode '%s'", barcode), e);
+      LOGGER.warn(format("isItemBarcodeUnique:: Error to find items by barcode '%s'", barcode), e);
       promise.fail(e);
     }
     return promise.future();
@@ -280,21 +358,28 @@ public class CreateItemEventHandler implements EventHandler {
       .map(note -> note.withNoteType(validNotes.getOrDefault(note.getNoteType(), note.getNoteType())))
       .collect(Collectors.toList());
 
-    if (LOG.isTraceEnabled()) {
-      notes.forEach(note -> LOG.trace("addItem:: circulation note with id : {} added to item with itemId: {}", note.getId(), item.getId()));
+    if (LOGGER.isTraceEnabled()) {
+      notes.forEach(note -> LOGGER.trace("addItem:: circulation note with id : {} added to item with itemId: {}", note.getId(), item.getId()));
     }
 
     itemCollection.add(item.withCirculationNotes(notes), success -> promise.complete(success.getResult()),
       failure -> {
         //This is temporary solution (verify by error message). It will be improved via another solution by https://issues.folio.org/browse/RMB-899.
         if (isNotBlank(failure.getReason()) && failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
-          LOG.info("addItem:: Duplicated event received by ItemId: {}. Ignoring...", item.getId());
+          LOGGER.info("addItem:: Duplicated event received by ItemId: {}. Ignoring...", item.getId());
           promise.fail(new DuplicateEventException(format("Duplicated event by Item id: %s", item.getId())));
         } else {
-          LOG.error(format("addItem:: Error posting Item cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
+          LOGGER.warn(format("addItem:: Error posting Item cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
           promise.fail(failure.getReason());
         }
       });
     return promise.future();
+  }
+
+  private JsonObject getItemFromJson(JsonObject itemAsJson) {
+    if (itemAsJson.getJsonObject(ITEM_PATH_FIELD) != null) {
+      return itemAsJson.getJsonObject(ITEM_PATH_FIELD);
+    }
+    return itemAsJson;
   }
 }
