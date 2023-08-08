@@ -73,7 +73,7 @@ public class UpdateItemEventHandler implements EventHandler {
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
   private static final Set<String> PROTECTED_STATUSES_FROM_UPDATE = new HashSet<>(Arrays.asList("Aged to lost", "Awaiting delivery", "Awaiting pickup", "Checked out", "Claimed returned", "Declared lost", "Paged", "Recently returned"));
-  private static final String CURRENT_RETRY_NUMBER = "CURRENT_RETRY_NUMBER";
+  static final String CURRENT_RETRY_NUMBER = "CURRENT_RETRY_NUMBER";
   private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
   private static final String CURRENT_EVENT_TYPE_PROPERTY = "CURRENT_EVENT_TYPE";
   private static final String CURRENT_NODE_PROPERTY = "CURRENT_NODE";
@@ -320,6 +320,7 @@ public class UpdateItemEventHandler implements EventHandler {
           }
         });
       })
+      .thenAccept(v -> eventPayload.getContext().remove(CURRENT_RETRY_NUMBER))
       .exceptionally(e -> {
         eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
         LOG.error(format("Cannot get actual Item by id: %s", e.getCause()));

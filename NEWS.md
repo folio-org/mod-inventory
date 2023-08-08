@@ -1,4 +1,5 @@
 ## 20.1.0-SNAPSHOT 2023-XX-XX
+* Data Import 3rd update Action on Item Record Fails ([MODINV-842](https://issues.folio.org/browse/MODINV-842))
 * Adjust Create Instance handler to use existing Instance UUID ([MODINV-840](https://issues.folio.org/browse/MODINV-840))
 * Upgrade mod-inventory to Java 17 ([MODINV-826](https://issues.folio.org/browse/MODINV-826))
 
