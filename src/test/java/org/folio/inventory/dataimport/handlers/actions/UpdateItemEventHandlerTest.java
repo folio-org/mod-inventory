@@ -5,6 +5,7 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_MATCHED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_UPDATED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
 import static org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler.ACTION_HAS_NO_MAPPING_MSG;
+import static org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler.CURRENT_RETRY_NUMBER;
 import static org.folio.inventory.domain.items.Item.HRID_KEY;
 import static org.folio.inventory.domain.items.Item.STATUS_KEY;
 import static org.folio.inventory.domain.items.ItemStatusName.AVAILABLE;
@@ -20,6 +21,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -88,6 +90,15 @@ import junitparams.Parameters;
 
 @RunWith(JUnitParamsRunner.class)
 public class UpdateItemEventHandlerTest {
+
+  private static final String PARSED_CONTENT = "{{ \n" +
+    "  \"fields\": [\n" +
+    "    { \"900\": { \"ind1\": \" \", \"ind2\": \" \", \"subfields\": [ { \"a\": \"it00000000001\" }, { \"3\": \"ho00000000001\" } ] } },\n" +
+    "    { \"950\": { \"ind1\": \" \", \"ind2\": \" \", \"subfields\": [ { \"a\": \"Did this item note get added?\" } ] } },\n" +
+    "    { \"951\": { \"ind1\": \" \", \"ind2\": \" \", \"subfields\": [ { \"a\": \"Did this item check-out note get added?\" } ] } },\n" +
+    "    { \"999\": { \"ind1\": \"f\", \"ind2\": \"f\", \"subfields\": [ { \"s\": \"bd9894be-e5ea-424f-aa47-1dd54e719ed4\" }, { \"i\": \"45fd6cfe-5b7c-43f3-9fc3-bd80261b328f\" } ] } }],\n" +
+    "  \"leader\": \"01877cam a2200457Ii 4500\"\n" +
+    "}";
 
   @Mock
   private Storage mockedStorage;
@@ -349,6 +360,64 @@ public class UpdateItemEventHandlerTest {
     Assert.assertNotNull(eventPayload.getContext().get(HOLDINGS.value()));
   }
 
+  @Test
+  public void shouldUpdateItemWithRetryAndRemoveRetryCounterFromPayload()
+    throws UnsupportedEncodingException, InterruptedException, ExecutionException, TimeoutException {
+
+    String itemId = UUID.randomUUID().toString();
+    String holdingId = UUID.randomUUID().toString();
+    String materialTypeId = UUID.randomUUID().toString();
+    String permanentLoanTypeId = UUID.randomUUID().toString();
+    JsonObject metadata = new JsonObject();
+
+    Item actualItem = new Item(itemId, "2", holdingId, "test", new Status(AVAILABLE), materialTypeId, permanentLoanTypeId, metadata);
+
+    when(mockedItemCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(actualItem));
+
+    doAnswer(invocationOnMock -> {
+      MultipleRecords<Item> result = new MultipleRecords<>(new ArrayList<>(), 0);
+      Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
+      return null;
+    }).when(mockedItemCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure("", 409));
+      return null;
+    }).doAnswer(invocationOnMock -> {
+      Item itemRecord = invocationOnMock.getArgument(0);
+      Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(itemRecord));
+      return null;
+    }).when(mockedItemCollection).update(any(), any(), any());
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new ItemWriterFactory());
+
+    Item itemRecord = new Item(itemId, "2", holdingId, new Status(AVAILABLE), materialTypeId, permanentLoanTypeId, metadata);
+
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    HashMap<String, String> context = new HashMap<>();
+    context.put(ITEM.value(), ItemUtil.mapToMappingResultRepresentation(itemRecord));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_ITEM_UPDATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = updateItemHandler.handle(dataImportEventPayload);
+    DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.SECONDS);
+    verify(mockedItemCollection, times(2)).update(any(), any(), any());
+    verify(mockedItemCollection).findById(itemRecord.getId());
+
+    Assert.assertEquals(DI_INVENTORY_ITEM_UPDATED.value(), actualDataImportEventPayload.getEventType());
+    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(ITEM.value()));
+    Assert.assertNull(actualDataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER));
+  }
 
   @Test
   public void shouldUpdateMultipleItemsWithNewStatusesIfHoldingAlreadyInPayload()
