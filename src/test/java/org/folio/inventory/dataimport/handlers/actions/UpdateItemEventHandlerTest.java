@@ -5,6 +5,7 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_MATCHED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_UPDATED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
 import static org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler.ACTION_HAS_NO_MAPPING_MSG;
+import static org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler.CURRENT_RETRY_NUMBER;
 import static org.folio.inventory.domain.items.Item.HRID_KEY;
 import static org.folio.inventory.domain.items.Item.STATUS_KEY;
 import static org.folio.inventory.domain.items.ItemStatusName.AVAILABLE;
@@ -20,6 +21,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -64,6 +66,7 @@ import org.folio.processing.value.StringValue;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.MappingDetail;
 import org.folio.rest.jaxrs.model.MappingRule;
+import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
 import org.junit.Assert;
@@ -84,6 +87,62 @@ import junitparams.Parameters;
 
 @RunWith(JUnitParamsRunner.class)
 public class UpdateItemEventHandlerTest {
+
+  private static final String PARSED_CONTENT = "{\n" +
+    "  \"fields\": [\n" +
+    "    {\n" +
+    "      \"900\": {\n" +
+    "        \"ind1\": \" \",\n" +
+    "        \"ind2\": \" \",\n" +
+    "        \"subfields\": [\n" +
+    "          {\n" +
+    "            \"a\": \"it00000000001\"\n" +
+    "          },\n" +
+    "          {\n" +
+    "            \"3\": \"ho00000000001\"\n" +
+    "          }\n" +
+    "        ]\n" +
+    "      }\n" +
+    "    },\n" +
+    "    {\n" +
+    "      \"950\": {\n" +
+    "        \"ind1\": \" \",\n" +
+    "        \"ind2\": \" \",\n" +
+    "        \"subfields\": [\n" +
+    "          {\n" +
+    "            \"a\": \"Did this item note get added?\"\n" +
+    "          }\n" +
+    "        ]\n" +
+    "      }\n" +
+    "    },\n" +
+    "    {\n" +
+    "      \"951\": {\n" +
+    "        \"ind1\": \" \",\n" +
+    "        \"ind2\": \" \",\n" +
+    "        \"subfields\": [\n" +
+    "          {\n" +
+    "            \"a\": \"Did this item check-out note get added?\"\n" +
+    "          }\n" +
+    "        ]\n" +
+    "      }\n" +
+    "    },\n" +
+    "    {\n" +
+    "      \"999\": {\n" +
+    "        \"ind1\": \"f\",\n" +
+    "        \"ind2\": \"f\",\n" +
+    "        \"subfields\": [\n" +
+    "          {\n" +
+    "            \"s\": \"bd9894be-e5ea-424f-aa47-1dd54e719ed4\"\n" +
+    "          },\n" +
+    "          {\n" +
+    "            \"i\": \"45fd6cfe-5b7c-43f3-9fc3-bd80261b328f\"\n" +
+    "          }\n" +
+    "        ]\n" +
+    "      }\n" +
+    "    }\n" +
+    "  ],\n" +
+    "  \"leader\": \"01877cam a2200457Ii 4500\"\n" +
+    "}";
 
   @Mock
   private Storage mockedStorage;
@@ -278,6 +337,76 @@ public class UpdateItemEventHandlerTest {
     Assert.assertNotNull(eventPayload.getContext().get(HOLDINGS.value()));
   }
 
+  @Test
+  public void shouldUpdateItemWithRetryAndRemoveRetryCounterFromPayload()
+    throws UnsupportedEncodingException, InterruptedException, ExecutionException, TimeoutException {
+
+    String itemId = UUID.randomUUID().toString();
+    String holdingId = UUID.randomUUID().toString();
+    String materialTypeId = UUID.randomUUID().toString();
+    String permanentLoanTypeId = UUID.randomUUID().toString();
+    JsonObject metadata = new JsonObject();
+    String instanceId = String.valueOf(UUID.randomUUID());
+    String hrid = UUID.randomUUID().toString();
+    String permanentLocationId = UUID.randomUUID().toString();
+
+    Item actualItem = new Item(itemId, "2", holdingId, "test", new Status(AVAILABLE), materialTypeId, permanentLoanTypeId, metadata);
+
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(IN_PROCESS.value()));
+    when(mockedStorage.getItemCollection(ArgumentMatchers.any(Context.class))).thenReturn(mockedItemCollection);
+    when(mockedStorage.getHoldingsRecordCollection(ArgumentMatchers.any(Context.class))).thenReturn(mockedHoldingsCollection);
+    when(mockedItemCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(actualItem));
+
+    doAnswer(invocationOnMock -> {
+      HoldingsRecord holdings = new HoldingsRecord()
+        .withId(holdingId)
+        .withHrid(hrid)
+        .withInstanceId(instanceId)
+        .withPermanentLocationId(permanentLocationId)
+        .withVersion(1);
+      Consumer<Success<HoldingsRecord>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(holdings));
+      return null;
+    }).when(mockedHoldingsCollection).findById(anyString(),any(Consumer.class),any(Consumer.class));
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure("", 409));
+      return null;
+    }).doAnswer(invocationOnMock -> {
+      Item itemRecord = invocationOnMock.getArgument(0);
+      Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(itemRecord));
+      return null;
+    }).when(mockedItemCollection).update(any(), any(), any());
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new ItemWriterFactory());
+
+    Item itemRecord = new Item(itemId, "2", holdingId, new Status(AVAILABLE), materialTypeId, permanentLoanTypeId, metadata);
+
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    HashMap<String, String> context = new HashMap<>();
+    context.put(ITEM.value(), Json.encode(itemRecord));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_ITEM_UPDATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = updateItemHandler.handle(dataImportEventPayload);
+    DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.SECONDS);
+    verify(mockedItemCollection, times(2)).update(any(), any(), any());
+    verify(mockedItemCollection).findById(itemRecord.getId());
+
+    Assert.assertEquals(DI_INVENTORY_ITEM_UPDATED.value(), actualDataImportEventPayload.getEventType());
+    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(ITEM.value()));
+    Assert.assertNull(actualDataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER));
+  }
 
   @Test(expected = ExecutionException.class)
   public void shouldReturnFailedWhenOLError()
