@@ -395,11 +395,19 @@ public class UpdateItemEventHandlerTest {
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new ItemWriterFactory());
 
-    Item itemRecord = new Item(itemId, "2", holdingId, new Status(AVAILABLE), materialTypeId, permanentLoanTypeId, metadata);
+    JsonObject firstExistingItemJson = new JsonObject()
+      .put("id", itemId)
+      .put("status", new JsonObject().put("name", AVAILABLE.value()))
+      .put("materialType", new JsonObject().put("id", materialTypeId))
+      .put("permanentLoanType", new JsonObject().put("id", permanentLoanTypeId))
+      .put("holdingsRecordId", holdingId);
+
+    JsonArray itemsList = new JsonArray();
+    itemsList.add(new JsonObject().put("item", firstExistingItemJson));
 
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
     HashMap<String, String> context = new HashMap<>();
-    context.put(ITEM.value(), ItemUtil.mapToMappingResultRepresentation(itemRecord));
+    context.put(ITEM.value(), itemsList.encode());
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
@@ -412,7 +420,7 @@ public class UpdateItemEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = updateItemHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.SECONDS);
     verify(mockedItemCollection, times(2)).update(any(), any(), any());
-    verify(mockedItemCollection).findById(itemRecord.getId());
+    verify(mockedItemCollection).findById(itemId);
 
     Assert.assertEquals(DI_INVENTORY_ITEM_UPDATED.value(), actualDataImportEventPayload.getEventType());
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(ITEM.value()));

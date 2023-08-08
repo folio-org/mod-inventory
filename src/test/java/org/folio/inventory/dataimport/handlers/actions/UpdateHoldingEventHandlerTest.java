@@ -246,7 +246,7 @@ public class UpdateHoldingEventHandlerTest {
     Assert.assertEquals(DI_INVENTORY_HOLDING_UPDATED.value(), actualDataImportEventPayload.getEventType());
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
     JsonArray resultedHoldingsList = new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
-    Assert.assertEquals(resultedHoldingsList.size(), 1);
+    Assert.assertEquals(1, resultedHoldingsList.size());
     JsonObject resultedHoldings = resultedHoldingsList.getJsonObject(0);
     Assert.assertNotNull(resultedHoldings.getString("id"));
     Assert.assertEquals(instanceId, resultedHoldings.getString("instanceId"));
@@ -391,7 +391,7 @@ public class UpdateHoldingEventHandlerTest {
     Assert.assertEquals(DI_INVENTORY_HOLDING_UPDATED.value(), actualDataImportEventPayload.getEventType());
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
     JsonArray resultedHoldingsList = new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
-    Assert.assertEquals(resultedHoldingsList.size(), 1);
+    Assert.assertEquals(1, resultedHoldingsList.size());
     JsonObject resultedHoldings = resultedHoldingsList.getJsonObject(0);
     Assert.assertNotNull(resultedHoldings.getString("id"));
     Assert.assertEquals(instanceId, resultedHoldings.getString("instanceId"));
@@ -458,7 +458,7 @@ public class UpdateHoldingEventHandlerTest {
     Assert.assertEquals(DI_INVENTORY_HOLDING_UPDATED.value(), actualDataImportEventPayload.getEventType());
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
     JsonArray resultedHoldingsList = new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
-    Assert.assertEquals(resultedHoldingsList.size(), 2);
+    Assert.assertEquals(2, resultedHoldingsList.size());
     JsonObject firstResultedHoldings = resultedHoldingsList.getJsonObject(0);
     Assert.assertNotNull(firstResultedHoldings.getString("id"));
     Assert.assertEquals(instanceId, firstResultedHoldings.getString("instanceId"));
@@ -546,7 +546,7 @@ public class UpdateHoldingEventHandlerTest {
     Assert.assertEquals(DI_INVENTORY_HOLDING_UPDATED.value(), actualDataImportEventPayload.getEventType());
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
     JsonArray resultedHoldingsList = new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
-    Assert.assertEquals(resultedHoldingsList.size(), 2);
+    Assert.assertEquals(2, resultedHoldingsList.size());
     JsonObject firstResultedHoldings = resultedHoldingsList.getJsonObject(0);
     Assert.assertNotNull(firstResultedHoldings.getString("id"));
     Assert.assertEquals(instanceId, firstResultedHoldings.getString("instanceId"));

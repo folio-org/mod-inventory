@@ -83,7 +83,7 @@ public class CreateItemEventHandler implements EventHandler {
     "Check in note", "Check in",
     "Check out note", "Check out");
 
-  private static final Logger LOG = LogManager.getLogger(CreateItemEventHandler.class);
+  private static final Logger LOGGER = LogManager.getLogger(CreateItemEventHandler.class);
 
   private final DateTimeFormatter dateTimeFormatter =
     DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").withZone(ZoneOffset.UTC);
@@ -106,18 +106,18 @@ public class CreateItemEventHandler implements EventHandler {
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
-    logParametersEventHandler(LOG, dataImportEventPayload);
+    logParametersEventHandler(LOGGER, dataImportEventPayload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
       dataImportEventPayload.setEventType(DI_INVENTORY_ITEM_CREATED.value());
 
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
       if (payloadContext == null || isBlank(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()))) {
-        LOG.error(PAYLOAD_HAS_NO_DATA_MSG);
+        LOGGER.warn("handle:: " + PAYLOAD_HAS_NO_DATA_MSG);
         return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
       }
       if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
-        LOG.error(ACTION_HAS_NO_MAPPING_MSG);
+        LOGGER.warn("handle:: " + ACTION_HAS_NO_MAPPING_MSG);
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
 
@@ -128,7 +128,7 @@ public class CreateItemEventHandler implements EventHandler {
       String jobExecutionId = dataImportEventPayload.getJobExecutionId();
       String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
       String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
-      LOG.info("Create item with jobExecutionId: {} , recordId: {} , chunkId: {}", jobExecutionId, recordId, chunkId);
+      LOGGER.info("handle:: Create items with jobExecutionId: {} , recordId: {} , chunkId: {}", jobExecutionId, recordId, chunkId);
 
       Future<RecordToEntity> recordToItemFuture = idStorageService.store(recordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant());
       recordToItemFuture.onSuccess(res -> {
@@ -146,6 +146,7 @@ public class CreateItemEventHandler implements EventHandler {
             return processMappingResult(dataImportEventPayload, deduplicationItemId);
           })
           .compose(mappedItemList -> {
+            LOGGER.trace(format("handle:: Mapped items: %s", mappedItemList.encode()));
             Promise<List<Item>> createMultipleItemsPromise = Promise.promise();
             List<PartialError> multipleItemsCreateErrors = new ArrayList<>();
             List<Future> createItemsFutures = new ArrayList<>();
@@ -181,7 +182,7 @@ public class CreateItemEventHandler implements EventHandler {
               }
               if (ar.succeeded()) {
                 String multipleItemsCreateErrorsAsStringJson = Json.encode(multipleItemsCreateErrors);
-                if (createdItems.size() > 0) {
+                if (!createdItems.isEmpty()) {
                   payloadContext.put(ERRORS, multipleItemsCreateErrorsAsStringJson);
                   createMultipleItemsPromise.complete(createdItems);
                 } else {
@@ -201,19 +202,19 @@ public class CreateItemEventHandler implements EventHandler {
                 );
             } else {
               if (!(ar.cause() instanceof DuplicateEventException)) {
-                LOG.error("Error creating inventory Item by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
+                LOGGER.warn("handle:: Error creating inventory Item by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
                   recordId, chunkId, ar.cause());
               }
               future.completeExceptionally(ar.cause());
             }
           });
       }).onFailure(failure -> {
-        LOG.error("Error creating inventory recordId and itemId relationship by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId, recordId,
+        LOGGER.warn("handle:: Error creating inventory recordId and itemId relationship by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId, recordId,
           chunkId, failure);
         future.completeExceptionally(failure);
       });
     } catch (Exception e) {
-      LOG.error("Error creating inventory Item", e);
+      LOGGER.warn("handle:: Error creating inventory Item", e);
       future.completeExceptionally(e);
     }
     return future;
@@ -221,10 +222,11 @@ public class CreateItemEventHandler implements EventHandler {
 
   private Future<Item> processSingleItem(String jobExecutionId, String recordId, String chunkId, ItemCollection itemCollection, JsonObject mappedItemJson) {
     List<String> errors = validateItem(mappedItemJson, requiredFields);
+    LOGGER.debug(format("processSingleItem:: Trying to create item with id: %s", mappedItemJson.getString("id")));
     if (!errors.isEmpty()) {
       String msg = format("Mapped Item is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", errors,
         jobExecutionId, recordId, chunkId);
-      LOG.warn(msg);
+      LOGGER.warn("processSingleItem:: " + msg);
       return Future.failedFuture(msg);
     }
     Item mappedItem = ItemUtil.jsonToItem(mappedItemJson);
@@ -273,7 +275,7 @@ public class CreateItemEventHandler implements EventHandler {
         String poLineId = poLineAsJson.getString(PO_LINE_ID_FIELD);
 
         if (isBlank(poLineId)) {
-          LOG.error(PAYLOAD_DATA_HAS_NO_PO_LINE_ID_MSG);
+          LOGGER.warn("fillPoLineIdIfNecessary:: " + PAYLOAD_DATA_HAS_NO_PO_LINE_ID_MSG);
           throw new EventProcessingException(PAYLOAD_DATA_HAS_NO_PO_LINE_ID_MSG);
         }
 
@@ -288,7 +290,7 @@ public class CreateItemEventHandler implements EventHandler {
       if (StringUtils.isNotEmpty(holdingsAsString)) {
         holdingId = getHoldingByPermanentLocation(holdingsAsString, holdingPermanentLocation);
       } else {
-        LOG.warn(PAYLOAD_DATA_HAS_NO_HOLDINGS);
+        LOGGER.warn("fillHoldingsRecordIdIfNecessary:: " + PAYLOAD_DATA_HAS_NO_HOLDINGS);
         throw new EventProcessingException(PAYLOAD_DATA_HAS_NO_HOLDINGS);
       }
       if (holdingId == null) return false;
@@ -304,7 +306,7 @@ public class CreateItemEventHandler implements EventHandler {
     }
 
     if (holdingPermanentLocation == null) {
-      LOG.debug("getHoldingByPermanentLocation:: " + HOLDING_PERMANENT_LOCATION_SHOULD_NOT_BE_BLANK);
+      LOGGER.debug("getHoldingByPermanentLocation:: " + HOLDING_PERMANENT_LOCATION_SHOULD_NOT_BE_BLANK);
       return null;
     }
 
@@ -340,7 +342,7 @@ public class CreateItemEventHandler implements EventHandler {
         findResult -> promise.complete(findResult.getResult().records.isEmpty()),
         failure -> promise.fail(failure.getReason()));
     } catch (UnsupportedEncodingException e) {
-      LOG.error(format("Error to find items by barcode '%s'", barcode), e);
+      LOGGER.warn(format("isItemBarcodeUnique:: Error to find items by barcode '%s'", barcode), e);
       promise.fail(e);
     }
     return promise.future();
@@ -356,18 +358,18 @@ public class CreateItemEventHandler implements EventHandler {
       .map(note -> note.withNoteType(validNotes.getOrDefault(note.getNoteType(), note.getNoteType())))
       .collect(Collectors.toList());
 
-    if (LOG.isTraceEnabled()) {
-      notes.forEach(note -> LOG.trace("addItem:: circulation note with id : {} added to item with itemId: {}", note.getId(), item.getId()));
+    if (LOGGER.isTraceEnabled()) {
+      notes.forEach(note -> LOGGER.trace("addItem:: circulation note with id : {} added to item with itemId: {}", note.getId(), item.getId()));
     }
 
     itemCollection.add(item.withCirculationNotes(notes), success -> promise.complete(success.getResult()),
       failure -> {
         //This is temporary solution (verify by error message). It will be improved via another solution by https://issues.folio.org/browse/RMB-899.
         if (isNotBlank(failure.getReason()) && failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
-          LOG.info("addItem:: Duplicated event received by ItemId: {}. Ignoring...", item.getId());
+          LOGGER.info("addItem:: Duplicated event received by ItemId: {}. Ignoring...", item.getId());
           promise.fail(new DuplicateEventException(format("Duplicated event by Item id: %s", item.getId())));
         } else {
-          LOG.warn(format("addItem:: Error posting Item cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
+          LOGGER.warn(format("addItem:: Error posting Item cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
           promise.fail(failure.getReason());
         }
       });

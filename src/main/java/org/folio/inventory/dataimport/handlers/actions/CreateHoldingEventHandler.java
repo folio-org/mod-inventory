@@ -84,11 +84,11 @@ public class CreateHoldingEventHandler implements EventHandler {
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
       if (payloadContext == null || payloadContext.isEmpty()
         || StringUtils.isEmpty(payloadContext.get(MARC_BIBLIOGRAPHIC.value()))) {
-        LOGGER.warn("Can`t create Holding entity for context: {}", payloadContext);
+        LOGGER.warn("handle:: Can`t create Holding entity for context: {}", payloadContext);
         throw new EventProcessingException(CONTEXT_EMPTY_ERROR_MESSAGE);
       }
       if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
-        LOGGER.error(ACTION_HAS_NO_MAPPING_MSG);
+        LOGGER.warn("handle:: " + ACTION_HAS_NO_MAPPING_MSG);
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
 
@@ -96,7 +96,7 @@ public class CreateHoldingEventHandler implements EventHandler {
       String jobExecutionId = dataImportEventPayload.getJobExecutionId();
       String recordId = payloadContext.get(RECORD_ID_HEADER);
       String chunkId = payloadContext.get(CHUNK_ID_HEADER);
-      LOGGER.info("Create holding with jobExecutionId: {} , recordId: {} , chunkId: {}", jobExecutionId, recordId, chunkId);
+      LOGGER.info("handle:: Create holding with jobExecutionId: {} , recordId: {} , chunkId: {}", jobExecutionId, recordId, chunkId);
 
       Future<RecordToEntity> recordToHoldingsFuture = idStorageService.store(recordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant());
       recordToHoldingsFuture.onSuccess(res -> {
@@ -121,12 +121,13 @@ public class CreateHoldingEventHandler implements EventHandler {
                 fillInstanceIdIfNeeded(dataImportEventPayload, holdingAsJson);
               }
 
+              LOGGER.trace(format("handle:: Mapped holdings: %s", holdingsList.encode()));
               dataImportEventPayload.getContext().put(HOLDINGS.value(), holdingsList.encode());
               return List.of(Json.decodeValue(payloadContext.get(HOLDINGS.value()), HoldingsRecord[].class));
             })
             .compose(holdingsToCreate -> addHoldings(holdingsToCreate, payloadContext, context))
             .onSuccess(createdHoldings -> {
-              LOGGER.info("Created Holdings records by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}'",
+              LOGGER.info("handle:: Created Holdings records by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}'",
                 jobExecutionId, recordId, chunkId);
               payloadContext.put(HOLDINGS.value(), Json.encode(createdHoldings));
               orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload, DI_INVENTORY_HOLDING_CREATED, context)
@@ -134,19 +135,19 @@ public class CreateHoldingEventHandler implements EventHandler {
             })
             .onFailure(e -> {
               if (!(e instanceof DuplicateEventException)) {
-                LOGGER.error("Error creating inventory Holding record by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
+                LOGGER.warn("handle:: Error creating inventory Holding record by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
                   recordId, chunkId, e);
               }
               future.completeExceptionally(e);
             });
         })
         .onFailure(failure -> {
-          LOGGER.error("Error creating inventory recordId and holdingsId relationship by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ",
+          LOGGER.warn("handle:: Error creating inventory recordId and holdingsId relationship by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ",
             jobExecutionId, recordId, chunkId, failure);
           future.completeExceptionally(failure);
         });
     } catch (Exception e) {
-      LOGGER.error(CREATE_HOLDING_ERROR_MESSAGE, e);
+      LOGGER.warn("handle:: " + CREATE_HOLDING_ERROR_MESSAGE, e);
       future.completeExceptionally(e);
     }
     return future;
@@ -189,6 +190,7 @@ public class CreateHoldingEventHandler implements EventHandler {
   }
 
   private void fillInstanceId(JsonObject holdingAsJson, String instanceId) {
+    LOGGER.trace(format("fillInstanceId:: Adding instance id: %s, to holding with id: %s", instanceId, holdingAsJson.getString("id")));
     holdingAsJson.put(INSTANCE_ID_FIELD, instanceId);
   }
 
@@ -200,6 +202,7 @@ public class CreateHoldingEventHandler implements EventHandler {
 
     HoldingsRecordCollection holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
     holdingsList.forEach(holdings -> {
+      LOGGER.debug(format("addHoldings:: Trying to add holdings with id: %s", holdings.getId()));
       Promise<Void> createPromise = Promise.promise();
       createHoldingsRecordFutures.add(createPromise.future());
       holdingsRecordCollection.add(holdings,
@@ -210,10 +213,10 @@ public class CreateHoldingEventHandler implements EventHandler {
         failure -> {
           errors.add(new PartialError(holdings.getId() != null ? holdings.getId() : BLANK, failure.getReason()));
           if (isNotBlank(failure.getReason()) && failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
-            LOGGER.info("Duplicated event received by Holding id: {}. Ignoring...", holdings.getId());
+            LOGGER.info("addHoldings:: Duplicated event received by Holding id: {}. Ignoring...", holdings.getId());
             createPromise.fail(new DuplicateEventException(format("Duplicated event by Holding id: %s", holdings.getId())));
           } else {
-            LOGGER.warn(format("Error posting Holdings cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
+            LOGGER.warn(format("addHoldings:: Error posting Holdings cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
             createPromise.complete();
           }
         });
@@ -221,7 +224,7 @@ public class CreateHoldingEventHandler implements EventHandler {
     CompositeFuture.all(createHoldingsRecordFutures).onComplete(ar -> {
       if (ar.succeeded()) {
         String errorsAsStringJson = Json.encode(errors);
-        if (createdHoldingsRecord.size() > 0) {
+        if (!createdHoldingsRecord.isEmpty()) {
           payloadContext.put(ERRORS, errorsAsStringJson);
           holdingsPromise.complete(createdHoldingsRecord);
         } else {

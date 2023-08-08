@@ -370,7 +370,7 @@ public class CreateItemEventHandlerTest {
     Assert.assertEquals(2, createdItems.size());
     Assert.assertEquals(EMPTY_JSON_ARRAY, eventPayload.getContext().get(ERRORS));
 
-    Assert.assertEquals(createdItems.getJsonObject(0).getString("id"), ITEM_ID);
+    Assert.assertEquals(ITEM_ID, createdItems.getJsonObject(0).getString("id"));
     for (int i = 0; i < createdItems.size(); i++) {
       JsonObject createdItem = createdItems.getJsonObject(i);
       Assert.assertNotNull(createdItem.getJsonObject("status").getString("name"));
@@ -448,7 +448,7 @@ public class CreateItemEventHandlerTest {
     JsonArray errors = new JsonArray(eventPayload.getContext().get(ERRORS));
     Assert.assertEquals(1, createdItems.size());
     Assert.assertEquals(1, errors.size());
-    Assert.assertEquals(errors.getJsonObject(0).getString("id"), ITEM_ID);
+    Assert.assertEquals(ITEM_ID, errors.getJsonObject(0).getString("id"));
     Assert.assertEquals(errors.getJsonObject(0).getString("error"), testError);
     Assert.assertEquals(errors.getJsonObject(0).getString("holdingId"), expectedHoldingId1);
 
