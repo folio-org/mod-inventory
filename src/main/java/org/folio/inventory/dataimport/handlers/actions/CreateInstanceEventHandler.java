@@ -12,6 +12,7 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.dataimport.services.OrderHelperService;
+import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.domain.relationship.RecordToEntity;
@@ -94,7 +95,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
       String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
       LOGGER.info("Create instance with jobExecutionId: {} , recordId: {} , chunkId: {}", jobExecutionId, recordId, chunkId);
 
-      Future<RecordToEntity> recordToInstanceFuture = idStorageService.store(targetRecord.getId(), UUID.randomUUID().toString(), dataImportEventPayload.getTenant());
+      Future<RecordToEntity> recordToInstanceFuture = idStorageService.store(targetRecord.getId(), getInstanceId(targetRecord), dataImportEventPayload.getTenant());
       recordToInstanceFuture.onSuccess(res -> {
           String instanceId = res.getEntityId();
           mappingMetadataCache.get(jobExecutionId, context)
@@ -143,6 +144,11 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
       future.completeExceptionally(e);
     }
     return future;
+  }
+
+  private String getInstanceId(Record record) {
+    String subfield999ffi = ParsedRecordUtil.getAdditionalSubfieldValue(record.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.I);
+    return isEmpty(subfield999ffi) ? UUID.randomUUID().toString() : subfield999ffi;
   }
 
   private JsonObject prepareInstance(DataImportEventPayload dataImportEventPayload, String instanceId, String jobExecutionId) {
