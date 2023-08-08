@@ -88,59 +88,12 @@ import junitparams.Parameters;
 @RunWith(JUnitParamsRunner.class)
 public class UpdateItemEventHandlerTest {
 
-  private static final String PARSED_CONTENT = "{\n" +
+  private static final String PARSED_CONTENT = "{{ \n" +
     "  \"fields\": [\n" +
-    "    {\n" +
-    "      \"900\": {\n" +
-    "        \"ind1\": \" \",\n" +
-    "        \"ind2\": \" \",\n" +
-    "        \"subfields\": [\n" +
-    "          {\n" +
-    "            \"a\": \"it00000000001\"\n" +
-    "          },\n" +
-    "          {\n" +
-    "            \"3\": \"ho00000000001\"\n" +
-    "          }\n" +
-    "        ]\n" +
-    "      }\n" +
-    "    },\n" +
-    "    {\n" +
-    "      \"950\": {\n" +
-    "        \"ind1\": \" \",\n" +
-    "        \"ind2\": \" \",\n" +
-    "        \"subfields\": [\n" +
-    "          {\n" +
-    "            \"a\": \"Did this item note get added?\"\n" +
-    "          }\n" +
-    "        ]\n" +
-    "      }\n" +
-    "    },\n" +
-    "    {\n" +
-    "      \"951\": {\n" +
-    "        \"ind1\": \" \",\n" +
-    "        \"ind2\": \" \",\n" +
-    "        \"subfields\": [\n" +
-    "          {\n" +
-    "            \"a\": \"Did this item check-out note get added?\"\n" +
-    "          }\n" +
-    "        ]\n" +
-    "      }\n" +
-    "    },\n" +
-    "    {\n" +
-    "      \"999\": {\n" +
-    "        \"ind1\": \"f\",\n" +
-    "        \"ind2\": \"f\",\n" +
-    "        \"subfields\": [\n" +
-    "          {\n" +
-    "            \"s\": \"bd9894be-e5ea-424f-aa47-1dd54e719ed4\"\n" +
-    "          },\n" +
-    "          {\n" +
-    "            \"i\": \"45fd6cfe-5b7c-43f3-9fc3-bd80261b328f\"\n" +
-    "          }\n" +
-    "        ]\n" +
-    "      }\n" +
-    "    }\n" +
-    "  ],\n" +
+    "    { \"900\": { \"ind1\": \" \", \"ind2\": \" \", \"subfields\": [ { \"a\": \"it00000000001\" }, { \"3\": \"ho00000000001\" } ] } },\n" +
+    "    { \"950\": { \"ind1\": \" \", \"ind2\": \" \", \"subfields\": [ { \"a\": \"Did this item note get added?\" } ] } },\n" +
+    "    { \"951\": { \"ind1\": \" \", \"ind2\": \" \", \"subfields\": [ { \"a\": \"Did this item check-out note get added?\" } ] } },\n" +
+    "    { \"999\": { \"ind1\": \"f\", \"ind2\": \"f\", \"subfields\": [ { \"s\": \"bd9894be-e5ea-424f-aa47-1dd54e719ed4\" }, { \"i\": \"45fd6cfe-5b7c-43f3-9fc3-bd80261b328f\" } ] } }],\n" +
     "  \"leader\": \"01877cam a2200457Ii 4500\"\n" +
     "}";
 
@@ -346,29 +299,17 @@ public class UpdateItemEventHandlerTest {
     String materialTypeId = UUID.randomUUID().toString();
     String permanentLoanTypeId = UUID.randomUUID().toString();
     JsonObject metadata = new JsonObject();
-    String instanceId = String.valueOf(UUID.randomUUID());
-    String hrid = UUID.randomUUID().toString();
-    String permanentLocationId = UUID.randomUUID().toString();
 
     Item actualItem = new Item(itemId, "2", holdingId, "test", new Status(AVAILABLE), materialTypeId, permanentLoanTypeId, metadata);
 
-    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(IN_PROCESS.value()));
-    when(mockedStorage.getItemCollection(ArgumentMatchers.any(Context.class))).thenReturn(mockedItemCollection);
-    when(mockedStorage.getHoldingsRecordCollection(ArgumentMatchers.any(Context.class))).thenReturn(mockedHoldingsCollection);
     when(mockedItemCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(actualItem));
 
     doAnswer(invocationOnMock -> {
-      HoldingsRecord holdings = new HoldingsRecord()
-        .withId(holdingId)
-        .withHrid(hrid)
-        .withInstanceId(instanceId)
-        .withPermanentLocationId(permanentLocationId)
-        .withVersion(1);
-      Consumer<Success<HoldingsRecord>> successHandler = invocationOnMock.getArgument(1);
-      successHandler.accept(new Success<>(holdings));
+      MultipleRecords<Item> result = new MultipleRecords<>(new ArrayList<>(), 0);
+      Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
       return null;
-    }).when(mockedHoldingsCollection).findById(anyString(),any(Consumer.class),any(Consumer.class));
+    }).when(mockedItemCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
@@ -388,7 +329,7 @@ public class UpdateItemEventHandlerTest {
 
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
     HashMap<String, String> context = new HashMap<>();
-    context.put(ITEM.value(), Json.encode(itemRecord));
+    context.put(ITEM.value(), ItemUtil.mapToMappingResultRepresentation(itemRecord));
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
