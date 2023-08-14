@@ -1,3 +1,6 @@
+## 20.0.7 2023-08-14
+* Support multiple actions on the same Item record ([MODINV-842](https://issues.folio.org/browse/MODINV-842))
+
 ## 20.0.6 2023-07-31
 * Update data-import-processing-core to v4.0.6 ([MODDICORE-333](https://issues.folio.org/browse/MODDICORE-333))
 * Support multiple actions on the same Holdings record ([MODINV-835](https://issues.folio.org/browse/MODINV-835))
