@@ -121,7 +121,6 @@ public class UpdateHoldingEventHandler implements EventHandler {
           MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
           MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
 
-          HoldingsRecordCollection holdingsRecordsCollection = storage.getHoldingsRecordCollection(context);
           List<HoldingsRecord> updatedHoldingsRecord = new ArrayList<>();
           List<Future> updatedHoldingsRecordFutures = new ArrayList<>();
           isPayloadConstructed = false;
@@ -140,33 +139,32 @@ public class UpdateHoldingEventHandler implements EventHandler {
                 constructDataImportEventPayload(updatePromise, dataImportEventPayload, list, context, errors);
               },
               failure -> {
-                errors.add(new PartialError(holding.getId() != null ? holding.getId() : BLANK, failure.getReason()));
                 if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
                   expiredHoldings.add(holding);
-                  updatePromise.complete();
                 } else {
+                  errors.add(new PartialError(holding.getId() != null ? holding.getId() : BLANK, failure.getReason()));
                   dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
                   LOGGER.warn("handle:: " + format(CANNOT_UPDATE_HOLDING_ERROR_MESSAGE, holding.getId(), jobExecutionId, recordId, chunkId, failure.getReason(), failure.getStatusCode()));
-                  updatePromise.fail(new EventProcessingException(format(UPDATE_HOLDING_ERROR_MESSAGE, jobExecutionId,
-                    recordId, chunkId)));
                 }
+                updatePromise.complete();
               });
           }
-          CompositeFuture.all(updatedHoldingsRecordFutures).onComplete(ar -> {
-            if (!expiredHoldings.isEmpty()) {
-              processOLError(dataImportEventPayload, future, holdingsRecordsCollection, expiredHoldings.get(0), errors);
-            }
-            if (dataImportEventPayload.getContext().containsKey(ERRORS) || !errors.isEmpty()) {
-              LOGGER.warn(format("handle:: Errors during holdings update: %s", Json.encode(errors)));
-              dataImportEventPayload.getContext().put(ERRORS, Json.encode(errors));
-            }
-            if (ar.succeeded()) {
-              dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encode(updatedHoldingsRecord));
-              future.complete(dataImportEventPayload);
-            } else {
-              future.completeExceptionally(ar.cause());
-            }
-          });
+          CompositeFuture.all(updatedHoldingsRecordFutures)
+            .onSuccess(ar -> {
+              if (!expiredHoldings.isEmpty()) {
+                processOLError(dataImportEventPayload, future, holdingsRecordCollection, expiredHoldings.get(0), errors);
+              }
+              String errorsAsStringJson = Json.encode(errors);
+              if (!updatedHoldingsRecord.isEmpty() || errors.size() == 0) {
+                LOGGER.warn(format("handle:: Errors during holdings update: %s", Json.encode(updatedHoldingsRecord)));
+                dataImportEventPayload.getContext().put(ERRORS, errorsAsStringJson);
+                dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encode(updatedHoldingsRecord));
+                future.complete(dataImportEventPayload);
+              } else {
+                future.completeExceptionally(new EventProcessingException(errorsAsStringJson));
+              }
+            })
+            .onFailure(future::completeExceptionally);
         })
         .onFailure(e -> {
           LOGGER.warn("handle:: Error updating inventory Holdings by jobExecutionId: '{}'", jobExecutionId, e);
