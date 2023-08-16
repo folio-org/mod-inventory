@@ -155,7 +155,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
                 processOLError(dataImportEventPayload, future, holdingsRecordCollection, expiredHoldings.get(0), errors);
               }
               String errorsAsStringJson = Json.encode(errors);
-              if (!updatedHoldingsRecord.isEmpty() || errors.size() == 0) {
+              if (!updatedHoldingsRecord.isEmpty() || errors.isEmpty()) {
                 LOGGER.warn(format("handle:: Errors during holdings update: %s", Json.encode(updatedHoldingsRecord)));
                 dataImportEventPayload.getContext().put(ERRORS, errorsAsStringJson);
                 dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encode(updatedHoldingsRecord));
