@@ -23,11 +23,11 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public final class ItemUtil {
-  private static final String MATERIAL_TYPE_ID_KEY = "materialTypeId";
-  private static final String PERMANENT_LOAN_TYPE_ID_KEY = "permanentLoanTypeId";
-  private static final String TEMPORARY_LOAN_TYPE_ID_KEY = "temporaryLoanTypeId";
-  private static final String PERMANENT_LOCATION_ID_KEY = "permanentLocationId";
-  private static final String TEMPORARY_LOCATION_ID_KEY = "temporaryLocationId";
+  public static final String MATERIAL_TYPE_ID_KEY = "materialTypeId";
+  public static final String PERMANENT_LOAN_TYPE_ID_KEY = "permanentLoanTypeId";
+  public static final String TEMPORARY_LOAN_TYPE_ID_KEY = "temporaryLoanTypeId";
+  public static final String PERMANENT_LOCATION_ID_KEY = "permanentLocationId";
+  public static final String TEMPORARY_LOCATION_ID_KEY = "temporaryLocationId";
   public static final String HOLDINGS_RECORD_ID = "holdingsRecordId";
   public static final String STATUS = "status";
   public static final String NUMBER_OF_PIECES = "numberOfPieces";
