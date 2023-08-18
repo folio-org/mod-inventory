@@ -8,6 +8,18 @@ import static org.folio.ActionProfile.Action.UPDATE;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_UPDATED;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.inventory.domain.items.Item.STATUS_KEY;
+import static org.folio.inventory.support.ItemUtil.ID;
+import static org.folio.inventory.support.ItemUtil.MATERIAL_TYPE;
+import static org.folio.inventory.support.ItemUtil.MATERIAL_TYPE_ID_KEY;
+import static org.folio.inventory.support.ItemUtil.PERMANENT_LOAN_TYPE;
+import static org.folio.inventory.support.ItemUtil.PERMANENT_LOAN_TYPE_ID_KEY;
+import static org.folio.inventory.support.ItemUtil.PERMANENT_LOCATION;
+import static org.folio.inventory.support.ItemUtil.PERMANENT_LOCATION_ID_KEY;
+import static org.folio.inventory.support.ItemUtil.TEMPORARY_LOAN_TYPE;
+import static org.folio.inventory.support.ItemUtil.TEMPORARY_LOAN_TYPE_ID_KEY;
+import static org.folio.inventory.support.ItemUtil.TEMPORARY_LOCATION;
+import static org.folio.inventory.support.ItemUtil.TEMPORARY_LOCATION_ID_KEY;
+import static org.folio.inventory.support.JsonHelper.getString;
 import static org.folio.rest.jaxrs.model.EntityType.HOLDINGS;
 import static org.folio.rest.jaxrs.model.EntityType.ITEM;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
@@ -142,8 +154,7 @@ public class UpdateItemEventHandler implements EventHandler {
           for (int i = 0; i < itemsJsonArray.size(); i++) {
             Promise<Void> updatePromise = Promise.promise();
             updatedItemsRecordFutures.add(updatePromise.future());
-            JsonObject mappedItemAsJson = itemsJsonArray.getJsonObject(i);
-            mappedItemAsJson = mappedItemAsJson.getJsonObject(ITEM_PATH_FIELD);
+            JsonObject mappedItemAsJson = itemsJsonArray.getJsonObject(i).getJsonObject(ITEM_PATH_FIELD);
             LOGGER.debug(format("handle:: Updating Item with id: %s", mappedItemAsJson.getString("id")));
             List<String> validationErrors = validateItem(mappedItemAsJson, requiredFields);
             if (!validationErrors.isEmpty()) {
@@ -186,16 +197,15 @@ public class UpdateItemEventHandler implements EventHandler {
             if (!expiredItems.isEmpty()) {
               processOLError(dataImportEventPayload, future, itemCollection, expiredItems.get(0), errors);
             }
-            if (dataImportEventPayload.getContext().containsKey(ERRORS) || !errors.isEmpty()) {
-              dataImportEventPayload.getContext().put(ERRORS, Json.encode(errors));
-            }
             if (ar.succeeded()) {
-              List<JsonObject> itemsAsJsons = new ArrayList<>();
-              for (Item updatedItemEntity : updatedItemEntities) {
-                itemsAsJsons.add(ItemUtil.mapToJson(updatedItemEntity));
+              String errorsAsStringJson = Json.encode(errors);
+              if (!updatedItemEntities.isEmpty() || errors.size() == 0) {
+                dataImportEventPayload.getContext().put(ERRORS, errorsAsStringJson);
+                dataImportEventPayload.getContext().put(ITEM.value(), getItemsMappedToJsonArrayAsString(updatedItemEntities));
+                future.complete(dataImportEventPayload);
+              } else {
+                future.completeExceptionally(new EventProcessingException(errorsAsStringJson));
               }
-              dataImportEventPayload.getContext().put(ITEM.value(), Json.encode(itemsAsJsons));
-              future.complete(dataImportEventPayload);
             } else {
               future.completeExceptionally(ar.cause());
             }
@@ -214,6 +224,41 @@ public class UpdateItemEventHandler implements EventHandler {
       dataImportEventPayload.getContext().remove(TEMPORARY_MULTIPLE_HOLDINGS_FIELD);
     }
     return future;
+  }
+
+  private static JsonObject getItemAsJsonWithProperFields(JsonObject item) {
+    String materialTypeId = getString(item, MATERIAL_TYPE_ID_KEY);
+    String permanentLocationId = getString(item, PERMANENT_LOCATION_ID_KEY);
+    String temporaryLocationId = getString(item, TEMPORARY_LOCATION_ID_KEY);
+    String permanentLoanTypeId = getString(item, PERMANENT_LOAN_TYPE_ID_KEY);
+    String temporaryLoanTypeId = getString(item, TEMPORARY_LOAN_TYPE_ID_KEY);
+
+    item.remove(MATERIAL_TYPE_ID_KEY);
+    item.remove(PERMANENT_LOCATION_ID_KEY);
+    item.remove(TEMPORARY_LOCATION_ID_KEY);
+    item.remove(PERMANENT_LOAN_TYPE_ID_KEY);
+    item.remove(TEMPORARY_LOAN_TYPE_ID_KEY);
+
+    putValueNestedIfNotNull(item, MATERIAL_TYPE, ID, materialTypeId);
+    putValueNestedIfNotNull(item, PERMANENT_LOCATION, ID, permanentLocationId);
+    putValueNestedIfNotNull(item, TEMPORARY_LOCATION, ID, temporaryLocationId);
+    putValueNestedIfNotNull(item, PERMANENT_LOAN_TYPE, ID, permanentLoanTypeId);
+    putValueNestedIfNotNull(item, TEMPORARY_LOAN_TYPE, ID, temporaryLoanTypeId);
+
+    return item;
+  }
+
+  private static void putValueNestedIfNotNull(JsonObject item, String objectPropertyName,
+                                              String nestedPropertyName, String value) {
+    if (value != null) item.put(objectPropertyName, new JsonObject().put(nestedPropertyName, value));
+  }
+
+  private static String getItemsMappedToJsonArrayAsString(List<Item> updatedItemEntities) {
+    List<JsonObject> itemsAsJsons = new ArrayList<>();
+    for (Item updatedItemEntity : updatedItemEntities) {
+      itemsAsJsons.add(ItemUtil.mapToJson(updatedItemEntity));
+    }
+    return Json.encode(itemsAsJsons);
   }
 
   @Override
@@ -274,7 +319,7 @@ public class UpdateItemEventHandler implements EventHandler {
     for (int i = 0; i < itemsJsonArray.size(); i++) {
       JsonObject itemAsJson = itemsJsonArray.getJsonObject(i);
       itemAsJson = itemAsJson.getJsonObject(ITEM_PATH_FIELD) != null ? itemAsJson.getJsonObject(ITEM_PATH_FIELD) : itemAsJson;
-      itemsJsonArray.set(i, new JsonObject().put(ITEM_PATH_FIELD, itemAsJson));
+      itemsJsonArray.set(i, new JsonObject().put(ITEM_PATH_FIELD, getItemAsJsonWithProperFields(itemAsJson)));
     }
     dataImportEventPayload.getContext().put(ITEM.value(), itemsJsonArray.encode());
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
@@ -336,17 +381,15 @@ public class UpdateItemEventHandler implements EventHandler {
 
     itemCollection.update(item, success -> promise.complete(item),
       failure -> {
-        errors.add(new PartialError(item.getId() != null ? item.getId() : BLANK, failure.getReason()));
         if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
           expiredItems.add(item);
-          updatePromise.complete();
-          promise.fail(failure.getReason());
         } else {
           eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
+          errors.add(new PartialError(item.getId() != null ? item.getId() : BLANK, failure.getReason()));
           LOGGER.warn(format("updateItemAndRetryIfOLExists:: updating Item - %s, status code %s", failure.getReason(), failure.getStatusCode()));
-          updatePromise.complete();
-          promise.fail(failure.getReason());
         }
+        updatePromise.complete();
+        promise.fail(failure.getReason());
       });
     return promise.future();
   }
