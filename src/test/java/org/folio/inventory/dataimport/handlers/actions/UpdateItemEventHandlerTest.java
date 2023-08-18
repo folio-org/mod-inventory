@@ -19,6 +19,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.times;
@@ -289,7 +290,7 @@ public class UpdateItemEventHandlerTest {
     JsonObject firstExistingItemJson = new JsonObject()
       .put("id", UUID.randomUUID().toString())
       .put("status", new JsonObject().put("name", AVAILABLE.value()))
-      .put("materialType", new JsonObject().put("id", UUID.randomUUID().toString()))
+      .put("materialTypeId", UUID.randomUUID().toString())
       .put("permanentLoanType", new JsonObject().put("id", UUID.randomUUID().toString()))
       .put("holdingsRecordId", UUID.randomUUID().toString());
 
@@ -345,7 +346,7 @@ public class UpdateItemEventHandlerTest {
     Assert.assertEquals(firstExistingItemJson.getString("id"), firstItem.getString("id"));
     Assert.assertEquals(firstExistingItemJson.getString(HRID_KEY), firstItem.getString(HRID_KEY));
     Assert.assertEquals(getNestedProperty(firstExistingItemJson, "permanentLoanType", "id"), firstItem.getString("permanentLoanTypeId"));
-    Assert.assertEquals(getNestedProperty(firstExistingItemJson, "materialType", "id"), firstItem.getString("materialTypeId"));
+    Assert.assertEquals(firstExistingItemJson.getString("materialTypeId"), firstItem.getString("materialTypeId"));
     Assert.assertEquals(firstExistingItemJson.getString("holdingsRecordId"), firstItem.getString("holdingsRecordId"));
     Assert.assertEquals(IN_PROCESS.value(), firstItem.getJsonObject(STATUS_KEY).getString("name"));
     Assert.assertNotNull(eventPayload.getContext().get(HOLDINGS.value()));
@@ -504,7 +505,7 @@ public class UpdateItemEventHandlerTest {
   }
 
   @Test
-  public void shouldNotMapItemsAndAndFillPartialErrorsIfOptimisticLockingExists()
+  public void shouldNotMapItemsAndNotFillPartialErrorsIfOptimisticLockingExists()
     throws UnsupportedEncodingException, InterruptedException, ExecutionException, TimeoutException {
     // given
     String firstItemId = UUID.randomUUID().toString();
@@ -577,20 +578,13 @@ public class UpdateItemEventHandlerTest {
 
     Assert.assertEquals(DI_INVENTORY_ITEM_UPDATED.value(), actualDataImportEventPayload.getEventType());
     Assert.assertEquals(0, new JsonArray(actualDataImportEventPayload.getContext().get(ITEM.value())).size());
-    JsonArray errors = new JsonArray(actualDataImportEventPayload.getContext().get(ERRORS));
-    Assert.assertEquals(2, errors.size());
-    JsonObject firstPartialError = errors.getJsonObject(0);
-    Assert.assertNotNull(firstPartialError.getString("error"));
-    Assert.assertEquals(firstItemId, firstPartialError.getString("id"));
-    JsonObject secondPartialError = errors.getJsonObject(1);
-    Assert.assertNotNull(secondPartialError.getString("error"));
-    Assert.assertEquals(secondItemId, secondPartialError.getString("id"));
+    Assert.assertEquals(0, new JsonArray(actualDataImportEventPayload.getContext().get(ERRORS)).size());
   }
 
 
-  @Test
-  public void shouldNotUpdateMultipleItemsWithNewStatusesAndPartialErrorsShouldExists()
-    throws UnsupportedEncodingException, InterruptedException, ExecutionException, TimeoutException {
+  @Test(expected = ExecutionException.class)
+  public void shouldNotUpdateMultipleItemsWithNewStatusesAndReturnDiErrorIfNoItemsUpdated()
+    throws UnsupportedEncodingException, ExecutionException, InterruptedException, TimeoutException {
     // given
     doAnswer(invocationOnMock -> {
       MultipleRecords<Item> result = new MultipleRecords<>(new ArrayList<>(), 0);
@@ -651,36 +645,16 @@ public class UpdateItemEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = updateItemHandler.handle(dataImportEventPayload);
 
     // then
-    DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
-    Assert.assertEquals(DI_INVENTORY_ITEM_UPDATED, DataImportEventTypes.fromValue(eventPayload.getEventType()));
-    Assert.assertNotNull(eventPayload.getContext().get(ITEM.value()));
-
-    Assert.assertEquals(0, new JsonArray(eventPayload.getContext().get(ITEM.value())).size());
-    JsonArray errors = new JsonArray(eventPayload.getContext().get(ERRORS));
-
-    JsonObject firstError = errors.getJsonObject(0);
-    Assert.assertEquals(firstExistingItemJson.getString("id"), firstError.getString("id"));
-    Assert.assertTrue(firstError.getString("error").contains("Mapped Instance is invalid: [Invalid status specified 'Invalid status']"));
-
-    JsonObject secondError = errors.getJsonObject(1);
-    Assert.assertEquals(secondExistingItemJson.getString("id"), secondError.getString("id"));
-    Assert.assertTrue(secondError.getString("error").contains("Mapped Instance is invalid: [Invalid status specified 'Invalid status']"));
+    future.get(5, TimeUnit.SECONDS);
   }
 
   @Test
   public void shouldAddPartialErrorsWhenBarcodeToUpdatedAssignedToAnotherItem()
     throws InterruptedException, ExecutionException, TimeoutException, UnsupportedEncodingException {
     // given
-    doAnswer(invocationOnMock -> {
-      Item itemByCql = new Item(null, null, null, new Status(AVAILABLE), null, null, null);
-      MultipleRecords<Item> result = new MultipleRecords<>(Collections.singletonList(itemByCql), 0);
-      Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
-      successHandler.accept(new Success<>(result));
-      return null;
-    }).when(mockedItemCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
-
+    String itemId1 = UUID.randomUUID().toString();
     JsonObject firstExistingItemJson = new JsonObject()
-      .put("id", UUID.randomUUID().toString())
+      .put("id", itemId1)
       .put("status", new JsonObject().put("name", AVAILABLE.value()))
       .put("materialType", new JsonObject().put("id", UUID.randomUUID().toString()))
       .put("permanentLoanType", new JsonObject().put("id", UUID.randomUUID().toString()))
@@ -692,6 +666,22 @@ public class UpdateItemEventHandlerTest {
       .put("materialType", new JsonObject().put("id", UUID.randomUUID().toString()))
       .put("permanentLoanType", new JsonObject().put("id", UUID.randomUUID().toString()))
       .put("holdingsRecordId", UUID.randomUUID().toString());
+
+    doAnswer(invocationOnMock -> {
+      MultipleRecords<Item> result = new MultipleRecords<>(new ArrayList<>(), 0);
+      Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
+      return null;
+    }).when(mockedItemCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    doAnswer(invocationOnMock -> {
+      Item itemByCql = new Item(null, null, null, new Status(AVAILABLE), null, null, null);
+      MultipleRecords<Item> result = new MultipleRecords<>(Collections.singletonList(itemByCql), 0);
+      Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
+      return null;
+    }).when(mockedItemCollection).findByCql(argThat(cql -> cql.contains(itemId1)),
+      any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
     JsonArray itemsList = new JsonArray();
     itemsList.add(new JsonObject().put("item", firstExistingItemJson));
@@ -731,16 +721,21 @@ public class UpdateItemEventHandlerTest {
     DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
     Assert.assertEquals(DI_INVENTORY_ITEM_UPDATED, DataImportEventTypes.fromValue(eventPayload.getEventType()));
 
-    Assert.assertEquals(0, new JsonArray(eventPayload.getContext().get(ITEM.value())).size());
+    JsonArray updatedItems = new JsonArray(eventPayload.getContext().get(ITEM.value()));
+    Assert.assertEquals(1, updatedItems.size());
+    JsonObject firstItem = updatedItems.getJsonObject(0);
+    Assert.assertEquals(secondExistingItemJson.getString("id"), firstItem.getString("id"));
+    Assert.assertEquals(secondExistingItemJson.getString(HRID_KEY), firstItem.getString(HRID_KEY));
+    Assert.assertEquals(getNestedProperty(secondExistingItemJson, "permanentLoanType", "id"), firstItem.getString("permanentLoanTypeId"));
+    Assert.assertEquals(getNestedProperty(secondExistingItemJson, "materialType", "id"), firstItem.getString("materialTypeId"));
+    Assert.assertEquals(secondExistingItemJson.getString("holdingsRecordId"), firstItem.getString("holdingsRecordId"));
+    Assert.assertEquals(IN_PROCESS.value(), firstItem.getJsonObject(STATUS_KEY).getString("name"));
+    Assert.assertNotNull(eventPayload.getContext().get(HOLDINGS.value()));
     JsonArray errors = new JsonArray(eventPayload.getContext().get(ERRORS));
 
     JsonObject firstError = errors.getJsonObject(0);
     Assert.assertEquals(firstExistingItemJson.getString("id"), firstError.getString("id"));
     Assert.assertTrue(firstError.getString("error").contains("Barcode must be unique, In process is already assigned to another item"));
-
-    JsonObject secondError = errors.getJsonObject(1);
-    Assert.assertEquals(secondExistingItemJson.getString("id"), secondError.getString("id"));
-    Assert.assertTrue(secondError.getString("error").contains("Barcode must be unique, In process is already assigned to another item"));
   }
 
   @Test
