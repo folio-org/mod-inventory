@@ -18,17 +18,14 @@ import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
-import org.folio.inventory.exceptions.InternalServerErrorException;
 import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.storage.Storage;
-import org.folio.inventory.support.CompletableFutures;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaHeaderUtils;
 import org.folio.kafka.exception.DuplicateEventException;
 import org.folio.rest.jaxrs.model.Record;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -76,13 +73,24 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       InstanceCollection targetInstanceCollection = storage.getInstanceCollection(targetTenantContext);
       LOGGER.info("handle :: targetInstanceCollection : {}", targetInstanceCollection);
 
+      targetInstanceCollection.findById(UUID.randomUUID().toString(), instanceTargetSerachSuccess -> {
+          LOGGER.info("1 handle :: instance found : {}", instanceTargetSerachSuccess.getResult());
+          promise.complete(instanceTargetSerachSuccess.getResult().toString());
+        },
+        failure -> {
+          String errorMessage = format("1 Error retrieving Instance by id %s from target tenant %s. Error: %s",
+            instanceId, sharingInstance.getTargetTenantId(), sharingInstance.getTargetTenantId(), failure);
+          LOGGER.error(errorMessage);
+          promise.fail(errorMessage);
+        });
+
       getInstanceById(instanceId, targetInstanceCollection)
         .onSuccess(instance -> {
-          LOGGER.info("handle :: instance found : {}", instance.getId());
+          LOGGER.info("2 handle :: instance found : {}", instance.getId());
           promise.complete(instance.toString());
         })
         .onFailure(failure -> {
-          String errorMessage = format("Error retrieving Instance by id %s from target tenant %s. Error: %s",
+          String errorMessage = format("2 Error retrieving Instance by id %s from target tenant %s. Error: %s",
             instanceId, sharingInstance.getTargetTenantId(), sharingInstance.getTargetTenantId(), failure);
           LOGGER.error(errorMessage);
           promise.fail(errorMessage);
