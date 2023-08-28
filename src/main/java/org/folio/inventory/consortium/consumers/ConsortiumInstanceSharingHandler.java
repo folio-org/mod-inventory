@@ -76,16 +76,18 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       InstanceCollection targetInstanceCollection = storage.getInstanceCollection(targetTenantContext);
       LOGGER.info("handle :: targetInstanceCollection : {}", targetInstanceCollection);
 
-      return getInstanceById(instanceId, targetInstanceCollection)
-        .compose(instance -> {
-          LOGGER.info("handle :: founded instance : {}", instance.toString());
-          return Future.succeededFuture(instance.toString());
-        }).onFailure(failure -> {
-          String errorMessage = format("Error save Instance by id %s on the target tenant %s. Error: %s",
-            instanceId, sharingInstance.getTargetTenantId(), failure.getCause());
+      getInstanceById(instanceId, targetInstanceCollection)
+        .onSuccess(instance -> {
+          LOGGER.info("handle :: instance found : {}", instance.getId());
+          promise.complete(instance.toString());
+        })
+        .onFailure(failure -> {
+          String errorMessage = format("Error retrieving Instance by id %s from target tenant %s. Error: %s",
+            instanceId, sharingInstance.getTargetTenantId(), sharingInstance.getTargetTenantId(), failure);
           LOGGER.error(errorMessage);
-          promise.fail(failure);
+          promise.fail(errorMessage);
         });
+      return promise.future();
     } catch (Exception ex) {
       LOGGER.error(format("Failed to process data import kafka record from topic %s", record.topic()), ex);
       return Future.failedFuture(ex);

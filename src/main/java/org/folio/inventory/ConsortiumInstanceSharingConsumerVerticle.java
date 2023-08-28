@@ -7,7 +7,6 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.DataImportEventTypes;
 import org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler;
 import org.folio.inventory.consortium.model.ConsortiumEvenType;
 import org.folio.inventory.dataimport.util.ConsumerWrapperUtil;
