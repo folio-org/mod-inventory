@@ -9,6 +9,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventTypes;
 import org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler;
+import org.folio.inventory.consortium.model.ConsortiumEvenType;
 import org.folio.inventory.dataimport.util.ConsumerWrapperUtil;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.AsyncRecordHandler;
@@ -19,7 +20,7 @@ import org.folio.kafka.KafkaConsumerWrapper;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.folio.DataImportEventTypes.CONSORTIUM_INSTANCE_SHARING_INIT;
+import static org.folio.inventory.consortium.model.ConsortiumEvenType.CONSORTIUM_INSTANCE_SHARING_INIT;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX_REQUEST_SIZE;
@@ -60,7 +61,7 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
     consumer.stop().onComplete(ar -> stopPromise.complete());
   }
 
-  private Future<KafkaConsumerWrapper<String, String>> createKafkaConsumer(KafkaConfig kafkaConfig, DataImportEventTypes eventType,
+  private Future<KafkaConsumerWrapper<String, String>> createKafkaConsumer(KafkaConfig kafkaConfig, ConsortiumEvenType eventType,
                                                                            AsyncRecordHandler<String, String> recordHandler) {
     var subscriptionDefinition =
       createSubscriptionDefinition(kafkaConfig.getEnvId(), getDefaultNameSpace(), eventType.name());
