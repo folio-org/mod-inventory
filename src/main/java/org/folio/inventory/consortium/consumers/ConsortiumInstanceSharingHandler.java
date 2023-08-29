@@ -79,12 +79,12 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       InstanceCollection sourceInstanceCollection = storage.getInstanceCollection(sourceTenantContext);
       LOGGER.info("handle :: sourceInstanceCollection : {}", sourceInstanceCollection);
 
-      getInstanceById(instanceId, targetInstanceCollection)
+      getInstanceById(instanceId, sharingInstance.getTargetTenantId(), targetInstanceCollection)
         .onSuccess(instanceOnTargetTenant -> {
           if (instanceOnTargetTenant == null) {
             LOGGER.info("handle :: instance {} not found on target tenant: {}",
               instanceId, sharingInstance.getTargetTenantId());
-            getInstanceById(instanceId, targetInstanceCollection)
+            getInstanceById(instanceId, sharingInstance.getSourceTenantId(), sourceInstanceCollection)
               .onSuccess(instanceOnSourceTenant -> {
                 if (instanceOnSourceTenant == null) {
                   String errorMessage = format("handle :: instance {} not found on source tenant: {}",
@@ -230,20 +230,21 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     }
   }
 
-  private Future<Instance> getInstanceById(String instanceId, InstanceCollection instanceCollection) {
-    LOGGER.info("getInstanceById :: instanceId : {}", instanceId);
+  private Future<Instance> getInstanceById(String instanceId, String tenantId, InstanceCollection instanceCollection) {
+    LOGGER.info("getInstanceById :: instanceId: {} on tenant: {}", instanceId, tenantId);
     Promise<Instance> promise = Promise.promise();
     instanceCollection.findById(instanceId, success -> {
         if (success.getResult() == null) {
-          LOGGER.error("Can't find Instance by id: {} ", instanceId);
-          promise.fail(new NotFoundException(format("Can't find Instance by id: %s", instanceId)));
+          LOGGER.error("getInstanceById :: Can't find Instance by id: {} on tenant: {}", instanceId, tenantId);
+          promise.fail(new NotFoundException(format("Can't find Instance by id: %s on tenant: %s", instanceId, tenantId)));
         } else {
           LOGGER.info("getInstanceById :: instanceCollection.findById :: success : {}", success);
           promise.complete(success.getResult());
         }
       },
       failure -> {
-        LOGGER.error(format("Error retrieving Instance by id %s - %s, status code %s", instanceId, failure.getReason(), failure.getStatusCode()));
+        LOGGER.error(format("getInstanceById :: Error retrieving Instance by id %s on tenant %s - %s, status code %s",
+          instanceId, tenantId, failure.getReason(), failure.getStatusCode()));
         promise.fail(failure.getReason());
       });
     return promise.future();
