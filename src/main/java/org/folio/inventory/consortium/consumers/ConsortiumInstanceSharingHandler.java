@@ -74,7 +74,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       InstanceCollection sourceInstanceCollection = storage.getInstanceCollection(sourceTenantContext);
       LOGGER.info("handle :: sourceInstanceCollection : {}", sourceInstanceCollection);
 
-      getInstanceById(UUID.randomUUID().toString(), sharingInstance.getTargetTenantId(), targetInstanceCollection)
+      getInstanceById(instanceId, sharingInstance.getTargetTenantId(), targetInstanceCollection)
         .onFailure(failure -> {
           if (failure.getClass().equals(NotFoundException.class)) {
             LOGGER.info("handle :: instance {} not found on target tenant: {}",
