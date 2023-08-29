@@ -356,7 +356,7 @@ public class MatchItemEventHandlerUnitTest {
 
     EventHandler eventHandler = new MatchItemEventHandler(mappingMetadataCache);
     HashMap<String, String> context = new HashMap<>();
-    context.put(EntityType.HOLDINGS.value(), JsonObject.mapFrom(new HoldingsRecord().withId(HOLDING_ID)).encode());
+    context.put(EntityType.HOLDINGS.value(), JsonArray.of(new HoldingsRecord().withId(HOLDING_ID)).encode());
     context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
     context.put(RELATIONS, MATCHING_RELATIONS);
     DataImportEventPayload eventPayload = createEventPayload().withContext(context);
