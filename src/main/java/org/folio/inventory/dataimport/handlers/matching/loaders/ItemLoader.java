@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 import org.folio.DataImportEventPayload;
@@ -62,7 +63,8 @@ public class ItemLoader extends AbstractLoader<Item> {
         JsonObject itemAsJson = new JsonObject(eventPayload.getContext().get(EntityType.ITEM.value()));
         cqlSubMatch = format(" AND id == \"%s\"", itemAsJson.getString("id"));
       } else if (isNotEmpty(eventPayload.getContext().get(EntityType.HOLDINGS.value()))) {
-        JsonObject holdingAsJson = new JsonObject(eventPayload.getContext().get(EntityType.HOLDINGS.value()));
+        JsonObject holdingAsJson = new JsonArray(eventPayload.getContext().get(EntityType.HOLDINGS.value()))
+          .getJsonObject(0);
         if (holdingAsJson.getJsonObject(HOLDINGS_FIELD) != null) {
           holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_FIELD);
         }
