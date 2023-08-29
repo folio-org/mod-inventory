@@ -47,8 +47,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
   private Storage storage;
 
-  public ConsortiumInstanceSharingHandler(Vertx vertx, HttpClient client, KafkaConfig kafkaConfig, Storage storage) {
-    this.vertx = vertx;
+  public ConsortiumInstanceSharingHandler(KafkaConfig kafkaConfig, Storage storage) {
     this.kafkaConfig = kafkaConfig;
     this.storage = storage;
   }
@@ -65,6 +64,9 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       LOGGER.info("Event 'sharing instance' has been received for instanceId: {}, sourceTenant: {}, targetTenant: {}",
         instanceId, sharingInstance.getSourceTenantId(), sharingInstance.getTargetTenantId());
 
+      LOGGER.info("OKAPI_TOKEN_HEADER = {}", headersMap.get(OKAPI_TOKEN_HEADER));
+      LOGGER.info("OKAPI_URL_HEADER = {}", headersMap.get(OKAPI_URL_HEADER));
+
       //make GET request by Instance UUID on target (consortium) tenant, if exists - (publish error event?), if not - proceed
       Context targetTenantContext = EventHandlingUtil.constructContext(sharingInstance.getTargetTenantId(),
         headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER));
@@ -73,16 +75,16 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       InstanceCollection targetInstanceCollection = storage.getInstanceCollection(targetTenantContext);
       LOGGER.info("handle :: targetInstanceCollection : {}", targetInstanceCollection);
 
-      targetInstanceCollection.findById(UUID.randomUUID().toString(), instanceTargetSerachSuccess -> {
-          LOGGER.info("1 handle :: instance found : {}", instanceTargetSerachSuccess.getResult());
-          promise.complete(instanceTargetSerachSuccess.getResult().toString());
-        },
-        failure -> {
-          String errorMessage = format("1 Error retrieving Instance by id %s from target tenant %s. Error: %s",
-            instanceId, sharingInstance.getTargetTenantId(), sharingInstance.getTargetTenantId(), failure);
-          LOGGER.error(errorMessage);
-          promise.fail(errorMessage);
-        });
+//      targetInstanceCollection.findById(UUID.randomUUID().toString(), instanceTargetSerachSuccess -> {
+//          LOGGER.info("1 handle :: instance found : {}", instanceTargetSerachSuccess.getResult());
+//          promise.complete(instanceTargetSerachSuccess.getResult().toString());
+//        },
+//        failure -> {
+//          String errorMessage = format("1 Error retrieving Instance by id %s from target tenant %s. Error: %s",
+//            instanceId, sharingInstance.getTargetTenantId(), sharingInstance.getTargetTenantId(), failure);
+//          LOGGER.error(errorMessage);
+//          promise.fail(errorMessage);
+//        });
 
       getInstanceById(instanceId, targetInstanceCollection)
         .onSuccess(instance -> {

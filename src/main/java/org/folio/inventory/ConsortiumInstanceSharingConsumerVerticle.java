@@ -47,7 +47,7 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
     HttpClient client = vertx.createHttpClient();
     Storage storage = Storage.basedUpon(config, vertx.createHttpClient());
 
-    var handler = new ConsortiumInstanceSharingHandler(vertx, client, kafkaConfig, storage);
+    var handler = new ConsortiumInstanceSharingHandler(kafkaConfig, storage);
     var kafkaConsumerFuture = createKafkaConsumer(kafkaConfig, CONSORTIUM_INSTANCE_SHARING_INIT, handler);
     kafkaConsumerFuture.onSuccess(ar -> {
         consumer = ar;
