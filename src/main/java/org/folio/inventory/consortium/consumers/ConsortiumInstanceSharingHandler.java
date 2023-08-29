@@ -74,7 +74,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
       Context sourceTenantContext = EventHandlingUtil.constructContext(sharingInstance.getSourceTenantId(),
         headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER));
-      LOGGER.info("handle :: sourceTenantContext : tenantId : {}", targetTenantContext.getTenantId());
+      LOGGER.info("handle :: sourceTenantContext : tenantId : {}", sharingInstance.getSourceTenantId());
 
       InstanceCollection sourceInstanceCollection = storage.getInstanceCollection(sourceTenantContext);
       LOGGER.info("handle :: sourceInstanceCollection : {}", sourceInstanceCollection);
