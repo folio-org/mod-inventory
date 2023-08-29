@@ -2,8 +2,6 @@ package org.folio.inventory.consortium.consumers;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
@@ -21,7 +19,6 @@ import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.AsyncRecordHandler;
-import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaHeaderUtils;
 import org.folio.kafka.exception.DuplicateEventException;
 import org.folio.rest.jaxrs.model.Record;
@@ -40,8 +37,6 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
   private static final String OKAPI_TOKEN_HEADER = "X-Okapi-Token";
   private static final String OKAPI_URL_HEADER = "X-Okapi-Url";
-
-  private Vertx vertx;
 
   private Storage storage;
 
@@ -79,15 +74,15 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       InstanceCollection sourceInstanceCollection = storage.getInstanceCollection(sourceTenantContext);
       LOGGER.info("handle :: sourceInstanceCollection : {}", sourceInstanceCollection);
 
-      getInstanceById(instanceId, sharingInstance.getTargetTenantId(), targetInstanceCollection)
-        .onSuccess(instanceOnTargetTenant -> {
-          if (instanceOnTargetTenant == null) {
+      getInstanceById(UUID.randomUUID().toString(), sharingInstance.getTargetTenantId(), targetInstanceCollection)
+        .onFailure(failure -> {
+          if (failure.getClass().equals(NotFoundException.class)) {
             LOGGER.info("handle :: instance {} not found on target tenant: {}",
               instanceId, sharingInstance.getTargetTenantId());
             getInstanceById(instanceId, sharingInstance.getSourceTenantId(), sourceInstanceCollection)
               .onSuccess(instanceOnSourceTenant -> {
                 if (instanceOnSourceTenant == null) {
-                  String errorMessage = format("handle :: instance {} not found on source tenant: {}",
+                  String errorMessage = format("handle :: instance %s not found on source tenant: %s",
                     instanceId, sharingInstance.getSourceTenantId());
                   LOGGER.error(errorMessage);
                   promise.fail(errorMessage);
@@ -96,7 +91,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                     sharingInstance.getSourceTenantId(), instanceOnSourceTenant.getSource());
 //            if ("FOLIO".equals(instanceToPublish.getSource())) {
                   addInstance(instanceOnSourceTenant, targetInstanceCollection).onSuccess(
-                    publishedInstance ->  {
+                    publishedInstance -> {
                       LOGGER.info("handle :: Updating source to 'CONSORTIUM-FOLIO' for instance {}", instanceId);
                       JsonObject jsonInstanceToPublish = instanceOnSourceTenant.getJsonForStorage();
                       jsonInstanceToPublish.put("source", "CONSORTIUM-FOLIO");
@@ -111,7 +106,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                           promise.fail(error);
                         });
                     }
-                  ).onFailure( e -> {
+                  ).onFailure(e -> {
                     String errorMessage = format("Error save Instance by id %s on the target tenant %s. Error: %s",
                       instanceId, sharingInstance.getTargetTenantId(), e.getCause());
                     LOGGER.error(errorMessage);
@@ -123,22 +118,17 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 //              }
                 }
               })
-              .onFailure(failure -> {
+              .onFailure(err -> {
                 String errorMessage = format("Error retrieving Instance by id %s from source tenant %s. Error: %s",
-                  instanceId, sharingInstance.getSourceTenantId(), failure);
+                  instanceId, sharingInstance.getSourceTenantId(), err);
                 LOGGER.error(errorMessage);
                 promise.fail(errorMessage);
               });
-          } else {
-            String errorMessage = format("handle :: instance {} is present on target tenant: {}",
-              instanceOnTargetTenant.getId(), sharingInstance.getTargetTenantId());
-            LOGGER.error(errorMessage);
-            promise.fail(errorMessage);
           }
         })
-        .onFailure(failure -> {
-          String errorMessage = format("Error retrieving Instance by id %s from target tenant %s. Error: %s",
-            instanceId, sharingInstance.getTargetTenantId(), failure);
+        .onSuccess(instanceOnTargetTenant -> {
+          String errorMessage = format("handle :: instance %s is present on target tenant: %s",
+            instanceId, sharingInstance.getTargetTenantId());
           LOGGER.error(errorMessage);
           promise.fail(errorMessage);
         });
@@ -149,93 +139,12 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     }
   }
 
-  public Future<String> handle1(KafkaConsumerRecord<String, String> record) {
-    try {
-      Promise<String> promise = Promise.promise();
-      SharingInstance sharingInstance = Json.decodeValue(record.value(), SharingInstance.class);
-
-      String instanceId = sharingInstance.getInstanceIdentifier().toString();
-      Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(record.headers());
-      LOGGER.info("Data import event payload has been received with event type: {}, instanceId: {}",
-        record.key(), instanceId);
-
-      //make GET request by Instance UUID on target (consortium) tenant, if exists - (publish error event?), if not - proceed
-      Context targetTenantContext = EventHandlingUtil.constructContext(sharingInstance.getTargetTenantId(),
-        headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER));
-
-      InstanceCollection targetInstanceCollection = storage.getInstanceCollection(targetTenantContext);
-      targetInstanceCollection.findById(UUID.randomUUID().toString(), instanceTargetSerachSuccess -> { //UUID.randomUUID().toString() -> instanceId
-        if (instanceTargetSerachSuccess.getResult() == null) {
-          //if source FOLIO - make GET request by Instance UUID on source tenant and POST on target tenant with source=FOLIO
-          Context sourceTenantContext = EventHandlingUtil.constructContext(sharingInstance.getSourceTenantId(),
-            headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER));
-          InstanceCollection sourceInstanceCollection = storage.getInstanceCollection(sourceTenantContext);
-          sourceInstanceCollection.findById(instanceId, instanceSourceSerachSuccess -> {
-            if (instanceSourceSerachSuccess.getResult() == null) {
-              String errorMessage = String.format("Can't find Instance by id %s on source tenant: %s", instanceId, sharingInstance.getSourceTenantId());
-              LOGGER.error(errorMessage);
-              promise.fail(errorMessage);
-            } else {
-              Instance instanceToPublish = instanceSourceSerachSuccess.getResult();
-//            if ("FOLIO".equals(instanceToPublish.getSource())) {
-                addInstance(instanceToPublish, targetInstanceCollection).onSuccess(
-                  publishedInstance ->  {
-                    JsonObject jsonInstanceToPublish = instanceToPublish.getJsonForStorage();
-                    jsonInstanceToPublish.put("source", "CONSORTIUM-FOLIO");
-                    updateInstanceInStorage(Instance.fromJson(jsonInstanceToPublish), sourceInstanceCollection)
-                      .onSuccess(updatesSourceInstance -> {
-                        promise.complete();
-                      }).onFailure(error -> {
-                        String errorMessage = format("Error update Instance by id %s on the source tenant %s. Error: %s",
-                          instanceId, sharingInstance.getTargetTenantId(), error.getCause());
-                        LOGGER.error(errorMessage);
-                        promise.fail(error);
-                      });
-                  }
-                ).onFailure( e -> {
-                  String errorMessage = format("Error save Instance by id %s on the target tenant %s. Error: %s",
-                    instanceId, sharingInstance.getTargetTenantId(), e.getCause());
-                  LOGGER.error(errorMessage);
-                  promise.fail(e);
-                });
-               //TODO: send Instance to the target tenant
-               // make PUT request to update source to CONSORTIUM-FOLIO, set HRID (changing logic of PUT endpoint is our of scope of this task)
-               // publish CONSORTIUM_INSTANCE_SHARING_COMPLETE or DI_ERROR???
-//              }
-            }
-          },
-            failure -> {
-              String errorMessage = format("Error retrieving Instance by id %s from source tenant %s - %s, status code %s",
-                instanceId, sharingInstance.getSourceTenantId(), failure.getReason(), failure.getStatusCode());
-              LOGGER.error(errorMessage);
-              promise.fail(errorMessage);
-            });
-        } else {
-          String alreadyExists = String.format("Instance %s already exists on target tenant %s",
-            instanceId, sharingInstance.getTargetTenantId());
-          LOGGER.error(alreadyExists);
-          promise.fail(alreadyExists);
-        }
-      }, failure -> {
-        String errorMessage = format("Error retrieving Instance by id %s from target tenant $s - %s, status code %s",
-          instanceId, sharingInstance.getTargetTenantId(), failure.getReason(), failure.getStatusCode());
-        LOGGER.error(errorMessage);
-        promise.fail(errorMessage);
-      });
-
-      return promise.future();
-    } catch (Exception e) {
-      LOGGER.error(format("Failed to process data import kafka record from topic %s", record.topic()), e);
-      return Future.failedFuture(e);
-    }
-  }
-
   private Future<Instance> getInstanceById(String instanceId, String tenantId, InstanceCollection instanceCollection) {
     LOGGER.info("getInstanceById :: instanceId: {} on tenant: {}", instanceId, tenantId);
     Promise<Instance> promise = Promise.promise();
     instanceCollection.findById(instanceId, success -> {
         if (success.getResult() == null) {
-          LOGGER.error("getInstanceById :: Can't find Instance by id: {} on tenant: {}", instanceId, tenantId);
+          LOGGER.warn("getInstanceById :: Can't find Instance by id: {} on tenant: {}", instanceId, tenantId);
           promise.fail(new NotFoundException(format("Can't find Instance by id: %s on tenant: %s", instanceId, tenantId)));
         } else {
           LOGGER.info("getInstanceById :: instanceCollection.findById :: success : {}", success);

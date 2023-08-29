@@ -18,25 +18,17 @@ import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.kafka.SubscriptionDefinition;
 import org.folio.processing.events.EventManager;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import static java.lang.String.format;
-import static org.folio.inventory.consortium.model.ConsortiumEvenType.CONSORTIUM_INSTANCE_SHARING_INIT;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX_REQUEST_SIZE;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_PORT;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_REPLICATION_FACTOR;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.OKAPI_URL;
-import static org.folio.kafka.KafkaTopicNameHelper.createSubscriptionDefinition;
-import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
 
 public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle {
 
   private static final Logger LOGGER = LogManager.getLogger(DataImportConsumerVerticle.class);
-
-  private List<KafkaConsumerWrapper<String, String>> consumerWrappers = new ArrayList<>();
 
   private final int loadLimit = getLoadLimit();
 
@@ -60,7 +52,7 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
 
     Storage storage = Storage.basedUpon(config, vertx.createHttpClient());
     ConsortiumInstanceSharingHandler consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(storage);
-    var kafkaConsumerFuture = createKafkaConsumerWrapper(kafkaConfig, CONSORTIUM_INSTANCE_SHARING_INIT, consortiumInstanceSharingHandler);
+    var kafkaConsumerFuture = createKafkaConsumerWrapper(kafkaConfig, consortiumInstanceSharingHandler);
     kafkaConsumerFuture.onFailure(startPromise::fail)
       .onSuccess(ar -> {
         consumer = ar;
@@ -68,10 +60,10 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
       });
   }
 
-  private Future<KafkaConsumerWrapper<String, String>> createKafkaConsumerWrapper(KafkaConfig kafkaConfig, ConsortiumEvenType eventType,
+  private Future<KafkaConsumerWrapper<String, String>> createKafkaConsumerWrapper(KafkaConfig kafkaConfig,
                                                                                   AsyncRecordHandler<String, String> recordHandler) {
     SubscriptionDefinition subscriptionDefinition = KafkaTopicNameHelper.createSubscriptionDefinition(kafkaConfig.getEnvId(),
-      KafkaTopicNameHelper.getDefaultNameSpace(), eventType.value());
+      KafkaTopicNameHelper.getDefaultNameSpace(), ConsortiumEvenType.CONSORTIUM_INSTANCE_SHARING_INIT.value());
 
     KafkaConsumerWrapper<String, String> consumerWrapper = KafkaConsumerWrapper.<String, String>builder()
       .context(context)
@@ -82,52 +74,14 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
       .subscriptionDefinition(subscriptionDefinition)
       .build();
 
-    return consumerWrapper.start(recordHandler, ConsumerWrapperUtil.constructModuleName())
+    return consumerWrapper
+      .start(recordHandler, ConsumerWrapperUtil.constructModuleName())
       .map(consumerWrapper);
-  }
-
-  public void start2(Promise<Void> startPromise) {
-    JsonObject config = vertx.getOrCreateContext().config();
-    Storage storage = Storage.basedUpon(config, vertx.createHttpClient());
-
-    var handler = new ConsortiumInstanceSharingHandler(storage);
-    var kafkaConsumerFuture = createKafkaConsumer(getKafkaConfig(config), CONSORTIUM_INSTANCE_SHARING_INIT, handler);
-    kafkaConsumerFuture.onSuccess(ar -> {
-        consumer = ar;
-        startPromise.complete();
-      }).onFailure(startPromise::fail);
   }
 
   @Override
   public void stop(Promise<Void> stopPromise) {
     consumer.stop().onComplete(ar -> stopPromise.complete());
-  }
-
-  private Future<KafkaConsumerWrapper<String, String>> createKafkaConsumer(KafkaConfig kafkaConfig, ConsortiumEvenType eventType,
-                                                                           AsyncRecordHandler<String, String> recordHandler) {
-    var subscriptionDefinition = createSubscriptionDefinition(kafkaConfig.getEnvId(), getDefaultNameSpace(), eventType.name());
-    KafkaConsumerWrapper<String, String> consumerWrapper = KafkaConsumerWrapper.<String, String>builder()
-      .context(context)
-      .vertx(vertx)
-      .kafkaConfig(kafkaConfig)
-      .loadLimit(loadLimit)
-      .globalLoadSensor(new GlobalLoadSensor())
-      .subscriptionDefinition(subscriptionDefinition)
-      .build();
-    return consumerWrapper.start(recordHandler, ConsumerWrapperUtil.constructModuleName()).map(consumerWrapper);
-  }
-
-  private KafkaConfig getKafkaConfig(JsonObject config) {
-    KafkaConfig kafkaConfig = KafkaConfig.builder()
-      .envId(config.getString(KAFKA_ENV))
-      .kafkaHost(config.getString(KAFKA_HOST))
-      .kafkaPort(config.getString(KAFKA_PORT))
-      .okapiUrl(config.getString(OKAPI_URL))
-      .replicationFactor(Integer.parseInt(config.getString(KAFKA_REPLICATION_FACTOR)))
-      .maxRequestSize(Integer.parseInt(config.getString(KAFKA_MAX_REQUEST_SIZE)))
-      .build();
-    LOGGER.info("kafkaConfig: {}", kafkaConfig);
-    return kafkaConfig;
   }
 
   private int getLoadLimit() {
