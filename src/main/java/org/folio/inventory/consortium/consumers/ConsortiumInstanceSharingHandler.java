@@ -43,12 +43,9 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
   private Vertx vertx;
 
-  private KafkaConfig kafkaConfig;
-
   private Storage storage;
 
-  public ConsortiumInstanceSharingHandler(KafkaConfig kafkaConfig, Storage storage) {
-    this.kafkaConfig = kafkaConfig;
+  public ConsortiumInstanceSharingHandler(Storage storage) {
     this.storage = storage;
   }
 
@@ -75,25 +72,73 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       InstanceCollection targetInstanceCollection = storage.getInstanceCollection(targetTenantContext);
       LOGGER.info("handle :: targetInstanceCollection : {}", targetInstanceCollection);
 
-//      targetInstanceCollection.findById(UUID.randomUUID().toString(), instanceTargetSerachSuccess -> {
-//          LOGGER.info("1 handle :: instance found : {}", instanceTargetSerachSuccess.getResult());
-//          promise.complete(instanceTargetSerachSuccess.getResult().toString());
-//        },
-//        failure -> {
-//          String errorMessage = format("1 Error retrieving Instance by id %s from target tenant %s. Error: %s",
-//            instanceId, sharingInstance.getTargetTenantId(), sharingInstance.getTargetTenantId(), failure);
-//          LOGGER.error(errorMessage);
-//          promise.fail(errorMessage);
-//        });
+      Context sourceTenantContext = EventHandlingUtil.constructContext(sharingInstance.getSourceTenantId(),
+        headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER));
+      LOGGER.info("handle :: sourceTenantContext : tenantId : {}", targetTenantContext.getTenantId());
+
+      InstanceCollection sourceInstanceCollection = storage.getInstanceCollection(sourceTenantContext);
+      LOGGER.info("handle :: sourceInstanceCollection : {}", sourceInstanceCollection);
 
       getInstanceById(instanceId, targetInstanceCollection)
-        .onSuccess(instance -> {
-          LOGGER.info("2 handle :: instance found : {}", instance.getId());
-          promise.complete(instance.toString());
+        .onSuccess(instanceOnTargetTenant -> {
+          if (instanceOnTargetTenant == null) {
+            LOGGER.info("handle :: instance {} not found on target tenant: {}",
+              instanceId, sharingInstance.getTargetTenantId());
+            getInstanceById(instanceId, targetInstanceCollection)
+              .onSuccess(instanceOnSourceTenant -> {
+                if (instanceOnSourceTenant == null) {
+                  String errorMessage = format("handle :: instance {} not found on source tenant: {}",
+                    instanceId, sharingInstance.getSourceTenantId());
+                  LOGGER.error(errorMessage);
+                  promise.fail(errorMessage);
+                } else {
+                  LOGGER.info("handle :: Instance {} from {} tenant with source {}", instanceId,
+                    sharingInstance.getSourceTenantId(), instanceOnSourceTenant.getSource());
+//            if ("FOLIO".equals(instanceToPublish.getSource())) {
+                  addInstance(instanceOnSourceTenant, targetInstanceCollection).onSuccess(
+                    publishedInstance ->  {
+                      LOGGER.info("handle :: Updating source to 'CONSORTIUM-FOLIO' for instance {}", instanceId);
+                      JsonObject jsonInstanceToPublish = instanceOnSourceTenant.getJsonForStorage();
+                      jsonInstanceToPublish.put("source", "CONSORTIUM-FOLIO");
+                      updateInstanceInStorage(Instance.fromJson(jsonInstanceToPublish), sourceInstanceCollection)
+                        .onSuccess(updatesSourceInstance -> {
+                          LOGGER.info("handle :: source 'CONSORTIUM-FOLIO' updated to instance {}", instanceId);
+                          promise.complete();
+                        }).onFailure(error -> {
+                          String errorMessage = format("Error update Instance by id %s on the source tenant %s. Error: %s",
+                            instanceId, sharingInstance.getTargetTenantId(), error.getCause());
+                          LOGGER.error(errorMessage);
+                          promise.fail(error);
+                        });
+                    }
+                  ).onFailure( e -> {
+                    String errorMessage = format("Error save Instance by id %s on the target tenant %s. Error: %s",
+                      instanceId, sharingInstance.getTargetTenantId(), e.getCause());
+                    LOGGER.error(errorMessage);
+                    promise.fail(e);
+                  });
+                  //TODO: send Instance to the target tenant
+                  // make PUT request to update source to CONSORTIUM-FOLIO, set HRID (changing logic of PUT endpoint is our of scope of this task)
+                  // publish CONSORTIUM_INSTANCE_SHARING_COMPLETE or DI_ERROR???
+//              }
+                }
+              })
+              .onFailure(failure -> {
+                String errorMessage = format("Error retrieving Instance by id %s from source tenant %s. Error: %s",
+                  instanceId, sharingInstance.getSourceTenantId(), failure);
+                LOGGER.error(errorMessage);
+                promise.fail(errorMessage);
+              });
+          } else {
+            String errorMessage = format("handle :: instance {} is present on target tenant: {}",
+              instanceOnTargetTenant.getId(), sharingInstance.getTargetTenantId());
+            LOGGER.error(errorMessage);
+            promise.fail(errorMessage);
+          }
         })
         .onFailure(failure -> {
-          String errorMessage = format("2 Error retrieving Instance by id %s from target tenant %s. Error: %s",
-            instanceId, sharingInstance.getTargetTenantId(), sharingInstance.getTargetTenantId(), failure);
+          String errorMessage = format("Error retrieving Instance by id %s from target tenant %s. Error: %s",
+            instanceId, sharingInstance.getTargetTenantId(), failure);
           LOGGER.error(errorMessage);
           promise.fail(errorMessage);
         });
@@ -213,7 +258,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
           LOGGER.info("Duplicated event received by InstanceId: {}. Ignoring...", instance.getId());
           promise.fail(new DuplicateEventException(format("Duplicated event by Instance id: %s", instance.getId())));
         } else {
-          LOGGER.error(format("Error posting Instance by instanceId:'%s' cause %s, status code %s", instance.getId(), failure.getReason(), failure.getStatusCode()));
+          LOGGER.error(format("Error posting Instance %s cause %s, status code %s", instance.getId(), failure.getReason(), failure.getStatusCode()));
           promise.fail(failure.getReason());
         }
       });
