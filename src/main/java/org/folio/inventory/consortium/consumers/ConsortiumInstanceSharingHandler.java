@@ -87,8 +87,8 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                   LOGGER.error(errorMessage);
                   promise.fail(errorMessage);
                 } else {
-                  LOGGER.info("handle :: Instance {} from {} tenant with source {}", instanceId,
-                    sharingInstance.getSourceTenantId(), instanceOnSourceTenant.getSource());
+                  LOGGER.info("handle :: Publishing instance {} with source {} from {} tenant to {} tenant",
+                    instanceId, sharingInstance.getSourceTenantId(), sharingInstance.getTargetTenantId(), instanceOnSourceTenant.getSource());
 //            if ("FOLIO".equals(instanceToPublish.getSource())) {
                   addInstance(instanceOnSourceTenant, targetInstanceCollection).onSuccess(
                     publishedInstance -> {
@@ -140,14 +140,14 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   }
 
   private Future<Instance> getInstanceById(String instanceId, String tenantId, InstanceCollection instanceCollection) {
-    LOGGER.info("getInstanceById :: instanceId: {} on tenant: {}", instanceId, tenantId);
+    LOGGER.trace("getInstanceById :: instanceId: {} on tenant: {}", instanceId, tenantId);
     Promise<Instance> promise = Promise.promise();
     instanceCollection.findById(instanceId, success -> {
         if (success.getResult() == null) {
           LOGGER.warn("getInstanceById :: Can't find Instance by id: {} on tenant: {}", instanceId, tenantId);
           promise.fail(new NotFoundException(format("Can't find Instance by id: %s on tenant: %s", instanceId, tenantId)));
         } else {
-          LOGGER.info("getInstanceById :: instanceCollection.findById :: success : {}", success);
+          LOGGER.trace("getInstanceById :: Instance with id {} is present on tenant: {}", instanceId, tenantId);
           promise.complete(success.getResult());
         }
       },
