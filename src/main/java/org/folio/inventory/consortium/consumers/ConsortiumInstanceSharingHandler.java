@@ -64,8 +64,8 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     try {
       Promise<String> promise = Promise.promise();
 
-      String tenantId = record.key();
-      LOGGER.info("handle :: CONSORTIUM_INSTANCE_SHARING_INIT from tenant {}", tenantId);
+      String consortiumId = record.key();
+      LOGGER.info("handle :: CONSORTIUM_INSTANCE_SHARING_INIT from consortiumId {}", consortiumId);
       SharingInstance sharingInstance = Json.decodeValue(record.value(), SharingInstance.class);
 
       String instanceId = sharingInstance.getInstanceIdentifier().toString();
@@ -75,6 +75,8 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
       LOGGER.info("OKAPI_TOKEN_HEADER = {}", kafkaHeaders.get(OKAPI_TOKEN_HEADER));
       LOGGER.info("OKAPI_URL_HEADER = {}", kafkaHeaders.get(OKAPI_URL_HEADER));
+      LOGGER.info("OKAPI_TENANT = {}", kafkaHeaders.get("x-okapi-tenant"));
+      String tenantId = kafkaHeaders.get("x-okapi-tenant");
 
       //make GET request by Instance UUID on target (consortium) tenant, if exists - (publish error event?), if not - proceed
       Context targetTenantContext = EventHandlingUtil.constructContext(sharingInstance.getTargetTenantId(),
