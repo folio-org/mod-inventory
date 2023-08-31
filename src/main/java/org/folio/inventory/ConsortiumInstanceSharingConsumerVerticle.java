@@ -6,6 +6,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.inventory.consortium.ConsortiumInstanceSharingErrorHandler;
 import org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler;
 import org.folio.inventory.consortium.model.ConsortiumEvenType;
 import org.folio.inventory.dataimport.util.ConsumerWrapperUtil;
@@ -51,7 +52,7 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
     EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, maxDistributionNumber);
 
     Storage storage = Storage.basedUpon(config, vertx.createHttpClient());
-    ConsortiumInstanceSharingHandler consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(storage);
+    ConsortiumInstanceSharingHandler consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig);
     var kafkaConsumerFuture = createKafkaConsumerWrapper(kafkaConfig, consortiumInstanceSharingHandler);
     kafkaConsumerFuture.onFailure(startPromise::fail)
       .onSuccess(ar -> {
@@ -72,6 +73,7 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
       .loadLimit(loadLimit)
       .globalLoadSensor(new GlobalLoadSensor())
       .subscriptionDefinition(subscriptionDefinition)
+      .processRecordErrorHandler(new ConsortiumInstanceSharingErrorHandler())
       .build();
 
     return consumerWrapper
