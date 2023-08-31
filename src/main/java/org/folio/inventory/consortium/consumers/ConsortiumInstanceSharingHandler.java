@@ -80,20 +80,22 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
             LOGGER.info("handle :: instance {} not found on target tenant: {}",
               instanceId, sharingInstance.getTargetTenantId());
             getInstanceById(instanceId, sharingInstance.getSourceTenantId(), sourceInstanceCollection)
-              .onSuccess(instanceOnSourceTenant -> {
-                if (instanceOnSourceTenant == null) {
+              .onSuccess(srcInstance -> {
+                if (srcInstance == null) {
                   String errorMessage = format("handle :: instance %s not found on source tenant: %s",
                     instanceId, sharingInstance.getSourceTenantId());
                   LOGGER.error(errorMessage);
                   promise.fail(errorMessage);
                 } else {
                   LOGGER.info("handle :: Publishing instance {} with source {} from {} tenant to {} tenant",
-                    instanceId, sharingInstance.getSourceTenantId(), sharingInstance.getTargetTenantId(), instanceOnSourceTenant.getSource());
+                    instanceId, sharingInstance.getSourceTenantId(), sharingInstance.getTargetTenantId(), srcInstance.getSource());
 //            if ("FOLIO".equals(instanceToPublish.getSource())) {
-                  addInstance(instanceOnSourceTenant, targetInstanceCollection).onSuccess(
+                  JsonObject jsonInstanceToPublishOnTargetTenant = srcInstance.getJsonForStorage();
+                  jsonInstanceToPublishOnTargetTenant.remove("hrid");
+                  addInstance(Instance.fromJson(jsonInstanceToPublishOnTargetTenant), targetInstanceCollection).onSuccess(
                     publishedInstance -> {
                       LOGGER.info("handle :: Updating source to 'CONSORTIUM-FOLIO' for instance {}", instanceId);
-                      JsonObject jsonInstanceToPublish = instanceOnSourceTenant.getJsonForStorage();
+                      JsonObject jsonInstanceToPublish = srcInstance.getJsonForStorage();
                       jsonInstanceToPublish.put("source", "CONSORTIUM-FOLIO");
                       updateInstanceInStorage(Instance.fromJson(jsonInstanceToPublish), sourceInstanceCollection)
                         .onSuccess(updatesSourceInstance -> {
