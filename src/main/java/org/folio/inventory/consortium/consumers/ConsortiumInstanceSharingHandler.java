@@ -29,6 +29,7 @@ import org.folio.kafka.KafkaHeaderUtils;
 import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.kafka.SubscriptionDefinition;
 import org.folio.kafka.exception.DuplicateEventException;
+import org.folio.kafka.services.KafkaProducerRecordBuilder;
 import org.folio.rest.jaxrs.model.LinkUpdateReport;
 
 import java.util.HashMap;
@@ -117,7 +118,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                         .onSuccess(updatesSourceInstance -> {
                           LOGGER.info("handle :: source 'CONSORTIUM-FOLIO' updated to instance {}", instanceId);
                           sendEventToKafka(tenantId, instanceId, "Completed.", ConsortiumEvenType.CONSORTIUM_INSTANCE_SHARING_COMPLETE,
-                            kafkaConfig, KafkaHeaderUtils.kafkaHeadersFromMap(kafkaHeaders));
+                            kafkaConfig, kafkaHeaders);
                           promise.complete();
                         }).onFailure(error -> {
                           String errorMessage = format("Error update Instance by id %s on the source tenant %s. Error: %s",
@@ -209,12 +210,17 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
   private void sendEventToKafka(String tenantId, String instanceId, String message,
                                 ConsortiumEvenType consortiumEvenType,
-                                KafkaConfig kafkaConfig, List<KafkaHeader> kafkaHeaders) {
+                                KafkaConfig kafkaConfig, Map<String, String> kafkaHeaders) {
     try {
+      LOGGER.info("sendEventToKafka :: tenantId: {}, instanceId: {}, message: {}, consortiumEvenType: {}",
+        tenantId, instanceId, message, consortiumEvenType.value());
+
       String topicName = KafkaTopicNameHelper.formatTopicName(kafkaConfig.getEnvId(),
         KafkaTopicNameHelper.getDefaultNameSpace(), tenantId, consortiumEvenType.value());
 
-      KafkaProducerRecord<String, String> kafkaRecord = createKafkaMessage(instanceId, message, topicName, kafkaHeaders);
+      LOGGER.info("sendEventToKafka :: topicName: {}", topicName);
+
+      KafkaProducerRecord<String, String> kafkaRecord = createKafkaMessage(tenantId, instanceId, message, topicName, kafkaHeaders);
       getProducer(tenantId, topicName).write(kafkaRecord, ar -> {
         if (ar.succeeded()) {
           LOGGER.info("Event with type {}, was sent to kafka", consortiumEvenType.value());
@@ -228,18 +234,21 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     }
   }
 
-  private KafkaProducerRecord<String, String> createKafkaMessage(String instanceId, String message,
-                                                                 String topicName, List<KafkaHeader> kafkaHeaders) {
-    LOGGER.debug("createKafkaMessage :: instanceId: {}, message: {}, topicName: {}", instanceId, message, topicName);
-    KafkaProducerRecord<String, String> kafkaRecord = KafkaProducerRecord.create(topicName, instanceId, message);
-    kafkaRecord.addHeaders(kafkaHeaders);
-    return kafkaRecord;
+  private KafkaProducerRecord<String, String> createKafkaMessage(String tenantId, String instanceId, String message,
+                                                                 String topicName, Map<String, String> kafkaHeaders) {
+    LOGGER.info("createKafkaMessage :: instanceId: {}, message: {}, topicName: {}", instanceId, message, topicName);
+    KafkaProducerRecordBuilder<String, String> builder = new KafkaProducerRecordBuilder<>(tenantId);
+    KafkaProducerRecord<String, String> producerRecord = builder
+      .key(instanceId).value(message).topic(topicName).propagateOkapiHeaders(kafkaHeaders)
+      .build();
+
+    return producerRecord;
   }
 
   private KafkaProducer<String, String> getProducer(String tenantId, String topicName) {
-    LOGGER.debug("getProducer :: tenantId: {}", tenantId);
+    LOGGER.info("getProducer :: tenantId: {}", tenantId);
     if (producerList.get(tenantId) == null) {
-      LOGGER.debug("getProducer :: trying to create producer for tenantId: {}", tenantId);
+      LOGGER.info("getProducer :: trying to create producer for tenantId: {}", tenantId);
       producerList.put(tenantId, KafkaProducer.createShared(vertx, topicName, kafkaConfig.getProducerProps()));
     }
     return producerList.get(tenantId);
