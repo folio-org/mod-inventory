@@ -20,6 +20,7 @@ import org.folio.inventory.dataimport.HoldingWriterFactory;
 import org.folio.inventory.dataimport.HoldingsMapperFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.entities.PartialError;
+import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.dataimport.services.OrderHelperServiceImpl;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.instances.Instance;
@@ -100,6 +101,8 @@ public class CreateHoldingEventHandlerTest {
   private IdStorageService holdingsIdStorageService;
   @Mock
   private OrderHelperServiceImpl orderHelperService;
+  @Mock
+  private ConsortiumService consortiumService;
   @Spy
   private MarcBibReaderFactory fakeReaderFactory = new MarcBibReaderFactory();
 
@@ -145,7 +148,7 @@ public class CreateHoldingEventHandlerTest {
   public void setUp() throws UnsupportedEncodingException {
     MockitoAnnotations.initMocks(this);
     MappingManager.clearReaderFactories();
-    createHoldingEventHandler = new CreateHoldingEventHandler(storage, mappingMetadataCache, holdingsIdStorageService, orderHelperService);
+    createHoldingEventHandler = new CreateHoldingEventHandler(storage, mappingMetadataCache, holdingsIdStorageService, orderHelperService, consortiumService);
     doAnswer(invocationOnMock -> {
       MultipleRecords result = new MultipleRecords<>(new ArrayList<>(), 0);
       Consumer<Success<MultipleRecords>> successHandler = invocationOnMock.getArgument(2);

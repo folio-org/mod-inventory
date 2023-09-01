@@ -50,6 +50,7 @@ import org.folio.inventory.dataimport.handlers.matching.preloaders.InstancePrelo
 import org.folio.inventory.dataimport.handlers.matching.preloaders.ItemPreloader;
 import org.folio.inventory.dataimport.handlers.matching.preloaders.OrdersPreloaderHelper;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
+import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.dataimport.services.OrderHelperService;
 import org.folio.inventory.dataimport.services.OrderHelperServiceImpl;
 import org.folio.inventory.services.AuthorityIdStorageService;
@@ -92,6 +93,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
   private MappingMetadataCache mappingMetadataCache;
   private KafkaConfig kafkaConfig;
   private OrderHelperService orderHelperService;
+  private ConsortiumService consortiumService;
 
   public DataImportKafkaHandler(Vertx vertx, Storage storage, HttpClient client,
                                 ProfileSnapshotCache profileSnapshotCache,
@@ -102,6 +104,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     this.mappingMetadataCache = mappingMetadataCache;
     this.kafkaConfig = kafkaConfig;
     orderHelperService = new OrderHelperServiceImpl(profileSnapshotCache);
+    consortiumService = new ConsortiumService(client);
     registerDataImportProcessingHandlers(storage, client);
   }
 
@@ -174,7 +177,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     EventManager.registerEventHandler(new MatchHoldingEventHandler(mappingMetadataCache));
     EventManager.registerEventHandler(new MatchAuthorityEventHandler(mappingMetadataCache));
     EventManager.registerEventHandler(new CreateItemEventHandler(storage, mappingMetadataCache, new ItemIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))), orderHelperService));
-    EventManager.registerEventHandler(new CreateHoldingEventHandler(storage, mappingMetadataCache, new HoldingsIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))), orderHelperService));
+    EventManager.registerEventHandler(new CreateHoldingEventHandler(storage, mappingMetadataCache, new HoldingsIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))), orderHelperService, consortiumService));
     EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, new InstanceIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))), orderHelperService));
     EventManager.registerEventHandler(new CreateMarcHoldingsEventHandler(storage, mappingMetadataCache, new HoldingsIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))), new HoldingsCollectionService()));
     EventManager.registerEventHandler(new UpdateMarcHoldingsEventHandler(storage, mappingMetadataCache, new KafkaEventPublisher(kafkaConfig, vertx, 100)));
