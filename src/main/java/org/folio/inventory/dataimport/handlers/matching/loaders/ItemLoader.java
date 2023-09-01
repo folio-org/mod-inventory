@@ -65,11 +65,14 @@ public class ItemLoader extends AbstractLoader<Item> {
       } else if (isNotEmpty(eventPayload.getContext().get(EntityType.HOLDINGS.value()))) {
         JsonArray holdingsAsJson = new JsonArray(eventPayload.getContext().get(EntityType.HOLDINGS.value()));
         if (!holdingsAsJson.isEmpty()) {
-          JsonObject holdingAsJson = holdingsAsJson.getJsonObject(0);
-          if (holdingAsJson.getJsonObject(HOLDINGS_FIELD) != null) {
-            holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_FIELD);
-          }
-          cqlSubMatch = format(" AND holdingsRecordId == \"%s\"", holdingAsJson.getString("id"));
+          String holdingIds = holdingsAsJson.stream().map(JsonObject.class::cast)
+            .map(jsonObj -> {
+              if (jsonObj.getJsonObject(HOLDINGS_FIELD) != null) {
+                return jsonObj.getJsonObject(HOLDINGS_FIELD).getString("id");
+              }
+              return jsonObj.getString("id");
+            }).collect(Collectors.joining(" OR "));
+          cqlSubMatch = format(" AND holdingsRecordId == (%s)", holdingIds);
         }
       }
     }
