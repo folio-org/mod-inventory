@@ -98,19 +98,16 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       getInstanceById(instanceId, sharingInstance.getTargetTenantId(), targetInstanceCollection)
         .onFailure(failure -> {
           if (failure.getClass().equals(NotFoundException.class)) {
-            LOGGER.info("handle :: instance {} not found on target tenant: {}",
-              instanceId, sharingInstance.getTargetTenantId());
+            LOGGER.info("handle :: instance {} not found on target tenant: {}", instanceId, sharingInstance.getTargetTenantId());
             getInstanceById(instanceId, sharingInstance.getSourceTenantId(), sourceInstanceCollection)
               .onSuccess(srcInstance -> {
                 if (srcInstance == null) {
-                  String errorMessage = format("handle :: instance %s not found on source tenant: %s",
-                    instanceId, sharingInstance.getSourceTenantId());
+                  String errorMessage = format("handle :: instance %s not found on source tenant: %s", instanceId, sharingInstance.getSourceTenantId());
                   LOGGER.error(errorMessage);
                   sendEventToKafka(tenantId, sharingInstance, ConsortiumEnumStatus.ERROR, errorMessage, kafkaConfig, kafkaHeaders);
                   promise.fail(errorMessage);
                 } else {
-                  LOGGER.info("handle :: Publishing instance {} with source {} from {} tenant to {} tenant",
-                    instanceId, sharingInstance.getSourceTenantId(), sharingInstance.getTargetTenantId(), srcInstance.getSource());
+                  LOGGER.info("handle :: Publishing instance {} with source {} from {} tenant to {} tenant", instanceId, srcInstance.getSource(), sharingInstance.getSourceTenantId(), sharingInstance.getTargetTenantId());
 //            if ("FOLIO".equals(instanceToPublish.getSource())) {
                   publishInstanceToTenant(srcInstance, targetInstanceCollection)
                     .onSuccess(publishedInstance -> {
@@ -123,16 +120,14 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                           sendEventToKafka(tenantId, sharingInstance, ConsortiumEnumStatus.COMPLETE, kafkaConfig, kafkaHeaders);
                           promise.complete();
                         }).onFailure(error -> {
-                          String errorMessage = format("Error update Instance by id %s on the source tenant %s. Error: %s",
-                            instanceId, sharingInstance.getTargetTenantId(), error.getCause());
+                          String errorMessage = format("Error update Instance by id %s on the source tenant %s. Error: %s", instanceId, sharingInstance.getTargetTenantId(), error.getCause());
                           LOGGER.error(errorMessage);
                           sendEventToKafka(tenantId, sharingInstance, ConsortiumEnumStatus.ERROR, errorMessage, kafkaConfig, kafkaHeaders);
                           promise.fail(error);
                         });
                     })
                     .onFailure(publishFailure -> {
-                      String errorMessage = format("Error save Instance by id %s on the target tenant %s. Error: %s",
-                        instanceId, sharingInstance.getTargetTenantId(), publishFailure.getCause());
+                      String errorMessage = format("Error save Instance by id %s on the target tenant %s. Error: %s", instanceId, sharingInstance.getTargetTenantId(), publishFailure.getCause());
                       LOGGER.error(errorMessage);
                       sendEventToKafka(tenantId, sharingInstance, ConsortiumEnumStatus.ERROR, errorMessage, kafkaConfig, kafkaHeaders);
                       promise.fail(publishFailure);
@@ -141,22 +136,19 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                 }
               })
               .onFailure(err -> {
-                String errorMessage = format("Error retrieving Instance by id %s from source tenant %s. Error: %s",
-                  instanceId, sharingInstance.getSourceTenantId(), err);
+                String errorMessage = format("Error retrieving Instance by id %s from source tenant %s. Error: %s", instanceId, sharingInstance.getSourceTenantId(), err);
                 LOGGER.error(errorMessage);
                 sendEventToKafka(tenantId, sharingInstance, ConsortiumEnumStatus.ERROR, errorMessage, kafkaConfig, kafkaHeaders);
                 promise.fail(errorMessage);
               });
           }
-          String errorMessage = format("Error checking Instance by id %s on target tenant %s. Error: %s",
-            instanceId, sharingInstance.getTargetTenantId(), failure.getCause());
+          String errorMessage = format("Error checking Instance by id %s on target tenant %s. Error: %s", instanceId, sharingInstance.getTargetTenantId(), failure.getMessage());
           LOGGER.error(errorMessage);
           sendEventToKafka(tenantId, sharingInstance, ConsortiumEnumStatus.ERROR, errorMessage, kafkaConfig, kafkaHeaders);
           promise.fail(errorMessage);
         })
         .onSuccess(instanceOnTargetTenant -> {
-          String errorMessage = format("handle :: instance %s is present on target tenant: %s",
-            instanceId, sharingInstance.getTargetTenantId());
+          String errorMessage = format("handle :: instance %s is present on target tenant: %s", instanceId, sharingInstance.getTargetTenantId());
           LOGGER.error(errorMessage);
           sendEventToKafka(tenantId, sharingInstance, ConsortiumEnumStatus.ERROR, errorMessage, kafkaConfig, kafkaHeaders);
           promise.fail(errorMessage);
@@ -264,9 +256,10 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
     KafkaProducerRecordBuilder<String, String> builder = new KafkaProducerRecordBuilder<>(tenantId);
     sharingInstance.setStatus(status);
-    if (sharingInstance.getStatus().equals(ConsortiumEnumStatus.ERROR)) sharingInstance.setError(errorMessage);
+    if (sharingInstance.getStatus().equals(ConsortiumEnumStatus.ERROR))
+      sharingInstance.setError(errorMessage);
 
-    String data = OBJECT_MAPPER.writeValueAsString(sharingInstance.toString());
+    String data = Json.encode(sharingInstance);
     return builder.value(data).topic(topicName).propagateOkapiHeaders(kafkaHeaders).build();
   }
 
