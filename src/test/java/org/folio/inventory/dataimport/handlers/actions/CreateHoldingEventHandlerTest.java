@@ -11,11 +11,13 @@ import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
 import org.folio.JobProfile;
 import org.folio.MappingProfile;
+import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.consortium.model.SharingInstance;
 import org.folio.inventory.dataimport.HoldingWriterFactory;
 import org.folio.inventory.dataimport.HoldingsMapperFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
@@ -24,6 +26,7 @@ import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.dataimport.services.OrderHelperServiceImpl;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.domain.relationship.RecordToEntity;
 import org.folio.inventory.services.IdStorageService;
 import org.folio.inventory.storage.Storage;
@@ -49,7 +52,6 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -77,7 +79,9 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class CreateHoldingEventHandlerTest {
@@ -90,11 +94,12 @@ public class CreateHoldingEventHandlerTest {
   private static final String ERRORS = "ERRORS";
   private static Reader fakeReader;
   private static final String permanentLocationId = UUID.randomUUID().toString();
-
   @Mock
   private Storage storage;
   @Mock
   private HoldingsRecordCollection holdingsRecordsCollection;
+  @Mock
+  private InstanceCollection instanceCollection;
   @Mock
   private MappingMetadataCache mappingMetadataCache;
   @Mock
@@ -105,6 +110,8 @@ public class CreateHoldingEventHandlerTest {
   private ConsortiumService consortiumService;
   @Spy
   private MarcBibReaderFactory fakeReaderFactory = new MarcBibReaderFactory();
+  private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
+  private Instance existingInstance;
 
   private JobProfile jobProfile = new JobProfile()
     .withId(UUID.randomUUID().toString())
@@ -145,9 +152,10 @@ public class CreateHoldingEventHandlerTest {
   private CreateHoldingEventHandler createHoldingEventHandler;
 
   @Before
-  public void setUp() throws UnsupportedEncodingException {
+  public void setUp() throws IOException {
     MockitoAnnotations.initMocks(this);
     MappingManager.clearReaderFactories();
+    existingInstance = Instance.fromJson(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
     createHoldingEventHandler = new CreateHoldingEventHandler(storage, mappingMetadataCache, holdingsIdStorageService, orderHelperService, consortiumService);
     doAnswer(invocationOnMock -> {
       MultipleRecords result = new MultipleRecords<>(new ArrayList<>(), 0);
@@ -155,6 +163,12 @@ public class CreateHoldingEventHandlerTest {
       successHandler.accept(new Success<>(result));
       return null;
     }).when(holdingsRecordsCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(existingInstance));
+      return null;
+    }).when(instanceCollection).findById(anyString(), any(), any());
 
     doAnswer(invocationOnMock -> {
       HoldingsRecord holdingsRecord = invocationOnMock.getArgument(0);
@@ -178,6 +192,7 @@ public class CreateHoldingEventHandlerTest {
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
     when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
+    when(storage.getInstanceCollection(any())).thenReturn(instanceCollection);
 
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new HoldingWriterFactory());
@@ -204,6 +219,62 @@ public class CreateHoldingEventHandlerTest {
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
+
+    Assert.assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
+    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
+    JsonObject holding = new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getJsonObject(0);
+    JsonArray errors = new JsonArray(actualDataImportEventPayload.getContext().get(ERRORS));
+    Assert.assertEquals(0, errors.size());
+    Assert.assertNotNull(holding.getString("id"));
+    Assert.assertEquals(instanceId, holding.getString("instanceId"));
+    Assert.assertEquals(permanentLocationId, holding.getString("permanentLocationId"));
+    Assert.assertEquals(FOLIO_SOURCE_ID, holding.getString("sourceId"));
+  }
+
+  @Test
+  public void shouldProcessEventAndCreateShadowInstance() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    String instanceId = String.valueOf(UUID.randomUUID());
+    Instance instance = new Instance(instanceId, "5", String.valueOf(UUID.randomUUID()),
+      String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    HashMap<String, String> payloadContext = new HashMap<>();
+
+    payloadContext.put("INSTANCE", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
+    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    payloadContext.put(ERRORS, Json.encode(new PartialError(null, "testError")));
+
+    String localTenant = "tenant";
+    String token = "token";
+    String baseUrl = "baseUrl";
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withTenant(localTenant)
+      .withToken(token)
+      .withOkapiUrl(baseUrl)
+      .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(null));
+      return null;
+    }).when(instanceCollection).findById(anyString(), any(), any());
+
+    doAnswer(invocationOnMock -> {
+      SharingInstance sharingInstance = new SharingInstance();
+      sharingInstance.setSourceTenantId(localTenant);
+      sharingInstance.setTargetTenantId("consortium");
+      sharingInstance.setInstanceIdentifier(UUID.fromString(instanceId));
+      return Future.succeededFuture(sharingInstance);
+    }).when(consortiumService).createShadowInstance(any(), anyString());
+
+    CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
+
+    verify(consortiumService).createShadowInstance(argThat(context -> context.getTenantId().equals(localTenant)), eq(instanceId));
 
     Assert.assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
