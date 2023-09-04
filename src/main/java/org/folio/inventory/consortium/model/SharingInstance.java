@@ -35,11 +35,6 @@ public class SharingInstance {
     this.id = id;
   }
 
-  /**
-   * Get instanceIdentifier
-   *
-   * @return instanceIdentifier
-   */
   public UUID getInstanceIdentifier() {
     return instanceIdentifier;
   }
@@ -48,16 +43,6 @@ public class SharingInstance {
     this.instanceIdentifier = instanceIdentifier;
   }
 
-  public SharingInstance sourceTenantId(String sourceTenantId) {
-    this.sourceTenantId = sourceTenantId;
-    return this;
-  }
-
-  /**
-   * Get sourceTenantId
-   *
-   * @return sourceTenantId
-   */
   public String getSourceTenantId() {
     return sourceTenantId;
   }
@@ -66,16 +51,6 @@ public class SharingInstance {
     this.sourceTenantId = sourceTenantId;
   }
 
-  public SharingInstance targetTenantId(String targetTenantId) {
-    this.targetTenantId = targetTenantId;
-    return this;
-  }
-
-  /**
-   * Get targetTenantId
-   *
-   * @return targetTenantId
-   */
   public String getTargetTenantId() {
     return targetTenantId;
   }
@@ -84,11 +59,6 @@ public class SharingInstance {
     this.targetTenantId = targetTenantId;
   }
 
-  /**
-   * Get status
-   *
-   * @return status
-   */
   public Status getStatus() {
     return status;
   }
@@ -141,10 +111,6 @@ public class SharingInstance {
     return sb.toString();
   }
 
-  /**
-   * Convert the given object to string with each line indented by 4 spaces
-   * (except the first line).
-   */
   private String toIndentedString(Object o) {
     if (o == null) {
       return "null";
