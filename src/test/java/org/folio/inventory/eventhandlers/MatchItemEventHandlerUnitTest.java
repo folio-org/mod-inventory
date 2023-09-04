@@ -351,7 +351,7 @@ public class MatchItemEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(itemCollection)
-      .findByCql(eq(format("hrid == \"%s\" AND holdingsRecordId == \"%s\"", ITEM_HRID, HOLDING_ID)),
+      .findByCql(eq(format("hrid == \"%s\" AND holdingsRecordId == (%s)", ITEM_HRID, HOLDING_ID)),
         any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
     EventHandler eventHandler = new MatchItemEventHandler(mappingMetadataCache);
