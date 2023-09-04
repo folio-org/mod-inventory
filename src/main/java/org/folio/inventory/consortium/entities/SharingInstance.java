@@ -25,8 +25,6 @@ public class SharingInstance {
   @JsonProperty("error")
   private String error;
 
-  public SharingInstance() {}
-
   public UUID getId() {
     return id;
   }

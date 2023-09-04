@@ -23,7 +23,7 @@ import java.util.concurrent.CompletableFuture;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 
 public class ConsortiumServiceImpl implements ConsortiumService{
-  private static final Logger LOGGER = LogManager.getLogger();
+  private static final Logger LOGGER = LogManager.getLogger(ConsortiumServiceImpl.class);
   private static final String USER_TENANTS_ENDPOINT = "/user-tenants?limit=1";
   private static final String SHARE_INSTANCE_ENDPOINT = "/consortia/%s/sharing/instances";
   private static final String CONSORTIA_ENDPOINT = "/consortia";
@@ -58,7 +58,7 @@ public class ConsortiumServiceImpl implements ConsortiumService{
               JsonArray userTenants = httpResponse.getJson().getJsonArray("userTenants");
               if (userTenants.isEmpty()) {
                 String message = "Central tenant not found";
-                LOGGER.warn("getCentralTenantId:: " + message);
+                LOGGER.warn(String.format("getCentralTenantId:: %s", message));
                 return CompletableFuture.failedFuture(new NotFoundException(message));
               }
               String centralTenantId = userTenants.getJsonObject(0).getString("centralTenantId");
@@ -67,7 +67,7 @@ public class ConsortiumServiceImpl implements ConsortiumService{
             } else {
               String message = String.format("Error retrieving centralTenantId by tenant id: %s, status code: %s, response message: %s",
                 context.getTenantId(), httpResponse.getStatusCode(), httpResponse.getBody());
-              LOGGER.warn("getCentralTenantId:: " + message);
+              LOGGER.warn(String.format("getCentralTenantId:: %s", message));
               return CompletableFuture.failedFuture(new EventProcessingException(message));
             }
           }));
@@ -83,7 +83,7 @@ public class ConsortiumServiceImpl implements ConsortiumService{
               JsonArray consortia = httpResponse.getJson().getJsonArray("consortia");
               if (consortia.isEmpty()) {
                 String message = String.format("ConsortiaId for tenant: %s not found", context.getTenantId());
-                LOGGER.warn("getConsortiumId:: " + message);
+                LOGGER.warn(String.format("getConsortiumId:: %s", message));
                 return CompletableFuture.failedFuture(new NotFoundException(message));
               }
               String consortiumId = consortia.getJsonObject(0).getString("id");
@@ -92,7 +92,7 @@ public class ConsortiumServiceImpl implements ConsortiumService{
             } else {
               String message = String.format("Error retrieving consortiaId by tenant: %s, status code: %s, response message: %s",
                 context.getTenantId(), httpResponse.getStatusCode(), httpResponse.getBody());
-              LOGGER.warn("getConsortiumId:: " + message);
+              LOGGER.warn(String.format("getConsortiumId:: %s", message));
               return CompletableFuture.failedFuture(new EventProcessingException(message));
             }
           }));
@@ -112,7 +112,7 @@ public class ConsortiumServiceImpl implements ConsortiumService{
             } else {
               String message = String.format(SHARING_INSTANCE_ERROR, sharingInstance.getSourceTenantId(), sharingInstance.getTargetTenantId(),
                 sharingInstance.getInstanceIdentifier(), httpResponse.getStatusCode(), httpResponse.getBody());
-              LOGGER.warn("shareInstance:: " + message);
+              LOGGER.warn(String.format("shareInstance:: %s", message));
               return CompletableFuture.failedFuture(new EventProcessingException(message));
             }
           }));

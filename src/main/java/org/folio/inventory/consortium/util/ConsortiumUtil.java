@@ -7,7 +7,6 @@ import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.consortium.entities.SharingInstance;
 import org.folio.inventory.consortium.services.ConsortiumService;
-import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.exceptions.NotFoundException;
@@ -17,7 +16,9 @@ import java.util.Optional;
 import static java.lang.String.format;
 
 public class ConsortiumUtil {
-  private static final Logger LOGGER = LogManager.getLogger(InstanceUpdateDelegate.class);
+  private static final Logger LOGGER = LogManager.getLogger(ConsortiumUtil.class);
+
+  private ConsortiumUtil() {}
 
   public static Future<Optional<SharingInstance>> createShadowInstanceIfNeeded(ConsortiumService consortiumService,
                                                                                InstanceCollection instanceCollection, Context context, String instanceId) {
