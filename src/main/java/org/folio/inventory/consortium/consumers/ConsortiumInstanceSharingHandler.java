@@ -106,6 +106,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                   String errorMessage = format("handle :: instance %s not found on source tenant: %s",
                     instanceId, sharingInstance.getSourceTenantId());
                   LOGGER.error(errorMessage);
+                  sendEventToKafka(tenantId, sharingInstance, ConsortiumEnumStatus.ERROR, errorMessage, kafkaConfig, kafkaHeaders);
                   promise.fail(errorMessage);
                 } else {
                   LOGGER.info("handle :: Publishing instance {} with source {} from {} tenant to {} tenant",
@@ -127,6 +128,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                           String errorMessage = format("Error update Instance by id %s on the source tenant %s. Error: %s",
                             instanceId, sharingInstance.getTargetTenantId(), error.getCause());
                           LOGGER.error(errorMessage);
+                          sendEventToKafka(tenantId, sharingInstance, ConsortiumEnumStatus.ERROR, errorMessage, kafkaConfig, kafkaHeaders);
                           promise.fail(error);
                         });
                     }
@@ -134,6 +136,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                     String errorMessage = format("Error save Instance by id %s on the target tenant %s. Error: %s",
                       instanceId, sharingInstance.getTargetTenantId(), e.getCause());
                     LOGGER.error(errorMessage);
+                    sendEventToKafka(tenantId, sharingInstance, ConsortiumEnumStatus.ERROR, errorMessage, kafkaConfig, kafkaHeaders);
                     promise.fail(e);
                   });
 //              }
@@ -143,6 +146,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                 String errorMessage = format("Error retrieving Instance by id %s from source tenant %s. Error: %s",
                   instanceId, sharingInstance.getSourceTenantId(), err);
                 LOGGER.error(errorMessage);
+                sendEventToKafka(tenantId, sharingInstance, ConsortiumEnumStatus.ERROR, errorMessage, kafkaConfig, kafkaHeaders);
                 promise.fail(errorMessage);
               });
           }
@@ -151,6 +155,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
           String errorMessage = format("handle :: instance %s is present on target tenant: %s",
             instanceId, sharingInstance.getTargetTenantId());
           LOGGER.error(errorMessage);
+          sendEventToKafka(tenantId, sharingInstance, ConsortiumEnumStatus.ERROR, errorMessage, kafkaConfig, kafkaHeaders);
           promise.fail(errorMessage);
         });
       return promise.future();

@@ -6,7 +6,9 @@ import com.fasterxml.jackson.annotation.JsonValue;
 public enum ConsortiumEnumStatus {
   COMPLETE("COMPLETE"),
 
-  ERROR("ERROR");
+  ERROR("ERROR"),
+
+  IN_PROGRESS("IN_PROGRESS");
 
   private String value;
 
