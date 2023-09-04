@@ -1,6 +1,8 @@
 package org.folio.inventory.consortium.consumers;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -13,7 +15,6 @@ import io.vertx.kafka.client.producer.KafkaProducerRecord;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.consortium.model.ConsortiumEnumStatus;
 import org.folio.inventory.consortium.model.ConsortiumEvenType;
@@ -51,8 +52,9 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   private final Storage storage;
   private final KafkaConfig kafkaConfig;
   private final Map<String, KafkaProducer<String, String>> producerList = new HashMap<>();
-
-  private static final ObjectMapper OBJECT_MAPPER = ObjectMapperTool.getMapper();
+  protected static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL)
+    .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+    .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
 
   public ConsortiumInstanceSharingHandler(Vertx vertx, Storage storage, KafkaConfig kafkaConfig) {
     this.vertx = vertx;
@@ -117,7 +119,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                       updateInstanceInStorage(Instance.fromJson(jsonInstanceToPublish), sourceInstanceCollection)
                         .onSuccess(updatesSourceInstance -> {
                           LOGGER.info("handle :: source 'CONSORTIUM-FOLIO' updated to instance {}", instanceId);
-                          sendEventToKafka(tenantId, sharingInstance, ConsortiumEnumStatus.COMPLETE, kafkaConfig, kafkaHeaders);
+                          sendCompleteEventToKafka(tenantId, sharingInstance, kafkaConfig, kafkaHeaders);
                           promise.complete();
                         }).onFailure(error -> {
                           String errorMessage = format("Error update Instance by id %s on the source tenant %s. Error: %s", instanceId, sharingInstance.getTargetTenantId(), error.getCause());
@@ -141,11 +143,12 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                 sendEventToKafka(tenantId, sharingInstance, ConsortiumEnumStatus.ERROR, errorMessage, kafkaConfig, kafkaHeaders);
                 promise.fail(errorMessage);
               });
+          } else {
+            String errorMessage = format("Error checking Instance by id %s on target tenant %s. Error: %s", instanceId, sharingInstance.getTargetTenantId(), failure.getMessage());
+            LOGGER.error(errorMessage);
+            sendEventToKafka(tenantId, sharingInstance, ConsortiumEnumStatus.ERROR, errorMessage, kafkaConfig, kafkaHeaders);
+            promise.fail(errorMessage);
           }
-          String errorMessage = format("Error checking Instance by id %s on target tenant %s. Error: %s", instanceId, sharingInstance.getTargetTenantId(), failure.getMessage());
-          LOGGER.error(errorMessage);
-          sendEventToKafka(tenantId, sharingInstance, ConsortiumEnumStatus.ERROR, errorMessage, kafkaConfig, kafkaHeaders);
-          promise.fail(errorMessage);
         })
         .onSuccess(instanceOnTargetTenant -> {
           String errorMessage = format("handle :: instance %s is present on target tenant: %s", instanceId, sharingInstance.getTargetTenantId());
@@ -216,9 +219,9 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     return promise.future();
   }
 
-  private void sendEventToKafka(String tenantId, SharingInstance sharingInstance, ConsortiumEnumStatus status,
+  private void sendCompleteEventToKafka(String tenantId, SharingInstance sharingInstance,
                                 KafkaConfig kafkaConfig, Map<String, String> kafkaHeaders) {
-    sendEventToKafka(tenantId, sharingInstance, status, null, kafkaConfig, kafkaHeaders);
+    sendEventToKafka(tenantId, sharingInstance, ConsortiumEnumStatus.COMPLETE, null, kafkaConfig, kafkaHeaders);
   }
 
   private void sendEventToKafka(String tenantId, SharingInstance sharingInstance, ConsortiumEnumStatus status, String message,
@@ -227,8 +230,9 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     ConsortiumEvenType evenType = ConsortiumEvenType.CONSORTIUM_INSTANCE_SHARING_COMPLETE;
 
     try {
-      LOGGER.info("sendEventToKafka :: tenantId: {}, instanceId: {}, message: {}, consortiumEvenType: {}",
-        tenantId, sharingInstance.getInstanceIdentifier(), message, evenType.value());
+      LOGGER.info("sendEventToKafka :: tenantId: {}, instanceId: {}, status: {}{}",
+        tenantId, sharingInstance.getInstanceIdentifier(), status.getValue(),
+        status.equals(ConsortiumEnumStatus.ERROR) ? ", message: " + message : message);
 
       String topicName = KafkaTopicNameHelper.formatTopicName(kafkaConfig.getEnvId(),
         KafkaTopicNameHelper.getDefaultNameSpace(), tenantId, evenType.value());
@@ -259,7 +263,8 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     if (sharingInstance.getStatus().equals(ConsortiumEnumStatus.ERROR))
       sharingInstance.setError(errorMessage);
 
-    String data = Json.encode(sharingInstance);
+    //String data = Json.encode(sharingInstance);
+    String data = OBJECT_MAPPER.writeValueAsString(sharingInstance);
     return builder.value(data).topic(topicName).propagateOkapiHeaders(kafkaHeaders).build();
   }
 

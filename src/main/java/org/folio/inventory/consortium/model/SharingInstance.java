@@ -4,14 +4,11 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
-import javax.validation.Valid;
 import java.util.Objects;
 import java.util.UUID;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@JsonPropertyOrder({
-  "status"
-})
+@JsonPropertyOrder({"id", "instanceIdentifier", "sourceTenantId", "targetTenantId", "status", "error"})
 public class SharingInstance {
 
   @JsonProperty("id")
@@ -34,6 +31,7 @@ public class SharingInstance {
 
   /**
    * Get id
+   *
    * @return id
    */
   public UUID getId() {
@@ -42,11 +40,6 @@ public class SharingInstance {
 
   public void setId(UUID id) {
     this.id = id;
-  }
-
-  public SharingInstance instanceIdentifier(UUID instanceIdentifier) {
-    this.instanceIdentifier = instanceIdentifier;
-    return this;
   }
 
   /**
@@ -113,6 +106,7 @@ public class SharingInstance {
 
   /**
    * Get error
+   *
    * @return error
    */
   public String getError() {
