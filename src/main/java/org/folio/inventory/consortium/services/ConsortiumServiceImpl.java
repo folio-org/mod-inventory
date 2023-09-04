@@ -11,9 +11,9 @@ import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.consortium.entities.SharingInstance;
 import org.folio.inventory.consortium.entities.Status;
+import org.folio.inventory.consortium.exceptions.ConsortiumException;
 import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
-import org.folio.processing.exceptions.EventProcessingException;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -68,7 +68,7 @@ public class ConsortiumServiceImpl implements ConsortiumService{
               String message = String.format("Error retrieving centralTenantId by tenant id: %s, status code: %s, response message: %s",
                 context.getTenantId(), httpResponse.getStatusCode(), httpResponse.getBody());
               LOGGER.warn(String.format("getCentralTenantId:: %s", message));
-              return CompletableFuture.failedFuture(new EventProcessingException(message));
+              return CompletableFuture.failedFuture(new ConsortiumException(message));
             }
           }));
     return Future.fromCompletionStage(completableFuture);
@@ -93,7 +93,7 @@ public class ConsortiumServiceImpl implements ConsortiumService{
               String message = String.format("Error retrieving consortiaId by tenant: %s, status code: %s, response message: %s",
                 context.getTenantId(), httpResponse.getStatusCode(), httpResponse.getBody());
               LOGGER.warn(String.format("getConsortiumId:: %s", message));
-              return CompletableFuture.failedFuture(new EventProcessingException(message));
+              return CompletableFuture.failedFuture(new ConsortiumException(message));
             }
           }));
     return Future.fromCompletionStage(completableFuture);
@@ -113,7 +113,7 @@ public class ConsortiumServiceImpl implements ConsortiumService{
               String message = String.format(SHARING_INSTANCE_ERROR, sharingInstance.getSourceTenantId(), sharingInstance.getTargetTenantId(),
                 sharingInstance.getInstanceIdentifier(), httpResponse.getStatusCode(), httpResponse.getBody());
               LOGGER.warn(String.format("shareInstance:: %s", message));
-              return CompletableFuture.failedFuture(new EventProcessingException(message));
+              return CompletableFuture.failedFuture(new ConsortiumException(message));
             }
           }));
     return Future.fromCompletionStage(completableFuture);
