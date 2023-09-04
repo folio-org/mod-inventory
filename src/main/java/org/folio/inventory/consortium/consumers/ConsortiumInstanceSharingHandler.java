@@ -255,7 +255,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
     KafkaProducerRecordBuilder<String, String> builder = new KafkaProducerRecordBuilder<>(tenantId);
     SharingInstanceResult sharingInstanceResult = new SharingInstanceResult(sharingInstance.getInstanceIdentifier(),
-      sharingInstance.getSourceTenantId(), sharingInstance.getTargetTenantId(), status.getValue(), message);
+      sharingInstance.getSourceTenantId(), sharingInstance.getTargetTenantId(), status, message);
 
     String data = OBJECT_MAPPER.writeValueAsString(sharingInstanceResult.toString());
     return builder.value(data).topic(topicName).propagateOkapiHeaders(kafkaHeaders).build();

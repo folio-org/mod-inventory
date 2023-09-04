@@ -18,7 +18,7 @@ public class SharingInstance {
   private String targetTenantId;
 
   @JsonProperty("status")
-  private Status status;
+  private ConsortiumEnumStatus status;
 
   /**
    * Get instanceIdentifier
@@ -74,11 +74,11 @@ public class SharingInstance {
    *
    * @return status
    */
-  public Status getStatus() {
+  public ConsortiumEnumStatus getStatus() {
     return status;
   }
 
-  public void setStatus(Status status) {
+  public void setStatus(ConsortiumEnumStatus status) {
     this.status = status;
   }
 

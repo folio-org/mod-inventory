@@ -9,13 +9,13 @@ public class SharingInstanceResult {
   private UUID instanceId;
   private String sourceTenantId;
   private String targetTenantId;
-  private String status;
+  private ConsortiumEnumStatus status;
   private String error;
 
   public SharingInstanceResult() {
   }
 
-  public SharingInstanceResult(UUID instanceId, String sourceTenantId, String targetTenantId, String status, String error) {
+  public SharingInstanceResult(UUID instanceId, String sourceTenantId, String targetTenantId, ConsortiumEnumStatus status, String error) {
     this.id = UUID.randomUUID();
     this.instanceId = instanceId;
     this.sourceTenantId = sourceTenantId;
@@ -56,11 +56,11 @@ public class SharingInstanceResult {
     this.targetTenantId = targetTenantId;
   }
 
-  public String getStatus() {
+  public ConsortiumEnumStatus getStatus() {
     return status;
   }
 
-  public void setStatus(String status) {
+  public void setStatus(ConsortiumEnumStatus status) {
     this.status = status;
   }
 
