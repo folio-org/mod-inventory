@@ -1,4 +1,4 @@
-package org.folio.inventory.consortium.model;
+package org.folio.inventory.consortium.entities;
 
 public enum Status {
   IN_PROGRESS,

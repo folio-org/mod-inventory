@@ -17,12 +17,12 @@ import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
-import org.folio.inventory.consortium.model.SharingInstance;
+import org.folio.inventory.consortium.entities.SharingInstance;
 import org.folio.inventory.dataimport.HoldingWriterFactory;
 import org.folio.inventory.dataimport.HoldingsMapperFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.entities.PartialError;
-import org.folio.inventory.consortium.services.ConsortiumService;
+import org.folio.inventory.consortium.services.ConsortiumServiceImpl;
 import org.folio.inventory.dataimport.services.OrderHelperServiceImpl;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.instances.Instance;
@@ -107,7 +107,7 @@ public class CreateHoldingEventHandlerTest {
   @Mock
   private OrderHelperServiceImpl orderHelperService;
   @Mock
-  private ConsortiumService consortiumService;
+  private ConsortiumServiceImpl consortiumServiceImpl;
   @Spy
   private MarcBibReaderFactory fakeReaderFactory = new MarcBibReaderFactory();
   private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
@@ -156,7 +156,7 @@ public class CreateHoldingEventHandlerTest {
     MockitoAnnotations.initMocks(this);
     MappingManager.clearReaderFactories();
     existingInstance = Instance.fromJson(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
-    createHoldingEventHandler = new CreateHoldingEventHandler(storage, mappingMetadataCache, holdingsIdStorageService, orderHelperService, consortiumService);
+    createHoldingEventHandler = new CreateHoldingEventHandler(storage, mappingMetadataCache, holdingsIdStorageService, orderHelperService, consortiumServiceImpl);
     doAnswer(invocationOnMock -> {
       MultipleRecords result = new MultipleRecords<>(new ArrayList<>(), 0);
       Consumer<Success<MultipleRecords>> successHandler = invocationOnMock.getArgument(2);
@@ -269,12 +269,12 @@ public class CreateHoldingEventHandlerTest {
       sharingInstance.setTargetTenantId("consortium");
       sharingInstance.setInstanceIdentifier(UUID.fromString(instanceId));
       return Future.succeededFuture(sharingInstance);
-    }).when(consortiumService).createShadowInstance(any(), anyString());
+    }).when(consortiumServiceImpl).createShadowInstance(any(), anyString());
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
 
-    verify(consortiumService).createShadowInstance(argThat(context -> context.getTenantId().equals(localTenant)), eq(instanceId));
+    verify(consortiumServiceImpl).createShadowInstance(argThat(context -> context.getTenantId().equals(localTenant)), eq(instanceId));
 
     Assert.assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));

@@ -14,9 +14,9 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.consortium.model.SharingInstance;
-import org.folio.inventory.consortium.model.Status;
-import org.folio.inventory.consortium.services.ConsortiumService;
+import org.folio.inventory.consortium.entities.SharingInstance;
+import org.folio.inventory.consortium.entities.Status;
+import org.folio.inventory.consortium.services.ConsortiumServiceImpl;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.exceptions.NotFoundException;
 import org.junit.Before;
@@ -30,7 +30,7 @@ import java.util.UUID;
 @RunWith(VertxUnitRunner.class)
 public class ConsortiumServiceTest {
   private final Vertx vertx = Vertx.vertx();
-  private final ConsortiumService consortiumService = new ConsortiumService(vertx.createHttpClient());
+  private final ConsortiumServiceImpl consortiumServiceImpl = new ConsortiumServiceImpl(vertx.createHttpClient());
   private final String localTenant = "tenant";
   private final String consortiumTenant = "consortiumTenant";
   private final String token = "token";
@@ -78,7 +78,7 @@ public class ConsortiumServiceTest {
   public void shouldReturnCentralTenantId(TestContext testContext) {
     Async async = testContext.async();
     Context context = EventHandlingUtil.constructContext(localTenant, token, baseUrl);
-    consortiumService.getCentralTenantId(context).onComplete(ar -> {
+    consortiumServiceImpl.getCentralTenantId(context).onComplete(ar -> {
       testContext.assertTrue(ar.succeeded());
       testContext.assertEquals(ar.result(), consortiumTenant);
       async.complete();
@@ -91,7 +91,7 @@ public class ConsortiumServiceTest {
       .willReturn(WireMock.ok().withBody(Json.encode(new JsonObject().put("userTenants", new JsonArray())))));
     Async async = testContext.async();
     Context context = EventHandlingUtil.constructContext(localTenant, token, baseUrl);
-    consortiumService.getCentralTenantId(context).onComplete(ar -> {
+    consortiumServiceImpl.getCentralTenantId(context).onComplete(ar -> {
       testContext.assertTrue(ar.failed());
       testContext.assertTrue(ar.cause().getCause() instanceof NotFoundException);
       async.complete();
@@ -102,7 +102,7 @@ public class ConsortiumServiceTest {
   public void shouldReturnConsortiumId(TestContext testContext) {
     Async async = testContext.async();
     Context context = EventHandlingUtil.constructContext(localTenant, token, baseUrl);
-    consortiumService.getConsortiumId(context).onComplete(ar -> {
+    consortiumServiceImpl.getConsortiumId(context).onComplete(ar -> {
       testContext.assertTrue(ar.succeeded());
       testContext.assertEquals(ar.result(), consortiumId);
       async.complete();
@@ -115,7 +115,7 @@ public class ConsortiumServiceTest {
     WireMock.stubFor(WireMock.get(new UrlPathPattern(new RegexPattern("/consortia"), true))
       .willReturn(WireMock.ok().withBody(Json.encode(new JsonObject().put("consortia", new JsonArray())))));
     Context context = EventHandlingUtil.constructContext(localTenant, token, baseUrl);
-    consortiumService.getConsortiumId(context).onComplete(ar -> {
+    consortiumServiceImpl.getConsortiumId(context).onComplete(ar -> {
       testContext.assertTrue(ar.failed());
       testContext.assertTrue(ar.cause().getCause() instanceof NotFoundException);
       async.complete();
@@ -132,7 +132,7 @@ public class ConsortiumServiceTest {
     sharingInstance.setTargetTenantId(localTenant);
 
     Context context = EventHandlingUtil.constructContext(localTenant, token, baseUrl);
-    consortiumService.shareInstance(context, consortiumId, sharingInstance).onComplete(ar -> {
+    consortiumServiceImpl.shareInstance(context, consortiumId, sharingInstance).onComplete(ar -> {
       testContext.assertTrue(ar.succeeded());
       testContext.assertEquals(ar.result().getStatus(), Status.COMPLETE);
       async.complete();
@@ -162,7 +162,7 @@ public class ConsortiumServiceTest {
     incomingSharingInstance.setTargetTenantId(localTenant);
 
     Context context = EventHandlingUtil.constructContext(localTenant, token, baseUrl);
-    consortiumService.shareInstance(context, consortiumId, incomingSharingInstance).onComplete(ar -> {
+    consortiumServiceImpl.shareInstance(context, consortiumId, incomingSharingInstance).onComplete(ar -> {
       testContext.assertTrue(ar.failed());
       testContext.assertTrue(ar.cause().getMessage().contains(testError));
       async.complete();
@@ -174,7 +174,7 @@ public class ConsortiumServiceTest {
     Async async = testContext.async();
 
     Context context = EventHandlingUtil.constructContext(localTenant, token, baseUrl);
-    consortiumService.createShadowInstance(context, instanceId.toString()).onComplete(ar -> {
+    consortiumServiceImpl.createShadowInstance(context, instanceId.toString()).onComplete(ar -> {
       WireMock.verify(WireMock.getRequestedFor(WireMock.urlEqualTo("/user-tenants?limit=1"))
         .withHeader(TENANT_HEADER, WireMock.equalTo(localTenant))
         .withHeader(TOKEN_HEADER, WireMock.equalTo(token))

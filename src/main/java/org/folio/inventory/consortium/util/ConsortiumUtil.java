@@ -1,13 +1,13 @@
-package org.folio.inventory.dataimport.util;
+package org.folio.inventory.consortium.util;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.consortium.model.SharingInstance;
-import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
+import org.folio.inventory.consortium.entities.SharingInstance;
 import org.folio.inventory.consortium.services.ConsortiumService;
+import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.exceptions.NotFoundException;
@@ -20,7 +20,7 @@ public class ConsortiumUtil {
   private static final Logger LOGGER = LogManager.getLogger(InstanceUpdateDelegate.class);
 
   public static Future<Optional<SharingInstance>> createShadowInstanceIfNeeded(ConsortiumService consortiumService,
-                                                              InstanceCollection instanceCollection, Context context, String instanceId) {
+                                                                               InstanceCollection instanceCollection, Context context, String instanceId) {
     return findInstanceById(instanceId, instanceCollection).map(Optional.<SharingInstance>empty())
       .recover(throwable -> {
         if (throwable instanceof NotFoundException) {
