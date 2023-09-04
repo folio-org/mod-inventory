@@ -95,6 +95,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       InstanceCollection sourceInstanceCollection = storage.getInstanceCollection(sourceTenantContext);
       LOGGER.info("handle :: sourceInstanceCollection : {}", sourceInstanceCollection);
 
+      LOGGER.info("handle :: checking is instance {} exists on tenant {}", instanceId, sharingInstance.getTargetTenantId());
       getInstanceById(instanceId, sharingInstance.getTargetTenantId(), targetInstanceCollection)
         .onFailure(failure -> {
           if (failure.getClass().equals(NotFoundException.class)) {
@@ -150,6 +151,11 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                 promise.fail(errorMessage);
               });
           }
+          String errorMessage = format("Error checking Instance by id %s on target tenant %s. Error: %s",
+            instanceId, sharingInstance.getTargetTenantId(), failure.getCause());
+          LOGGER.error(errorMessage);
+          sendEventToKafka(tenantId, sharingInstance, ConsortiumEnumStatus.ERROR, errorMessage, kafkaConfig, kafkaHeaders);
+          promise.fail(errorMessage);
         })
         .onSuccess(instanceOnTargetTenant -> {
           String errorMessage = format("handle :: instance %s is present on target tenant: %s",
@@ -166,7 +172,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   }
 
   private Future<Instance> getInstanceById(String instanceId, String tenantId, InstanceCollection instanceCollection) {
-    LOGGER.trace("getInstanceById :: instanceId: {} on tenant: {}", instanceId, tenantId);
+    LOGGER.info("getInstanceById :: instanceId: {} on tenant: {}", instanceId, tenantId);
     Promise<Instance> promise = Promise.promise();
     instanceCollection.findById(instanceId, success -> {
         if (success.getResult() == null) {
