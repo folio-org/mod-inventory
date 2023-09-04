@@ -1,12 +1,21 @@
 package org.folio.inventory.consortium.model;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.folio.inventory.domain.items.Status;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
+import javax.validation.Valid;
 import java.util.Objects;
 import java.util.UUID;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonPropertyOrder({
+  "status"
+})
 public class SharingInstance {
+
+  @JsonProperty("id")
+  private UUID id;
 
   @JsonProperty("instanceIdentifier")
   private UUID instanceIdentifier;
@@ -19,6 +28,26 @@ public class SharingInstance {
 
   @JsonProperty("status")
   private ConsortiumEnumStatus status;
+
+  @JsonProperty("error")
+  private String error;
+
+  /**
+   * Get id
+   * @return id
+   */
+  public UUID getId() {
+    return id;
+  }
+
+  public void setId(UUID id) {
+    this.id = id;
+  }
+
+  public SharingInstance instanceIdentifier(UUID instanceIdentifier) {
+    this.instanceIdentifier = instanceIdentifier;
+    return this;
+  }
 
   /**
    * Get instanceIdentifier
@@ -82,6 +111,18 @@ public class SharingInstance {
     this.status = status;
   }
 
+  /**
+   * Get error
+   * @return error
+   */
+  public String getError() {
+    return error;
+  }
+
+  public void setError(String error) {
+    this.error = error;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -91,25 +132,29 @@ public class SharingInstance {
       return false;
     }
     SharingInstance sharingInstance = (SharingInstance) o;
-    return Objects.equals(this.instanceIdentifier, sharingInstance.instanceIdentifier) &&
+    return Objects.equals(this.id, sharingInstance.id) &&
+      Objects.equals(this.instanceIdentifier, sharingInstance.instanceIdentifier) &&
       Objects.equals(this.sourceTenantId, sharingInstance.sourceTenantId) &&
       Objects.equals(this.targetTenantId, sharingInstance.targetTenantId) &&
-      Objects.equals(this.status, sharingInstance.status);
+      Objects.equals(this.status, sharingInstance.status) &&
+      Objects.equals(this.error, sharingInstance.status);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(instanceIdentifier, sourceTenantId, targetTenantId, status);
+    return Objects.hash(id, instanceIdentifier, sourceTenantId, targetTenantId, status, error);
   }
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("class SharingInstance {\n");
+    sb.append("    id: ").append(toIndentedString(id)).append("\n");
     sb.append("    instanceIdentifier: ").append(toIndentedString(instanceIdentifier)).append("\n");
     sb.append("    sourceTenantId: ").append(toIndentedString(sourceTenantId)).append("\n");
     sb.append("    targetTenantId: ").append(toIndentedString(targetTenantId)).append("\n");
     sb.append("    status: ").append(toIndentedString(status)).append("\n");
+    sb.append("    error: ").append(toIndentedString(error)).append("\n");
     sb.append("}");
     return sb.toString();
   }
