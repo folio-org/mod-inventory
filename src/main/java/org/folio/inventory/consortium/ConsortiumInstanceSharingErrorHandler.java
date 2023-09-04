@@ -13,10 +13,10 @@ public class ConsortiumInstanceSharingErrorHandler implements ProcessRecordError
 
   @Override
   public void handle(Throwable throwable, KafkaConsumerRecord<String, String> kafkaConsumerRecord) {
-    LOGGER.debug("kafkaConsumerRecord.key : {}", kafkaConsumerRecord.key());
-    LOGGER.debug("kafkaConsumerRecord.value : {}", kafkaConsumerRecord.value());
-    LOGGER.debug("kafkaConsumerRecord.headers : {} ",  KafkaHeaderUtils.kafkaHeadersToMap(kafkaConsumerRecord.headers()));
-    LOGGER.debug("kafkaConsumerRecord.headers.size : {} ",  KafkaHeaderUtils.kafkaHeadersToMap(kafkaConsumerRecord.headers()).size());
+    LOGGER.info("kafkaConsumerRecord.key : {}", kafkaConsumerRecord.key());
+    LOGGER.info("kafkaConsumerRecord.value : {}", kafkaConsumerRecord.value());
+    LOGGER.info("kafkaConsumerRecord.headers : {} ",  KafkaHeaderUtils.kafkaHeadersToMap(kafkaConsumerRecord.headers()));
+    LOGGER.info("kafkaConsumerRecord.headers.size : {} ",  KafkaHeaderUtils.kafkaHeadersToMap(kafkaConsumerRecord.headers()).size());
   }
 
 }

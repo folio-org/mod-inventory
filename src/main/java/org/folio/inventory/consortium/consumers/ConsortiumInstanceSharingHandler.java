@@ -1,21 +1,24 @@
 package org.folio.inventory.consortium.consumers;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
-import io.vertx.kafka.client.producer.KafkaHeader;
 import io.vertx.kafka.client.producer.KafkaProducer;
 import io.vertx.kafka.client.producer.KafkaProducerRecord;
-import liquibase.pro.packaged.L;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.consortium.model.ConsortiumEnumStatus;
 import org.folio.inventory.consortium.model.ConsortiumEvenType;
 import org.folio.inventory.consortium.model.SharingInstance;
+import org.folio.inventory.consortium.model.SharingInstanceResult;
 import org.folio.inventory.dataimport.consumers.DataImportKafkaHandler;
 import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
@@ -27,18 +30,15 @@ import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaHeaderUtils;
 import org.folio.kafka.KafkaTopicNameHelper;
-import org.folio.kafka.SubscriptionDefinition;
 import org.folio.kafka.exception.DuplicateEventException;
 import org.folio.kafka.services.KafkaProducerRecordBuilder;
-import org.folio.rest.jaxrs.model.LinkUpdateReport;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static java.lang.String.format;
+import static org.apache.commons.lang.StringUtils.EMPTY;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
-import static org.folio.inventory.EntityLinksKafkaTopic.LINKS_STATS;
 import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 
 public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<String, String> {
@@ -52,6 +52,8 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   private final Storage storage;
   private final KafkaConfig kafkaConfig;
   private final Map<String, KafkaProducer<String, String>> producerList = new HashMap<>();
+
+  private static final ObjectMapper OBJECT_MAPPER = ObjectMapperTool.getMapper();
 
   public ConsortiumInstanceSharingHandler(Vertx vertx, Storage storage, KafkaConfig kafkaConfig) {
     this.vertx = vertx;
@@ -119,8 +121,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                       updateInstanceInStorage(Instance.fromJson(jsonInstanceToPublish), sourceInstanceCollection)
                         .onSuccess(updatesSourceInstance -> {
                           LOGGER.info("handle :: source 'CONSORTIUM-FOLIO' updated to instance {}", instanceId);
-                          sendEventToKafka(tenantId, instanceId, "Completed.", ConsortiumEvenType.CONSORTIUM_INSTANCE_SHARING_COMPLETE,
-                            kafkaConfig, kafkaHeaders);
+                          sendEventToKafka(tenantId, sharingInstance, ConsortiumEnumStatus.COMPLETE, kafkaConfig, kafkaHeaders);
                           promise.complete();
                         }).onFailure(error -> {
                           String errorMessage = format("Error update Instance by id %s on the source tenant %s. Error: %s",
@@ -135,7 +136,6 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                     LOGGER.error(errorMessage);
                     promise.fail(e);
                   });
-                  // publish CONSORTIUM_INSTANCE_SHARING_COMPLETE or DI_ERROR???
 //              }
                 }
               })
@@ -210,41 +210,50 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     return promise.future();
   }
 
-  private void sendEventToKafka(String tenantId, String instanceId, String message,
-                                ConsortiumEvenType consortiumEvenType,
+  private void sendEventToKafka(String tenantId, SharingInstance sharingInstance, ConsortiumEnumStatus status,
                                 KafkaConfig kafkaConfig, Map<String, String> kafkaHeaders) {
+    sendEventToKafka(tenantId, sharingInstance, status, null, kafkaConfig, kafkaHeaders);
+  }
+
+  private void sendEventToKafka(String tenantId, SharingInstance sharingInstance, ConsortiumEnumStatus status, String message,
+                                KafkaConfig kafkaConfig, Map<String, String> kafkaHeaders) {
+
+    ConsortiumEvenType evenType = ConsortiumEvenType.CONSORTIUM_INSTANCE_SHARING_COMPLETE;
+
     try {
       LOGGER.info("sendEventToKafka :: tenantId: {}, instanceId: {}, message: {}, consortiumEvenType: {}",
-        tenantId, instanceId, message, consortiumEvenType.value());
+        tenantId, sharingInstance.getInstanceIdentifier(), message, evenType.value());
 
       String topicName = KafkaTopicNameHelper.formatTopicName(kafkaConfig.getEnvId(),
-        KafkaTopicNameHelper.getDefaultNameSpace(), tenantId, consortiumEvenType.value());
+        KafkaTopicNameHelper.getDefaultNameSpace(), tenantId, evenType.value());
 
       LOGGER.info("sendEventToKafka :: topicName: {}", topicName);
 
-      KafkaProducerRecord<String, String> kafkaRecord = createKafkaMessage(tenantId, instanceId, message, topicName, kafkaHeaders);
+      KafkaProducerRecord<String, String> kafkaRecord = createKafkaMessage(tenantId, sharingInstance, status, message, topicName, kafkaHeaders);
       getProducer(tenantId, topicName).write(kafkaRecord, ar -> {
         if (ar.succeeded()) {
-          LOGGER.info("Event with type {}, was sent to kafka", consortiumEvenType.value());
+          LOGGER.info("Event with type {}, was sent to kafka", evenType.value());
         } else {
           var cause = ar.cause();
-          LOGGER.info("Failed to sent event {}, cause: {}", consortiumEvenType.value(), cause);
+          LOGGER.info("Failed to sent event {}, cause: {}", evenType.value(), cause);
         }
       });
     } catch (Exception e) {
-      LOGGER.error("Failed to send an event for eventType {}, cause {}", consortiumEvenType.value(), e);
+      LOGGER.error("Failed to send an event for eventType {}, cause {}", evenType.value(), e);
     }
   }
 
-  private KafkaProducerRecord<String, String> createKafkaMessage(String tenantId, String instanceId, String message,
-                                                                 String topicName, Map<String, String> kafkaHeaders) {
-    LOGGER.info("createKafkaMessage :: instanceId: {}, message: {}, topicName: {}", instanceId, message, topicName);
-    KafkaProducerRecordBuilder<String, String> builder = new KafkaProducerRecordBuilder<>(tenantId);
-    KafkaProducerRecord<String, String> producerRecord = builder
-      .key(instanceId).value(message).topic(topicName).propagateOkapiHeaders(kafkaHeaders)
-      .build();
+  private KafkaProducerRecord<String, String> createKafkaMessage(String tenantId, SharingInstance sharingInstance, ConsortiumEnumStatus status,
+                                                                 String message, String topicName, Map<String, String> kafkaHeaders) throws JsonProcessingException {
+    LOGGER.info("createKafkaMessage :: instanceId: {}, status: {}, {}topicName: {}",
+      sharingInstance.getInstanceIdentifier(), status, status.equals(ConsortiumEnumStatus.ERROR) ? message + ", " : EMPTY, topicName);
 
-    return producerRecord;
+    KafkaProducerRecordBuilder<String, String> builder = new KafkaProducerRecordBuilder<>(tenantId);
+    SharingInstanceResult sharingInstanceResult = new SharingInstanceResult(sharingInstance.getInstanceIdentifier(),
+      sharingInstance.getSourceTenantId(), sharingInstance.getTargetTenantId(), status.getValue(), message);
+
+    String data = OBJECT_MAPPER.writeValueAsString(sharingInstanceResult.toString());
+    return builder.value(data).topic(topicName).propagateOkapiHeaders(kafkaHeaders).build();
   }
 
   private KafkaProducer<String, String> getProducer(String tenantId, String topicName) {
