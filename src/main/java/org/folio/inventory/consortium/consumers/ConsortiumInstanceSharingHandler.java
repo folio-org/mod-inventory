@@ -45,7 +45,7 @@ import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_
 
 public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<String, String> {
 
-  private static final Logger LOGGER = LogManager.getLogger(DataImportKafkaHandler.class);
+  private static final Logger LOGGER = LogManager.getLogger(ConsortiumInstanceSharingHandler.class);
 
   private static final String OKAPI_TOKEN_HEADER = "x-okapi-token";
   private static final String OKAPI_URL_HEADER = "x-okapi-url";
@@ -54,10 +54,6 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   private final Vertx vertx;
   private final Storage storage;
   private final KafkaConfig kafkaConfig;
-  private final Map<String, KafkaProducer<String, String>> producerList = new HashMap<>();
-  protected static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL)
-    .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-    .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
 
   public ConsortiumInstanceSharingHandler(Vertx vertx, Storage storage, KafkaConfig kafkaConfig) {
     this.vertx = vertx;
@@ -124,12 +120,12 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                         promise.fail(publishFailure);
                       });
                   } else if ("MARC".equals(srcInstance.getSource())) {
-                    String errorMessage = format("Error sharing Instance with id %s to the target tenant %s. Because source is {}",
+                    String errorMessage = format("Error sharing Instance with id %s to the target tenant %s. Because source is %s",
                       instanceId, sharingInstance.getTargetTenantId(), srcInstance.getSource());
                     sendErrorResponseAndPrintLogMessage(tenantId, errorMessage, sharingInstance, record.headers());
                     promise.fail(errorMessage);
                   } else {
-                    String errorMessage = format("Error sharing Instance with id %s to the target tenant %s. Because source is {}",
+                    String errorMessage = format("Error sharing Instance with id %s to the target tenant %s. Because source is %s",
                       instanceId, sharingInstance.getTargetTenantId(), srcInstance.getSource());
                     sendErrorResponseAndPrintLogMessage(tenantId, errorMessage, sharingInstance, record.headers());
                     promise.fail(errorMessage);
@@ -160,7 +156,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   }
 
   private void sendErrorResponseAndPrintLogMessage(String tenantId, String errorMessage, SharingInstance sharingInstance, List<KafkaHeader> kafkaHeaders) {
-    LOGGER.error("handle:: " + errorMessage);
+    LOGGER.error("handle:: {}", errorMessage);
     sendEventToKafka(tenantId, sharingInstance, ERROR, errorMessage, kafkaConfig, kafkaHeaders);
   }
 

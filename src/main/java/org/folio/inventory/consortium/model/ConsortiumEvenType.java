@@ -11,6 +11,7 @@ public enum ConsortiumEvenType {
     this.value = value;
   }
 
+  @Override
   public String toString() {
     return this.value;
   }
