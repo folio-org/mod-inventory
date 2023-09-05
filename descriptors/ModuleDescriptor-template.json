@@ -606,6 +606,10 @@
     {
       "id": "order-lines",
       "version": "3.0"
+    },
+    {
+      "id": "consortia",
+      "version": "1.0"
     }
   ],
   "permissionSets": [
