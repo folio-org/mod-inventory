@@ -19,7 +19,6 @@ import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ReactTo;
 
-import java.io.UnsupportedEncodingException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -80,7 +79,7 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
             LOG.error(failure.getReason());
             future.completeExceptionally(new MatchingException(format(ERROR_LOAD_MSG, failure.getReason(), failure.getStatusCode())));
           });
-      } catch (UnsupportedEncodingException e) {
+      } catch (Exception e) {
         LOG.error("Failed to retrieve records", e);
         future.completeExceptionally(e);
       }

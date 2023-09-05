@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 import org.folio.DataImportEventPayload;
@@ -62,11 +63,17 @@ public class ItemLoader extends AbstractLoader<Item> {
         JsonObject itemAsJson = new JsonObject(eventPayload.getContext().get(EntityType.ITEM.value()));
         cqlSubMatch = format(" AND id == \"%s\"", itemAsJson.getString("id"));
       } else if (isNotEmpty(eventPayload.getContext().get(EntityType.HOLDINGS.value()))) {
-        JsonObject holdingAsJson = new JsonObject(eventPayload.getContext().get(EntityType.HOLDINGS.value()));
-        if (holdingAsJson.getJsonObject(HOLDINGS_FIELD) != null) {
-          holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_FIELD);
+        JsonArray holdingsAsJson = new JsonArray(eventPayload.getContext().get(EntityType.HOLDINGS.value()));
+        if (!holdingsAsJson.isEmpty()) {
+          String holdingIds = holdingsAsJson.stream().map(JsonObject.class::cast)
+            .map(jsonObj -> {
+              if (jsonObj.getJsonObject(HOLDINGS_FIELD) != null) {
+                return jsonObj.getJsonObject(HOLDINGS_FIELD).getString("id");
+              }
+              return jsonObj.getString("id");
+            }).collect(Collectors.joining(" OR "));
+          cqlSubMatch = format(" AND holdingsRecordId == (%s)", holdingIds);
         }
-        cqlSubMatch = format(" AND holdingsRecordId == \"%s\"", holdingAsJson.getString("id"));
       }
     }
     return cqlSubMatch;
