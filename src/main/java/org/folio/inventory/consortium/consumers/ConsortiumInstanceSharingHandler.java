@@ -311,7 +311,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
   private KafkaProducer<String, String> createProducer(String tenantId, String topicName) {
     LOGGER.info("getProducer :: tenantId: {}", tenantId);
-    return producerList.put(tenantId, KafkaProducer.createShared(vertx, topicName + "_Producer", kafkaConfig.getProducerProps()));
+    return KafkaProducer.createShared(vertx, topicName + "_Producer", kafkaConfig.getProducerProps());
   }
 
 }
