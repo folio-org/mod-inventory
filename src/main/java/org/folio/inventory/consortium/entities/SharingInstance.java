@@ -2,6 +2,9 @@ package org.folio.inventory.consortium.entities;
 
 import java.util.UUID;
 
+/**
+ * Entity that is used for sharing instance process
+ */
 public class SharingInstance {
   private UUID id;
   private UUID instanceIdentifier;
@@ -10,6 +13,10 @@ public class SharingInstance {
   private Status status;
   private String error;
 
+  /**
+   * Returns id of sharedInstance entity
+   * @return id of SharedInstance
+   */
   public UUID getId() {
     return id;
   }
@@ -18,6 +25,10 @@ public class SharingInstance {
     this.id = id;
   }
 
+  /**
+   * Returns id of instance
+   * @return id of instance
+   */
   public UUID getInstanceIdentifier() {
     return instanceIdentifier;
   }
@@ -26,6 +37,10 @@ public class SharingInstance {
     this.instanceIdentifier = instanceIdentifier;
   }
 
+  /**
+   * Returns the tenant id from which pull the instance
+   * @return id of sourceTenant
+   */
   public String getSourceTenantId() {
     return sourceTenantId;
   }
@@ -34,6 +49,10 @@ public class SharingInstance {
     this.sourceTenantId = sourceTenantId;
   }
 
+  /**
+   * Returns the tenant id to which pull the instance
+   * @return id of targetTenant
+   */
   public String getTargetTenantId() {
     return targetTenantId;
   }
@@ -42,6 +61,10 @@ public class SharingInstance {
     this.targetTenantId = targetTenantId;
   }
 
+  /**
+   * Returns status of sharing process
+   * @return status
+   */
   public Status getStatus() {
     return status;
   }
@@ -50,6 +73,10 @@ public class SharingInstance {
     this.status = status;
   }
 
+  /**
+   * Returns the error that existed during sharing process
+   * @return error as a string
+   */
   public String getError() {
     return error;
   }
