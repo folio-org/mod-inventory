@@ -3,6 +3,7 @@ package org.folio.inventory.consortium.model;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import java.util.Objects;
 import java.util.UUID;
@@ -55,11 +56,6 @@ public class SharingInstance {
     this.instanceIdentifier = instanceIdentifier;
   }
 
-  public SharingInstance sourceTenantId(String sourceTenantId) {
-    this.sourceTenantId = sourceTenantId;
-    return this;
-  }
-
   /**
    * Get sourceTenantId
    *
@@ -71,11 +67,6 @@ public class SharingInstance {
 
   public void setSourceTenantId(String sourceTenantId) {
     this.sourceTenantId = sourceTenantId;
-  }
-
-  public SharingInstance targetTenantId(String targetTenantId) {
-    this.targetTenantId = targetTenantId;
-    return this;
   }
 
   /**
@@ -118,6 +109,17 @@ public class SharingInstance {
   }
 
   @Override
+  public String toString() {
+    return new ToStringBuilder(this)
+      .append("id", id)
+      .append("instanceIdentifier", instanceIdentifier)
+      .append("sourceTenantId", sourceTenantId)
+      .append("targetTenantId", targetTenantId)
+      .append("status", status)
+      .append("error", error).toString();
+  }
+
+  @Override
   public boolean equals(Object o) {
     if (this == o) {
       return true;
@@ -137,20 +139,6 @@ public class SharingInstance {
   @Override
   public int hashCode() {
     return Objects.hash(id, instanceIdentifier, sourceTenantId, targetTenantId, status, error);
-  }
-
-  @Override
-  public String toString() {
-    StringBuilder sb = new StringBuilder();
-    sb.append("class SharingInstance {\n");
-    sb.append("    id: ").append(toIndentedString(id)).append("\n");
-    sb.append("    instanceIdentifier: ").append(toIndentedString(instanceIdentifier)).append("\n");
-    sb.append("    sourceTenantId: ").append(toIndentedString(sourceTenantId)).append("\n");
-    sb.append("    targetTenantId: ").append(toIndentedString(targetTenantId)).append("\n");
-    sb.append("    status: ").append(toIndentedString(status)).append("\n");
-    sb.append("    error: ").append(toIndentedString(error)).append("\n");
-    sb.append("}");
-    return sb.toString();
   }
 
   /**
