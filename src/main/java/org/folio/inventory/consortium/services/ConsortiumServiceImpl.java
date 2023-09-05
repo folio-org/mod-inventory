@@ -22,7 +22,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 
-public class ConsortiumServiceImpl implements ConsortiumService{
+public class ConsortiumServiceImpl implements ConsortiumService {
   private static final Logger LOGGER = LogManager.getLogger(ConsortiumServiceImpl.class);
   private static final String USER_TENANTS_ENDPOINT = "/user-tenants?limit=1";
   private static final String SHARE_INSTANCE_ENDPOINT = "/consortia/%s/sharing/instances";
