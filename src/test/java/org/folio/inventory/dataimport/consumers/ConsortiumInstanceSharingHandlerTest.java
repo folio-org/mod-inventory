@@ -1,5 +1,6 @@
 package org.folio.inventory.dataimport.consumers;
 
+import api.ApiTestSuite;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.common.Slf4jNotifier;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
@@ -8,7 +9,9 @@ import com.github.tomakehurst.wiremock.matching.RegexPattern;
 import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -17,16 +20,15 @@ import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
 import net.mguenther.kafka.junit.KeyValue;
 import net.mguenther.kafka.junit.ObserveKeyValues;
 import net.mguenther.kafka.junit.SendKeyValues;
-import org.folio.ActionProfile;
-import org.folio.DataImportEventPayload;
-import org.folio.JobProfile;
-import org.folio.MappingProfile;
 import org.folio.inventory.ConsortiumInstanceSharingConsumerVerticle;
+import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
+import org.folio.inventory.domain.instances.PublicationPeriod;
+import org.folio.inventory.storage.Storage;
 import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.processing.events.EventManager;
 import org.folio.processing.events.services.handler.EventHandler;
-import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -39,89 +41,63 @@ import org.mockito.MockitoAnnotations;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
 import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
-import static org.folio.ActionProfile.Action.CREATE;
-import static org.folio.DataImportEventTypes.DI_COMPLETED;
+import static org.folio.inventory.consortium.model.ConsortiumEvenType.CONSORTIUM_INSTANCE_SHARING_COMPLETE;
 import static org.folio.inventory.consortium.model.ConsortiumEvenType.CONSORTIUM_INSTANCE_SHARING_INIT;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX_REQUEST_SIZE;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_PORT;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_REPLICATION_FACTOR;
+import static org.folio.inventory.domain.instances.Instance.PUBLICATION_PERIOD_KEY;
+import static org.folio.inventory.domain.instances.Instance.TAGS_KEY;
+import static org.folio.inventory.domain.instances.Instance.TAG_LIST_KEY;
+import static org.folio.inventory.domain.instances.PublicationPeriod.publicationPeriodToJson;
 import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
-import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
-import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.when;
 
 @RunWith(VertxUnitRunner.class)
 public class ConsortiumInstanceSharingHandlerTest {
 
   private static final String TENANT_ID = "diku";
   private static final String KAFKA_ENV_NAME = "test-env";
-  private static final String JOB_PROFILE_URL = "/data-import-profiles/jobProfileSnapshots";
+  private static final String INSTANCES_URL = "/instance-storage/instances";
   private static final String RECORD_ID_HEADER = "recordId";
-  private static final String CHUNK_ID_HEADER = "chunkId";
 
   private static Vertx vertx;
-
   public static EmbeddedKafkaCluster cluster;
-
   @Mock
   private EventHandler mockedEventHandler;
+  private static KafkaConfig kafkaConfig;
 
-  private JobProfile jobProfile = new JobProfile()
-    .withId(UUID.randomUUID().toString())
-    .withName("Create instance")
-    .withDataType(org.folio.JobProfile.DataType.MARC);
-  private ActionProfile actionProfile = new ActionProfile()
-    .withId(UUID.randomUUID().toString())
-    .withName("Create instance")
-    .withAction(CREATE)
-    .withFolioRecord(ActionProfile.FolioRecord.INSTANCE);
-  private MappingProfile mappingProfile = new MappingProfile()
-    .withId(UUID.randomUUID().toString())
-    .withName("Create instance")
-    .withIncomingRecordType(MARC_BIBLIOGRAPHIC)
-    .withExistingRecordType(INSTANCE);
-
-  private ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
-    .withId(UUID.randomUUID().toString())
-    .withProfileId(jobProfile.getId())
-    .withContentType(JOB_PROFILE)
-    .withContent(JsonObject.mapFrom(jobProfile).getMap())
-    .withChildSnapshotWrappers(Collections.singletonList(
-      new ProfileSnapshotWrapper()
-        .withId(UUID.randomUUID().toString())
-        .withProfileId(actionProfile.getId())
-        .withContentType(ACTION_PROFILE)
-        .withContent(JsonObject.mapFrom(actionProfile).getMap())
-        .withChildSnapshotWrappers(Collections.singletonList(
-          new ProfileSnapshotWrapper()
-            .withId(UUID.randomUUID().toString())
-            .withProfileId(mappingProfile.getId())
-            .withContentType(MAPPING_PROFILE)
-            .withContent(JsonObject.mapFrom(mappingProfile).getMap())))));
+  JsonObject instance = new JsonObject()
+    .put("id", UUID.randomUUID().toString())
+    .put("hrid", "in777")
+    .put("title", "Long Way to a Small Angry Planet")
+    .put("identifiers", new JsonArray().add(new JsonObject()
+      .put("identifierTypeId", ApiTestSuite.getIsbnIdentifierType())
+      .put("value", "9781473619777")))
+    .put("contributors", new JsonArray().add(new JsonObject()
+      .put("contributorNameTypeId", ApiTestSuite.getPersonalContributorNameType())
+      .put("name", "Chambers, Becky")))
+    .put("source", "Local")
+    .put("administrativeNotes", new JsonArray().add("this is a note"))
+    .put("instanceTypeId", ApiTestSuite.getTextInstanceType())
+    .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add("important")))
+    .put(PUBLICATION_PERIOD_KEY, publicationPeriodToJson(new PublicationPeriod(1000, 2000)));
 
   @Rule
   public WireMockRule mockServer = new WireMockRule(
     WireMockConfiguration.wireMockConfig()
       .dynamicPort()
       .notifier(new Slf4jNotifier(true)));
-
 
   @BeforeClass
   public static void setUpClass(TestContext context) {
@@ -130,7 +106,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     cluster.start();
     String[] hostAndPort = cluster.getBrokerList().split(":");
 
-    KafkaConfig kafkaConfig = KafkaConfig.builder()
+    kafkaConfig = KafkaConfig.builder()
       .kafkaHost(hostAndPort[0])
       .kafkaPort(hostAndPort[1])
       .build();
@@ -150,15 +126,11 @@ public class ConsortiumInstanceSharingHandlerTest {
   @Before
   public void setUp() {
     MockitoAnnotations.openMocks(this);
-    when(mockedEventHandler.isEligible(any(DataImportEventPayload.class))).thenReturn(true);
-    doAnswer(invocationOnMock -> {
-      DataImportEventPayload eventPayload = invocationOnMock.getArgument(0);
-      eventPayload.setCurrentNode(eventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
-      return CompletableFuture.completedFuture(eventPayload);
-    }).when(mockedEventHandler).handle(any(DataImportEventPayload.class));
 
-    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(JOB_PROFILE_URL + "/.*"), true))
-      .willReturn(WireMock.ok().withBody(Json.encode(profileSnapshotWrapper))));
+    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern("http://mod-inventory:9403" + INSTANCES_URL + "/.*"), true))
+      .willReturn(WireMock.ok().withBody(Json.encode(instance))));
+
+    HttpClient client = vertx.createHttpClient();
 
     EventManager.clearEventHandlers();
     EventManager.registerEventHandler(mockedEventHandler);
@@ -169,13 +141,15 @@ public class ConsortiumInstanceSharingHandlerTest {
 
     // given
     String consortiumId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
-    String data = "{\"instanceIdentifier\":\"8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572\"," +
+    String data = "{\"id\":\"8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572\"," +
+      "\"instanceIdentifier\":\"8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572\"," +
       "\"sourceTenantId\":\"consortium\"," +
       "\"targetTenantId\":\"university\"," +
       "\"status\":\"IN_PROGRESS\"}";
 
     KeyValue<String, String> kafkaRecord = new KeyValue<>(consortiumId, data);
     kafkaRecord.addHeader(OKAPI_TENANT_HEADER, TENANT_ID, UTF_8);
+    kafkaRecord.addHeader("x-okapi-url", "http://mod-inventory:9403", UTF_8);
 
     String topic = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_NAME, getDefaultNameSpace(), TENANT_ID, CONSORTIUM_INSTANCE_SHARING_INIT.value());
 
@@ -183,7 +157,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     cluster.send(SendKeyValues.to(topic, Collections.singletonList(kafkaRecord)).useDefaults());
 
     // then
-    String observeTopic = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_NAME, getDefaultNameSpace(), TENANT_ID, DI_COMPLETED.value());
+    String observeTopic = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_NAME, getDefaultNameSpace(), TENANT_ID, CONSORTIUM_INSTANCE_SHARING_COMPLETE.value());
     List<KeyValue<String, String>> observedValues = cluster.observe(ObserveKeyValues.on(observeTopic, 1)
       .observeFor(30, TimeUnit.SECONDS)
       .build());

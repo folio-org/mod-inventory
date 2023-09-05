@@ -123,6 +123,16 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                         sendErrorResponseAndPrintLogMessage(tenantId, errorMessage, sharingInstance, record.headers());
                         promise.fail(publishFailure);
                       });
+                  } else if ("MARC".equals(srcInstance.getSource())) {
+                    String errorMessage = format("Error sharing Instance with id %s to the target tenant %s. Because source is {}",
+                      instanceId, sharingInstance.getTargetTenantId(), srcInstance.getSource());
+                    sendErrorResponseAndPrintLogMessage(tenantId, errorMessage, sharingInstance, record.headers());
+                    promise.fail(errorMessage);
+                  } else {
+                    String errorMessage = format("Error sharing Instance with id %s to the target tenant %s. Because source is {}",
+                      instanceId, sharingInstance.getTargetTenantId(), srcInstance.getSource());
+                    sendErrorResponseAndPrintLogMessage(tenantId, errorMessage, sharingInstance, record.headers());
+                    promise.fail(errorMessage);
                   }
                 }
               })

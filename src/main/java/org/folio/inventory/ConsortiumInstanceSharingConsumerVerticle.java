@@ -72,7 +72,6 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
       .loadLimit(loadLimit)
       .globalLoadSensor(new GlobalLoadSensor())
       .subscriptionDefinition(subscriptionDefinition)
-      //.processRecordErrorHandler(new ConsortiumInstanceSharingErrorHandler())
       .build();
 
     return consumerWrapper
