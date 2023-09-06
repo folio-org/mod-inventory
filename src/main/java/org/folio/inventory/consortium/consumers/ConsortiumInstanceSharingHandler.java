@@ -89,12 +89,15 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
         .toCompletableFuture()
           .whenComplete((instance, ex) -> {
               if (ex != null) {
+                LOGGER.info("Step 1");
                 sendErrorResponseAndPrintLogMessage(tenantId, ex.getMessage(), sharingInstance, event.headers());
                 promise.fail(ex.getMessage());
               } else if (instance != null) {
+                LOGGER.info("Step 2");
                 sendErrorResponseAndPrintLogMessage(tenantId, instance.getHrid(), sharingInstance, event.headers());
                 promise.fail("Instance != null");
               } else {
+                LOGGER.info("Step 3");
                 sendErrorResponseAndPrintLogMessage(tenantId, "instance is null", sharingInstance, event.headers());
                 promise.fail("Instance == null");
               }
@@ -102,14 +105,17 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
           )
         .thenAccept(instance -> {
           if (instance != null) {
+            LOGGER.info("Step 4");
             sendErrorResponseAndPrintLogMessage(tenantId, "2 instance != null", sharingInstance, event.headers());
             promise.complete("2 instance != null");
           } else {
+            LOGGER.info("Step 5");
             sendErrorResponseAndPrintLogMessage(tenantId, "2 instance == null", sharingInstance, event.headers());
             promise.fail("2 instance == null");
           }
         })
         .exceptionally(throwable -> {
+          LOGGER.info("Step 6");
           promise.fail(throwable.getCause());
           return null;
         });
