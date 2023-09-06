@@ -25,7 +25,7 @@ public class SharingInstance {
   private String targetTenantId;
 
   @JsonProperty("status")
-  private ConsortiumEnumStatus status;
+  private SharingStatus status;
 
   @JsonProperty("error")
   private String error;
@@ -87,11 +87,11 @@ public class SharingInstance {
    *
    * @return status
    */
-  public ConsortiumEnumStatus getStatus() {
+  public SharingStatus getStatus() {
     return status;
   }
 
-  public void setStatus(ConsortiumEnumStatus status) {
+  public void setStatus(SharingStatus status) {
     this.status = status;
   }
 
@@ -133,7 +133,7 @@ public class SharingInstance {
       Objects.equals(this.sourceTenantId, sharingInstance.sourceTenantId) &&
       Objects.equals(this.targetTenantId, sharingInstance.targetTenantId) &&
       Objects.equals(this.status, sharingInstance.status) &&
-      Objects.equals(this.error, sharingInstance.status);
+      Objects.equals(this.error, sharingInstance.error);
   }
 
   @Override

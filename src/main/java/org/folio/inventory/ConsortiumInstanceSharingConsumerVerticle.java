@@ -7,7 +7,7 @@ import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler;
-import org.folio.inventory.consortium.model.ConsortiumEvenType;
+import org.folio.inventory.consortium.model.SharingInstanceEventType;
 import org.folio.inventory.dataimport.util.ConsumerWrapperUtil;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.AsyncRecordHandler;
@@ -57,7 +57,7 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
   private Future<KafkaConsumerWrapper<String, String>> createKafkaConsumerWrapper(KafkaConfig kafkaConfig,
                                                                                   AsyncRecordHandler<String, String> recordHandler) {
     SubscriptionDefinition subscriptionDefinition = KafkaTopicNameHelper.createSubscriptionDefinition(kafkaConfig.getEnvId(),
-      KafkaTopicNameHelper.getDefaultNameSpace(), ConsortiumEvenType.CONSORTIUM_INSTANCE_SHARING_INIT.value());
+      KafkaTopicNameHelper.getDefaultNameSpace(), SharingInstanceEventType.CONSORTIUM_INSTANCE_SHARING_INIT.value());
 
     KafkaConsumerWrapper<String, String> consumerWrapper = KafkaConsumerWrapper.<String, String>builder()
       .context(context)

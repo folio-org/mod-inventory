@@ -3,16 +3,16 @@ package org.folio.inventory.consortium.model;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
-public enum ConsortiumEnumStatus {
+public enum SharingStatus {
   COMPLETE("COMPLETE"),
 
   ERROR("ERROR"),
 
   IN_PROGRESS("IN_PROGRESS");
 
-  private String value;
+  private final String value;
 
-  ConsortiumEnumStatus(String value) {
+  SharingStatus(String value) {
     this.value = value;
   }
 
@@ -27,8 +27,8 @@ public enum ConsortiumEnumStatus {
   }
 
   @JsonCreator
-  public static ConsortiumEnumStatus fromValue(String value) {
-    for (ConsortiumEnumStatus b : ConsortiumEnumStatus.values()) {
+  public static SharingStatus fromValue(String value) {
+    for (SharingStatus b : SharingStatus.values()) {
       if (b.value.equals(value)) {
         return b;
       }

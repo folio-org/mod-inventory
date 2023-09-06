@@ -13,8 +13,8 @@ import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.consortium.model.ConsortiumEnumStatus;
-import org.folio.inventory.consortium.model.ConsortiumEvenType;
+import org.folio.inventory.consortium.model.SharingStatus;
+import org.folio.inventory.consortium.model.SharingInstanceEventType;
 import org.folio.inventory.consortium.model.SharingInstance;
 import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
@@ -34,9 +34,9 @@ import java.util.Map;
 import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.EMPTY;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
-import static org.folio.inventory.consortium.model.ConsortiumEnumStatus.COMPLETE;
-import static org.folio.inventory.consortium.model.ConsortiumEnumStatus.ERROR;
-import static org.folio.inventory.consortium.model.ConsortiumEvenType.*;
+import static org.folio.inventory.consortium.model.SharingStatus.COMPLETE;
+import static org.folio.inventory.consortium.model.SharingStatus.ERROR;
+import static org.folio.inventory.consortium.model.SharingInstanceEventType.*;
 import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_FOLIO;
 import static org.folio.inventory.domain.instances.InstanceSource.FOLIO;
@@ -217,14 +217,13 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   }
 
   private void sendCompleteEventToKafka(String tenantId, SharingInstance sharingInstance,
-                                        ConsortiumEnumStatus status, String errorMessage, List<KafkaHeader> kafkaHeaders) {
+                                        SharingStatus status, String errorMessage, List<KafkaHeader> kafkaHeaders) {
 
-    ConsortiumEvenType evenType = CONSORTIUM_INSTANCE_SHARING_COMPLETE;
+    SharingInstanceEventType evenType = CONSORTIUM_INSTANCE_SHARING_COMPLETE;
 
     try {
-      LOGGER.info("sendEventToKafka :: tenantId: {}, instance with InstanceId={}, status: {}{}",
-        tenantId, sharingInstance.getInstanceIdentifier(), status.getValue(),
-        status.equals(ERROR) ? ", message: " + errorMessage : errorMessage);
+      LOGGER.info("sendEventToKafka :: tenantId: {}, instance with InstanceId={}, status: {}, message: {}",
+        tenantId, sharingInstance.getInstanceIdentifier(), status.getValue(), errorMessage);
 
       String topicName = KafkaTopicNameHelper.formatTopicName(kafkaConfig.getEnvId(),
         KafkaTopicNameHelper.getDefaultNameSpace(), tenantId, evenType.value());
@@ -244,7 +243,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   }
 
   private KafkaProducerRecord<String, String> createProducerRecord(String topicName, SharingInstance sharingInstance,
-                                                                   ConsortiumEnumStatus status, String errorMessage, List<KafkaHeader> kafkaHeaders) {
+                                                                   SharingStatus status, String errorMessage, List<KafkaHeader> kafkaHeaders) {
     LOGGER.info("createKafkaMessage :: Instance with InstanceId={}, status: {}, {}topicName: {}",
       sharingInstance.getInstanceIdentifier(), status,
       status.equals(ERROR) ? " message: " + errorMessage + ", " : EMPTY, topicName);

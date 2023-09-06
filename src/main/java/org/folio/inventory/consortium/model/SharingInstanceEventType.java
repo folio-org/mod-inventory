@@ -2,12 +2,12 @@ package org.folio.inventory.consortium.model;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 
-public enum ConsortiumEvenType {
+public enum SharingInstanceEventType {
   CONSORTIUM_INSTANCE_SHARING_INIT("CONSORTIUM_INSTANCE_SHARING_INIT"),
   CONSORTIUM_INSTANCE_SHARING_COMPLETE("CONSORTIUM_INSTANCE_SHARING_COMPLETE");
   private final String value;
 
-  private ConsortiumEvenType(String value) {
+  SharingInstanceEventType(String value) {
     this.value = value;
   }
 
