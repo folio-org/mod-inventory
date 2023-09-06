@@ -13,7 +13,7 @@ public enum InstanceSource {
 
   CONSORTIUM_MARC("CONSORTIUM-MARC");
 
-  private String value;
+  private final String value;
 
   InstanceSource(String value) {
     this.value = value;
