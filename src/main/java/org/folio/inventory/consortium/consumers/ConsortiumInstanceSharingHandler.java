@@ -87,38 +87,25 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       LOGGER.info("handle :: checking is InstanceId={} exists on tenant {}", instanceId, sharingInstance.getTargetTenantId());
       targetInstanceCollection.findById(instanceId)
         .toCompletableFuture()
-          .whenComplete((instance, ex) -> {
-              if (ex != null) {
-                LOGGER.info("Step 1");
-                sendErrorResponseAndPrintLogMessage(tenantId, ex.getMessage(), sharingInstance, event.headers());
-                promise.fail(ex.getMessage());
-              } else if (instance != null) {
-                LOGGER.info("Step 2");
-                sendErrorResponseAndPrintLogMessage(tenantId, instance.getHrid(), sharingInstance, event.headers());
-                promise.fail("Instance != null");
-              } else {
-                LOGGER.info("Step 3");
-                sendErrorResponseAndPrintLogMessage(tenantId, "instance is null", sharingInstance, event.headers());
-                promise.fail("Instance == null");
-              }
+        .thenCompose((instance) -> {
+            if (instance != null) {
+              LOGGER.info("Step 1");
+              sendErrorResponseAndPrintLogMessage(tenantId, "Step 1:" + instance.getHrid(), sharingInstance, event.headers());
+              promise.fail("Instance != null");
+            } else {
+              LOGGER.info("Step 2");
+              sendErrorResponseAndPrintLogMessage(tenantId, "Step 2: instance is null", sharingInstance, event.headers());
+              promise.fail("Instance == null");
             }
-          )
-        .thenAccept(instance -> {
-          if (instance != null) {
-            LOGGER.info("Step 4");
-            sendErrorResponseAndPrintLogMessage(tenantId, "2 instance != null", sharingInstance, event.headers());
-            promise.complete("2 instance != null");
-          } else {
-            LOGGER.info("Step 5");
-            sendErrorResponseAndPrintLogMessage(tenantId, "2 instance == null", sharingInstance, event.headers());
-            promise.fail("2 instance == null");
+            return null;
           }
-        })
-        .exceptionally(throwable -> {
-          LOGGER.info("Step 6");
-          promise.fail(throwable.getCause());
-          return null;
-        });
+        ).exceptionally(
+          throwable -> {
+            LOGGER.info("Step 3: " + throwable.getMessage());
+            promise.fail(throwable.getCause());
+            return null;
+          }
+        );
 
       LOGGER.info("handle :: checking is InstanceId={} exists on tenant {}", instanceId, sharingInstance.getTargetTenantId());
       getInstanceById(instanceId, sharingInstance.getTargetTenantId(), targetInstanceCollection)
