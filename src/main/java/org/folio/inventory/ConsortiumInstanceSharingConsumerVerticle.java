@@ -27,21 +27,17 @@ import static org.folio.inventory.dataimport.util.KafkaConfigConstants.OKAPI_URL
 
 public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle {
 
-  private static final Logger LOGGER = LogManager.getLogger(DataImportConsumerVerticle.class);
+  private static final Logger LOGGER = LogManager.getLogger(ConsortiumInstanceSharingConsumerVerticle.class);
 
   private final int loadLimit = getLoadLimit();
 
   private KafkaConsumerWrapper<String, String> consumer;
 
-//  private final int maxDistributionNumber = getMaxDistributionNumber();
-
   @Override
   public void start(Promise<Void> startPromise) {
     JsonObject config = vertx.getOrCreateContext().config();
     KafkaConfig kafkaConfig = getKafkaConfig(config);
-
     LOGGER.info(format("kafkaConfig: %s", kafkaConfig));
-//    EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, maxDistributionNumber);
 
     Storage storage = Storage.basedUpon(config, vertx.createHttpClient());
     ConsortiumInstanceSharingHandler consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig);
@@ -94,9 +90,5 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
   private int getLoadLimit() {
     return Integer.parseInt(System.getProperty("inventory.kafka.ConsortiumInstanceSharingConsumer.loadLimit", "5"));
   }
-
-//  private int getMaxDistributionNumber() {
-//    return Integer.parseInt(System.getProperty("inventory.kafka.ConsortiumInstanceSharingVerticle.maxDistributionNumber", "100"));
-//  }
 
 }
