@@ -85,6 +85,36 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       InstanceCollection sourceInstanceCollection = storage.getInstanceCollection(sourceTenantContext);
 
       LOGGER.info("handle :: checking is InstanceId={} exists on tenant {}", instanceId, sharingInstance.getTargetTenantId());
+      targetInstanceCollection.findById(instanceId)
+        .toCompletableFuture()
+          .whenComplete((instance, ex) -> {
+              if (ex != null) {
+                sendErrorResponseAndPrintLogMessage(tenantId, ex.getMessage(), sharingInstance, event.headers());
+                promise.fail(ex.getMessage());
+              } else if (instance != null) {
+                sendErrorResponseAndPrintLogMessage(tenantId, instance.getHrid(), sharingInstance, event.headers());
+                promise.fail("Instance != null");
+              } else {
+                sendErrorResponseAndPrintLogMessage(tenantId, "instance is null", sharingInstance, event.headers());
+                promise.fail("Instance == null");
+              }
+            }
+          )
+        .thenAccept(instance -> {
+          if (instance != null) {
+            sendErrorResponseAndPrintLogMessage(tenantId, "2 instance != null", sharingInstance, event.headers());
+            promise.complete("2 instance != null");
+          } else {
+            sendErrorResponseAndPrintLogMessage(tenantId, "2 instance == null", sharingInstance, event.headers());
+            promise.fail("2 instance == null");
+          }
+        })
+        .exceptionally(throwable -> {
+          promise.fail(throwable.getCause());
+          return null;
+        });
+
+      LOGGER.info("handle :: checking is InstanceId={} exists on tenant {}", instanceId, sharingInstance.getTargetTenantId());
       getInstanceById(instanceId, sharingInstance.getTargetTenantId(), targetInstanceCollection)
         .onFailure(failure -> {
           if (failure.getClass().equals(NotFoundException.class)) {
