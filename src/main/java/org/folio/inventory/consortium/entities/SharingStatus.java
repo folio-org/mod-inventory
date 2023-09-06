@@ -1,6 +1,6 @@
 package org.folio.inventory.consortium.entities;
 
-public enum Status {
+public enum SharingStatus {
   IN_PROGRESS,
   COMPLETE,
   ERROR

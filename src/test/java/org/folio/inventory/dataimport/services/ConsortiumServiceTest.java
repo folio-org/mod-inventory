@@ -15,7 +15,7 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.consortium.entities.SharingInstance;
-import org.folio.inventory.consortium.entities.Status;
+import org.folio.inventory.consortium.entities.SharingStatus;
 import org.folio.inventory.consortium.services.ConsortiumServiceImpl;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.exceptions.NotFoundException;
@@ -68,7 +68,7 @@ public class ConsortiumServiceTest {
     sharingInstance.setSourceTenantId(consortiumTenant);
     sharingInstance.setInstanceIdentifier(instanceId);
     sharingInstance.setTargetTenantId(localTenant);
-    sharingInstance.setStatus(Status.COMPLETE);
+    sharingInstance.setStatus(SharingStatus.COMPLETE);
 
     WireMock.stubFor(WireMock.post(new UrlPathPattern(new RegexPattern("/consortia/" + consortiumId + "/sharing/instances"), true))
       .willReturn(WireMock.ok().withBody(Json.encode(sharingInstance))));
@@ -134,7 +134,7 @@ public class ConsortiumServiceTest {
     Context context = EventHandlingUtil.constructContext(localTenant, token, baseUrl);
     consortiumServiceImpl.shareInstance(context, consortiumId, sharingInstance).onComplete(ar -> {
       testContext.assertTrue(ar.succeeded());
-      testContext.assertEquals(ar.result().getStatus(), Status.COMPLETE);
+      testContext.assertEquals(ar.result().getStatus(), SharingStatus.COMPLETE);
       async.complete();
     });
   }
@@ -150,7 +150,7 @@ public class ConsortiumServiceTest {
     resultingSharedInstance.setSourceTenantId(consortiumTenant);
     resultingSharedInstance.setInstanceIdentifier(instanceId);
     resultingSharedInstance.setTargetTenantId(localTenant);
-    resultingSharedInstance.setStatus(Status.ERROR);
+    resultingSharedInstance.setStatus(SharingStatus.ERROR);
     resultingSharedInstance.setError(testError);
 
     WireMock.stubFor(WireMock.post(new UrlPathPattern(new RegexPattern("/consortia/" + consortiumId + "/sharing/instances"), true))
@@ -191,7 +191,7 @@ public class ConsortiumServiceTest {
         .withHeader(OKAPI_URL_HEADER, WireMock.equalTo(context.getOkapiLocation())));
 
       testContext.assertTrue(ar.succeeded());
-      testContext.assertEquals(ar.result().getStatus(), Status.COMPLETE);
+      testContext.assertEquals(ar.result().getStatus(), SharingStatus.COMPLETE);
       async.complete();
     });
   }

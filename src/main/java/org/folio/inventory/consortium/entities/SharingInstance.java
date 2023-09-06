@@ -10,7 +10,7 @@ public class SharingInstance {
   private UUID instanceIdentifier;
   private String sourceTenantId;
   private String targetTenantId;
-  private Status status;
+  private SharingStatus status;
   private String error;
 
   /**
@@ -65,11 +65,11 @@ public class SharingInstance {
    * Returns status of sharing process
    * @return status
    */
-  public Status getStatus() {
+  public SharingStatus getStatus() {
     return status;
   }
 
-  public void setStatus(Status status) {
+  public void setStatus(SharingStatus status) {
     this.status = status;
   }
 

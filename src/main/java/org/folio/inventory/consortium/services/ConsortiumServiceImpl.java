@@ -10,7 +10,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.consortium.entities.SharingInstance;
-import org.folio.inventory.consortium.entities.Status;
+import org.folio.inventory.consortium.entities.SharingStatus;
 import org.folio.inventory.consortium.exceptions.ConsortiumException;
 import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
@@ -34,6 +34,7 @@ public class ConsortiumServiceImpl implements ConsortiumService {
     this.httpClient = httpClient;
   }
 
+  @Override
   public Future<SharingInstance> createShadowInstance(Context context, String instanceId) {
     return getCentralTenantId(context)
       .compose(centralTenantId -> {
@@ -49,6 +50,7 @@ public class ConsortiumServiceImpl implements ConsortiumService {
       });
   }
 
+  @Override
   public Future<String> getCentralTenantId(Context context) {
     CompletableFuture<String> completableFuture = createOkapiHttpClient(context)
       .thenCompose(client ->
@@ -74,6 +76,7 @@ public class ConsortiumServiceImpl implements ConsortiumService {
     return Future.fromCompletionStage(completableFuture);
   }
 
+  @Override
   public Future<String> getConsortiumId(Context context) {
     CompletableFuture<String> completableFuture = createOkapiHttpClient(context)
       .thenCompose(client ->
@@ -99,12 +102,13 @@ public class ConsortiumServiceImpl implements ConsortiumService {
     return Future.fromCompletionStage(completableFuture);
   }
 
+  @Override
   public Future<SharingInstance> shareInstance(Context context, String consortiumId, SharingInstance sharingInstance) {
     CompletableFuture<SharingInstance> completableFuture = createOkapiHttpClient(context)
       .thenCompose(client ->
         client.post(context.getOkapiLocation() + String.format(SHARE_INSTANCE_ENDPOINT, consortiumId), Json.encode(sharingInstance))
           .thenCompose(httpResponse -> {
-            if (httpResponse.getStatusCode() == HttpStatus.SC_OK && !httpResponse.getJson().getString("status").equals(Status.ERROR.toString())) {
+            if (httpResponse.getStatusCode() == HttpStatus.SC_OK && !SharingStatus.ERROR.toString().equals(httpResponse.getJson().getString("status"))) {
               SharingInstance response = Json.decodeValue(httpResponse.getBody(), SharingInstance.class);
               LOGGER.debug("shareInstance:: Successfully sharedInstance with id: {}, sharedInstance: {}",
                 response.getInstanceIdentifier(), httpResponse.getBody());
