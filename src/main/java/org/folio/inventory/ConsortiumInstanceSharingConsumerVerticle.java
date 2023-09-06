@@ -16,7 +16,6 @@ import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaConsumerWrapper;
 import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.kafka.SubscriptionDefinition;
-import org.folio.processing.events.EventManager;
 
 import static java.lang.String.format;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
@@ -34,24 +33,19 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
 
   private KafkaConsumerWrapper<String, String> consumer;
 
-  private final int maxDistributionNumber = getMaxDistributionNumber();
+//  private final int maxDistributionNumber = getMaxDistributionNumber();
 
   @Override
   public void start(Promise<Void> startPromise) {
     JsonObject config = vertx.getOrCreateContext().config();
-    KafkaConfig kafkaConfig = KafkaConfig.builder()
-      .envId(config.getString(KAFKA_ENV))
-      .kafkaHost(config.getString(KAFKA_HOST))
-      .kafkaPort(config.getString(KAFKA_PORT))
-      .okapiUrl(config.getString(OKAPI_URL))
-      .replicationFactor(Integer.parseInt(config.getString(KAFKA_REPLICATION_FACTOR)))
-      .maxRequestSize(Integer.parseInt(config.getString(KAFKA_MAX_REQUEST_SIZE)))
-      .build();
+    KafkaConfig kafkaConfig = getKafkaConfig(config);
+
     LOGGER.info(format("kafkaConfig: %s", kafkaConfig));
-    EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, maxDistributionNumber);
+//    EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, maxDistributionNumber);
 
     Storage storage = Storage.basedUpon(config, vertx.createHttpClient());
     ConsortiumInstanceSharingHandler consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig);
+
     var kafkaConsumerFuture = createKafkaConsumerWrapper(kafkaConfig, consortiumInstanceSharingHandler);
     kafkaConsumerFuture.onFailure(startPromise::fail)
       .onSuccess(ar -> {
@@ -79,6 +73,19 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
       .map(consumerWrapper);
   }
 
+  private KafkaConfig getKafkaConfig(JsonObject config) {
+    KafkaConfig kafkaConfig = KafkaConfig.builder()
+      .envId(config.getString(KAFKA_ENV))
+      .kafkaHost(config.getString(KAFKA_HOST))
+      .kafkaPort(config.getString(KAFKA_PORT))
+      .okapiUrl(config.getString(OKAPI_URL))
+      .replicationFactor(Integer.parseInt(config.getString(KAFKA_REPLICATION_FACTOR)))
+      .maxRequestSize(Integer.parseInt(config.getString(KAFKA_MAX_REQUEST_SIZE)))
+      .build();
+    LOGGER.info("kafkaConfig: {}", kafkaConfig);
+    return kafkaConfig;
+  }
+
   @Override
   public void stop(Promise<Void> stopPromise) {
     consumer.stop().onComplete(ar -> stopPromise.complete());
@@ -88,8 +95,8 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
     return Integer.parseInt(System.getProperty("inventory.kafka.ConsortiumInstanceSharingConsumer.loadLimit", "5"));
   }
 
-  private int getMaxDistributionNumber() {
-    return Integer.parseInt(System.getProperty("inventory.kafka.ConsortiumInstanceSharingVerticle.maxDistributionNumber", "100"));
-  }
+//  private int getMaxDistributionNumber() {
+//    return Integer.parseInt(System.getProperty("inventory.kafka.ConsortiumInstanceSharingVerticle.maxDistributionNumber", "100"));
+//  }
 
 }
