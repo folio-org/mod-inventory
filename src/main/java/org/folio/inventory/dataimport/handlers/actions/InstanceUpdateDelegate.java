@@ -11,11 +11,10 @@ import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
+import org.folio.inventory.consortium.util.ConsortiumUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
-import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.InstanceUtil;
 import org.folio.processing.mapping.defaultmapper.RecordMapper;
@@ -57,22 +56,9 @@ public class InstanceUpdateDelegate {
       LOGGER.info("Instance update with instanceId: {}", instanceId);
       RecordMapper<org.folio.Instance> recordMapper = RecordMapperBuilder.buildMapper(MARC_FORMAT);
       var mappedInstance = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
-
-      if (mappedInstance.getSource().equals(CONSORTIUM_FOLIO.getValue()) || mappedInstance.getSource().equals(CONSORTIUM_MARC.getValue())) {
-        String centralTenantId = "";
-        Context centralTenantContext = EventHandlingUtil.constructContext(centralTenantId, context.getToken(), context.getOkapiLocation());
-        InstanceCollection instanceCollection = storage.getInstanceCollection(centralTenantContext);
-        return getInstanceById(instanceId, instanceCollection)
-          .onSuccess(existedInstance -> fillVersion(existedInstance, eventPayload))
-          .compose(existedInstance -> updateInstance(existedInstance, mappedInstance))
-          .compose(updatedInstance -> {
-            eventPayload.put(CENTRAL_TENANT_INSTANCE_UPDATED_FLAG, "true");
-            return updateInstanceInStorage(updatedInstance, instanceCollection);
-          });
-      }
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
 
-      return getInstanceById(instanceId, instanceCollection)
+      return ConsortiumUtil.findInstanceById(instanceId, instanceCollection)
         .onSuccess(existingInstance -> fillVersion(existingInstance, eventPayload))
         .compose(existingInstance -> updateInstance(existingInstance, mappedInstance))
         .compose(updatedInstance -> updateInstanceInStorage(updatedInstance, instanceCollection));
@@ -92,23 +78,6 @@ public class InstanceUpdateDelegate {
     return parsedRecord.getContent() instanceof String
       ? new JsonObject(parsedRecord.getContent().toString())
       : JsonObject.mapFrom(parsedRecord.getContent());
-  }
-
-  private Future<Instance> getInstanceById(String instanceId, InstanceCollection instanceCollection) {
-    Promise<Instance> promise = Promise.promise();
-    instanceCollection.findById(instanceId, success -> {
-        if (success.getResult() == null) {
-          LOGGER.error("Can't find Instance by id: {} ", instanceId);
-          promise.fail(new NotFoundException(format("Can't find Instance by id: %s", instanceId)));
-        } else {
-          promise.complete(success.getResult());
-        }
-      },
-      failure -> {
-        LOGGER.error(format("Error retrieving Instance by id %s - %s, status code %s", instanceId, failure.getReason(), failure.getStatusCode()));
-        promise.fail(failure.getReason());
-      });
-    return promise.future();
   }
 
   private Future<Instance> updateInstance(Instance existingInstance, org.folio.Instance mappedInstance) {

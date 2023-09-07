@@ -13,9 +13,11 @@ import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.entities.PartialError;
 import org.folio.inventory.dataimport.services.OrderHelperService;
+import org.folio.inventory.consortium.util.ConsortiumUtil;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.relationship.RecordToEntity;
@@ -65,14 +67,16 @@ public class CreateHoldingEventHandler implements EventHandler {
   private final Storage storage;
   private final MappingMetadataCache mappingMetadataCache;
   private final IdStorageService idStorageService;
-  private OrderHelperService orderHelperService;
+  private final OrderHelperService orderHelperService;
+  private final ConsortiumService consortiumService;
 
   public CreateHoldingEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache, IdStorageService idStorageService,
-                                   OrderHelperService orderHelperServiceImpl) {
+                                   OrderHelperService orderHelperServiceImpl, ConsortiumService consortiumService) {
     this.orderHelperService = orderHelperServiceImpl;
     this.storage = storage;
     this.mappingMetadataCache = mappingMetadataCache;
     this.idStorageService = idStorageService;
+    this.consortiumService = consortiumService;
   }
 
   @Override
@@ -110,6 +114,7 @@ public class CreateHoldingEventHandler implements EventHandler {
               MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
               MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
               JsonArray holdingsList = new JsonArray(payloadContext.get(HOLDINGS.value()));
+              String instanceId = getInstanceId(dataImportEventPayload);
               for (int i = 0; i < holdingsList.size(); i++) {
                 JsonObject holdingAsJson = holdingsList.getJsonObject(i);
                 if (holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD) != null) {
@@ -118,13 +123,22 @@ public class CreateHoldingEventHandler implements EventHandler {
                 }
                 holdingAsJson.put("id", (i == 0) ? holdingsId : UUID.randomUUID().toString());
                 holdingAsJson.put("sourceId", FOLIO_SOURCE_ID);
-                fillInstanceIdIfNeeded(dataImportEventPayload, holdingAsJson);
+                fillInstanceIdIfNeeded(instanceId, holdingAsJson);
               }
 
               LOGGER.trace(format("handle:: Mapped holdings: %s", holdingsList.encode()));
               dataImportEventPayload.getContext().put(HOLDINGS.value(), holdingsList.encode());
               return List.of(Json.decodeValue(payloadContext.get(HOLDINGS.value()), HoldingsRecord[].class));
             })
+            .compose(holdingsToCreate -> consortiumService.getConsortiumConfiguration(context)
+              .compose(consortiumConfigurationOptional -> {
+                if (consortiumConfigurationOptional.isPresent()) {
+                  return ConsortiumUtil.createShadowInstanceIfNeeded(consortiumService, storage.getInstanceCollection(context),
+                    context, getInstanceId(dataImportEventPayload), consortiumConfigurationOptional.get()).map(holdingsToCreate)
+                    .map(holdingsToCreate);
+                }
+                return Future.succeededFuture(holdingsToCreate);
+              }))
             .compose(holdingsToCreate -> addHoldings(holdingsToCreate, payloadContext, context))
             .onSuccess(createdHoldings -> {
               LOGGER.info("handle:: Created Holdings records by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}'",
@@ -168,25 +182,29 @@ public class CreateHoldingEventHandler implements EventHandler {
     dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
   }
 
-  private void fillInstanceIdIfNeeded(DataImportEventPayload dataImportEventPayload, JsonObject holdingAsJson) {
+  private void fillInstanceIdIfNeeded(String instanceId, JsonObject holdingAsJson) {
     if (isBlank(holdingAsJson.getString(INSTANCE_ID_FIELD))) {
-      String instanceId = null;
-      String instanceAsString = dataImportEventPayload.getContext().get(EntityType.INSTANCE.value());
-
-      if (isNotEmpty(instanceAsString)) {
-        JsonObject holdingsRecord = new JsonObject(instanceAsString);
-        instanceId = holdingsRecord.getString("id");
-      }
-      if (isBlank(instanceId)) {
-        String recordAsString = dataImportEventPayload.getContext().get(EntityType.MARC_BIBLIOGRAPHIC.value());
-        Record record = Json.decodeValue(recordAsString, Record.class);
-        instanceId = ParsedRecordUtil.getAdditionalSubfieldValue(record.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.I);
-      }
       if (isBlank(instanceId)) {
         throw new EventProcessingException(PAYLOAD_DATA_HAS_NO_INSTANCE_ID_ERROR_MSG);
       }
       fillInstanceId(holdingAsJson, instanceId);
     }
+  }
+
+  private static String getInstanceId(DataImportEventPayload dataImportEventPayload) {
+    String instanceId = null;
+    String instanceAsString = dataImportEventPayload.getContext().get(EntityType.INSTANCE.value());
+
+    if (isNotEmpty(instanceAsString)) {
+      JsonObject instanceRecord = new JsonObject(instanceAsString);
+      instanceId = instanceRecord.getString("id");
+    }
+    if (isBlank(instanceId)) {
+      String recordAsString = dataImportEventPayload.getContext().get(EntityType.MARC_BIBLIOGRAPHIC.value());
+      Record record = Json.decodeValue(recordAsString, Record.class);
+      instanceId = ParsedRecordUtil.getAdditionalSubfieldValue(record.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.I);
+    }
+    return instanceId;
   }
 
   private void fillInstanceId(JsonObject holdingAsJson, String instanceId) {

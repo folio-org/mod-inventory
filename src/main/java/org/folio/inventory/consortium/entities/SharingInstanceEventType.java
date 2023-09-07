@@ -1,4 +1,4 @@
-package org.folio.inventory.consortium.model;
+package org.folio.inventory.consortium.entities;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 

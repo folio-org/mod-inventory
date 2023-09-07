@@ -7,7 +7,7 @@ import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler;
-import org.folio.inventory.consortium.model.SharingInstanceEventType;
+import org.folio.inventory.consortium.entities.SharingInstanceEventType;
 import org.folio.inventory.dataimport.util.ConsumerWrapperUtil;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.AsyncRecordHandler;
