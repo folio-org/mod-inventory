@@ -130,8 +130,15 @@ public class CreateHoldingEventHandler implements EventHandler {
               dataImportEventPayload.getContext().put(HOLDINGS.value(), holdingsList.encode());
               return List.of(Json.decodeValue(payloadContext.get(HOLDINGS.value()), HoldingsRecord[].class));
             })
-            .compose(holdingsToCreate -> ConsortiumUtil.createShadowInstanceIfNeeded(consortiumService, storage.getInstanceCollection(context),
-              context, getInstanceId(dataImportEventPayload)).map(holdingsToCreate))
+            .compose(holdingsToCreate -> consortiumService.getConsortiumConfiguration(context)
+              .compose(consortiumConfigurationOptional -> {
+                if (consortiumConfigurationOptional.isPresent()) {
+                  return ConsortiumUtil.createShadowInstanceIfNeeded(consortiumService, storage.getInstanceCollection(context),
+                    context, getInstanceId(dataImportEventPayload), consortiumConfigurationOptional.get()).map(holdingsToCreate)
+                    .map(holdingsToCreate);
+                }
+                return Future.succeededFuture(holdingsToCreate);
+              }))
             .compose(holdingsToCreate -> addHoldings(holdingsToCreate, payloadContext, context))
             .onSuccess(createdHoldings -> {
               LOGGER.info("handle:: Created Holdings records by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}'",

@@ -9,14 +9,15 @@ import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.consortium.entities.ConsortiumConfiguration;
 import org.folio.inventory.consortium.entities.SharingInstance;
 import org.folio.inventory.consortium.entities.SharingStatus;
 import org.folio.inventory.consortium.exceptions.ConsortiumException;
-import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -26,7 +27,6 @@ public class ConsortiumServiceImpl implements ConsortiumService {
   private static final Logger LOGGER = LogManager.getLogger(ConsortiumServiceImpl.class);
   private static final String USER_TENANTS_ENDPOINT = "/user-tenants?limit=1";
   private static final String SHARE_INSTANCE_ENDPOINT = "/consortia/%s/sharing/instances";
-  private static final String CONSORTIA_ENDPOINT = "/consortia";
   private static final String SHARING_INSTANCE_ERROR = "Error during sharing Instance for sourceTenantId: %s, targetTenantId: %s, instanceIdentifier: %s, status code: %s, response message: %s";
   private final HttpClient httpClient;
 
@@ -35,37 +35,31 @@ public class ConsortiumServiceImpl implements ConsortiumService {
   }
 
   @Override
-  public Future<SharingInstance> createShadowInstance(Context context, String instanceId) {
-    return getCentralTenantId(context)
-      .compose(centralTenantId -> {
-        Context centralTenantContext = constructContext(centralTenantId, context.getToken(), context.getOkapiLocation());
-        return getConsortiumId(centralTenantContext)
-          .compose(consortiumId -> {
-            SharingInstance sharingInstance = new SharingInstance();
-            sharingInstance.setSourceTenantId(centralTenantId);
-            sharingInstance.setInstanceIdentifier(UUID.fromString(instanceId));
-            sharingInstance.setTargetTenantId(context.getTenantId());
-            return shareInstance(centralTenantContext, consortiumId, sharingInstance);
-          });
-      });
+  public Future<SharingInstance> createShadowInstance(Context context, String instanceId, ConsortiumConfiguration consortiumConfiguration) {
+    Context centralTenantContext = constructContext(consortiumConfiguration.getCentralTenantId(), context.getToken(), context.getOkapiLocation());
+    SharingInstance sharingInstance = new SharingInstance();
+    sharingInstance.setSourceTenantId(consortiumConfiguration.getCentralTenantId());
+    sharingInstance.setInstanceIdentifier(UUID.fromString(instanceId));
+    sharingInstance.setTargetTenantId(context.getTenantId());
+    return shareInstance(centralTenantContext, consortiumConfiguration.getConsortiumId(), sharingInstance);
   }
 
   @Override
-  public Future<String> getCentralTenantId(Context context) {
-    CompletableFuture<String> completableFuture = createOkapiHttpClient(context)
+  public Future<Optional<ConsortiumConfiguration>> getConsortiumConfiguration(Context context) {
+    CompletableFuture<Optional<ConsortiumConfiguration>> completableFuture = createOkapiHttpClient(context)
       .thenCompose(client ->
         client.get(context.getOkapiLocation() + USER_TENANTS_ENDPOINT).toCompletableFuture()
           .thenCompose(httpResponse -> {
             if (httpResponse.getStatusCode() == HttpStatus.SC_OK) {
               JsonArray userTenants = httpResponse.getJson().getJsonArray("userTenants");
               if (userTenants.isEmpty()) {
-                String message = "Central tenant not found";
-                LOGGER.warn(String.format("getCentralTenantId:: %s", message));
-                return CompletableFuture.failedFuture(new NotFoundException(message));
+                LOGGER.debug("getCentralTenantId:: Central tenant and consortium id not found");
+                return CompletableFuture.completedFuture(Optional.empty());
               }
               String centralTenantId = userTenants.getJsonObject(0).getString("centralTenantId");
-              LOGGER.debug("getCentralTenantId:: Found centralTenantId: {}", centralTenantId);
-              return CompletableFuture.completedFuture(centralTenantId);
+              String consortiumId = userTenants.getJsonObject(0).getString("consortiumId");
+              LOGGER.debug("getCentralTenantId:: Found centralTenantId: {} and consortiumId: {}", centralTenantId, consortiumId);
+              return CompletableFuture.completedFuture(Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId)));
             } else {
               String message = String.format("Error retrieving centralTenantId by tenant id: %s, status code: %s, response message: %s",
                 context.getTenantId(), httpResponse.getStatusCode(), httpResponse.getBody());
@@ -76,32 +70,7 @@ public class ConsortiumServiceImpl implements ConsortiumService {
     return Future.fromCompletionStage(completableFuture);
   }
 
-  @Override
-  public Future<String> getConsortiumId(Context context) {
-    CompletableFuture<String> completableFuture = createOkapiHttpClient(context)
-      .thenCompose(client ->
-        client.get(context.getOkapiLocation() + CONSORTIA_ENDPOINT).toCompletableFuture()
-          .thenCompose(httpResponse -> {
-            if (httpResponse.getStatusCode() == HttpStatus.SC_OK) {
-              JsonArray consortia = httpResponse.getJson().getJsonArray("consortia");
-              if (consortia.isEmpty()) {
-                String message = String.format("ConsortiaId for tenant: %s not found", context.getTenantId());
-                LOGGER.warn(String.format("getConsortiumId:: %s", message));
-                return CompletableFuture.failedFuture(new NotFoundException(message));
-              }
-              String consortiumId = consortia.getJsonObject(0).getString("id");
-              LOGGER.debug("getConsortiumId:: Found consortiumId: {}", consortiumId);
-              return CompletableFuture.completedFuture(consortiumId);
-            } else {
-              String message = String.format("Error retrieving consortiaId by tenant: %s, status code: %s, response message: %s",
-                context.getTenantId(), httpResponse.getStatusCode(), httpResponse.getBody());
-              LOGGER.warn(String.format("getConsortiumId:: %s", message));
-              return CompletableFuture.failedFuture(new ConsortiumException(message));
-            }
-          }));
-    return Future.fromCompletionStage(completableFuture);
-  }
-
+  // Returns completed future if the sharing status is "IN_PROGRESS" or "COMPLETE"
   @Override
   public Future<SharingInstance> shareInstance(Context context, String consortiumId, SharingInstance sharingInstance) {
     CompletableFuture<SharingInstance> completableFuture = createOkapiHttpClient(context)
