@@ -70,7 +70,7 @@ public class ConsortiumServiceImpl implements ConsortiumService {
     return Future.fromCompletionStage(completableFuture);
   }
 
-  // Returns completed future if the sharing status is "IN_PROGRESS" or "COMPLETE"
+  // Returns successful future if the sharing status is "IN_PROGRESS" or "COMPLETE"
   @Override
   public Future<SharingInstance> shareInstance(Context context, String consortiumId, SharingInstance sharingInstance) {
     CompletableFuture<SharingInstance> completableFuture = createOkapiHttpClient(context)

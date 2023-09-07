@@ -134,7 +134,7 @@ public class CreateHoldingEventHandler implements EventHandler {
               .compose(consortiumConfigurationOptional -> {
                 if (consortiumConfigurationOptional.isPresent()) {
                   return ConsortiumUtil.createShadowInstanceIfNeeded(consortiumService, storage.getInstanceCollection(context),
-                    context, getInstanceId(dataImportEventPayload), consortiumConfigurationOptional.get()).map(holdingsToCreate)
+                    context, getInstanceId(dataImportEventPayload), consortiumConfigurationOptional.get())
                     .map(holdingsToCreate);
                 }
                 return Future.succeededFuture(holdingsToCreate);
