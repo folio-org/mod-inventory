@@ -48,6 +48,8 @@ import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventH
 import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
 import static org.folio.inventory.domain.instances.Instance.METADATA_KEY;
 import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
+import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_FOLIO;
+import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 
@@ -64,9 +66,6 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   private static final String CURRENT_NODE_PROPERTY = "CURRENT_NODE";
   private static final String MARC_INSTANCE_SOURCE = "MARC";
   private static final String INSTANCE_ID_TYPE = "INSTANCE";
-
-  public static final String CONSORTIUM_MARC_SOURCE = "CONSORTIUM-MARC";
-  public static final String CONSORTIUM_FOLIO_SOURCE = "CONSORTIUM-FOLIO";
   public static final String CENTRAL_TENANT_INSTANCE_UPDATED_FLAG = "CENTRAL_TENANT_INSTANCE_UPDATED";
 
   private final PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
@@ -108,15 +107,8 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       Instance instanceToUpdate = Instance.fromJson(new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value())));
 
-
-      // Retrieve central TenantId from mod-users/users.
-      // Get Shared Instance from Central Tenant.
-      //  Update Instance from CentralTenant
-      // Change it to Central Tenant ID.
-      //  Add flag to the payload.
-
       // 999ffi InstanceUUID ->
-      if (instanceToUpdate.getSource().equals(CONSORTIUM_MARC_SOURCE) || instanceToUpdate.getSource().equals(CONSORTIUM_FOLIO_SOURCE)) {
+      if (instanceToUpdate.getSource().equals(CONSORTIUM_FOLIO.getValue()) || instanceToUpdate.getSource().equals(CONSORTIUM_MARC.getValue())) {
         String centralTenantId = ""; //TODO: getCentralTenantId
         Context centralTenantContext = EventHandlingUtil.constructContext(centralTenantId, context.getToken(), context.getOkapiLocation());
         InstanceCollection instanceCollection = storage.getInstanceCollection(centralTenantContext);

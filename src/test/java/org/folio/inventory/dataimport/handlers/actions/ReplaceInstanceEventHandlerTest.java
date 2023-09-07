@@ -22,6 +22,8 @@ import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.consortium.model.SharingInstance;
+import org.folio.inventory.consortium.model.SharingStatus;
 import org.folio.inventory.dataimport.InstanceWriterFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.instances.Instance;
@@ -76,6 +78,7 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING;
 import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.ACTION_HAS_NO_MAPPING_MSG;
+import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
 import static org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle.TITLE_KEY;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
@@ -107,6 +110,13 @@ public class ReplaceInstanceEventHandlerTest {
   private static final Integer INSTANCE_VERSION = 1;
   private static final String INSTANCE_VERSION_AS_STRING = "1";
   private static final String MARC_INSTANCE_SOURCE = "MARC";
+  private String baseUrl;
+//  private final ConsortiumServiceImpl consortiumServiceImpl = new ConsortiumServiceImpl(vertx.createHttpClient());
+  private final String localTenant = "tenant";
+  private final String consortiumTenant = "consortiumTenant";
+  private final String token = "token";
+  private final UUID instanceId = UUID.randomUUID();
+  private final String consortiumId = UUID.randomUUID().toString();
 
   @Mock
   private Storage storage;
@@ -310,6 +320,86 @@ public class ReplaceInstanceEventHandlerTest {
     ArgumentCaptor<Set<String>> titleIdCaptor = ArgumentCaptor.forClass(Set.class);
     verify(precedingSucceedingTitlesHelper).deletePrecedingSucceedingTitles(titleIdCaptor.capture(), any(Context.class));
     assertTrue(titleIdCaptor.getValue().contains(existingPrecedingTitle.getString("id")));
+  }
+
+  @Test
+  public void shouldProcessEventIfConsortiumInstance() throws InterruptedException, ExecutionException, TimeoutException {
+
+    baseUrl = mockServer.baseUrl();
+
+    JsonObject centralTenantIdResponse = new JsonObject()
+      .put("userTenants", new JsonArray().add(new JsonObject().put("centralTenantId", consortiumTenant)));
+
+    WireMock.stubFor(WireMock.get(new UrlPathPattern(new RegexPattern("/user-tenants"), true))
+      .willReturn(WireMock.ok().withBody(Json.encode(centralTenantIdResponse))));
+
+    JsonObject consortiumIdResponse = new JsonObject()
+      .put("consortia", new JsonArray().add(new JsonObject().put("id", consortiumId)));
+
+    WireMock.stubFor(WireMock.get(new UrlPathPattern(new RegexPattern("/consortia"), true))
+      .willReturn(WireMock.ok().withBody(Json.encode(consortiumIdResponse))));
+
+    SharingInstance sharingInstance = new SharingInstance();
+    sharingInstance.setId(UUID.randomUUID());
+    sharingInstance.setSourceTenantId(consortiumTenant);
+    sharingInstance.setInstanceIdentifier(instanceId);
+    sharingInstance.setTargetTenantId(localTenant);
+    sharingInstance.setStatus(SharingStatus.COMPLETE);
+
+    WireMock.stubFor(WireMock.post(new UrlPathPattern(new RegexPattern("/consortia/" + consortiumId + "/sharing/instances"), true))
+      .willReturn(WireMock.ok().withBody(Json.encode(sharingInstance))));
+
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    String instanceTypeId = UUID.randomUUID().toString();
+    String title = "titleValue";
+
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId), StringValue.of(title));
+
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new InstanceWriterFactory());
+
+    HashMap<String, String> context = new HashMap<>();
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(INSTANCE.value(), new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("hrid", UUID.randomUUID().toString())
+      .put("source", CONSORTIUM_MARC.getValue())
+      .put("_version", INSTANCE_VERSION)
+      .encode());
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(mockServer.baseUrl())
+      .withToken(TOKEN)
+      .withJobExecutionId(UUID.randomUUID().toString());
+
+    CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload actualDataImportEventPayload = future.get(20, TimeUnit.SECONDS);
+
+    assertEquals(DI_INVENTORY_INSTANCE_UPDATED.value(), actualDataImportEventPayload.getEventType());
+    assertNotNull(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
+    JsonObject createdInstance = new JsonObject(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
+    assertNotNull(createdInstance.getString("id"));
+    assertEquals(title, createdInstance.getString("title"));
+    assertEquals(instanceTypeId, createdInstance.getString("instanceTypeId"));
+    assertEquals(MARC_INSTANCE_SOURCE, createdInstance.getString("source"));
+    assertThat(createdInstance.getJsonArray("precedingTitles").size(), is(1));
+    assertThat(createdInstance.getJsonArray("succeedingTitles").size(), is(1));
+    assertThat(createdInstance.getJsonArray("notes").size(), is(2));
+    assertThat(createdInstance.getJsonArray("notes").getJsonObject(0).getString("instanceNoteTypeId"), notNullValue());
+    assertThat(createdInstance.getJsonArray("notes").getJsonObject(1).getString("instanceNoteTypeId"), notNullValue());
+    assertThat(createdInstance.getString("_version"), is(INSTANCE_VERSION_AS_STRING));
+    verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
+    verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern("/source-storage/records" + "/.*"), true)));
   }
 
   @Test(expected = ExecutionException.class)

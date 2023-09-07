@@ -2,6 +2,8 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import static java.lang.String.format;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersUpdateDelegate;
+import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_FOLIO;
+import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
 
 import java.util.Map;
 
@@ -56,14 +58,7 @@ public class InstanceUpdateDelegate {
       RecordMapper<org.folio.Instance> recordMapper = RecordMapperBuilder.buildMapper(MARC_FORMAT);
       var mappedInstance = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
 
-
-      // Retrieve central TenantId from mod-users/users.
-      // Get Shared Instance from Central Tenant.
-      //  Update Instance from CentralTenant
-      // Change it to Central Tenant ID.
-      //  Add flag to the payload.
-
-      if (mappedInstance.getSource().equals(CONSORTIUM_MARC_SOURCE) || mappedInstance.getSource().equals(CONSORTIUM_FOLIO_SOURCE)) {
+      if (mappedInstance.getSource().equals(CONSORTIUM_FOLIO.getValue()) || mappedInstance.getSource().equals(CONSORTIUM_MARC.getValue())) {
         String centralTenantId = "";
         Context centralTenantContext = EventHandlingUtil.constructContext(centralTenantId, context.getToken(), context.getOkapiLocation());
         InstanceCollection instanceCollection = storage.getInstanceCollection(centralTenantContext);
