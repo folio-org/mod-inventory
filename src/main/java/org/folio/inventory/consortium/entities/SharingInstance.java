@@ -1,4 +1,4 @@
-package org.folio.inventory.consortium.model;
+package org.folio.inventory.consortium.entities;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -8,6 +8,9 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import java.util.Objects;
 import java.util.UUID;
 
+/**
+ * Entity that is used for sharing instance process
+ */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({"id", "instanceIdentifier", "sourceTenantId", "targetTenantId", "status", "error"})
 public class SharingInstance {
@@ -31,9 +34,9 @@ public class SharingInstance {
   private String error;
 
   /**
-   * Get id
+   * Returns id of sharedInstance entity
    *
-   * @return id
+   * @return id of SharedInstance
    */
   public UUID getId() {
     return id;
@@ -44,7 +47,7 @@ public class SharingInstance {
   }
 
   /**
-   * Get instanceIdentifier
+   * Returns id of instance
    *
    * @return instanceIdentifier
    */
@@ -57,7 +60,7 @@ public class SharingInstance {
   }
 
   /**
-   * Get sourceTenantId
+   * Returns the tenant id from which pull the instance
    *
    * @return sourceTenantId
    */
@@ -70,7 +73,7 @@ public class SharingInstance {
   }
 
   /**
-   * Get targetTenantId
+   * Returns the tenant id to which pull the instance
    *
    * @return targetTenantId
    */
@@ -83,7 +86,7 @@ public class SharingInstance {
   }
 
   /**
-   * Get status
+   * Returns status of sharing process
    *
    * @return status
    */
@@ -96,7 +99,7 @@ public class SharingInstance {
   }
 
   /**
-   * Get error
+   * Returns the error that existed during sharing process
    *
    * @return error
    */
