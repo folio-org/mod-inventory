@@ -9,6 +9,7 @@ import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
@@ -33,6 +34,9 @@ public class InstanceUpdateDelegate {
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
   private static final String QM_RELATED_RECORD_VERSION_KEY = "RELATED_RECORD_VERSION";
   private static final String MARC_FORMAT = "MARC_BIB";
+  public static final String CONSORTIUM_MARC_SOURCE = "CONSORTIUM-MARC";
+  public static final String CONSORTIUM_FOLIO_SOURCE = "CONSORTIUM-FOLIO";
+  public static final String CENTRAL_TENANT_INSTANCE_UPDATED_FLAG = "CENTRAL_TENANT_INSTANCE_UPDATED";
 
   private final Storage storage;
 
@@ -51,6 +55,26 @@ public class InstanceUpdateDelegate {
       LOGGER.info("Instance update with instanceId: {}", instanceId);
       RecordMapper<org.folio.Instance> recordMapper = RecordMapperBuilder.buildMapper(MARC_FORMAT);
       var mappedInstance = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
+
+
+      // Retrieve central TenantId from mod-users/users.
+      // Get Shared Instance from Central Tenant.
+      //  Update Instance from CentralTenant
+      // Change it to Central Tenant ID.
+      //  Add flag to the payload.
+
+      if (mappedInstance.getSource().equals(CONSORTIUM_MARC_SOURCE) || mappedInstance.getSource().equals(CONSORTIUM_FOLIO_SOURCE)) {
+        String centralTenantId = "";
+        Context centralTenantContext = EventHandlingUtil.constructContext(centralTenantId, context.getToken(), context.getOkapiLocation());
+        InstanceCollection instanceCollection = storage.getInstanceCollection(centralTenantContext);
+        return getInstanceById(instanceId, instanceCollection)
+          .onSuccess(existedInstance -> fillVersion(existedInstance, eventPayload))
+          .compose(existedInstance -> updateInstance(existedInstance, mappedInstance))
+          .compose(updatedInstance -> {
+            eventPayload.put(CENTRAL_TENANT_INSTANCE_UPDATED_FLAG, "true");
+            return updateInstanceInStorage(updatedInstance, instanceCollection);
+          });
+      }
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
 
       return getInstanceById(instanceId, instanceCollection)
