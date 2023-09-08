@@ -1,20 +1,15 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import static java.lang.String.format;
-import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersUpdateDelegate;
-import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_FOLIO;
-import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
-
-import java.util.Map;
-
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.json.JsonObject;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.consortium.util.ConsortiumUtil;
+import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
-import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.InstanceUtil;
 import org.folio.processing.mapping.defaultmapper.RecordMapper;
@@ -23,9 +18,10 @@ import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingPa
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.Record;
 
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.json.JsonObject;
+import java.util.Map;
+
+import static java.lang.String.format;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersUpdateDelegate;
 
 public class InstanceUpdateDelegate {
 
@@ -58,7 +54,7 @@ public class InstanceUpdateDelegate {
       var mappedInstance = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
 
-      return ConsortiumUtil.findInstanceById(instanceId, instanceCollection)
+      return InstanceUtil.findInstanceById(instanceId, instanceCollection)
         .onSuccess(existingInstance -> fillVersion(existingInstance, eventPayload))
         .compose(existingInstance -> updateInstance(existingInstance, mappedInstance))
         .compose(updatedInstance -> updateInstanceInStorage(updatedInstance, instanceCollection));
