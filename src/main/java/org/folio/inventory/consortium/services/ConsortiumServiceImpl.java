@@ -53,17 +53,17 @@ public class ConsortiumServiceImpl implements ConsortiumService {
             if (httpResponse.getStatusCode() == HttpStatus.SC_OK) {
               JsonArray userTenants = httpResponse.getJson().getJsonArray("userTenants");
               if (userTenants.isEmpty()) {
-                LOGGER.debug("getCentralTenantId:: Central tenant and consortium id not found");
+                LOGGER.debug("getConsortiumConfiguration:: centralTenantId and consortiumId not found");
                 return CompletableFuture.completedFuture(Optional.empty());
               }
               String centralTenantId = userTenants.getJsonObject(0).getString("centralTenantId");
               String consortiumId = userTenants.getJsonObject(0).getString("consortiumId");
-              LOGGER.debug("getCentralTenantId:: Found centralTenantId: {} and consortiumId: {}", centralTenantId, consortiumId);
+              LOGGER.debug("getConsortiumConfiguration:: Found centralTenantId: {} and consortiumId: {}", centralTenantId, consortiumId);
               return CompletableFuture.completedFuture(Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId)));
             } else {
-              String message = String.format("Error retrieving centralTenantId by tenant id: %s, status code: %s, response message: %s",
+              String message = String.format("Error retrieving centralTenantId and consortiumId by tenant id: %s, status code: %s, response message: %s",
                 context.getTenantId(), httpResponse.getStatusCode(), httpResponse.getBody());
-              LOGGER.warn(String.format("getCentralTenantId:: %s", message));
+              LOGGER.warn(String.format("getConsortiumConfiguration:: %s", message));
               return CompletableFuture.failedFuture(new ConsortiumException(message));
             }
           }));
