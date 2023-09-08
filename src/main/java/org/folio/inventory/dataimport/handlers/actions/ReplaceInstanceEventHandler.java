@@ -13,6 +13,8 @@ import org.folio.MappingMetadataDto;
 import org.folio.Record;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
+import org.folio.inventory.consortium.services.ConsortiumService;
+
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.instances.Instance;
@@ -72,14 +74,18 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   private final MappingMetadataCache mappingMetadataCache;
   private final HttpClient httpClient;
 
+  private final ConsortiumService consortiumService;
+
   public ReplaceInstanceEventHandler(Storage storage,
                                      PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper,
                                      MappingMetadataCache mappingMetadataCache,
-                                     HttpClient client) {
+                                     HttpClient client,
+                                     ConsortiumService consortiumService) {
     super(storage);
     this.precedingSucceedingTitlesHelper = precedingSucceedingTitlesHelper;
     this.mappingMetadataCache = mappingMetadataCache;
     this.httpClient = client;
+    this.consortiumService = consortiumService;
   }
 
   @Override
@@ -102,25 +108,34 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         LOGGER.error(ACTION_HAS_NO_MAPPING_MSG);
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
-      LOGGER.info("Processing ReplaceInstanceEventHandler starting with jobExecutionId: {}.", dataImportEventPayload.getJobExecutionId());
+      LOGGER.info("handle:: Processing ReplaceInstanceEventHandler starting with jobExecutionId: {}.", dataImportEventPayload.getJobExecutionId());
 
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       Instance instanceToUpdate = Instance.fromJson(new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value())));
 
-      // 999ffi InstanceUUID ->
       if (instanceToUpdate.getSource().equals(CONSORTIUM_FOLIO.getValue()) || instanceToUpdate.getSource().equals(CONSORTIUM_MARC.getValue())) {
-        String centralTenantId = ""; //TODO: getCentralTenantId
-        Context centralTenantContext = EventHandlingUtil.constructContext(centralTenantId, context.getToken(), context.getOkapiLocation());
-        InstanceCollection instanceCollection = storage.getInstanceCollection(centralTenantContext);
-        getInstanceById(instanceToUpdate.getId(), instanceCollection)
-          .onSuccess(existedCentralTenantInstance -> {
-            processInstanceUpdate(dataImportEventPayload, instanceCollection, context, existedCentralTenantInstance, future);
-            dataImportEventPayload.getContext().put(CENTRAL_TENANT_INSTANCE_UPDATED_FLAG, "true");
-          })
-          .onFailure(e -> {
-            LOGGER.error("Error retrieving inventory Instance from central tenant", e);
-            future.completeExceptionally(e);
+        consortiumService.getConsortiumConfiguration(context)
+          .compose(consortiumConfigurationOptional -> {
+            if (consortiumConfigurationOptional.isPresent()) {
+              Context centralTenantContext = EventHandlingUtil.constructContext(consortiumConfigurationOptional.get().getCentralTenantId(), context.getToken(), context.getOkapiLocation());
+              InstanceCollection instanceCollection = storage.getInstanceCollection(centralTenantContext);
+              getInstanceById(instanceToUpdate.getId(), instanceCollection)
+                .onSuccess(existedCentralTenantInstance -> {
+                  processInstanceUpdate(dataImportEventPayload, instanceCollection, context, existedCentralTenantInstance, future);
+                  dataImportEventPayload.getContext().put(CENTRAL_TENANT_INSTANCE_UPDATED_FLAG, "true");
+                })
+                .onFailure(e -> {
+                  LOGGER.warn("Error retrieving inventory Instance from central tenant", e);
+                  future.completeExceptionally(e);
+                });
+            } else {
+              LOGGER.warn("handle:: Can't retrieve centralTenantId updating Instance by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}'", dataImportEventPayload.getJobExecutionId(),
+                dataImportEventPayload.getContext().get(RECORD_ID_HEADER), dataImportEventPayload.getContext().get(CHUNK_ID_HEADER));
+              future.completeExceptionally(new NotFoundException("Can't retrieve centralTenantId updating Instance"));
+            }
+            return Future.succeededFuture();
           });
+
       } else {
         InstanceCollection instanceCollection = storage.getInstanceCollection(context);
         processInstanceUpdate(dataImportEventPayload, instanceCollection, context, instanceToUpdate, future);
@@ -221,7 +236,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       .collect(Collectors.toList()));
     instanceAsJson.put("id", instanceToUpdate.getId());
     instanceAsJson.put(HRID_KEY, instanceToUpdate.getHrid());
-    if (!(instanceToUpdate.getSource().equals(CONSORTIUM_MARC_SOURCE) || instanceToUpdate.getSource().equals(CONSORTIUM_FOLIO_SOURCE))) {
+    if (!(instanceToUpdate.getSource().equals(CONSORTIUM_FOLIO.getValue()) || instanceToUpdate.getSource().equals(CONSORTIUM_MARC.getValue()))) {
       instanceAsJson.put(SOURCE_KEY, MARC_FORMAT);
     }
     instanceAsJson.put(METADATA_KEY, instanceToUpdate.getMetadata());

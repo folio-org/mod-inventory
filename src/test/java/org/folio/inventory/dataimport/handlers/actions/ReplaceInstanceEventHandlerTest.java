@@ -8,6 +8,7 @@ import com.github.tomakehurst.wiremock.matching.RegexPattern;
 import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
 import com.google.common.collect.Lists;
 
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
@@ -22,9 +23,12 @@ import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
-import org.folio.inventory.consortium.model.SharingInstance;
-import org.folio.inventory.consortium.model.SharingStatus;
+import org.folio.inventory.consortium.entities.ConsortiumConfiguration;
+import org.folio.inventory.consortium.services.ConsortiumService;
+import org.folio.inventory.consortium.services.ConsortiumServiceImpl;
 import org.folio.inventory.dataimport.InstanceWriterFactory;
+import org.folio.inventory.consortium.entities.SharingInstance;
+import org.folio.inventory.consortium.entities.SharingStatus;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
@@ -59,6 +63,7 @@ import java.net.URL;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -111,7 +116,6 @@ public class ReplaceInstanceEventHandlerTest {
   private static final String INSTANCE_VERSION_AS_STRING = "1";
   private static final String MARC_INSTANCE_SOURCE = "MARC";
   private String baseUrl;
-//  private final ConsortiumServiceImpl consortiumServiceImpl = new ConsortiumServiceImpl(vertx.createHttpClient());
   private final String localTenant = "tenant";
   private final String consortiumTenant = "consortiumTenant";
   private final String token = "token";
@@ -124,6 +128,8 @@ public class ReplaceInstanceEventHandlerTest {
   private InstanceCollection instanceRecordCollection;
   @Mock
   private OkapiHttpClient mockedClient;
+  @Mock
+  private ConsortiumServiceImpl consortiumServiceImpl;
   @Spy
   private MarcBibReaderFactory fakeReaderFactory = new MarcBibReaderFactory();
 
@@ -193,7 +199,7 @@ public class ReplaceInstanceEventHandlerTest {
 
     Vertx vertx = Vertx.vertx();
     replaceInstanceEventHandler = new ReplaceInstanceEventHandler(storage, precedingSucceedingTitlesHelper, new MappingMetadataCache(vertx,
-      vertx.createHttpClient(), 3600), vertx.createHttpClient());
+      vertx.createHttpClient(), 3600), vertx.createHttpClient(), consortiumServiceImpl);
 
 
     doAnswer(invocationOnMock -> {
@@ -324,6 +330,14 @@ public class ReplaceInstanceEventHandlerTest {
 
   @Test
   public void shouldProcessEventIfConsortiumInstance() throws InterruptedException, ExecutionException, TimeoutException {
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+
+    Instance returnedInstance = new Instance(UUID.randomUUID().toString(), String.valueOf(INSTANCE_VERSION), UUID.randomUUID().toString(), "MARC", "title", "instanceTypeId");
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(returnedInstance));
+      return null;
+    }).when(instanceRecordCollection).findById(anyString(), any(Consumer.class), any(Consumer.class));
 
     baseUrl = mockServer.baseUrl();
 
@@ -349,6 +363,8 @@ public class ReplaceInstanceEventHandlerTest {
     WireMock.stubFor(WireMock.post(new UrlPathPattern(new RegexPattern("/consortia/" + consortiumId + "/sharing/instances"), true))
       .willReturn(WireMock.ok().withBody(Json.encode(sharingInstance))));
 
+    doAnswer(invocationOnMock -> Future.succeededFuture(Optional.of(new ConsortiumConfiguration(consortiumId, consortiumId)))).when(consortiumServiceImpl).getConsortiumConfiguration(any());
+
     Reader fakeReader = Mockito.mock(Reader.class);
 
     String instanceTypeId = UUID.randomUUID().toString();
@@ -357,8 +373,6 @@ public class ReplaceInstanceEventHandlerTest {
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId), StringValue.of(title));
 
     when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-
-    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
 
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
