@@ -13,8 +13,7 @@ import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler;
-import org.folio.inventory.consortium.model.SharingInstance;
-import org.folio.inventory.consortium.model.SharingStatus;
+import org.folio.inventory.consortium.entities.SharingInstance;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
@@ -32,6 +31,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
 
+import static org.folio.inventory.consortium.entities.SharingStatus.IN_PROGRESS;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
 import static org.mockito.ArgumentMatchers.any;
@@ -88,7 +88,7 @@ public class ConsortiumInstanceSharingHandlerTest {
       .withInstanceIdentifier(UUID.fromString(instanceId))
       .withSourceTenantId("consortium")
       .withTargetTenantId("university")
-      .withStatus(SharingStatus.IN_PROGRESS);
+      .withStatus(IN_PROGRESS);
 
     when(kafkaRecord.key()).thenReturn(shareId);
     when(kafkaRecord.value()).thenReturn(Json.encode(sharingInstance));
@@ -154,7 +154,7 @@ public class ConsortiumInstanceSharingHandlerTest {
       .withInstanceIdentifier(UUID.fromString(instanceId))
       .withSourceTenantId("consortium")
       .withTargetTenantId("university")
-      .withStatus(SharingStatus.IN_PROGRESS);
+      .withStatus(IN_PROGRESS);
 
     when(kafkaRecord.key()).thenReturn(shareId);
     when(kafkaRecord.value()).thenReturn(Json.encode(sharingInstance));
@@ -198,7 +198,7 @@ public class ConsortiumInstanceSharingHandlerTest {
       .withInstanceIdentifier(UUID.fromString(instanceId))
       .withSourceTenantId("consortium")
       .withTargetTenantId("university")
-      .withStatus(SharingStatus.IN_PROGRESS);
+      .withStatus(IN_PROGRESS);
 
     when(kafkaRecord.key()).thenReturn(shareId);
     when(kafkaRecord.value()).thenReturn(Json.encode(sharingInstance));
@@ -252,7 +252,7 @@ public class ConsortiumInstanceSharingHandlerTest {
       .withInstanceIdentifier(UUID.fromString(instanceId))
       .withSourceTenantId("consortium")
       .withTargetTenantId("university")
-      .withStatus(SharingStatus.IN_PROGRESS);
+      .withStatus(IN_PROGRESS);
 
     when(kafkaRecord.key()).thenReturn(shareId);
     when(kafkaRecord.value()).thenReturn(Json.encode(sharingInstance));
@@ -292,9 +292,7 @@ public class ConsortiumInstanceSharingHandlerTest {
   @AfterClass
   public static void tearDownClass(TestContext context) {
     Async async = context.async();
-    vertx.close(ar -> {
-      async.complete();
-    });
+    vertx.close(ar -> async.complete());
   }
 
 }
