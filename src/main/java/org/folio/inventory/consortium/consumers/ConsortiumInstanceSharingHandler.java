@@ -13,9 +13,9 @@ import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.consortium.model.SharingStatus;
-import org.folio.inventory.consortium.model.SharingInstanceEventType;
 import org.folio.inventory.consortium.model.SharingInstance;
+import org.folio.inventory.consortium.model.SharingInstanceEventType;
+import org.folio.inventory.consortium.model.SharingStatus;
 import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.instances.Instance;
@@ -34,22 +34,21 @@ import java.util.Map;
 import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.EMPTY;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
+import static org.folio.inventory.consortium.model.SharingInstanceEventType.CONSORTIUM_INSTANCE_SHARING_COMPLETE;
 import static org.folio.inventory.consortium.model.SharingStatus.COMPLETE;
 import static org.folio.inventory.consortium.model.SharingStatus.ERROR;
-import static org.folio.inventory.consortium.model.SharingInstanceEventType.*;
 import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_FOLIO;
 import static org.folio.inventory.domain.instances.InstanceSource.FOLIO;
 import static org.folio.inventory.domain.instances.InstanceSource.MARC;
 import static org.folio.inventory.domain.items.Item.HRID_KEY;
+import static org.folio.okapi.common.XOkapiHeaders.TENANT;
+import static org.folio.okapi.common.XOkapiHeaders.TOKEN;
+import static org.folio.okapi.common.XOkapiHeaders.URL;
 
 public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<String, String> {
 
   private static final Logger LOGGER = LogManager.getLogger(ConsortiumInstanceSharingHandler.class);
-
-  private static final String OKAPI_TOKEN_HEADER = "x-okapi-token";
-  private static final String OKAPI_URL_HEADER = "x-okapi-url";
-  private static final String OKAPI_TENANT_HEADER = "x-okapi-tenant";
 
   private final Vertx vertx;
   private final Storage storage;
@@ -74,38 +73,15 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
       LOGGER.info("Event CONSORTIUM_INSTANCE_SHARING_INIT has been received for instanceId: {}, sourceTenant: {}, targetTenant: {}",
         instanceId, sharingInstance.getSourceTenantId(), sharingInstance.getTargetTenantId());
-      String tenantId = kafkaHeaders.get(OKAPI_TENANT_HEADER);
+      String tenantId = kafkaHeaders.get(TENANT.toLowerCase());
 
       Context targetTenantContext = EventHandlingUtil.constructContext(sharingInstance.getTargetTenantId(),
-        kafkaHeaders.get(OKAPI_TOKEN_HEADER), kafkaHeaders.get(OKAPI_URL_HEADER));
+        kafkaHeaders.get(TOKEN.toLowerCase()), kafkaHeaders.get(URL.toLowerCase()));
       InstanceCollection targetInstanceCollection = storage.getInstanceCollection(targetTenantContext);
 
       Context sourceTenantContext = EventHandlingUtil.constructContext(sharingInstance.getSourceTenantId(),
-        kafkaHeaders.get(OKAPI_TOKEN_HEADER), kafkaHeaders.get(OKAPI_URL_HEADER));
+        kafkaHeaders.get(TOKEN.toLowerCase()), kafkaHeaders.get(URL.toLowerCase()));
       InstanceCollection sourceInstanceCollection = storage.getInstanceCollection(sourceTenantContext);
-
-      LOGGER.info("handle :: checking is InstanceId={} exists on tenant {}", instanceId, sharingInstance.getTargetTenantId());
-      targetInstanceCollection.findById(instanceId)
-        .toCompletableFuture()
-        .thenCompose((instance) -> {
-            if (instance != null) {
-              LOGGER.info("Step 1");
-              sendErrorResponseAndPrintLogMessage(tenantId, "Step 1:" + instance.getHrid(), sharingInstance, event.headers());
-              promise.fail("Instance != null");
-            } else {
-              LOGGER.info("Step 2");
-              sendErrorResponseAndPrintLogMessage(tenantId, "Step 2: instance is null", sharingInstance, event.headers());
-              promise.fail("Instance == null");
-            }
-            return null;
-          }
-        ).exceptionally(
-          throwable -> {
-            LOGGER.info("Step 3: " + throwable.getMessage());
-            promise.fail(throwable.getCause());
-            return null;
-          }
-        );
 
       LOGGER.info("handle :: checking is InstanceId={} exists on tenant {}", instanceId, sharingInstance.getTargetTenantId());
       getInstanceById(instanceId, sharingInstance.getTargetTenantId(), targetInstanceCollection)
@@ -210,6 +186,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   }
 
   private Future<Instance> addInstance(Instance instance, InstanceCollection instanceCollection) {
+    LOGGER.info("addInstance :: InstanceId={}", instance.getId());
     Promise<Instance> promise = Promise.promise();
     instanceCollection.add(instance, success -> promise.complete(success.getResult()),
       failure -> {
