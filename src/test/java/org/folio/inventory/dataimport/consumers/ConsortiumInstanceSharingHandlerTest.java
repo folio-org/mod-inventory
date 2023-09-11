@@ -163,13 +163,20 @@ public class ConsortiumInstanceSharingHandlerTest {
         KafkaHeader.header(OKAPI_URL_HEADER, "url")));
 
     when(storage.getInstanceCollection(any(Context.class)))
-      .thenReturn(mockedTargetInstanceCollection);
+      .thenReturn(mockedTargetInstanceCollection)
+      .thenReturn(mockedSourceInstanceCollection);
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(null));
+      return null;
+    }).when(mockedTargetInstanceCollection).findById(any(String.class), any(), any());
 
     doAnswer(invocationOnMock -> {
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(existingInstance));
       return null;
-    }).when(mockedTargetInstanceCollection).findById(any(String.class), any(), any());
+    }).when(mockedSourceInstanceCollection).findById(eq(instanceId), any(), any());
 
     // when
     consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig);
@@ -180,6 +187,61 @@ public class ConsortiumInstanceSharingHandlerTest {
       context.assertTrue(ar.failed());
       context.assertTrue(ar.cause().getMessage()
         .contains("Instance with InstanceId=" + instanceId + " is present on target tenant: university"));
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldNotShareInstanceWhenInstanceNotExistsOnSourceTenant(TestContext context) throws IOException {
+
+    // given
+    Async async = context.async();
+    JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
+    jsonInstance.put("source", "FOLIO");
+    existingInstance = Instance.fromJson(jsonInstance);
+
+    String shareId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
+    String instanceId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
+
+    SharingInstance sharingInstance = new SharingInstance()
+      .withId(UUID.fromString(shareId))
+      .withInstanceIdentifier(UUID.fromString(instanceId))
+      .withSourceTenantId("consortium")
+      .withTargetTenantId("university")
+      .withStatus(IN_PROGRESS);
+
+    when(kafkaRecord.key()).thenReturn(shareId);
+    when(kafkaRecord.value()).thenReturn(Json.encode(sharingInstance));
+    when(kafkaRecord.headers()).thenReturn(
+      List.of(KafkaHeader.header(OKAPI_TOKEN_HEADER, "token"),
+        KafkaHeader.header(OKAPI_URL_HEADER, "url")));
+
+    when(storage.getInstanceCollection(any(Context.class)))
+      .thenReturn(mockedTargetInstanceCollection)
+      .thenReturn(mockedSourceInstanceCollection);
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(null));
+      return null;
+    }).when(mockedTargetInstanceCollection).findById(any(String.class), any(), any());
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(null));
+      return null;
+    }).when(mockedSourceInstanceCollection).findById(eq(instanceId), any(), any());
+
+    // when
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig);
+
+    //then
+    Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
+    future.onComplete(ar -> {
+      context.assertTrue(ar.failed());
+      context.assertTrue(ar.cause().getMessage()
+        .contains("Error retrieving Instance by InstanceId=" + instanceId
+          + " from source tenant consortium. Error: org.folio.inventory.exceptions.NotFoundException: Can't find Instance by InstanceId=" + instanceId + " on tenant: consortium"));
       async.complete();
     });
   }
