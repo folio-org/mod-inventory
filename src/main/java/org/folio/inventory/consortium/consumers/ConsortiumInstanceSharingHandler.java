@@ -10,6 +10,7 @@ import io.vertx.kafka.client.producer.KafkaHeader;
 import io.vertx.kafka.client.producer.KafkaProducer;
 import io.vertx.kafka.client.producer.KafkaProducerRecord;
 import org.apache.http.HttpStatus;
+import org.apache.kafka.common.protocol.types.Field;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
@@ -42,14 +43,13 @@ import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_FOL
 import static org.folio.inventory.domain.instances.InstanceSource.FOLIO;
 import static org.folio.inventory.domain.instances.InstanceSource.MARC;
 import static org.folio.inventory.domain.items.Item.HRID_KEY;
+import static org.folio.okapi.common.XOkapiHeaders.TENANT;
+import static org.folio.okapi.common.XOkapiHeaders.TOKEN;
+import static org.folio.okapi.common.XOkapiHeaders.URL;
 
 public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<String, String> {
 
   private static final Logger LOGGER = LogManager.getLogger(ConsortiumInstanceSharingHandler.class);
-
-  private static final String OKAPI_TOKEN_HEADER = "x-okapi-token";
-  private static final String OKAPI_URL_HEADER = "x-okapi-url";
-  private static final String OKAPI_TENANT_HEADER = "x-okapi-tenant";
 
   private final Vertx vertx;
   private final Storage storage;
@@ -74,14 +74,14 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
       LOGGER.info("Event CONSORTIUM_INSTANCE_SHARING_INIT has been received for instanceId: {}, sourceTenant: {}, targetTenant: {}",
         instanceId, sharingInstance.getSourceTenantId(), sharingInstance.getTargetTenantId());
-      String tenantId = kafkaHeaders.get(OKAPI_TENANT_HEADER);
+      String tenantId = kafkaHeaders.get(TENANT.toLowerCase());
 
       Context targetTenantContext = EventHandlingUtil.constructContext(sharingInstance.getTargetTenantId(),
-        kafkaHeaders.get(OKAPI_TOKEN_HEADER), kafkaHeaders.get(OKAPI_URL_HEADER));
+        kafkaHeaders.get(TOKEN.toLowerCase()), kafkaHeaders.get(URL.toLowerCase()));
       InstanceCollection targetInstanceCollection = storage.getInstanceCollection(targetTenantContext);
 
       Context sourceTenantContext = EventHandlingUtil.constructContext(sharingInstance.getSourceTenantId(),
-        kafkaHeaders.get(OKAPI_TOKEN_HEADER), kafkaHeaders.get(OKAPI_URL_HEADER));
+        kafkaHeaders.get(TOKEN.toLowerCase()), kafkaHeaders.get(URL.toLowerCase()));
       InstanceCollection sourceInstanceCollection = storage.getInstanceCollection(sourceTenantContext);
 
       LOGGER.info("handle :: checking is InstanceId={} exists on tenant {}", instanceId, sharingInstance.getTargetTenantId());
@@ -98,7 +98,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                 } else {
                   LOGGER.info("handle :: Publishing Instance with InstanceId={} and with source {} from {} tenant to {} tenant", instanceId, srcInstance.getSource(), sharingInstance.getSourceTenantId(), sharingInstance.getTargetTenantId());
                   if (FOLIO.getValue().equals(srcInstance.getSource())) {
-                    publishInstanceToTenantSpecificCollection(srcInstance, targetInstanceCollection)
+                    publishInstanceToTenantSpecificCollection(srcInstance, sharingInstance.getTargetTenantId(), targetInstanceCollection)
                       .onSuccess(publishedInstance -> {
                         LOGGER.info("handle :: Updating source to 'CONSORTIUM-FOLIO' for Instance with InstanceId={}", instanceId);
                         JsonObject jsonInstanceToPublish = srcInstance.getJsonForStorage();
@@ -160,10 +160,10 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     sendCompleteEventToKafka(tenantId, sharingInstance, ERROR, errorMessage, kafkaHeaders);
   }
 
-  private Future<Instance> publishInstanceToTenantSpecificCollection(Instance instance, InstanceCollection instanceCollection) {
+  private Future<Instance> publishInstanceToTenantSpecificCollection(Instance instance, String tenant, InstanceCollection instanceCollection) {
     JsonObject jsonInstance = instance.getJsonForStorage();
     jsonInstance.remove(HRID_KEY);
-    return addInstance(Instance.fromJson(jsonInstance), instanceCollection);
+    return addInstance(Instance.fromJson(jsonInstance), tenant, instanceCollection);
   }
 
   private Future<Instance> getInstanceById(String instanceId, String tenantId, InstanceCollection instanceCollection) {
@@ -186,7 +186,8 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     return promise.future();
   }
 
-  private Future<Instance> addInstance(Instance instance, InstanceCollection instanceCollection) {
+  private Future<Instance> addInstance(Instance instance, String tenant, InstanceCollection instanceCollection) {
+    LOGGER.info("addInstance :: Instance with InstanceId={} to tenant {}", instance.getId(), tenant);
     Promise<Instance> promise = Promise.promise();
     instanceCollection.add(instance, success -> promise.complete(success.getResult()),
       failure -> {

@@ -163,20 +163,13 @@ public class ConsortiumInstanceSharingHandlerTest {
         KafkaHeader.header(OKAPI_URL_HEADER, "url")));
 
     when(storage.getInstanceCollection(any(Context.class)))
-      .thenReturn(mockedTargetInstanceCollection)
-      .thenReturn(mockedSourceInstanceCollection);
-
-    doAnswer(invocationOnMock -> {
-      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
-      successHandler.accept(new Success<>(null));
-      return null;
-    }).when(mockedTargetInstanceCollection).findById(any(String.class), any(), any());
+      .thenReturn(mockedTargetInstanceCollection);
 
     doAnswer(invocationOnMock -> {
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(existingInstance));
       return null;
-    }).when(mockedSourceInstanceCollection).findById(eq(instanceId), any(), any());
+    }).when(mockedTargetInstanceCollection).findById(any(String.class), any(), any());
 
     // when
     consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig);
