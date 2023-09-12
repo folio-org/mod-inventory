@@ -123,8 +123,8 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
               InstanceCollection instanceCollection = storage.getInstanceCollection(centralTenantContext);
               getInstanceById(instanceToUpdate.getId(), instanceCollection)
                 .onSuccess(existedCentralTenantInstance -> {
-                  LOGGER.error("!!!!!Instance:", existedCentralTenantInstance);
-                  LOGGER.error("!!!!!InstanceAsString:", existedCentralTenantInstance.toString());
+                  LOGGER.error("!!!!!Instance: {}", existedCentralTenantInstance);
+                  LOGGER.error("!!!!!InstanceAsString: {}", existedCentralTenantInstance.toString());
                   processInstanceUpdate(dataImportEventPayload, instanceCollection, context, existedCentralTenantInstance, future, centralTenantContext.getTenantId());
                   dataImportEventPayload.getContext().put(CENTRAL_TENANT_INSTANCE_UPDATED_FLAG, "true");
                 })
@@ -265,7 +265,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   private Future<Void> prepareRecordForMapping(DataImportEventPayload dataImportEventPayload,
                                                List<MarcFieldProtectionSetting> marcFieldProtectionSettings,
                                                Instance instance, String tenantId) {
-    LOGGER.error("SOURCE!!!: ", instance.getSource());
+    LOGGER.error("SOURCE!!!: {}", instance.getSource());
     if (!MARC_INSTANCE_SOURCE.equals(instance.getSource()) && !CONSORTIUM_MARC.getValue().equals(instance.getSource())) {
       LOGGER.error("INSIDE!!!: ");
       return Future.succeededFuture();
