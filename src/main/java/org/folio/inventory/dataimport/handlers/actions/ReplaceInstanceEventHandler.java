@@ -121,7 +121,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
               InstanceCollection instanceCollection = storage.getInstanceCollection(centralTenantContext);
               getInstanceById(instanceToUpdate.getId(), instanceCollection)
                 .onSuccess(existedCentralTenantInstance -> {
-                  processInstanceUpdate(dataImportEventPayload, instanceCollection, context, existedCentralTenantInstance, future);
+                  processInstanceUpdate(dataImportEventPayload, instanceCollection, context, existedCentralTenantInstance, future, centralTenantContext.getTenantId());
                   dataImportEventPayload.getContext().put(CENTRAL_TENANT_INSTANCE_UPDATED_FLAG, "true");
                 })
                 .onFailure(e -> {
@@ -138,7 +138,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
       } else {
         InstanceCollection instanceCollection = storage.getInstanceCollection(context);
-        processInstanceUpdate(dataImportEventPayload, instanceCollection, context, instanceToUpdate, future);
+        processInstanceUpdate(dataImportEventPayload, instanceCollection, context, instanceToUpdate, future, context.getTenantId());
       }
     } catch (Exception e) {
       LOGGER.error("Error updating inventory Instance", e);
@@ -147,7 +147,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
     return future;
   }
 
-  private void processInstanceUpdate(DataImportEventPayload dataImportEventPayload, InstanceCollection instanceCollection, Context context, Instance instanceToUpdate, CompletableFuture<DataImportEventPayload> future) {
+  private void processInstanceUpdate(DataImportEventPayload dataImportEventPayload, InstanceCollection instanceCollection, Context context, Instance instanceToUpdate, CompletableFuture<DataImportEventPayload> future, String centralTenantId) {
     prepareEvent(dataImportEventPayload);
 
     String jobExecutionId = dataImportEventPayload.getJobExecutionId();
@@ -158,7 +158,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
     mappingMetadataCache.get(jobExecutionId, context)
       .compose(parametersOptional -> parametersOptional
-        .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, mappingMetadata, instanceToUpdate, context.getTenantId()))
+        .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, mappingMetadata, instanceToUpdate, centralTenantId))
         .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, jobExecutionId,
           recordId, chunkId))))
       .compose(e -> {
