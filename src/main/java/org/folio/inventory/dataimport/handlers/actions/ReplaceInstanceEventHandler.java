@@ -158,7 +158,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
     mappingMetadataCache.get(jobExecutionId, context)
       .compose(parametersOptional -> parametersOptional
-        .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, mappingMetadata, instanceToUpdate))
+        .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, mappingMetadata, instanceToUpdate, context.getTenantId()))
         .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, jobExecutionId,
           recordId, chunkId))))
       .compose(e -> {
@@ -243,11 +243,11 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
     return instanceAsJson;
   }
 
-  private Future<Void> prepareAndExecuteMapping(DataImportEventPayload dataImportEventPayload, MappingMetadataDto mappingMetadata, Instance instanceToUpdate) {
+  private Future<Void> prepareAndExecuteMapping(DataImportEventPayload dataImportEventPayload, MappingMetadataDto mappingMetadata, Instance instanceToUpdate, String tenantId) {
     JsonObject mappingRules = new JsonObject(mappingMetadata.getMappingRules());
     MappingParameters mappingParameters = Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class);
 
-    return prepareRecordForMapping(dataImportEventPayload, mappingParameters.getMarcFieldProtectionSettings(), instanceToUpdate)
+    return prepareRecordForMapping(dataImportEventPayload, mappingParameters.getMarcFieldProtectionSettings(), instanceToUpdate, tenantId)
       .onSuccess(v -> {
         org.folio.Instance mapped = defaultMapRecordToInstance(dataImportEventPayload, mappingRules, mappingParameters);
         Instance mergedInstance = InstanceUtil.mergeFieldsWhichAreNotControlled(instanceToUpdate, mapped);
@@ -258,12 +258,12 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
   private Future<Void> prepareRecordForMapping(DataImportEventPayload dataImportEventPayload,
                                                List<MarcFieldProtectionSetting> marcFieldProtectionSettings,
-                                               Instance instance) {
+                                               Instance instance, String tenantId) {
     if (!MARC_INSTANCE_SOURCE.equals(instance.getSource())) {
       return Future.succeededFuture();
     }
 
-    return getRecordByInstanceId(dataImportEventPayload, instance.getId())
+    return getRecordByInstanceId(dataImportEventPayload, instance.getId(), tenantId)
       .compose(existingRecord -> {
         Record incomingRecord = Json.decodeValue(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()), Record.class);
         String updatedContent = new MarcRecordModifier().updateRecord(incomingRecord, existingRecord, marcFieldProtectionSettings);
@@ -274,9 +274,9 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   }
 
   private Future<Record> getRecordByInstanceId(DataImportEventPayload dataImportEventPayload,
-                                               String instanceId) {
+                                               String instanceId, String tenantId) {
     SourceStorageRecordsClient client = new SourceStorageRecordsClient(dataImportEventPayload.getOkapiUrl(),
-      dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), httpClient);
+      tenantId, dataImportEventPayload.getToken(), httpClient);
 
     return client.getSourceStorageRecordsFormattedById(instanceId, INSTANCE_ID_TYPE).compose(resp -> {
       if (resp.statusCode() != 200) {
