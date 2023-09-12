@@ -123,6 +123,8 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
               InstanceCollection instanceCollection = storage.getInstanceCollection(centralTenantContext);
               getInstanceById(instanceToUpdate.getId(), instanceCollection)
                 .onSuccess(existedCentralTenantInstance -> {
+                  LOGGER.error("!!!!!Instance:", existedCentralTenantInstance);
+                  LOGGER.error("!!!!!InstanceAsString:", existedCentralTenantInstance.toString());
                   processInstanceUpdate(dataImportEventPayload, instanceCollection, context, existedCentralTenantInstance, future, centralTenantContext.getTenantId());
                   dataImportEventPayload.getContext().put(CENTRAL_TENANT_INSTANCE_UPDATED_FLAG, "true");
                 })
