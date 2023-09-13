@@ -114,8 +114,6 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       Instance instanceToUpdate = Instance.fromJson(new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value())));
 
       if (instanceToUpdate.getSource().equals(CONSORTIUM_FOLIO.getValue()) || instanceToUpdate.getSource().equals(CONSORTIUM_MARC.getValue())) {
-        LOGGER.error("!!!!");
-
         consortiumService.getConsortiumConfiguration(context)
           .compose(consortiumConfigurationOptional -> {
             if (consortiumConfigurationOptional.isPresent()) {
@@ -123,8 +121,6 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
               InstanceCollection instanceCollection = storage.getInstanceCollection(centralTenantContext);
               getInstanceById(instanceToUpdate.getId(), instanceCollection)
                 .onSuccess(existedCentralTenantInstance -> {
-                  LOGGER.error("!!!!!Instance: {}", existedCentralTenantInstance);
-                  LOGGER.error("!!!!!InstanceAsString: {}", existedCentralTenantInstance.toString());
                   processInstanceUpdate(dataImportEventPayload, instanceCollection, context, existedCentralTenantInstance, future, centralTenantContext.getTenantId());
                   dataImportEventPayload.getContext().put(CENTRAL_TENANT_INSTANCE_UPDATED_FLAG, "true");
                 })
@@ -141,8 +137,6 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           });
 
       } else {
-        LOGGER.error("!!!!?");
-
         InstanceCollection instanceCollection = storage.getInstanceCollection(context);
         processInstanceUpdate(dataImportEventPayload, instanceCollection, context, instanceToUpdate, future, context.getTenantId());
       }
@@ -265,9 +259,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   private Future<Void> prepareRecordForMapping(DataImportEventPayload dataImportEventPayload,
                                                List<MarcFieldProtectionSetting> marcFieldProtectionSettings,
                                                Instance instance, String tenantId) {
-    LOGGER.error("SOURCE!!!: {}", instance.getSource());
     if (!MARC_INSTANCE_SOURCE.equals(instance.getSource()) && !CONSORTIUM_MARC.getValue().equals(instance.getSource())) {
-      LOGGER.error("INSIDE!!!: ");
       return Future.succeededFuture();
     }
 
