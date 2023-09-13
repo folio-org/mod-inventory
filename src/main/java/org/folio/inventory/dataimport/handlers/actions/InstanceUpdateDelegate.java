@@ -1,15 +1,18 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.json.JsonObject;
+import static java.lang.String.format;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersUpdateDelegate;
+
+import java.util.Map;
+
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
+import org.folio.inventory.consortium.util.ConsortiumUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
+import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.InstanceUtil;
 import org.folio.processing.mapping.defaultmapper.RecordMapper;
@@ -18,10 +21,9 @@ import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingPa
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.Record;
 
-import java.util.Map;
-
-import static java.lang.String.format;
-import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersUpdateDelegate;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.json.JsonObject;
 
 public class InstanceUpdateDelegate {
 
@@ -31,9 +33,6 @@ public class InstanceUpdateDelegate {
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
   private static final String QM_RELATED_RECORD_VERSION_KEY = "RELATED_RECORD_VERSION";
   private static final String MARC_FORMAT = "MARC_BIB";
-  public static final String CONSORTIUM_MARC_SOURCE = "CONSORTIUM-MARC";
-  public static final String CONSORTIUM_FOLIO_SOURCE = "CONSORTIUM-FOLIO";
-  public static final String CENTRAL_TENANT_INSTANCE_UPDATED_FLAG = "CENTRAL_TENANT_INSTANCE_UPDATED";
 
   private final Storage storage;
 
@@ -54,7 +53,7 @@ public class InstanceUpdateDelegate {
       var mappedInstance = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
 
-      return InstanceUtil.findInstanceById(instanceId, instanceCollection)
+      return ConsortiumUtil.findInstanceById(instanceId, instanceCollection)
         .onSuccess(existingInstance -> fillVersion(existingInstance, eventPayload))
         .compose(existingInstance -> updateInstance(existingInstance, mappedInstance))
         .compose(updatedInstance -> updateInstanceInStorage(updatedInstance, instanceCollection));
