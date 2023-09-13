@@ -119,7 +119,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
             if (consortiumConfigurationOptional.isPresent()) {
               Context centralTenantContext = EventHandlingUtil.constructContext(consortiumConfigurationOptional.get().getCentralTenantId(), context.getToken(), context.getOkapiLocation());
               InstanceCollection instanceCollection = storage.getInstanceCollection(centralTenantContext);
-              getInstanceById(instanceToUpdate.getId(), instanceCollection)
+              InstanceUtil.findInstanceById(instanceToUpdate.getId(), instanceCollection)
                 .onSuccess(existedCentralTenantInstance -> {
                   processInstanceUpdate(dataImportEventPayload, instanceCollection, context, existedCentralTenantInstance, future, centralTenantContext.getTenantId());
                   dataImportEventPayload.getContext().put(CENTRAL_TENANT_INSTANCE_UPDATED_FLAG, "true");
@@ -342,20 +342,4 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       });
   }
 
-  private Future<Instance> getInstanceById(String instanceId, InstanceCollection instanceCollection) {
-    Promise<Instance> promise = Promise.promise();
-    instanceCollection.findById(instanceId, success -> {
-        if (success.getResult() == null) {
-          LOGGER.error("Can't find Instance by id: {} ", instanceId);
-          promise.fail(new NotFoundException(format("Can't find Instance by id: %s", instanceId)));
-        } else {
-          promise.complete(success.getResult());
-        }
-      },
-      failure -> {
-        LOGGER.error(format("Error retrieving Instance by id %s - %s, status code %s", instanceId, failure.getReason(), failure.getStatusCode()));
-        promise.fail(failure.getReason());
-      });
-    return promise.future();
-  }
 }
