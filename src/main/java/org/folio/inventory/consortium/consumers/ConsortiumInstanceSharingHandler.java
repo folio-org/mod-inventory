@@ -87,9 +87,9 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   }
 
   private Future<String> checkIsInstanceExistsOnTargetTenant(SharingInstance sharingInstanceMetadata,
-                                               InstanceCollection targetInstanceCollection,
-                                               InstanceCollection sourceInstanceCollection,
-                                               Map<String, String> kafkaHeaders) {
+                                                             InstanceCollection targetInstanceCollection,
+                                                             InstanceCollection sourceInstanceCollection,
+                                                             Map<String, String> kafkaHeaders) {
     LOGGER.info("checkIsInstanceExistsOnTargetTenant :: InstanceId={} on tenant: {}",
       sharingInstanceMetadata.getInstanceIdentifier(), sharingInstanceMetadata.getTargetTenantId());
     return getInstanceById(sharingInstanceMetadata.getInstanceIdentifier().toString(),
@@ -105,12 +105,17 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
   private Future<String> publishInstance(SharingInstance sharingInstanceMetadata, InstanceCollection sourceInstanceCollection,
                                          InstanceCollection targetInstanceCollection, Map<String, String> kafkaHeaders) {
-    return getInstanceById(sharingInstanceMetadata.getInstanceIdentifier().toString(), sharingInstanceMetadata.getSourceTenantId(), sourceInstanceCollection)
+
+    String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
+    String sourceTenant = sharingInstanceMetadata.getSourceTenantId();
+    String targetTenant = sharingInstanceMetadata.getTargetTenantId();
+
+    return getInstanceById(instanceId, sourceTenant, sourceInstanceCollection)
       .compose(srcInstance -> {
         if ("FOLIO".equals(srcInstance.getSource())) {
           JsonObject jsonInstance = srcInstance.getJsonForStorage();
           jsonInstance.remove(HRID_KEY);
-          return addInstance(srcInstance, sharingInstanceMetadata.getTargetTenantId(), targetInstanceCollection)
+          return addInstance(srcInstance, targetTenant, targetInstanceCollection)
             .compose(addedInstance -> {
               JsonObject jsonInstanceToPublish = srcInstance.getJsonForStorage();
               jsonInstanceToPublish.put("source", CONSORTIUM_FOLIO.getValue());
@@ -118,29 +123,31 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                 .map(ignored -> "Instance has been updated successfully")
                 .onSuccess(ignored -> {
                   String message = format("Instance with InstanceId=%s has been shared to the target tenant %s",
-                    sharingInstanceMetadata.getInstanceIdentifier(), sharingInstanceMetadata.getTargetTenantId());
+                    instanceId, targetTenant);
                   sendCompleteEventToKafka(sharingInstanceMetadata, COMPLETE, message, kafkaHeaders);
                 }).onFailure(throwable -> {
                   String errorMessage = format("Error updating Instance with InstanceId=%s on source tenant %s.",
-                    sharingInstanceMetadata.getInstanceIdentifier(), sharingInstanceMetadata.getSourceTenantId());
+                    instanceId, sourceTenant);
                   sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
                 });
+            }).onFailure(throwable -> {
+              String errorMessage = format("Error sharing Instance with InstanceId=%s to the target tenant %s.",
+                instanceId, targetTenant);
+              sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
             });
         } else if ("MARC".equals(srcInstance.getSource())) {
           String errorMessage = format("Error sharing Instance with InstanceId=%s and source=MARC to the target tenant %s. " +
-              "Not implemented yet.", sharingInstanceMetadata.getInstanceIdentifier(),
-            sharingInstanceMetadata.getTargetTenantId());
+            "Not implemented yet.", instanceId, targetTenant);
           sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
           return Future.failedFuture(errorMessage);
         } else {
           String errorMessage = format("Error sharing Instance with InstanceId=%s to the target tenant %s. Because source is %s",
-            sharingInstanceMetadata.getInstanceIdentifier(), sharingInstanceMetadata.getTargetTenantId(), srcInstance.getSource());
+            instanceId, targetTenant, srcInstance.getSource());
           sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
           return Future.failedFuture(errorMessage);
         }
       }, throwable -> {
-        String errorMessage = format("Error retrieving Instance by InstanceId=%s from source tenant %s.",
-          sharingInstanceMetadata.getInstanceIdentifier(), sharingInstanceMetadata.getSourceTenantId());
+        String errorMessage = format("Error retrieving Instance by InstanceId=%s from source tenant %s.", instanceId, sourceTenant);
         if (throwable != null && throwable.getCause() != null)
           errorMessage += " Error: " + throwable.getCause();
         sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
