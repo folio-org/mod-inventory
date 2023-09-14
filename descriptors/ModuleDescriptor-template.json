@@ -592,6 +592,10 @@
     {
       "id": "bound-with-parts-storage",
       "version": "1.0"
+    },
+    {
+      "id": "authority-storage",
+      "version": "2.0"
     }
   ],
   "optional": [
