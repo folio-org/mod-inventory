@@ -177,9 +177,8 @@ public class ConsortiumInstanceSharingHandlerTest {
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
     future.onComplete(ar -> {
-      context.assertTrue(ar.failed());
-      context.assertTrue(ar.cause().getMessage()
-        .contains("Instance with InstanceId=" + instanceId + " is present on target tenant: university"));
+      context.assertTrue(ar.result().equals("Instance with InstanceId=" + instanceId +
+        " is present on target tenant: university"));
       async.complete();
     });
   }
@@ -233,8 +232,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     future.onComplete(ar -> {
       context.assertTrue(ar.failed());
       context.assertTrue(ar.cause().getMessage()
-        .contains("Error retrieving Instance by InstanceId=" + instanceId
-          + " from source tenant consortium. Error: org.folio.inventory.exceptions.NotFoundException: Can't find Instance by InstanceId=" + instanceId + " on tenant: consortium"));
+        .contains("Error retrieving Instance by InstanceId=" + instanceId + " from source tenant consortium."));
       async.complete();
     });
   }
@@ -284,8 +282,8 @@ public class ConsortiumInstanceSharingHandlerTest {
     future.onComplete(ar -> {
       context.assertTrue(ar.failed());
       context.assertTrue(ar.cause().getMessage()
-        .contains("Error sharing Instance with InstanceId=" + instanceId +
-          " to the target tenant university. Because source is MARC"));
+        .contains("Error sharing Instance with InstanceId=" + instanceId + " and " +
+          "source=MARC to the target tenant university. Not implemented yet."));
       async.complete();
     });
   }

@@ -28,6 +28,7 @@ import org.folio.kafka.KafkaHeaderUtils;
 import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.kafka.exception.DuplicateEventException;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -39,8 +40,6 @@ import static org.folio.inventory.consortium.entities.SharingStatus.COMPLETE;
 import static org.folio.inventory.consortium.entities.SharingStatus.ERROR;
 import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_FOLIO;
-import static org.folio.inventory.domain.instances.InstanceSource.FOLIO;
-import static org.folio.inventory.domain.instances.InstanceSource.MARC;
 import static org.folio.inventory.domain.items.Item.HRID_KEY;
 import static org.folio.okapi.common.XOkapiHeaders.TENANT;
 import static org.folio.okapi.common.XOkapiHeaders.TOKEN;
@@ -63,106 +62,95 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   @Override
   public Future<String> handle(KafkaConsumerRecord<String, String> event) {
     try {
-      Promise<String> promise = Promise.promise();
-      String consortiumId = event.key();
-      LOGGER.info("handle :: CONSORTIUM_INSTANCE_SHARING_INIT from consortiumId {}", consortiumId);
-      SharingInstance sharingInstance = Json.decodeValue(event.value(), SharingInstance.class);
+      SharingInstance sharingInstanceMetadata = Json.decodeValue(event.value(), SharingInstance.class);
 
-      String instanceId = sharingInstance.getInstanceIdentifier().toString();
       Map<String, String> kafkaHeaders = KafkaHeaderUtils.kafkaHeadersToMap(event.headers());
+      String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
 
       LOGGER.info("Event CONSORTIUM_INSTANCE_SHARING_INIT has been received for instanceId: {}, sourceTenant: {}, targetTenant: {}",
-        instanceId, sharingInstance.getSourceTenantId(), sharingInstance.getTargetTenantId());
-      String tenantId = kafkaHeaders.get(TENANT.toLowerCase());
+        instanceId, sharingInstanceMetadata.getSourceTenantId(), sharingInstanceMetadata.getTargetTenantId());
 
-      Context targetTenantContext = EventHandlingUtil.constructContext(sharingInstance.getTargetTenantId(),
+      Context targetTenantContext = EventHandlingUtil.constructContext(sharingInstanceMetadata.getTargetTenantId(),
         kafkaHeaders.get(TOKEN.toLowerCase()), kafkaHeaders.get(URL.toLowerCase()));
       InstanceCollection targetInstanceCollection = storage.getInstanceCollection(targetTenantContext);
 
-      Context sourceTenantContext = EventHandlingUtil.constructContext(sharingInstance.getSourceTenantId(),
+      Context sourceTenantContext = EventHandlingUtil.constructContext(sharingInstanceMetadata.getSourceTenantId(),
         kafkaHeaders.get(TOKEN.toLowerCase()), kafkaHeaders.get(URL.toLowerCase()));
       InstanceCollection sourceInstanceCollection = storage.getInstanceCollection(sourceTenantContext);
 
-      LOGGER.info("handle :: checking is InstanceId={} exists on tenant {}", instanceId, sharingInstance.getTargetTenantId());
-      getInstanceById(instanceId, sharingInstance.getTargetTenantId(), targetInstanceCollection)
-        .onFailure(failure -> {
-          if (failure.getClass().equals(NotFoundException.class)) {
-            LOGGER.info("handle :: Instance with InstanceId={} not found on target tenant: {}", instanceId, sharingInstance.getTargetTenantId());
-            getInstanceById(instanceId, sharingInstance.getSourceTenantId(), sourceInstanceCollection)
-              .onSuccess(srcInstance -> {
-                if (srcInstance == null) {
-                  String errorMessage = format("Instance with InstanceId=%s not found on source tenant: %s", instanceId, sharingInstance.getSourceTenantId());
-                  sendErrorResponseAndPrintLogMessage(tenantId, errorMessage, sharingInstance, event.headers());
-                  promise.fail(errorMessage);
-                } else {
-                  LOGGER.info("handle :: Publishing Instance with InstanceId={} and with source {} from {} tenant to {} tenant", instanceId, srcInstance.getSource(), sharingInstance.getSourceTenantId(), sharingInstance.getTargetTenantId());
-                  if (FOLIO.getValue().equals(srcInstance.getSource())) {
-                    publishInstanceToTenantSpecificCollection(srcInstance, sharingInstance.getTargetTenantId(), targetInstanceCollection)
-                      .onSuccess(publishedInstance -> {
-                        LOGGER.info("handle :: Updating source to 'CONSORTIUM-FOLIO' for Instance with InstanceId={}", instanceId);
-                        JsonObject jsonInstanceToPublish = srcInstance.getJsonForStorage();
-                        jsonInstanceToPublish.put("source", CONSORTIUM_FOLIO.getValue());
-                        updateInstanceInStorage(Instance.fromJson(jsonInstanceToPublish), sourceInstanceCollection)
-                          .onSuccess(updatesSourceInstance -> {
-                            LOGGER.info("handle :: Source '{}' updated for Instance with InstanceId={}", CONSORTIUM_FOLIO.getValue(), instanceId);
-                            sendCompleteEventToKafka(tenantId, sharingInstance, COMPLETE, EMPTY, event.headers());
-                            promise.complete();
-                          }).onFailure(error -> {
-                            String errorMessage = format("Error update Instance by InstanceId=%s on the source tenant %s. Error: %s", instanceId, sharingInstance.getTargetTenantId(), error.getCause());
-                            sendErrorResponseAndPrintLogMessage(tenantId, errorMessage, sharingInstance, event.headers());
-                            promise.fail(error);
-                          });
-                      })
-                      .onFailure(publishFailure -> {
-                        String errorMessage = format("Error save Instance by InstanceId=%s on the target tenant %s. Error: %s", instanceId, sharingInstance.getTargetTenantId(), publishFailure.getCause());
-                        sendErrorResponseAndPrintLogMessage(tenantId, errorMessage, sharingInstance, event.headers());
-                        promise.fail(publishFailure);
-                      });
-                  } else if (MARC.getValue().equals(srcInstance.getSource())) {
-                    String errorMessage = format("Error sharing Instance with InstanceId=%s to the target tenant %s. Because source is %s",
-                      instanceId, sharingInstance.getTargetTenantId(), srcInstance.getSource());
-                    sendErrorResponseAndPrintLogMessage(tenantId, errorMessage, sharingInstance, event.headers());
-                    promise.fail(errorMessage);
-                  } else {
-                    String errorMessage = format("Error sharing Instance with InstanceId=%s to the target tenant %s. Because source is %s",
-                      instanceId, sharingInstance.getTargetTenantId(), srcInstance.getSource());
-                    sendErrorResponseAndPrintLogMessage(tenantId, errorMessage, sharingInstance, event.headers());
-                    promise.fail(errorMessage);
-                  }
-                }
-              })
-              .onFailure(err -> {
-                String errorMessage = format("Error retrieving Instance by InstanceId=%s from source tenant %s. Error: %s", instanceId, sharingInstance.getSourceTenantId(), err);
-                sendErrorResponseAndPrintLogMessage(tenantId, errorMessage, sharingInstance, event.headers());
-                promise.fail(errorMessage);
-              });
-          } else {
-            String errorMessage = format("Error checking Instance by InstanceId=%s on target tenant %s. Error: %s", instanceId, sharingInstance.getTargetTenantId(), failure.getMessage());
-            sendErrorResponseAndPrintLogMessage(tenantId, errorMessage, sharingInstance, event.headers());
-            promise.fail(errorMessage);
-          }
-        })
-        .onSuccess(instanceOnTargetTenant -> {
-          String warningMessage = format("Instance with InstanceId=%s is present on target tenant: %s", instanceId, sharingInstance.getTargetTenantId());
-          sendCompleteEventToKafka(tenantId, sharingInstance, COMPLETE, warningMessage, event.headers());
-          promise.fail(warningMessage);
-        });
-      return promise.future();
+      return checkIsInstanceExistsOnTargetTenant(sharingInstanceMetadata, targetInstanceCollection,
+        sourceInstanceCollection, kafkaHeaders);
     } catch (Exception ex) {
       LOGGER.error(format("Failed to process data import kafka record from topic %s", event.topic()), ex);
       return Future.failedFuture(ex);
     }
   }
 
-  private void sendErrorResponseAndPrintLogMessage(String tenantId, String errorMessage, SharingInstance sharingInstance, List<KafkaHeader> kafkaHeaders) {
-    LOGGER.error("handle:: {}", errorMessage);
-    sendCompleteEventToKafka(tenantId, sharingInstance, ERROR, errorMessage, kafkaHeaders);
+  private Future<String> checkIsInstanceExistsOnTargetTenant(SharingInstance sharingInstanceMetadata,
+                                               InstanceCollection targetInstanceCollection,
+                                               InstanceCollection sourceInstanceCollection,
+                                               Map<String, String> kafkaHeaders) {
+    LOGGER.info("checkIsInstanceExistsOnTargetTenant :: InstanceId={} on tenant: {}",
+      sharingInstanceMetadata.getInstanceIdentifier(), sharingInstanceMetadata.getTargetTenantId());
+    return getInstanceById(sharingInstanceMetadata.getInstanceIdentifier().toString(),
+      sharingInstanceMetadata.getTargetTenantId(), targetInstanceCollection)
+      .compose(instance -> {
+        String warningMessage = format("Instance with InstanceId=%s is present on target tenant: %s",
+          sharingInstanceMetadata.getInstanceIdentifier(), sharingInstanceMetadata.getTargetTenantId());
+        sendCompleteEventToKafka(sharingInstanceMetadata, COMPLETE, warningMessage, kafkaHeaders);
+        return Future.succeededFuture(warningMessage);
+      }, throwable -> publishInstance(sharingInstanceMetadata, sourceInstanceCollection,
+        targetInstanceCollection, kafkaHeaders));
   }
 
-  private Future<Instance> publishInstanceToTenantSpecificCollection(Instance instance, String tenant, InstanceCollection instanceCollection) {
-    JsonObject jsonInstance = instance.getJsonForStorage();
-    jsonInstance.remove(HRID_KEY);
-    return addInstance(Instance.fromJson(jsonInstance), tenant, instanceCollection);
+  private Future<String> publishInstance(SharingInstance sharingInstanceMetadata, InstanceCollection sourceInstanceCollection,
+                                         InstanceCollection targetInstanceCollection, Map<String, String> kafkaHeaders) {
+    return getInstanceById(sharingInstanceMetadata.getInstanceIdentifier().toString(), sharingInstanceMetadata.getSourceTenantId(), sourceInstanceCollection)
+      .compose(srcInstance -> {
+        if ("FOLIO".equals(srcInstance.getSource())) {
+          JsonObject jsonInstance = srcInstance.getJsonForStorage();
+          jsonInstance.remove(HRID_KEY);
+          return addInstance(srcInstance, sharingInstanceMetadata.getTargetTenantId(), targetInstanceCollection)
+            .compose(addedInstance -> {
+              JsonObject jsonInstanceToPublish = srcInstance.getJsonForStorage();
+              jsonInstanceToPublish.put("source", CONSORTIUM_FOLIO.getValue());
+              return updateInstanceInStorage(Instance.fromJson(jsonInstanceToPublish), sourceInstanceCollection)
+                .map(ignored -> "Instance has been updated successfully")
+                .onSuccess(ignored -> {
+                  String message = format("Instance with InstanceId=%s has been shared to the target tenant %s",
+                    sharingInstanceMetadata.getInstanceIdentifier(), sharingInstanceMetadata.getTargetTenantId());
+                  sendCompleteEventToKafka(sharingInstanceMetadata, COMPLETE, message, kafkaHeaders);
+                }).onFailure(throwable -> {
+                  String errorMessage = format("Error updating Instance with InstanceId=%s on source tenant %s.",
+                    sharingInstanceMetadata.getInstanceIdentifier(), sharingInstanceMetadata.getSourceTenantId());
+                  sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
+                });
+            });
+        } else if ("MARC".equals(srcInstance.getSource())) {
+          String errorMessage = format("Error sharing Instance with InstanceId=%s and source=MARC to the target tenant %s. " +
+              "Not implemented yet.", sharingInstanceMetadata.getInstanceIdentifier(),
+            sharingInstanceMetadata.getTargetTenantId());
+          sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
+          return Future.failedFuture(errorMessage);
+        } else {
+          String errorMessage = format("Error sharing Instance with InstanceId=%s to the target tenant %s. Because source is %s",
+            sharingInstanceMetadata.getInstanceIdentifier(), sharingInstanceMetadata.getTargetTenantId(), srcInstance.getSource());
+          sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
+          return Future.failedFuture(errorMessage);
+        }
+      }, throwable -> {
+        String errorMessage = format("Error retrieving Instance by InstanceId=%s from source tenant %s.",
+          sharingInstanceMetadata.getInstanceIdentifier(), sharingInstanceMetadata.getSourceTenantId());
+        if (throwable != null && throwable.getCause() != null)
+          errorMessage += " Error: " + throwable.getCause();
+        sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
+        return Future.failedFuture(errorMessage);
+      });
+  }
+
+  private void sendErrorResponseAndPrintLogMessage(String errorMessage, SharingInstance sharingInstance, Map<String, String> kafkaHeaders) {
+    LOGGER.error("handle:: {}", errorMessage);
+    sendCompleteEventToKafka(sharingInstance, ERROR, errorMessage, kafkaHeaders);
   }
 
   private Future<Instance> getInstanceById(String instanceId, String tenantId, InstanceCollection instanceCollection) {
@@ -216,19 +204,22 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     return promise.future();
   }
 
-  private void sendCompleteEventToKafka(String tenantId, SharingInstance sharingInstance,
-                                        SharingStatus status, String errorMessage, List<KafkaHeader> kafkaHeaders) {
+  private void sendCompleteEventToKafka(SharingInstance sharingInstance, SharingStatus status, String errorMessage, Map<String, String> kafkaHeaders) {
 
     SharingInstanceEventType evenType = CONSORTIUM_INSTANCE_SHARING_COMPLETE;
 
     try {
+
+      String tenantId = kafkaHeaders.get(TENANT.toLowerCase());
+      List<KafkaHeader> kafkaHeadersList = convertKafkaHeadersMap(kafkaHeaders);
+
       LOGGER.info("sendEventToKafka :: tenantId: {}, instance with InstanceId={}, status: {}, message: {}",
         tenantId, sharingInstance.getInstanceIdentifier(), status.getValue(), errorMessage);
 
       String topicName = KafkaTopicNameHelper.formatTopicName(kafkaConfig.getEnvId(),
         KafkaTopicNameHelper.getDefaultNameSpace(), tenantId, evenType.value());
 
-      KafkaProducerRecord<String, String> kafkaRecord = createProducerRecord(topicName, sharingInstance, status, errorMessage, kafkaHeaders);
+      KafkaProducerRecord<String, String> kafkaRecord = createProducerRecord(topicName, sharingInstance, status, errorMessage, kafkaHeadersList);
       createProducer(tenantId, topicName).write(kafkaRecord, ar -> {
         if (ar.succeeded()) {
           LOGGER.info("Event with type {}, was sent to kafka", evenType.value());
@@ -262,6 +253,14 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   private KafkaProducer<String, String> createProducer(String tenantId, String topicName) {
     LOGGER.info("createProducer :: tenantId: {}, topicName: {}", tenantId, topicName);
     return KafkaProducer.createShared(vertx, topicName + "_Producer", kafkaConfig.getProducerProps());
+  }
+
+  private List<KafkaHeader> convertKafkaHeadersMap(Map<String, String> kafkaHeaders) {
+    return new ArrayList<>(List.of(
+      KafkaHeader.header(URL, kafkaHeaders.get(URL)),
+      KafkaHeader.header(TENANT, kafkaHeaders.get(TENANT)),
+      KafkaHeader.header(TOKEN, kafkaHeaders.get(TOKEN)))
+    );
   }
 
 }
