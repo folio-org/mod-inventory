@@ -4,14 +4,17 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
 import io.vertx.kafka.client.producer.KafkaProducer;
 import io.vertx.kafka.client.producer.KafkaProducerRecord;
+import org.apache.http.HttpException;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.Record;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.consortium.entities.SharingInstance;
 import org.folio.inventory.consortium.entities.SharingInstanceEventType;
@@ -27,12 +30,21 @@ import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaHeaderUtils;
 import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.kafka.exception.DuplicateEventException;
+import org.folio.rest.client.ChangeManagerClient;
+import org.folio.rest.client.SourceStorageRecordsClient;
+import org.folio.rest.jaxrs.model.InitJobExecutionsRqDto;
+import org.folio.rest.jaxrs.model.InitialRecord;
+import org.folio.rest.jaxrs.model.JobProfileInfo;
+import org.folio.rest.jaxrs.model.RawRecordsDto;
+import org.folio.rest.jaxrs.model.RecordsMetadata;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static java.lang.String.format;
+import static java.util.Collections.singletonList;
 import static org.apache.commons.lang.StringUtils.EMPTY;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.folio.inventory.consortium.entities.SharingInstanceEventType.CONSORTIUM_INSTANCE_SHARING_COMPLETE;
@@ -44,6 +56,7 @@ import static org.folio.inventory.domain.items.Item.HRID_KEY;
 import static org.folio.okapi.common.XOkapiHeaders.TENANT;
 import static org.folio.okapi.common.XOkapiHeaders.TOKEN;
 import static org.folio.okapi.common.XOkapiHeaders.URL;
+import static org.folio.okapi.common.XOkapiHeaders.USER_ID;
 
 public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<String, String> {
 
@@ -52,6 +65,9 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   private final Vertx vertx;
   private final Storage storage;
   private final KafkaConfig kafkaConfig;
+
+  private static final String INSTANCE_ID_TYPE = "INSTANCE";
+  private static final String DEFAULT_INSTANCE_JOB_PROFILE_ID = "e34d7b92-9b83-11eb-a8b3-0242ac130003";
 
   public ConsortiumInstanceSharingHandler(Vertx vertx, Storage storage, KafkaConfig kafkaConfig) {
     this.vertx = vertx;
@@ -66,6 +82,9 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
       Map<String, String> kafkaHeaders = KafkaHeaderUtils.kafkaHeadersToMap(event.headers());
       String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
+
+      SourceStorageRecordsClient client = new SourceStorageRecordsClient(kafkaHeaders.get(URL.toLowerCase()),
+        kafkaHeaders.get(TENANT.toLowerCase()), kafkaHeaders.get(TOKEN.toLowerCase()), vertx.createHttpClient());
 
       LOGGER.info("Event CONSORTIUM_INSTANCE_SHARING_INIT has been received for instanceId: {}, sourceTenant: {}, targetTenant: {}",
         instanceId, sharingInstanceMetadata.getSourceTenantId(), sharingInstanceMetadata.getTargetTenantId());
@@ -136,10 +155,63 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
               sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
             });
         } else if ("MARC".equals(srcInstance.getSource())) {
-          String errorMessage = format("Error sharing Instance with InstanceId=%s and source=MARC to the target tenant %s. " +
-            "Not implemented yet.", instanceId, targetTenant);
-          sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
-          return Future.failedFuture(errorMessage);
+
+          ChangeManagerClient targetManagerClient = new ChangeManagerClient(kafkaHeaders.get(URL.toLowerCase()),
+            kafkaHeaders.get(TENANT.toLowerCase()), kafkaHeaders.get(TOKEN.toLowerCase()), vertx.createHttpClient());
+
+          ChangeManagerClient sourceManagerClient = new ChangeManagerClient(kafkaHeaders.get(URL.toLowerCase()),
+            kafkaHeaders.get(TENANT.toLowerCase()), kafkaHeaders.get(TOKEN.toLowerCase()), vertx.createHttpClient());
+
+          return getParsedMARCByInstanceId(instanceId, kafkaHeaders)
+            .compose(record -> {
+              return getJobExecutionByChangeManager(targetManagerClient, kafkaHeaders)
+                .compose(jobExecution -> {
+                  String jobExecutionId = jobExecution.getString("parentJobExecutionId");
+                  JobProfileInfo jobProfileInfo = new JobProfileInfo()
+                    .withId(DEFAULT_INSTANCE_JOB_PROFILE_ID)
+                    .withName("Default - Create instance and SRS MARC Bib")
+                    .withDataType(JobProfileInfo.DataType.MARC);
+                  return setJobProfileToJobExecution(jobExecutionId, jobProfileInfo, targetManagerClient)
+                    .compose(ignore -> {
+                      String jsonRecord = JsonObject.mapFrom(record).toString();
+                      RawRecordsDto sendRecord = new RawRecordsDto()
+                        .withId(UUID.randomUUID().toString())
+                        .withRecordsMetadata(new RecordsMetadata()
+                          .withLast(false)
+                          .withCounter(1)
+                          .withTotal(1)
+                          .withContentType(RecordsMetadata.ContentType.MARC_JSON))
+                        .withInitialRecords(singletonList(new InitialRecord().withRecord(jsonRecord)));
+                      postRecordToParsing(jobExecutionId, sendRecord, targetManagerClient)
+                        .compose(result -> {
+                          RawRecordsDto checkRecord = new RawRecordsDto()
+                            .withId(UUID.randomUUID().toString())
+                            .withRecordsMetadata(new RecordsMetadata()
+                              .withLast(true)
+                              .withCounter(1)
+                              .withTotal(1)
+                              .withContentType(RecordsMetadata.ContentType.MARC_JSON));
+                          postRecordToParsing(jobExecutionId, checkRecord, targetManagerClient)
+                            .onSuccess(checkResult -> {
+                              String message = format("Check import with jobExecutionId=%s result: %s",
+                                jobExecutionId, checkResult);
+                              sendCompleteEventToKafka(sharingInstanceMetadata, COMPLETE, message, kafkaHeaders);
+                            })
+                            .onFailure(throwable -> {
+                              String errorMessage = format("Error checking import with jobExecutionId=%s status: %s.",
+                                jobExecutionId, throwable.getCause());
+                              sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
+                            });
+                          return null;
+                        });
+                      return Future.succeededFuture("Completed successfully");
+                    });
+                });
+            })
+            .onFailure(throwable -> {
+              String errorMessage = format("Error retrieving MARC record for InstanceId=%s.", instanceId);
+              sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
+            });
         } else {
           String errorMessage = format("Error sharing Instance with InstanceId=%s to the target tenant %s. Because source is %s",
             instanceId, targetTenant, srcInstance.getSource());
@@ -153,6 +225,94 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
         sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
         return Future.failedFuture(errorMessage);
       });
+  }
+
+  private Future<Record> getParsedMARCByInstanceId(String instanceId, Map<String, String> kafkaHeaders) {
+
+    LOGGER.info("getParsedMARCByInstanceId:: InstanceId={}. Start.", instanceId);
+
+    SourceStorageRecordsClient client = new SourceStorageRecordsClient(kafkaHeaders.get(URL.toLowerCase()),
+      kafkaHeaders.get(TENANT.toLowerCase()), kafkaHeaders.get(TOKEN.toLowerCase()), vertx.createHttpClient());
+
+    return client.getSourceStorageRecordsFormattedById(instanceId, INSTANCE_ID_TYPE).compose(resp -> {
+      if (resp.statusCode() != 200) {
+        return Future.failedFuture(format("Failed to retrieve MARC record by instance id: '%s', status code: %s",
+          instanceId, resp.statusCode()));
+      }
+      LOGGER.info("getParsedMARCByInstanceId:: InstanceId={}. Finish.", instanceId);
+      return Future.succeededFuture(resp.bodyAsJson(Record.class));
+    });
+  }
+
+  private Future<JsonObject> getJobExecutionByChangeManager(ChangeManagerClient client, Map<String, String> kafkaHeaders) {
+
+    LOGGER.info("getJobExecutionByChangeManager:: Start.");
+    Promise<JsonObject> promise = Promise.promise();
+    try {
+      InitJobExecutionsRqDto initJobExecutionsRqDto = new InitJobExecutionsRqDto()
+        .withSourceType(InitJobExecutionsRqDto.SourceType.ONLINE)
+        .withUserId(kafkaHeaders.get(USER_ID.toLowerCase()));
+
+      client.postChangeManagerJobExecutions(initJobExecutionsRqDto, response -> {
+        if (response.result().statusCode() != HttpStatus.SC_CREATED) {
+          LOGGER.info("getJobExecutionByChangeManager:: Error creating new JobExecution. Status message: {}",
+            response.result().statusMessage());
+          promise.fail(new HttpException("Error creating new JobExecution", response.cause()));
+        } else {
+          LOGGER.info("getJobExecutionByChangeManager:: Response: {}", response.result());
+          JsonObject responseBody = response.result().bodyAsJsonObject();
+          JsonArray jobExecutions = responseBody.getJsonArray("jobExecutions");
+          promise.complete(jobExecutions.getJsonObject(0));
+        }
+      });
+    } catch (Exception e) {
+      LOGGER.error("getJobExecutionByChangeManager:: Error: {}", e.getMessage());
+      promise.fail(e);
+    }
+    return promise.future();
+  }
+
+  private Future<JsonObject> setJobProfileToJobExecution(String jobExecutionId, JobProfileInfo jobProfileInfo,
+                                                         ChangeManagerClient client) {
+    LOGGER.info("setJobProfileToJobExecution:: jobExecutionId={} Start.", jobExecutionId);
+    Promise<JsonObject> promise = Promise.promise();
+    try {
+      client.putChangeManagerJobExecutionsJobProfileById(jobExecutionId, jobProfileInfo, response -> {
+        if (response.result().statusCode() != HttpStatus.SC_OK) {
+          LOGGER.warn("setJobProfileToJobExecution:: Failed to set JobProfile for JobExecution. Status message: {}",
+            response.result().statusMessage());
+          promise.fail(new HttpException("Failed to set JobProfile for JobExecution.", response.cause()));
+        } else {
+          LOGGER.info("setJobProfileToJobExecution:: Response: {}", response.result());
+          promise.complete(response.result().bodyAsJsonObject());
+        }
+      });
+    } catch (Exception e) {
+      LOGGER.error("setJobProfileToJobExecution:: Error: {}", e.getMessage());
+      promise.fail(e);
+    }
+    return promise.future();
+  }
+
+  private Future<JsonObject> postRecordToParsing(String jobExecutionId, RawRecordsDto rawRecordsDto,
+                                                 ChangeManagerClient client) {
+    Promise<JsonObject> promise = Promise.promise();
+    try {
+      client.postChangeManagerJobExecutionsRecordsById(jobExecutionId, true, rawRecordsDto, response -> {
+        if (response.result().statusCode() != HttpStatus.SC_NO_CONTENT) {
+          LOGGER.warn("postRecordToParsing:: Failed sending record to parsing. Status message: {}",
+            response.result().statusMessage());
+          promise.fail(new HttpException("Failed sending record to parsing.", response.cause()));
+        } else {
+          LOGGER.info("postRecordToParsing:: Response: {}", response.result());
+          promise.complete(response.result().bodyAsJsonObject());
+        }
+      });
+    } catch (Exception e) {
+      LOGGER.error("postRecordToParsing:: Error: {}", e.getMessage());
+      promise.fail(e);
+    }
+    return promise.future();
   }
 
   private void sendErrorResponseAndPrintLogMessage(String errorMessage, SharingInstance sharingInstance, Map<String, String> kafkaHeaders) {
