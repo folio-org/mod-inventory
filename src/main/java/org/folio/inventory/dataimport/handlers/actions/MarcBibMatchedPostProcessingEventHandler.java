@@ -80,12 +80,16 @@ public class MarcBibMatchedPostProcessingEventHandler implements EventHandler {
       instanceCollection.findById(instanceId)
         .thenCompose(localInstance -> {
           if (localInstance == null) {
-            return getInstanceCentralTenantIfLocalTenantInConsortium(instanceId, context);
+            LOGGER.debug("handle:: Instance not found at local tenant during marcBibMatchPostProcessing, tenantId: {}, instanceId: {}",
+              context.getTenantId(), instanceId);
+            return getInstanceFromCentralTenantIfLocalTenantInConsortium(instanceId, context);
           }
           return CompletableFuture.completedFuture(localInstance);
         })
         .whenComplete((v, t) -> {
           if (t == null && v != null) {
+            LOGGER.debug("handle:: Instance found during marcBibMatchPostProcessing, tenantId: {}, instanceId: {}",
+              context.getTenantId(), instanceId);
             dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(v));
             try {
               holdingsRecordCollection.findByCql(format("instanceId=%s", v.getId()), PagingParameters.defaults(),
@@ -115,12 +119,14 @@ public class MarcBibMatchedPostProcessingEventHandler implements EventHandler {
     return future;
   }
 
-  private CompletionStage<Instance> getInstanceCentralTenantIfLocalTenantInConsortium(String instanceId, Context context) {
+  private CompletionStage<Instance> getInstanceFromCentralTenantIfLocalTenantInConsortium(String instanceId, Context context) {
     return consortiumService.getConsortiumConfiguration(context)
       .toCompletionStage()
       .thenCompose(consortiumConfigurationOptional -> {
         if (consortiumConfigurationOptional.isPresent()) {
           Context consortiumContext = constructContext(consortiumConfigurationOptional.get().getCentralTenantId(), context.getToken(), context.getOkapiLocation());
+          LOGGER.debug("getInstanceFromCentralTenantIfLocalTenantInConsortium:: Searching instance at central tenant, centralTenantId: {}, localTenantId: {}, instanceId: {}",
+            consortiumContext.getTenantId(), context.getTenantId(), instanceId);
           return storage.getInstanceCollection(consortiumContext).findById(instanceId);
         }
         return CompletableFuture.completedFuture(null);
