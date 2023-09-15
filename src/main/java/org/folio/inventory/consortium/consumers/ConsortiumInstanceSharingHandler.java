@@ -260,10 +260,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
             sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
           } else {
             JsonObject jobExecutionObj = jobExecutionRes.result();
-            LOGGER.info("sharingInstanceWithMarcSource:: jobExecution1={}. Start.", jobExecutionObj);
-            LOGGER.info("sharingInstanceWithMarcSource:: jobExecution2={}. Start.", jobExecutionObj.encodePrettily());
-
-            String jobExecutionId = jobExecutionObj.getJsonObject("jobExecutionId").getString("value");
+            String jobExecutionId = jobExecutionObj.getJsonObject("id").getString("value");
 
             setDefaultJobProfileToJobExecution(jobExecutionId, targetManagerClient)
               .onComplete(jobProfileSet -> {
