@@ -244,8 +244,8 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     Promise<String> promise = Promise.promise();
     String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
 
-    ChangeManagerClient targetManagerClient = new ChangeManagerClient(kafkaHeaders.get(URL).toLowerCase(),
-      kafkaHeaders.get(TENANT).toLowerCase(), kafkaHeaders.get(TOKEN), vertx.createHttpClient());
+    ChangeManagerClient targetManagerClient = new ChangeManagerClient(kafkaHeaders.get(URL.toLowerCase()),
+      kafkaHeaders.get(TENANT.toLowerCase()), kafkaHeaders.get(TOKEN.toLowerCase()), vertx.createHttpClient());
 
     getParsedSourceMARCByInstanceId(instanceId, sharingInstanceMetadata.getSourceTenantId(), kafkaHeaders).onComplete(marcRecord -> {
       if (marcRecord.failed()) {
