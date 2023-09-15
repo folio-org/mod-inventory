@@ -363,7 +363,9 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
         } else {
           LOGGER.info("getJobExecutionByChangeManager:: Response: {}", response.result());
           JsonObject responseBody = response.result().bodyAsJsonObject();
+          LOGGER.info("getJobExecutionByChangeManager:: ResponseBody: {}", responseBody);
           JsonArray jobExecutions = responseBody.getJsonArray("jobExecutions");
+          LOGGER.info("getJobExecutionByChangeManager:: JobExecutions: {}", jobExecutions);
           promise.complete(jobExecutions.getJsonObject(0));
         }
       });
