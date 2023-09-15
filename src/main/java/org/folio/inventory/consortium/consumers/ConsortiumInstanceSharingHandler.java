@@ -325,7 +325,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
   private Future<Record> getParsedSourceMARCByInstanceId(String instanceId, String sourceTenant, Map<String, String> kafkaHeaders) {
 
-    LOGGER.info("getParsedMARCByInstanceId:: InstanceId={}. Start.", instanceId);
+    LOGGER.info("getParsedMARCByInstanceId:: For Instance with InstanceId={} from tenant {}. Start.", instanceId, sourceTenant);
 
     SourceStorageRecordsClient client = new SourceStorageRecordsClient(kafkaHeaders.get(URL.toLowerCase()),
       sourceTenant, kafkaHeaders.get(TOKEN.toLowerCase()), vertx.createHttpClient());
@@ -335,19 +335,21 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
         return Future.failedFuture(format("Failed to retrieve MARC record by instance id: '%s', status code: %s",
           instanceId, resp.statusCode()));
       }
-      LOGGER.info("getParsedMARCByInstanceId:: InstanceId={}. Finish.", instanceId);
+      LOGGER.info("getParsedMARCByInstanceId:: InstanceId={}. Record:{}. Finish.", instanceId, resp.bodyAsString());
       return Future.succeededFuture(resp.bodyAsJson(Record.class));
     });
   }
 
   private Future<JsonObject> getJobExecutionByChangeManager(ChangeManagerClient client, Map<String, String> kafkaHeaders) {
 
-    LOGGER.info("getJobExecutionByChangeManager:: Start.");
     Promise<JsonObject> promise = Promise.promise();
     try {
 
       String userId = kafkaHeaders.get(USER_ID.toLowerCase());
       if (isEmpty(userId)) userId = "906ab8fb-3bac-4099-9473-cf1717bd457f";
+
+      LOGGER.info("getJobExecutionByChangeManager:: userId: {}, {}: {} Start.",
+        userId, USER_ID.toLowerCase(), kafkaHeaders.get(USER_ID.toLowerCase()));
 
       InitJobExecutionsRqDto initJobExecutionsRqDto = new InitJobExecutionsRqDto()
         .withSourceType(InitJobExecutionsRqDto.SourceType.ONLINE)
