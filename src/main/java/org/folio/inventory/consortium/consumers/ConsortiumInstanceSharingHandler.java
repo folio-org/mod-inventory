@@ -85,9 +85,6 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       Map<String, String> kafkaHeaders = KafkaHeaderUtils.kafkaHeadersToMap(event.headers());
       String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
 
-      SourceStorageRecordsClient client = new SourceStorageRecordsClient(kafkaHeaders.get(URL.toLowerCase()),
-        kafkaHeaders.get(TENANT.toLowerCase()), kafkaHeaders.get(TOKEN.toLowerCase()), vertx.createHttpClient());
-
       LOGGER.info("Event CONSORTIUM_INSTANCE_SHARING_INIT has been received for instanceId: {}, sourceTenant: {}, targetTenant: {}",
         instanceId, sharingInstanceMetadata.getSourceTenantId(), sharingInstanceMetadata.getTargetTenantId());
 
@@ -262,8 +259,11 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
             promise.fail(new CompletionException(errorMessage, jobExecutionRes.cause()));
             sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
           } else {
-            JsonObject jobExecution = jobExecutionRes.result();
-            String jobExecutionId = jobExecution.getJsonObject("jobExecutionId").getString("value");
+            JsonObject jobExecutionObj = jobExecutionRes.result();
+            LOGGER.info("sharingInstanceWithMarcSource:: jobExecution1={}. Start.", jobExecutionObj);
+            LOGGER.info("sharingInstanceWithMarcSource:: jobExecution2={}. Start.", jobExecutionObj.encodePrettily());
+
+            String jobExecutionId = jobExecutionObj.getJsonObject("jobExecutionId").getString("value");
 
             setDefaultJobProfileToJobExecution(jobExecutionId, targetManagerClient)
               .onComplete(jobProfileSet -> {
