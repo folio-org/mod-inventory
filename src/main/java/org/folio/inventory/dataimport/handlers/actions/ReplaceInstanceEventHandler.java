@@ -115,6 +115,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       Instance instanceToUpdate = Instance.fromJson(new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value())));
 
       if (instanceToUpdate.getSource().equals(CONSORTIUM_FOLIO.getValue()) || instanceToUpdate.getSource().equals(CONSORTIUM_MARC.getValue())) {
+        LOGGER.info("handle:: Processing Consortium Instance jobExecutionId: {}.", dataImportEventPayload.getJobExecutionId());
         consortiumService.getConsortiumConfiguration(context)
           .compose(consortiumConfigurationOptional -> {
             if (consortiumConfigurationOptional.isPresent()) {
@@ -123,6 +124,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
               InstanceCollection instanceCollection = storage.getInstanceCollection(centralTenantContext);
               InstanceUtil.findInstanceById(instanceToUpdate.getId(), instanceCollection)
                 .onSuccess(existedCentralTenantInstance -> {
+                  LOGGER.info("handle:: Processed Consortium Instance jobExecutionId: {}.", dataImportEventPayload.getJobExecutionId());
                   processInstanceUpdate(dataImportEventPayload, instanceCollection, context, existedCentralTenantInstance, future, centralTenantContext.getTenantId());
                   dataImportEventPayload.getContext().put(CENTRAL_TENANT_INSTANCE_UPDATED_FLAG, "true");
                   dataImportEventPayload.getContext().put(CENTRAL_TENANT_ID, centralTenantId);
