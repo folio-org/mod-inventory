@@ -47,6 +47,7 @@ import java.util.concurrent.CompletionException;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.apache.commons.lang.StringUtils.EMPTY;
+import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.folio.inventory.consortium.entities.SharingInstanceEventType.CONSORTIUM_INSTANCE_SHARING_COMPLETE;
 import static org.folio.inventory.consortium.entities.SharingStatus.COMPLETE;
@@ -344,9 +345,13 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     LOGGER.info("getJobExecutionByChangeManager:: Start.");
     Promise<JsonObject> promise = Promise.promise();
     try {
+
+      String userId = kafkaHeaders.get(USER_ID.toLowerCase());
+      if (isEmpty(userId)) userId = "906ab8fb-3bac-4099-9473-cf1717bd457f";
+
       InitJobExecutionsRqDto initJobExecutionsRqDto = new InitJobExecutionsRqDto()
         .withSourceType(InitJobExecutionsRqDto.SourceType.ONLINE)
-        .withUserId(kafkaHeaders.get(USER_ID.toLowerCase()));
+        .withUserId(userId);
 
       client.postChangeManagerJobExecutions(initJobExecutionsRqDto, response -> {
         if (response.result().statusCode() != HttpStatus.SC_CREATED) {
