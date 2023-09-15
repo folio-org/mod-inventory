@@ -259,9 +259,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
             promise.fail(new CompletionException(errorMessage, jobExecutionRes.cause()));
             sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
           } else {
-            JsonObject jobExecutionObj = jobExecutionRes.result();
-            String jobExecutionId = jobExecutionObj.getJsonObject("id").getString("value");
-
+            String jobExecutionId = jobExecutionRes.result().getString("id");
             setDefaultJobProfileToJobExecution(jobExecutionId, targetManagerClient)
               .onComplete(jobProfileSet -> {
                 if (jobProfileSet.failed()) {
