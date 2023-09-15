@@ -69,6 +69,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   private static final String MARC_INSTANCE_SOURCE = "MARC";
   private static final String INSTANCE_ID_TYPE = "INSTANCE";
   public static final String CENTRAL_TENANT_INSTANCE_UPDATED_FLAG = "CENTRAL_TENANT_INSTANCE_UPDATED";
+  public static final String CENTRAL_TENANT_ID = "CENTRAL_TENANT_ID";
 
   private final PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
   private final MappingMetadataCache mappingMetadataCache;
@@ -117,12 +118,14 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         consortiumService.getConsortiumConfiguration(context)
           .compose(consortiumConfigurationOptional -> {
             if (consortiumConfigurationOptional.isPresent()) {
-              Context centralTenantContext = EventHandlingUtil.constructContext(consortiumConfigurationOptional.get().getCentralTenantId(), context.getToken(), context.getOkapiLocation());
+              String centralTenantId = consortiumConfigurationOptional.get().getCentralTenantId();
+              Context centralTenantContext = EventHandlingUtil.constructContext(centralTenantId, context.getToken(), context.getOkapiLocation());
               InstanceCollection instanceCollection = storage.getInstanceCollection(centralTenantContext);
               InstanceUtil.findInstanceById(instanceToUpdate.getId(), instanceCollection)
                 .onSuccess(existedCentralTenantInstance -> {
                   processInstanceUpdate(dataImportEventPayload, instanceCollection, context, existedCentralTenantInstance, future, centralTenantContext.getTenantId());
                   dataImportEventPayload.getContext().put(CENTRAL_TENANT_INSTANCE_UPDATED_FLAG, "true");
+                  dataImportEventPayload.getContext().put(CENTRAL_TENANT_ID, centralTenantId);
                 })
                 .onFailure(e -> {
                   LOGGER.warn("Error retrieving inventory Instance from central tenant", e);
