@@ -139,7 +139,8 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
               .compose(addedInstance -> {
                 JsonObject jsonInstanceToPublish = srcInstance.getJsonForStorage();
                 jsonInstanceToPublish.put("source", CONSORTIUM_FOLIO.getValue());
-                return updateInstanceInStorage(Instance.fromJson(jsonInstanceToPublish), sourceInstanceCollection)
+                return updateInstanceInStorage(Instance.fromJson(jsonInstanceToPublish),
+                  sharingInstanceMetadata.getSourceTenantId(), sourceInstanceCollection)
                   .compose(ignored -> {
                     String message = format("Instance with InstanceId=%s has been shared to the target tenant %s",
                       instanceId, targetTenant);
@@ -558,7 +559,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   }
 
   private Future<Instance> addInstance(Instance instance, String tenant, InstanceCollection instanceCollection) {
-    LOGGER.info("addInstance :: Instance with InstanceId={} to tenant {}", instance.getId(), tenant);
+    LOGGER.info("addInstance :: Publishing instance with InstanceId={} to tenant {}", instance.getId(), tenant);
     Promise<Instance> promise = Promise.promise();
     instanceCollection.add(instance, success -> promise.complete(success.getResult()),
       failure -> {
@@ -574,7 +575,9 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     return promise.future();
   }
 
-  private Future<Instance> updateInstanceInStorage(Instance instance, InstanceCollection instanceCollection) {
+  private Future<Instance> updateInstanceInStorage(Instance instance, String tenant, InstanceCollection instanceCollection) {
+    LOGGER.info("updateInstanceInStorage :: Updating instance with InstanceId={} on tenant {}",
+      instance.getId(), tenant);
     Promise<Instance> promise = Promise.promise();
     instanceCollection.update(instance, success -> promise.complete(instance),
       failure -> {
@@ -588,7 +591,8 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     return promise.future();
   }
 
-  private void sendCompleteEventToKafka(SharingInstance sharingInstance, SharingStatus status, String errorMessage, Map<String, String> kafkaHeaders) {
+  private void sendCompleteEventToKafka(SharingInstance sharingInstance, SharingStatus status, String errorMessage,
+                                        Map<String, String> kafkaHeaders) {
 
     SharingInstanceEventType evenType = CONSORTIUM_INSTANCE_SHARING_COMPLETE;
 
@@ -641,9 +645,9 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
   private List<KafkaHeader> convertKafkaHeadersMap(Map<String, String> kafkaHeaders) {
     return new ArrayList<>(List.of(
-      KafkaHeader.header(URL, kafkaHeaders.get(URL)),
-      KafkaHeader.header(TENANT, kafkaHeaders.get(TENANT)),
-      KafkaHeader.header(TOKEN, kafkaHeaders.get(TOKEN)))
+      KafkaHeader.header(URL, kafkaHeaders.get(URL.toLowerCase())),
+      KafkaHeader.header(TENANT, kafkaHeaders.get(TENANT.toLowerCase())),
+      KafkaHeader.header(TOKEN, kafkaHeaders.get(TOKEN.toLowerCase())))
     );
   }
 
