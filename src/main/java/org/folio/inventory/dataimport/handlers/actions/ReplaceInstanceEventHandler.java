@@ -265,6 +265,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
                                                List<MarcFieldProtectionSetting> marcFieldProtectionSettings,
                                                Instance instance, String tenantId) {
     if (!MARC_INSTANCE_SOURCE.equals(instance.getSource()) && !CONSORTIUM_MARC.getValue().equals(instance.getSource())) {
+      LOGGER.info("Processing prepareRecordForMapping!!!");
       return Future.succeededFuture();
     }
 
