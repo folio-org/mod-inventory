@@ -114,7 +114,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       Instance instanceToUpdate = Instance.fromJson(new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value())));
 
-      if (instanceToUpdate.getSource().equals(CONSORTIUM_FOLIO.getValue()) || instanceToUpdate.getSource().equals(CONSORTIUM_MARC.getValue())) {
+      if (instanceToUpdate.getSource() != null && (instanceToUpdate.getSource().equals(CONSORTIUM_FOLIO.getValue()) || instanceToUpdate.getSource().equals(CONSORTIUM_MARC.getValue()))) {
         LOGGER.info("handle:: Processing Consortium Instance jobExecutionId: {}.", dataImportEventPayload.getJobExecutionId());
         consortiumService.getConsortiumConfiguration(context)
           .compose(consortiumConfigurationOptional -> {
@@ -241,7 +241,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       .collect(Collectors.toList()));
     instanceAsJson.put("id", instanceToUpdate.getId());
     instanceAsJson.put(HRID_KEY, instanceToUpdate.getHrid());
-    if (!(instanceToUpdate.getSource().equals(CONSORTIUM_FOLIO.getValue()) || instanceToUpdate.getSource().equals(CONSORTIUM_MARC.getValue()))) {
+    if (instanceToUpdate.getSource() != null && (!(instanceToUpdate.getSource().equals(CONSORTIUM_FOLIO.getValue()) || instanceToUpdate.getSource().equals(CONSORTIUM_MARC.getValue())))) {
       instanceAsJson.put(SOURCE_KEY, MARC_FORMAT);
     }
     instanceAsJson.put(METADATA_KEY, instanceToUpdate.getMetadata());
