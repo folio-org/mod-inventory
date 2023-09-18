@@ -264,6 +264,8 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   private Future<Void> prepareRecordForMapping(DataImportEventPayload dataImportEventPayload,
                                                List<MarcFieldProtectionSetting> marcFieldProtectionSettings,
                                                Instance instance, String tenantId) {
+    LOGGER.info("Processing prepareRecordForMapping!!!!!: {}   ", instance.getSource());
+
     if (!MARC_INSTANCE_SOURCE.equals(instance.getSource()) && !CONSORTIUM_MARC.getValue().equals(instance.getSource())) {
       LOGGER.info("Processing prepareRecordForMapping!!!");
       return Future.succeededFuture();
