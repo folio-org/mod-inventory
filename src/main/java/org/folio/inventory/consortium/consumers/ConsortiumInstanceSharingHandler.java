@@ -561,6 +561,8 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     Promise<JsonObject> promise = Promise.promise();
     try {
       client.postChangeManagerJobExecutionsRecordsById(jobExecutionId, acceptInstanceId, rawRecordsDto, response -> {
+        LOGGER.info("postRecordToParsing :: body={}", response.result().bodyAsString());
+        LOGGER.info("postRecordToParsing :: statusCode={}", response.result().statusCode());
         if (response.result().statusCode() != HttpStatus.SC_NO_CONTENT) {
           LOGGER.warn("postRecordToParsing:: Failed sending record to parsing. Status message: {}",
             response.result().statusMessage());
