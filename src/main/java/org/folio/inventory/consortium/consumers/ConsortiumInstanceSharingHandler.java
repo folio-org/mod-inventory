@@ -314,27 +314,40 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
                   return postRecordToParsing(jobExecutionId, false, lastRecord, targetManagerClient)
                     .compose(publishLastPackageResult -> {
-                      vertx.setPeriodic(TimeUnit.MINUTES.toMillis(1), timerId -> {
-                        LOGGER.info("sharingInstanceWithMarcSource:: InstanceId={}. Check import status for DI with jobExecutionId={}.",
-                          sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionId);
-
-                        getJobExecutionById(jobExecutionId, targetManagerClient)
-                          .compose(jobExecution -> {
-                              JsonObject jobExecutionJson = new JsonObject(jobExecution);
-                              LOGGER.info("sharingInstanceWithMarcSource:: InstanceId={}. Check import status for DI with jobExecutionId={}. Result: {}",
-                                sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionId, jobExecutionJson.getString("status"));
-                              vertx.cancelTimer(timerId);
-                              return Future.succeededFuture(jobExecutionJson);
-                            },
-                            throwable -> {
-                              String errorMessage = String.format("Failed get jobExecutionId=%s for " +
-                                "DI with InstanceId=%s. Error: %s", jobExecutionId, instanceId, throwable.getMessage());
-                              sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
-                              vertx.cancelTimer(timerId);
-                              return Future.failedFuture(throwable);
-                            });
-                      });
-                      return promise.future();
+                      return getJobExecutionById(jobExecutionId, targetManagerClient)
+                        .compose(jobExecution -> {
+                          LOGGER.info("jobExecution = {}", jobExecution);
+                          JsonObject jobExecutionJson = new JsonObject(jobExecution);
+                          LOGGER.info("jobExecutionJson = {}", jobExecutionJson);
+                          LOGGER.info("sharingInstanceWithMarcSource:: InstanceId={}. Check import status for DI with jobExecutionId={}. Result: {}",
+                            sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionId, jobExecutionJson.getString("status"));
+                          return Future.succeededFuture(jobExecutionJson);
+                        }, throwable -> {
+                          String errorMessage = String.format("Failed get jobExecutionId=%s for " +
+                            "DI with InstanceId=%s. Error: %s", jobExecutionId, instanceId, throwable.getMessage());
+                          sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
+                          return Future.failedFuture(throwable);
+                        });
+//                      vertx.setPeriodic(TimeUnit.MINUTES.toMillis(1), timerId -> {
+//                        LOGGER.info("sharingInstanceWithMarcSource:: InstanceId={}. Check import status for DI with jobExecutionId={}.",
+//                          sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionId);
+//
+//                        getJobExecutionById(jobExecutionId, targetManagerClient)
+//                          .compose(jobExecution -> {
+//                              JsonObject jobExecutionJson = new JsonObject(jobExecution);
+//                              LOGGER.info("sharingInstanceWithMarcSource:: InstanceId={}. Check import status for DI with jobExecutionId={}. Result: {}",
+//                                sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionId, jobExecutionJson.getString("status"));
+//                              vertx.cancelTimer(timerId);
+//                              return Future.succeededFuture(jobExecutionJson);
+//                            },
+//                            throwable -> {
+//                              String errorMessage = String.format("Failed get jobExecutionId=%s for " +
+//                                "DI with InstanceId=%s. Error: %s", jobExecutionId, instanceId, throwable.getMessage());
+//                              sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
+//                              vertx.cancelTimer(timerId);
+//                              return Future.failedFuture(throwable);
+//                            });
+//                      });
                     }, throwable -> {
                       String errorMessage = String.format("Failed start DI with jobExecutionId=%s for " +
                         "sharing instance with InstanceId=%s. Error: %s", jobExecutionId, instanceId, throwable.getMessage());
