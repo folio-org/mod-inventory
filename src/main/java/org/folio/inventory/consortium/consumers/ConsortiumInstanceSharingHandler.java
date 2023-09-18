@@ -293,7 +293,8 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                   .withContentType(RecordsMetadata.ContentType.MARC_JSON))
                 .withInitialRecords(singletonList(new InitialRecord().withRecord(jsonRecord)));
 
-              postRecordToParsing(jobExecutionId, sendRecord, targetManagerClient).onComplete(postRecords -> {
+              LOGGER.info("sharingInstanceWithMarcSource:: InstanceId={}. Send record to parsing.", sharingInstanceMetadata.getInstanceIdentifier());
+              postRecordToParsing(jobExecutionId, true, sendRecord, targetManagerClient).onComplete(postRecords -> {
                 if (postRecords.failed()) {
                   String errorMessage = String.format("Failed start DI with jobExecutionId=%s for " +
                     "sharing instance with InstanceId=%s. Error: %s", jobExecutionId, instanceId, postRecords.cause().getMessage());
@@ -310,24 +311,26 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                       .withContentType(RecordsMetadata.ContentType.MARC_JSON));
 
                   vertx.setPeriodic(TimeUnit.MINUTES.toMillis(1), timerId -> {
-                    postRecordToParsing(jobExecutionId, checkRecord, targetManagerClient).onComplete(importResult -> {
-                      if (importResult.failed()) {
-                        String errorMessage = String.format("DI failed with jobExecutionId=%s for " +
-                          "Instance with InstanceId=%s. Error: %s", jobExecutionId, instanceId, importResult.cause().getMessage());
-                        promise.fail(new CompletionException(errorMessage, importResult.cause()));
-                        sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
-                      } else {
-                        JsonObject checkResult = importResult.result();
-                        LOGGER.info("sharingInstanceWithMarcSource:: Check import with jobExecutionId={} result: {}",
-                          jobExecutionId, checkResult.getString("status"));
-                        if (checkResult.getBoolean("COMPLETED")) {
-                          promise.complete(marcRecord.getMatchedId());
-                        } else if (checkResult.getBoolean("ERROR")) {
-                          promise.fail(new CompletionException(new Exception("ERROR")));
+                    LOGGER.info("sharingInstanceWithMarcSource:: InstanceId={}. Check import status for DI with jobExecutionId={}.", sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionId);
+                    postRecordToParsing(jobExecutionId, false, checkRecord, targetManagerClient)
+                      .onComplete(importResult -> {
+                        if (importResult.failed()) {
+                          String errorMessage = String.format("DI failed with jobExecutionId=%s for " +
+                            "Instance with InstanceId=%s. Error: %s", jobExecutionId, instanceId, importResult.cause().getMessage());
+                          promise.fail(new CompletionException(errorMessage, importResult.cause()));
+                          sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
+                        } else {
+                          JsonObject checkResult = importResult.result();
+                          LOGGER.info("sharingInstanceWithMarcSource:: Status checking DI with jobExecutionId={} result: {}",
+                            jobExecutionId, checkResult.getString("status"));
+                          if (checkResult.getBoolean("COMPLETED")) {
+                            promise.complete(marcRecord.getMatchedId());
+                          } else if (checkResult.getBoolean("ERROR")) {
+                            promise.fail(new CompletionException(new Exception("ERROR")));
+                          }
+                          vertx.cancelTimer(timerId);
                         }
-                        vertx.cancelTimer(timerId);
-                      }
-                    });
+                      });
                   });
                 }
               });
@@ -452,19 +455,11 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     Promise<JsonObject> promise = Promise.promise();
     try {
 
-      String userId = kafkaHeaders.get(USER_ID.toLowerCase());
-      if (isEmpty(userId)) {
-        userId = "906ab8fb-3bac-4099-9473-cf1717bd457f";
-      } else {
-        LOGGER.info("USER_ID is not empty: USER_ID={}", userId);
-      }
-
-      LOGGER.info("getJobExecutionByChangeManager:: userId: {}, {}: {} Start.",
-        userId, USER_ID.toLowerCase(), kafkaHeaders.get(USER_ID.toLowerCase()));
+      LOGGER.info("getJobExecutionByChangeManager:: Start.");
 
       InitJobExecutionsRqDto initJobExecutionsRqDto = new InitJobExecutionsRqDto()
         .withSourceType(InitJobExecutionsRqDto.SourceType.ONLINE)
-        .withUserId(userId);
+        .withUserId(kafkaHeaders.get(USER_ID.toLowerCase()));
 
       client.postChangeManagerJobExecutions(initJobExecutionsRqDto, response -> {
         if (response.result().statusCode() != HttpStatus.SC_CREATED) {
@@ -515,11 +510,12 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     return promise.future();
   }
 
-  private Future<JsonObject> postRecordToParsing(String jobExecutionId, RawRecordsDto rawRecordsDto,
+  private Future<JsonObject> postRecordToParsing(String jobExecutionId, Boolean acceptInstanceId, RawRecordsDto rawRecordsDto,
                                                  ChangeManagerClient client) {
+    LOGGER.info("postRecordToParsing :: jobExecutionId={}, acceptInstanceId={}. Start.", jobExecutionId, acceptInstanceId);
     Promise<JsonObject> promise = Promise.promise();
     try {
-      client.postChangeManagerJobExecutionsRecordsById(jobExecutionId, true, rawRecordsDto, response -> {
+      client.postChangeManagerJobExecutionsRecordsById(jobExecutionId, acceptInstanceId, rawRecordsDto, response -> {
         if (response.result().statusCode() != HttpStatus.SC_NO_CONTENT) {
           LOGGER.warn("postRecordToParsing:: Failed sending record to parsing. Status message: {}",
             response.result().statusMessage());
