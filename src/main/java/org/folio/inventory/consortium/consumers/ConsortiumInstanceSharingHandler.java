@@ -44,11 +44,13 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.apache.commons.lang.StringUtils.EMPTY;
-import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.folio.inventory.consortium.entities.SharingInstanceEventType.CONSORTIUM_INSTANCE_SHARING_COMPLETE;
 import static org.folio.inventory.consortium.entities.SharingStatus.COMPLETE;
@@ -280,7 +282,6 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
             if (jobProfileSet.failed()) {
               String errorMessage = String.format("Failed to link jobProfile to jobExecution with jibExecutionId=%s: Error: %s",
                 jobExecutionId, jobProfileSet.cause().getMessage());
-              promise.fail(new CompletionException(errorMessage, jobProfileSet.cause()));
               sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
             } else {
               // Post record to parsing
@@ -294,51 +295,81 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                   .withContentType(RecordsMetadata.ContentType.MARC_JSON))
                 .withInitialRecords(singletonList(new InitialRecord().withRecord(jsonRecord)));
 
-              LOGGER.info("sharingInstanceWithMarcSource:: InstanceId={}. Send record to parsing.", sharingInstanceMetadata.getInstanceIdentifier());
-              postRecordToParsing(jobExecutionId, true, sendRecord, targetManagerClient).onComplete(postRecords -> {
-                if (postRecords.failed()) {
-                  String errorMessage = String.format("Failed start DI with jobExecutionId=%s for " +
-                    "sharing instance with InstanceId=%s. Error: %s", jobExecutionId, instanceId, postRecords.cause().getMessage());
-                  promise.fail(new CompletionException(errorMessage, postRecords.cause()));
-                  sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
-                } else {
-                  // Check record
-                  RawRecordsDto checkRecord = new RawRecordsDto()
+              LOGGER.info("sharingInstanceWithMarcSource:: InstanceId={}. Sending record to parsing.",
+                sharingInstanceMetadata.getInstanceIdentifier());
+
+              postRecordToParsing(jobExecutionId, true, sendRecord, targetManagerClient)
+                .compose(publishResult -> {
+                  RawRecordsDto lastRecord = new RawRecordsDto()
                     .withId(UUID.randomUUID().toString())
                     .withRecordsMetadata(new RecordsMetadata()
                       .withLast(true)
                       .withCounter(1)
                       .withTotal(1)
-                      .withContentType(RecordsMetadata.ContentType.MARC_JSON));
+                      .withContentType(RecordsMetadata.ContentType.MARC_JSON))
+                    .withInitialRecords(new ArrayList<>());
 
-                  vertx.setPeriodic(TimeUnit.MINUTES.toMillis(1), timerId -> {
-                    LOGGER.info("sharingInstanceWithMarcSource:: InstanceId={}. Check import status for DI with jobExecutionId={}.", sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionId);
-                    postRecordToParsing(jobExecutionId, false, checkRecord, targetManagerClient)
-                      .onComplete(importResult -> {
-                        if (importResult.failed()) {
-                          String errorMessage = String.format("DI failed with jobExecutionId=%s for " +
-                            "Instance with InstanceId=%s. Error: %s", jobExecutionId, instanceId, importResult.cause().getMessage());
-                          promise.fail(new CompletionException(errorMessage, importResult.cause()));
-                          sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
-                        } else {
-                          JsonObject checkResult = importResult.result();
-                          LOGGER.info("sharingInstanceWithMarcSource:: Status checking DI with jobExecutionId={} result: {}",
-                            jobExecutionId, checkResult.getString("status"));
-                          if (checkResult.getBoolean("COMPLETED")) {
-                            promise.complete(marcRecord.getMatchedId());
-                          } else if (checkResult.getBoolean("ERROR")) {
-                            promise.fail(new CompletionException(new Exception("ERROR")));
-                          }
-                          vertx.cancelTimer(timerId);
-                        }
+                  LOGGER.info("sharingInstanceWithMarcSource:: InstanceId={}. Sending last record to parsing.",
+                    sharingInstanceMetadata.getInstanceIdentifier());
+
+                  return postRecordToParsing(jobExecutionId, false, lastRecord, targetManagerClient)
+                    .compose(publishLastPackageResult -> {
+                      vertx.setPeriodic(TimeUnit.MINUTES.toMillis(1), timerId -> {
+                        LOGGER.info("sharingInstanceWithMarcSource:: InstanceId={}. Check import status for DI with jobExecutionId={}.",
+                          sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionId);
+
+                        getJobExecutionById(jobExecutionId, targetManagerClient)
+                          .compose(jobExecution -> {
+                              JsonObject jobExecutionJson = new JsonObject(jobExecution);
+                              LOGGER.info("sharingInstanceWithMarcSource:: InstanceId={}. Check import status for DI with jobExecutionId={}. Result: {}",
+                                sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionId, jobExecutionJson.getString("status"));
+                              vertx.cancelTimer(timerId);
+                              return Future.succeededFuture(jobExecutionJson);
+                            },
+                            throwable -> {
+                              String errorMessage = String.format("Failed get jobExecutionId=%s for " +
+                                "DI with InstanceId=%s. Error: %s", jobExecutionId, instanceId, throwable.getMessage());
+                              sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
+                              vertx.cancelTimer(timerId);
+                              return Future.failedFuture(throwable);
+                            });
                       });
-                  });
-                }
-              });
+                      return promise.future();
+                    }, throwable -> {
+                      String errorMessage = String.format("Failed start DI with jobExecutionId=%s for " +
+                        "sharing instance with InstanceId=%s. Error: %s", jobExecutionId, instanceId, throwable.getMessage());
+                      sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
+                      return Future.failedFuture(throwable);
+                    });
+                }, throwable -> {
+                  String errorMessage = String.format("Failed start DI with jobExecutionId=%s for " +
+                    "sharing instance with InstanceId=%s. Error: %s", jobExecutionId, instanceId, throwable.getMessage());
+                  sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
+                  return Future.failedFuture(throwable);
+                });
             }
           });
       }
     });
+    return promise.future();
+  }
+
+  private Future<String> getJobExecutionById(String jobExecutionId, ChangeManagerClient client) {
+    LOGGER.info("getJobExecutionById:: jobExecutionId={} Start.", jobExecutionId);
+    Promise<String> promise = Promise.promise();
+    try {
+      client.getChangeManagerJobExecutionsById(jobExecutionId, response -> {
+        if (response.result().statusCode() == HttpStatus.SC_OK) {
+          promise.complete(response.result().bodyAsJsonObject().toString());
+        } else {
+          String errorMessage = "Error getting JobExecution by id " + jobExecutionId;
+          LOGGER.error(errorMessage);
+          promise.fail(errorMessage);
+        }
+      });
+    } catch (Exception e) {
+      promise.fail(e);
+    }
     return promise.future();
   }
 
