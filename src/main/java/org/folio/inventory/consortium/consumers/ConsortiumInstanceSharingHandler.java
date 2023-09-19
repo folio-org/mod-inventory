@@ -286,6 +286,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
             } else {
               // Post record to parsing
               String jsonRecord = JsonObject.mapFrom(marcRecord).toString();
+              LOGGER.info("jsonRecord to DI = {}", jsonRecord);
               RawRecordsDto sendRecord = new RawRecordsDto()
                 .withId(UUID.randomUUID().toString())
                 .withRecordsMetadata(new RecordsMetadata()
