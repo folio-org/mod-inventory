@@ -306,7 +306,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                     return postRecordToParsing(jobExecutionId, false, buildLastChunk(), targetManagerClient)
                       .onComplete(publishLastPackageResult -> {
                         if (publishLastPackageResult.succeeded()) {
-                          checkDataImportStatus(jobExecutionId, sharingInstanceMetadata, 1L, 10, targetManagerClient)
+                          checkDataImportStatus(jobExecutionId, sharingInstanceMetadata, 1L, 3, targetManagerClient)
                             .onComplete(diResult -> {
                               if (diResult.succeeded()) {
                                 promise.complete(diResult.result());
@@ -378,7 +378,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
               JsonObject jobExecutionJson = new JsonObject(jobExecution.result());
               LOGGER.info("checkDataImportStatus:: InstanceId={}. Check import status for DI with jobExecutionId={}. Result: {}",
                 sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionId, jobExecutionJson.getString("status"));
-              if (jobExecutionJson.getString("status").equals("COMPLETED")
+              if (jobExecutionJson.getString("status").equals("COMMITTED")
                 || jobExecutionJson.getString("status").equals("ERROR")) {
                 vertx.cancelTimer(timerId);
                 promise.complete(jobExecutionJson.getString("status"));
@@ -390,8 +390,11 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
               vertx.cancelTimer(timerId);
               promise.fail(errorMessage);
             }
-            if (counter.getAndIncrement() > attemptsNumber)
+
+            if (counter.getAndIncrement() > attemptsNumber) {
               vertx.cancelTimer(timerId);
+              promise.fail("Number of attempts to check DI status has ended for jobExecutionId=" + jobExecutionId);
+            }
           });
       });
       return promise.future();
