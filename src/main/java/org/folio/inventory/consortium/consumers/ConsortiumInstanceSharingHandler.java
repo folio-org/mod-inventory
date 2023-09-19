@@ -166,26 +166,34 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
             return getParsedSourceMARCByInstanceId(instanceId, sourceTenant, sourceTenantStorageClient)
               .compose(record -> {
                   return sharingInstanceWithMarcSource(record, sharingInstanceMetadata, kafkaHeaders)
-                    .compose(ignore -> {
-                      return sourceTenantStorageClient.deleteSourceStorageRecordsById(instanceId)
-                        .compose(response -> {
-                          if (response.statusCode() != HttpStatus.SC_NO_CONTENT) {
+                    .compose(diResult -> {
+                      if (diResult.equals("COMPLETED")) {
+                        return sourceTenantStorageClient.deleteSourceStorageRecordsById(instanceId)
+                          .compose(response -> {
+                            if (response.statusCode() != HttpStatus.SC_NO_CONTENT) {
+                              String errorMessage = String.format("Failed to delete MARC source for Instance=%s. Error: %s",
+                                instanceId, response.statusMessage());
+                              sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
+                              return Future.failedFuture(errorMessage);
+                            } else {
+                              String message = format("Instance with InstanceId=%s has been shared to the target tenant %s",
+                                instanceId, targetTenant);
+                              sendCompleteEventToKafka(sharingInstanceMetadata, COMPLETE, message, kafkaHeaders);
+                              return Future.succeededFuture(message);
+                            }
+                          }, throwable -> {
                             String errorMessage = String.format("Failed to delete MARC source for Instance=%s. Error: %s",
-                              instanceId, response.statusMessage());
+                              instanceId, throwable.getCause().getMessage());
                             sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
-                            return Future.failedFuture(errorMessage);
-                          } else {
-                            String message = format("Instance with InstanceId=%s has been shared to the target tenant %s",
-                              instanceId, targetTenant);
-                            sendCompleteEventToKafka(sharingInstanceMetadata, COMPLETE, message, kafkaHeaders);
-                            return Future.succeededFuture(message);
-                          }
-                        }, throwable -> {
-                          String errorMessage = String.format("Failed to delete MARC source for Instance=%s. Error: %s",
-                            instanceId, throwable.getCause().getMessage());
-                          sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
-                          return Future.failedFuture(throwable);
-                        });
+                            return Future.failedFuture(throwable);
+                          });
+                      } else {
+                        String errorMessage = String.format("Failed to publish MARC record from source tenant %s " +
+                            "for Instance with InstanceId=%s. Error: %s", sharingInstanceMetadata.getSourceTenantId(),
+                          sharingInstanceMetadata.getInstanceIdentifier(), diResult);
+                        sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
+                        return Future.failedFuture(diResult);
+                      }
                     }, throwable -> {
                       String errorMessage = String.format("Failed to get MARC record from source tenant %s " +
                           "for Instance with InstanceId=%s. Error: %s", sharingInstanceMetadata.getSourceTenantId(),
@@ -262,110 +270,135 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   }
 
   public Future<String> sharingInstanceWithMarcSource(Record marcRecord, SharingInstance sharingInstanceMetadata, Map<String, String> kafkaHeaders) {
+
     LOGGER.info("sharingInstanceWithMarcSource:: InstanceId={}. Start.", sharingInstanceMetadata.getInstanceIdentifier());
+    Promise<String> promise = Promise.promise();
+
+    try {
+      String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
+      ChangeManagerClient targetManagerClient = new ChangeManagerClient(kafkaHeaders.get(URL.toLowerCase()),
+        kafkaHeaders.get(TENANT.toLowerCase()), kafkaHeaders.get(TOKEN.toLowerCase()), vertx.createHttpClient());
+
+      getNewJobExecutionByChangeManager(targetManagerClient, kafkaHeaders).onComplete(jobExecutionRes -> {
+        if (jobExecutionRes.failed()) {
+          String errorMessage = String.format("Failed to handle job execution: %s", jobExecutionRes.cause().getMessage());
+          promise.fail(new CompletionException(errorMessage, jobExecutionRes.cause()));
+          sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
+        } else {
+          String jobExecutionId = jobExecutionRes.result().getString("id");
+          setDefaultJobProfileToJobExecution(jobExecutionId, targetManagerClient)
+            .onComplete(jobProfileSet -> {
+              if (jobProfileSet.failed()) {
+                String errorMessage = String.format("Failed to link jobProfile to jobExecution with jibExecutionId=%s: Error: %s",
+                  jobExecutionId, jobProfileSet.cause().getMessage());
+                sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
+              } else {
+                LOGGER.info("sharingInstanceWithMarcSource:: InstanceId={}. Sending record to parsing.",
+                  sharingInstanceMetadata.getInstanceIdentifier());
+
+                Object parsedRecord = JsonObject.mapFrom(marcRecord.getParsedRecord().getContent());
+                postRecordToParsing(jobExecutionId, true, prepareDataChunk(parsedRecord), targetManagerClient)
+                  .compose(publishResult -> {
+
+                    LOGGER.info("sharingInstanceWithMarcSource:: InstanceId={}. Sending last record to parsing.",
+                      sharingInstanceMetadata.getInstanceIdentifier());
+
+                    return postRecordToParsing(jobExecutionId, false, buildLastChunk(), targetManagerClient)
+                      .onComplete(publishLastPackageResult -> {
+                        if (publishLastPackageResult.succeeded()) {
+                          checkDataImportStatus(jobExecutionId, sharingInstanceMetadata, 1L, 10, targetManagerClient)
+                            .onComplete(diResult -> {
+                              if (diResult.succeeded()) {
+                                promise.complete(diResult.result());
+                              } else {
+                                promise.fail(diResult.cause());
+                              }
+                            });
+                        } else {
+                          promise.fail(publishLastPackageResult.cause());
+                        }
+                      });
+                  }, throwable -> {
+                    String errorMessage = String.format("Failed start DI with jobExecutionId=%s for " +
+                      "sharing instance with InstanceId=%s. Error: %s", jobExecutionId, instanceId, throwable.getMessage());
+                    sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
+                    return Future.failedFuture(throwable);
+                  });
+              }
+            });
+        }
+      });
+    } catch (Exception ex) {
+      LOGGER.error("sharingInstanceWithMarcSource:: Starting DI for Instance with InstanceId={} and with MARC source failed.",
+        sharingInstanceMetadata.getInstanceIdentifier(), ex);
+      return Future.failedFuture(ex);
+    }
+
+    return promise.future();
+  }
+
+  private RawRecordsDto prepareDataChunk(Object parsedRecord) {
+    return new RawRecordsDto()
+      .withId(UUID.randomUUID().toString())
+      .withRecordsMetadata(new RecordsMetadata()
+        .withLast(false)
+        .withCounter(1)
+        .withTotal(1)
+        .withContentType(RecordsMetadata.ContentType.MARC_JSON))
+      .withInitialRecords(singletonList(new InitialRecord().withRecord(parsedRecord.toString())));
+  }
+
+  private RawRecordsDto buildLastChunk() {
+    return new RawRecordsDto()
+      .withId(UUID.randomUUID().toString())
+      .withRecordsMetadata(new RecordsMetadata()
+        .withLast(true)
+        .withCounter(1)
+        .withTotal(1)
+        .withContentType(RecordsMetadata.ContentType.MARC_JSON))
+      .withInitialRecords(new ArrayList<>());
+  }
+
+  private Future<String> checkDataImportStatus(String jobExecutionId, SharingInstance sharingInstanceMetadata,
+                                               Long durationInMin, Integer attemptsNumber, ChangeManagerClient client) {
+    LOGGER.info("checkDataImportStatus:: InstanceId={}, jobExecutionId={}. Start.",
+      sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionId);
 
     Promise<String> promise = Promise.promise();
-    String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
+    AtomicInteger counter = new AtomicInteger(0);
 
-    ChangeManagerClient targetManagerClient = new ChangeManagerClient(kafkaHeaders.get(URL.toLowerCase()),
-      kafkaHeaders.get(TENANT.toLowerCase()), kafkaHeaders.get(TOKEN.toLowerCase()), vertx.createHttpClient());
+    try {
+      vertx.setPeriodic(TimeUnit.MINUTES.toMillis(durationInMin), timerId -> {
+        LOGGER.info("checkDataImportStatus:: InstanceId={}. Check import status for DI with jobExecutionId={}.",
+          sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionId);
 
-    getNewJobExecutionByChangeManager(targetManagerClient, kafkaHeaders).onComplete(jobExecutionRes -> {
-      if (jobExecutionRes.failed()) {
-        String errorMessage = String.format("Failed to handle job execution: %s", jobExecutionRes.cause().getMessage());
-        promise.fail(new CompletionException(errorMessage, jobExecutionRes.cause()));
-        sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
-      } else {
-        String jobExecutionId = jobExecutionRes.result().getString("id");
-        setDefaultJobProfileToJobExecution(jobExecutionId, targetManagerClient)
-          .onComplete(jobProfileSet -> {
-            if (jobProfileSet.failed()) {
-              String errorMessage = String.format("Failed to link jobProfile to jobExecution with jibExecutionId=%s: Error: %s",
-                jobExecutionId, jobProfileSet.cause().getMessage());
-              sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
+        getJobExecutionById(jobExecutionId, client)
+          .onComplete(jobExecution -> {
+            if (jobExecution.succeeded()) {
+              JsonObject jobExecutionJson = new JsonObject(jobExecution.result());
+              LOGGER.info("checkDataImportStatus:: InstanceId={}. Check import status for DI with jobExecutionId={}. Result: {}",
+                sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionId, jobExecutionJson.getString("status"));
+              if (jobExecutionJson.getString("status").equals("COMPLETED")
+                || jobExecutionJson.getString("status").equals("ERROR")) {
+                vertx.cancelTimer(timerId);
+                promise.complete(jobExecutionJson.getString("status"));
+              }
             } else {
-              // Post record to parsing
-              String jsonRecord = JsonObject.mapFrom(marcRecord.getParsedRecord().getContent()).toString();
-              LOGGER.info("jsonRecord to DI = {}", jsonRecord);
-              RawRecordsDto sendRecord = new RawRecordsDto()
-                .withId(UUID.randomUUID().toString())
-                .withRecordsMetadata(new RecordsMetadata()
-                  .withLast(false)
-                  .withCounter(1)
-                  .withTotal(1)
-                  .withContentType(RecordsMetadata.ContentType.MARC_JSON))
-                .withInitialRecords(singletonList(new InitialRecord().withRecord(jsonRecord)));
-
-              LOGGER.info("sharingInstanceWithMarcSource:: InstanceId={}. Sending record to parsing.",
-                sharingInstanceMetadata.getInstanceIdentifier());
-
-              postRecordToParsing(jobExecutionId, true, sendRecord, targetManagerClient)
-                .compose(publishResult -> {
-                  RawRecordsDto lastRecord = new RawRecordsDto()
-                    .withId(UUID.randomUUID().toString())
-                    .withRecordsMetadata(new RecordsMetadata()
-                      .withLast(true)
-                      .withCounter(1)
-                      .withTotal(1)
-                      .withContentType(RecordsMetadata.ContentType.MARC_JSON))
-                    .withInitialRecords(new ArrayList<>());
-
-                  LOGGER.info("sharingInstanceWithMarcSource:: InstanceId={}. Sending last record to parsing.",
-                    sharingInstanceMetadata.getInstanceIdentifier());
-
-                  return postRecordToParsing(jobExecutionId, false, lastRecord, targetManagerClient)
-                    .compose(publishLastPackageResult -> {
-                      return getJobExecutionById(jobExecutionId, targetManagerClient)
-                        .compose(jobExecution -> {
-                          LOGGER.info("jobExecution = {}", jobExecution);
-                          JsonObject jobExecutionJson = new JsonObject(jobExecution);
-                          LOGGER.info("jobExecutionJson = {}", jobExecutionJson);
-                          LOGGER.info("sharingInstanceWithMarcSource:: InstanceId={}. Check import status for DI with jobExecutionId={}. Result: {}",
-                            sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionId, jobExecutionJson.getString("status"));
-                          return Future.succeededFuture(jobExecutionJson);
-                        }, throwable -> {
-                          String errorMessage = String.format("Failed get jobExecutionId=%s for " +
-                            "DI with InstanceId=%s. Error: %s", jobExecutionId, instanceId, throwable.getMessage());
-                          sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
-                          return Future.failedFuture(throwable);
-                        });
-//                      vertx.setPeriodic(TimeUnit.MINUTES.toMillis(1), timerId -> {
-//                        LOGGER.info("sharingInstanceWithMarcSource:: InstanceId={}. Check import status for DI with jobExecutionId={}.",
-//                          sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionId);
-//
-//                        getJobExecutionById(jobExecutionId, targetManagerClient)
-//                          .compose(jobExecution -> {
-//                              JsonObject jobExecutionJson = new JsonObject(jobExecution);
-//                              LOGGER.info("sharingInstanceWithMarcSource:: InstanceId={}. Check import status for DI with jobExecutionId={}. Result: {}",
-//                                sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionId, jobExecutionJson.getString("status"));
-//                              vertx.cancelTimer(timerId);
-//                              return Future.succeededFuture(jobExecutionJson);
-//                            },
-//                            throwable -> {
-//                              String errorMessage = String.format("Failed get jobExecutionId=%s for " +
-//                                "DI with InstanceId=%s. Error: %s", jobExecutionId, instanceId, throwable.getMessage());
-//                              sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
-//                              vertx.cancelTimer(timerId);
-//                              return Future.failedFuture(throwable);
-//                            });
-//                      });
-                    }, throwable -> {
-                      String errorMessage = String.format("Failed start DI with jobExecutionId=%s for " +
-                        "sharing instance with InstanceId=%s. Error: %s", jobExecutionId, instanceId, throwable.getMessage());
-                      sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
-                      return Future.failedFuture(throwable);
-                    });
-                }, throwable -> {
-                  String errorMessage = String.format("Failed start DI with jobExecutionId=%s for " +
-                    "sharing instance with InstanceId=%s. Error: %s", jobExecutionId, instanceId, throwable.getMessage());
-                  sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
-                  return Future.failedFuture(throwable);
-                });
+              String errorMessage = String.format("Failed get jobExecutionId=%s for DI with InstanceId=%s. " +
+                "Error: %s", jobExecutionId, sharingInstanceMetadata.getInstanceIdentifier(), jobExecution.cause().getMessage());
+              LOGGER.error("checkDataImportStatus:: {}", errorMessage);
+              vertx.cancelTimer(timerId);
+              promise.fail(errorMessage);
             }
+            if (counter.getAndIncrement() > attemptsNumber)
+              vertx.cancelTimer(timerId);
           });
-      }
-    });
-    return promise.future();
+      });
+      return promise.future();
+    } catch (Exception ex) {
+      LOGGER.error("checkDataImportStatus:: Checking DI status failed", ex);
+      return Future.failedFuture(ex);
+    }
   }
 
   private Future<String> getJobExecutionById(String jobExecutionId, ChangeManagerClient client) {
