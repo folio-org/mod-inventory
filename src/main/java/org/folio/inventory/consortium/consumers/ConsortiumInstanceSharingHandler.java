@@ -285,7 +285,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
               sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
             } else {
               // Post record to parsing
-              String jsonRecord = JsonObject.mapFrom(marcRecord).toString();
+              String jsonRecord = JsonObject.mapFrom(marcRecord.getParsedRecord().getContent()).toString();
               LOGGER.info("jsonRecord to DI = {}", jsonRecord);
               RawRecordsDto sendRecord = new RawRecordsDto()
                 .withId(UUID.randomUUID().toString())
