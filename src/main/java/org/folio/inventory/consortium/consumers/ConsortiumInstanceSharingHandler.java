@@ -692,9 +692,9 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
   private List<KafkaHeader> convertKafkaHeadersMap(Map<String, String> kafkaHeaders) {
     return new ArrayList<>(List.of(
-      KafkaHeader.header(URL, kafkaHeaders.get(URL.toLowerCase())),
-      KafkaHeader.header(TENANT, kafkaHeaders.get(TENANT.toLowerCase())),
-      KafkaHeader.header(TOKEN, kafkaHeaders.get(TOKEN.toLowerCase())))
+      KafkaHeader.header(URL.toLowerCase(), kafkaHeaders.get(URL.toLowerCase())),
+      KafkaHeader.header(TENANT.toLowerCase(), kafkaHeaders.get(TENANT.toLowerCase())),
+      KafkaHeader.header(TOKEN.toLowerCase(), kafkaHeaders.get(TOKEN.toLowerCase())))
     );
   }
 
