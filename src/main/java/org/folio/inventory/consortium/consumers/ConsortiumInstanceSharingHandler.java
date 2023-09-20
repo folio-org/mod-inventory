@@ -167,7 +167,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
               .compose(record -> {
                   return sharingInstanceWithMarcSource(record, sharingInstanceMetadata, kafkaHeaders)
                     .compose(diResult -> {
-                      if (diResult.equals("COMPLETED")) {
+                      if (diResult.equals("COMMITTED")) {
                         return sourceTenantStorageClient.deleteSourceStorageRecordsById(instanceId)
                           .compose(response -> {
                             if (response.statusCode() != HttpStatus.SC_NO_CONTENT) {
