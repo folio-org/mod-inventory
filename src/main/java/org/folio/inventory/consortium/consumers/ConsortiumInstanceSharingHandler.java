@@ -45,8 +45,6 @@ import java.util.UUID;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
@@ -66,6 +64,7 @@ import static org.folio.okapi.common.XOkapiHeaders.USER_ID;
 public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<String, String> {
 
   private static final Logger LOGGER = LogManager.getLogger(ConsortiumInstanceSharingHandler.class);
+  public static final String COMMITTED = "COMMITTED";
 
   private final Vertx vertx;
   private final Storage storage;
@@ -126,7 +125,6 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
   private Future<String> publishInstance(SharingInstance sharingInstanceMetadata, InstanceCollection sourceInstanceCollection,
                                          InstanceCollection targetInstanceCollection, Map<String, String> kafkaHeaders) {
-    Promise<String> promise = Promise.promise();
     try {
       String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
       String sourceTenant = sharingInstanceMetadata.getSourceTenantId();
@@ -167,25 +165,24 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
               .compose(record -> {
                   return sharingInstanceWithMarcSource(record, sharingInstanceMetadata, kafkaHeaders)
                     .compose(diResult -> {
-                      if (diResult.equals("COMMITTED")) {
-                        return sourceTenantStorageClient.deleteSourceStorageRecordsById(instanceId)
-                          .compose(response -> {
-                            if (response.statusCode() != HttpStatus.SC_NO_CONTENT) {
-                              String errorMessage = String.format("Failed to delete MARC source for Instance=%s. Error: %s",
-                                instanceId, response.statusMessage());
-                              sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
-                              return Future.failedFuture(errorMessage);
+                      if (diResult.equals(COMMITTED)) {
+                        LOGGER.info("checkIsInstanceExistsOnTargetTenant :: Deleting source MARC for InstanceId={} on tenant: {}",
+                          sharingInstanceMetadata.getInstanceIdentifier(), sharingInstanceMetadata.getSourceTenantId());
+                        return deleteSourceRecordByInstanceId(instanceId, sourceTenant, sourceTenantStorageClient)
+                          .onComplete(deletionResult -> {
+                            if (deletionResult.succeeded()) {
+                              updateInstanceInStorage(srcInstance, sharingInstanceMetadata.getSourceTenantId(), sourceInstanceCollection)
+                                .onComplete(event -> {
+                                  String message = format("Instance with InstanceId=%s has been shared to the target tenant %s",
+                                    instanceId, targetTenant);
+                                  sendCompleteEventToKafka(sharingInstanceMetadata, COMPLETE, message, kafkaHeaders);
+                                });
                             } else {
-                              String message = format("Instance with InstanceId=%s has been shared to the target tenant %s",
-                                instanceId, targetTenant);
-                              sendCompleteEventToKafka(sharingInstanceMetadata, COMPLETE, message, kafkaHeaders);
-                              return Future.succeededFuture(message);
+                              String errorMessage = String.format("Failed to delete MARC source for Instance with InstanceId=%s " +
+                                  "on source tenant %s. Error: %s", instanceId, sharingInstanceMetadata.getSourceTenantId(),
+                                deletionResult.cause().getMessage());
+                              sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
                             }
-                          }, throwable -> {
-                            String errorMessage = String.format("Failed to delete MARC source for Instance=%s. Error: %s",
-                              instanceId, throwable.getCause().getMessage());
-                            sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
-                            return Future.failedFuture(throwable);
                           });
                       } else {
                         String errorMessage = String.format("Failed to publish MARC record from source tenant %s " +
@@ -378,8 +375,8 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
               JsonObject jobExecutionJson = new JsonObject(jobExecution.result());
               LOGGER.info("checkDataImportStatus:: InstanceId={}. Check import status for DI with jobExecutionId={}. Result: {}",
                 sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionId, jobExecutionJson.getString("status"));
-              if (jobExecutionJson.getString("status").equals("COMMITTED")
-                || jobExecutionJson.getString("status").equals("ERROR")) {
+              if (jobExecutionJson.getString("status").equals(COMMITTED)
+                || jobExecutionJson.getString("status").equals(ERROR.getValue())) {
                 vertx.cancelTimer(timerId);
                 promise.complete(jobExecutionJson.getString("status"));
               }
@@ -539,6 +536,19 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
       LOGGER.info("getJobExecutionByChangeManager:: Start.");
 
+      LOGGER.info("getJobExecutionByChangeManager:: kafkaHeaders={}", kafkaHeaders);
+
+      client.putChangeManagerJobExecutionsJobProfileById("e34d7b92-9b83-11eb-a8b3-0242ac130003", new JobProfileInfo(), response -> {
+        if (response.result().statusCode() != HttpStatus.SC_OK) {
+          LOGGER.warn("setJobProfileToJobExecution:: Failed to set JobProfile for JobExecution. Status message: {}",
+            response.result().statusMessage());
+          promise.fail(new HttpException("Failed to set JobProfile for JobExecution.", response.cause()));
+        } else {
+          LOGGER.info("setJobProfileToJobExecution:: Response: {}", response.result());
+          promise.complete(response.result().bodyAsJsonObject());
+        }
+      });
+
       InitJobExecutionsRqDto initJobExecutionsRqDto = new InitJobExecutionsRqDto()
         .withSourceType(InitJobExecutionsRqDto.SourceType.ONLINE)
         .withUserId(kafkaHeaders.get(USER_ID.toLowerCase()));
@@ -619,6 +629,23 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   private void sendErrorResponseAndPrintLogMessage(String errorMessage, SharingInstance sharingInstance, Map<String, String> kafkaHeaders) {
     LOGGER.error("handle:: {}", errorMessage);
     sendCompleteEventToKafka(sharingInstance, ERROR, errorMessage, kafkaHeaders);
+  }
+
+  private Future<String> deleteSourceRecordByInstanceId(String instanceId, String tenantId, SourceStorageRecordsClient client) {
+    LOGGER.info("getInstanceById :: InstanceId={} on tenant: {}", instanceId, tenantId);
+    Promise<String> promise = Promise.promise();
+    client.deleteSourceStorageRecordsById(instanceId).onComplete(response -> {
+      if (response.failed()) {
+        LOGGER.error("deleteSourceRecordByInstanceId:: Error deleting source record by InstanceId={} on tenant: {}",
+          instanceId, tenantId, response.cause());
+        promise.fail(response.cause());
+      } else {
+        LOGGER.info("deleteSourceRecordByInstanceId:: Source record by InstanceId={} on tenant: {} has been deleted",
+          instanceId, tenantId);
+        promise.complete(instanceId);
+      }
+    });
+    return promise.future();
   }
 
   private Future<Instance> getInstanceById(String instanceId, String tenantId, InstanceCollection instanceCollection) {
