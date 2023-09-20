@@ -62,7 +62,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   private static final String CURRENT_EVENT_TYPE_PROPERTY = "CURRENT_EVENT_TYPE";
   private static final String CURRENT_NODE_PROPERTY = "CURRENT_NODE";
   private static final String MARC_INSTANCE_SOURCE = "MARC";
-  private static final String INSTANCE_ID_TYPE = "INSTANCE";
+  public static final String INSTANCE_ID_TYPE = "INSTANCE";
 
   private final PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
   private final MappingMetadataCache mappingMetadataCache;
