@@ -55,6 +55,7 @@ import static org.folio.inventory.consortium.entities.SharingStatus.COMPLETE;
 import static org.folio.inventory.consortium.entities.SharingStatus.ERROR;
 import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_FOLIO;
+import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
 import static org.folio.inventory.domain.items.Item.HRID_KEY;
 import static org.folio.okapi.common.XOkapiHeaders.TENANT;
 import static org.folio.okapi.common.XOkapiHeaders.TOKEN;
@@ -172,7 +173,9 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                         return deleteSourceRecordByInstanceId(instanceId, sourceTenant, sourceTenantStorageClient)
                           .onComplete(deletionResult -> {
                             if (deletionResult.succeeded()) {
-                              updateInstanceInStorage(srcInstance, sharingInstanceMetadata.getSourceTenantId(), sourceInstanceCollection)
+                              JsonObject jsonInstanceToPublish = srcInstance.getJsonForStorage();
+                              jsonInstanceToPublish.put("source", CONSORTIUM_MARC.getValue());
+                              updateInstanceInStorage(Instance.fromJson(jsonInstanceToPublish), sharingInstanceMetadata.getSourceTenantId(), sourceInstanceCollection)
                                 .onComplete(event -> {
                                   String message = format("Instance with InstanceId=%s has been shared to the target tenant %s",
                                     instanceId, targetTenant);
@@ -257,7 +260,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                     return postRecordToParsing(jobExecutionId, false, buildLastChunk(), targetManagerClient)
                       .onComplete(publishLastPackageResult -> {
                         if (publishLastPackageResult.succeeded()) {
-                          checkDataImportStatus(jobExecutionId, sharingInstanceMetadata, 1L, 3, targetManagerClient)
+                          checkDataImportStatus(jobExecutionId, sharingInstanceMetadata, 30L, 3, targetManagerClient)
                             .onComplete(diResult -> {
                               if (diResult.succeeded()) {
                                 promise.complete(diResult.result());
@@ -311,7 +314,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   }
 
   private Future<String> checkDataImportStatus(String jobExecutionId, SharingInstance sharingInstanceMetadata,
-                                               Long durationInMin, Integer attemptsNumber, ChangeManagerClient client) {
+                                               Long durationInSec, Integer attemptsNumber, ChangeManagerClient client) {
     LOGGER.info("checkDataImportStatus:: InstanceId={}, jobExecutionId={}. Start.",
       sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionId);
 
@@ -319,7 +322,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     AtomicInteger counter = new AtomicInteger(0);
 
     try {
-      vertx.setPeriodic(TimeUnit.MINUTES.toMillis(durationInMin), timerId -> {
+      vertx.setPeriodic(TimeUnit.SECONDS.toMillis(durationInSec), timerId -> {
         LOGGER.info("checkDataImportStatus:: InstanceId={}. Check import status for DI with jobExecutionId={}.",
           sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionId);
 
