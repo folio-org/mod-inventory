@@ -65,6 +65,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
   private static final Logger LOGGER = LogManager.getLogger(ConsortiumInstanceSharingHandler.class);
   public static final String COMMITTED = "COMMITTED";
+  public static final String UUID_DEFAULT_JOB_PROFILE = "e34d7b92-9b83-11eb-a8b3-0242ac130003";
 
   private final Vertx vertx;
   private final Storage storage;
@@ -192,7 +193,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                         return Future.failedFuture(diResult);
                       }
                     }, throwable -> {
-                      String errorMessage = String.format("Failed to get MARC record from source tenant %s " +
+                      String errorMessage = String.format("Failed import MARC record from source tenant %s " +
                           "for Instance with InstanceId=%s. Error: %s", sharingInstanceMetadata.getSourceTenantId(),
                         sharingInstanceMetadata.getInstanceIdentifier(), throwable.getCause().getMessage());
                       sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
@@ -217,53 +218,6 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
         sharingInstanceMetadata.getInstanceIdentifier()), ex);
       return Future.failedFuture(ex);
     }
-
-//    return getInstanceById(instanceId, sourceTenant, sourceInstanceCollection)
-//      .compose(srcInstance -> {
-//        if ("FOLIO".equals(srcInstance.getSource())) {
-//          JsonObject jsonInstance = srcInstance.getJsonForStorage();
-//          jsonInstance.remove(HRID_KEY);
-//          return addInstance(srcInstance, targetTenant, targetInstanceCollection)
-//            .compose(addedInstance -> {
-//              JsonObject jsonInstanceToPublish = srcInstance.getJsonForStorage();
-//              jsonInstanceToPublish.put("source", CONSORTIUM_FOLIO.getValue());
-//              return updateInstanceInStorage(Instance.fromJson(jsonInstanceToPublish), sourceInstanceCollection)
-//                .map(ignored -> "Instance has been updated successfully")
-//                .onSuccess(ignored -> {
-//                  String message = format("Instance with InstanceId=%s has been shared to the target tenant %s",
-//                    instanceId, targetTenant);
-//                  sendCompleteEventToKafka(sharingInstanceMetadata, COMPLETE, message, kafkaHeaders);
-//                }).onFailure(throwable -> {
-//                  String errorMessage = format("Error updating Instance with InstanceId=%s on source tenant %s.",
-//                    instanceId, sourceTenant);
-//                  sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
-//                });
-//            }).onFailure(throwable -> {
-//              String errorMessage = format("Error sharing Instance with InstanceId=%s to the target tenant %s.",
-//                instanceId, targetTenant);
-//              sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
-//            });
-//        } else if ("MARC".equals(srcInstance.getSource())) {
-//          sharingInstanceWithMarcSource(sharingInstanceMetadata, kafkaHeaders)
-//            .onComplete(result -> {
-//              return;
-//            }).onFailure(throwable -> {
-//              return;
-//            });
-//          return null;
-//        } else {
-//          String errorMessage = format("Error sharing Instance with InstanceId=%s to the target tenant %s. Because source is %s",
-//            instanceId, targetTenant, srcInstance.getSource());
-//          sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
-//          return Future.failedFuture("errorMessage");
-//        }
-//      }, throwable -> {
-//        String errorMessage = format("Error retrieving Instance by InstanceId=%s from source tenant %s.", instanceId, sourceTenant);
-//        if (throwable != null && throwable.getCause() != null)
-//          errorMessage += " Error: " + throwable.getCause();
-//        sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
-//        return Future.failedFuture(errorMessage);
-//      }).otherwiseEmpty();
   }
 
   public Future<String> sharingInstanceWithMarcSource(Record marcRecord, SharingInstance sharingInstanceMetadata, Map<String, String> kafkaHeaders) {
@@ -530,24 +484,9 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   }
 
   private Future<JsonObject> getNewJobExecutionByChangeManager(ChangeManagerClient client, Map<String, String> kafkaHeaders) {
-
+    LOGGER.info("getJobExecutionByChangeManager:: Receiving jobExecutionId...");
     Promise<JsonObject> promise = Promise.promise();
     try {
-
-      LOGGER.info("getJobExecutionByChangeManager:: Start.");
-
-      LOGGER.info("getJobExecutionByChangeManager:: kafkaHeaders={}", kafkaHeaders);
-
-      client.putChangeManagerJobExecutionsJobProfileById("e34d7b92-9b83-11eb-a8b3-0242ac130003", new JobProfileInfo(), response -> {
-        if (response.result().statusCode() != HttpStatus.SC_OK) {
-          LOGGER.warn("setJobProfileToJobExecution:: Failed to set JobProfile for JobExecution. Status message: {}",
-            response.result().statusMessage());
-          promise.fail(new HttpException("Failed to set JobProfile for JobExecution.", response.cause()));
-        } else {
-          LOGGER.info("setJobProfileToJobExecution:: Response: {}", response.result());
-          promise.complete(response.result().bodyAsJsonObject());
-        }
-      });
 
       InitJobExecutionsRqDto initJobExecutionsRqDto = new InitJobExecutionsRqDto()
         .withSourceType(InitJobExecutionsRqDto.SourceType.ONLINE)
@@ -555,11 +494,10 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
       client.postChangeManagerJobExecutions(initJobExecutionsRqDto, response -> {
         if (response.result().statusCode() != HttpStatus.SC_CREATED) {
-          LOGGER.info("getJobExecutionByChangeManager:: Error creating new JobExecution. Status message: {}",
-            response.result().statusMessage());
+          LOGGER.info("getJobExecutionByChangeManager:: Error creating new JobExecution. " +
+            "Status message: {}. Status code: {}", response.result().statusMessage(), response.result().statusCode());
           promise.fail(new HttpException("Error creating new JobExecution", response.cause()));
         } else {
-          LOGGER.info("getJobExecutionByChangeManager:: Response: {}", response.result());
           JsonObject responseBody = response.result().bodyAsJsonObject();
           LOGGER.info("getJobExecutionByChangeManager:: ResponseBody: {}", responseBody);
           JsonArray jobExecutions = responseBody.getJsonArray("jobExecutions");
@@ -575,7 +513,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   }
 
   private Future<JsonObject> setDefaultJobProfileToJobExecution(String jobExecutionId, ChangeManagerClient client) {
-    LOGGER.info("setJobProfileToJobExecution:: jobExecutionId={} Start.", jobExecutionId);
+    LOGGER.info("setJobProfileToJobExecution:: Linking JobProfile to JobExecution with jobExecutionId={}", jobExecutionId);
     Promise<JsonObject> promise = Promise.promise();
     try {
 
@@ -587,16 +525,18 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
       client.putChangeManagerJobExecutionsJobProfileById(jobExecutionId, jobProfileInfo, response -> {
         if (response.result().statusCode() != HttpStatus.SC_OK) {
-          LOGGER.warn("setJobProfileToJobExecution:: Failed to set JobProfile for JobExecution. Status message: {}",
-            response.result().statusMessage());
-          promise.fail(new HttpException("Failed to set JobProfile for JobExecution.", response.cause()));
+          LOGGER.warn("setJobProfileToJobExecution:: Failed to set JobProfile for JobExecution. " +
+              "Status message: {}. Status code: {}", response.result().statusMessage(), response.result().statusCode());
+          promise.fail(new HttpException(format("Failed to set JobProfile for JobExecution with jobExecutionId=%s.",
+            jobExecutionId), response.cause()));
         } else {
-          LOGGER.info("setJobProfileToJobExecution:: Response: {}", response.result());
+          LOGGER.info("setJobProfileToJobExecution:: Response: {}", response.result().bodyAsJsonObject());
           promise.complete(response.result().bodyAsJsonObject());
         }
       });
     } catch (Exception e) {
-      LOGGER.error("setJobProfileToJobExecution:: Error: {}", e.getMessage());
+      LOGGER.error(format("setJobProfileToJobExecution:: Failed to link JobProfile to JobExecution " +
+        "with jobExecutionId=$s. Error: %s", jobExecutionId, e.getCause()));
       promise.fail(e);
     }
     return promise.future();
