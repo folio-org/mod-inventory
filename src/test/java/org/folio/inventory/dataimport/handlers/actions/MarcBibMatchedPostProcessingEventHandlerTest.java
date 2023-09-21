@@ -60,7 +60,6 @@ public class MarcBibMatchedPostProcessingEventHandlerTest {
   private static final String OKAPI_URL = "http://localhost";
   private static final String TENANT_ID = "diku";
   private static final String CENTRAL_TENANT_ID = "centralTenantId";
-  private static final String CONSORTIUM_ID = "consortiumId";
   private static final String TOKEN = "dummy";
   private static final String MATCHED_MARC_BIB_KEY = "MATCHED_MARC_BIBLIOGRAPHIC";
   @Mock
@@ -69,11 +68,8 @@ public class MarcBibMatchedPostProcessingEventHandlerTest {
   private InstanceCollection mockedInstanceCollection;
   @Mock
   private HoldingsRecordCollection mockedHoldingsCollection;
-  @Mock
-  private ConsortiumService consortiumService;
   private Record record;
   private Instance existingInstance;
-  private ConsortiumConfiguration consortiumConfiguration;
   private MarcBibMatchedPostProcessingEventHandler marcBibMatchedPostProcessingEventHandler;
 
   private ActionProfile actionProfile = new ActionProfile()
@@ -101,14 +97,12 @@ public class MarcBibMatchedPostProcessingEventHandlerTest {
 
   @Before
   public void setUp() throws IOException {
-    consortiumConfiguration = new ConsortiumConfiguration(CENTRAL_TENANT_ID, CONSORTIUM_ID);
     existingInstance = Instance.fromJson(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
     record = Json.decodeValue(TestUtil.readFileFromPath(RECORD_PATH), Record.class);
     record.getParsedRecord().withContent(JsonObject.mapFrom(record.getParsedRecord().getContent()).encode());
 
     when(mockedStorage.getInstanceCollection(any())).thenReturn(mockedInstanceCollection);
     when(mockedStorage.getHoldingsRecordCollection(any())).thenReturn(mockedHoldingsCollection);
-    when(consortiumService.getConsortiumConfiguration(any())).thenReturn(Future.succeededFuture(Optional.of(consortiumConfiguration)));
     when(mockedInstanceCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(existingInstance));
 
     doAnswer(invocationOnMock -> {
@@ -117,21 +111,15 @@ public class MarcBibMatchedPostProcessingEventHandlerTest {
       return null;
     }).when(mockedHoldingsCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any());
 
-    marcBibMatchedPostProcessingEventHandler = new MarcBibMatchedPostProcessingEventHandler(mockedStorage, consortiumService);
+    marcBibMatchedPostProcessingEventHandler = new MarcBibMatchedPostProcessingEventHandler(mockedStorage);
   }
 
   @Test
-  public void shouldSetInstanceFromCentralTenantIfCentralTenantIdCannotFindInstanceOnLocalInstanceAndECSenabled() throws InterruptedException, ExecutionException, TimeoutException {
+  public void shouldSetInstanceFromCentralTenantIfCentralTenantIdExistsInContext() throws InterruptedException, ExecutionException, TimeoutException {
     // given
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(MATCHED_MARC_BIB_KEY, Json.encode(record));
-
-    InstanceCollection centralTenantInstanceCollection = Mockito.mock(InstanceCollection.class);
-
-    when(mockedStorage.getInstanceCollection(argThat(context -> context.getTenantId().equals(CENTRAL_TENANT_ID)))).thenReturn(centralTenantInstanceCollection);
-    when(centralTenantInstanceCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(existingInstance));
-
-    when(mockedInstanceCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(null));
+    payloadContext.put("CENTRAL_TENANT_ID", CENTRAL_TENANT_ID);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_MATCHED_READY_FOR_POST_PROCESSING.value())
@@ -146,42 +134,11 @@ public class MarcBibMatchedPostProcessingEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = marcBibMatchedPostProcessingEventHandler.handle(dataImportEventPayload);
 
     DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
+    Mockito.verify(mockedStorage).getInstanceCollection(argThat(context -> context.getTenantId().equals(CENTRAL_TENANT_ID)));
     JsonObject instanceJson = new JsonObject(eventPayload.getContext().get(INSTANCE.value()));
-    Mockito.verify(centralTenantInstanceCollection, times(1)).findById(existingInstance.getId());
-    Mockito.verify(consortiumService, times(1)).getConsortiumConfiguration(any());
     Assert.assertNotNull(instanceJson);
     Instance updatedInstance = Instance.fromJson(instanceJson);
     Assert.assertEquals(updatedInstance.getId(), existingInstance.getId());
-  }
-
-  @Test
-  public void shouldNotSetInstanceFromCentralTenantIfCentralTenantIdCannotFindInstanceOnLocalInstanceAndECSunenabled() throws InterruptedException, ExecutionException, TimeoutException {
-    // given
-    HashMap<String, String> payloadContext = new HashMap<>();
-    payloadContext.put(MATCHED_MARC_BIB_KEY, Json.encode(record));
-
-    InstanceCollection centralTenantInstanceCollection = Mockito.mock(InstanceCollection.class);
-
-    when(consortiumService.getConsortiumConfiguration(any())).thenReturn(Future.succeededFuture(Optional.empty()));
-
-    when(mockedInstanceCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(null));
-
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_SRS_MARC_BIB_RECORD_MATCHED_READY_FOR_POST_PROCESSING.value())
-      .withJobExecutionId(UUID.randomUUID().toString())
-      .withContext(payloadContext)
-      .withTenant(TENANT_ID)
-      .withToken(TOKEN)
-      .withOkapiUrl(OKAPI_URL)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
-
-    // when
-    CompletableFuture<DataImportEventPayload> future = marcBibMatchedPostProcessingEventHandler.handle(dataImportEventPayload);
-
-    DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
-    Mockito.verify(centralTenantInstanceCollection, times(0)).findById(existingInstance.getId());
-    Mockito.verify(consortiumService, times(1)).getConsortiumConfiguration(any());
-    Assert.assertNull(eventPayload.getContext().get(INSTANCE.value()));
   }
 
   @Test
@@ -207,7 +164,6 @@ public class MarcBibMatchedPostProcessingEventHandlerTest {
     DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
     JsonObject instanceJson = new JsonObject(eventPayload.getContext().get(INSTANCE.value()));
     Mockito.verify(centralTenantInstanceCollection, times(0)).findById(any());
-    Mockito.verify(consortiumService, times(0)).getConsortiumConfiguration(any());
     Assert.assertNotNull(instanceJson);
     Instance updatedInstance = Instance.fromJson(instanceJson);
     Assert.assertEquals(updatedInstance.getId(), existingInstance.getId());

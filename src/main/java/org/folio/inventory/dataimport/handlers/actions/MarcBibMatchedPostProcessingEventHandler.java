@@ -43,11 +43,10 @@ public class MarcBibMatchedPostProcessingEventHandler implements EventHandler {
   private static final String ERROR_HOLDING_MSG = "Error loading inventory holdings for MARC BIB";
   private static final String MATCHED_MARC_BIB_KEY = "MATCHED_MARC_BIBLIOGRAPHIC";
   private final Storage storage;
-  private final ConsortiumService consortiumService;
+  public static final String CENTRAL_TENANT_ID = "CENTRAL_TENANT_ID";
 
-  public MarcBibMatchedPostProcessingEventHandler(Storage storage, ConsortiumService consortiumService) {
+  public MarcBibMatchedPostProcessingEventHandler(Storage storage) {
     this.storage = storage;
-    this.consortiumService = consortiumService;
   }
 
   @Override
@@ -69,7 +68,7 @@ public class MarcBibMatchedPostProcessingEventHandler implements EventHandler {
 
       Record matchedRecord = new JsonObject(payloadContext.get(MATCHED_MARC_BIB_KEY)).mapTo(Record.class);
       String instanceId = ParsedRecordUtil.getAdditionalSubfieldValue(matchedRecord.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.I);
-      Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+      Context context = EventHandlingUtil.constructContext(getTenant(dataImportEventPayload), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
       HoldingsRecordCollection holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
       if (isBlank(instanceId)) {
@@ -78,14 +77,6 @@ public class MarcBibMatchedPostProcessingEventHandler implements EventHandler {
       }
 
       instanceCollection.findById(instanceId)
-        .thenCompose(localInstance -> {
-          if (localInstance == null) {
-            LOGGER.debug("handle:: Instance not found at local tenant during marcBibMatchPostProcessing, tenantId: {}, instanceId: {}",
-              context.getTenantId(), instanceId);
-            return getInstanceFromCentralTenantIfLocalTenantInConsortium(instanceId, context);
-          }
-          return CompletableFuture.completedFuture(localInstance);
-        })
         .whenComplete((v, t) -> {
           if (t == null && v != null) {
             LOGGER.debug("handle:: Instance found during marcBibMatchPostProcessing, tenantId: {}, instanceId: {}",
@@ -119,18 +110,12 @@ public class MarcBibMatchedPostProcessingEventHandler implements EventHandler {
     return future;
   }
 
-  private CompletionStage<Instance> getInstanceFromCentralTenantIfLocalTenantInConsortium(String instanceId, Context context) {
-    return consortiumService.getConsortiumConfiguration(context)
-      .toCompletionStage()
-      .thenCompose(consortiumConfigurationOptional -> {
-        if (consortiumConfigurationOptional.isPresent()) {
-          Context consortiumContext = constructContext(consortiumConfigurationOptional.get().getCentralTenantId(), context.getToken(), context.getOkapiLocation());
-          LOGGER.debug("getInstanceFromCentralTenantIfLocalTenantInConsortium:: Searching instance at central tenant, centralTenantId: {}, localTenantId: {}, instanceId: {}",
-            consortiumContext.getTenantId(), context.getTenantId(), instanceId);
-          return storage.getInstanceCollection(consortiumContext).findById(instanceId);
-        }
-        return CompletableFuture.completedFuture(null);
-      });
+  public static String getTenant(DataImportEventPayload payload) {
+    String centralTenantId = payload.getContext().get(CENTRAL_TENANT_ID);
+    if (centralTenantId != null) {
+      return centralTenantId;
+    }
+    return payload.getTenant();
   }
 
   @Override
