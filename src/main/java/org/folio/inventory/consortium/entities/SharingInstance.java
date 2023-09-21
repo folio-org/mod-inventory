@@ -46,6 +46,11 @@ public class SharingInstance {
     this.id = id;
   }
 
+  public SharingInstance withId(UUID id) {
+    this.id = id;
+    return this;
+  }
+
   /**
    * Returns id of instance
    *
@@ -57,6 +62,11 @@ public class SharingInstance {
 
   public void setInstanceIdentifier(UUID instanceIdentifier) {
     this.instanceIdentifier = instanceIdentifier;
+  }
+
+  public SharingInstance withInstanceIdentifier(UUID instanceIdentifier) {
+    this.instanceIdentifier = instanceIdentifier;
+    return this;
   }
 
   /**
@@ -72,6 +82,11 @@ public class SharingInstance {
     this.sourceTenantId = sourceTenantId;
   }
 
+  public SharingInstance withSourceTenantId(String sourceTenantId) {
+    this.sourceTenantId = sourceTenantId;
+    return this;
+  }
+
   /**
    * Returns the tenant id to which pull the instance
    *
@@ -85,6 +100,11 @@ public class SharingInstance {
     this.targetTenantId = targetTenantId;
   }
 
+  public SharingInstance withTargetTenantId(String targetTenantId) {
+    this.targetTenantId = targetTenantId;
+    return this;
+  }
+
   /**
    * Returns status of sharing process
    *
@@ -96,6 +116,11 @@ public class SharingInstance {
 
   public void setStatus(SharingStatus status) {
     this.status = status;
+  }
+
+  public SharingInstance withStatus(SharingStatus status) {
+    this.status = status;
+    return this;
   }
 
   /**
