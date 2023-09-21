@@ -260,22 +260,27 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
         vertx.createHttpClient());
 
       initJobExecution(targetManagerClient, kafkaHeaders)
-        .map(jobExecutionResponse -> jobExecutionResponse.getString(ID))
-        .map(jobExecutionId -> setDefaultJobProfileToJobExecution(jobExecutionId, targetManagerClient)
-          .compose(ignore -> {
+        .compose(jobExecutionResponse -> setDefaultJobProfileToJobExecution(jobExecutionResponse.getString(ID), targetManagerClient)
+          .compose(jobProfileSet -> {
             Object parsedRecord = JsonObject.mapFrom(marcRecord.getParsedRecord().getContent());
-            postRecordToParsing(jobExecutionId, true, buildDataChunk(false, singletonList(new InitialRecord().withRecord(parsedRecord.toString()))), targetManagerClient)
-              .compose(publishFistChunkResult -> postRecordToParsing(jobExecutionId, false, buildDataChunk(true, new ArrayList<>()), targetManagerClient)
-                .compose(publishLastChunkResult -> checkDataImportStatus(jobExecutionId, sharingInstanceMetadata, 20L, 3, targetManagerClient))
-                .compose(dataImportResult -> {
-                  LOGGER.info("publishInstanceWithMarcSource:: Import MARC file for instance with InstanceId={} has been finished to the target tenant={}. " +
-                    "Data import result: {}", instanceId, sharingInstanceMetadata.getTargetTenantId(), dataImportResult);
-                  return Future.succeededFuture(dataImportResult);
-                }));
-            String errorMessage = format("Failed to start import of MARC file for instance with InstanceId=%s to the target tenant=%s.",
+            return postRecordToParsing(jobExecutionResponse.getString(ID), true,
+              buildDataChunk(false, singletonList(new InitialRecord().withRecord(parsedRecord.toString()))), targetManagerClient)
+              .compose(ignore -> postRecordToParsing(jobExecutionResponse.getString(ID), false,
+                buildDataChunk(true, new ArrayList<>()), targetManagerClient)
+              )
+              .compose(publishLastChunkResult -> checkDataImportStatus(jobExecutionResponse.getString(ID), sharingInstanceMetadata, 20L, 3, targetManagerClient))
+              .compose(dataImportResult -> {
+                LOGGER.info("Import MARC file for instance with InstanceId={} has been finished to the target tenant={}. " +
+                  "Data import result: {}", instanceId, sharingInstanceMetadata.getTargetTenantId(), dataImportResult);
+                promise.complete(dataImportResult);
+                return Future.succeededFuture(dataImportResult);
+              });
+          }).onFailure(throwable -> {
+            String errorMessage = String.format("Failed to start import of MARC file for instance with InstanceId=%s to the target tenant=%s.",
               instanceId, sharingInstanceMetadata.getTargetTenantId());
-            LOGGER.error("publishInstanceWithMarcSource :: {}", errorMessage);
-            return Future.failedFuture(errorMessage);
+            LOGGER.error("publishInstanceWithMarcSource :: {}", errorMessage, throwable);
+            sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
+            promise.fail(throwable);
           }));
     } catch (Exception ex) {
       LOGGER.error("sharingInstanceWithMarcSource:: Starting DI for Instance with InstanceId={} and with MARC source failed.",
