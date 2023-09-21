@@ -1,169 +1,351 @@
 package org.folio.inventory.dataimport.consumers;
 
-import api.ApiTestSuite;
-import com.github.tomakehurst.wiremock.client.WireMock;
-import com.github.tomakehurst.wiremock.common.Slf4jNotifier;
-import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
-import com.github.tomakehurst.wiremock.junit.WireMockRule;
-import com.github.tomakehurst.wiremock.matching.RegexPattern;
-import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
-import io.vertx.core.DeploymentOptions;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
-import net.mguenther.kafka.junit.KeyValue;
-import net.mguenther.kafka.junit.SendKeyValues;
-import org.folio.inventory.ConsortiumInstanceSharingConsumerVerticle;
-import org.folio.inventory.domain.instances.PublicationPeriod;
+import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
+import io.vertx.kafka.client.producer.KafkaHeader;
+import org.folio.inventory.TestUtil;
+import org.folio.inventory.common.Context;
+import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler;
+import org.folio.inventory.consortium.entities.SharingInstance;
+import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.domain.instances.InstanceCollection;
+import org.folio.inventory.storage.Storage;
 import org.folio.kafka.KafkaConfig;
-import org.folio.kafka.KafkaTopicNameHelper;
-import org.folio.processing.events.EventManager;
-import org.folio.processing.events.services.handler.EventHandler;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.util.Collections;
+import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
+import java.util.function.Consumer;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
-import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
-import static org.folio.inventory.consortium.entities.SharingInstanceEventType.CONSORTIUM_INSTANCE_SHARING_COMPLETE;
-import static org.folio.inventory.consortium.entities.SharingInstanceEventType.CONSORTIUM_INSTANCE_SHARING_INIT;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX_REQUEST_SIZE;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_PORT;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_REPLICATION_FACTOR;
-import static org.folio.inventory.domain.instances.Instance.PUBLICATION_PERIOD_KEY;
-import static org.folio.inventory.domain.instances.Instance.TAGS_KEY;
-import static org.folio.inventory.domain.instances.Instance.TAG_LIST_KEY;
-import static org.folio.inventory.domain.instances.PublicationPeriod.publicationPeriodToJson;
-import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
+import static org.folio.inventory.consortium.entities.SharingStatus.IN_PROGRESS;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.when;
 
 @RunWith(VertxUnitRunner.class)
 public class ConsortiumInstanceSharingHandlerTest {
 
-  private static final String TENANT_ID = "diku";
-  private static final String KAFKA_ENV_NAME = "test-env";
-  private static final String INSTANCES_URL = "/instance-storage/instances";
-  private static final String RECORD_ID_HEADER = "recordId";
-
+  private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
   private static Vertx vertx;
-  public static EmbeddedKafkaCluster cluster;
   @Mock
-  private EventHandler mockedEventHandler;
+  private Storage storage;
+  @Mock
+  private InstanceCollection mockedTargetInstanceCollection;
+  @Mock
+  private InstanceCollection mockedSourceInstanceCollection;
+  @Mock
+  private KafkaConsumerRecord<String, String> kafkaRecord;
+  @Mock
   private static KafkaConfig kafkaConfig;
-
-  JsonObject instance = new JsonObject()
-    .put("id", UUID.randomUUID().toString())
-    .put("hrid", "in777")
-    .put("title", "Long Way to a Small Angry Planet")
-    .put("identifiers", new JsonArray().add(new JsonObject()
-      .put("identifierTypeId", ApiTestSuite.getIsbnIdentifierType())
-      .put("value", "9781473619777")))
-    .put("contributors", new JsonArray().add(new JsonObject()
-      .put("contributorNameTypeId", ApiTestSuite.getPersonalContributorNameType())
-      .put("name", "Chambers, Becky")))
-    .put("source", "Local")
-    .put("administrativeNotes", new JsonArray().add("this is a note"))
-    .put("instanceTypeId", ApiTestSuite.getTextInstanceType())
-    .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add("important")))
-    .put(PUBLICATION_PERIOD_KEY, publicationPeriodToJson(new PublicationPeriod(1000, 2000)));
-
-  @Rule
-  public WireMockRule mockServer = new WireMockRule(
-    WireMockConfiguration.wireMockConfig()
-      .dynamicPort()
-      .notifier(new Slf4jNotifier(true)));
+  private Instance existingInstance;
+  private ConsortiumInstanceSharingHandler consortiumInstanceSharingHandler;
 
   @BeforeClass
-  public static void setUpClass(TestContext context) {
-    Async async = context.async();
-    cluster = provisionWith(defaultClusterConfig());
-    cluster.start();
-    String[] hostAndPort = cluster.getBrokerList().split(":");
-
-    kafkaConfig = KafkaConfig.builder()
-      .kafkaHost(hostAndPort[0])
-      .kafkaPort(hostAndPort[1])
-      .build();
-    EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, 1);
-
+  public static void setUpClass() {
     vertx = Vertx.vertx();
-    DeploymentOptions options = new DeploymentOptions()
-      .setConfig(new JsonObject()
-        .put(KAFKA_HOST, hostAndPort[0])
-        .put(KAFKA_PORT, hostAndPort[1])
-        .put(KAFKA_REPLICATION_FACTOR, "1")
-        .put(KAFKA_ENV, KAFKA_ENV_NAME)
-        .put(KAFKA_MAX_REQUEST_SIZE, "1048576"));
-    vertx.deployVerticle(ConsortiumInstanceSharingConsumerVerticle.class.getName(), options, deployAr -> async.complete());
+    kafkaConfig = KafkaConfig.builder()
+      .envId("env")
+      .maxRequestSize(1048576)
+      .build();
   }
 
   @Before
-  public void setUp() {
+  public void setUp() throws IOException {
     MockitoAnnotations.openMocks(this);
-
-    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern("http://mod-inventory:9403" + INSTANCES_URL + "/.*"), true))
-      .willReturn(WireMock.ok().withBody(Json.encode(instance))));
-
-    HttpClient client = vertx.createHttpClient();
-
-    EventManager.clearEventHandlers();
-    EventManager.registerEventHandler(mockedEventHandler);
   }
 
   @Test
-  public void shouldShareInstanceWithFOLIOSource() throws InterruptedException {
+  public void shouldShareInstanceWithFOLIOSource(TestContext context) throws IOException {
 
     // given
-    String consortiumId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
-    String data = "{\"id\":\"8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572\"," +
-      "\"instanceIdentifier\":\"8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572\"," +
-      "\"sourceTenantId\":\"consortium\"," +
-      "\"targetTenantId\":\"university\"," +
-      "\"status\":\"IN_PROGRESS\"}";
+    Async async = context.async();
+    JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
+    jsonInstance.put("source", "FOLIO");
+    existingInstance = Instance.fromJson(jsonInstance);
 
-    KeyValue<String, String> kafkaRecord = new KeyValue<>(consortiumId, data);
-    kafkaRecord.addHeader(OKAPI_TENANT_HEADER, TENANT_ID, UTF_8);
-    kafkaRecord.addHeader("x-okapi-url", "http://mod-inventory:9403", UTF_8);
+    String shareId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
+    String instanceId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
 
-    String topic = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_NAME, getDefaultNameSpace(), TENANT_ID, CONSORTIUM_INSTANCE_SHARING_INIT.value());
+    SharingInstance sharingInstance = new SharingInstance()
+      .withId(UUID.fromString(shareId))
+      .withInstanceIdentifier(UUID.fromString(instanceId))
+      .withSourceTenantId("consortium")
+      .withTargetTenantId("university")
+      .withStatus(IN_PROGRESS);
+
+    when(kafkaRecord.key()).thenReturn(shareId);
+    when(kafkaRecord.value()).thenReturn(Json.encode(sharingInstance));
+    when(kafkaRecord.headers()).thenReturn(
+      List.of(KafkaHeader.header(OKAPI_TOKEN_HEADER, "token"),
+        KafkaHeader.header(OKAPI_URL_HEADER, "url")));
+
+    when(storage.getInstanceCollection(any(Context.class)))
+      .thenReturn(mockedTargetInstanceCollection)
+      .thenReturn(mockedSourceInstanceCollection)
+      .thenReturn(mockedTargetInstanceCollection)
+      .thenReturn(mockedSourceInstanceCollection);
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(null));
+      return null;
+    }).when(mockedTargetInstanceCollection).findById(any(String.class), any(), any());
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(existingInstance));
+      return null;
+    }).when(mockedSourceInstanceCollection).findById(eq(instanceId), any(), any());
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(existingInstance));
+      return null;
+    }).when(mockedTargetInstanceCollection).add(any(Instance.class), any(), any());
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(existingInstance));
+      return null;
+    }).when(mockedSourceInstanceCollection).update(any(Instance.class), any(), any());
 
     // when
-    cluster.send(SendKeyValues.to(topic, Collections.singletonList(kafkaRecord)).useDefaults());
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig);
 
-    // then
-    String observeTopic = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_NAME, getDefaultNameSpace(), TENANT_ID, CONSORTIUM_INSTANCE_SHARING_COMPLETE.value());
-//    List<KeyValue<String, String>> observedValues = cluster.observe(ObserveKeyValues.on(observeTopic, 1)
-//      .observeFor(30, TimeUnit.SECONDS)
-//      .build());
+    //then
+    Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
+    future.onComplete(ar -> {
+      context.assertTrue(ar.succeeded());
+      async.complete();
+    });
+  }
 
-    //assertEquals(0, observedValues.size());
-    //assertNotNull(observedValues.get(0).getHeaders().lastHeader(RECORD_ID_HEADER));
+  @Test
+  public void shouldNotShareInstanceWhenInstanceExistsOnTargetTenant(TestContext context) throws IOException {
+
+    // given
+    Async async = context.async();
+    JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
+    jsonInstance.put("source", "FOLIO");
+    existingInstance = Instance.fromJson(jsonInstance);
+
+    String shareId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
+    String instanceId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
+
+    SharingInstance sharingInstance = new SharingInstance()
+      .withId(UUID.fromString(shareId))
+      .withInstanceIdentifier(UUID.fromString(instanceId))
+      .withSourceTenantId("consortium")
+      .withTargetTenantId("university")
+      .withStatus(IN_PROGRESS);
+
+    when(kafkaRecord.key()).thenReturn(shareId);
+    when(kafkaRecord.value()).thenReturn(Json.encode(sharingInstance));
+    when(kafkaRecord.headers()).thenReturn(
+      List.of(KafkaHeader.header(OKAPI_TOKEN_HEADER, "token"),
+        KafkaHeader.header(OKAPI_URL_HEADER, "url")));
+
+    when(storage.getInstanceCollection(any(Context.class)))
+      .thenReturn(mockedTargetInstanceCollection);
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(existingInstance));
+      return null;
+    }).when(mockedTargetInstanceCollection).findById(any(String.class), any(), any());
+
+    // when
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig);
+
+    //then
+    Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
+    future.onComplete(ar -> {
+      context.assertTrue(ar.result().equals("Instance with InstanceId=" + instanceId +
+        " is present on target tenant: university"));
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldNotShareInstanceWhenInstanceNotExistsOnSourceTenant(TestContext context) throws IOException {
+
+    // given
+    Async async = context.async();
+    JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
+    jsonInstance.put("source", "FOLIO");
+    existingInstance = Instance.fromJson(jsonInstance);
+
+    String shareId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
+    String instanceId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
+
+    SharingInstance sharingInstance = new SharingInstance()
+      .withId(UUID.fromString(shareId))
+      .withInstanceIdentifier(UUID.fromString(instanceId))
+      .withSourceTenantId("consortium")
+      .withTargetTenantId("university")
+      .withStatus(IN_PROGRESS);
+
+    when(kafkaRecord.key()).thenReturn(shareId);
+    when(kafkaRecord.value()).thenReturn(Json.encode(sharingInstance));
+    when(kafkaRecord.headers()).thenReturn(
+      List.of(KafkaHeader.header(OKAPI_TOKEN_HEADER, "token"),
+        KafkaHeader.header(OKAPI_URL_HEADER, "url")));
+
+    when(storage.getInstanceCollection(any(Context.class)))
+      .thenReturn(mockedTargetInstanceCollection)
+      .thenReturn(mockedSourceInstanceCollection);
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(null));
+      return null;
+    }).when(mockedTargetInstanceCollection).findById(any(String.class), any(), any());
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(null));
+      return null;
+    }).when(mockedSourceInstanceCollection).findById(eq(instanceId), any(), any());
+
+    // when
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig);
+
+    //then
+    Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
+    future.onComplete(ar -> {
+      context.assertTrue(ar.failed());
+      context.assertTrue(ar.cause().getMessage()
+        .contains("Error retrieving Instance by InstanceId=" + instanceId + " from source tenant consortium."));
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldNotShareInstanceWithMARCSource(TestContext context) throws IOException {
+
+    // given
+    Async async = context.async();
+    existingInstance = Instance.fromJson(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
+    String shareId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
+    String instanceId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
+
+    SharingInstance sharingInstance = new SharingInstance()
+      .withId(UUID.fromString(shareId))
+      .withInstanceIdentifier(UUID.fromString(instanceId))
+      .withSourceTenantId("consortium")
+      .withTargetTenantId("university")
+      .withStatus(IN_PROGRESS);
+
+    when(kafkaRecord.key()).thenReturn(shareId);
+    when(kafkaRecord.value()).thenReturn(Json.encode(sharingInstance));
+    when(kafkaRecord.headers()).thenReturn(
+      List.of(KafkaHeader.header(OKAPI_TOKEN_HEADER, "token"),
+        KafkaHeader.header(OKAPI_URL_HEADER, "url")));
+
+    when(storage.getInstanceCollection(any(Context.class)))
+      .thenReturn(mockedTargetInstanceCollection).thenReturn(mockedSourceInstanceCollection);
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(null));
+      return null;
+    }).when(mockedTargetInstanceCollection).findById(any(String.class), any(), any());
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(existingInstance));
+      return null;
+    }).when(mockedSourceInstanceCollection).findById(eq(instanceId), any(), any());
+
+    // when
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig);
+
+    //then
+    Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
+    future.onComplete(ar -> {
+      context.assertTrue(ar.failed());
+      context.assertTrue(ar.cause().getMessage()
+        .contains("Error sharing Instance with InstanceId=" + instanceId + " and " +
+          "source=MARC to the target tenant university. Not implemented yet."));
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldNotShareInstanceWithNotFOLIOAndMARCSource(TestContext context) throws IOException {
+
+    // given
+    Async async = context.async();
+    JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
+    jsonInstance.put("source", "SOURCE");
+    existingInstance = Instance.fromJson(jsonInstance);
+
+    String shareId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
+    String instanceId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
+
+    SharingInstance sharingInstance = new SharingInstance()
+      .withId(UUID.fromString(shareId))
+      .withInstanceIdentifier(UUID.fromString(instanceId))
+      .withSourceTenantId("consortium")
+      .withTargetTenantId("university")
+      .withStatus(IN_PROGRESS);
+
+    when(kafkaRecord.key()).thenReturn(shareId);
+    when(kafkaRecord.value()).thenReturn(Json.encode(sharingInstance));
+    when(kafkaRecord.headers()).thenReturn(
+      List.of(KafkaHeader.header(OKAPI_TOKEN_HEADER, "token"),
+        KafkaHeader.header(OKAPI_URL_HEADER, "url")));
+
+    when(storage.getInstanceCollection(any(Context.class)))
+      .thenReturn(mockedTargetInstanceCollection).thenReturn(mockedSourceInstanceCollection);
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(null));
+      return null;
+    }).when(mockedTargetInstanceCollection).findById(any(String.class), any(), any());
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(existingInstance));
+      return null;
+    }).when(mockedSourceInstanceCollection).findById(eq(instanceId), any(), any());
+
+    // when
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig);
+
+    //then
+    Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
+    future.onComplete(ar -> {
+      context.assertTrue(ar.failed());
+      context.assertTrue(ar.cause().getMessage()
+        .contains("Error sharing Instance with InstanceId=" + instanceId
+          + " to the target tenant university. Because source is SOURCE"));
+      async.complete();
+    });
   }
 
   @AfterClass
   public static void tearDownClass(TestContext context) {
     Async async = context.async();
-    vertx.close(ar -> {
-      cluster.stop();
-      async.complete();
-    });
+    vertx.close(ar -> async.complete());
   }
+
 }
