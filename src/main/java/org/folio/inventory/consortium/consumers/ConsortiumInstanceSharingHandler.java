@@ -163,6 +163,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                     if (dataImportResult.equals(COMMITTED)) {
                       deleteSourceRecordByInstanceId(instanceId, sourceTenant, sourceTenantStorageClient)
                         .compose(deletionResult -> {
+                          LOGGER.info("publishInstance :: Delete MARC file result. {}", deletionResult);
                           JsonObject jsonInstanceToPublish = srcInstance.getJsonForStorage();
                           jsonInstanceToPublish.put(SOURCE, CONSORTIUM_MARC.getValue());
                           updateInstanceInStorage(Instance.fromJson(jsonInstanceToPublish), sourceTenant, sourceInstanceCollection)
@@ -173,13 +174,15 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                             }).onFailure(throwable -> promise.fail(throwable.getCause()));
                           return Future.failedFuture(deletionResult);
                         });
+                    } else {
+                      String errorMessage = format("Sharing instance with InstanceId=%s to the target tenant=%s. " +
+                        "Result: %s", instanceId, targetTenant, dataImportResult);
+                      sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
+                      return Future.failedFuture(errorMessage);
                     }
-                    String errorMessage = format("1 Error sharing instance with InstanceId=%s to the target tenant=%s. Error: %s",
-                      instanceId, targetTenant, dataImportResult);
-                    sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
-                    return Future.failedFuture(errorMessage);
+                    return null;
                   }, throwable -> {
-                    String errorMessage = format("2 Error sharing instance with InstanceId=%s to the target tenant=%s. Error: %s",
+                    String errorMessage = format("Error sharing instance with InstanceId=%s to the target tenant=%s. Error: %s",
                       instanceId, targetTenant, throwable.getMessage());
                     sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
                     return Future.failedFuture(errorMessage);
