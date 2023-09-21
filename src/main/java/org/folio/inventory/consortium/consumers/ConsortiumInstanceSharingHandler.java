@@ -159,6 +159,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
             getSourceMARCByInstanceId(instanceId, sourceTenant, sourceTenantStorageClient)
               .compose(marcRecord -> publishInstanceWithMarcSource(marcRecord, sharingInstanceMetadata, kafkaHeaders))
               .compose(dataImportResult -> {
+                  LOGGER.info("publishInstance :: Import MARC file result. {}", dataImportResult);
                   if (dataImportResult.equals(COMMITTED)) {
                     deleteSourceRecordByInstanceId(instanceId, sourceTenant, sourceTenantStorageClient)
                       .compose(deletionResult -> {
