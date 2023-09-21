@@ -2,6 +2,7 @@ package org.folio.inventory.consortium.services;
 
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.ext.web.client.WebClient;
@@ -17,11 +18,13 @@ import org.folio.inventory.support.http.client.OkapiHttpClient;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
+import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
 
 public class ConsortiumServiceImpl implements ConsortiumService {
   private static final Logger LOGGER = LogManager.getLogger(ConsortiumServiceImpl.class);
@@ -73,11 +76,12 @@ public class ConsortiumServiceImpl implements ConsortiumService {
   // Returns successful future if the sharing status is "IN_PROGRESS" or "COMPLETE"
   @Override
   public Future<SharingInstance> shareInstance(Context context, String consortiumId, SharingInstance sharingInstance) {
+    Map<String, String> headers = Map.of(HttpHeaders.CONTENT_TYPE.toString(), APPLICATION_JSON);
     CompletableFuture<SharingInstance> completableFuture = createOkapiHttpClient(context)
       .thenCompose(client ->
-        client.post(context.getOkapiLocation() + String.format(SHARE_INSTANCE_ENDPOINT, consortiumId), Json.encode(sharingInstance))
+        client.post(context.getOkapiLocation() + String.format(SHARE_INSTANCE_ENDPOINT, consortiumId), Json.encode(sharingInstance), headers)
           .thenCompose(httpResponse -> {
-            if (httpResponse.getStatusCode() == HttpStatus.SC_OK && !SharingStatus.ERROR.toString().equals(httpResponse.getJson().getString("status"))) {
+            if (httpResponse.getStatusCode() == HttpStatus.SC_CREATED && !SharingStatus.ERROR.toString().equals(httpResponse.getJson().getString("status"))) {
               SharingInstance response = Json.decodeValue(httpResponse.getBody(), SharingInstance.class);
               LOGGER.debug("shareInstance:: Successfully sharedInstance with id: {}, sharedInstance: {}",
                 response.getInstanceIdentifier(), httpResponse.getBody());
