@@ -13,10 +13,13 @@ import org.folio.MappingMetadataDto;
 import org.folio.Record;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
+import org.folio.inventory.consortium.services.ConsortiumService;
+
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
+import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.InstanceUtil;
 import org.folio.processing.exceptions.EventProcessingException;
@@ -47,6 +50,8 @@ import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventH
 import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
 import static org.folio.inventory.domain.instances.Instance.METADATA_KEY;
 import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
+import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_FOLIO;
+import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 
@@ -63,19 +68,25 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   private static final String CURRENT_NODE_PROPERTY = "CURRENT_NODE";
   private static final String MARC_INSTANCE_SOURCE = "MARC";
   public static final String INSTANCE_ID_TYPE = "INSTANCE";
+  public static final String CENTRAL_TENANT_INSTANCE_UPDATED_FLAG = "CENTRAL_TENANT_INSTANCE_UPDATED";
+  public static final String CENTRAL_TENANT_ID = "CENTRAL_TENANT_ID";
 
   private final PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
   private final MappingMetadataCache mappingMetadataCache;
   private final HttpClient httpClient;
 
+  private final ConsortiumService consortiumService;
+
   public ReplaceInstanceEventHandler(Storage storage,
                                      PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper,
                                      MappingMetadataCache mappingMetadataCache,
-                                     HttpClient client) {
+                                     HttpClient client,
+                                     ConsortiumService consortiumService) {
     super(storage);
     this.precedingSucceedingTitlesHelper = precedingSucceedingTitlesHelper;
     this.mappingMetadataCache = mappingMetadataCache;
     this.httpClient = client;
+    this.consortiumService = consortiumService;
   }
 
   @Override
@@ -98,64 +109,97 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         LOGGER.error(ACTION_HAS_NO_MAPPING_MSG);
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
-      LOGGER.info("Processing ReplaceInstanceEventHandler starting with jobExecutionId: {}.", dataImportEventPayload.getJobExecutionId());
+      LOGGER.info("handle:: Processing ReplaceInstanceEventHandler starting with jobExecutionId: {}.", dataImportEventPayload.getJobExecutionId());
 
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       Instance instanceToUpdate = Instance.fromJson(new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value())));
 
-      prepareEvent(dataImportEventPayload);
+      if (instanceToUpdate.getSource() != null && (instanceToUpdate.getSource().equals(CONSORTIUM_FOLIO.getValue()) || instanceToUpdate.getSource().equals(CONSORTIUM_MARC.getValue()))) {
+        LOGGER.info("handle:: Processing Consortium Instance jobExecutionId: {}.", dataImportEventPayload.getJobExecutionId());
+        consortiumService.getConsortiumConfiguration(context)
+          .compose(consortiumConfigurationOptional -> {
+            if (consortiumConfigurationOptional.isPresent()) {
+              String centralTenantId = consortiumConfigurationOptional.get().getCentralTenantId();
+              Context centralTenantContext = EventHandlingUtil.constructContext(centralTenantId, context.getToken(), context.getOkapiLocation());
+              InstanceCollection instanceCollection = storage.getInstanceCollection(centralTenantContext);
+              InstanceUtil.findInstanceById(instanceToUpdate.getId(), instanceCollection)
+                .onSuccess(existedCentralTenantInstance -> {
+                  LOGGER.info("handle:: Processed Consortium Instance jobExecutionId: {}.", dataImportEventPayload.getJobExecutionId());
+                  processInstanceUpdate(dataImportEventPayload, instanceCollection, context, existedCentralTenantInstance, future, centralTenantContext.getTenantId());
+                  dataImportEventPayload.getContext().put(CENTRAL_TENANT_INSTANCE_UPDATED_FLAG, "true");
+                  dataImportEventPayload.getContext().put(CENTRAL_TENANT_ID, centralTenantId);
+                })
+                .onFailure(e -> {
+                  LOGGER.warn("Error retrieving inventory Instance from central tenant", e);
+                  future.completeExceptionally(e);
+                });
+            } else {
+              LOGGER.warn("handle:: Can't retrieve centralTenantId updating Instance by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}'", dataImportEventPayload.getJobExecutionId(),
+                dataImportEventPayload.getContext().get(RECORD_ID_HEADER), dataImportEventPayload.getContext().get(CHUNK_ID_HEADER));
+              future.completeExceptionally(new NotFoundException("Can't retrieve centralTenantId updating Instance"));
+            }
+            return Future.succeededFuture();
+          });
 
-      String jobExecutionId = dataImportEventPayload.getJobExecutionId();
-
-      String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
-      String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
-      LOGGER.info("Replace instance with jobExecutionId: {} , recordId: {} , chunkId: {}", jobExecutionId, recordId, chunkId);
-
-      mappingMetadataCache.get(jobExecutionId, context)
-        .compose(parametersOptional -> parametersOptional
-          .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, mappingMetadata, instanceToUpdate))
-          .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, jobExecutionId,
-            recordId, chunkId))))
-        .compose(e -> {
-          JsonObject instanceAsJson = prepareTargetInstance(dataImportEventPayload, instanceToUpdate);
-          InstanceCollection instanceCollection = storage.getInstanceCollection(context);
-          List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
-
-          if (!errors.isEmpty()) {
-            String msg = format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", errors,
-              jobExecutionId, recordId, chunkId);
-            LOGGER.warn(msg);
-            return Future.failedFuture(msg);
-          }
-
-          Instance mappedInstance = Instance.fromJson(instanceAsJson);
-          return updateInstanceAndRetryIfOlExists(mappedInstance, instanceCollection, dataImportEventPayload)
-            .compose(updatedInstance -> precedingSucceedingTitlesHelper.getExistingPrecedingSucceedingTitles(mappedInstance, context))
-            .map(precedingSucceedingTitles -> precedingSucceedingTitles.stream()
-              .map(titleJson -> titleJson.getString("id"))
-              .collect(Collectors.toSet()))
-            .compose(titlesIds -> precedingSucceedingTitlesHelper.deletePrecedingSucceedingTitles(titlesIds, context))
-            .compose(ar -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(mappedInstance, context))
-            .map(instanceAsJson);
-        })
-        .onComplete(ar -> {
-          if (ar.succeeded()) {
-            dataImportEventPayload.getContext().put(INSTANCE.value(), ar.result().encode());
-            dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
-            future.complete(dataImportEventPayload);
-          } else {
-            dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
-            String errMessage = format("Error updating inventory Instance by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s': %s ", jobExecutionId,
-              recordId, chunkId, ar.cause());
-            LOGGER.error(errMessage);
-            future.completeExceptionally(ar.cause());
-          }
-        });
+      } else {
+        InstanceCollection instanceCollection = storage.getInstanceCollection(context);
+        processInstanceUpdate(dataImportEventPayload, instanceCollection, context, instanceToUpdate, future, context.getTenantId());
+      }
     } catch (Exception e) {
       LOGGER.error("Error updating inventory Instance", e);
       future.completeExceptionally(e);
     }
     return future;
+  }
+
+  private void processInstanceUpdate(DataImportEventPayload dataImportEventPayload, InstanceCollection instanceCollection, Context context, Instance instanceToUpdate, CompletableFuture<DataImportEventPayload> future, String centralTenantId) {
+    prepareEvent(dataImportEventPayload);
+
+    String jobExecutionId = dataImportEventPayload.getJobExecutionId();
+
+    String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
+    String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
+    LOGGER.info("Replace instance with jobExecutionId: {} , recordId: {} , chunkId: {}", jobExecutionId, recordId, chunkId);
+
+    mappingMetadataCache.get(jobExecutionId, context)
+      .compose(parametersOptional -> parametersOptional
+        .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, mappingMetadata, instanceToUpdate, centralTenantId))
+        .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, jobExecutionId,
+          recordId, chunkId))))
+      .compose(e -> {
+        JsonObject instanceAsJson = prepareTargetInstance(dataImportEventPayload, instanceToUpdate);
+        List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
+
+        if (!errors.isEmpty()) {
+          String msg = format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", errors,
+            jobExecutionId, recordId, chunkId);
+          LOGGER.warn(msg);
+          return Future.failedFuture(msg);
+        }
+
+        Instance mappedInstance = Instance.fromJson(instanceAsJson);
+        return updateInstanceAndRetryIfOlExists(mappedInstance, instanceCollection, dataImportEventPayload)
+          .compose(updatedInstance -> precedingSucceedingTitlesHelper.getExistingPrecedingSucceedingTitles(mappedInstance, context))
+          .map(precedingSucceedingTitles -> precedingSucceedingTitles.stream()
+            .map(titleJson -> titleJson.getString("id"))
+            .collect(Collectors.toSet()))
+          .compose(titlesIds -> precedingSucceedingTitlesHelper.deletePrecedingSucceedingTitles(titlesIds, context))
+          .compose(ar -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(mappedInstance, context))
+          .map(instanceAsJson);
+      })
+      .onComplete(ar -> {
+        if (ar.succeeded()) {
+          dataImportEventPayload.getContext().put(INSTANCE.value(), ar.result().encode());
+          dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
+          future.complete(dataImportEventPayload);
+        } else {
+          dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
+          String errMessage = format("Error updating inventory Instance by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s': %s ", jobExecutionId,
+            recordId, chunkId, ar.cause());
+          LOGGER.error(errMessage);
+          future.completeExceptionally(ar.cause());
+        }
+      });
   }
 
   @Override
@@ -197,16 +241,18 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       .collect(Collectors.toList()));
     instanceAsJson.put("id", instanceToUpdate.getId());
     instanceAsJson.put(HRID_KEY, instanceToUpdate.getHrid());
-    instanceAsJson.put(SOURCE_KEY, MARC_FORMAT);
+    if (instanceToUpdate.getSource() != null && (!(instanceToUpdate.getSource().equals(CONSORTIUM_FOLIO.getValue()) || instanceToUpdate.getSource().equals(CONSORTIUM_MARC.getValue())))) {
+      instanceAsJson.put(SOURCE_KEY, MARC_FORMAT);
+    }
     instanceAsJson.put(METADATA_KEY, instanceToUpdate.getMetadata());
     return instanceAsJson;
   }
 
-  private Future<Void> prepareAndExecuteMapping(DataImportEventPayload dataImportEventPayload, MappingMetadataDto mappingMetadata, Instance instanceToUpdate) {
+  private Future<Void> prepareAndExecuteMapping(DataImportEventPayload dataImportEventPayload, MappingMetadataDto mappingMetadata, Instance instanceToUpdate, String tenantId) {
     JsonObject mappingRules = new JsonObject(mappingMetadata.getMappingRules());
     MappingParameters mappingParameters = Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class);
 
-    return prepareRecordForMapping(dataImportEventPayload, mappingParameters.getMarcFieldProtectionSettings(), instanceToUpdate)
+    return prepareRecordForMapping(dataImportEventPayload, mappingParameters.getMarcFieldProtectionSettings(), instanceToUpdate, tenantId)
       .onSuccess(v -> {
         org.folio.Instance mapped = defaultMapRecordToInstance(dataImportEventPayload, mappingRules, mappingParameters);
         Instance mergedInstance = InstanceUtil.mergeFieldsWhichAreNotControlled(instanceToUpdate, mapped);
@@ -217,25 +263,24 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
   private Future<Void> prepareRecordForMapping(DataImportEventPayload dataImportEventPayload,
                                                List<MarcFieldProtectionSetting> marcFieldProtectionSettings,
-                                               Instance instance) {
-    if (!MARC_INSTANCE_SOURCE.equals(instance.getSource())) {
-      return Future.succeededFuture();
+                                               Instance instance, String tenantId) {
+    if (MARC_INSTANCE_SOURCE.equals(instance.getSource()) || CONSORTIUM_MARC.getValue().equals(instance.getSource())) {
+      return getRecordByInstanceId(dataImportEventPayload, instance.getId(), tenantId)
+        .compose(existingRecord -> {
+          Record incomingRecord = Json.decodeValue(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()), Record.class);
+          String updatedContent = new MarcRecordModifier().updateRecord(incomingRecord, existingRecord, marcFieldProtectionSettings);
+          incomingRecord.getParsedRecord().setContent(updatedContent);
+          dataImportEventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(incomingRecord));
+          return Future.succeededFuture();
+        });
     }
-
-    return getRecordByInstanceId(dataImportEventPayload, instance.getId())
-      .compose(existingRecord -> {
-        Record incomingRecord = Json.decodeValue(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()), Record.class);
-        String updatedContent = new MarcRecordModifier().updateRecord(incomingRecord, existingRecord, marcFieldProtectionSettings);
-        incomingRecord.getParsedRecord().setContent(updatedContent);
-        dataImportEventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(incomingRecord));
-        return Future.succeededFuture();
-      });
+    return Future.succeededFuture();
   }
 
   private Future<Record> getRecordByInstanceId(DataImportEventPayload dataImportEventPayload,
-                                               String instanceId) {
+                                               String instanceId, String tenantId) {
     SourceStorageRecordsClient client = new SourceStorageRecordsClient(dataImportEventPayload.getOkapiUrl(),
-      dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), httpClient);
+      tenantId, dataImportEventPayload.getToken(), httpClient);
 
     return client.getSourceStorageRecordsFormattedById(instanceId, INSTANCE_ID_TYPE).compose(resp -> {
       if (resp.statusCode() != 200) {
@@ -300,4 +345,5 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         return null;
       });
   }
+
 }
