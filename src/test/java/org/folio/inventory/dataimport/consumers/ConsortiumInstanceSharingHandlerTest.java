@@ -199,8 +199,8 @@ public class ConsortiumInstanceSharingHandlerTest {
     SharingInstance sharingInstance = new SharingInstance()
       .withId(UUID.fromString(shareId))
       .withInstanceIdentifier(UUID.fromString(instanceId))
-      .withSourceTenantId("consortium")
-      .withTargetTenantId("university")
+      .withSourceTenantId("university")
+      .withTargetTenantId("consortium")
       .withStatus(IN_PROGRESS);
 
     when(kafkaRecord.key()).thenReturn(shareId);
@@ -233,10 +233,12 @@ public class ConsortiumInstanceSharingHandlerTest {
     future.onComplete(ar -> {
       context.assertTrue(ar.failed());
       context.assertTrue(ar.cause().getMessage()
-        .contains("Can't find Instance by InstanceId=" + instanceId + " on tenant consortium."));
+        .contains("Error sharing Instance with InstanceId=" + instanceId + " to the target tenant=consortium. " +
+          "Because the instance is not found on the source tenant=university"));
       async.complete();
     });
   }
+
   @Ignore
   @Test
   public void shouldNotShareInstanceWithMARCSource(TestContext context) throws IOException {
@@ -304,8 +306,8 @@ public class ConsortiumInstanceSharingHandlerTest {
     SharingInstance sharingInstance = new SharingInstance()
       .withId(UUID.fromString(shareId))
       .withInstanceIdentifier(UUID.fromString(instanceId))
-      .withSourceTenantId("consortium")
-      .withTargetTenantId("university")
+      .withSourceTenantId("university")
+      .withTargetTenantId("consortium")
       .withStatus(IN_PROGRESS);
 
     when(kafkaRecord.key()).thenReturn(shareId);
@@ -338,7 +340,7 @@ public class ConsortiumInstanceSharingHandlerTest {
       context.assertTrue(ar.failed());
       context.assertTrue(ar.cause().getMessage()
         .contains("Error sharing Instance with InstanceId=" + instanceId
-          + " to the target tenant university. Because source is SOURCE"));
+          + " to the target tenant=consortium. Because source is SOURCE"));
       async.complete();
     });
   }
