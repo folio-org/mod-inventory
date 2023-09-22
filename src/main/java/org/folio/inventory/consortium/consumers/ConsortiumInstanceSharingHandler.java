@@ -252,7 +252,6 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     LOGGER.info("publishInstanceWithMarcSource:: Importing MARC record for instance with InstanceId={} to target tenant={}.",
       sharingInstanceMetadata.getInstanceIdentifier(), sharingInstanceMetadata.getTargetTenantId());
 
-    String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
     ChangeManagerClient targetManagerClient = new ChangeManagerClient(
       kafkaHeaders.get(URL.toLowerCase()),
       kafkaHeaders.get(TENANT.toLowerCase()),
@@ -262,37 +261,25 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     Promise<String> promise = Promise.promise();
 
     initJobExecution(targetManagerClient, kafkaHeaders)
-      .map(getJobExecution -> getJobExecution.getString(ID))
-      .compose(jobExecutionId -> {
-        Object parsedRecord = JsonObject.mapFrom(marcRecord.getParsedRecord().getContent());
-        return postRecordToParsing(jobExecutionId, true,
-          buildDataChunk(false, singletonList(new InitialRecord().withRecord(parsedRecord.toString()))),
-          targetManagerClient)
-          .compose(ignore -> postRecordToParsing(jobExecutionId, false, buildDataChunk(true, new ArrayList<>()),
-            targetManagerClient))
-          .compose(ignore -> checkDataImportStatus(jobExecutionId, sharingInstanceMetadata, 20L, 3, targetManagerClient))
-          .compose(dataImportResult -> {
-            LOGGER.info("Import MARC file for instance with InstanceId={} has been finished to the target tenant={}. " +
-              "Data import result: {}", instanceId, sharingInstanceMetadata.getTargetTenantId(), dataImportResult);
-            promise.complete(dataImportResult);
-            return Future.succeededFuture(dataImportResult);
-          })
-          .onFailure(throwable -> {
-            String errorMessage = String.format("Failed to start import of MARC file for instance with InstanceId=%s to the target tenant=%s.",
-              instanceId, sharingInstanceMetadata.getTargetTenantId());
-            LOGGER.error("publishInstanceWithMarcSource :: {}", errorMessage, throwable);
-            sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
-            promise.fail(throwable);
-          });
-      })
-      .onFailure(throwable -> {
-        String errorMessage = String.format("Failed to start import of MARC file for instance with InstanceId=%s to the target tenant=%s.",
-          instanceId, sharingInstanceMetadata.getTargetTenantId());
-        LOGGER.error("publishInstanceWithMarcSource :: {}", errorMessage, throwable);
-        sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
-        promise.fail(throwable);
-      });
-
+      .map(jobExecution -> jobExecution.getString(ID))
+        .onComplete(jExId -> {
+          if (jExId.succeeded()) {
+            String jobExecutionId = jExId.result();
+            Object parsedRecord = JsonObject.mapFrom(marcRecord.getParsedRecord().getContent());
+            postRecordToParsing(jobExecutionId,true, buildDataChunk(false, singletonList(new InitialRecord().withRecord(parsedRecord.toString()))), targetManagerClient)
+              .compose(ignore -> postRecordToParsing(jobExecutionId, false, buildDataChunk(true, new ArrayList<>()), targetManagerClient))
+              .compose(ignore -> checkDataImportStatus(jobExecutionId, sharingInstanceMetadata, 20L, 3, targetManagerClient)
+                .onComplete(dataImportResult -> {
+                  if (dataImportResult.succeeded()) {
+                    promise.complete(dataImportResult.result());
+                  } else {
+                    promise.fail(dataImportResult.cause());
+                  }
+                }));
+          } else {
+            promise.fail("publishInstanceWithMarcSource:: jobExecutionId is null");
+          }
+        });
     return promise.future();
   }
 
