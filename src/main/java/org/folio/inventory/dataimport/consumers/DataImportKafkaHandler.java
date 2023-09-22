@@ -173,10 +173,10 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     MatchingManager.registerMatcherFactory(new HoldingsItemMatcherFactory());
 
     PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper = new PrecedingSucceedingTitlesHelper(WebClient.wrap(client));
-    EventManager.registerEventHandler(new MatchInstanceEventHandler(mappingMetadataCache));
-    EventManager.registerEventHandler(new MatchItemEventHandler(mappingMetadataCache));
-    EventManager.registerEventHandler(new MatchHoldingEventHandler(mappingMetadataCache));
-    EventManager.registerEventHandler(new MatchAuthorityEventHandler(mappingMetadataCache));
+    EventManager.registerEventHandler(new MatchInstanceEventHandler(mappingMetadataCache, consortiumService));
+    EventManager.registerEventHandler(new MatchItemEventHandler(mappingMetadataCache, consortiumService));
+    EventManager.registerEventHandler(new MatchHoldingEventHandler(mappingMetadataCache, consortiumService));
+    EventManager.registerEventHandler(new MatchAuthorityEventHandler(mappingMetadataCache, consortiumService));
     EventManager.registerEventHandler(new CreateItemEventHandler(storage, mappingMetadataCache, new ItemIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))), orderHelperService));
     EventManager.registerEventHandler(new CreateHoldingEventHandler(storage, mappingMetadataCache, new HoldingsIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))), orderHelperService, consortiumService));
     EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, new InstanceIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))), orderHelperService));

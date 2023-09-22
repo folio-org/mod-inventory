@@ -7,15 +7,18 @@ import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
 import org.folio.MatchProfile;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.util.MatchingParametersRelations;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
+import org.folio.processing.exceptions.MatchingException;
 import org.folio.processing.matching.MatchingManager;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.MappingMetadataDto;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
@@ -26,11 +29,14 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
   private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingMetadata snapshot was not found by jobExecutionId '%s'";
   private static final String MATCHING_RELATIONS = "MATCHING_PARAMETERS_RELATIONS";
   private static final String MAPPING_PARAMS = "MAPPING_PARAMS";
+  public static final String FOUND_MULTIPLE_ENTITIES = "Found multiple entities during matching on localTenant: %s and centralTenant: %s";
 
   private MappingMetadataCache mappingMetadataCache;
+  private ConsortiumService consortiumService;
 
-  public AbstractMatchEventHandler(MappingMetadataCache mappingMetadataCache) {
+  public AbstractMatchEventHandler(MappingMetadataCache mappingMetadataCache, ConsortiumService consortiumService) {
     this.mappingMetadataCache = mappingMetadataCache;
+    this.consortiumService = consortiumService;
   }
 
   @Override
@@ -45,7 +51,7 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
     mappingMetadataCache.get(dataImportEventPayload.getJobExecutionId(), context)
       .toCompletionStage()
       .thenCompose(metadataOptional -> metadataOptional
-        .map(mappingMetadataDto -> doMatching(dataImportEventPayload, mappingMetadataDto, new MatchingParametersRelations()))
+        .map(mappingMetadataDto -> doMatching(dataImportEventPayload, mappingMetadataDto, new MatchingParametersRelations(), context))
         .orElse(CompletableFuture.failedFuture(new EventProcessingException(MAPPING_METADATA_NOT_FOUND_MSG))))
       .whenComplete((matched, throwable) -> {
         if (throwable != null) {
@@ -63,12 +69,38 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
   }
 
   private CompletableFuture<Boolean> doMatching(DataImportEventPayload dataImportEventPayload, MappingMetadataDto mappingMetadataDto,
-                                                MatchingParametersRelations matchingParametersRelations) {
+                                                MatchingParametersRelations matchingParametersRelations, Context context) {
     dataImportEventPayload.getContext().put(MAPPING_PARAMS, mappingMetadataDto.getMappingParams());
     dataImportEventPayload.getContext().put(MATCHING_RELATIONS,
       Json.encode(matchingParametersRelations.getMatchingRelations()));
 
-    return MatchingManager.match(dataImportEventPayload);
+    return MatchingManager.match(dataImportEventPayload)
+      .thenCompose(matchedLocal -> {
+        if (isConsortiumAvailable()) {
+          return matchCentralTenantIfNeededAndCombineWithLocalMatchedEntities(dataImportEventPayload, matchedLocal, context);
+        }
+        return CompletableFuture.completedFuture(matchedLocal);
+      });
+  }
+
+  private CompletableFuture<Boolean> matchCentralTenantIfNeededAndCombineWithLocalMatchedEntities(DataImportEventPayload dataImportEventPayload,
+                                                                                                boolean isMatchedLocal, Context context) {
+    return consortiumService.getConsortiumConfiguration(context)
+      .toCompletionStage().toCompletableFuture()
+      .thenCompose(consortiumConfiguration -> {
+        if (consortiumConfiguration.isPresent() && !consortiumConfiguration.get().getCentralTenantId().equals(context.getTenantId())) {
+          dataImportEventPayload.setTenant(consortiumConfiguration.get().getCentralTenantId());
+          return MatchingManager.match(dataImportEventPayload)
+            .thenCompose(isMatchedConsortium -> {
+              dataImportEventPayload.setTenant(context.getTenantId());
+              if (isMatchedConsortium && isMatchedLocal) {
+                return CompletableFuture.failedFuture(new MatchingException(String.format(FOUND_MULTIPLE_ENTITIES, context.getTenantId(), consortiumConfiguration.get().getCentralTenantId())));
+              }
+              return CompletableFuture.completedFuture(isMatchedConsortium || isMatchedLocal);
+            });
+        }
+        return CompletableFuture.completedFuture(isMatchedLocal);
+      });
   }
 
   @Override
@@ -86,4 +118,5 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
 
   protected abstract String getNotMatchedEventType();
 
+  protected abstract boolean isConsortiumAvailable();
 }

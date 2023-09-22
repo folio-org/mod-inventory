@@ -1,5 +1,6 @@
 package org.folio.inventory.dataimport.handlers.matching;
 
+import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.rest.jaxrs.model.EntityType;
 
@@ -8,8 +9,8 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_NOT_MATCHED;
 
 public class MatchAuthorityEventHandler extends AbstractMatchEventHandler {
 
-  public MatchAuthorityEventHandler(MappingMetadataCache mappingMetadataCache) {
-    super(mappingMetadataCache);
+  public MatchAuthorityEventHandler(MappingMetadataCache mappingMetadataCache, ConsortiumService consortiumService) {
+    super(mappingMetadataCache, consortiumService);
   }
 
   @Override
@@ -25,5 +26,10 @@ public class MatchAuthorityEventHandler extends AbstractMatchEventHandler {
   @Override
   protected String getNotMatchedEventType() {
     return DI_INVENTORY_AUTHORITY_NOT_MATCHED.value();
+  }
+
+  @Override
+  protected boolean isConsortiumAvailable() {
+    return false;
   }
 }
