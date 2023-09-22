@@ -76,7 +76,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   private final KafkaConfig kafkaConfig;
 
   private final JobProfileInfo jobProfileInfo = new JobProfileInfo()
-    .withId("e34d7b92-9b83-11eb-a8b3-0242ac130003")
+    .withId("e34d7b92-9b83-11eb-a8b3-0242ac130003") //default stub id
     .withName("Default - Create instance and SRS MARC Bib")
     .withDataType(JobProfileInfo.DataType.MARC);
 
@@ -249,6 +249,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
   public Future<String> publishInstanceWithMarcSource(Record marcRecord, SharingInstance sharingInstanceMetadata, Map<String, String> kafkaHeaders) {
 
+    String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
     LOGGER.info("publishInstanceWithMarcSource:: Importing MARC record for instance with InstanceId={} to target tenant={}.",
       sharingInstanceMetadata.getInstanceIdentifier(), sharingInstanceMetadata.getTargetTenantId());
 
@@ -262,24 +263,29 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
     initJobExecution(targetManagerClient, kafkaHeaders)
       .map(jobExecution -> jobExecution.getString(ID))
-        .onComplete(jExId -> {
-          if (jExId.succeeded()) {
-            String jobExecutionId = jExId.result();
-            Object parsedRecord = JsonObject.mapFrom(marcRecord.getParsedRecord().getContent());
-            postRecordToParsing(jobExecutionId,true, buildDataChunk(false, singletonList(new InitialRecord().withRecord(parsedRecord.toString()))), targetManagerClient)
-              .compose(ignore -> postRecordToParsing(jobExecutionId, false, buildDataChunk(true, new ArrayList<>()), targetManagerClient))
-              .compose(ignore -> checkDataImportStatus(jobExecutionId, sharingInstanceMetadata, 20L, 3, targetManagerClient)
-                .onComplete(dataImportResult -> {
-                  if (dataImportResult.succeeded()) {
-                    promise.complete(dataImportResult.result());
-                  } else {
-                    promise.fail(dataImportResult.cause());
-                  }
-                }));
-          } else {
-            promise.fail("publishInstanceWithMarcSource:: jobExecutionId is null");
-          }
-        });
+      .onComplete(jExId -> {
+        if (jExId.succeeded()) {
+          String jobExecutionId = jExId.result();
+          LOGGER.info("publishInstanceWithMarcSource:: Instance with InstanceId={}, jobExecutionId={}", instanceId, jobExecutionId);
+          setDefaultJobProfileToJobExecution(jobExecutionId, targetManagerClient)
+            .onComplete(ignore -> {
+              Object parsedRecord = JsonObject.mapFrom(marcRecord.getParsedRecord().getContent());
+              postRecordToParsing(jobExecutionId, true, buildDataChunk(false, singletonList(new InitialRecord().withRecord(parsedRecord.toString()))), targetManagerClient)
+                .compose(firstUpload -> postRecordToParsing(jobExecutionId, false, buildDataChunk(true, new ArrayList<>()), targetManagerClient))
+                .compose(secondUpload -> checkDataImportStatus(jobExecutionId, sharingInstanceMetadata, 20L, 3, targetManagerClient)
+                  .onComplete(dataImportResult -> {
+                    if (dataImportResult.succeeded()) {
+                      promise.complete(dataImportResult.result());
+                    } else {
+                      promise.fail(dataImportResult.cause());
+                    }
+                  }));
+            });
+
+        } else {
+          promise.fail("publishInstanceWithMarcSource:: jobExecutionId is null");
+        }
+      });
     return promise.future();
   }
 
@@ -460,7 +466,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
             response.result().statusMessage(), response.result().statusCode());
           promise.fail(new HttpException("Failed sending record data.", response.cause()));
         } else {
-          LOGGER.trace("postRecordToParsing:: Sending data result: {}", response.result());
+          LOGGER.info("postRecordToParsing:: Sending data result: {}", response.result());
           promise.complete(response.result().bodyAsJsonObject());
         }
       });
