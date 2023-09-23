@@ -10,7 +10,6 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
 import io.vertx.kafka.client.producer.KafkaProducer;
 import io.vertx.kafka.client.producer.KafkaProducerRecord;
-import liquibase.pro.packaged.L;
 import org.apache.http.HttpException;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
@@ -111,23 +110,6 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     }
   }
 
-//  private Future<String> checkIsInstanceExistsOnTargetTenant(SharingInstance sharingInstanceMetadata,
-//                                                             InstanceCollection targetInstanceCollection,
-//                                                             InstanceCollection sourceInstanceCollection,
-//                                                             Map<String, String> kafkaHeaders) {
-//
-//    String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
-//    String targetTenant = sharingInstanceMetadata.getTargetTenantId();
-//
-//    LOGGER.info("checkIsInstanceExistsOnTargetTenant :: Checking is instance with InstanceId={} exists on tenant={}", instanceId, targetTenant);
-//    return getInstanceById(instanceId, targetTenant, targetInstanceCollection)
-//      .compose(instance -> {
-//        String warningMessage = format("Instance with InstanceId=%s is present on target tenant: %s", instanceId, targetTenant);
-//        sendCompleteEventToKafka(sharingInstanceMetadata, COMPLETE, warningMessage, kafkaHeaders);
-//        return Future.succeededFuture(warningMessage);
-//      }, throwable -> publishInstance(sharingInstanceMetadata, sourceInstanceCollection, targetInstanceCollection, kafkaHeaders));
-//  }
-
   private Future<String> checkIsInstanceExistsOnTargetTenant(SharingInstance sharingInstanceMetadata,
                                                            InstanceCollection targetInstanceCollection,
                                                            InstanceCollection sourceInstanceCollection,
@@ -197,7 +179,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                         });
                     } else {
                       String errorMessage = format("Sharing instance with InstanceId=%s to the target tenant=%s. " +
-                        "Result: %s", instanceId, targetTenant, dataImportResult);
+                        "DI status is %s.", instanceId, targetTenant, dataImportResult);
                       sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
                       return Future.failedFuture(errorMessage);
                     }

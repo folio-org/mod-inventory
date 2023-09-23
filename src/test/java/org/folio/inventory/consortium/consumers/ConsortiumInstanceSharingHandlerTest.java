@@ -44,6 +44,7 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 import static java.lang.String.format;
+import static org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler.*;
 import static org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler.COMMITTED;
 import static org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler.JOB_PROFILE_INFO;
 import static org.folio.inventory.consortium.entities.SharingStatus.IN_PROGRESS;
@@ -390,7 +391,7 @@ public class ConsortiumInstanceSharingHandlerTest {
   }
 
   @Test
-  public void shouldNotShareInstanceWithMARCSource(TestContext context) throws IOException {
+  public void shouldNotShareInstanceWithMARCSourceBecauseMARCFileIsNotFound(TestContext context) throws IOException {
 
     // given
     Async async = context.async();
@@ -443,6 +444,101 @@ public class ConsortiumInstanceSharingHandlerTest {
     future.onComplete(ar -> {
       context.assertTrue(ar.failed());
       context.assertTrue(ar.cause().getMessage().contains("Record with id " + instanceId + " was not found"));
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldNotShareInstanceWithMARCSourceBecauseDIFailed(TestContext context) throws IOException {
+
+    // given
+    Async async = context.async();
+    existingInstance = Instance.fromJson(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
+    String shareId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
+    String instanceId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
+
+    SharingInstance sharingInstance = new SharingInstance()
+      .withId(UUID.fromString(shareId))
+      .withInstanceIdentifier(UUID.fromString(instanceId))
+      .withSourceTenantId("university")
+      .withTargetTenantId("consortium")
+      .withStatus(IN_PROGRESS);
+
+    when(kafkaRecord.key()).thenReturn(shareId);
+    when(kafkaRecord.value()).thenReturn(Json.encode(sharingInstance));
+    when(kafkaRecord.headers()).thenReturn(
+      List.of(KafkaHeader.header(OKAPI_TOKEN_HEADER, "token"),
+        KafkaHeader.header(OKAPI_URL_HEADER, "url")));
+
+    when(storage.getInstanceCollection(any(Context.class)))
+      .thenReturn(mockedTargetInstanceCollection)
+      .thenReturn(mockedSourceInstanceCollection);
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(null));
+      return null;
+    }).when(mockedTargetInstanceCollection).findById(any(String.class), any(), any());
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(existingInstance));
+      return null;
+    }).when(mockedSourceInstanceCollection).findById(eq(instanceId), any(), any());
+
+    // when
+    consortiumInstanceSharingHandler = spy(new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig));
+
+    when(consortiumInstanceSharingHandler.getSourceStorageRecordsClient(anyMap()))
+      .thenReturn(mockedSourceStorageRecordsClient);
+
+    //getting MARC record from SRS
+    when(mockedSourceStorageRecordsClient.getSourceStorageRecordsFormattedById(anyString(), anyString()))
+      .thenReturn(Future.succeededFuture(sourceStorageRecordsClientResponseBuffer));
+
+    //starting data import
+    when(consortiumInstanceSharingHandler.getChangeManagerClient(anyMap()))
+      .thenReturn(mockedTargetManagerClient);
+
+    //getJobExecutionId
+    doAnswer(invocationOnMock -> {
+      Handler<AsyncResult<HttpResponse<Buffer>>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.handle(Future.succeededFuture(targetManagerClientJobExecutionResponseBuffer));
+      return null;
+    }).when(mockedTargetManagerClient).postChangeManagerJobExecutions(any(InitJobExecutionsRqDto.class), any());
+
+    //link jobProfile to jobExecution
+    doAnswer(invocationOnMock -> {
+      Handler<AsyncResult<HttpResponse<Buffer>>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.handle(Future.succeededFuture(targetManagerClientResponseBuffer));
+      return null;
+    }).when(mockedTargetManagerClient).putChangeManagerJobExecutionsJobProfileById(anyString(), eq(JOB_PROFILE_INFO), any());
+
+    //sending 1st chunk of records
+    doAnswer(invocationOnMock -> {
+      Handler<AsyncResult<HttpResponse<Buffer>>> successHandler = invocationOnMock.getArgument(3);
+      successHandler.handle(Future.succeededFuture(targetManagerClientPostContentResponseBuffer));
+      return null;
+    }).when(mockedTargetManagerClient).postChangeManagerJobExecutionsRecordsById(anyString(), eq(true), any(RawRecordsDto.class), any());
+
+    //sending last chunk of records
+    doAnswer(invocationOnMock -> {
+      Handler<AsyncResult<HttpResponse<Buffer>>> successHandler = invocationOnMock.getArgument(3);
+      successHandler.handle(Future.succeededFuture(targetManagerClientPostContentResponseBuffer));
+      return null;
+    }).when(mockedTargetManagerClient).postChangeManagerJobExecutionsRecordsById(anyString(), eq(false), any(RawRecordsDto.class), any());
+
+    //check data import status
+    doAnswer(invocationOnMock -> {
+      return Future.succeededFuture(ERROR);
+    }).when(consortiumInstanceSharingHandler).checkDataImportStatus(anyString(), any(SharingInstance.class), anyLong(), anyInt(), any());
+
+    //then
+    Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
+    future.onComplete(ar -> {
+      context.assertTrue(ar.failed());
+      context.assertTrue(ar.cause().getMessage()
+        .contains("Sharing instance with InstanceId=" + instanceId + " to the target tenant=consortium. DI status is ERROR."));
       async.complete();
     });
   }
