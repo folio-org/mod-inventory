@@ -75,7 +75,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   private final Storage storage;
   private final KafkaConfig kafkaConfig;
 
-  private final JobProfileInfo jobProfileInfo = new JobProfileInfo()
+  public static final JobProfileInfo JOB_PROFILE_INFO = new JobProfileInfo()
     .withId("e34d7b92-9b83-11eb-a8b3-0242ac130003") //default stub id
     .withName("Default - Create instance and SRS MARC Bib")
     .withDataType(JobProfileInfo.DataType.MARC);
@@ -150,12 +150,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
           } else if (MARC.getValue().equals(srcInstance.getSource())) {
 
-            SourceStorageRecordsClient sourceTenantStorageClient = new SourceStorageRecordsClient(
-              kafkaHeaders.get(URL.toLowerCase()),
-              sourceTenant,
-              kafkaHeaders.get(TOKEN.toLowerCase()),
-              vertx.createHttpClient());
-
+            SourceStorageRecordsClient sourceTenantStorageClient = getSourceStorageRecordsClient(kafkaHeaders);
             getSourceMARCByInstanceId(instanceId, sourceTenant, sourceTenantStorageClient)
               .compose(marcRecord -> publishInstanceWithMarcSource(marcRecord, sharingInstanceMetadata, kafkaHeaders)
                 .compose(dataImportResult -> {
@@ -171,8 +166,10 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                               String message = format("Instance with InstanceId=%s has been shared to the target tenant %s", instanceId, targetTenant);
                               sendCompleteEventToKafka(sharingInstanceMetadata, COMPLETE, message, kafkaHeaders);
                               promise.complete(message);
-                            }).onFailure(throwable -> promise.fail(throwable.getCause()));
-                          return Future.failedFuture(deletionResult);
+                            }).onFailure(
+                              throwable -> promise.fail(throwable.getCause())
+                            );
+                          return promise.future();
                         });
                     } else {
                       String errorMessage = format("Sharing instance with InstanceId=%s to the target tenant=%s. " +
@@ -180,7 +177,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                       sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
                       return Future.failedFuture(errorMessage);
                     }
-                    return null;
+                    return promise.future();
                   }, throwable -> {
                     String errorMessage = format("Error sharing instance with InstanceId=%s to the target tenant=%s. Error: %s",
                       instanceId, targetTenant, throwable.getMessage());
@@ -207,10 +204,30 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     return promise.future();
   }
 
+  public SourceStorageRecordsClient getSourceStorageRecordsClient(Map<String, String> kafkaHeaders) {
+    return new SourceStorageRecordsClient(
+      kafkaHeaders.get(URL.toLowerCase()),
+      kafkaHeaders.get(TENANT.toLowerCase()),
+      kafkaHeaders.get(TOKEN.toLowerCase()),
+      vertx.createHttpClient());
+  }
+
+  public ChangeManagerClient getChangeManagerClient(Map<String, String> kafkaHeaders) {
+    return new ChangeManagerClient(
+      kafkaHeaders.get(URL.toLowerCase()),
+      kafkaHeaders.get(TENANT.toLowerCase()),
+      kafkaHeaders.get(TOKEN.toLowerCase()),
+      vertx.createHttpClient());
+  }
+
   private Future<String> publishInstanceWithFolioSource(Instance instance, SharingInstance sharingInstanceMetadata,
                                                         InstanceCollection targetInstanceCollection,
                                                         InstanceCollection sourceInstanceCollection,
                                                         Map<String, String> kafkaHeaders) {
+
+    LOGGER.info("publishInstanceWithFolioSource :: Publishing instance with InstanceId={} to tenant={}.",
+      sharingInstanceMetadata.getInstanceIdentifier(), sharingInstanceMetadata.getTargetTenantId());
+
     Promise<String> promise = Promise.promise();
     try {
       String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
@@ -247,45 +264,78 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     return promise.future();
   }
 
-  public Future<String> publishInstanceWithMarcSource(Record marcRecord, SharingInstance sharingInstanceMetadata, Map<String, String> kafkaHeaders) {
+  private Future<String> publishInstanceWithMarcSource(Record marcRecord, SharingInstance sharingInstanceMetadata, Map<String, String> kafkaHeaders) {
 
     String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
     LOGGER.info("publishInstanceWithMarcSource:: Importing MARC record for instance with InstanceId={} to target tenant={}.",
       sharingInstanceMetadata.getInstanceIdentifier(), sharingInstanceMetadata.getTargetTenantId());
 
-    ChangeManagerClient targetManagerClient = new ChangeManagerClient(
-      kafkaHeaders.get(URL.toLowerCase()),
-      kafkaHeaders.get(TENANT.toLowerCase()),
-      kafkaHeaders.get(TOKEN.toLowerCase()),
-      vertx.createHttpClient());
-
     Promise<String> promise = Promise.promise();
+    ChangeManagerClient targetManagerClient = getChangeManagerClient(kafkaHeaders);
 
     initJobExecution(targetManagerClient, kafkaHeaders)
-      .map(jobExecution -> jobExecution.getString(ID))
-      .onComplete(jExId -> {
-        if (jExId.succeeded()) {
-          String jobExecutionId = jExId.result();
-          LOGGER.info("publishInstanceWithMarcSource:: Instance with InstanceId={}, jobExecutionId={}", instanceId, jobExecutionId);
-          setDefaultJobProfileToJobExecution(jobExecutionId, targetManagerClient)
-            .onComplete(ignore -> {
-              Object parsedRecord = JsonObject.mapFrom(marcRecord.getParsedRecord().getContent());
-              postRecordToParsing(jobExecutionId, true, buildDataChunk(false, singletonList(new InitialRecord().withRecord(parsedRecord.toString()))), targetManagerClient)
-                .compose(firstUpload -> postRecordToParsing(jobExecutionId, false, buildDataChunk(true, new ArrayList<>()), targetManagerClient))
-                .compose(secondUpload -> checkDataImportStatus(jobExecutionId, sharingInstanceMetadata, 20L, 3, targetManagerClient)
-                  .onComplete(dataImportResult -> {
-                    if (dataImportResult.succeeded()) {
-                      promise.complete(dataImportResult.result());
-                    } else {
-                      promise.fail(dataImportResult.cause());
-                    }
-                  }));
-            });
+      .compose(jobExecution -> {
+        String jobExecutionId = jobExecution.getString(ID);
+        LOGGER.info("New JobExcution initialized for import MARC record for instance with InstanceId={}, " +
+          "jobExecutionId={}", instanceId, jobExecutionId);
 
-        } else {
-          promise.fail("publishInstanceWithMarcSource:: jobExecutionId is null");
-        }
+        return setDefaultJobProfileToJobExecution(jobExecutionId, targetManagerClient)
+          .compose(ignore -> {
+            Object parsedRecord = JsonObject.mapFrom(marcRecord.getParsedRecord().getContent());
+
+            return postRecordToParsing(jobExecutionId, true,
+              buildDataChunk(false, singletonList(new InitialRecord().withRecord(parsedRecord.toString()))),
+              targetManagerClient)
+              .compose(ignore2 -> postRecordToParsing(jobExecutionId, false, buildDataChunk(true, new ArrayList<>()),
+                targetManagerClient))
+              .compose(ignore3 -> checkDataImportStatus(jobExecutionId, sharingInstanceMetadata, 20L, 3, targetManagerClient));
+          })
+          .onSuccess(dataImportResult -> {
+            LOGGER.info("Import MARC file for instance with InstanceId={} has been finished to the target tenant={}. " +
+              "Data import result: {}", instanceId, sharingInstanceMetadata.getTargetTenantId(), dataImportResult);
+            promise.complete(dataImportResult);
+          })
+          .onFailure(throwable -> {
+            String errorMessage = String.format("Failed to import MARC file for instance with InstanceId=%s and target tenant=%s.",
+              instanceId, sharingInstanceMetadata.getTargetTenantId());
+            LOGGER.error(errorMessage, throwable);
+            sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
+            promise.fail(throwable);
+          });
+      })
+      .onFailure(throwable -> {
+        String errorMessage = String.format("Failed to initialize job execution for MARC file import to the target tenant=%s.",
+          sharingInstanceMetadata.getTargetTenantId());
+        LOGGER.error(errorMessage, throwable);
+        sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
+        promise.fail(throwable);
       });
+
+//    initJobExecution(targetManagerClient, kafkaHeaders)
+//      .map(jobExecution -> jobExecution.getString(ID))
+//      .onComplete(jExId -> {
+//        if (jExId.succeeded()) {
+//          String jobExecutionId = jExId.result();
+//          LOGGER.info("publishInstanceWithMarcSource:: Instance with InstanceId={}, jobExecutionId={}", instanceId, jobExecutionId);
+//          setDefaultJobProfileToJobExecution(jobExecutionId, targetManagerClient)
+//            .onComplete(ignore -> {
+//              Object parsedRecord = JsonObject.mapFrom(marcRecord.getParsedRecord().getContent());
+//              postRecordToParsing(jobExecutionId, true, buildDataChunk(false, singletonList(new InitialRecord().withRecord(parsedRecord.toString()))), targetManagerClient)
+//                .compose(firstUpload -> postRecordToParsing(jobExecutionId, false, buildDataChunk(true, new ArrayList<>()), targetManagerClient))
+//                .compose(secondUpload -> checkDataImportStatus(jobExecutionId, sharingInstanceMetadata, 20L, 3, targetManagerClient)
+//                  .onComplete(dataImportResult -> {
+//                    if (dataImportResult.succeeded()) {
+//                      promise.complete(dataImportResult.result());
+//                    } else {
+//                      promise.fail(dataImportResult.cause());
+//                    }
+//                  }));
+//            });
+//
+//        } else {
+//          promise.fail("publishInstanceWithMarcSource:: jobExecutionId is null");
+//        }
+//      });
     return promise.future();
   }
 
@@ -309,8 +359,9 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       .withInitialRecords(data);
   }
 
-  private Future<String> checkDataImportStatus(String jobExecutionId, SharingInstance sharingInstanceMetadata,
+  protected Future<String> checkDataImportStatus(String jobExecutionId, SharingInstance sharingInstanceMetadata,
                                                Long durationInSec, Integer attemptsNumber, ChangeManagerClient client) {
+
     LOGGER.info("checkDataImportStatus:: InstanceId={}, jobExecutionId={}. Start.",
       sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionId);
 
@@ -359,6 +410,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   }
 
   private Future<String> getJobExecutionById(String jobExecutionId, ChangeManagerClient client) {
+
     LOGGER.info("getJobExecutionById:: Getting jobExecution by jobExecutionId={}.", jobExecutionId);
     Promise<String> promise = Promise.promise();
     try {
@@ -381,23 +433,27 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   }
 
   private Future<Record> getSourceMARCByInstanceId(String instanceId, String sourceTenant, SourceStorageRecordsClient client) {
+
     LOGGER.info("getSourceMARCByInstanceId:: Getting source MARC record for instance with InstanceId={} from tenant={}.",
       instanceId, sourceTenant);
-    return client.getSourceStorageRecordsFormattedById(instanceId, INSTANCE_ID_TYPE)
-      .compose(resp -> {
-        if (resp.statusCode() != HttpStatus.SC_OK) {
+    Promise<Record> promise = Promise.promise();
+    client.getSourceStorageRecordsFormattedById(instanceId, INSTANCE_ID_TYPE)
+      .onComplete(resp -> {
+        if ((!resp.succeeded()) || (resp.result().statusCode() != HttpStatus.SC_OK)) {
           String errorMessage = format("Failed to retrieve MARC record for instance with InstanceId=%s from tenant=%s. " +
-            "Status message: %s. Status code: %s", instanceId, sourceTenant, resp.statusMessage(), resp.statusCode());
+            "Status message: %s. Status code: %s", instanceId, sourceTenant, resp.result().statusMessage(), resp.result().statusCode());
           LOGGER.error(errorMessage);
-          return Future.failedFuture(errorMessage);
+          promise.fail(errorMessage);
         }
         LOGGER.trace("getSourceMARCByInstanceId:: MARC source for instance with InstanceId={} from tenant={}. Record={}. Finish.",
-          instanceId, sourceTenant, resp.bodyAsString());
-        return Future.succeededFuture(resp.bodyAsJson(Record.class));
+          instanceId, sourceTenant, resp.result().bodyAsString());
+        promise.complete(resp.result().bodyAsJson(Record.class));
       });
+    return promise.future();
   }
 
   private Future<JsonObject> initJobExecution(ChangeManagerClient client, Map<String, String> kafkaHeaders) {
+
     LOGGER.info("initJobExecution:: Receiving new JobExecution ...");
     Promise<JsonObject> promise = Promise.promise();
     try {
@@ -435,7 +491,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     LOGGER.info("setJobProfileToJobExecution:: Linking JobProfile to JobExecution with jobExecutionId={}", jobExecutionId);
     Promise<JsonObject> promise = Promise.promise();
     try {
-      client.putChangeManagerJobExecutionsJobProfileById(jobExecutionId, jobProfileInfo, response -> {
+      client.putChangeManagerJobExecutionsJobProfileById(jobExecutionId, JOB_PROFILE_INFO, response -> {
         if (response.result().statusCode() != HttpStatus.SC_OK) {
           LOGGER.warn("setJobProfileToJobExecution:: Failed to set JobProfile for JobExecution. " +
             "Status message: {}. Status code: {}", response.result().statusMessage(), response.result().statusCode());
@@ -484,7 +540,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   }
 
   private Future<String> deleteSourceRecordByInstanceId(String instanceId, String tenantId, SourceStorageRecordsClient client) {
-    LOGGER.info("deleteSourceRecordByInstanceId :: Delete instance by InstanceId={} from tenant={}", instanceId, tenantId);
+    LOGGER.info("deleteSourceRecordByInstanceId :: Delete source record for instance by InstanceId={} from tenant={}", instanceId, tenantId);
     Promise<String> promise = Promise.promise();
     client.deleteSourceStorageRecordsById(instanceId).onComplete(response -> {
       if (response.failed()) {
@@ -522,6 +578,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   }
 
   private Future<Instance> addInstance(Instance instance, String tenant, InstanceCollection instanceCollection) {
+
     LOGGER.info("addInstance :: Publishing instance with InstanceId={} to tenant={}", instance.getId(), tenant);
     Promise<Instance> promise = Promise.promise();
     instanceCollection.add(instance, success -> promise.complete(success.getResult()),
@@ -541,9 +598,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   private Future<Instance> updateInstanceInStorage(Instance instance, String tenant, InstanceCollection instanceCollection) {
 
     LOGGER.info("updateInstanceInStorage :: Updating instance with InstanceId={} on tenant={}", instance.getId(), tenant);
-
     Promise<Instance> promise = Promise.promise();
-
     instanceCollection.update(instance, success -> promise.complete(instance),
       failure -> {
         if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
@@ -589,10 +644,8 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   private KafkaProducerRecord<String, String> createProducerRecord(String topicName, SharingInstance sharingInstance,
                                                                    SharingStatus status, String errorMessage, List<KafkaHeader> kafkaHeaders) {
     LOGGER.info("createKafkaMessage :: Instance with InstanceId={}, status: {}, {}topicName: {}",
-      sharingInstance.getInstanceIdentifier(),
-      status,
-      status.equals(SharingStatus.ERROR) ? " message: " + errorMessage + ", " : EMPTY,
-      topicName);
+      sharingInstance.getInstanceIdentifier(), status,
+      status.equals(SharingStatus.ERROR) ? " message: " + errorMessage + ", " : EMPTY, topicName);
 
     sharingInstance.setStatus(status);
     if (sharingInstance.getStatus().equals(SharingStatus.ERROR)) {
