@@ -324,7 +324,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     // when
     consortiumInstanceSharingHandler = spy(new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig));
 
-    when(consortiumInstanceSharingHandler.getSourceStorageRecordsClient(anyMap()))
+    when(consortiumInstanceSharingHandler.getSourceStorageRecordsClient(anyString(), anyMap()))
       .thenReturn(mockedSourceStorageRecordsClient);
 
     //getting MARC record from SRS
@@ -432,7 +432,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     consortiumInstanceSharingHandler = spy(new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig));
 
     //init SRS client
-    when(consortiumInstanceSharingHandler.getSourceStorageRecordsClient(anyMap()))
+    when(consortiumInstanceSharingHandler.getSourceStorageRecordsClient(anyString(), anyMap()))
       .thenReturn(mockedSourceStorageRecordsClient);
 
     //getting MARC record from SRS
@@ -489,7 +489,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     // when
     consortiumInstanceSharingHandler = spy(new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig));
 
-    when(consortiumInstanceSharingHandler.getSourceStorageRecordsClient(anyMap()))
+    when(consortiumInstanceSharingHandler.getSourceStorageRecordsClient(anyString(), anyMap()))
       .thenReturn(mockedSourceStorageRecordsClient);
 
     //getting MARC record from SRS

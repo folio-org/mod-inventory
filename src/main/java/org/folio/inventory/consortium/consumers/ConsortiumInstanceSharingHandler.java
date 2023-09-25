@@ -156,7 +156,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
           } else if (MARC.getValue().equals(srcInstance.getSource())) {
 
-            SourceStorageRecordsClient sourceTenantStorageClient = getSourceStorageRecordsClient(kafkaHeaders);
+            SourceStorageRecordsClient sourceTenantStorageClient = getSourceStorageRecordsClient(sourceTenant, kafkaHeaders);
             getSourceMARCByInstanceId(instanceId, sourceTenant, sourceTenantStorageClient)
               .compose(marcRecord -> publishInstanceWithMarcSource(marcRecord, sharingInstanceMetadata, kafkaHeaders)
                 .compose(dataImportResult -> {
@@ -216,10 +216,10 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     return promise.future();
   }
 
-  public SourceStorageRecordsClient getSourceStorageRecordsClient(Map<String, String> kafkaHeaders) {
+  public SourceStorageRecordsClient getSourceStorageRecordsClient(String tenant, Map<String, String> kafkaHeaders) {
     return new SourceStorageRecordsClient(
       kafkaHeaders.get(URL.toLowerCase()),
-      kafkaHeaders.get(TENANT.toLowerCase()),
+      kafkaHeaders.get(tenant),
       kafkaHeaders.get(TOKEN.toLowerCase()),
       vertx.createHttpClient());
   }
