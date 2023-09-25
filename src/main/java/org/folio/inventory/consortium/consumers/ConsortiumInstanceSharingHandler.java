@@ -217,11 +217,10 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   }
 
   public SourceStorageRecordsClient getSourceStorageRecordsClient(String tenant, Map<String, String> kafkaHeaders) {
-    LOGGER.info("getSourceStorageRecordsClient :: Creating SourceStorageRecordsClient for tenant={}, url={}, token={}",
-      tenant, kafkaHeaders.get(URL.toLowerCase()), kafkaHeaders.get(TOKEN.toLowerCase()));
+    LOGGER.info("getSourceStorageRecordsClient :: Creating SourceStorageRecordsClient for tenant={}", tenant);
     return new SourceStorageRecordsClient(
       kafkaHeaders.get(URL.toLowerCase()),
-      kafkaHeaders.get(tenant),
+      tenant,
       kafkaHeaders.get(TOKEN.toLowerCase()),
       vertx.createHttpClient());
   }
