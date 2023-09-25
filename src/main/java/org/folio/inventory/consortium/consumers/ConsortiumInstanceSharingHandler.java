@@ -397,7 +397,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     return promise.future();
   }
 
-  private Future<String> getJobExecutionById(String jobExecutionId, ChangeManagerClient client) {
+  protected Future<String> getJobExecutionById(String jobExecutionId, ChangeManagerClient client) {
 
     LOGGER.info("getJobExecutionById:: Getting jobExecution by jobExecutionId={}.", jobExecutionId);
     Promise<String> promise = Promise.promise();
