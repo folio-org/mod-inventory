@@ -137,7 +137,8 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
                                          InstanceCollection targetInstanceCollection, Map<String, String> kafkaHeaders) {
 
     LOGGER.info("publishInstance :: Publishing instance with InstanceId={} from tenant={} to tenant={}.",
-      sharingInstanceMetadata.getInstanceIdentifier(), sharingInstanceMetadata.getSourceTenantId(), sharingInstanceMetadata.getTargetTenantId());
+      sharingInstanceMetadata.getInstanceIdentifier(), sharingInstanceMetadata.getSourceTenantId(),
+      sharingInstanceMetadata.getTargetTenantId());
 
     Promise<String> promise = Promise.promise();
 
@@ -146,8 +147,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       String sourceTenant = sharingInstanceMetadata.getSourceTenantId();
       String targetTenant = sharingInstanceMetadata.getTargetTenantId();
 
-      getInstanceById(instanceId, sourceTenant, sourceInstanceCollection)
-        .onSuccess(srcInstance -> {
+      getInstanceById(instanceId, sourceTenant, sourceInstanceCollection).onSuccess(srcInstance -> {
 
           if (FOLIO.getValue().equals(srcInstance.getSource())) {
 
@@ -217,7 +217,8 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   }
 
   public SourceStorageRecordsClient getSourceStorageRecordsClient(String tenant, Map<String, String> kafkaHeaders) {
-    LOGGER.info("getSourceStorageRecordsClient :: Creating SourceStorageRecordsClient for tenant={}", tenant);
+    LOGGER.info("getSourceStorageRecordsClient :: Creating SourceStorageRecordsClient for tenant={}, url={}, token={}",
+      tenant, kafkaHeaders.get(URL.toLowerCase()), kafkaHeaders.get(TOKEN.toLowerCase()));
     return new SourceStorageRecordsClient(
       kafkaHeaders.get(URL.toLowerCase()),
       kafkaHeaders.get(tenant),
