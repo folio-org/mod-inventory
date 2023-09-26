@@ -32,7 +32,7 @@ import static java.util.Objects.isNull;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING;
-import static org.folio.inventory.dataimport.handlers.actions.MarcBibMatchedPostProcessingEventHandler.getTenant;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.getTenant;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
