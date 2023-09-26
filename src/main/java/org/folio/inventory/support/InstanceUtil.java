@@ -1,20 +1,29 @@
 package org.folio.inventory.support;
 
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.math.NumberUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.ChildInstance;
 import org.folio.ParentInstance;
 import org.folio.Tags;
+import org.folio.inventory.consortium.util.ConsortiumUtil;
 import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
 import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
+import org.folio.inventory.exceptions.NotFoundException;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class InstanceUtil {
+import static java.lang.String.format;
 
+public class InstanceUtil {
+  private static final Logger LOGGER = LogManager.getLogger(InstanceUtil.class);
   private static final String STATISTICAL_CODE_IDS_PROPERTY = "statisticalCodeIds";
   private static final String NATURE_OF_CONTENT_TERM_IDS_PROPERTY = "natureOfContentTermIds";
   private static final String ADMINISTRATIVE_NOTES_PROPERTY = "administrativeNotes";
@@ -108,5 +117,22 @@ public class InstanceUtil {
    */
   private static Integer asIntegerOrNull(String s) {
     return NumberUtils.isParsable(s) ? Integer.parseInt(s) : null;
+  }
+
+  public static Future<Instance> findInstanceById(String instanceId, InstanceCollection instanceCollection) {
+    Promise<Instance> promise = Promise.promise();
+    instanceCollection.findById(instanceId, success -> {
+        if (success.getResult() == null) {
+          LOGGER.warn("findInstanceById:: Can't find Instance by id: {} ", instanceId);
+          promise.fail(new NotFoundException(format("Can't find Instance by id: %s", instanceId)));
+        } else {
+          promise.complete(success.getResult());
+        }
+      },
+      failure -> {
+        LOGGER.warn(format("findInstanceById:: Error retrieving Instance by id %s - %s, status code %s", instanceId, failure.getReason(), failure.getStatusCode()));
+        promise.fail(failure.getReason());
+      });
+    return promise.future();
   }
 }
