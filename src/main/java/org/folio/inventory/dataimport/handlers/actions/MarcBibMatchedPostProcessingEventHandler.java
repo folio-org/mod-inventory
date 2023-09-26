@@ -43,7 +43,7 @@ public class MarcBibMatchedPostProcessingEventHandler implements EventHandler {
   private static final String ERROR_HOLDING_MSG = "Error loading inventory holdings for MARC BIB";
   private static final String MATCHED_MARC_BIB_KEY = "MATCHED_MARC_BIBLIOGRAPHIC";
   private final Storage storage;
-  public static final String CENTRAL_TENANT_ID = "CENTRAL_TENANT_ID";
+  private static final String CENTRAL_TENANT_ID = "CENTRAL_TENANT_ID";
 
   public MarcBibMatchedPostProcessingEventHandler(Storage storage) {
     this.storage = storage;
