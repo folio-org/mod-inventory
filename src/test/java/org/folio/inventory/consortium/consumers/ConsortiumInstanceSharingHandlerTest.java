@@ -45,8 +45,6 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 import static java.lang.String.format;
-import static org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler.COMMITTED;
-import static org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler.ERROR;
 import static org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler.JOB_PROFILE_INFO;
 import static org.folio.inventory.consortium.entities.SharingStatus.IN_PROGRESS;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;

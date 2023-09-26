@@ -38,6 +38,7 @@ import java.util.Map;
 import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.EMPTY;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
+import static org.folio.inventory.consortium.consumers.RestDataImportHelper.STATUS_COMMITTED;
 import static org.folio.inventory.consortium.entities.SharingInstanceEventType.CONSORTIUM_INSTANCE_SHARING_COMPLETE;
 import static org.folio.inventory.consortium.entities.SharingStatus.COMPLETE;
 import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.INSTANCE_ID_TYPE;
@@ -47,16 +48,13 @@ import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MAR
 import static org.folio.inventory.domain.instances.InstanceSource.FOLIO;
 import static org.folio.inventory.domain.instances.InstanceSource.MARC;
 import static org.folio.inventory.domain.items.Item.HRID_KEY;
-import static org.folio.okapi.common.XOkapiHeaders.TENANT;
-import static org.folio.okapi.common.XOkapiHeaders.TOKEN;
-import static org.folio.okapi.common.XOkapiHeaders.URL;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
 
 public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<String, String> {
 
   private static final Logger LOGGER = LogManager.getLogger(ConsortiumInstanceSharingHandler.class);
-  public static final String COMMITTED = "COMMITTED";
-  public static final String ERROR = "ERROR";
-  public static final String STATUS = "status";
   public static final String SOURCE = "source";
 
   public static final String ID = "id";
@@ -152,7 +150,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
               .compose(marcRecord -> dataImportService.publishInstanceWithMarcSource(marcRecord, sharingInstanceMetadata, kafkaHeaders)
                 .compose(dataImportResult -> {
                     LOGGER.info("publishInstance :: Import MARC file result. {}", dataImportResult);
-                    if (dataImportResult.equals(COMMITTED)) {
+                    if (dataImportResult.equals(STATUS_COMMITTED)) {
                       deleteSourceRecordByInstanceId(instanceId, sourceTenant, sourceTenantStorageClient)
                         .compose(deletionResult -> {
                           LOGGER.info("publishInstance :: Delete MARC file result. {}", deletionResult);
@@ -210,17 +208,17 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   public SourceStorageRecordsClient getSourceStorageRecordsClient(String tenant, Map<String, String> kafkaHeaders) {
     LOGGER.info("getSourceStorageRecordsClient :: Creating SourceStorageRecordsClient for tenant={}", tenant);
     return new SourceStorageRecordsClient(
-      kafkaHeaders.get(URL.toLowerCase()),
+      kafkaHeaders.get(OKAPI_URL_HEADER),
       tenant,
-      kafkaHeaders.get(TOKEN.toLowerCase()),
+      kafkaHeaders.get(OKAPI_TOKEN_HEADER),
       vertx.createHttpClient());
   }
 
   public ChangeManagerClient getChangeManagerClient(Map<String, String> kafkaHeaders) {
     return new ChangeManagerClient(
-      kafkaHeaders.get(URL.toLowerCase()),
-      kafkaHeaders.get(TENANT.toLowerCase()),
-      kafkaHeaders.get(TOKEN.toLowerCase()),
+      kafkaHeaders.get(OKAPI_URL_HEADER),
+      kafkaHeaders.get(OKAPI_TENANT_HEADER),
+      kafkaHeaders.get(OKAPI_TOKEN_HEADER),
       vertx.createHttpClient());
   }
 
@@ -272,8 +270,8 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     return storage.getInstanceCollection(
       EventHandlingUtil.constructContext(
         tenantId,
-        kafkaHeaders.get(TOKEN.toLowerCase()),
-        kafkaHeaders.get(URL.toLowerCase()))
+        kafkaHeaders.get(OKAPI_TOKEN_HEADER),
+        kafkaHeaders.get(OKAPI_URL_HEADER))
     );
   }
 
@@ -390,7 +388,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     SharingInstanceEventType evenType = CONSORTIUM_INSTANCE_SHARING_COMPLETE;
 
     try {
-      String tenantId = kafkaHeaders.get(TENANT.toLowerCase());
+      String tenantId = kafkaHeaders.get(OKAPI_TENANT_HEADER);
       List<KafkaHeader> kafkaHeadersList = convertKafkaHeadersMap(kafkaHeaders);
 
       LOGGER.info("sendEventToKafka :: tenantId={}, instance with InstanceId={}, status={}, message={}",
@@ -437,9 +435,9 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
   private List<KafkaHeader> convertKafkaHeadersMap(Map<String, String> kafkaHeaders) {
     return new ArrayList<>(List.of(
-      KafkaHeader.header(URL.toLowerCase(), kafkaHeaders.get(URL.toLowerCase())),
-      KafkaHeader.header(TENANT.toLowerCase(), kafkaHeaders.get(TENANT.toLowerCase())),
-      KafkaHeader.header(TOKEN.toLowerCase(), kafkaHeaders.get(TOKEN.toLowerCase())))
+      KafkaHeader.header(OKAPI_URL_HEADER, kafkaHeaders.get(OKAPI_URL_HEADER)),
+      KafkaHeader.header(OKAPI_TENANT_HEADER, kafkaHeaders.get(OKAPI_TENANT_HEADER)),
+      KafkaHeader.header(OKAPI_TOKEN_HEADER, kafkaHeaders.get(OKAPI_TOKEN_HEADER)))
     );
   }
 

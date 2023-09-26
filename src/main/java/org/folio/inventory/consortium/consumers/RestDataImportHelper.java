@@ -43,8 +43,8 @@ public class RestDataImportHelper {
   public static final String FIELD_STATUS = "status";
   public static final String FIELD_JOB_EXECUTIONS = "jobExecutions";
 
-  public static final String COMMITTED_STATUS = "COMMITTED";
-  public static final String ERROR_STATUS = "ERROR";
+  public static final String STATUS_COMMITTED = "COMMITTED";
+  public static final String STATUS_ERROR = "ERROR";
 
   private final Vertx vertx;
 
@@ -60,9 +60,9 @@ public class RestDataImportHelper {
   /**
    * Import MARC record to tenant.
    *
-   * @param marcRecord - MARC record
+   * @param marcRecord              - MARC record
    * @param sharingInstanceMetadata - sharing instance metadata
-   * @param kafkaHeaders - kafka headers
+   * @param kafkaHeaders            - kafka headers
    * @return - future with "COMMITTED" | "ERROR" or failed status
    */
   public Future<String> publishInstanceWithMarcSource(Record marcRecord, SharingInstance sharingInstanceMetadata, Map<String, String> kafkaHeaders) {
@@ -78,7 +78,7 @@ public class RestDataImportHelper {
     final long durationInSec = 20;
     final int attemptsNumber = 3;
 
-    return initJobExecution(changeManagerClient, kafkaHeaders)
+    return initJobExecution(instanceId, changeManagerClient, kafkaHeaders)
       .compose(jobExecutionId -> setDefaultJobProfileToJobExecution(jobExecutionId, changeManagerClient))
       .compose(jobExecutionId -> {
         RawRecordsDto dataChunk = buildDataChunk(false, singletonList(new InitialRecord().withRecord(
@@ -93,9 +93,9 @@ public class RestDataImportHelper {
       .compose(jobExecutionId -> checkDataImportStatus(jobExecutionId, sharingInstanceMetadata, durationInSec, attemptsNumber, changeManagerClient));
   }
 
-  private Future<String> initJobExecution(ChangeManagerClient changeManagerClient, Map<String, String> kafkaHeaders) {
+  protected Future<String> initJobExecution(String instanceId, ChangeManagerClient changeManagerClient, Map<String, String> kafkaHeaders) {
 
-    LOGGER.info("initJobExecution:: Receiving new JobExecution ...");
+    LOGGER.info("initJobExecution:: Receiving new JobExecution for sharing instance with InstanceId={} ...", instanceId);
     Promise<String> promise = Promise.promise();
     try {
 
@@ -105,24 +105,27 @@ public class RestDataImportHelper {
 
       changeManagerClient.postChangeManagerJobExecutions(initJobExecutionsRqDto, response -> {
         if (response.result().statusCode() != HttpStatus.SC_CREATED) {
-          LOGGER.error("initJobExecution:: Error receiving new JobExecution. " +
-            "Status message: {}. Status code: {}", response.result().statusMessage(), response.result().statusCode());
-          promise.fail(new HttpException("Error receiving JobExecutionId.", response.cause()));
+          String errorMessage = format("Error receiving new JobExecution for sharing instance with InstanceId=%s. " +
+            "Status message: %s. Status code: %s", instanceId, response.result().statusMessage(), response.result().statusCode());
+          LOGGER.error("initJobExecution:: {}", errorMessage);
+          promise.fail(new HttpException(errorMessage, response.cause()));
         } else {
           JsonObject responseBody = response.result().bodyAsJsonObject();
-          LOGGER.trace("initJobExecution:: ResponseBody: {}", responseBody);
+          LOGGER.trace("initJobExecution:: ResponseBody: {} for sharing instance with InstanceId={}.", responseBody, instanceId);
           JsonArray jobExecutions = responseBody.getJsonArray(FIELD_JOB_EXECUTIONS);
-          LOGGER.trace("initJobExecution:: ResponseBody.JobExecutions: {}", jobExecutions);
+          LOGGER.trace("initJobExecution:: ResponseBody.JobExecutions: {} for sharing instance with InstanceId={}.", jobExecutions, instanceId);
 
           if (jobExecutions == null || jobExecutions.isEmpty()) {
-            promise.fail("Response body doesn't contain JobExecution object");
+            String errorMessage = format("Response body doesn't contains JobExecution object for sharing instance with InstanceId=%s.", instanceId);
+            LOGGER.error("initJobExecution:: {}", errorMessage);
+            promise.fail(errorMessage);
           } else {
             promise.complete(jobExecutions.getJsonObject(0).getString(FIELD_ID));
           }
         }
       });
     } catch (Exception ex) {
-      LOGGER.error("initJobExecution:: Error init JobExecution. Error: {}.", ex.getMessage());
+      LOGGER.error("initJobExecution:: Error init JobExecution for sharing instance with InstanceId={}. Error: {}.", instanceId, ex.getMessage());
       promise.fail(ex);
     }
     return promise.future();
@@ -152,7 +155,7 @@ public class RestDataImportHelper {
   }
 
   private Future<String> postChunk(String jobExecutionId, Boolean shouldAcceptInstanceId,
-                                       RawRecordsDto rawRecordsDto, ChangeManagerClient changeManagerClient) {
+                                   RawRecordsDto rawRecordsDto, ChangeManagerClient changeManagerClient) {
     LOGGER.info("postChunk:: Sending data for jobExecutionId={}, shouldAcceptInstanceId={}.", jobExecutionId, shouldAcceptInstanceId);
     Promise<String> promise = Promise.promise();
     try {
@@ -213,7 +216,7 @@ public class RestDataImportHelper {
         String jobExecutionStatus = jobExecution.result();
         LOGGER.info("checkDataImportStatus:: Check import status for DI with jobExecutionId={}, InstanceId={}, JobExecutionStatus={}",
           sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionId, jobExecutionStatus);
-        if (jobExecutionStatus.equals(COMMITTED_STATUS) || jobExecutionStatus.equals(ERROR_STATUS)) {
+        if (jobExecutionStatus.equals(STATUS_COMMITTED) || jobExecutionStatus.equals(STATUS_ERROR)) {
           promise.complete(jobExecutionStatus);
         } else {
           vertx.setTimer(TimeUnit.SECONDS.toMillis(durationInSec), timerId ->
