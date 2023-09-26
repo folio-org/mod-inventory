@@ -4,13 +4,11 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
 import io.vertx.kafka.client.producer.KafkaProducer;
 import io.vertx.kafka.client.producer.KafkaProducerRecord;
-import org.apache.http.HttpException;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -31,21 +29,13 @@ import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.kafka.exception.DuplicateEventException;
 import org.folio.rest.client.ChangeManagerClient;
 import org.folio.rest.client.SourceStorageRecordsClient;
-import org.folio.rest.jaxrs.model.InitJobExecutionsRqDto;
-import org.folio.rest.jaxrs.model.InitialRecord;
 import org.folio.rest.jaxrs.model.JobProfileInfo;
-import org.folio.rest.jaxrs.model.RawRecordsDto;
-import org.folio.rest.jaxrs.model.RecordsMetadata;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.lang.String.format;
-import static java.util.Collections.singletonList;
 import static org.apache.commons.lang.StringUtils.EMPTY;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.folio.inventory.consortium.entities.SharingInstanceEventType.CONSORTIUM_INSTANCE_SHARING_COMPLETE;
@@ -60,7 +50,6 @@ import static org.folio.inventory.domain.items.Item.HRID_KEY;
 import static org.folio.okapi.common.XOkapiHeaders.TENANT;
 import static org.folio.okapi.common.XOkapiHeaders.TOKEN;
 import static org.folio.okapi.common.XOkapiHeaders.URL;
-import static org.folio.okapi.common.XOkapiHeaders.USER_ID;
 
 public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<String, String> {
 
@@ -74,6 +63,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   private final Vertx vertx;
   private final Storage storage;
   private final KafkaConfig kafkaConfig;
+  private final RestDataImportHelper dataImportService;
 
   public static final JobProfileInfo JOB_PROFILE_INFO = new JobProfileInfo()
     .withId("e34d7b92-9b83-11eb-a8b3-0242ac130003") //default stub id
@@ -84,6 +74,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     this.vertx = vertx;
     this.storage = storage;
     this.kafkaConfig = kafkaConfig;
+    this.dataImportService = new RestDataImportHelper(vertx);
   }
 
   @Override
@@ -158,7 +149,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
             SourceStorageRecordsClient sourceTenantStorageClient = getSourceStorageRecordsClient(sourceTenant, kafkaHeaders);
             getSourceMARCByInstanceId(instanceId, sourceTenant, sourceTenantStorageClient)
-              .compose(marcRecord -> publishInstanceWithMarcSource(marcRecord, sharingInstanceMetadata, kafkaHeaders)
+              .compose(marcRecord -> dataImportService.publishInstanceWithMarcSource(marcRecord, sharingInstanceMetadata, kafkaHeaders)
                 .compose(dataImportResult -> {
                     LOGGER.info("publishInstance :: Import MARC file result. {}", dataImportResult);
                     if (dataImportResult.equals(COMMITTED)) {
@@ -277,56 +268,6 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     return promise.future();
   }
 
-  private Future<String> publishInstanceWithMarcSource(Record marcRecord, SharingInstance sharingInstanceMetadata, Map<String, String> kafkaHeaders) {
-
-    String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
-    LOGGER.info("publishInstanceWithMarcSource:: Importing MARC record for instance with InstanceId={} to target tenant={}.",
-      sharingInstanceMetadata.getInstanceIdentifier(), sharingInstanceMetadata.getTargetTenantId());
-
-    Promise<String> promise = Promise.promise();
-    ChangeManagerClient targetManagerClient = getChangeManagerClient(kafkaHeaders);
-
-    initJobExecution(targetManagerClient, kafkaHeaders)
-      .compose(jobExecution -> {
-        String jobExecutionId = jobExecution.getString(ID);
-        LOGGER.info("New JobExcution initialized for import MARC record for instance with InstanceId={}, " +
-          "jobExecutionId={}", instanceId, jobExecutionId);
-
-        return setDefaultJobProfileToJobExecution(jobExecutionId, targetManagerClient)
-          .compose(ignore -> {
-            Object parsedRecord = JsonObject.mapFrom(marcRecord.getParsedRecord().getContent());
-
-            return postRecordToParsing(jobExecutionId, true,
-              buildDataChunk(false, singletonList(new InitialRecord().withRecord(parsedRecord.toString()))),
-              targetManagerClient)
-              .compose(ignore2 -> postRecordToParsing(jobExecutionId, false, buildDataChunk(true, new ArrayList<>()),
-                targetManagerClient))
-              .compose(ignore3 -> checkDataImportStatus(jobExecutionId, sharingInstanceMetadata, 20L, 3, targetManagerClient));
-          })
-          .onSuccess(dataImportResult -> {
-            LOGGER.info("Import MARC file for instance with InstanceId={} has been finished to the target tenant={}. " +
-              "Data import result: {}", instanceId, sharingInstanceMetadata.getTargetTenantId(), dataImportResult);
-            promise.complete(dataImportResult);
-          })
-          .onFailure(throwable -> {
-            String errorMessage = String.format("Failed to import MARC file for instance with InstanceId=%s and target tenant=%s.",
-              instanceId, sharingInstanceMetadata.getTargetTenantId());
-            LOGGER.error(errorMessage, throwable);
-            sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
-            promise.fail(throwable);
-          });
-      })
-      .onFailure(throwable -> {
-        String errorMessage = String.format("Failed to initialize job execution for MARC file import to the target tenant=%s.",
-          sharingInstanceMetadata.getTargetTenantId());
-        LOGGER.error(errorMessage, throwable);
-        sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
-        promise.fail(throwable);
-      });
-
-    return promise.future();
-  }
-
   private InstanceCollection getTenantSpecificSourceCollection(String tenantId, Map<String, String> kafkaHeaders) {
     return storage.getInstanceCollection(
       EventHandlingUtil.constructContext(
@@ -334,90 +275,6 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
         kafkaHeaders.get(TOKEN.toLowerCase()),
         kafkaHeaders.get(URL.toLowerCase()))
     );
-  }
-
-  private RawRecordsDto buildDataChunk(boolean isLast, List<InitialRecord> data) {
-    return new RawRecordsDto()
-      .withId(UUID.randomUUID().toString())
-      .withRecordsMetadata(new RecordsMetadata()
-        .withLast(isLast)
-        .withCounter(1)
-        .withTotal(1)
-        .withContentType(RecordsMetadata.ContentType.MARC_JSON))
-      .withInitialRecords(data);
-  }
-
-  protected Future<String> checkDataImportStatus(String jobExecutionId, SharingInstance sharingInstanceMetadata,
-                                               Long durationInSec, Integer attemptsNumber, ChangeManagerClient client) {
-
-    LOGGER.info("checkDataImportStatus:: InstanceId={}, jobExecutionId={}. Start.",
-      sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionId);
-
-    Promise<String> promise = Promise.promise();
-    AtomicInteger counter = new AtomicInteger(0);
-
-    try {
-      vertx.setPeriodic(TimeUnit.SECONDS.toMillis(durationInSec), timerId -> {
-        LOGGER.info("checkDataImportStatus:: Checking import status by jobExecutionId={}. InstanceId={}.",
-          sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionId);
-
-        getJobExecutionById(jobExecutionId, client)
-          .onComplete(jobExecution -> {
-            if (jobExecution.succeeded()) {
-              JsonObject jobExecutionJson = new JsonObject(jobExecution.result());
-              String jobExecutionStatus = jobExecutionJson.getString(STATUS);
-              LOGGER.trace("checkDataImportStatus:: Check import status for DI with jobExecutionId={}. " +
-                  "InstanceId={}. JobExecution={}", sharingInstanceMetadata.getInstanceIdentifier(),
-                jobExecutionId, jobExecutionStatus);
-              if (jobExecutionStatus.equals(COMMITTED) || jobExecutionStatus.equals(ERROR)) {
-                vertx.cancelTimer(timerId);
-                promise.complete(jobExecutionJson.getString(STATUS));
-              }
-            } else {
-              vertx.cancelTimer(timerId);
-              String errorMessage = String.format("Failed get jobExecutionId=%s for DI with InstanceId=%s. " +
-                "Error: %s", jobExecutionId, sharingInstanceMetadata.getInstanceIdentifier(), jobExecution.cause().getMessage());
-              LOGGER.error("checkDataImportStatus:: {}", errorMessage);
-              promise.fail(errorMessage);
-            }
-
-            if (counter.getAndIncrement() > attemptsNumber) {
-              vertx.cancelTimer(timerId);
-              String errorMessage = String.format("Number of attempts=%s to check DI status has ended for jobExecutionId=%s",
-                counter.get(), jobExecutionId);
-              LOGGER.info(errorMessage);
-              promise.fail(errorMessage);
-            }
-          });
-      });
-    } catch (Exception ex) {
-      LOGGER.error("checkDataImportStatus:: Checking DI status failed", ex);
-      promise.fail(ex);
-    }
-    return promise.future();
-  }
-
-  protected Future<String> getJobExecutionById(String jobExecutionId, ChangeManagerClient client) {
-
-    LOGGER.info("getJobExecutionById:: Getting jobExecution by jobExecutionId={}.", jobExecutionId);
-    Promise<String> promise = Promise.promise();
-    try {
-      client.getChangeManagerJobExecutionsById(jobExecutionId, response -> {
-        if (response.result().statusCode() != HttpStatus.SC_OK) {
-          String errorMessage = format("Error getting jobExecution by jobExecutionId=%s. " +
-              "Status message: %s. Status code: %s", jobExecutionId, response.result().statusMessage(),
-            response.result().statusCode());
-          LOGGER.error(errorMessage);
-          promise.fail(errorMessage);
-        } else {
-          promise.complete(response.result().bodyAsJsonObject().toString());
-        }
-      });
-    } catch (Exception ex) {
-      LOGGER.error("getJobExecutionById:: Error getting jobExecution by jobExecutionId={}.", jobExecutionId, ex);
-      promise.fail(ex);
-    }
-    return promise.future();
   }
 
   private Future<Record> getSourceMARCByInstanceId(String instanceId, String sourceTenant, SourceStorageRecordsClient client) {
@@ -446,88 +303,6 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
           promise.fail(resp.cause());
         }
       });
-    return promise.future();
-  }
-
-  private Future<JsonObject> initJobExecution(ChangeManagerClient client, Map<String, String> kafkaHeaders) {
-
-    LOGGER.info("initJobExecution:: Receiving new JobExecution ...");
-    Promise<JsonObject> promise = Promise.promise();
-    try {
-
-      InitJobExecutionsRqDto initJobExecutionsRqDto = new InitJobExecutionsRqDto()
-        .withSourceType(InitJobExecutionsRqDto.SourceType.ONLINE)
-        .withUserId(kafkaHeaders.get(USER_ID.toLowerCase()));
-
-      client.postChangeManagerJobExecutions(initJobExecutionsRqDto, response -> {
-        if (response.result().statusCode() != HttpStatus.SC_CREATED) {
-          LOGGER.error("initJobExecution:: Error receiving new JobExecution. " +
-            "Status message: {}. Status code: {}", response.result().statusMessage(), response.result().statusCode());
-          promise.fail(new HttpException("Error receiving JobExecutionId.", response.cause()));
-        } else {
-          JsonObject responseBody = response.result().bodyAsJsonObject();
-          LOGGER.trace("initJobExecution:: ResponseBody: {}", responseBody);
-          JsonArray jobExecutions = responseBody.getJsonArray("jobExecutions");
-          LOGGER.trace("initJobExecution:: ResponseBody.JobExecutions: {}", jobExecutions);
-
-          if (jobExecutions.isEmpty()) {
-            promise.fail("Response body doesn't contains JobExecution object");
-          } else {
-            promise.complete(jobExecutions.getJsonObject(0));
-          }
-        }
-      });
-    } catch (Exception ex) {
-      LOGGER.error(format("initJobExecution :: Error init JobExecution. Error: %s", ex.getMessage()));
-      promise.fail(ex);
-    }
-    return promise.future();
-  }
-
-  private Future<JsonObject> setDefaultJobProfileToJobExecution(String jobExecutionId, ChangeManagerClient client) {
-    LOGGER.info("setJobProfileToJobExecution:: Linking JobProfile to JobExecution with jobExecutionId={}", jobExecutionId);
-    Promise<JsonObject> promise = Promise.promise();
-    try {
-      client.putChangeManagerJobExecutionsJobProfileById(jobExecutionId, JOB_PROFILE_INFO, response -> {
-        if (response.result().statusCode() != HttpStatus.SC_OK) {
-          LOGGER.warn("setJobProfileToJobExecution:: Failed to set JobProfile for JobExecution. " +
-            "Status message: {}. Status code: {}", response.result().statusMessage(), response.result().statusCode());
-          promise.fail(new HttpException(format("Failed to set JobProfile for JobExecution with jobExecutionId=%s.",
-            jobExecutionId), response.cause()));
-        } else {
-          LOGGER.trace("setJobProfileToJobExecution:: Response: {}", response.result().bodyAsJsonObject());
-          promise.complete(response.result().bodyAsJsonObject());
-        }
-      });
-    } catch (Exception ex) {
-      LOGGER.error(format("setJobProfileToJobExecution:: Failed to link JobProfile to JobExecution " +
-        "with jobExecutionId=%s. Error: %s", jobExecutionId, ex.getCause()));
-      promise.fail(ex);
-    }
-    return promise.future();
-  }
-
-  private Future<JsonObject> postRecordToParsing(String jobExecutionId, Boolean acceptInstanceId,
-                                                 RawRecordsDto rawRecordsDto, ChangeManagerClient client) {
-    LOGGER.info("postRecordToParsing :: Sending data for jobExecutionId={}, acceptInstanceId={}.",
-      jobExecutionId, acceptInstanceId);
-    Promise<JsonObject> promise = Promise.promise();
-    try {
-      client.postChangeManagerJobExecutionsRecordsById(jobExecutionId, acceptInstanceId, rawRecordsDto, response -> {
-        if (response.result().statusCode() != HttpStatus.SC_NO_CONTENT) {
-          LOGGER.error("postRecordToParsing:: Failed sending data. Status message: {}. Status code: {}.",
-            response.result().statusMessage(), response.result().statusCode());
-          promise.fail(new HttpException("Failed sending record data.", response.cause()));
-        } else {
-          LOGGER.info("postRecordToParsing:: Sending data result: {}", response.result());
-          promise.complete(response.result().bodyAsJsonObject());
-        }
-      });
-    } catch (Exception e) {
-      LOGGER.error("postRecordToParsing:: Error sending data for jobExecutionId={}. Error: {}",
-        jobExecutionId, e.getMessage());
-      promise.fail(e);
-    }
     return promise.future();
   }
 
