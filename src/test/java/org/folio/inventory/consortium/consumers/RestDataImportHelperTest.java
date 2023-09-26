@@ -13,6 +13,7 @@ import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.impl.HttpResponseImpl;
 import org.folio.HttpStatus;
 import org.folio.rest.client.ChangeManagerClient;
+import org.folio.rest.jaxrs.model.JobProfileInfo;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -20,8 +21,11 @@ import org.junit.runner.RunWith;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
+import static org.folio.inventory.consortium.consumers.RestDataImportHelper.FIELD_JOB_EXECUTIONS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -44,11 +48,10 @@ public class RestDataImportHelperTest {
 
     // given
     Map<String, String> kafkaHeaders = new HashMap<>();
-    String tenantId = "consortium";
-    String expectedJobExecutionId = "jobExecutionId";
+    String expectedJobExecutionId = UUID.randomUUID().toString();
 
     JsonObject responseBody = new JsonObject()
-      .put("jobExecutions", new JsonArray().add(new JsonObject().put("id", expectedJobExecutionId)));
+      .put(FIELD_JOB_EXECUTIONS, new JsonArray().add(new JsonObject().put("id", expectedJobExecutionId)));
 
     HttpResponseImpl<Buffer> jobExecutionResponse =
       buildHttpResponseWithBuffer(HttpStatus.HTTP_CREATED, BufferImpl.buffer(responseBody.encode()));
@@ -61,19 +64,19 @@ public class RestDataImportHelperTest {
     }).when(changeManagerClient).postChangeManagerJobExecutions(any(), any());
 
     // when
-    restDataImportHelper.initJobExecution(tenantId, changeManagerClient, kafkaHeaders).onComplete(asyncResult -> {
-      // then
-      assertTrue(asyncResult.succeeded());
-      assertEquals(expectedJobExecutionId, asyncResult.result());
-    });
+    restDataImportHelper.initJobExecution(UUID.randomUUID().toString(), changeManagerClient, kafkaHeaders)
+      .onComplete(asyncResult -> {
+        // then
+        assertTrue(asyncResult.succeeded());
+        assertEquals(expectedJobExecutionId, asyncResult.result());
+      });
   }
 
   @Test
-  public void initJobExecutionInternalServerErrorTest() {
+  public void initJobExecutionFailedInternalServerErrorTest() {
 
     // given
     Map<String, String> kafkaHeaders = new HashMap<>();
-    String tenantId = "consortium";
     HttpResponseImpl<Buffer> jobExecutionResponse =
       buildHttpResponseWithBuffer(HttpStatus.HTTP_INTERNAL_SERVER_ERROR, null);
     Future<HttpResponse<Buffer>> futureResponse = Future.succeededFuture(jobExecutionResponse);
@@ -85,12 +88,13 @@ public class RestDataImportHelperTest {
     }).when(changeManagerClient).postChangeManagerJobExecutions(any(), any());
 
     // when
-    restDataImportHelper.initJobExecution(tenantId, changeManagerClient, kafkaHeaders).onComplete(asyncResult -> {
-      // then
-      assertTrue(asyncResult.failed());
-      assertEquals("Error receiving new JobExecution for sharing instance with InstanceId=consortium. Status message: Ok. Status code: 500",
-        asyncResult.cause().getMessage());
-    });
+    restDataImportHelper.initJobExecution(UUID.randomUUID().toString(), changeManagerClient, kafkaHeaders)
+      .onComplete(asyncResult -> {
+        // then
+        assertTrue(asyncResult.failed());
+        assertEquals("Error receiving new JobExecution for sharing instance with InstanceId=consortium. Status message: Ok. Status code: 500",
+          asyncResult.cause().getMessage());
+      });
   }
 
   @Test
@@ -98,9 +102,6 @@ public class RestDataImportHelperTest {
 
     // given
     Map<String, String> kafkaHeaders = new HashMap<>();
-    String tenantId = "consortium";
-    String expectedJobExecutionId = "jobExecutionId";
-
     JsonObject responseBody = new JsonObject().put("jobExecutions", new JsonArray().add(""));
 
     HttpResponseImpl<Buffer> jobExecutionResponse =
@@ -114,11 +115,86 @@ public class RestDataImportHelperTest {
     }).when(changeManagerClient).postChangeManagerJobExecutions(any(), any());
 
     // when
-    restDataImportHelper.initJobExecution(tenantId, changeManagerClient, kafkaHeaders).onComplete(asyncResult -> {
-      // then
-      assertTrue(asyncResult.failed());
-      assertEquals("class java.lang.String cannot be cast to class io.vertx.core.json.JsonObject (java.lang.String is in module java.base of loader 'bootstrap'; io.vertx.core.json.JsonObject is in unnamed module of loader 'app')", asyncResult.cause().getMessage());
-    });
+    restDataImportHelper.initJobExecution(UUID.randomUUID().toString(), changeManagerClient, kafkaHeaders)
+      .onComplete(asyncResult -> {
+        // then
+        assertTrue(asyncResult.failed());
+        assertEquals("class java.lang.String cannot be cast to class io.vertx.core.json.JsonObject (java.lang.String is in module java.base of loader 'bootstrap'; io.vertx.core.json.JsonObject is in unnamed module of loader 'app')", asyncResult.cause().getMessage());
+      });
+  }
+
+  @Test
+  public void initJobExecutionFailedWithJobExecutionsEmptyArrayTest() {
+
+    // given
+    Map<String, String> kafkaHeaders = new HashMap<>();
+    HttpResponseImpl<Buffer> jobExecutionResponse =
+      buildHttpResponseWithBuffer(HttpStatus.HTTP_CREATED, BufferImpl.buffer("{\"jobExecutions\":[]}"));
+    Future<HttpResponse<Buffer>> futureResponse = Future.succeededFuture(jobExecutionResponse);
+
+    doAnswer(invocation -> {
+      Handler<AsyncResult<HttpResponse<Buffer>>> handler = invocation.getArgument(1);
+      handler.handle(futureResponse);
+      return null;
+    }).when(changeManagerClient).postChangeManagerJobExecutions(any(), any());
+
+    // when
+    restDataImportHelper.initJobExecution(UUID.randomUUID().toString(), changeManagerClient, kafkaHeaders)
+      .onComplete(asyncResult -> {
+        // then
+        assertTrue(asyncResult.failed());
+        assertEquals("class java.lang.String cannot be cast to class io.vertx.core.json.JsonObject (java.lang.String is in module java.base of loader 'bootstrap'; io.vertx.core.json.JsonObject is in unnamed module of loader 'app')", asyncResult.cause().getMessage());
+      });
+  }
+
+  @Test
+  public void setDefaultJobProfileToJobExecutionTest() {
+
+    // given
+    String expectedJobExecutionId = UUID.randomUUID().toString();
+
+    HttpResponseImpl<Buffer> jobExecutionResponse =
+      buildHttpResponseWithBuffer(HttpStatus.HTTP_OK, null);
+    Future<HttpResponse<Buffer>> futureResponse = Future.succeededFuture(jobExecutionResponse);
+
+    doAnswer(invocation -> {
+      Handler<AsyncResult<HttpResponse<Buffer>>> handler = invocation.getArgument(2);
+      handler.handle(futureResponse);
+      return null;
+    }).when(changeManagerClient).putChangeManagerJobExecutionsJobProfileById(any(), any(JobProfileInfo.class), any());
+
+    // when
+    restDataImportHelper.setDefaultJobProfileToJobExecution(expectedJobExecutionId, changeManagerClient)
+      .onComplete(asyncResult -> {
+        // then
+        assertTrue(asyncResult.succeeded());
+        assertEquals(expectedJobExecutionId, asyncResult.result());
+      });
+  }
+
+  @Test
+  public void setDefaultJobProfileToJobExecutionFailedInternalServerErrorTest() {
+
+    // given
+    String expectedJobExecutionId = UUID.randomUUID().toString();
+
+    HttpResponseImpl<Buffer> jobExecutionResponse =
+      buildHttpResponseWithBuffer(HttpStatus.HTTP_INTERNAL_SERVER_ERROR, null);
+    Future<HttpResponse<Buffer>> futureResponse = Future.succeededFuture(jobExecutionResponse);
+
+    doAnswer(invocation -> {
+      Handler<AsyncResult<HttpResponse<Buffer>>> handler = invocation.getArgument(2);
+      handler.handle(futureResponse);
+      return null;
+    }).when(changeManagerClient).putChangeManagerJobExecutionsJobProfileById(any(), any(JobProfileInfo.class), any());
+
+    // when
+    restDataImportHelper.setDefaultJobProfileToJobExecution(expectedJobExecutionId, changeManagerClient)
+      .onComplete(asyncResult -> {
+        // then
+        assertFalse(asyncResult.succeeded());
+        assertEquals("Failed to set JobProfile for JobExecution with jobExecutionId=0cd88adb-f193-4497-b7fb-dd1f6efb5973. Status message: Ok. Status code: 500", asyncResult.cause().getMessage());
+      });
   }
 
   @Test

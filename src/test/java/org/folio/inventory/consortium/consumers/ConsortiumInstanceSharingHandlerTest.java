@@ -49,16 +49,11 @@ import static org.folio.inventory.consortium.consumers.ConsortiumInstanceSharing
 import static org.folio.inventory.consortium.entities.SharingStatus.IN_PROGRESS;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
@@ -600,38 +595,6 @@ public class ConsortiumInstanceSharingHandlerTest {
       async.complete();
     });
   }
-
-  @Ignore
-  @Test
-  public void testGetJobExecutionByIdSuccess() {
-
-    // given
-    String jobExecutionId = "52dae5b1-616f-40d1-802a-aa449c6ad678";
-    HttpResponseImpl<Buffer> jobExecutionResponse =
-      buildHttpResponseWithBuffer(HttpStatus.HTTP_OK, BufferImpl.buffer("{}"));
-
-    Future<HttpResponse<Buffer>> futureResponse = Future.succeededFuture(jobExecutionResponse);
-
-    when(kafkaRecord.headers()).thenReturn(
-      List.of(KafkaHeader.header(OKAPI_TOKEN_HEADER, "token"),
-        KafkaHeader.header(OKAPI_URL_HEADER, "url")));
-
-    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig);
-
-    doAnswer(invocation -> {
-      Handler<AsyncResult<HttpResponse<Buffer>>> handler = invocation.getArgument(1);
-      handler.handle(futureResponse);
-      return null;
-    }).when(mockedTargetManagerClient).getChangeManagerJobExecutionsById(eq(jobExecutionId), any());
-
-    // when
-    //Future<String> actual = consortiumInstanceSharingHandler.getJobExecutionById(jobExecutionId, mockedTargetManagerClient);
-
-    // then
-    //assertTrue(actual.succeeded());
-    //assertEquals(jobExecutionResponse.bodyAsString(), actual.result());
-  }
-
 
   @AfterClass
   public static void tearDownClass(TestContext context) {

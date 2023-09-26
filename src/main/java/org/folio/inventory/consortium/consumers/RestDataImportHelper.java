@@ -131,18 +131,19 @@ public class RestDataImportHelper {
     return promise.future();
   }
 
-  private Future<String> setDefaultJobProfileToJobExecution(String jobExecutionId, ChangeManagerClient changeManagerClient) {
+  protected Future<String> setDefaultJobProfileToJobExecution(String jobExecutionId, ChangeManagerClient changeManagerClient) {
     LOGGER.info("setDefaultJobProfileToJobExecution:: Linking JobProfile to JobExecution with jobExecutionId={}", jobExecutionId);
     Promise<String> promise = Promise.promise();
     try {
       changeManagerClient.putChangeManagerJobExecutionsJobProfileById(jobExecutionId, JOB_PROFILE_INFO, response -> {
         if (response.result().statusCode() != HttpStatus.SC_OK) {
-          LOGGER.warn("setDefaultJobProfileToJobExecution:: Failed to set JobProfile for JobExecution. " +
-            "Status message: {}. Status code: {}", response.result().statusMessage(), response.result().statusCode());
-          promise.fail(new HttpException(format("Failed to set JobProfile for JobExecution with jobExecutionId=%s.",
-            jobExecutionId), response.cause()));
+          String errorMessage = format("Failed to set JobProfile for JobExecution with jobExecutionId=%s. " +
+            "Status message: %s. Status code: %s", jobExecutionId, response.result().statusMessage(), response.result().statusCode());
+          LOGGER.warn("setDefaultJobProfileToJobExecution:: {}", errorMessage);
+          promise.fail(new HttpException(format(errorMessage, jobExecutionId), response.cause()));
         } else {
-          LOGGER.trace("setDefaultJobProfileToJobExecution:: Response: {}", response.result().bodyAsJsonObject());
+          LOGGER.trace("setDefaultJobProfileToJobExecution:: Response: {} set JobProfile for JobExecution with jobExecutionId={}.",
+            response.result().bodyAsJsonObject(), jobExecutionId);
           promise.complete(jobExecutionId);
         }
       });
