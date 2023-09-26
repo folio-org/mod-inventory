@@ -8,9 +8,11 @@ import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.folio.inventory.domain.HoldingsRecordCollection;
+import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.events.services.handler.EventHandler;
@@ -20,6 +22,7 @@ import org.folio.rest.jaxrs.model.Record;
 import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import static java.lang.String.format;
 import static java.util.Objects.isNull;
@@ -27,6 +30,7 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MATCHED_READY_FOR_POST_PROCESSING;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.getTenant;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 
 public class MarcBibMatchedPostProcessingEventHandler implements EventHandler {
@@ -63,7 +67,7 @@ public class MarcBibMatchedPostProcessingEventHandler implements EventHandler {
 
       Record matchedRecord = new JsonObject(payloadContext.get(MATCHED_MARC_BIB_KEY)).mapTo(Record.class);
       String instanceId = ParsedRecordUtil.getAdditionalSubfieldValue(matchedRecord.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.I);
-      Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+      Context context = EventHandlingUtil.constructContext(getTenant(dataImportEventPayload), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
       HoldingsRecordCollection holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
       if (isBlank(instanceId)) {
@@ -74,6 +78,8 @@ public class MarcBibMatchedPostProcessingEventHandler implements EventHandler {
       instanceCollection.findById(instanceId)
         .whenComplete((v, t) -> {
           if (t == null && v != null) {
+            LOGGER.debug("handle:: Instance found during marcBibMatchPostProcessing, tenantId: {}, instanceId: {}",
+              context.getTenantId(), instanceId);
             dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(v));
             try {
               holdingsRecordCollection.findByCql(format("instanceId=%s", v.getId()), PagingParameters.defaults(),

@@ -21,9 +21,11 @@ import static org.hamcrest.Matchers.emptyOrNullString;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+import io.vertx.core.http.HttpHeaders;
 import org.folio.inventory.common.VertxAssistant;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -33,9 +35,7 @@ import org.junit.Test;
 import com.github.tomakehurst.wiremock.client.MappingBuilder;
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
 
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.client.WebClient;
 import lombok.SneakyThrows;
 
 public class OkapiHttpClientTests {
@@ -82,6 +82,34 @@ public class OkapiHttpClientTests {
 
     final var postCompleted = client.post(
       fakeWebServer.url("/record"), dummyJsonRequestBody());
+
+    final var response = postCompleted.toCompletableFuture().get(2, SECONDS);
+
+    assertThat(response.getStatusCode(), is(HTTP_CREATED.toInt()));
+    assertThat(response.getJson().getString("message"), is("hello"));
+    assertThat(response.getContentType(), is("application/json"));
+    assertThat(response.getLocation(), is(locationResponseHeader));
+
+  }
+
+  @SneakyThrows
+  @Test
+  public void canPostWithHeaders() {
+    final String locationResponseHeader = "/a-different-location";
+
+    Map<String, String> headers = Map.of(HttpHeaders.CONTENT_TYPE.toString(), "application/test");
+
+    fakeWebServer.stubFor(matchingFolioHeaders(post(urlPathEqualTo("/record")))
+      .withHeader("Content-Type", equalTo("application/test"))
+      .withRequestBody(equalToJson(dummyJsonRequestBody().encodePrettily()))
+      .willReturn(created().withBody(dummyJsonResponseBody())
+        .withHeader("Content-Type", "application/json")
+        .withHeader("Location", locationResponseHeader)));
+
+    OkapiHttpClient client = createClient();
+
+    final var postCompleted = client.post(
+      fakeWebServer.url("/record"), dummyJsonRequestBody().encode(), headers);
 
     final var response = postCompleted.toCompletableFuture().get(2, SECONDS);
 
