@@ -32,6 +32,9 @@ import static org.folio.okapi.common.XOkapiHeaders.TOKEN;
 import static org.folio.okapi.common.XOkapiHeaders.URL;
 import static org.folio.okapi.common.XOkapiHeaders.USER_ID;
 
+/**
+ * Helper class for importing MARC records with endpoints.
+ */
 public class RestDataImportHelper {
 
   private static final Logger LOGGER = LogManager.getLogger(RestDataImportHelper.class);
@@ -54,6 +57,14 @@ public class RestDataImportHelper {
     .withName("Default - Create instance and SRS MARC Bib")
     .withDataType(JobProfileInfo.DataType.MARC);
 
+  /**
+   * Import MARC record to tenant.
+   *
+   * @param marcRecord - MARC record
+   * @param sharingInstanceMetadata - sharing instance metadata
+   * @param kafkaHeaders - kafka headers
+   * @return - future with "COMMITTED" | "ERROR" or failed status
+   */
   public Future<String> publishInstanceWithMarcSource(Record marcRecord, SharingInstance sharingInstanceMetadata, Map<String, String> kafkaHeaders) {
 
     String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
