@@ -1,5 +1,6 @@
 package org.folio.inventory.consortium.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
@@ -12,6 +13,7 @@ import java.util.UUID;
  * Entity that is used for sharing instance process
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonIgnoreProperties(ignoreUnknown = true)
 @JsonPropertyOrder({"id", "instanceIdentifier", "sourceTenantId", "targetTenantId", "status", "error"})
 public class SharingInstance {
 
