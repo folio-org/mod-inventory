@@ -76,6 +76,7 @@ public class RestDataImportHelperTest {
   public void initJobExecutionFailedInternalServerErrorTest() {
 
     // given
+    String expectedJobExecutionId = UUID.randomUUID().toString();
     Map<String, String> kafkaHeaders = new HashMap<>();
     HttpResponseImpl<Buffer> jobExecutionResponse =
       buildHttpResponseWithBuffer(HttpStatus.HTTP_INTERNAL_SERVER_ERROR, null);
@@ -88,12 +89,12 @@ public class RestDataImportHelperTest {
     }).when(changeManagerClient).postChangeManagerJobExecutions(any(), any());
 
     // when
-    restDataImportHelper.initJobExecution(UUID.randomUUID().toString(), changeManagerClient, kafkaHeaders)
+    restDataImportHelper.initJobExecution(expectedJobExecutionId, changeManagerClient, kafkaHeaders)
       .onComplete(asyncResult -> {
         // then
         assertTrue(asyncResult.failed());
-        assertEquals("Error receiving new JobExecution for sharing instance with InstanceId=consortium. Status message: Ok. Status code: 500",
-          asyncResult.cause().getMessage());
+        assertEquals("Error receiving new JobExecution for sharing instance with InstanceId=" +
+          expectedJobExecutionId + ". Status message: Ok. Status code: 500", asyncResult.cause().getMessage());
       });
   }
 
@@ -127,6 +128,7 @@ public class RestDataImportHelperTest {
   public void initJobExecutionFailedWithJobExecutionsEmptyArrayTest() {
 
     // given
+    String expectedJobExecutionId = UUID.randomUUID().toString();
     Map<String, String> kafkaHeaders = new HashMap<>();
     HttpResponseImpl<Buffer> jobExecutionResponse =
       buildHttpResponseWithBuffer(HttpStatus.HTTP_CREATED, BufferImpl.buffer("{\"jobExecutions\":[]}"));
@@ -139,11 +141,12 @@ public class RestDataImportHelperTest {
     }).when(changeManagerClient).postChangeManagerJobExecutions(any(), any());
 
     // when
-    restDataImportHelper.initJobExecution(UUID.randomUUID().toString(), changeManagerClient, kafkaHeaders)
+    restDataImportHelper.initJobExecution(expectedJobExecutionId, changeManagerClient, kafkaHeaders)
       .onComplete(asyncResult -> {
         // then
         assertTrue(asyncResult.failed());
-        assertEquals("class java.lang.String cannot be cast to class io.vertx.core.json.JsonObject (java.lang.String is in module java.base of loader 'bootstrap'; io.vertx.core.json.JsonObject is in unnamed module of loader 'app')", asyncResult.cause().getMessage());
+        assertEquals("Response body doesn't contains JobExecution object for sharing instance with InstanceId=" +
+          expectedJobExecutionId + ".", asyncResult.cause().getMessage());
       });
   }
 
@@ -193,7 +196,8 @@ public class RestDataImportHelperTest {
       .onComplete(asyncResult -> {
         // then
         assertFalse(asyncResult.succeeded());
-        assertEquals("Failed to set JobProfile for JobExecution with jobExecutionId=0cd88adb-f193-4497-b7fb-dd1f6efb5973. Status message: Ok. Status code: 500", asyncResult.cause().getMessage());
+        assertEquals("Failed to set JobProfile for JobExecution with jobExecutionId=" +
+          expectedJobExecutionId + ". Status message: Ok. Status code: 500", asyncResult.cause().getMessage());
       });
   }
 
