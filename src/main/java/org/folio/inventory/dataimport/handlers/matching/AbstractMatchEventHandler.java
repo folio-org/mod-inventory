@@ -90,20 +90,27 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
       .toCompletionStage().toCompletableFuture()
       .thenCompose(consortiumConfiguration -> {
         if (consortiumConfiguration.isPresent() && !consortiumConfiguration.get().getCentralTenantId().equals(context.getTenantId())) {
+          LOGGER.debug("matchCentralTenantIfNeeded:: Start matching on central tenant with id: {}", consortiumConfiguration.get().getCentralTenantId());
           String localMatchedInstance = dataImportEventPayload.getContext().get(getEntityType().value());
           preparePayloadBeforeConsortiumProcessing(dataImportEventPayload, consortiumConfiguration.get(), mappingMetadataDto, matchingParametersRelations);
           return MatchingManager.match(dataImportEventPayload)
             .thenCompose(isMatchedConsortium -> {
               dataImportEventPayload.setTenant(context.getTenantId());
               if (isMatchedConsortium && isMatchedLocal) {
+                LOGGER.warn("matchCentralTenantIfNeeded:: Found multiple results during matching on local tenant: {} and central tenant: {} ",
+                  consortiumConfiguration.get().getCentralTenantId(), context.getTenantId());
                 return CompletableFuture.failedFuture(new MatchingException(String.format(FOUND_MULTIPLE_ENTITIES, context.getTenantId(), consortiumConfiguration.get().getCentralTenantId())));
               }
               if (StringUtils.isEmpty(dataImportEventPayload.getContext().get(getEntityType().value()))) {
+                LOGGER.debug("matchCentralTenantIfNeeded:: Matched on local tenant: {}", context.getTenantId());
                 dataImportEventPayload.getContext().put(getEntityType().value(), localMatchedInstance);
+              } else {
+                LOGGER.debug("matchCentralTenantIfNeeded:: Matched on central tenant: {}", consortiumConfiguration.get().getCentralTenantId());
               }
               return CompletableFuture.completedFuture(isMatchedConsortium || isMatchedLocal);
             });
         }
+        LOGGER.debug("matchCentralTenantIfNeeded:: Consortium configuration for tenant: {} not found", context.getTenantId());
         return CompletableFuture.completedFuture(isMatchedLocal);
       });
   }
