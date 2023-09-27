@@ -124,6 +124,25 @@ public class OkapiHttpClient {
       .thenCompose(OkapiHttpClient::mapAsyncResultToCompletionStage);
   }
 
+  public CompletionStage<Response> post(String url, String body, Map<String, String> headers) {
+    final var futureResponse = new CompletableFuture<AsyncResult<HttpResponse<Buffer>>>();
+
+    final HttpRequest<Buffer> request = withStandardHeaders(webClient.postAbs(url));
+
+    for (Map.Entry<String, String> headerEntry : headers.entrySet()) {
+      request.putHeader(headerEntry.getKey(), headerEntry.getValue());
+    }
+
+    final var buffer = body != null
+      ? Buffer.buffer(body)
+      : Buffer.buffer();
+
+    request.sendBuffer(buffer, futureResponse::complete);
+
+    return futureResponse
+      .thenCompose(OkapiHttpClient::mapAsyncResultToCompletionStage);
+  }
+
   public CompletionStage<Response> put(URL url, JsonObject body) {
     return put(url.toString(), body);
   }

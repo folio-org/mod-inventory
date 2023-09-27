@@ -26,6 +26,9 @@ import org.junit.runner.RunWith;
 
 import java.util.UUID;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static io.vertx.core.http.HttpHeaders.CONTENT_TYPE;
+import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
 
 @RunWith(VertxUnitRunner.class)
 public class ConsortiumServiceTest {
@@ -65,7 +68,8 @@ public class ConsortiumServiceTest {
     sharingInstance.setStatus(SharingStatus.COMPLETE);
 
     WireMock.stubFor(WireMock.post(new UrlPathPattern(new RegexPattern("/consortia/" + consortiumId + "/sharing/instances"), true))
-      .willReturn(WireMock.ok().withBody(Json.encode(sharingInstance))));
+      .withHeader(CONTENT_TYPE.toString(), equalTo(APPLICATION_JSON))
+      .willReturn(WireMock.created().withBody(Json.encode(sharingInstance))));
   }
 
   @Test
@@ -148,9 +152,9 @@ public class ConsortiumServiceTest {
     Context context = EventHandlingUtil.constructContext(localTenant, token, baseUrl);
     consortiumServiceImpl.createShadowInstance(context, instanceId.toString(), new ConsortiumConfiguration(centralTenantId, consortiumId)).onComplete(ar -> {
       WireMock.verify(WireMock.postRequestedFor(WireMock.urlEqualTo("/consortia/" + consortiumId + "/sharing/instances"))
-        .withHeader(TENANT_HEADER, WireMock.equalTo(centralTenantId))
-        .withHeader(TOKEN_HEADER, WireMock.equalTo(token))
-        .withHeader(OKAPI_URL_HEADER, WireMock.equalTo(context.getOkapiLocation())));
+        .withHeader(TENANT_HEADER, equalTo(centralTenantId))
+        .withHeader(TOKEN_HEADER, equalTo(token))
+        .withHeader(OKAPI_URL_HEADER, equalTo(context.getOkapiLocation())));
 
       testContext.assertTrue(ar.succeeded());
       testContext.assertEquals(ar.result().getStatus(), SharingStatus.COMPLETE);

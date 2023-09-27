@@ -55,8 +55,8 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPP
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -67,6 +67,7 @@ public class MarcBibModifiedPostProcessingEventHandlerTest {
   private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
   private static final String PRECEDING_SUCCEEDING_TITLES_KEY = "precedingSucceedingTitles";
   private static final String OKAPI_URL = "http://localhost";
+  private static final String CENTRAL_TENANT_ID = "centralTenantId";
 
   @Mock
   private Storage mockedStorage;
@@ -140,6 +141,42 @@ public class MarcBibModifiedPostProcessingEventHandlerTest {
 
     PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper = new PrecedingSucceedingTitlesHelper(ctxt -> mockedOkapiHttpClient);
     marcBibModifiedEventHandler = new MarcBibModifiedPostProcessingEventHandler(new InstanceUpdateDelegate(mockedStorage), precedingSucceedingTitlesHelper, mappingMetadataCache);
+  }
+
+  @Test
+  public void shouldUpdateInstanceAtCentralTenantIfCentralTenantIdExistsInContext() throws InterruptedException, ExecutionException, TimeoutException {
+    // given
+    HashMap<String, String> payloadContext = new HashMap<>();
+    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    payloadContext.put("CENTRAL_TENANT_ID", CENTRAL_TENANT_ID);
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withOkapiUrl(OKAPI_URL)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    // when
+    CompletableFuture<DataImportEventPayload> future = marcBibModifiedEventHandler.handle(dataImportEventPayload);
+
+    DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
+    JsonObject instanceJson = new JsonObject(eventPayload.getContext().get(INSTANCE.value()));
+    Instance updatedInstance = Instance.fromJson(instanceJson);
+
+    // then
+    Mockito.verify(mockedStorage).getInstanceCollection(argThat(context -> context.getTenantId().equals(CENTRAL_TENANT_ID)));
+    Assert.assertEquals(existingInstance.getId(), instanceJson.getString("id"));
+    Assert.assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
+    Assert.assertNotNull(updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value)).findFirst().get());
+    Assert.assertNotNull(updatedInstance.getContributors().stream().filter(c -> "Mazzeno, Laurence W., 1234566".equals(c.name)).findFirst().get());
+    Assert.assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0dd", updatedInstance.getStatisticalCodeIds().get(0));
+    Assert.assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0cf", updatedInstance.getNatureOfContentTermIds().get(0));
+    Assert.assertNotNull(updatedInstance.getSubjects());
+    Assert.assertEquals(1, updatedInstance.getSubjects().size());
+    assertThat(updatedInstance.getSubjects().get(0).getValue(), Matchers.containsString("additional subfield"));
+    Assert.assertNotNull(updatedInstance.getNotes());
+    Assert.assertEquals("Adding a note", updatedInstance.getNotes().get(0).note);
   }
 
   @Test

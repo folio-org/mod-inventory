@@ -4,12 +4,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
+import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.support.JsonHelper;
 
 import io.vertx.core.json.JsonObject;
 
 public final class EventHandlingUtil {
+  private static final String CENTRAL_TENANT_ID = "CENTRAL_TENANT_ID";
 
   private EventHandlingUtil() {}
 
@@ -47,6 +49,14 @@ public final class EventHandlingUtil {
       }
     }
     return errorMessages;
+  }
+
+  public static String getTenant(DataImportEventPayload payload) {
+    String centralTenantId = payload.getContext().get(CENTRAL_TENANT_ID);
+    if (centralTenantId != null) {
+      return centralTenantId;
+    }
+    return payload.getTenant();
   }
 
   private static boolean isExistsRequiredProperty(JsonObject representation, String propertyName, String nestedPropertyName) {
