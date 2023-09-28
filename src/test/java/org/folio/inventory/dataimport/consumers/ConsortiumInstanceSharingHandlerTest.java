@@ -19,6 +19,7 @@ import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.services.EventIdStorageService;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.KafkaConfig;
+import org.folio.kafka.exception.DuplicateEventException;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -129,6 +130,8 @@ public class ConsortiumInstanceSharingHandlerTest {
       return null;
     }).when(mockedSourceInstanceCollection).update(any(Instance.class), any(), any());
 
+    doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID())).when(eventIdStorageService).store(any(), any());
+
     // when
     consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig, eventIdStorageService);
 
@@ -173,6 +176,8 @@ public class ConsortiumInstanceSharingHandlerTest {
       successHandler.accept(new Success<>(existingInstance));
       return null;
     }).when(mockedTargetInstanceCollection).findById(any(String.class), any(), any());
+
+    doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID())).when(eventIdStorageService).store(any(), any());
 
     // when
     consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig, eventIdStorageService);
@@ -227,6 +232,8 @@ public class ConsortiumInstanceSharingHandlerTest {
       return null;
     }).when(mockedSourceInstanceCollection).findById(eq(instanceId), any(), any());
 
+    doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID())).when(eventIdStorageService).store(any(), any());
+
     // when
     consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig, eventIdStorageService);
 
@@ -276,6 +283,8 @@ public class ConsortiumInstanceSharingHandlerTest {
       successHandler.accept(new Success<>(existingInstance));
       return null;
     }).when(mockedSourceInstanceCollection).findById(eq(instanceId), any(), any());
+
+    doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID())).when(eventIdStorageService).store(any(), any());
 
     // when
     consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig, eventIdStorageService);
@@ -331,6 +340,8 @@ public class ConsortiumInstanceSharingHandlerTest {
       return null;
     }).when(mockedSourceInstanceCollection).findById(eq(instanceId), any(), any());
 
+    doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID())).when(eventIdStorageService).store(any(), any());
+
     // when
     consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig, eventIdStorageService);
 
@@ -341,6 +352,46 @@ public class ConsortiumInstanceSharingHandlerTest {
       context.assertTrue(ar.cause().getMessage()
         .contains("Error sharing Instance with InstanceId=" + instanceId
           + " to the target tenant university. Because source is SOURCE"));
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldNotProcessEventWhenRecordToHoldingsFutureFails(TestContext context) throws IOException {
+
+    // given
+    Async async = context.async();
+    JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
+    jsonInstance.put("source", "FOLIO");
+    existingInstance = Instance.fromJson(jsonInstance);
+
+    String shareId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
+    String instanceId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
+
+    SharingInstance sharingInstance = new SharingInstance()
+      .withId(UUID.fromString(shareId))
+      .withInstanceIdentifier(UUID.fromString(instanceId))
+      .withSourceTenantId("consortium")
+      .withTargetTenantId("university")
+      .withStatus(IN_PROGRESS);
+
+    when(kafkaRecord.key()).thenReturn(shareId);
+    when(kafkaRecord.value()).thenReturn(Json.encode(sharingInstance));
+    when(kafkaRecord.headers()).thenReturn(
+      List.of(KafkaHeader.header(OKAPI_TOKEN_HEADER, "token"),
+        KafkaHeader.header(OKAPI_URL_HEADER, "url")));
+
+    when(eventIdStorageService.store(any(), any())).thenReturn(Future.failedFuture(new DuplicateEventException("SQL Unique constraint violation prevented repeatedly saving the record")));
+
+    // when
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig, eventIdStorageService);
+
+    //then
+    Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
+    future.onComplete(ar -> {
+      context.assertTrue(ar.failed());
+      context.assertTrue(ar.cause().getMessage()
+        .contains("errorMessage"));
       async.complete();
     });
   }

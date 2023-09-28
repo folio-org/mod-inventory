@@ -27,21 +27,12 @@ public class SharedInstanceEventIdStorageServiceImpl implements EventIdStorageSe
   @Override
   public Future<String> store(String eventId, String tenantId) {
     Promise<String> promise = Promise.promise();
+    LOGGER.info("store:: Saving event for shared instanceId: {} tenantId: {}", eventId, tenantId);
     EventToEntity eventToEntity = EventToEntity.builder().table(EventTable.SHARED_INSTANCE).eventId(eventId).build();
-    LOGGER.info("store:: Saving event for shared Instance: {}", eventToEntity);
     eventIdStorageDao.storeEvent(eventToEntity, tenantId)
       .onSuccess(promise::complete)
       .onFailure(error -> {
-
-        LOGGER.warn("store:: getStackTrace: {}", Arrays.toString(error.getStackTrace()));
-        LOGGER.warn("store:: error.getMessage(): {}", error.getMessage());
         if (error instanceof PgException pgException) {
-          LOGGER.warn("store:: getCode: {}", pgException.getCode());
-          LOGGER.warn("store:: getDetail: {}", pgException.getDetail());
-          LOGGER.warn("store:: getConstraint: {}", pgException.getConstraint());
-          LOGGER.warn("store:: getErrorMessage: {}", pgException.getErrorMessage());
-          LOGGER.warn("store:: getHint: {}", pgException.getHint());
-
           if (pgException.getCode().equals(UNIQUE_VIOLATION_SQL_STATE)) {
             promise.fail(new DuplicateEventException("SQL Unique constraint violation prevented repeatedly saving the record"));
           } else {
