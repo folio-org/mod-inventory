@@ -9,11 +9,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.Record;
 import org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler;
+import org.folio.inventory.consortium.entities.SharingInstance;
 import org.folio.inventory.consortium.util.InstanceOperationsHelper;
 import org.folio.inventory.consortium.util.RestDataImportHelper;
-import org.folio.inventory.consortium.entities.SharingInstance;
 import org.folio.inventory.domain.instances.Instance;
-import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.rest.client.SourceStorageRecordsClient;
 
 import java.util.Map;
@@ -41,9 +40,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
   }
 
   public Future<String> publishInstance(Instance instance, SharingInstance sharingInstanceMetadata,
-                                        InstanceCollection sourceInstanceCollection,
-                                        InstanceCollection targetInstanceCollection,
-                                        Map<String, String> kafkaHeaders) {
+                                        Source source, Target target, Map<String, String> kafkaHeaders) {
 
     String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
     String sourceTenant = sharingInstanceMetadata.getSourceTenantId();
@@ -64,8 +61,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
                   JsonObject jsonInstanceToPublish = instance.getJsonForStorage();
                   jsonInstanceToPublish.put(SOURCE, CONSORTIUM_MARC.getValue());
                   // Update instance in sourceInstanceCollection
-                  return instanceOperations.updateInstance(Instance.fromJson(jsonInstanceToPublish),
-                    sourceTenant, sourceInstanceCollection);
+                  return instanceOperations.updateInstance(Instance.fromJson(jsonInstanceToPublish), source);
                 });
             } else {
               // If the result is not "COMMITTED", skip the deletion and update steps and return the result directly

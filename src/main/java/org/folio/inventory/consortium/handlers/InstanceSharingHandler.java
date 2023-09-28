@@ -3,15 +3,12 @@ package org.folio.inventory.consortium.handlers;
 import io.vertx.core.Future;
 import org.folio.inventory.consortium.entities.SharingInstance;
 import org.folio.inventory.domain.instances.Instance;
-import org.folio.inventory.domain.instances.InstanceCollection;
 
 import java.util.Map;
 
 public interface InstanceSharingHandler {
 
   Future<String> publishInstance(Instance instance, SharingInstance sharingInstanceMetadata,
-                                 InstanceCollection sourceInstanceCollection,
-                                 InstanceCollection targetInstanceCollection,
-                                 Map<String, String> kafkaHeaders);
+                                 Source source, Target target, Map<String, String> kafkaHeaders);
 
 }

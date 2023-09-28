@@ -27,8 +27,7 @@ public class FolioInstanceSharingHandlerImpl implements InstanceSharingHandler {
   }
 
   public Future<String> publishInstance(Instance instance, SharingInstance sharingInstanceMetadata,
-                                        InstanceCollection sourceInstanceCollection,
-                                        InstanceCollection targetInstanceCollection,
+                                        Source source, Target target,
                                         Map<String, String> kafkaHeaders) {
 
     String instanceId = instance.getId();
@@ -43,13 +42,13 @@ public class FolioInstanceSharingHandlerImpl implements InstanceSharingHandler {
     jsonInstance.remove(HRID_KEY);
 
     // Add instance to the targetInstanceCollection
-    return instanceOperations.addInstance(Instance.fromJson(jsonInstance), targetTenantId, targetInstanceCollection)
+    return instanceOperations.addInstance(Instance.fromJson(jsonInstance), targetTenantId, target.getInstanceCollection())
       .compose(ignore -> {
         JsonObject jsonInstanceToPublish = instance.getJsonForStorage();
         jsonInstanceToPublish.put(SOURCE, CONSORTIUM_FOLIO.getValue());
 
         // Update instance in sourceInstanceCollection
-        return instanceOperations.updateInstance(Instance.fromJson(jsonInstanceToPublish), sourceTenantId, sourceInstanceCollection);
+        return instanceOperations.updateInstance(Instance.fromJson(jsonInstanceToPublish), source);
       });
   }
 

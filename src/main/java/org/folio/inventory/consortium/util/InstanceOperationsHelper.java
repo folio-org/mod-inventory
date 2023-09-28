@@ -5,6 +5,7 @@ import io.vertx.core.Promise;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.inventory.consortium.handlers.TenantProvider;
 import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
@@ -43,31 +44,32 @@ public class InstanceOperationsHelper {
     return promise.future();
   }
 
-  public Future<Instance> getInstanceById(String instanceId, String tenantId, InstanceCollection instanceCollection) {
-    LOGGER.info("getInstanceById :: Get instance by InstanceId={} on tenant={}", instanceId, tenantId);
+  public Future<Instance> getInstanceById(String instanceId, TenantProvider tenantProvider) {
+    LOGGER.info("getInstanceById :: Get instance by InstanceId={} on tenant={}", instanceId, tenantProvider.getTenantId());
     Promise<Instance> promise = Promise.promise();
-    instanceCollection.findById(instanceId, success -> {
+    tenantProvider.getInstanceCollection().findById(instanceId, success -> {
         if (success.getResult() == null) {
-          String errorMessage = format("Can't find Instance by InstanceId=%s on tenant=%s.", instanceId, tenantId);
+          String errorMessage = format("Can't find Instance by InstanceId=%s on tenant=%s.", instanceId, tenantProvider.getTenantId());
           LOGGER.warn("getInstanceById:: {}", errorMessage);
           promise.fail(new NotFoundException(format(errorMessage)));
         } else {
-          LOGGER.debug("getInstanceById :: Instance with InstanceId={} is present on tenant={}.", instanceId, tenantId);
+          LOGGER.debug("getInstanceById :: Instance with InstanceId={} is present on tenant={}.", instanceId, tenantProvider.getTenantId());
           promise.complete(success.getResult());
         }
       },
       failure -> {
         LOGGER.error(format("getInstanceById :: Error retrieving Instance by InstanceId=%s from tenant=%s - %s, status code %s",
-          instanceId, tenantId, failure.getReason(), failure.getStatusCode()));
+          instanceId, tenantProvider.getTenantId(), failure.getReason(), failure.getStatusCode()));
         promise.fail(failure.getReason());
       });
     return promise.future();
   }
 
-  public Future<String> updateInstance(Instance instance, String tenant, InstanceCollection instanceCollection) {
-    LOGGER.info("updateInstanceInStorage :: Updating instance with InstanceId={} on tenant={}", instance.getId(), tenant);
+  public Future<String> updateInstance(Instance instance, TenantProvider tenantProvider) {
+    LOGGER.info("updateInstanceInStorage :: Updating instance with InstanceId={} on tenant={}",
+      instance.getId(), tenantProvider.getTenantId());
     Promise<String> promise = Promise.promise();
-    instanceCollection.update(instance, updateSuccess -> promise.complete(instance.getId()),
+    tenantProvider.getInstanceCollection().update(instance, updateSuccess -> promise.complete(instance.getId()),
       updateFailure -> {
         try {
           if (updateFailure.getStatusCode() == HttpStatus.SC_CONFLICT) {
@@ -79,7 +81,7 @@ public class InstanceOperationsHelper {
           }
         } catch (Exception ex) {
           String errorMessage = format("Error processing update instance with InstanceId=%s on tenant=%s failure.",
-            instance.getId(), tenant);
+            instance.getId(), tenantProvider.getTenantId());
           LOGGER.error(errorMessage, ex);
           promise.fail(ex);
         }
