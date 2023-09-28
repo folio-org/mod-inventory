@@ -89,11 +89,11 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
         checkIsInstanceExistsOnTargetTenant(sharingInstanceMetadata, targetInstanceCollection,
           sourceInstanceCollection, kafkaHeaders).onComplete(e -> {
           if (e.succeeded()) {
-            LOGGER.info("handle:: Checking if Instance exists on target tenant succeeded for instanceId: {}, sourceTenant: {}, targetTenant: {}",
+            LOGGER.info("handle:: Checking if Instance exists on target tenant - COMPLETED SUCCESSFULLY for instanceId: {}, sourceTenant: {}, targetTenant: {}",
               instanceId, sharingInstanceMetadata.getSourceTenantId(), sharingInstanceMetadata.getTargetTenantId());
             promise.complete(e.result());
           } else {
-            LOGGER.warn("handle:: Checking if Instance exists on target tenant failed for instanceId: {}, sourceTenant: {}, targetTenant: {} error: {}",
+            LOGGER.warn("handle:: Checking if Instance exists on target tenant - FAILED for instanceId: {}, sourceTenant: {}, targetTenant: {} error: {}",
               instanceId, sharingInstanceMetadata.getSourceTenantId(), sharingInstanceMetadata.getTargetTenantId(), e.cause());
             promise.fail(e.cause());
           }

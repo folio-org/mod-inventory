@@ -2,6 +2,7 @@ package org.folio.inventory.services;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.pgclient.PgException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.dao.EventIdStorageDao;
@@ -31,15 +32,25 @@ public class SharedInstanceEventIdStorageServiceImpl implements EventIdStorageSe
     eventIdStorageDao.storeEvent(eventToEntity, tenantId)
       .onSuccess(promise::complete)
       .onFailure(error -> {
-        LOGGER.warn("store:: Full-error: {}", error.toString());
+
         LOGGER.warn("store:: getStackTrace: {}", Arrays.toString(error.getStackTrace()));
         LOGGER.warn("store:: error.getMessage(): {}", error.getMessage());
-        if (error.getMessage().contains(UNIQUE_VIOLATION_SQL_STATE)) {
-          LOGGER.info("store:: Duplication found fot eventId: {} tenantId{}", eventId, tenantId);
-          promise.fail(new DuplicateEventException("SQL Unique constraint violation prevented repeatedly saving the record"));
+        if (error instanceof PgException pgException) {
+          LOGGER.warn("store:: getCode: {}", pgException.getCode());
+          LOGGER.warn("store:: getDetail: {}", pgException.getDetail());
+          LOGGER.warn("store:: getConstraint: {}", pgException.getConstraint());
+          LOGGER.warn("store:: getErrorMessage: {}", pgException.getErrorMessage());
+          LOGGER.warn("store:: getHint: {}", pgException.getHint());
+
+          if (pgException.getCode().equals(UNIQUE_VIOLATION_SQL_STATE)) {
+            promise.fail(new DuplicateEventException("SQL Unique constraint violation prevented repeatedly saving the record"));
+          } else {
+            promise.fail(error);
+          }
+        } else {
+          promise.fail(error);
         }
-        promise.fail(error);
       });
-     return promise.future();
+    return promise.future();
   }
 }
