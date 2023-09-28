@@ -26,6 +26,8 @@ import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaHeaderUtils;
 import org.folio.kafka.KafkaTopicNameHelper;
+import org.folio.kafka.SimpleKafkaProducerManager;
+import org.folio.kafka.services.KafkaProducerRecordBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,7 +39,8 @@ import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.EMPTY;
 import static org.folio.inventory.consortium.entities.SharingInstanceEventType.CONSORTIUM_INSTANCE_SHARING_COMPLETE;
 import static org.folio.inventory.consortium.entities.SharingStatus.COMPLETE;
-import static org.folio.inventory.consortium.handlers.InstanceSharingHandlerFactory.*;
+import static org.folio.inventory.consortium.handlers.InstanceSharingHandlerFactory.getInstanceSharingHandler;
+import static org.folio.inventory.consortium.handlers.InstanceSharingHandlerFactory.values;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
@@ -186,15 +189,15 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       String topicName = KafkaTopicNameHelper.formatTopicName(kafkaConfig.getEnvId(),
         KafkaTopicNameHelper.getDefaultNameSpace(), tenantId, evenType.value());
 
-      KafkaProducerRecord<String, String> kafkaRecord = createProducerRecord(topicName, sharingInstance, status, errorMessage, kafkaHeadersList);
-      createProducer(tenantId, topicName).write(kafkaRecord, ar -> {
-        if (ar.succeeded()) {
-          LOGGER.info("Event with type {}, was sent to kafka", evenType.value());
-        } else {
-          var cause = ar.cause();
-          LOGGER.error("Failed to sent event {}, cause: {}", evenType.value(), cause);
-        }
-      });
+      KafkaProducerRecord<String, String> kafkaRecord =
+        createProducerRecord(topicName, sharingInstance, status, errorMessage, kafkaHeadersList);
+      var kafkaProducer = createProducer(tenantId, topicName);
+      kafkaProducer.send(kafkaRecord)
+        .onSuccess(res -> LOGGER.info("Event with type {}, was sent to kafka", evenType.value()))
+        .onFailure(err -> {
+          var cause = err.getCause();
+          LOGGER.info("Failed to sent event {}, cause: {}", evenType.value(), cause);
+        });
     } catch (Exception e) {
       LOGGER.error("Failed to send an event for eventType {}, cause {}", evenType.value(), e);
     }
@@ -213,13 +216,17 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       sharingInstance.setError(EMPTY);
     }
 
-    String eventPayload = Json.encode(sharingInstance);
-    return KafkaProducerRecord.create(topicName, sharingInstance.getInstanceIdentifier().toString(), eventPayload).addHeaders(kafkaHeaders);
+    return new KafkaProducerRecordBuilder<String, Object>(sharingInstance.getTargetTenantId())
+      .key(sharingInstance.getInstanceIdentifier().toString())
+      .value(sharingInstance)
+      .topic(topicName)
+      .build()
+      .addHeaders(kafkaHeaders);
   }
 
   private KafkaProducer<String, String> createProducer(String tenantId, String topicName) {
     LOGGER.info("createProducer :: tenantId: {}, topicName: {}", tenantId, topicName);
-    return KafkaProducer.createShared(vertx, topicName + "_Producer", kafkaConfig.getProducerProps());
+    return new SimpleKafkaProducerManager(vertx, kafkaConfig).createShared(topicName);
   }
 
   private SharingInstance parseSharingInstance(String eventValue) {
