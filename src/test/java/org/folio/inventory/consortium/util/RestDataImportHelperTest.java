@@ -14,6 +14,8 @@ import io.vertx.ext.web.client.impl.HttpResponseImpl;
 import org.folio.HttpStatus;
 import org.folio.rest.client.ChangeManagerClient;
 import org.folio.rest.jaxrs.model.JobProfileInfo;
+import org.folio.rest.jaxrs.model.RawRecordsDto;
+import org.folio.rest.jaxrs.model.RecordsMetadata;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -24,10 +26,13 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.folio.inventory.consortium.util.RestDataImportHelper.FIELD_JOB_EXECUTIONS;
+import static org.folio.inventory.consortium.util.RestDataImportHelper.STATUS_COMMITTED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 
@@ -202,11 +207,115 @@ public class RestDataImportHelperTest {
   }
 
   @Test
-  public void checkDataImportStatus() {
+  public void postChunkTest() {
+
+    // given
+    String expectedJobExecutionId = UUID.randomUUID().toString();
+
+    HttpResponseImpl<Buffer> jobExecutionResponse =
+      buildHttpResponseWithBuffer(HttpStatus.HTTP_NO_CONTENT,null);
+    Future<HttpResponse<Buffer>> futureResponse = Future.succeededFuture(jobExecutionResponse);
+
+    RawRecordsDto rawRecordsDto = new RawRecordsDto()
+      .withId(UUID.randomUUID().toString())
+      .withRecordsMetadata(new RecordsMetadata()
+        .withLast(true)
+        .withCounter(1)
+        .withTotal(1)
+        .withContentType(RecordsMetadata.ContentType.MARC_JSON))
+      .withInitialRecords(null);
+
+    doAnswer(invocation -> {
+      Handler<AsyncResult<HttpResponse<Buffer>>> handler = invocation.getArgument(3);
+      handler.handle(futureResponse);
+      return null;
+    }).when(changeManagerClient).postChangeManagerJobExecutionsRecordsById(eq(expectedJobExecutionId),
+      eq(true), eq(rawRecordsDto), any());
+
+    // when
+    restDataImportHelper.postChunk(expectedJobExecutionId, true, rawRecordsDto, changeManagerClient)
+      .onComplete(asyncResult -> {
+        // then
+        assertTrue(asyncResult.succeeded());
+        assertEquals(expectedJobExecutionId, asyncResult.result());
+      });
   }
 
   @Test
   public void getJobExecutionStatusByJobExecutionId() {
+
+    // given
+    String expectedJobExecutionId = UUID.randomUUID().toString();
+
+    HttpResponseImpl<Buffer> jobExecutionResponse =
+      buildHttpResponseWithBuffer(HttpStatus.HTTP_OK,  BufferImpl.buffer("{\"status\":\"" + STATUS_COMMITTED + "\"}"));
+    Future<HttpResponse<Buffer>> futureResponse = Future.succeededFuture(jobExecutionResponse);
+
+    doAnswer(invocation -> {
+      Handler<AsyncResult<HttpResponse<Buffer>>> handler = invocation.getArgument(1);
+      handler.handle(futureResponse);
+      return null;
+    }).when(changeManagerClient).getChangeManagerJobExecutionsById(eq(expectedJobExecutionId), any());
+
+    // when
+    restDataImportHelper.getJobExecutionStatusByJobExecutionId(expectedJobExecutionId, changeManagerClient)
+      .onComplete(asyncResult -> {
+        // then
+        assertTrue(asyncResult.succeeded());
+        assertEquals(STATUS_COMMITTED, asyncResult.result());
+      });
+  }
+
+  @Test
+  public void getJobExecutionStatusByJobExecutionIdFailedWithEmptyResponseBodyTest() {
+
+    // given
+    String expectedJobExecutionId = UUID.randomUUID().toString();
+
+    HttpResponseImpl<Buffer> jobExecutionResponse =
+      buildHttpResponseWithBuffer(HttpStatus.HTTP_OK, null);
+    Future<HttpResponse<Buffer>> futureResponse = Future.succeededFuture(jobExecutionResponse);
+
+    doAnswer(invocation -> {
+      Handler<AsyncResult<HttpResponse<Buffer>>> handler = invocation.getArgument(1);
+      handler.handle(futureResponse);
+      return null;
+    }).when(changeManagerClient).getChangeManagerJobExecutionsById(eq(expectedJobExecutionId), any());
+
+    // when
+    restDataImportHelper.getJobExecutionStatusByJobExecutionId(expectedJobExecutionId, changeManagerClient)
+      .onComplete(asyncResult -> {
+        // then
+        assertFalse(asyncResult.succeeded());
+        assertEquals("Response body doesn't contains data for jobExecutionId=" + expectedJobExecutionId
+          + ".", asyncResult.cause().getMessage());
+      });
+  }
+
+  @Test
+  public void getJobExecutionStatusByJobExecutionIdFailedInternalServerErrorTest() {
+
+    // given
+    String expectedJobExecutionId = UUID.randomUUID().toString();
+
+    HttpResponseImpl<Buffer> jobExecutionResponse =
+      buildHttpResponseWithBuffer(HttpStatus.HTTP_INTERNAL_SERVER_ERROR, null);
+    Future<HttpResponse<Buffer>> futureResponse = Future.succeededFuture(jobExecutionResponse);
+
+    doAnswer(invocation -> {
+      Handler<AsyncResult<HttpResponse<Buffer>>> handler = invocation.getArgument(1);
+      handler.handle(futureResponse);
+      return null;
+    }).when(changeManagerClient).getChangeManagerJobExecutionsById(eq(expectedJobExecutionId), any());
+
+    // when
+    restDataImportHelper.getJobExecutionStatusByJobExecutionId(expectedJobExecutionId, changeManagerClient)
+      .onComplete(asyncResult -> {
+        // then
+        assertFalse(asyncResult.succeeded());
+        assertEquals("Error getting jobExecution by jobExecutionId=" + expectedJobExecutionId
+          + ". Status message: Ok. Status code: 500", asyncResult.cause().getMessage());
+      });
   }
 
   private static HttpResponseImpl<Buffer> buildHttpResponseWithBuffer(HttpStatus httpStatus, Buffer buffer) {

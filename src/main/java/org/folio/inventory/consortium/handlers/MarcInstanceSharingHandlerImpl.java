@@ -25,7 +25,7 @@ import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
 
 public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
 
-  private static final Logger LOGGER = LogManager.getLogger(ConsortiumInstanceSharingHandler.class);
+  private static final Logger LOGGER = LogManager.getLogger(MarcInstanceSharingHandlerImpl.class);
 
   private final RestDataImportHelper restDataImportHelper;
 

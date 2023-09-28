@@ -17,7 +17,7 @@ import static org.folio.inventory.domain.items.Item.HRID_KEY;
 
 public class FolioInstanceSharingHandlerImpl implements InstanceSharingHandler {
 
-  private static final Logger LOGGER = LogManager.getLogger(ConsortiumInstanceSharingHandler.class);
+  private static final Logger LOGGER = LogManager.getLogger(FolioInstanceSharingHandlerImpl.class);
 
   private final InstanceOperationsHelper instanceOperations;
 

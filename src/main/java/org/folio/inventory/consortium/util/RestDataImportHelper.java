@@ -155,7 +155,7 @@ public class RestDataImportHelper {
     return promise.future();
   }
 
-  private Future<String> postChunk(String jobExecutionId, Boolean shouldAcceptInstanceId,
+  protected Future<String> postChunk(String jobExecutionId, Boolean shouldAcceptInstanceId,
                                    RawRecordsDto rawRecordsDto, ChangeManagerClient changeManagerClient) {
     LOGGER.info("postChunk:: Sending data for jobExecutionId={}, shouldAcceptInstanceId={}.", jobExecutionId, shouldAcceptInstanceId);
     Promise<String> promise = Promise.promise();
@@ -247,16 +247,16 @@ public class RestDataImportHelper {
         } else {
           LOGGER.trace("getJobExecutionStatusByJobExecutionId:: Response: {}", response.result().bodyAsJsonObject());
           if (response.result().bodyAsJsonObject() == null || response.result().bodyAsJsonObject().isEmpty()) {
-            String errorMessage = format("Response body doesn't contain data for jobExecutionId=%s.", jobExecutionId);
+            String errorMessage = format("Response body doesn't contains data for jobExecutionId=%s.", jobExecutionId);
             LOGGER.error("getJobExecutionStatusByJobExecutionId:: {}", errorMessage);
-            promise.fail("Response body doesn't contain data.");
+            promise.fail(errorMessage);
           } else {
             promise.complete(response.result().bodyAsJsonObject().getString(FIELD_STATUS));
           }
         }
       });
     } catch (Exception ex) {
-      LOGGER.error("getJobExecutionById:: Error getting jobExecution by jobExecutionId={}.", jobExecutionId, ex);
+      LOGGER.error("getJobExecutionStatusByJobExecutionId:: Error getting jobExecution by jobExecutionId={}.", jobExecutionId, ex);
       promise.fail(ex);
     }
     return promise.future();

@@ -37,6 +37,7 @@ import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.EMPTY;
 import static org.folio.inventory.consortium.entities.SharingInstanceEventType.CONSORTIUM_INSTANCE_SHARING_COMPLETE;
 import static org.folio.inventory.consortium.entities.SharingStatus.COMPLETE;
+import static org.folio.inventory.consortium.handlers.InstanceSharingHandlerFactory.*;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
@@ -119,7 +120,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
           Instance instance = result.result();
           Optional<InstanceSharingHandlerFactory> type = checkSourceType(instance.getSource());
           type.ifPresentOrElse(
-            sourceType -> InstanceSharingHandlerFactory.getInstanceSharingHandler(sourceType, instanceOperations, vertx)
+            sourceType -> getInstanceSharingHandler(sourceType, instanceOperations, vertx)
               .publishInstance(instance, sharingInstanceMetadata, source, target, kafkaHeaders)
               .onComplete(publishResult -> handleSharingResult(sharingInstanceMetadata, kafkaHeaders, promise, publishResult)),
             () -> {
@@ -142,7 +143,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   }
 
   private static Optional<InstanceSharingHandlerFactory> checkSourceType(String source) {
-    return Stream.of(InstanceSharingHandlerFactory.values())
+    return Stream.of(values())
       .filter(value -> value.name().equalsIgnoreCase(source))
       .findFirst();
   }
