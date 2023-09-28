@@ -66,7 +66,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
                   jsonInstanceToPublish.put(SOURCE, CONSORTIUM_MARC.getValue());
                   // Update instance in sourceInstanceCollection
                   return instanceOperations.updateInstance(Instance.fromJson(jsonInstanceToPublish),
-                    targetTenant, sourceInstanceCollection);
+                    sourceTenant, sourceInstanceCollection);
                 });
             } else {
               // If the result is not "COMMITTED", skip the deletion and update steps and return the result directly
