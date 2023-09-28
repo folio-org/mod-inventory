@@ -94,10 +94,10 @@ public class EventIdStorageDaoImplTest {
   public void shouldReturnSameInstanceIdWithDuplicateRecordId(TestContext context) {
     Async async = context.async();
 
-    EventToEntity eventToEntity1 = EventToEntity.builder().table(EventTable.SHARED_INSTANCE).eventId(EVENT_ID).build();
-    EventToEntity eventToEntity2 = EventToEntity.builder().table(EventTable.SHARED_INSTANCE).eventId(EVENT_ID).build();
+    String SECOND_EVENT_ID = UUID.randomUUID().toString();
 
-
+    EventToEntity eventToEntity1 = EventToEntity.builder().table(EventTable.SHARED_INSTANCE).eventId(SECOND_EVENT_ID).build();
+    EventToEntity eventToEntity2 = EventToEntity.builder().table(EventTable.SHARED_INSTANCE).eventId(SECOND_EVENT_ID).build();
 
     Future<String> future = eventIdStorageDao.storeEvent(eventToEntity1, TENANT_ID)
       .compose(ar -> eventIdStorageDao.storeEvent(eventToEntity2, TENANT_ID));
