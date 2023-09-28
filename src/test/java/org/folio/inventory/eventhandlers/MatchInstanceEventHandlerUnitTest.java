@@ -12,6 +12,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
@@ -188,6 +189,39 @@ public class MatchInstanceEventHandlerUnitTest {
       testContext.assertNotNull(throwable);
       testContext.assertTrue(throwable.getCause() instanceof MatchingException);
       testContext.assertTrue(throwable.getMessage().contains("Found multiple entities during matching"));
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldNotTryToMatchOnCentralTenantIfMatchedShadowInstanceOnLocalTenant(TestContext testContext) throws UnsupportedEncodingException {
+    Async async = testContext.async();
+
+    Instance instance = new Instance(UUID.randomUUID().toString(), "5", INSTANCE_HRID, "CONSORTIUM-MARC", "Wonderful", "12334");
+
+    doAnswer(ans -> {
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Success<MultipleRecords<Instance>> result =
+        new Success<>(new MultipleRecords<>(singletonList(instance), 1));
+      callback.accept(result);
+      return null;
+    }).when(instanceCollection)
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    Mockito.verify(consortiumService, times(0)).getConsortiumConfiguration(any());
+
+    DataImportEventPayload eventPayload = createEventPayload();
+
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
+      testContext.assertNull(throwable);
+      testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
+      testContext.assertEquals(
+        updatedEventPayload.getEventsChain(),
+        singletonList(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      );
+      testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
+      JsonObject matchedInstanceAsJsonObject = new JsonObject(updatedEventPayload.getContext().get(INSTANCE.value()));
+      testContext.assertEquals(matchedInstanceAsJsonObject.getString("id"), instance.getId());
       async.complete();
     });
   }

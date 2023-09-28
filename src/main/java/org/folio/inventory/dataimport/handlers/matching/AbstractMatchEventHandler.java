@@ -31,6 +31,7 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
   private static final String MATCHING_RELATIONS = "MATCHING_PARAMETERS_RELATIONS";
   private static final String MAPPING_PARAMS = "MAPPING_PARAMS";
   public static final String FOUND_MULTIPLE_ENTITIES = "Found multiple entities during matching on localTenant: %s and centralTenant: %s";
+  private static final String CONSORTIUM_PREFIX = "CONSORTIUM-";
 
   private MappingMetadataCache mappingMetadataCache;
   private ConsortiumService consortiumService;
@@ -77,7 +78,7 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
 
     return MatchingManager.match(dataImportEventPayload)
       .thenCompose(matchedLocal -> {
-        if (isConsortiumAvailable()) {
+        if (isConsortiumAvailable() && !isShadowEntity(dataImportEventPayload.getContext().get(getEntityType().value()))) {
           return matchCentralTenantIfNeeded(dataImportEventPayload, matchedLocal, context, mappingMetadataDto, matchingParametersRelations);
         }
         return CompletableFuture.completedFuture(matchedLocal);
@@ -102,7 +103,6 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
                 return CompletableFuture.failedFuture(new MatchingException(String.format(FOUND_MULTIPLE_ENTITIES, context.getTenantId(), consortiumConfiguration.get().getCentralTenantId())));
               }
               if (StringUtils.isEmpty(dataImportEventPayload.getContext().get(getEntityType().value()))) {
-                LOGGER.debug("matchCentralTenantIfNeeded:: Matched on local tenant: {}", context.getTenantId());
                 dataImportEventPayload.getContext().put(getEntityType().value(), localMatchedInstance);
               } else {
                 LOGGER.debug("matchCentralTenantIfNeeded:: Matched on central tenant: {}", consortiumConfiguration.get().getCentralTenantId());
@@ -122,6 +122,15 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
     dataImportEventPayload.getContext().put(MATCHING_RELATIONS,
       Json.encode(matchingParametersRelations.getMatchingRelations()));
     dataImportEventPayload.getContext().remove(getEntityType().value());
+  }
+
+  private boolean isShadowEntity(String entity) {
+    if (entity != null) {
+      JsonObject entityAsJson = new JsonObject(entity);
+      String source = entityAsJson.getString("source");
+      return source != null && source.startsWith(CONSORTIUM_PREFIX);
+    }
+    return false;
   }
 
   @Override
