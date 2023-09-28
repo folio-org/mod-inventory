@@ -16,6 +16,7 @@ import org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler
 import org.folio.inventory.consortium.entities.SharingInstance;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
+import org.folio.inventory.services.EventIdStorageService;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.KafkaConfig;
 import org.junit.AfterClass;
@@ -54,6 +55,8 @@ public class ConsortiumInstanceSharingHandlerTest {
   private KafkaConsumerRecord<String, String> kafkaRecord;
   @Mock
   private static KafkaConfig kafkaConfig;
+  @Mock
+  private EventIdStorageService eventIdStorageService;
   private Instance existingInstance;
   private ConsortiumInstanceSharingHandler consortiumInstanceSharingHandler;
 
@@ -127,7 +130,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     }).when(mockedSourceInstanceCollection).update(any(Instance.class), any(), any());
 
     // when
-    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig);
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig, eventIdStorageService);
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
@@ -172,7 +175,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     }).when(mockedTargetInstanceCollection).findById(any(String.class), any(), any());
 
     // when
-    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig);
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig, eventIdStorageService);
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
@@ -225,7 +228,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     }).when(mockedSourceInstanceCollection).findById(eq(instanceId), any(), any());
 
     // when
-    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig);
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig, eventIdStorageService);
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
@@ -275,7 +278,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     }).when(mockedSourceInstanceCollection).findById(eq(instanceId), any(), any());
 
     // when
-    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig);
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig, eventIdStorageService);
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
@@ -329,7 +332,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     }).when(mockedSourceInstanceCollection).findById(eq(instanceId), any(), any());
 
     // when
-    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig);
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig, eventIdStorageService);
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
