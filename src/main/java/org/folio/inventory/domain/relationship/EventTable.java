@@ -1,5 +1,11 @@
 package org.folio.inventory.domain.relationship;
 
+import lombok.Getter;
+
+/**
+ * Enums which stores pointer on DB-tableNames inside.
+ */
+@Getter
 public enum EventTable {
   SHARED_INSTANCE("events_shared_instances");
 
@@ -7,9 +13,5 @@ public enum EventTable {
 
   EventTable(String tableName) {
     this.tableName = tableName;
-  }
-
-  public String getTableName() {
-    return tableName;
   }
 }

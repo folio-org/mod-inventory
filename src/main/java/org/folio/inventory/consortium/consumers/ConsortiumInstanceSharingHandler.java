@@ -79,7 +79,6 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
       Future<String> eventToSharedInstanceFuture = eventIdStorageService.store(event.key(), sharingInstanceMetadata.getTargetTenantId());
       eventToSharedInstanceFuture.compose(r -> {
-        LOGGER.info("handle:: r: {}", r);
         Context targetTenantContext = EventHandlingUtil.constructContext(sharingInstanceMetadata.getTargetTenantId(),
           kafkaHeaders.get(TOKEN.toLowerCase()), kafkaHeaders.get(URL.toLowerCase()));
         InstanceCollection targetInstanceCollection = storage.getInstanceCollection(targetTenantContext);

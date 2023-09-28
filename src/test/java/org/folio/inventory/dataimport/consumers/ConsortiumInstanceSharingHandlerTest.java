@@ -26,6 +26,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import java.io.IOException;
@@ -39,6 +40,7 @@ import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 @RunWith(VertxUnitRunner.class)
@@ -130,7 +132,7 @@ public class ConsortiumInstanceSharingHandlerTest {
       return null;
     }).when(mockedSourceInstanceCollection).update(any(Instance.class), any(), any());
 
-    doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID())).when(eventIdStorageService).store(any(), any());
+    doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID().toString())).when(eventIdStorageService).store(any(), any());
 
     // when
     consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig, eventIdStorageService);
@@ -177,7 +179,7 @@ public class ConsortiumInstanceSharingHandlerTest {
       return null;
     }).when(mockedTargetInstanceCollection).findById(any(String.class), any(), any());
 
-    doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID())).when(eventIdStorageService).store(any(), any());
+    doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID().toString())).when(eventIdStorageService).store(any(), any());
 
     // when
     consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig, eventIdStorageService);
@@ -232,7 +234,7 @@ public class ConsortiumInstanceSharingHandlerTest {
       return null;
     }).when(mockedSourceInstanceCollection).findById(eq(instanceId), any(), any());
 
-    doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID())).when(eventIdStorageService).store(any(), any());
+    doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID().toString())).when(eventIdStorageService).store(any(), any());
 
     // when
     consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig, eventIdStorageService);
@@ -284,7 +286,7 @@ public class ConsortiumInstanceSharingHandlerTest {
       return null;
     }).when(mockedSourceInstanceCollection).findById(eq(instanceId), any(), any());
 
-    doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID())).when(eventIdStorageService).store(any(), any());
+    doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID().toString())).when(eventIdStorageService).store(any(), any());
 
     // when
     consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig, eventIdStorageService);
@@ -340,7 +342,7 @@ public class ConsortiumInstanceSharingHandlerTest {
       return null;
     }).when(mockedSourceInstanceCollection).findById(eq(instanceId), any(), any());
 
-    doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID())).when(eventIdStorageService).store(any(), any());
+    doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID().toString())).when(eventIdStorageService).store(any(), any());
 
     // when
     consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig, eventIdStorageService);
@@ -357,7 +359,7 @@ public class ConsortiumInstanceSharingHandlerTest {
   }
 
   @Test
-  public void shouldNotProcessEventWhenRecordToHoldingsFutureFails(TestContext context) throws IOException {
+  public void shouldNotProcessIfDuplicatedEventReceived(TestContext context) throws IOException {
 
     // given
     Async async = context.async();
@@ -389,11 +391,13 @@ public class ConsortiumInstanceSharingHandlerTest {
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
     future.onComplete(ar -> {
-      context.assertTrue(ar.failed());
-      context.assertTrue(ar.cause().getMessage()
-        .contains("errorMessage"));
+      context.assertTrue(ar.succeeded());
       async.complete();
     });
+
+    Mockito.verify(mockedSourceInstanceCollection, times(0)).add(any(), any(), any());
+    Mockito.verify(storage, times(0)).getInstanceCollection(any());
+
   }
 
   @AfterClass

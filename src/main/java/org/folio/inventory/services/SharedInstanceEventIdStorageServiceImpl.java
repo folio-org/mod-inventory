@@ -10,8 +10,6 @@ import org.folio.inventory.domain.relationship.EventTable;
 import org.folio.inventory.domain.relationship.EventToEntity;
 import org.folio.kafka.exception.DuplicateEventException;
 
-import java.util.Arrays;
-
 public class SharedInstanceEventIdStorageServiceImpl implements EventIdStorageService {
 
   private static final Logger LOGGER = LogManager.getLogger(SharedInstanceEventIdStorageServiceImpl.class);

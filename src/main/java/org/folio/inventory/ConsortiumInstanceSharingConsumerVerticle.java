@@ -44,7 +44,8 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
     LOGGER.info(format("kafkaConfig: %s", kafkaConfig));
 
     Storage storage = Storage.basedUpon(config, vertx.createHttpClient());
-    ConsortiumInstanceSharingHandler consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig, new SharedInstanceEventIdStorageServiceImpl(new EventIdStorageDaoImpl(new PostgresClientFactory(vertx))));
+    SharedInstanceEventIdStorageServiceImpl sharedInstanceEventIdStorageService = new SharedInstanceEventIdStorageServiceImpl(new EventIdStorageDaoImpl(new PostgresClientFactory(vertx)));
+    ConsortiumInstanceSharingHandler consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig, sharedInstanceEventIdStorageService);
 
     var kafkaConsumerFuture = createKafkaConsumerWrapper(kafkaConfig, consortiumInstanceSharingHandler);
     kafkaConsumerFuture.onFailure(startPromise::fail)
