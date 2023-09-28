@@ -4,17 +4,18 @@ import io.vertx.core.Future;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonArray;
 import io.vertx.ext.web.client.WebClient;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.consortium.cache.ConsortiumDataCache;
 import org.folio.inventory.consortium.entities.ConsortiumConfiguration;
 import org.folio.inventory.consortium.entities.SharingInstance;
 import org.folio.inventory.consortium.entities.SharingStatus;
 import org.folio.inventory.consortium.exceptions.ConsortiumException;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
+import org.folio.okapi.common.XOkapiHeaders;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -28,13 +29,14 @@ import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
 
 public class ConsortiumServiceImpl implements ConsortiumService {
   private static final Logger LOGGER = LogManager.getLogger(ConsortiumServiceImpl.class);
-  private static final String USER_TENANTS_ENDPOINT = "/user-tenants?limit=1";
   private static final String SHARE_INSTANCE_ENDPOINT = "/consortia/%s/sharing/instances";
   private static final String SHARING_INSTANCE_ERROR = "Error during sharing Instance for sourceTenantId: %s, targetTenantId: %s, instanceIdentifier: %s, status code: %s, response message: %s";
   private final HttpClient httpClient;
+  private final ConsortiumDataCache consortiumDataCache;
 
-  public ConsortiumServiceImpl(HttpClient httpClient) {
+  public ConsortiumServiceImpl(HttpClient httpClient, ConsortiumDataCache consortiumDataCache) {
     this.httpClient = httpClient;
+    this.consortiumDataCache = consortiumDataCache;
   }
 
   @Override
@@ -49,28 +51,9 @@ public class ConsortiumServiceImpl implements ConsortiumService {
 
   @Override
   public Future<Optional<ConsortiumConfiguration>> getConsortiumConfiguration(Context context) {
-    CompletableFuture<Optional<ConsortiumConfiguration>> completableFuture = createOkapiHttpClient(context)
-      .thenCompose(client ->
-        client.get(context.getOkapiLocation() + USER_TENANTS_ENDPOINT).toCompletableFuture()
-          .thenCompose(httpResponse -> {
-            if (httpResponse.getStatusCode() == HttpStatus.SC_OK) {
-              JsonArray userTenants = httpResponse.getJson().getJsonArray("userTenants");
-              if (userTenants.isEmpty()) {
-                LOGGER.debug("getCentralTenantId:: Central tenant and consortium id not found");
-                return CompletableFuture.completedFuture(Optional.empty());
-              }
-              String centralTenantId = userTenants.getJsonObject(0).getString("centralTenantId");
-              String consortiumId = userTenants.getJsonObject(0).getString("consortiumId");
-              LOGGER.debug("getCentralTenantId:: Found centralTenantId: {} and consortiumId: {}", centralTenantId, consortiumId);
-              return CompletableFuture.completedFuture(Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId)));
-            } else {
-              String message = String.format("Error retrieving centralTenantId by tenant id: %s, status code: %s, response message: %s",
-                context.getTenantId(), httpResponse.getStatusCode(), httpResponse.getBody());
-              LOGGER.warn(String.format("getCentralTenantId:: %s", message));
-              return CompletableFuture.failedFuture(new ConsortiumException(message));
-            }
-          }));
-    return Future.fromCompletionStage(completableFuture);
+    Map<String, String> headers = Map.of(XOkapiHeaders.URL, context.getOkapiLocation(),
+      XOkapiHeaders.TENANT, context.getTenantId(), XOkapiHeaders.TOKEN, context.getToken());
+    return consortiumDataCache.getConsortiumData(context.getTenantId(), headers);
   }
 
   // Returns successful future if the sharing status is "IN_PROGRESS" or "COMPLETE"
