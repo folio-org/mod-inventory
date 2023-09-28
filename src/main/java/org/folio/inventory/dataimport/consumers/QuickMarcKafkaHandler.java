@@ -1,7 +1,5 @@
 package org.folio.inventory.dataimport.consumers;
 
-import static io.vertx.kafka.client.producer.KafkaProducer.createShared;
-
 import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_ERROR;
 import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_AUTHORITY_UPDATED;
 import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_HOLDINGS_UPDATED;
@@ -42,6 +40,8 @@ import org.folio.inventory.services.HoldingsCollectionService;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaConfig;
+import org.folio.kafka.SimpleKafkaProducerManager;
+import org.folio.kafka.services.KafkaProducerRecordBuilder;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.EventMetadata;
@@ -140,8 +140,7 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
   }
 
   private void createProducer(KafkaConfig kafkaConfig, QMEventTypes eventType) {
-    var producerName = eventType.name() + "_Producer";
-    KafkaProducer<String, String> producer = createShared(vertx, producerName, kafkaConfig.getProducerProps());
+    KafkaProducer<String, String> producer = new SimpleKafkaProducerManager(vertx, kafkaConfig).createShared(eventType.name());
     producerMap.put(eventType, producer);
   }
 
@@ -165,20 +164,19 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
   private Future<Boolean> sendEventWithPayload(String eventPayload, String eventType,
                                                String key, KafkaProducer<String, String> producer,
                                                OkapiConnectionParams params) {
-    KafkaProducerRecord<String, String> record;
-    record = createRecord(eventPayload, eventType, key, params);
+    KafkaProducerRecord<String, String> producerRecord = createRecord(eventPayload, eventType, key, params);
 
     Promise<Boolean> promise = Promise.promise();
-    producer.write(record, war -> {
-      if (war.succeeded()) {
+    producer.send(producerRecord)
+      .onSuccess(res -> {
         LOGGER.info("Event with type: {} was sent to kafka", eventType);
         promise.complete(true);
-      } else {
-        Throwable cause = war.cause();
+      })
+      .onFailure(err -> {
+        Throwable cause = err.getCause();
         LOGGER.error("Write error for event {}:", eventType, cause);
         promise.fail(cause);
-      }
-    });
+      });
     return promise.future();
   }
 
@@ -195,9 +193,14 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
 
     String topicName = formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), params.getTenantId(), eventType);
 
-    var record = KafkaProducerRecord.create(topicName, key, Json.encode(event));
-    record.addHeaders(kafkaHeadersFromMap(params.getHeaders()));
-    return record;
+    var producerRecord = new KafkaProducerRecordBuilder<String, Object>(event.getEventMetadata().getTenantId())
+      .key(key)
+      .value(event)
+      .topic(topicName)
+      .build();
+
+    producerRecord.addHeaders(kafkaHeadersFromMap(params.getHeaders()));
+    return producerRecord;
   }
 
 }
