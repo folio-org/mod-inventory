@@ -44,9 +44,9 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 import static java.lang.String.format;
+import static org.folio.inventory.consortium.entities.SharingStatus.IN_PROGRESS;
 import static org.folio.inventory.consortium.util.RestDataImportHelper.STATUS_COMMITTED;
 import static org.folio.inventory.consortium.util.RestDataImportHelper.STATUS_ERROR;
-import static org.folio.inventory.consortium.entities.SharingStatus.IN_PROGRESS;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
 import static org.mockito.ArgumentMatchers.any;
@@ -118,7 +118,6 @@ public class ConsortiumInstanceSharingHandlerTest {
     MockitoAnnotations.openMocks(this);
   }
 
-  @Ignore
   @Test
   public void shouldShareInstanceWithFOLIOSource(TestContext context) throws IOException {
 
@@ -145,10 +144,8 @@ public class ConsortiumInstanceSharingHandlerTest {
         KafkaHeader.header(OKAPI_URL_HEADER, "url")));
 
     when(storage.getInstanceCollection(any(Context.class)))
-      .thenReturn(mockedTargetInstanceCollection)
       .thenReturn(mockedSourceInstanceCollection)
-      .thenReturn(mockedTargetInstanceCollection)
-      .thenReturn(mockedSourceInstanceCollection);
+      .thenReturn(mockedTargetInstanceCollection);
 
     doAnswer(invocationOnMock -> {
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
@@ -183,6 +180,61 @@ public class ConsortiumInstanceSharingHandlerTest {
       context.assertTrue(ar.succeeded());
       context.assertTrue(ar.result()
         .contains("Instance with InstanceId=" + instanceId + " has been shared to the target tenant consortium"));
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldNotShareInstanceWithNotFOLIOAndMARCSource(TestContext context) throws IOException {
+
+    // given
+    Async async = context.async();
+    JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
+    jsonInstance.put("source", "SOURCE");
+    existingInstance = Instance.fromJson(jsonInstance);
+
+    String shareId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
+    String instanceId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
+
+    SharingInstance sharingInstance = new SharingInstance()
+      .withId(UUID.fromString(shareId))
+      .withInstanceIdentifier(UUID.fromString(instanceId))
+      .withSourceTenantId("university")
+      .withTargetTenantId("consortium")
+      .withStatus(IN_PROGRESS);
+
+    when(kafkaRecord.key()).thenReturn(shareId);
+    when(kafkaRecord.value()).thenReturn(Json.encode(sharingInstance));
+    when(kafkaRecord.headers()).thenReturn(
+      List.of(KafkaHeader.header(OKAPI_TOKEN_HEADER, "token"),
+        KafkaHeader.header(OKAPI_URL_HEADER, "url")));
+
+    when(storage.getInstanceCollection(any(Context.class)))
+      .thenReturn(mockedSourceInstanceCollection)
+      .thenReturn(mockedTargetInstanceCollection);
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(null));
+      return null;
+    }).when(mockedTargetInstanceCollection).findById(any(String.class), any(), any());
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(existingInstance));
+      return null;
+    }).when(mockedSourceInstanceCollection).findById(eq(instanceId), any(), any());
+
+    // when
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig);
+
+    //then
+    Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
+    future.onComplete(ar -> {
+      context.assertTrue(ar.failed());
+      context.assertTrue(ar.cause().getMessage()
+        .contains("Error sharing Instance with InstanceId=" + instanceId
+          + " to the target tenant consortium. Error: Unsupported source type: SOURCE"));
       async.complete();
     });
   }
@@ -282,8 +334,8 @@ public class ConsortiumInstanceSharingHandlerTest {
     future.onComplete(ar -> {
       context.assertTrue(ar.failed());
       context.assertTrue(ar.cause().getMessage()
-        .contains("Error sharing Instance with InstanceId=" + instanceId + " to the target tenant=consortium. " +
-          "Because the instance is not found on the source tenant=university"));
+        .contains("Error sharing Instance with InstanceId=" + instanceId + " to the target tenant consortium. " +
+          "Because the instance is not found on the source tenant university"));
       async.complete();
     });
   }
@@ -364,15 +416,6 @@ public class ConsortiumInstanceSharingHandlerTest {
     });
   }
 
-  private static void setField(Object instance, String fieldName, Object fieldValue) {
-    try {
-      Field field = instance.getClass().getDeclaredField(fieldName);
-      field.setAccessible(true);
-      field.set(instance, fieldValue);
-    } catch (NoSuchFieldException | IllegalAccessException e) {
-      throw new RuntimeException("Failed to set field value using reflection", e);
-    }
-  }
   @Ignore
   @Test
   public void shouldNotShareInstanceWithMARCSourceBecauseMARCFileIsNotFound(TestContext context) throws IOException {
@@ -495,65 +538,31 @@ public class ConsortiumInstanceSharingHandlerTest {
       async.complete();
     });
   }
-  @Ignore
-  @Test
-  public void shouldNotShareInstanceWithNotFOLIOAndMARCSource(TestContext context) throws IOException {
-
-    // given
-    Async async = context.async();
-    JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
-    jsonInstance.put("source", "SOURCE");
-    existingInstance = Instance.fromJson(jsonInstance);
-
-    String shareId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
-    String instanceId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
-
-    SharingInstance sharingInstance = new SharingInstance()
-      .withId(UUID.fromString(shareId))
-      .withInstanceIdentifier(UUID.fromString(instanceId))
-      .withSourceTenantId("university")
-      .withTargetTenantId("consortium")
-      .withStatus(IN_PROGRESS);
-
-    when(kafkaRecord.key()).thenReturn(shareId);
-    when(kafkaRecord.value()).thenReturn(Json.encode(sharingInstance));
-    when(kafkaRecord.headers()).thenReturn(
-      List.of(KafkaHeader.header(OKAPI_TOKEN_HEADER, "token"),
-        KafkaHeader.header(OKAPI_URL_HEADER, "url")));
-
-    when(storage.getInstanceCollection(any(Context.class)))
-      .thenReturn(mockedTargetInstanceCollection).thenReturn(mockedSourceInstanceCollection);
-
-    doAnswer(invocationOnMock -> {
-      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
-      successHandler.accept(new Success<>(null));
-      return null;
-    }).when(mockedTargetInstanceCollection).findById(any(String.class), any(), any());
-
-    doAnswer(invocationOnMock -> {
-      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
-      successHandler.accept(new Success<>(existingInstance));
-      return null;
-    }).when(mockedSourceInstanceCollection).findById(eq(instanceId), any(), any());
-
-    // when
-    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig);
-
-    //then
-    Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
-    future.onComplete(ar -> {
-      context.assertTrue(ar.failed());
-      context.assertTrue(ar.cause().getMessage()
-        .contains("Error sharing Instance with InstanceId=" + instanceId
-          + " to the target tenant=consortium. Because source is SOURCE"));
-      async.complete();
-    });
-  }
 
   @AfterClass
   public static void tearDownClass(TestContext context) {
     Async async = context.async();
     vertx.close(ar -> async.complete());
+  }
+
+  private static void setField(Object instance, String fieldName, Object fieldValue) {
+    try {
+      Field field = instance.getClass().getDeclaredField(fieldName);
+      field.setAccessible(true);
+      field.set(instance, fieldValue);
+    } catch (NoSuchFieldException | IllegalAccessException e) {
+      throw new RuntimeException("Failed to set field value using reflection", e);
+    }
+  }
+
+  private static Object getField(Object instance, String fieldName) {
+    try {
+      Field field = instance.getClass().getDeclaredField(fieldName);
+      field.setAccessible(true);
+      return field.get(instance);
+    } catch (NoSuchFieldException | IllegalAccessException e) {
+      throw new RuntimeException("Failed to set field value using reflection", e);
+    }
   }
 
   private final static String recordJson = "{\"id\":\"5e525f1e-d373-4a07-9aff-b80856bacfef\",\"snapshotId\":\"7376bb73-845e-44ce-ade4-53394f7526a6\",\"matchedId\":\"0ecd6e9f-f02f-47b7-8326-2743bfa3fc43\",\"generation\":1,\"recordType\":\"MARC_BIB\"," +

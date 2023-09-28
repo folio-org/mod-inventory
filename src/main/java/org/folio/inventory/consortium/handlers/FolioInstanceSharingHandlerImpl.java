@@ -5,10 +5,9 @@ import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler;
-import org.folio.inventory.consortium.util.InstanceOperationsHelper;
 import org.folio.inventory.consortium.entities.SharingInstance;
+import org.folio.inventory.consortium.util.InstanceOperationsHelper;
 import org.folio.inventory.domain.instances.Instance;
-import org.folio.inventory.domain.instances.InstanceCollection;
 
 import java.util.Map;
 
@@ -27,8 +26,7 @@ public class FolioInstanceSharingHandlerImpl implements InstanceSharingHandler {
   }
 
   public Future<String> publishInstance(Instance instance, SharingInstance sharingInstanceMetadata,
-                                        Source source, Target target,
-                                        Map<String, String> kafkaHeaders) {
+                                        Source source, Target target, Map<String, String> kafkaHeaders) {
 
     String instanceId = instance.getId();
     String sourceTenantId = sharingInstanceMetadata.getSourceTenantId();
@@ -42,7 +40,7 @@ public class FolioInstanceSharingHandlerImpl implements InstanceSharingHandler {
     jsonInstance.remove(HRID_KEY);
 
     // Add instance to the targetInstanceCollection
-    return instanceOperations.addInstance(Instance.fromJson(jsonInstance), targetTenantId, target.getInstanceCollection())
+    return instanceOperations.addInstance(Instance.fromJson(jsonInstance), target)
       .compose(ignore -> {
         JsonObject jsonInstanceToPublish = instance.getJsonForStorage();
         jsonInstanceToPublish.put(SOURCE, CONSORTIUM_FOLIO.getValue());

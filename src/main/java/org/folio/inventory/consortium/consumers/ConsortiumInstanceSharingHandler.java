@@ -30,12 +30,13 @@ import org.folio.kafka.KafkaTopicNameHelper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.EMPTY;
 import static org.folio.inventory.consortium.entities.SharingInstanceEventType.CONSORTIUM_INSTANCE_SHARING_COMPLETE;
 import static org.folio.inventory.consortium.entities.SharingStatus.COMPLETE;
-import static org.folio.inventory.consortium.handlers.InstanceSharingHandlerFactory.getInstanceSharingHandler;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
@@ -107,7 +108,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     String sourceTenant = sharingInstanceMetadata.getSourceTenantId();
     String targetTenant = sharingInstanceMetadata.getTargetTenantId();
 
-    LOGGER.info("publishInstance :: Publishing instance with InstanceId={} from tenant {} to tenant {}.",
+    LOGGER.info("publishInstance:: Publishing instance with InstanceId={} from tenant {} to tenant {}.",
       instanceId, sourceTenant, targetTenant);
 
     Promise<String> promise = Promise.promise();
@@ -116,23 +117,34 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       instanceOperations.getInstanceById(instanceId, source).onComplete(result -> {
         if (result.succeeded()) {
           Instance instance = result.result();
-
-          getInstanceSharingHandler(InstanceSharingHandlerFactory.valueOf(instance.getSource()), instanceOperations, vertx)
-            .publishInstance(instance, sharingInstanceMetadata, source, target, kafkaHeaders)
-            .onComplete(publishResult -> handleSharingResult(sharingInstanceMetadata, kafkaHeaders, promise, publishResult));
-
+          Optional<InstanceSharingHandlerFactory> type = checkSourceType(instance.getSource());
+          type.ifPresentOrElse(
+            sourceType -> InstanceSharingHandlerFactory.getInstanceSharingHandler(sourceType, instanceOperations, vertx)
+              .publishInstance(instance, sharingInstanceMetadata, source, target, kafkaHeaders)
+              .onComplete(publishResult -> handleSharingResult(sharingInstanceMetadata, kafkaHeaders, promise, publishResult)),
+            () -> {
+              throw new IllegalArgumentException(format("Unsupported source type: %s", instance.getSource()));
+            });
         } else {
-          String errorMessage = format("Error sharing Instance with InstanceId=%s to the target tenant=%s. " +
-            "Because the instance is not found on the source tenant=%s", instanceId, targetTenant, sourceTenant);
+          String errorMessage = format("Error sharing Instance with InstanceId=%s to the target tenant %s. " +
+            "Because the instance is not found on the source tenant %s", instanceId, targetTenant, sourceTenant);
           sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
           promise.fail(errorMessage);
         }
       });
     } catch (Exception ex) {
-      LOGGER.error(format("Failed to import instance with importId to  %s", instanceId), ex);
-      promise.fail(ex);
+      String errorMessage = format("Error sharing Instance with InstanceId=%s to the target tenant %s. Error: %s",
+        instanceId, targetTenant, ex.getMessage());
+      LOGGER.error("publishInstance:: {}", errorMessage, ex);
+      promise.fail(errorMessage);
     }
     return promise.future();
+  }
+
+  private static Optional<InstanceSharingHandlerFactory> checkSourceType(String source) {
+    return Stream.of(InstanceSharingHandlerFactory.values())
+      .filter(value -> value.name().equalsIgnoreCase(source))
+      .findFirst();
   }
 
   private void handleSharingResult(SharingInstance sharingInstanceMetadata, Map<String, String> kafkaHeaders, Promise<String> promise,

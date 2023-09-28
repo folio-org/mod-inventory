@@ -8,7 +8,6 @@ import org.apache.logging.log4j.Logger;
 import org.folio.inventory.consortium.handlers.TenantProvider;
 import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.inventory.domain.instances.Instance;
-import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.kafka.exception.DuplicateEventException;
 
@@ -20,11 +19,13 @@ public class InstanceOperationsHelper {
 
   private static final Logger LOGGER = LogManager.getLogger(InstanceOperationsHelper.class);
 
-  public Future<Instance> addInstance(Instance instance, String tenant, InstanceCollection instanceCollection) {
+  public Future<Instance> addInstance(Instance instance, TenantProvider tenantProvider) {
 
-    LOGGER.info("addInstance :: Publishing instance with InstanceId={} to tenant={}", instance.getId(), tenant);
+    LOGGER.info("addInstance :: Publishing instance with InstanceId={} to tenant={}", instance.getId(),
+      tenantProvider.getTenantId());
+
     Promise<Instance> promise = Promise.promise();
-    instanceCollection.add(instance, insertSuccess -> promise.complete(insertSuccess.getResult()),
+    tenantProvider.getInstanceCollection().add(instance, insertSuccess -> promise.complete(insertSuccess.getResult()),
       insertFailure -> {
         try {
           //This is a temporary solution (verify by error message). It will be improved via another solution by https://issues.folio.org/browse/RMB-899.
@@ -37,8 +38,10 @@ public class InstanceOperationsHelper {
             promise.fail(insertFailure.getReason());
           }
         } catch (Exception ex) {
-          LOGGER.error("Error processing insert failure.", ex);
-          promise.fail("Error processing insert failure.");
+          String errorMessage = format("Error processing insert instance with InstanceId=%s on tenant=%s failure. Error: %s",
+            instance.getId(), tenantProvider.getTenantId(), ex.getCause());
+          LOGGER.error("addInstance :: {}", errorMessage, ex);
+          promise.fail(errorMessage);
         }
       });
     return promise.future();
