@@ -1,0 +1,90 @@
+package org.folio.inventory.consortium.util;
+
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import org.apache.http.HttpStatus;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
+import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.domain.instances.InstanceCollection;
+import org.folio.inventory.exceptions.NotFoundException;
+import org.folio.kafka.exception.DuplicateEventException;
+
+import static java.lang.String.format;
+import static org.apache.commons.lang.StringUtils.isNotBlank;
+import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
+
+public class InstanceOperationsHelper {
+
+  private static final Logger LOGGER = LogManager.getLogger(InstanceOperationsHelper.class);
+
+  public Future<Instance> addInstance(Instance instance, String tenant, InstanceCollection instanceCollection) {
+
+    LOGGER.info("addInstance :: Publishing instance with InstanceId={} to tenant={}", instance.getId(), tenant);
+    Promise<Instance> promise = Promise.promise();
+    instanceCollection.add(instance, insertSuccess -> promise.complete(insertSuccess.getResult()),
+      insertFailure -> {
+        try {
+          //This is a temporary solution (verify by error message). It will be improved via another solution by https://issues.folio.org/browse/RMB-899.
+          if (isNotBlank(insertFailure.getReason()) && insertFailure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
+            LOGGER.info("addInstance :: Duplicated event received by InstanceId={}. Ignoring...", instance.getId());
+            promise.fail(new DuplicateEventException(format("Duplicated event by InstanceId=%s", instance.getId())));
+          } else {
+            LOGGER.error(format("addInstance :: Error posting Instance with InstanceId=%s cause %s, status code %s",
+              instance.getId(), insertFailure.getReason(), insertFailure.getStatusCode()));
+            promise.fail(insertFailure.getReason());
+          }
+        } catch (Exception ex) {
+          LOGGER.error("Error processing insert failure.", ex);
+          promise.fail("Error processing insert failure.");
+        }
+      });
+    return promise.future();
+  }
+
+  public Future<Instance> getInstanceById(String instanceId, String tenantId, InstanceCollection instanceCollection) {
+    LOGGER.info("getInstanceById :: Get instance by InstanceId={} on tenant={}", instanceId, tenantId);
+    Promise<Instance> promise = Promise.promise();
+    instanceCollection.findById(instanceId, success -> {
+        if (success.getResult() == null) {
+          String errorMessage = format("Can't find Instance by InstanceId=%s on tenant=%s.", instanceId, tenantId);
+          LOGGER.warn("getInstanceById:: {}", errorMessage);
+          promise.fail(new NotFoundException(format(errorMessage)));
+        } else {
+          LOGGER.debug("getInstanceById :: Instance with InstanceId={} is present on tenant={}.", instanceId, tenantId);
+          promise.complete(success.getResult());
+        }
+      },
+      failure -> {
+        LOGGER.error(format("getInstanceById :: Error retrieving Instance by InstanceId=%s from tenant=%s - %s, status code %s",
+          instanceId, tenantId, failure.getReason(), failure.getStatusCode()));
+        promise.fail(failure.getReason());
+      });
+    return promise.future();
+  }
+
+  public Future<String> updateInstance(Instance instance, String tenant, InstanceCollection instanceCollection) {
+    LOGGER.info("updateInstanceInStorage :: Updating instance with InstanceId={} on tenant={}", instance.getId(), tenant);
+    Promise<String> promise = Promise.promise();
+    instanceCollection.update(instance, updateSuccess -> promise.complete(instance.getId()),
+      updateFailure -> {
+        try {
+          if (updateFailure.getStatusCode() == HttpStatus.SC_CONFLICT) {
+            promise.fail(new OptimisticLockingException(updateFailure.getReason()));
+          } else {
+            LOGGER.error(format("Error updating instance with InstanceId=%s. Reason: %s. Status code %s",
+              instance.getId(), updateFailure.getReason(), updateFailure.getStatusCode()));
+            promise.fail(updateFailure.getReason());
+          }
+        } catch (Exception ex) {
+          String errorMessage = format("Error processing update instance with InstanceId=%s on tenant=%s failure.",
+            instance.getId(), tenant);
+          LOGGER.error(errorMessage, ex);
+          promise.fail(ex);
+        }
+      });
+    return promise.future();
+  }
+
+}

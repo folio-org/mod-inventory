@@ -1,4 +1,4 @@
-package org.folio.inventory.consortium.consumers;
+package org.folio.inventory.consortium.util;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -23,7 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.folio.inventory.consortium.consumers.RestDataImportHelper.FIELD_JOB_EXECUTIONS;
+import static org.folio.inventory.consortium.util.RestDataImportHelper.FIELD_JOB_EXECUTIONS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;

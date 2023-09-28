@@ -1,4 +1,4 @@
-package org.folio.inventory.consortium.consumers;
+package org.folio.inventory.consortium.util;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -65,7 +65,7 @@ public class RestDataImportHelper {
    * @param kafkaHeaders            - kafka headers
    * @return - future with "COMMITTED" | "ERROR" or failed status
    */
-  public Future<String> publishInstanceWithMarcSource(Record marcRecord, SharingInstance sharingInstanceMetadata, Map<String, String> kafkaHeaders) {
+  public Future<String> importMarcRecord(Record marcRecord, SharingInstance sharingInstanceMetadata, Map<String, String> kafkaHeaders) {
 
     String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
     LOGGER.info("publishInstanceWithMarcSource:: Importing MARC record for instance with InstanceId={} to target tenant={}.",
