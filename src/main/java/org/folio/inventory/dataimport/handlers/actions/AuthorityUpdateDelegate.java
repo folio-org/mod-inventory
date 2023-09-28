@@ -106,6 +106,7 @@ public class AuthorityUpdateDelegate {
       mappedRecord.setVersion(existingRecord.getVersion());
       JsonObject mapped = JsonObject.mapFrom(mappedRecord);
       Authority mergedAuthorityRecord = mapped.mapTo(Authority.class);
+      mergedAuthorityRecord.setSource(Authority.Source.MARC);
       return Future.succeededFuture(mergedAuthorityRecord);
     } catch (Exception e) {
       LOGGER.error("Error updating authority", e);
