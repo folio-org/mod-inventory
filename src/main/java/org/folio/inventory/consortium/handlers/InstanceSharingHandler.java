@@ -10,8 +10,8 @@ import java.util.Map;
 public interface InstanceSharingHandler {
 
   Future<String> publishInstance(Instance instance, SharingInstance sharingInstanceMetadata,
-                                 InstanceCollection targetInstanceCollection,
                                  InstanceCollection sourceInstanceCollection,
+                                 InstanceCollection targetInstanceCollection,
                                  Map<String, String> kafkaHeaders);
 
 }

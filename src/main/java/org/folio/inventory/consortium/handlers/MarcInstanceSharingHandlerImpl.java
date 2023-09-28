@@ -41,13 +41,12 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
   }
 
   public Future<String> publishInstance(Instance instance, SharingInstance sharingInstanceMetadata,
-                                         InstanceCollection targetInstanceCollection,
-                                         InstanceCollection sourceInstanceCollection,
-                                         Map<String, String> kafkaHeaders) {
+                                        InstanceCollection sourceInstanceCollection,
+                                        InstanceCollection targetInstanceCollection,
+                                        Map<String, String> kafkaHeaders) {
 
     String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
     String sourceTenant = sharingInstanceMetadata.getSourceTenantId();
-    String targetTenant = sharingInstanceMetadata.getTargetTenantId();
 
     SourceStorageRecordsClient sourceStorageClient = getSourceStorageRecordsClient(sourceTenant, kafkaHeaders);
 

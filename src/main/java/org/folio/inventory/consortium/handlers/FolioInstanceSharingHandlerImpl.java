@@ -27,8 +27,8 @@ public class FolioInstanceSharingHandlerImpl implements InstanceSharingHandler {
   }
 
   public Future<String> publishInstance(Instance instance, SharingInstance sharingInstanceMetadata,
-                                        InstanceCollection targetInstanceCollection,
                                         InstanceCollection sourceInstanceCollection,
+                                        InstanceCollection targetInstanceCollection,
                                         Map<String, String> kafkaHeaders) {
 
     String instanceId = instance.getId();
