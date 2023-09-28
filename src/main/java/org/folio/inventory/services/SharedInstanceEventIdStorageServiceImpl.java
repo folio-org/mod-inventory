@@ -9,6 +9,8 @@ import org.folio.inventory.domain.relationship.EventTable;
 import org.folio.inventory.domain.relationship.EventToEntity;
 import org.folio.kafka.exception.DuplicateEventException;
 
+import java.util.Arrays;
+
 public class SharedInstanceEventIdStorageServiceImpl implements EventIdStorageService {
 
   private static final Logger LOGGER = LogManager.getLogger(SharedInstanceEventIdStorageServiceImpl.class);
@@ -30,8 +32,8 @@ public class SharedInstanceEventIdStorageServiceImpl implements EventIdStorageSe
       .onSuccess(promise::complete)
       .onFailure(error -> {
         LOGGER.warn("store:: Full-error: {}", error.toString());
+        LOGGER.warn("store:: getStackTrace: {}", Arrays.toString(error.getStackTrace()));
         LOGGER.warn("store:: error.getMessage(): {}", error.getMessage());
-        LOGGER.warn("store:: error.getCause(): {}", error.getCause().toString());
         if (error.getMessage().contains(UNIQUE_VIOLATION_SQL_STATE)) {
           LOGGER.info("store:: Duplication found fot eventId: {} tenantId{}", eventId, tenantId);
           promise.fail(new DuplicateEventException("SQL Unique constraint violation prevented repeatedly saving the record"));
