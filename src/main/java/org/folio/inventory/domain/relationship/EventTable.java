@@ -3,7 +3,7 @@ package org.folio.inventory.domain.relationship;
 import lombok.Getter;
 
 /**
- * Enums which stores pointer on DB-tableNames inside.
+ * Enum which stores pointer on DB-tableNames inside.
  */
 @Getter
 public enum EventTable {
