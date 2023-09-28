@@ -13,15 +13,16 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.Json;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
 import io.vertx.kafka.client.producer.KafkaProducer;
 import io.vertx.kafka.client.producer.KafkaProducerRecord;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.MappingMetadataDto;
@@ -34,6 +35,8 @@ import org.folio.inventory.domain.instances.Instance;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaHeaderUtils;
+import org.folio.kafka.SimpleKafkaProducerManager;
+import org.folio.kafka.services.KafkaProducerRecordBuilder;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.LinkUpdateReport;
 import org.folio.rest.jaxrs.model.MarcBibUpdate;
@@ -118,14 +121,12 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
   private void sendEventToKafka(LinkUpdateReport linkUpdateReport, List<KafkaHeader> kafkaHeaders) {
     try {
       var kafkaRecord = createKafkaProducerRecord(linkUpdateReport, kafkaHeaders);
-      producer.write(kafkaRecord, ar -> {
-        if (ar.succeeded()) {
-          LOGGER.info("Event with type {}, jobId {} was sent to kafka", LINKS_STATS.topicName(), linkUpdateReport.getJobId());
-        } else {
-          var cause = ar.cause();
+      producer.send(kafkaRecord)
+        .onSuccess(res -> LOGGER.info("Event with type {}, jobId {} was sent to kafka", LINKS_STATS.topicName(), linkUpdateReport.getJobId()))
+        .onFailure(err -> {
+          var cause = err.getCause();
           LOGGER.info("Failed to sent event {} for jobId {}, cause: {}", LINKS_STATS.topicName(), linkUpdateReport.getJobId(), cause);
-        }
-      });
+        });
     } catch (Exception e) {
       LOGGER.error("Failed to send an event for eventType {}, jobId {}, cause {}", LINKS_STATS.topicName(), linkUpdateReport.getJobId(), e);
     }
@@ -134,9 +135,13 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
   private KafkaProducerRecord<String, String> createKafkaProducerRecord(LinkUpdateReport linkUpdateReport, List<KafkaHeader> kafkaHeaders) {
     var topicName = formatTopicName(kafkaConfig.getEnvId(), linkUpdateReport.getTenant(), LINKS_STATS.topicName());
     var key = String.valueOf(INDEXER.incrementAndGet() % maxDistributionNumber);
-    var kafkaRecord = KafkaProducerRecord.create(topicName, key, Json.encode(linkUpdateReport));
-    kafkaRecord.addHeaders(kafkaHeaders);
+    var kafkaRecord = new KafkaProducerRecordBuilder<String, Object>(linkUpdateReport.getTenant())
+      .key(key)
+      .value(linkUpdateReport)
+      .topic(topicName)
+      .build();
 
+    kafkaRecord.addHeaders(kafkaHeaders);
     return kafkaRecord;
   }
 
@@ -150,8 +155,7 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
   }
 
   private KafkaProducer<String, String> createProducer(String eventType, KafkaConfig kafkaConfig) {
-    String producerName = eventType + "_Producer";
-    return KafkaProducer.createShared(vertx, producerName, kafkaConfig.getProducerProps());
+    return new SimpleKafkaProducerManager(vertx, kafkaConfig).createShared(eventType);
   }
 
   private LinkUpdateReport mapToLinkReport(MarcBibUpdate marcBibUpdate, String instanceId, String errMessage) {
