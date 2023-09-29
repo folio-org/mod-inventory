@@ -168,6 +168,14 @@ public class MatchInstanceEventHandlerUnitTest {
   public void shouldThrowExceptionWhenMatchOnLocalAndCentralTenant(TestContext testContext) throws UnsupportedEncodingException {
     Async async = testContext.async();
 
+    String centralTenantId = "consortium";
+    String consortiumId = "consortiumId";
+
+    Instance instance = new Instance(UUID.randomUUID().toString(), "5", INSTANCE_HRID, "MARC", "Wonderful", "12334");
+
+    InstanceCollection instanceCollectionCentralTenant = Mockito.mock(InstanceCollection.class);
+    when(storage.getInstanceCollection(Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)))).thenReturn(instanceCollectionCentralTenant);
+
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
       Success<MultipleRecords<Instance>> result =
@@ -177,8 +185,14 @@ public class MatchInstanceEventHandlerUnitTest {
     }).when(instanceCollection)
       .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    String centralTenantId = "consortium";
-    String consortiumId = "consortiumId";
+    doAnswer(ans -> {
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Success<MultipleRecords<Instance>> result =
+        new Success<>(new MultipleRecords<>(singletonList(instance), 1));
+      callback.accept(result);
+      return null;
+    }).when(instanceCollectionCentralTenant)
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
     doAnswer(invocationOnMock -> Future.succeededFuture(Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
       .when(consortiumService).getConsortiumConfiguration(any());
@@ -194,10 +208,16 @@ public class MatchInstanceEventHandlerUnitTest {
   }
 
   @Test
-  public void shouldNotTryToMatchOnCentralTenantIfMatchedShadowInstanceOnLocalTenant(TestContext testContext) throws UnsupportedEncodingException {
+  public void shouldNotThrowMultiMatchExceptionIfMatchedShadowInstanceLocallyAndSharedInstanceOnCentralTenant(TestContext testContext) throws UnsupportedEncodingException {
     Async async = testContext.async();
 
-    Instance instance = new Instance(UUID.randomUUID().toString(), "5", INSTANCE_HRID, "CONSORTIUM-MARC", "Wonderful", "12334");
+    String centralTenantId = "consortium";
+    String consortiumId = "consortiumId";
+
+    Instance instance = new Instance(INSTANCE_ID, "5", UUID.randomUUID().toString(), "CONSORTIUM-MARC", "Wonderful", "12334");
+
+    InstanceCollection instanceCollectionCentralTenant = Mockito.mock(InstanceCollection.class);
+    when(storage.getInstanceCollection(Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)))).thenReturn(instanceCollectionCentralTenant);
 
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
@@ -208,7 +228,17 @@ public class MatchInstanceEventHandlerUnitTest {
     }).when(instanceCollection)
       .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    Mockito.verify(consortiumService, times(0)).getConsortiumConfiguration(any());
+    doAnswer(ans -> {
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Success<MultipleRecords<Instance>> result =
+        new Success<>(new MultipleRecords<>(singletonList(createInstance()), 1));
+      callback.accept(result);
+      return null;
+    }).when(instanceCollectionCentralTenant)
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    doAnswer(invocationOnMock -> Future.succeededFuture(Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
+      .when(consortiumService).getConsortiumConfiguration(any());
 
     DataImportEventPayload eventPayload = createEventPayload();
 
@@ -221,7 +251,8 @@ public class MatchInstanceEventHandlerUnitTest {
       );
       testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
       JsonObject matchedInstanceAsJsonObject = new JsonObject(updatedEventPayload.getContext().get(INSTANCE.value()));
-      testContext.assertEquals(matchedInstanceAsJsonObject.getString("id"), instance.getId());
+      testContext.assertEquals(matchedInstanceAsJsonObject.getString("id"), INSTANCE_ID);
+      testContext.assertEquals(matchedInstanceAsJsonObject.getString("hrid"), INSTANCE_HRID);
       async.complete();
     });
   }

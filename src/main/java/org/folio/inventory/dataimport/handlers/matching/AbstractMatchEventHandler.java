@@ -31,7 +31,6 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
   private static final String MATCHING_RELATIONS = "MATCHING_PARAMETERS_RELATIONS";
   private static final String MAPPING_PARAMS = "MAPPING_PARAMS";
   public static final String FOUND_MULTIPLE_ENTITIES = "Found multiple entities during matching on localTenant: %s and centralTenant: %s";
-  private static final String CONSORTIUM_PREFIX = "CONSORTIUM-";
 
   private MappingMetadataCache mappingMetadataCache;
   private ConsortiumService consortiumService;
@@ -78,7 +77,7 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
 
     return MatchingManager.match(dataImportEventPayload)
       .thenCompose(matchedLocal -> {
-        if (isConsortiumAvailable() && !isShadowEntity(dataImportEventPayload.getContext().get(getEntityType().value()))) {
+        if (isConsortiumAvailable()) {
           return matchCentralTenantIfNeeded(dataImportEventPayload, matchedLocal, context, mappingMetadataDto, matchingParametersRelations);
         }
         return CompletableFuture.completedFuture(matchedLocal);
@@ -97,7 +96,7 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
           return MatchingManager.match(dataImportEventPayload)
             .thenCompose(isMatchedConsortium -> {
               dataImportEventPayload.setTenant(context.getTenantId());
-              if (isMatchedConsortium && isMatchedLocal) {
+              if (isMatchedConsortium && isMatchedLocal && !isShadowEntity(localMatchedInstance, dataImportEventPayload.getContext().get(getEntityType().value()))) {
                 LOGGER.warn("matchCentralTenantIfNeeded:: Found multiple results during matching on local tenant: {} and central tenant: {} ",
                   consortiumConfiguration.get().getCentralTenantId(), context.getTenantId());
                 return CompletableFuture.failedFuture(new MatchingException(String.format(FOUND_MULTIPLE_ENTITIES, context.getTenantId(), consortiumConfiguration.get().getCentralTenantId())));
@@ -124,11 +123,11 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
     dataImportEventPayload.getContext().remove(getEntityType().value());
   }
 
-  private boolean isShadowEntity(String entity) {
-    if (entity != null) {
-      JsonObject entityAsJson = new JsonObject(entity);
-      String source = entityAsJson.getString("source");
-      return source != null && source.startsWith(CONSORTIUM_PREFIX);
+  private boolean isShadowEntity(String localEntity, String matchedEntity) {
+    if (localEntity != null && matchedEntity != null) {
+      JsonObject localEntityAsJson = new JsonObject(localEntity);
+      JsonObject matchedEntityAsJson = new JsonObject(matchedEntity);
+      return StringUtils.equals(localEntityAsJson.getString("id"), matchedEntityAsJson.getString("id"));
     }
     return false;
   }
