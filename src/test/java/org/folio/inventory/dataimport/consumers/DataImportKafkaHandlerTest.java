@@ -21,6 +21,7 @@ import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.JobProfile;
 import org.folio.MappingProfile;
+import org.folio.inventory.consortium.cache.ConsortiumDataCache;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
 import org.folio.inventory.storage.Storage;
@@ -152,7 +153,8 @@ public class DataImportKafkaHandlerTest {
     HttpClient client = vertx.createHttpClient();
     dataImportKafkaHandler = new DataImportKafkaHandler(vertx, mockedStorage, client,
       new ProfileSnapshotCache(vertx, client, 3600),
-      kafkaConfig, new MappingMetadataCache(vertx, client, 3600));
+      kafkaConfig, new MappingMetadataCache(vertx, client, 3600),
+      new ConsortiumDataCache(vertx, client));
 
     EventManager.clearEventHandlers();
     EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, 1);
