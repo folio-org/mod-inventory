@@ -14,6 +14,7 @@ import org.folio.inventory.client.OrdersClient;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.dao.EntityIdStorageDaoImpl;
 import org.folio.inventory.common.dao.PostgresClientFactory;
+import org.folio.inventory.consortium.cache.ConsortiumDataCache;
 import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.dataimport.HoldingWriterFactory;
 import org.folio.inventory.dataimport.HoldingsItemMatcherFactory;
@@ -99,13 +100,14 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
   public DataImportKafkaHandler(Vertx vertx, Storage storage, HttpClient client,
                                 ProfileSnapshotCache profileSnapshotCache,
                                 KafkaConfig kafkaConfig,
-                                MappingMetadataCache mappingMetadataCache) {
+                                MappingMetadataCache mappingMetadataCache,
+                                ConsortiumDataCache consortiumDataCache) {
     this.vertx = vertx;
     this.profileSnapshotCache = profileSnapshotCache;
     this.mappingMetadataCache = mappingMetadataCache;
     this.kafkaConfig = kafkaConfig;
     orderHelperService = new OrderHelperServiceImpl(profileSnapshotCache);
-    consortiumService = new ConsortiumServiceImpl(client);
+    consortiumService = new ConsortiumServiceImpl(client, consortiumDataCache);
     registerDataImportProcessingHandlers(storage, client);
   }
 
