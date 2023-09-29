@@ -14,6 +14,7 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.consortium.cache.ConsortiumDataCache;
 import org.folio.inventory.consortium.entities.ConsortiumConfiguration;
 import org.folio.inventory.consortium.entities.SharingInstance;
 import org.folio.inventory.consortium.entities.SharingStatus;
@@ -33,7 +34,9 @@ import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
 @RunWith(VertxUnitRunner.class)
 public class ConsortiumServiceTest {
   private final Vertx vertx = Vertx.vertx();
-  private final ConsortiumServiceImpl consortiumServiceImpl = new ConsortiumServiceImpl(vertx.createHttpClient());
+  private ConsortiumDataCache consortiumDataCache = new ConsortiumDataCache(vertx, vertx.createHttpClient());
+  private final ConsortiumServiceImpl consortiumServiceImpl =
+    new ConsortiumServiceImpl(vertx.createHttpClient(), consortiumDataCache);
   private final String localTenant = "tenant";
   private final String centralTenantId = "consortiumTenant";
   private final String token = "token";
