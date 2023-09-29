@@ -14,7 +14,7 @@ import java.util.UUID;
 public class EventIdStorageDaoImpl implements EventIdStorageDao {
   private static final Logger LOGGER = LogManager.getLogger(EventIdStorageDaoImpl.class);
 
-  private static final String INSERT_FUNCTION = "INSERT INTO {schemaName}.{tableName} VALUES ($1::uuid) RETURNING *;";
+  private static final String INSERT_FUNCTION = "INSERT INTO {schemaName}.{tableName} VALUES ($1::uuid, current_timestamp) RETURNING *;";
 
   private final PostgresClientFactory postgresClientFactory;
 
