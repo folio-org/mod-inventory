@@ -134,7 +134,7 @@ public class MatchAuthorityEventHandlerUnitTest {
     }).when(collection)
       .findByCql(eq(format("personalName == \"%s\"", PERSONAL_NAME)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache, null);
     DataImportEventPayload eventPayload = createEventPayload(personalNameMatchDetail);
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
@@ -176,7 +176,7 @@ public class MatchAuthorityEventHandlerUnitTest {
     }).when(collection)
       .findByCql(eq("identifiers=\\\"[{\\\"value\\\":\\\"955335\\\",\\\"identifierTypeId\\\":\\\"11bf5f7c-30e1-4308-8170-1fbb5b817cf2\\\"}]\\\""), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache, null);
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
       testContext.assertNull(throwable);
@@ -218,7 +218,7 @@ public class MatchAuthorityEventHandlerUnitTest {
     }).when(collection)
       .findByCql(eq(format("id == \"%s\"", AUTHORITY_ID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache, null);
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
       testContext.assertNull(throwable);
@@ -256,7 +256,7 @@ public class MatchAuthorityEventHandlerUnitTest {
     }).when(collection)
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache, null);
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
       testContext.assertNull(throwable);
       testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
@@ -292,7 +292,7 @@ public class MatchAuthorityEventHandlerUnitTest {
     }).when(collection)
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache, null);
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
       testContext.assertNotNull(throwable);
@@ -323,7 +323,7 @@ public class MatchAuthorityEventHandlerUnitTest {
     }).when(collection)
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache, null);
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
       testContext.assertNotNull(throwable);
@@ -348,7 +348,7 @@ public class MatchAuthorityEventHandlerUnitTest {
     doThrow(new UnsupportedEncodingException()).when(collection)
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache, null);
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
       testContext.assertNotNull(throwable);
@@ -373,7 +373,7 @@ public class MatchAuthorityEventHandlerUnitTest {
     when(marcValueReader.read(any(DataImportEventPayload.class), any(MatchDetail.class)))
       .thenReturn(MissingValue.getInstance());
 
-    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache, null);
 
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
       testContext.assertNull(throwable);
@@ -389,14 +389,14 @@ public class MatchAuthorityEventHandlerUnitTest {
 
   @Test
   public void shouldReturnFalseOnIsEligibleIfNullCurrentNode() {
-    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache, null);
     DataImportEventPayload eventPayload = new DataImportEventPayload();
     assertFalse(eventHandler.isEligible(eventPayload));
   }
 
   @Test
   public void shouldReturnFalseOnIsEligibleIfCurrentNodeTypeIsNotMatchProfile() {
-    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache, null);
     DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withContentType(MAPPING_PROFILE));
@@ -405,7 +405,7 @@ public class MatchAuthorityEventHandlerUnitTest {
 
   @Test
   public void shouldReturnFalseOnIsEligibleForNotAuthorityMatchProfile() {
-    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache, null);
     DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withContentType(MATCH_PROFILE)
@@ -416,7 +416,7 @@ public class MatchAuthorityEventHandlerUnitTest {
 
   @Test
   public void shouldReturnTrueOnIsEligibleForAuthorityMatchProfile() {
-    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache, null);
     DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withContentType(MATCH_PROFILE)
@@ -448,7 +448,7 @@ public class MatchAuthorityEventHandlerUnitTest {
       .findByCql(eq(format("personalName == \"%s\" AND id == \"%s\"", PERSONAL_NAME, AUTHORITY_ID)),
         any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache, null);
     HashMap<String, String> context = new HashMap<>();
     context.put(AUTHORITY.value(), JsonObject.mapFrom(createAuthority()).encode());
     context.put("MAPPING_PARAMS", new JsonObject().encode());
@@ -490,7 +490,7 @@ public class MatchAuthorityEventHandlerUnitTest {
       .findByCql(eq(format("personalName == \"%s\" AND id == (%s OR %s)", PERSONAL_NAME, multiMatchResult.get(0), multiMatchResult.get(1))),
         any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache, null);
     HashMap<String, String> context = new HashMap<>();
     context.put(MULTI_MATCH_IDS, Json.encode(multiMatchResult));
     context.put("MAPPING_PARAMS", new JsonObject().encode());
@@ -531,7 +531,7 @@ public class MatchAuthorityEventHandlerUnitTest {
       .findByCql(eq(format("personalName == \"%s\"", PERSONAL_NAME)),
         any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache);
+    EventHandler eventHandler = new MatchAuthorityEventHandler(mappingMetadataCache, null);
     HashMap<String, String> context = new HashMap<>();
     context.put("MAPPING_PARAMS", new JsonObject().encode());
     DataImportEventPayload eventPayload = createEventPayload(personalNameMatchDetail).withContext(context);
