@@ -83,15 +83,15 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       Future<String> eventToSharedInstanceFuture = eventIdStorageService.store(event.key(), sharingInstanceMetadata.getTargetTenantId());
       eventToSharedInstanceFuture.compose(r -> {
 
-        publishInstanceIfNeeded(sharingInstanceMetadata, kafkaHeaders).onComplete(e -> {
-          if (e.succeeded()) {
+        publishInstanceIfNeeded(sharingInstanceMetadata, kafkaHeaders).onComplete(t -> {
+          if (t.succeeded()) {
             LOGGER.info("handle:: Checking if Instance exists on target tenant - COMPLETED SUCCESSFULLY for instanceId: {}, sourceTenant: {}, targetTenant: {}",
               instanceId, sharingInstanceMetadata.getSourceTenantId(), sharingInstanceMetadata.getTargetTenantId());
-            promise.complete(e.result());
+            promise.complete(t.result());
           } else {
             LOGGER.warn("handle:: Checking if Instance exists on target tenant - FAILED for instanceId: {}, sourceTenant: {}, targetTenant: {} error: {}",
-              instanceId, sharingInstanceMetadata.getSourceTenantId(), sharingInstanceMetadata.getTargetTenantId(), e.cause());
-            promise.fail(e.cause());
+              instanceId, sharingInstanceMetadata.getSourceTenantId(), sharingInstanceMetadata.getTargetTenantId(), t.cause());
+            promise.fail(t.cause());
           }
         });
         return promise.future();
