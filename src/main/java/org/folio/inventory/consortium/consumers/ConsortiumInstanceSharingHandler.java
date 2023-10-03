@@ -99,8 +99,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
         return Future.succeededFuture(warningMessage);
       })
       .onFailure(throwable -> {
-        String warningMessage = String.format("Instance with InstanceId=%s is not exists on target tenant: %s.", instanceId, targetTenant);
-        LOGGER.info(warningMessage);
+        LOGGER.info(String.format("Instance with InstanceId=%s is not exists on target tenant: %s.", instanceId, targetTenant));
       })
       .recover(throwable -> publishInstance(sharingInstanceMetadata, source, target, kafkaHeaders));
   }

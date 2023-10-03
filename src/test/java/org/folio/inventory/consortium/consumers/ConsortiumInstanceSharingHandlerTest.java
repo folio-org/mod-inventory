@@ -14,26 +14,28 @@ import io.vertx.ext.web.client.impl.HttpResponseImpl;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
 import org.folio.HttpStatus;
-import org.folio.Record;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.consortium.entities.SharingInstance;
+import org.folio.inventory.consortium.handlers.InstanceSharingHandler;
+import org.folio.inventory.consortium.handlers.InstanceSharingHandlerFactory;
+import org.folio.inventory.consortium.util.InstanceOperationsHelper;
 import org.folio.inventory.consortium.util.RestDataImportHelper;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
-import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.KafkaConfig;
-import org.folio.rest.client.ChangeManagerClient;
 import org.folio.rest.client.SourceStorageRecordsClient;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import java.io.IOException;
@@ -43,15 +45,10 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
 
-import static java.lang.String.format;
 import static org.folio.inventory.consortium.entities.SharingStatus.IN_PROGRESS;
-import static org.folio.inventory.consortium.util.RestDataImportHelper.STATUS_COMMITTED;
-import static org.folio.inventory.consortium.util.RestDataImportHelper.STATUS_ERROR;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -72,8 +69,6 @@ public class ConsortiumInstanceSharingHandlerTest {
   @Mock
   private SourceStorageRecordsClient mockedSourceStorageRecordsClient;
   @Mock
-  private ChangeManagerClient mockedTargetManagerClient;
-  @Mock
   private RestDataImportHelper mockedRestDataImportHelper;
   @Mock
   private KafkaConsumerRecord<String, String> kafkaRecord;
@@ -81,6 +76,7 @@ public class ConsortiumInstanceSharingHandlerTest {
   private static KafkaConfig kafkaConfig;
   private Instance existingInstance;
   private ConsortiumInstanceSharingHandler consortiumInstanceSharingHandler;
+  private MockedStatic<InstanceSharingHandlerFactory> mockedInstanceSharingHandler;
   private final HttpResponse<Buffer> sourceStorageRecordsClientResponseBuffer =
     buildHttpResponseWithBuffer(HttpStatus.HTTP_OK, BufferImpl.buffer(recordJson));
   private final HttpResponse<Buffer> targetManagerClientJobExecutionResponseBuffer =
@@ -339,13 +335,16 @@ public class ConsortiumInstanceSharingHandlerTest {
       async.complete();
     });
   }
-  @Ignore
+
   @Test
   public void shouldShareInstanceWithMARCSource(TestContext context) throws IOException {
 
     // given
     Async async = context.async();
-    existingInstance = Instance.fromJson(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
+    JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
+    jsonInstance.put("source", "MARC");
+    existingInstance = Instance.fromJson(jsonInstance);
+
     String shareId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
     String instanceId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
 
@@ -363,8 +362,8 @@ public class ConsortiumInstanceSharingHandlerTest {
         KafkaHeader.header(OKAPI_URL_HEADER, "url")));
 
     when(storage.getInstanceCollection(any(Context.class)))
-      .thenReturn(mockedTargetInstanceCollection)
-      .thenReturn(mockedSourceInstanceCollection);
+      .thenReturn(mockedSourceInstanceCollection)
+      .thenReturn(mockedTargetInstanceCollection);
 
     doAnswer(invocationOnMock -> {
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
@@ -378,33 +377,23 @@ public class ConsortiumInstanceSharingHandlerTest {
       return null;
     }).when(mockedSourceInstanceCollection).findById(eq(instanceId), any(), any());
 
-    // when
+    mockedInstanceSharingHandler = Mockito.mockStatic(InstanceSharingHandlerFactory.class);
+
+    InstanceSharingHandler sharingHandler = mock(InstanceSharingHandler.class);
+
+    mockedInstanceSharingHandler.when(InstanceSharingHandlerFactory :: values)
+    .thenReturn(new InstanceSharingHandlerFactory[]{InstanceSharingHandlerFactory.MARC});
+
+    mockedInstanceSharingHandler.when(() ->
+        InstanceSharingHandlerFactory.getInstanceSharingHandler(eq(InstanceSharingHandlerFactory.MARC),
+        any(InstanceOperationsHelper.class), any(Vertx.class)))
+      .thenReturn(sharingHandler);
+
+    when(sharingHandler.publishInstance(any(), any(), any(), any(), any()))
+      .thenReturn(Future.succeededFuture("COMMITTED"));
+
+    //when
     consortiumInstanceSharingHandler = spy(new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig));
-
-//    when(consortiumInstanceSharingHandler.getSourceStorageRecordsClient(anyString(), anyMap()))
-//      .thenReturn(mockedSourceStorageRecordsClient);
-
-    //getting MARC record from SRS
-    when(mockedSourceStorageRecordsClient.getSourceStorageRecordsFormattedById(anyString(), anyString()))
-      .thenReturn(Future.succeededFuture(sourceStorageRecordsClientResponseBuffer));
-
-    mockedRestDataImportHelper = mock(RestDataImportHelper.class);
-    setField(consortiumInstanceSharingHandler, "restDataImportHelper", mockedRestDataImportHelper);
-
-    when(mockedRestDataImportHelper.importMarcRecord(any(Record.class), any(SharingInstance.class), anyMap()))
-      .thenReturn(Future.succeededFuture(STATUS_COMMITTED));
-
-    //delete source records
-    doAnswer(invocationOnMock -> {
-      return Future.succeededFuture(targetManagerClientResponseBuffer);
-    }).when(mockedSourceStorageRecordsClient).deleteSourceStorageRecordsById(anyString());
-
-    //update source of sharing instance to CONSORTIUM-MARC
-    doAnswer(invocationOnMock -> {
-      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
-      successHandler.accept(new Success<>(existingInstance));
-      return null;
-    }).when(mockedSourceInstanceCollection).update(any(Instance.class), any(), any());
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
@@ -416,71 +405,15 @@ public class ConsortiumInstanceSharingHandlerTest {
     });
   }
 
-  @Ignore
-  @Test
-  public void shouldNotShareInstanceWithMARCSourceBecauseMARCFileIsNotFound(TestContext context) throws IOException {
-
-    // given
-    Async async = context.async();
-    existingInstance = Instance.fromJson(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
-    String shareId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
-    String instanceId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
-
-    SharingInstance sharingInstance = new SharingInstance()
-      .withId(UUID.fromString(shareId))
-      .withInstanceIdentifier(UUID.fromString(instanceId))
-      .withSourceTenantId("university")
-      .withTargetTenantId("consortium")
-      .withStatus(IN_PROGRESS);
-
-    when(kafkaRecord.key()).thenReturn(shareId);
-    when(kafkaRecord.value()).thenReturn(Json.encode(sharingInstance));
-    when(kafkaRecord.headers()).thenReturn(
-      List.of(KafkaHeader.header(OKAPI_TOKEN_HEADER, "token"),
-        KafkaHeader.header(OKAPI_URL_HEADER, "url")));
-
-    when(storage.getInstanceCollection(any(Context.class)))
-      .thenReturn(mockedTargetInstanceCollection)
-      .thenReturn(mockedSourceInstanceCollection);
-
-    doAnswer(invocationOnMock -> {
-      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
-      successHandler.accept(new Success<>(null));
-      return null;
-    }).when(mockedTargetInstanceCollection).findById(any(String.class), any(), any());
-
-    doAnswer(invocationOnMock -> {
-      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
-      successHandler.accept(new Success<>(existingInstance));
-      return null;
-    }).when(mockedSourceInstanceCollection).findById(eq(instanceId), any(), any());
-
-    // when
-    consortiumInstanceSharingHandler = spy(new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig));
-
-    //init SRS client
-//    when(consortiumInstanceSharingHandler.getSourceStorageRecordsClient(anyString(), anyMap()))
-//      .thenReturn(mockedSourceStorageRecordsClient);
-
-    //getting MARC record from SRS
-    when(mockedSourceStorageRecordsClient.getSourceStorageRecordsFormattedById(anyString(), anyString()))
-      .thenReturn(Future.failedFuture(new NotFoundException(format("Record with id %s was not found", instanceId))));
-
-    //then
-    Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
-    future.onComplete(ar -> {
-      context.assertTrue(ar.failed());
-      context.assertTrue(ar.cause().getMessage().contains("Record with id " + instanceId + " was not found"));
-      async.complete();
-    });
-  }
-  @Ignore
   @Test
   public void shouldNotShareInstanceWithMARCSourceBecauseDIFailed(TestContext context) throws IOException {
 
     // given
     Async async = context.async();
-    existingInstance = Instance.fromJson(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
+    JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
+    jsonInstance.put("source", "MARC");
+    existingInstance = Instance.fromJson(jsonInstance);
+
     String shareId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
     String instanceId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
 
@@ -498,8 +431,8 @@ public class ConsortiumInstanceSharingHandlerTest {
         KafkaHeader.header(OKAPI_URL_HEADER, "url")));
 
     when(storage.getInstanceCollection(any(Context.class)))
-      .thenReturn(mockedTargetInstanceCollection)
-      .thenReturn(mockedSourceInstanceCollection);
+      .thenReturn(mockedSourceInstanceCollection)
+      .thenReturn(mockedTargetInstanceCollection);
 
     doAnswer(invocationOnMock -> {
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
@@ -513,30 +446,38 @@ public class ConsortiumInstanceSharingHandlerTest {
       return null;
     }).when(mockedSourceInstanceCollection).findById(eq(instanceId), any(), any());
 
-    // when
+    mockedInstanceSharingHandler = Mockito.mockStatic(InstanceSharingHandlerFactory.class);
+
+    InstanceSharingHandler sharingHandler = mock(InstanceSharingHandler.class);
+
+    mockedInstanceSharingHandler.when(InstanceSharingHandlerFactory :: values)
+      .thenReturn(new InstanceSharingHandlerFactory[]{InstanceSharingHandlerFactory.MARC});
+
+    mockedInstanceSharingHandler.when(() ->
+        InstanceSharingHandlerFactory.getInstanceSharingHandler(eq(InstanceSharingHandlerFactory.MARC),
+          any(InstanceOperationsHelper.class), any(Vertx.class)))
+      .thenReturn(sharingHandler);
+
+    when(sharingHandler.publishInstance(any(), any(), any(), any(), any()))
+      .thenReturn(Future.failedFuture("ERROR"));
+
+    //when
     consortiumInstanceSharingHandler = spy(new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig));
-
-//    when(consortiumInstanceSharingHandler.getSourceStorageRecordsClient(anyString(), anyMap()))
-//      .thenReturn(mockedSourceStorageRecordsClient);
-
-    //getting MARC record from SRS
-    when(mockedSourceStorageRecordsClient.getSourceStorageRecordsFormattedById(anyString(), anyString()))
-      .thenReturn(Future.succeededFuture(sourceStorageRecordsClientResponseBuffer));
-
-    mockedRestDataImportHelper = mock(RestDataImportHelper.class);
-    setField(consortiumInstanceSharingHandler, "restDataImportHelper", mockedRestDataImportHelper);
-
-    when(mockedRestDataImportHelper.importMarcRecord(any(Record.class), any(SharingInstance.class), anyMap()))
-      .thenReturn(Future.succeededFuture(STATUS_ERROR));
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
     future.onComplete(ar -> {
       context.assertTrue(ar.failed());
       context.assertTrue(ar.cause().getMessage()
-        .contains("Sharing instance with InstanceId=" + instanceId + " to the target tenant consortium. Error: DI status is ERROR"));
+        .contains("Sharing instance with InstanceId=" + instanceId + " to the target tenant consortium. Error: ERROR"));
       async.complete();
     });
+  }
+
+  @After
+  public void tearDown() {
+    if (mockedInstanceSharingHandler != null)
+      mockedInstanceSharingHandler.close();
   }
 
   @AfterClass

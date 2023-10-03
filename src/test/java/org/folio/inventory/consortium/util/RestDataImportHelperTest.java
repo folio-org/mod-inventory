@@ -12,6 +12,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.impl.HttpResponseImpl;
 import org.folio.HttpStatus;
+import org.folio.inventory.consortium.entities.SharingInstance;
 import org.folio.rest.client.ChangeManagerClient;
 import org.folio.rest.jaxrs.model.JobProfileInfo;
 import org.folio.rest.jaxrs.model.RawRecordsDto;
@@ -31,7 +32,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -42,10 +42,23 @@ public class RestDataImportHelperTest {
   private ChangeManagerClient changeManagerClient;
   private RestDataImportHelper restDataImportHelper;
 
+  private SharingInstance createTestSharingInstance() {
+    SharingInstance sharingInstance = new SharingInstance();
+    sharingInstance.setInstanceIdentifier(UUID.randomUUID());
+    sharingInstance.setSourceTenantId("sourceTenantId");
+    sharingInstance.setTargetTenantId("targetTenantId");
+    return sharingInstance;
+  }
+
   @Before
   public void init() {
     changeManagerClient = mock(ChangeManagerClient.class);
-    restDataImportHelper = new RestDataImportHelper(mock(Vertx.class));
+    restDataImportHelper = new RestDataImportHelper(mock(Vertx.class)) {
+      @Override
+      public ChangeManagerClient getChangeManagerClient(Map<String, String> kafkaHeaders) {
+        return changeManagerClient;
+      }
+    };
   }
 
   @Test
@@ -213,7 +226,7 @@ public class RestDataImportHelperTest {
     String expectedJobExecutionId = UUID.randomUUID().toString();
 
     HttpResponseImpl<Buffer> jobExecutionResponse =
-      buildHttpResponseWithBuffer(HttpStatus.HTTP_NO_CONTENT,null);
+      buildHttpResponseWithBuffer(HttpStatus.HTTP_NO_CONTENT, null);
     Future<HttpResponse<Buffer>> futureResponse = Future.succeededFuture(jobExecutionResponse);
 
     RawRecordsDto rawRecordsDto = new RawRecordsDto()
@@ -248,7 +261,7 @@ public class RestDataImportHelperTest {
     String expectedJobExecutionId = UUID.randomUUID().toString();
 
     HttpResponseImpl<Buffer> jobExecutionResponse =
-      buildHttpResponseWithBuffer(HttpStatus.HTTP_OK,  BufferImpl.buffer("{\"status\":\"" + STATUS_COMMITTED + "\"}"));
+      buildHttpResponseWithBuffer(HttpStatus.HTTP_OK, BufferImpl.buffer("{\"status\":\"" + STATUS_COMMITTED + "\"}"));
     Future<HttpResponse<Buffer>> futureResponse = Future.succeededFuture(jobExecutionResponse);
 
     doAnswer(invocation -> {

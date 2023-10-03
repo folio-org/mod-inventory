@@ -21,7 +21,7 @@ public class InstanceOperationsHelper {
 
   public Future<Instance> addInstance(Instance instance, TenantProvider tenantProvider) {
 
-    LOGGER.info("addInstance :: Publishing instance with InstanceId={} to tenant={}", instance.getId(),
+    LOGGER.info("addInstance :: Adding instance with InstanceId={} to tenant={}", instance.getId(),
       tenantProvider.getTenantId());
 
     Promise<Instance> promise = Promise.promise();
@@ -33,7 +33,7 @@ public class InstanceOperationsHelper {
             LOGGER.info("addInstance :: Duplicated event received by InstanceId={}. Ignoring...", instance.getId());
             promise.fail(new DuplicateEventException(format("Duplicated event by InstanceId=%s", instance.getId())));
           } else {
-            LOGGER.error(format("addInstance :: Error posting Instance with InstanceId=%s cause %s, status code %s",
+            LOGGER.error(format("addInstance :: Error adding instance with InstanceId=%s cause %s, status code %s",
               instance.getId(), insertFailure.getReason(), insertFailure.getStatusCode()));
             promise.fail(insertFailure.getReason());
           }
@@ -48,11 +48,11 @@ public class InstanceOperationsHelper {
   }
 
   public Future<Instance> getInstanceById(String instanceId, TenantProvider tenantProvider) {
-    LOGGER.info("getInstanceById :: Get instance by InstanceId={} on tenant={}", instanceId, tenantProvider.getTenantId());
+    LOGGER.info("getInstanceById :: Get instance by InstanceId={} from tenant={}", instanceId, tenantProvider.getTenantId());
     Promise<Instance> promise = Promise.promise();
     tenantProvider.getInstanceCollection().findById(instanceId, success -> {
         if (success.getResult() == null) {
-          String errorMessage = format("Can't find Instance by InstanceId=%s on tenant=%s.", instanceId, tenantProvider.getTenantId());
+          String errorMessage = format("Can't find instance by InstanceId=%s on tenant=%s.", instanceId, tenantProvider.getTenantId());
           LOGGER.warn("getInstanceById:: {}", errorMessage);
           promise.fail(new NotFoundException(format(errorMessage)));
         } else {
@@ -61,7 +61,7 @@ public class InstanceOperationsHelper {
         }
       },
       failure -> {
-        LOGGER.error(format("getInstanceById :: Error retrieving Instance by InstanceId=%s from tenant=%s - %s, status code %s",
+        LOGGER.error(format("getInstanceById :: Error retrieving instance by InstanceId=%s from tenant=%s - %s, status code %s",
           instanceId, tenantProvider.getTenantId(), failure.getReason(), failure.getStatusCode()));
         promise.fail(failure.getReason());
       });

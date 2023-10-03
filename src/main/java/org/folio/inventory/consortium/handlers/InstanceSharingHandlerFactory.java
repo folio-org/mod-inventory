@@ -7,10 +7,10 @@ public enum InstanceSharingHandlerFactory {
   FOLIO, MARC;
 
   public static InstanceSharingHandler getInstanceSharingHandler(InstanceSharingHandlerFactory instanceSharingHandlerType,
-                                                                 InstanceOperationsHelper instanceOperations, Vertx vertx) {
+                                                                 InstanceOperationsHelper instanceOperationsHelper, Vertx vertx) {
     return instanceSharingHandlerType == FOLIO ?
-      new FolioInstanceSharingHandlerImpl(instanceOperations) :
-      new MarcInstanceSharingHandlerImpl(instanceOperations, vertx);
+      new FolioInstanceSharingHandlerImpl(instanceOperationsHelper) :
+      new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, vertx);
   }
 
 }

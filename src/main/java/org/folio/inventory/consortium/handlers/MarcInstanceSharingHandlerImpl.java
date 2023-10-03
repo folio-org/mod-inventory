@@ -39,7 +39,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
     this.restDataImportHelper = new RestDataImportHelper(vertx);
   }
 
-  public Future<String> publishInstance(Instance instance, SharingInstance sharingInstanceMetadata,
+  public Future<String>  publishInstance(Instance instance, SharingInstance sharingInstanceMetadata,
                                         Source source, Target target, Map<String, String> kafkaHeaders) {
 
     String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
