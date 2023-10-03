@@ -105,10 +105,8 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
         if (throwable.getClass().equals(NotFoundException.class)) {
           return publishInstance(sharingInstanceMetadata, source, target, kafkaHeaders);
         } else {
-          String errorMessage = String.format("Instance with InstanceId=%s cannot be shared on target tenant: %s. Error: %s",
-            instanceId, targetTenant,
-            isNull(throwable.getCause()) ? throwable.getMessage() : throwable.getCause());
-          LOGGER.error(errorMessage);
+          LOGGER.error(format("Instance with InstanceId=%s cannot be shared on target tenant: %s.",
+            instanceId, targetTenant), throwable);
           return Future.failedFuture(throwable);
         }
       });
