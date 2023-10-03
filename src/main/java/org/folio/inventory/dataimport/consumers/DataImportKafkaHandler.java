@@ -90,12 +90,12 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
   private static final String CHUNK_ID_HEADER = "chunkId";
   private static final String PROFILE_SNAPSHOT_ID_KEY = "JOB_PROFILE_SNAPSHOT_ID";
 
-  private Vertx vertx;
-  private ProfileSnapshotCache profileSnapshotCache;
-  private MappingMetadataCache mappingMetadataCache;
-  private KafkaConfig kafkaConfig;
-  private OrderHelperService orderHelperService;
-  private ConsortiumService consortiumService;
+  private final Vertx vertx;
+  private final ProfileSnapshotCache profileSnapshotCache;
+  private final MappingMetadataCache mappingMetadataCache;
+  private final KafkaConfig kafkaConfig;
+  private final OrderHelperService orderHelperService;
+  private final ConsortiumService consortiumService;
 
   public DataImportKafkaHandler(Vertx vertx, Storage storage, HttpClient client,
                                 ProfileSnapshotCache profileSnapshotCache,
