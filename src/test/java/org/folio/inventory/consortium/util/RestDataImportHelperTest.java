@@ -12,7 +12,6 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.impl.HttpResponseImpl;
 import org.folio.HttpStatus;
-import org.folio.inventory.consortium.entities.SharingInstance;
 import org.folio.rest.client.ChangeManagerClient;
 import org.folio.rest.jaxrs.model.JobProfileInfo;
 import org.folio.rest.jaxrs.model.RawRecordsDto;
@@ -41,14 +40,6 @@ public class RestDataImportHelperTest {
 
   private ChangeManagerClient changeManagerClient;
   private RestDataImportHelper restDataImportHelper;
-
-  private SharingInstance createTestSharingInstance() {
-    SharingInstance sharingInstance = new SharingInstance();
-    sharingInstance.setInstanceIdentifier(UUID.randomUUID());
-    sharingInstance.setSourceTenantId("sourceTenantId");
-    sharingInstance.setTargetTenantId("targetTenantId");
-    return sharingInstance;
-  }
 
   @Before
   public void init() {
@@ -331,7 +322,7 @@ public class RestDataImportHelperTest {
       });
   }
 
-  private static HttpResponseImpl<Buffer> buildHttpResponseWithBuffer(HttpStatus httpStatus, Buffer buffer) {
+  public static HttpResponseImpl<Buffer> buildHttpResponseWithBuffer(HttpStatus httpStatus, Buffer buffer) {
     return new HttpResponseImpl(
       null,
       httpStatus.toInt(),

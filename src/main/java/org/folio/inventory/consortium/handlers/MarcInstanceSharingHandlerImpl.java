@@ -8,7 +8,6 @@ import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.Record;
-import org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler;
 import org.folio.inventory.consortium.entities.SharingInstance;
 import org.folio.inventory.consortium.util.InstanceOperationsHelper;
 import org.folio.inventory.consortium.util.RestDataImportHelper;
@@ -71,14 +70,13 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
       });
   }
 
-  private Future<Record> getSourceMARCByInstanceId(String instanceId, String sourceTenant, SourceStorageRecordsClient client) {
+  Future<Record> getSourceMARCByInstanceId(String instanceId, String sourceTenant, SourceStorageRecordsClient client) {
 
     LOGGER.info("getSourceMARCByInstanceId:: Getting source MARC record for instance with InstanceId={} from tenant={}.",
       instanceId, sourceTenant);
 
     Promise<Record> promise = Promise.promise();
-    client.getSourceStorageRecordsFormattedById(instanceId, INSTANCE_ID_TYPE)
-      .onComplete(responseResult -> {
+    client.getSourceStorageRecordsFormattedById(instanceId, INSTANCE_ID_TYPE).onComplete(responseResult -> {
         try {
           if (responseResult.succeeded()) {
             int statusCode = responseResult.result().statusCode();
@@ -106,7 +104,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
     return promise.future();
   }
 
-  private Future<String> deleteSourceRecordByInstanceId(String instanceId, String tenantId, SourceStorageRecordsClient client) {
+  Future<String> deleteSourceRecordByInstanceId(String instanceId, String tenantId, SourceStorageRecordsClient client) {
     LOGGER.info("deleteSourceRecordByInstanceId :: Delete source record for instance by InstanceId={} from tenant={}", instanceId, tenantId);
     Promise<String> promise = Promise.promise();
     client.deleteSourceStorageRecordsById(instanceId).onComplete(responseResult -> {
@@ -121,8 +119,10 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
           promise.complete(instanceId);
         }
       } catch (Exception ex) {
-        LOGGER.error("Error processing source record deletion.", ex);
-        promise.fail("Error processing source record deletion.");
+        String errorMessage = String.format("Error processing source record deletion for instance with InstanceId=%s from tenant=%s. Error message: %s",
+          instanceId, tenantId, responseResult.cause());
+        LOGGER.error("deleteSourceRecordByInstanceId:: {}", errorMessage, ex);
+        promise.fail(errorMessage);
       }
     });
     return promise.future();

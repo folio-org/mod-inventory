@@ -2,18 +2,13 @@ package org.folio.inventory.consortium.consumers;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.buffer.impl.BufferImpl;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import io.vertx.ext.web.client.HttpResponse;
-import io.vertx.ext.web.client.impl.HttpResponseImpl;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
-import org.folio.HttpStatus;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Success;
@@ -21,12 +16,10 @@ import org.folio.inventory.consortium.entities.SharingInstance;
 import org.folio.inventory.consortium.handlers.InstanceSharingHandler;
 import org.folio.inventory.consortium.handlers.InstanceSharingHandlerFactory;
 import org.folio.inventory.consortium.util.InstanceOperationsHelper;
-import org.folio.inventory.consortium.util.RestDataImportHelper;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.KafkaConfig;
-import org.folio.rest.client.SourceStorageRecordsClient;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -39,8 +32,6 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -67,38 +58,12 @@ public class ConsortiumInstanceSharingHandlerTest {
   @Mock
   private InstanceCollection mockedSourceInstanceCollection;
   @Mock
-  private SourceStorageRecordsClient mockedSourceStorageRecordsClient;
-  @Mock
-  private RestDataImportHelper mockedRestDataImportHelper;
-  @Mock
   private KafkaConsumerRecord<String, String> kafkaRecord;
   @Mock
   private static KafkaConfig kafkaConfig;
   private Instance existingInstance;
   private ConsortiumInstanceSharingHandler consortiumInstanceSharingHandler;
   private MockedStatic<InstanceSharingHandlerFactory> mockedInstanceSharingHandler;
-  private final HttpResponse<Buffer> sourceStorageRecordsClientResponseBuffer =
-    buildHttpResponseWithBuffer(HttpStatus.HTTP_OK, BufferImpl.buffer(recordJson));
-  private final HttpResponse<Buffer> targetManagerClientJobExecutionResponseBuffer =
-    buildHttpResponseWithBuffer(HttpStatus.HTTP_CREATED, BufferImpl.buffer("{\"parentJobExecutionId\":\"52dae5b1-616f-40d1-802a-aa449c6ad678\",\"jobExecutions\":[{\"id\":\"52dae5b1-616f-40d1-802a-aa449c6ad678\"}]}"));
-  private final HttpResponse<Buffer> jobExecutionResponseBuffer =
-    buildHttpResponseWithBuffer(HttpStatus.HTTP_OK, BufferImpl.buffer("{\"parentJobExecutionId\":\"52dae5b1-616f-40d1-802a-aa449c6ad678\",\"jobExecutions\":[{\"id\":\"52dae5b1-616f-40d1-802a-aa449c6ad678\"}]}"));
-  private final HttpResponse<Buffer> targetManagerClientResponseBuffer =
-    buildHttpResponseWithBuffer(HttpStatus.HTTP_OK, null);
-  private final HttpResponse<Buffer> targetManagerClientPostContentResponseBuffer =
-    buildHttpResponseWithBuffer(HttpStatus.HTTP_NO_CONTENT, null);
-
-  private static HttpResponseImpl<Buffer> buildHttpResponseWithBuffer(HttpStatus httpStatus, Buffer buffer) {
-    return new HttpResponseImpl(
-      null,
-      httpStatus.toInt(),
-      "Ok",
-      null,
-      null,
-      null,
-      buffer,
-      new ArrayList<String>());
-  }
 
   @BeforeClass
   public static void setUpClass() {
@@ -484,26 +449,6 @@ public class ConsortiumInstanceSharingHandlerTest {
   public static void tearDownClass(TestContext context) {
     Async async = context.async();
     vertx.close(ar -> async.complete());
-  }
-
-  private static void setField(Object instance, String fieldName, Object fieldValue) {
-    try {
-      Field field = instance.getClass().getDeclaredField(fieldName);
-      field.setAccessible(true);
-      field.set(instance, fieldValue);
-    } catch (NoSuchFieldException | IllegalAccessException e) {
-      throw new RuntimeException("Failed to set field value using reflection", e);
-    }
-  }
-
-  private static Object getField(Object instance, String fieldName) {
-    try {
-      Field field = instance.getClass().getDeclaredField(fieldName);
-      field.setAccessible(true);
-      return field.get(instance);
-    } catch (NoSuchFieldException | IllegalAccessException e) {
-      throw new RuntimeException("Failed to set field value using reflection", e);
-    }
   }
 
   private final static String recordJson = "{\"id\":\"5e525f1e-d373-4a07-9aff-b80856bacfef\",\"snapshotId\":\"7376bb73-845e-44ce-ade4-53394f7526a6\",\"matchedId\":\"0ecd6e9f-f02f-47b7-8326-2743bfa3fc43\",\"generation\":1,\"recordType\":\"MARC_BIB\"," +
