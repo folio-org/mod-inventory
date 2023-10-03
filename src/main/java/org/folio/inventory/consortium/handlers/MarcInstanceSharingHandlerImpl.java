@@ -54,7 +54,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
           .compose(result -> {
             if ("COMMITTED".equals(result)) {
               // Delete source record by instance ID if the result is "COMMITTED"
-              return deleteSourceRecordByInstanceId(marcRecord.getId(), sourceTenant, sourceStorageClient)
+              return deleteSourceRecordByInstanceId(marcRecord.getId(), instanceId, sourceTenant, sourceStorageClient)
                 .compose(deletedInstanceId -> {
                   // Update JSON instance to include SOURCE=CONSORTIUM-MARC
                   JsonObject jsonInstanceToPublish = instance.getJsonForStorage();
@@ -104,23 +104,24 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
     return promise.future();
   }
 
-  Future<String> deleteSourceRecordByInstanceId(String recordId, String tenantId, SourceStorageRecordsClient client) {
-    LOGGER.info("deleteSourceRecordByInstanceId :: Delete source record for instance by InstanceId={} from tenant={}", recordId, tenantId);
+  Future<String> deleteSourceRecordByInstanceId(String recordId, String instanceId, String tenantId, SourceStorageRecordsClient client) {
+    LOGGER.info("deleteSourceRecordByInstanceId :: Delete source record with recordId={} for instance by InstanceId={} from tenant {}",
+      recordId, instanceId, tenantId);
     Promise<String> promise = Promise.promise();
     client.deleteSourceStorageRecordsById(recordId).onComplete(responseResult -> {
       try {
         if (responseResult.failed()) {
-          LOGGER.error("deleteSourceRecordByInstanceId:: Error deleting source record by InstanceId={} from tenant {}",
-            recordId, tenantId, responseResult.cause());
+          LOGGER.error("deleteSourceRecordByInstanceId:: Error deleting source record with recordId={} by InstanceId={} from tenant {}",
+            recordId, instanceId, tenantId, responseResult.cause());
           promise.fail(responseResult.cause());
         } else {
-          LOGGER.info("deleteSourceRecordByInstanceId:: Source record for instance with InstanceId={} from tenant {} has been deleted.",
-            recordId, tenantId);
-          promise.complete(recordId);
+          LOGGER.info("deleteSourceRecordByInstanceId:: Source record with recordId={} for instance with InstanceId={} from tenant {} has been deleted.",
+            recordId, instanceId, tenantId);
+          promise.complete(instanceId);
         }
       } catch (Exception ex) {
-        String errorMessage = String.format("Error processing source record deletion for instance with InstanceId=%s from tenant=%s. Error message: %s",
-          recordId, tenantId, responseResult.cause());
+        String errorMessage = String.format("Error processing source record with recordId={} deletion for instance with InstanceId=%s from tenant=%s. Error message: %s",
+          recordId, instanceId, tenantId, responseResult.cause());
         LOGGER.error("deleteSourceRecordByInstanceId:: {}", errorMessage, ex);
         promise.fail(errorMessage);
       }

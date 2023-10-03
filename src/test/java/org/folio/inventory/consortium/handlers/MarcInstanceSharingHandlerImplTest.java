@@ -101,7 +101,7 @@ public class MarcInstanceSharingHandlerImplTest {
     when(restDataImportHelper.importMarcRecord(any(), any(), any()))
       .thenReturn(Future.succeededFuture("COMMITTED"));
 
-    doReturn(Future.succeededFuture(instanceId)).when(marcHandler).deleteSourceRecordByInstanceId(any(), any(), any());
+    doReturn(Future.succeededFuture(instanceId)).when(marcHandler).deleteSourceRecordByInstanceId(any(), any(), any(), any());
     when(instance.getJsonForStorage()).thenReturn((JsonObject) Json.decodeValue(recordJson));
     when(instanceOperationsHelper.updateInstance(any(), any())).thenReturn(Future.succeededFuture());
 
@@ -169,6 +169,7 @@ public class MarcInstanceSharingHandlerImplTest {
   @Test
   public void deleteSourceRecordByInstanceIdSuccessTest() {
 
+    String recordId = "991f37c8-cd22-4db7-9543-a4ec68735e95";
     String instanceId = "fea6477b-d8f5-4d22-9e86-6218407c780b";
     String tenant = "sourceTenant";
 
@@ -176,26 +177,27 @@ public class MarcInstanceSharingHandlerImplTest {
       .thenReturn(Future.succeededFuture());
 
     MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, vertx);
-    handler.deleteSourceRecordByInstanceId(instanceId, tenant, sourceStorageClient)
+    handler.deleteSourceRecordByInstanceId(recordId, instanceId, tenant, sourceStorageClient)
       .onComplete(result -> assertEquals(instanceId, result.result()));
 
-    verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(instanceId);
+    verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(recordId);
   }
 
   @Test
   public void deleteSourceRecordByInstanceIdFailedTest() {
 
-    String instanceId = "fea6477b-d8f5-4d22-9e86-6218407c780b";
+    String instanceId = "991f37c8-cd22-4db7-9543-a4ec68735e95";
+    String recordId = "fea6477b-d8f5-4d22-9e86-6218407c780b";
     String tenant = "sourceTenant";
 
     when(sourceStorageClient.deleteSourceStorageRecordsById(any()))
       .thenReturn(Future.failedFuture(new NotFoundException("Not found")));
 
     MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, vertx);
-    handler.deleteSourceRecordByInstanceId(instanceId, tenant, sourceStorageClient)
+    handler.deleteSourceRecordByInstanceId(recordId, instanceId, tenant, sourceStorageClient)
       .onComplete(result -> assertTrue(result.failed()));
 
-    verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(instanceId);
+    verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(recordId);
   }
 
   private static void setField(Object instance, String fieldName, Object fieldValue) {

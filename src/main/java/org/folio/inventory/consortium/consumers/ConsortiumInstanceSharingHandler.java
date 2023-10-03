@@ -105,7 +105,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
         if (throwable.getClass().equals(NotFoundException.class)) {
           return publishInstance(sharingInstanceMetadata, source, target, kafkaHeaders);
         } else {
-          String errorMessage = String.format("Instance with InstanceId=%s cannot be shared on target tenant: %s. Error: ",
+          String errorMessage = String.format("Instance with InstanceId=%s cannot be shared on target tenant: %s. Error: %s",
             instanceId, targetTenant,
             isNull(throwable.getCause()) ? throwable.getMessage() : throwable.getCause());
           LOGGER.error(errorMessage);
@@ -192,8 +192,8 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       String tenantId = kafkaHeaders.get(OKAPI_TENANT_HEADER);
       List<KafkaHeader> kafkaHeadersList = convertKafkaHeadersMap(kafkaHeaders);
 
-      LOGGER.info("sendEventToKafka :: Sending a message about the result of sharing instance with InstanceId={} " +
-        "to tenant {}. Status: {}, Message: {}", tenantId, sharingInstance.getInstanceIdentifier(), status.getValue(), errorMessage);
+      LOGGER.info("sendEventToKafka :: Sending a message about the result of sharing instance with InstanceId={}" +
+        " to tenant {}. Status: {}, Message: {}", sharingInstance.getInstanceIdentifier(), tenantId, status.getValue(), errorMessage);
 
       KafkaProducerRecord<String, String> kafkaRecord =
         createProducerRecord(getTopicName(tenantId, evenType),
