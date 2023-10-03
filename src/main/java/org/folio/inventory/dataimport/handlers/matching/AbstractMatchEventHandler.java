@@ -147,5 +147,5 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
 
   protected abstract String getNotMatchedEventType();
 
-  protected abstract boolean isConsortiumAvailable();
+  protected abstract boolean isConsortiumActionAvailable();
 }
