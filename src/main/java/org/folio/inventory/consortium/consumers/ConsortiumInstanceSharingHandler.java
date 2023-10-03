@@ -99,13 +99,13 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
         sendCompleteEventToKafka(sharingInstanceMetadata, COMPLETE, warningMessage, kafkaHeaders);
         return Future.succeededFuture(warningMessage);
       })
-      .onFailure(throwable -> LOGGER.info(String.format("Instance with InstanceId=%s is not exists on target tenant: %s.", instanceId, targetTenant)))
       .recover(throwable -> {
         if (throwable.getClass().equals(NotFoundException.class)) {
+          LOGGER.info("Instance with InstanceId={} is not exists on target tenant: {}.", instanceId, targetTenant);
           return publishInstance(sharingInstanceMetadata, source, target, kafkaHeaders);
         } else {
-          LOGGER.error(format("Instance with InstanceId=%s cannot be shared on target tenant: %s.",
-            instanceId, targetTenant), throwable);
+          LOGGER.error("Instance with InstanceId={} cannot be shared on target tenant: {}.",
+            instanceId, targetTenant, throwable);
           return Future.failedFuture(throwable);
         }
       });
