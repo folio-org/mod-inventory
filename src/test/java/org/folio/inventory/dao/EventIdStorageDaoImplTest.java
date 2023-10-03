@@ -28,10 +28,7 @@ import static api.ApiTestSuite.TENANT_ID;
 public class EventIdStorageDaoImplTest {
 
   private static final String EVENT_ID = UUID.randomUUID().toString();
-  private static final String INSTANCE_ID = UUID.randomUUID().toString();
-  private static final String DUPLICATE_EVENT_ID = UUID.randomUUID().toString();
   public static final String UNIQUE_VIOLATION_SQL_STATE = "23505";
-
   private static boolean runningOnOwn;
 
   PostgresClientFactory postgresClientFactory = new PostgresClientFactory(Vertx.vertx());
