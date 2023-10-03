@@ -37,7 +37,6 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
-import static java.util.Objects.isNull;
 import static org.apache.commons.lang.StringUtils.EMPTY;
 import static org.folio.inventory.consortium.entities.SharingInstanceEventType.CONSORTIUM_INSTANCE_SHARING_COMPLETE;
 import static org.folio.inventory.consortium.entities.SharingStatus.COMPLETE;
