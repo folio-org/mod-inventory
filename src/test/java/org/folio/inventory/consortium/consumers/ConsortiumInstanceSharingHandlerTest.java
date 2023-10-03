@@ -11,6 +11,7 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.consortium.entities.SharingInstance;
 import org.folio.inventory.consortium.handlers.InstanceSharingHandler;
@@ -242,6 +243,52 @@ public class ConsortiumInstanceSharingHandlerTest {
     future.onComplete(ar -> {
       context.assertTrue(ar.result().equals("Instance with InstanceId=" + instanceId +
         " is present on target tenant: university"));
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldNotShareInstanceWhenTargetReturns500Error(TestContext context) throws IOException {
+
+    // given
+    Async async = context.async();
+    JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
+    jsonInstance.put("source", "FOLIO");
+    existingInstance = Instance.fromJson(jsonInstance);
+
+    String shareId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
+    String instanceId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
+
+    SharingInstance sharingInstance = new SharingInstance()
+      .withId(UUID.fromString(shareId))
+      .withInstanceIdentifier(UUID.fromString(instanceId))
+      .withSourceTenantId("consortium")
+      .withTargetTenantId("university")
+      .withStatus(IN_PROGRESS);
+
+    when(kafkaRecord.key()).thenReturn(shareId);
+    when(kafkaRecord.value()).thenReturn(Json.encode(sharingInstance));
+    when(kafkaRecord.headers()).thenReturn(
+      List.of(KafkaHeader.header(OKAPI_TOKEN_HEADER, "token"),
+        KafkaHeader.header(OKAPI_URL_HEADER, "url")));
+
+    when(storage.getInstanceCollection(any(Context.class)))
+      .thenReturn(mockedTargetInstanceCollection);
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure("Internal server error.", 500));
+      return null;
+    }).when(mockedTargetInstanceCollection).findById(any(String.class), any(), any());
+
+    // when
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig);
+
+    //then
+    Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
+    future.onComplete(ar -> {
+      context.assertTrue(ar.failed());
+      context.assertTrue(ar.cause().getMessage().equals("Internal server error."));
       async.complete();
     });
   }

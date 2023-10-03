@@ -21,6 +21,7 @@ import org.folio.inventory.consortium.util.InstanceOperationsHelper;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
+import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaConfig;
@@ -36,6 +37,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
+import static java.util.Objects.isNull;
 import static org.apache.commons.lang.StringUtils.EMPTY;
 import static org.folio.inventory.consortium.entities.SharingInstanceEventType.CONSORTIUM_INSTANCE_SHARING_COMPLETE;
 import static org.folio.inventory.consortium.entities.SharingStatus.COMPLETE;
@@ -98,10 +100,18 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
         sendCompleteEventToKafka(sharingInstanceMetadata, COMPLETE, warningMessage, kafkaHeaders);
         return Future.succeededFuture(warningMessage);
       })
-      .onFailure(throwable -> {
-        LOGGER.info(String.format("Instance with InstanceId=%s is not exists on target tenant: %s.", instanceId, targetTenant));
-      })
-      .recover(throwable -> publishInstance(sharingInstanceMetadata, source, target, kafkaHeaders));
+      .onFailure(throwable -> LOGGER.info(String.format("Instance with InstanceId=%s is not exists on target tenant: %s.", instanceId, targetTenant)))
+      .recover(throwable -> {
+        if (throwable.getClass().equals(NotFoundException.class)) {
+          return publishInstance(sharingInstanceMetadata, source, target, kafkaHeaders);
+        } else {
+          String errorMessage = String.format("Instance with InstanceId=%s cannot be shared on target tenant: %s. Error: ",
+            instanceId, targetTenant,
+            isNull(throwable.getCause()) ? throwable.getMessage() : throwable.getCause());
+          LOGGER.error(errorMessage);
+          return Future.failedFuture(throwable);
+        }
+      });
   }
 
   private Future<String> publishInstance(SharingInstance sharingInstanceMetadata, Source source,
@@ -182,35 +192,41 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       String tenantId = kafkaHeaders.get(OKAPI_TENANT_HEADER);
       List<KafkaHeader> kafkaHeadersList = convertKafkaHeadersMap(kafkaHeaders);
 
-      LOGGER.info("sendEventToKafka :: tenantId={}, instance with InstanceId={}, status={}, message={}",
-        tenantId, sharingInstance.getInstanceIdentifier(), status.getValue(), errorMessage);
-
-      String topicName = KafkaTopicNameHelper.formatTopicName(kafkaConfig.getEnvId(),
-        KafkaTopicNameHelper.getDefaultNameSpace(), tenantId, evenType.value());
+      LOGGER.info("sendEventToKafka :: Sending a message about the result of sharing instance with InstanceId={} " +
+        "to tenant {}. Status: {}, Message: {}", tenantId, sharingInstance.getInstanceIdentifier(), status.getValue(), errorMessage);
 
       KafkaProducerRecord<String, String> kafkaRecord =
-        createProducerRecord(topicName, sharingInstance, status, errorMessage, kafkaHeadersList);
-      var kafkaProducer = createProducer(tenantId, topicName);
+        createProducerRecord(getTopicName(tenantId, evenType),
+          sharingInstance,
+          status,
+          errorMessage,
+          kafkaHeadersList);
+
+      var kafkaProducer = createProducer(tenantId, getTopicName(tenantId, evenType));
       kafkaProducer.send(kafkaRecord)
-        .onSuccess(res -> LOGGER.info("Event with type {}, was sent to kafka", evenType.value()))
+        .onSuccess(res -> LOGGER.info("Event with type {}, was sent to kafka about sharing instance with InstanceId={}",
+          evenType.value(), sharingInstance.getInstanceIdentifier()))
         .onFailure(err -> {
           var cause = err.getCause();
-          LOGGER.info("Failed to sent event {}, cause: {}", evenType.value(), cause);
+          LOGGER.info("Failed to sent event {} to kafka about sharing instance with InstanceId={}, cause: {}",
+            evenType.value(), sharingInstance.getInstanceIdentifier(), cause);
         });
     } catch (Exception e) {
-      LOGGER.error("Failed to send an event for eventType {}, cause {}", evenType.value(), e);
+      LOGGER.error("Failed to send an event for eventType {} about sharing instance with InstanceId={}, cause {}",
+        evenType.value(), sharingInstance.getInstanceIdentifier(), e);
     }
   }
 
   private KafkaProducerRecord<String, String> createProducerRecord(String topicName, SharingInstance sharingInstance,
-                                                                   SharingStatus status, String errorMessage, List<KafkaHeader> kafkaHeaders) {
-    LOGGER.info("createKafkaMessage :: Instance with InstanceId={}, status: {}, {}topicName: {}",
-      sharingInstance.getInstanceIdentifier(), status,
-      status.equals(SharingStatus.ERROR) ? " message: " + errorMessage + ", " : EMPTY, topicName);
+                                                                   SharingStatus status, String message, List<KafkaHeader> kafkaHeaders) {
+
+    String logErrorMessage = SharingStatus.ERROR == status ? format(" Error: %s" , message) : EMPTY;
+    LOGGER.info("createKafkaMessage :: Create producer record for sharing instance with InstanceId={} with status {} " +
+        "to topic {}{}", sharingInstance.getInstanceIdentifier(), status, topicName, logErrorMessage);
 
     sharingInstance.setStatus(status);
-    if (sharingInstance.getStatus().equals(SharingStatus.ERROR)) {
-      sharingInstance.setError(errorMessage);
+    if (SharingStatus.ERROR == sharingInstance.getStatus()) {
+      sharingInstance.setError(message);
     } else {
       sharingInstance.setError(EMPTY);
     }
@@ -221,6 +237,11 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       .topic(topicName)
       .build()
       .addHeaders(kafkaHeaders);
+  }
+
+  private String getTopicName(String tenantId, SharingInstanceEventType eventType) {
+    return KafkaTopicNameHelper.formatTopicName(kafkaConfig.getEnvId(),
+      KafkaTopicNameHelper.getDefaultNameSpace(), tenantId, eventType.value());
   }
 
   private KafkaProducer<String, String> createProducer(String tenantId, String topicName) {
