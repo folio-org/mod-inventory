@@ -10,7 +10,6 @@ import org.apache.logging.log4j.Logger;
 import org.folio.ChildInstance;
 import org.folio.ParentInstance;
 import org.folio.Tags;
-import org.folio.inventory.consortium.util.ConsortiumUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
