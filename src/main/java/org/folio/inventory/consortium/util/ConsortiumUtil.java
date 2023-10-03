@@ -1,21 +1,17 @@
 package org.folio.inventory.consortium.util;
 
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.consortium.entities.ConsortiumConfiguration;
 import org.folio.inventory.consortium.entities.SharingInstance;
 import org.folio.inventory.consortium.services.ConsortiumService;
-import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.support.InstanceUtil;
 
 import java.util.Optional;
-
-import static java.lang.String.format;
 
 public class ConsortiumUtil {
   private static final Logger LOGGER = LogManager.getLogger(ConsortiumUtil.class);
