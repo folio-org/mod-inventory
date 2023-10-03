@@ -77,7 +77,7 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
 
     return MatchingManager.match(dataImportEventPayload)
       .thenCompose(matchedLocal -> {
-        if (isConsortiumAvailable()) {
+        if (isConsortiumActionAvailable()) {
           return matchCentralTenantIfNeeded(dataImportEventPayload, matchedLocal, context, mappingMetadataDto, matchingParametersRelations);
         }
         return CompletableFuture.completedFuture(matchedLocal);

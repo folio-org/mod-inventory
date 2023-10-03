@@ -29,7 +29,7 @@ public class MatchInstanceEventHandler extends AbstractMatchEventHandler {
   }
 
   @Override
-  protected boolean isConsortiumAvailable() {
+  protected boolean isConsortiumActionAvailable() {
     return true;
   }
 }
