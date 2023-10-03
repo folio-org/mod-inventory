@@ -4,6 +4,7 @@
 * Adjust Create Instance handler to use existing Instance UUID ([MODINV-840](https://issues.folio.org/browse/MODINV-840))
 * Upgrade mod-inventory to Java 17 ([MODINV-826](https://issues.folio.org/browse/MODINV-826))
 * Upgrade folio-kafka-wrapper to 3.0.0 version ([MODINV-834](https://issues.folio.org/browse/MODINV-834))
+* Upgrade folio-kafka-wrapper to 3.0.0 version ([MODINV-846](https://issues.folio.org/browse/MODINV-847))
 
 ## 20.0.0 2023-02-20
 * Controlled Instance's field properly reflects updates made by user in MARC Authority's 1XX fields ([MODINV-773] (https://issues.folio.org/browse/MODINV-773))
