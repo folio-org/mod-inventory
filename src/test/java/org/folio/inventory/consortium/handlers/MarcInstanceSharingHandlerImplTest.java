@@ -104,6 +104,7 @@ public class MarcInstanceSharingHandlerImplTest {
     doReturn(Future.succeededFuture(instanceId)).when(marcHandler).deleteSourceRecordByInstanceId(any(), any(), any(), any());
     when(instance.getJsonForStorage()).thenReturn((JsonObject) Json.decodeValue(recordJson));
     when(instanceOperationsHelper.updateInstance(any(), any())).thenReturn(Future.succeededFuture());
+    when(instanceOperationsHelper.getInstanceById(any(), any())).thenReturn(Future.succeededFuture(instance));
 
     doReturn(Future.succeededFuture(instanceId)).when(instanceOperationsHelper).updateInstance(any(), any());
 
