@@ -46,7 +46,7 @@ public class EntitiesLinksServiceImpl implements EntitiesLinksService {
 
   @Override
   public Future<List<EntityLink>> putInstanceAuthorityLinks(Context context, String instanceId, List<EntityLink> entityLinks) {
-    JsonObject body = new JsonObject().put("links", JsonArray.of(entityLinks));
+    JsonObject body = new JsonObject().put("links", new JsonArray(entityLinks));
     CompletableFuture<List<EntityLink>> completableFuture = createOkapiHttpClient(context, httpClient)
       .thenCompose(client ->
         client.put(context.getOkapiLocation() + String.format(AUTHORITY_LINK, instanceId), body)

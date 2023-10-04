@@ -24,6 +24,8 @@ public class EntityLink {
   @JsonProperty("errorCause")
   private String errorCause;
 
+  public EntityLink() {}
+
   public EntityLink(String id, String authorityId, String authorityNaturalId, String instanceId, int linkingRuleId, String status, String errorCause) {
     this.id = id;
     this.authorityId = authorityId;
