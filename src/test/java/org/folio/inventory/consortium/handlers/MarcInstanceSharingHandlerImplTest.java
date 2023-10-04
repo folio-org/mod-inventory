@@ -92,7 +92,7 @@ public class MarcInstanceSharingHandlerImplTest {
     //given
     kafkaHeaders = new HashMap<>();
 
-    marcHandler = spy(new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, vertx));
+    marcHandler = spy(new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx));
     setField(marcHandler, "restDataImportHelper", restDataImportHelper);
 
     doReturn(sourceStorageClient).when(marcHandler).getSourceStorageRecordsClient(anyString(), eq(kafkaHeaders));
@@ -136,7 +136,7 @@ public class MarcInstanceSharingHandlerImplTest {
     when(recordHttpResponse.bodyAsString()).thenReturn("{\"id\":\"" + instanceId + "\"}");
     when(recordHttpResponse.bodyAsJson(Record.class)).thenReturn(mockRecord);
 
-    MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, vertx);
+    MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx);
     handler.getSourceMARCByInstanceId(instanceId, sourceTenant, sourceStorageClient).onComplete(result -> {
       Record record = result.result();
       assertEquals(instanceId, record.getId());
@@ -161,7 +161,7 @@ public class MarcInstanceSharingHandlerImplTest {
     when(recordHttpResponse.bodyAsString()).thenReturn("{\"id\":\"" + instanceId + "\"}");
     when(recordHttpResponse.bodyAsJson(Record.class)).thenReturn(mockRecord);
 
-    MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, vertx);
+    MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx);
     handler.getSourceMARCByInstanceId(instanceId, sourceTenant, sourceStorageClient)
       .onComplete(result -> assertTrue(result.failed()));
   }
@@ -176,7 +176,7 @@ public class MarcInstanceSharingHandlerImplTest {
     when(sourceStorageClient.deleteSourceStorageRecordsById(any()))
       .thenReturn(Future.succeededFuture());
 
-    MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, vertx);
+    MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx);
     handler.deleteSourceRecordByInstanceId(recordId, instanceId, tenant, sourceStorageClient)
       .onComplete(result -> assertEquals(instanceId, result.result()));
 
@@ -193,7 +193,7 @@ public class MarcInstanceSharingHandlerImplTest {
     when(sourceStorageClient.deleteSourceStorageRecordsById(any()))
       .thenReturn(Future.failedFuture(new NotFoundException("Not found")));
 
-    MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, vertx);
+    MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx);
     handler.deleteSourceRecordByInstanceId(recordId, instanceId, tenant, sourceStorageClient)
       .onComplete(result -> assertTrue(result.failed()));
 

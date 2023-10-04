@@ -8,16 +8,30 @@ import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.Record;
+import org.folio.inventory.common.Context;
+import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.consortium.entities.EntityLink;
 import org.folio.inventory.consortium.entities.SharingInstance;
+import org.folio.inventory.consortium.exceptions.ConsortiumException;
+import org.folio.inventory.consortium.services.EntitiesLinksService;
+import org.folio.inventory.consortium.services.EntitiesLinksServiceImpl;
 import org.folio.inventory.consortium.util.InstanceOperationsHelper;
+import org.folio.inventory.consortium.util.MarcRecordUtil;
 import org.folio.inventory.consortium.util.RestDataImportHelper;
+import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.storage.Storage;
 import org.folio.rest.client.SourceStorageRecordsClient;
 
+import java.io.UnsupportedEncodingException;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
+import static java.lang.String.format;
 import static org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler.SOURCE;
 import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.INSTANCE_ID_TYPE;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
@@ -25,29 +39,33 @@ import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
 public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
 
   private static final Logger LOGGER = LogManager.getLogger(MarcInstanceSharingHandlerImpl.class);
-
+  private static final String CONSORTIUM_PREFIX = "CONSORTIUM-";
   private final RestDataImportHelper restDataImportHelper;
-
   private final InstanceOperationsHelper instanceOperations;
-
+  private final EntitiesLinksService entitiesLinksService;
+  private final Storage storage;
   private final Vertx vertx;
 
-  public MarcInstanceSharingHandlerImpl(InstanceOperationsHelper instanceOperations, Vertx vertx) {
+  public MarcInstanceSharingHandlerImpl(InstanceOperationsHelper instanceOperations, Storage storage, Vertx vertx) {
     this.vertx = vertx;
     this.instanceOperations = instanceOperations;
     this.restDataImportHelper = new RestDataImportHelper(vertx);
+    this.entitiesLinksService = new EntitiesLinksServiceImpl(vertx.createHttpClient());
+    this.storage = storage;
   }
 
   public Future<String>  publishInstance(Instance instance, SharingInstance sharingInstanceMetadata,
-                                        Source source, Target target, Map<String, String> kafkaHeaders) {
+                                         Source source, Target target, Map<String, String> kafkaHeaders) {
 
     String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
     String sourceTenant = sharingInstanceMetadata.getSourceTenantId();
 
     SourceStorageRecordsClient sourceStorageClient = getSourceStorageRecordsClient(sourceTenant, kafkaHeaders);
+    Context context = constructContext(sourceTenant, kafkaHeaders.get(OKAPI_TOKEN_HEADER), kafkaHeaders.get(OKAPI_URL_HEADER));
 
     // Get source MARC by instance ID
     return getSourceMARCByInstanceId(instanceId, sourceTenant, sourceStorageClient)
+      .compose(marcRecord -> unlinkAuthorityLinksIfNeeded(marcRecord, instanceId, context, storage))
       .compose(marcRecord -> {
         // Publish instance with MARC source
         return restDataImportHelper.importMarcRecord(marcRecord, sharingInstanceMetadata, kafkaHeaders)
@@ -68,6 +86,58 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
             }
           });
       });
+  }
+
+  private Future<Record> unlinkAuthorityLinksIfNeeded(Record marcRecord, String instanceId, Context context, Storage storage) {
+    return entitiesLinksService.getInstanceAuthorityLinks(context, instanceId)
+      .compose(entityLinks -> {
+        if (entityLinks.isEmpty()) {
+          return Future.succeededFuture(marcRecord);
+        }
+        AuthorityRecordCollection authorityRecordCollection = storage.getAuthorityRecordCollection(context);
+        return unlinkLocalAuthorities(entityLinks, marcRecord, instanceId, context, authorityRecordCollection);
+      });
+  }
+
+  private Future<Record> unlinkLocalAuthorities(List<EntityLink> entityLinks, Record marcRecord, String instanceId,
+                                                Context context, AuthorityRecordCollection authorityRecordCollection) {
+
+    return getLocalAuthoritiesIdsList(entityLinks, authorityRecordCollection)
+      .compose(localAuthoritiesIds -> {
+        if (MarcRecordUtil.removeSubfieldsThatContainsValue(marcRecord, '9', localAuthoritiesIds)) {
+          return Future.succeededFuture(localAuthoritiesIds);
+        }
+        LOGGER.warn(format("unlinkLocalAuthorities:: Error during remove of 9 subfields from record: %s", marcRecord.getId()));
+        return Future.failedFuture(new ConsortiumException("Error of unlinking local authorities from marc record during Instance sharing process"));
+      })
+      .compose(localAuthoritiesIds -> {
+        List<EntityLink> sharedAuthorityLinks = getSharedAuthorityLinks(entityLinks, localAuthoritiesIds);
+        return entitiesLinksService.putInstanceAuthorityLinks(context, instanceId, sharedAuthorityLinks);
+      }).map(marcRecord);
+  }
+
+  private Future<List<String>> getLocalAuthoritiesIdsList(List<EntityLink> entityLinks, AuthorityRecordCollection authorityRecordCollection) {
+    Promise<List<String>> promise = Promise.promise();
+    try {
+      authorityRecordCollection.findByCql(format("id==(%s)", getQueryParamForMultipleAuthorities(entityLinks)), PagingParameters.defaults(),
+        findResults -> {
+          List<String> localEntitiesIds = findResults.getResult().records.stream()
+            .map(entityLink -> entityLink.getSource().value()).filter(source -> !source.startsWith(CONSORTIUM_PREFIX)).toList();
+          promise.complete(localEntitiesIds);
+        },
+        failure -> promise.fail(failure.getReason()));
+    } catch (UnsupportedEncodingException e) {
+      promise.fail(e);
+    }
+    return promise.future();
+  }
+
+  private static List<EntityLink> getSharedAuthorityLinks(List<EntityLink> entityLinks, List<String> localAuthoritiesIds) {
+    return entityLinks.stream().filter(entityLink -> !localAuthoritiesIds.contains(entityLink.getAuthorityId())).collect(Collectors.toList());
+  }
+
+  private static String getQueryParamForMultipleAuthorities(List<EntityLink> entityLinks) {
+    return entityLinks.stream().map(EntityLink::getAuthorityId).collect(Collectors.joining(" OR "));
   }
 
   Future<Record> getSourceMARCByInstanceId(String instanceId, String sourceTenant, SourceStorageRecordsClient client) {

@@ -129,7 +129,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
           Instance instance = result.result();
           Optional<InstanceSharingHandlerFactory> type = checkSourceType(instance.getSource());
           type.ifPresentOrElse(
-            sourceType -> getInstanceSharingHandler(sourceType, instanceOperations, vertx)
+            sourceType -> getInstanceSharingHandler(sourceType, instanceOperations, storage, vertx)
               .publishInstance(instance, sharingInstanceMetadata, source, target, kafkaHeaders)
               .onComplete(publishResult -> handleSharingResult(sharingInstanceMetadata, kafkaHeaders, promise, publishResult)),
             () -> {

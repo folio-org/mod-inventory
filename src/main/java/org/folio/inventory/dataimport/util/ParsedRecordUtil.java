@@ -42,7 +42,7 @@ public final class ParsedRecordUtil {
       .orElse(EMPTY);
   }
 
-  private static JsonObject normalize(Object content) {
+  public static JsonObject normalize(Object content) {
     return (content instanceof String)
       ? new JsonObject((String) content)
       : JsonObject.mapFrom(content);

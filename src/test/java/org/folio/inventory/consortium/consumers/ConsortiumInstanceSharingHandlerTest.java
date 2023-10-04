@@ -398,7 +398,7 @@ public class ConsortiumInstanceSharingHandlerTest {
 
     mockedInstanceSharingHandler.when(() ->
         InstanceSharingHandlerFactory.getInstanceSharingHandler(eq(InstanceSharingHandlerFactory.MARC),
-        any(InstanceOperationsHelper.class), any(Vertx.class)))
+        any(InstanceOperationsHelper.class), any(Storage.class), any(Vertx.class)))
       .thenReturn(sharingHandler);
 
     when(sharingHandler.publishInstance(any(), any(), any(), any(), any()))
@@ -467,7 +467,7 @@ public class ConsortiumInstanceSharingHandlerTest {
 
     mockedInstanceSharingHandler.when(() ->
         InstanceSharingHandlerFactory.getInstanceSharingHandler(eq(InstanceSharingHandlerFactory.MARC),
-          any(InstanceOperationsHelper.class), any(Vertx.class)))
+          any(InstanceOperationsHelper.class), any(Storage.class), any(Vertx.class)))
       .thenReturn(sharingHandler);
 
     when(sharingHandler.publishInstance(any(), any(), any(), any(), any()))
