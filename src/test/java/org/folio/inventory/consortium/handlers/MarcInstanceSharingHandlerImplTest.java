@@ -152,6 +152,14 @@ public class MarcInstanceSharingHandlerImplTest {
     future.onComplete(ar -> {
       testContext.assertTrue(ar.succeeded());
       testContext.assertTrue(ar.result().equals(instanceId));
+      testContext.assertTrue(ar.succeeded());
+      testContext.assertTrue(ar.result().equals(instanceId));
+
+      ArgumentCaptor<Instance> updatedInstanceCaptor = ArgumentCaptor.forClass(Instance.class);
+      verify(instanceOperationsHelper, times(1)).updateInstance(updatedInstanceCaptor.capture(), any());
+      Instance updatedInstance = updatedInstanceCaptor.getValue();
+      testContext.assertEquals("CONSORTIUM-MARC", updatedInstance.getSource());
+      testContext.assertEquals(targetInstanceHrid, updatedInstance.getHrid());
       async.complete();
     });
 
@@ -162,6 +170,8 @@ public class MarcInstanceSharingHandlerImplTest {
     Async async = testContext.async();
 
     String instanceId = "eb89b292-d2b7-4c36-9bfc-f816d6f96418";
+    String targetInstanceHrid = "consin0000000000101";
+
     Record record = buildHttpResponseWithBuffer(HttpStatus.HTTP_OK, BufferImpl.buffer(recordJsonWithLinkedAuthorities)).bodyAsJson(Record.class);
 
     Authority authority1 = new Authority().withId(AUTHORITY_ID_1).withSource(Authority.Source.MARC);
@@ -189,7 +199,9 @@ public class MarcInstanceSharingHandlerImplTest {
 
     doReturn(Future.succeededFuture(instanceId)).when(marcHandler).deleteSourceRecordByInstanceId(any(), any(), any(), any());
     when(instance.getJsonForStorage()).thenReturn((JsonObject) Json.decodeValue(recordJsonWithLinkedAuthorities));
+    when(instance.getHrid()).thenReturn(targetInstanceHrid);
     when(instanceOperationsHelper.updateInstance(any(), any())).thenReturn(Future.succeededFuture());
+    when(instanceOperationsHelper.getInstanceById(any(), any())).thenReturn(Future.succeededFuture(instance));
 
     doAnswer(invocationOnMock -> {
       MultipleRecords result = new MultipleRecords<>(List.of(authority1, authority2), 2);
@@ -199,7 +211,7 @@ public class MarcInstanceSharingHandlerImplTest {
     }).when(authorityRecordCollection).findByCql(Mockito.argThat(cql -> cql.equals(String.format("id==(%s OR %s)", AUTHORITY_ID_1, AUTHORITY_ID_2))),
       any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    when(entitiesLinksService.putInstanceAuthorityLinks(any(), any(), any())).thenReturn(Future.succeededFuture());
+    when(entitiesLinksService.putInstanceAuthorityLinks(any(), any(), any())).thenReturn(Future.succeededFuture(links));
 
     doReturn(Future.succeededFuture(instanceId)).when(instanceOperationsHelper).updateInstance(any(), any());
 
@@ -219,6 +231,14 @@ public class MarcInstanceSharingHandlerImplTest {
     future.onComplete(ar -> {
       testContext.assertTrue(ar.succeeded());
       testContext.assertTrue(ar.result().equals(instanceId));
+      testContext.assertTrue(ar.succeeded());
+      testContext.assertTrue(ar.result().equals(instanceId));
+
+      ArgumentCaptor<Instance> updatedInstanceCaptor = ArgumentCaptor.forClass(Instance.class);
+      verify(instanceOperationsHelper, times(1)).updateInstance(updatedInstanceCaptor.capture(), any());
+      Instance updatedInstance = updatedInstanceCaptor.getValue();
+      testContext.assertEquals("CONSORTIUM-MARC", updatedInstance.getSource());
+      testContext.assertEquals(targetInstanceHrid, updatedInstance.getHrid());
       async.complete();
     });
 
