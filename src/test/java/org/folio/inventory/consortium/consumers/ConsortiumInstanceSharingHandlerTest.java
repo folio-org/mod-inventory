@@ -30,6 +30,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
@@ -48,6 +49,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @RunWith(VertxUnitRunner.class)
@@ -94,6 +96,12 @@ public class ConsortiumInstanceSharingHandlerTest {
     jsonInstance.put("source", "FOLIO");
     existingInstance = Instance.fromJson(jsonInstance);
 
+    String targetInstanceHrid = "consin0000000000123";
+
+    JsonObject jsonTargetInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
+    jsonTargetInstance.put("hrid", targetInstanceHrid);
+    Instance targetInstance = Instance.fromJson(jsonTargetInstance);
+
     String shareId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
     String instanceId = "8673c2b0-dfe6-447b-bb6e-a1d7eb2e3572";
 
@@ -128,7 +136,7 @@ public class ConsortiumInstanceSharingHandlerTest {
 
     doAnswer(invocationOnMock -> {
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
-      successHandler.accept(new Success<>(existingInstance));
+      successHandler.accept(new Success<>(targetInstance));
       return null;
     }).when(mockedTargetInstanceCollection).add(any(Instance.class), any(), any());
 
@@ -149,6 +157,13 @@ public class ConsortiumInstanceSharingHandlerTest {
       context.assertTrue(ar.succeeded());
       context.assertTrue(ar.result()
         .contains("Instance with InstanceId=" + instanceId + " has been shared to the target tenant consortium"));
+
+      ArgumentCaptor<Instance> updatedInstanceCaptor = ArgumentCaptor.forClass(Instance.class);
+      verify(mockedSourceInstanceCollection, times(1)).update(updatedInstanceCaptor.capture(), any(), any());
+      Instance updatedInstance = updatedInstanceCaptor.getValue();
+      context.assertEquals("CONSORTIUM-FOLIO", updatedInstance.getSource());
+      context.assertEquals(targetInstanceHrid, updatedInstance.getHrid());
+
       async.complete();
     });
   }
