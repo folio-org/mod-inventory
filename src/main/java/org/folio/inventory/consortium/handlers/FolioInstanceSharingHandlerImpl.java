@@ -40,9 +40,10 @@ public class FolioInstanceSharingHandlerImpl implements InstanceSharingHandler {
 
     // Add instance to the targetInstanceCollection
     return instanceOperations.addInstance(Instance.fromJson(jsonInstance), target)
-      .compose(ignore -> {
+      .compose(targetInstance -> {
         JsonObject jsonInstanceToPublish = instance.getJsonForStorage();
         jsonInstanceToPublish.put(SOURCE, CONSORTIUM_FOLIO.getValue());
+        jsonInstanceToPublish.put(HRID_KEY, targetInstance.getHrid());
 
         // Update instance in sourceInstanceCollection
         return instanceOperations.updateInstance(Instance.fromJson(jsonInstanceToPublish), source);
