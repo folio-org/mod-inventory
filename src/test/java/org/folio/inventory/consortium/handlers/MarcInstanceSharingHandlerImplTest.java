@@ -22,6 +22,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -87,6 +88,7 @@ public class MarcInstanceSharingHandlerImplTest {
     Async async = context.async();
 
     String instanceId = "fea6477b-d8f5-4d22-9e86-6218407c780b";
+    String targetInstanceHrid = "consin0000000000101";
     Record record = sourceStorageRecordsResponseBuffer.bodyAsJson(Record.class);
 
     //given
@@ -103,6 +105,7 @@ public class MarcInstanceSharingHandlerImplTest {
 
     doReturn(Future.succeededFuture(instanceId)).when(marcHandler).deleteSourceRecordByInstanceId(any(), any(), any(), any());
     when(instance.getJsonForStorage()).thenReturn((JsonObject) Json.decodeValue(recordJson));
+    when(instance.getHrid()).thenReturn(targetInstanceHrid);
     when(instanceOperationsHelper.updateInstance(any(), any())).thenReturn(Future.succeededFuture());
     when(instanceOperationsHelper.getInstanceById(any(), any())).thenReturn(Future.succeededFuture(instance));
 
@@ -115,6 +118,13 @@ public class MarcInstanceSharingHandlerImplTest {
     future.onComplete(ar -> {
       context.assertTrue(ar.succeeded());
       context.assertTrue(ar.result().equals(instanceId));
+
+      ArgumentCaptor<Instance> updatedInstanceCaptor = ArgumentCaptor.forClass(Instance.class);
+      verify(instanceOperationsHelper, times(1)).updateInstance(updatedInstanceCaptor.capture(), any());
+      Instance updatedInstance = updatedInstanceCaptor.getValue();
+      context.assertEquals("CONSORTIUM-MARC", updatedInstance.getSource());
+      context.assertEquals(targetInstanceHrid, updatedInstance.getHrid());
+
       async.complete();
     });
 
