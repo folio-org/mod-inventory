@@ -2,6 +2,8 @@ package org.folio.inventory.consortium.cache;
 
 import static io.vertx.core.http.HttpMethod.GET;
 import static java.net.HttpURLConnection.HTTP_OK;
+import static org.folio.inventory.consortium.util.ConsortiumUtil.DEFAULT_EXPIRATION_TIME_SECONDS;
+import static org.folio.inventory.consortium.util.ConsortiumUtil.EXPIRATION_TIME_PARAM;
 import static org.folio.okapi.common.XOkapiHeaders.URL;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
@@ -27,8 +29,6 @@ import org.folio.inventory.consortium.entities.ConsortiumConfiguration;
 public class ConsortiumDataCache {
 
   private static final Logger LOG = LogManager.getLogger(ConsortiumDataCache.class);
-  private static final String EXPIRATION_TIME_PARAM = "cache.consortium-data.expiration.time.seconds";
-  private static final String DEFAULT_EXPIRATION_TIME_SECONDS = "300";
   private static final String USER_TENANTS_PATH = "/user-tenants?limit=1"; //NOSONAR
   private static final String USER_TENANTS_FIELD = "userTenants";
   private static final String CENTRAL_TENANT_ID_FIELD = "centralTenantId";

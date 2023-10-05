@@ -7,10 +7,10 @@ import io.vertx.core.json.JsonObject;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.Link;
 import org.folio.Record;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
-import org.folio.inventory.consortium.entities.EntityLink;
 import org.folio.inventory.consortium.entities.SharingInstance;
 import org.folio.inventory.consortium.exceptions.ConsortiumException;
 import org.folio.inventory.consortium.services.EntitiesLinksService;
@@ -50,7 +50,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
     this.vertx = vertx;
     this.instanceOperations = instanceOperations;
     this.restDataImportHelper = new RestDataImportHelper(vertx);
-    this.entitiesLinksService = new EntitiesLinksServiceImpl(vertx.createHttpClient());
+    this.entitiesLinksService = new EntitiesLinksServiceImpl(vertx, vertx.createHttpClient());
     this.storage = storage;
   }
 
@@ -99,7 +99,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
       });
   }
 
-  private Future<Record> unlinkLocalAuthorities(List<EntityLink> entityLinks, Record marcRecord, String instanceId,
+  private Future<Record> unlinkLocalAuthorities(List<Link> entityLinks, Record marcRecord, String instanceId,
                                                 Context context, AuthorityRecordCollection authorityRecordCollection) {
 
     return getLocalAuthoritiesIdsList(entityLinks, authorityRecordCollection)
@@ -111,12 +111,12 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
         return Future.failedFuture(new ConsortiumException("Error of unlinking local authorities from marc record during Instance sharing process"));
       })
       .compose(localAuthoritiesIds -> {
-        List<EntityLink> sharedAuthorityLinks = getSharedAuthorityLinks(entityLinks, localAuthoritiesIds);
+        List<Link> sharedAuthorityLinks = getSharedAuthorityLinks(entityLinks, localAuthoritiesIds);
         return entitiesLinksService.putInstanceAuthorityLinks(context, instanceId, sharedAuthorityLinks);
       }).map(marcRecord);
   }
 
-  private Future<List<String>> getLocalAuthoritiesIdsList(List<EntityLink> entityLinks, AuthorityRecordCollection authorityRecordCollection) {
+  private Future<List<String>> getLocalAuthoritiesIdsList(List<Link> entityLinks, AuthorityRecordCollection authorityRecordCollection) {
     Promise<List<String>> promise = Promise.promise();
     try {
       authorityRecordCollection.findByCql(format("id==(%s)", getQueryParamForMultipleAuthorities(entityLinks)), PagingParameters.defaults(),
@@ -132,12 +132,12 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
     return promise.future();
   }
 
-  private static List<EntityLink> getSharedAuthorityLinks(List<EntityLink> entityLinks, List<String> localAuthoritiesIds) {
+  private static List<Link> getSharedAuthorityLinks(List<Link> entityLinks, List<String> localAuthoritiesIds) {
     return entityLinks.stream().filter(entityLink -> !localAuthoritiesIds.contains(entityLink.getAuthorityId())).collect(Collectors.toList());
   }
 
-  private static String getQueryParamForMultipleAuthorities(List<EntityLink> entityLinks) {
-    return entityLinks.stream().map(EntityLink::getAuthorityId).collect(Collectors.joining(" OR "));
+  private static String getQueryParamForMultipleAuthorities(List<Link> entityLinks) {
+    return entityLinks.stream().map(Link::getAuthorityId).collect(Collectors.joining(" OR "));
   }
 
   Future<Record> getSourceMARCByInstanceId(String instanceId, String sourceTenant, SourceStorageRecordsClient client) {
