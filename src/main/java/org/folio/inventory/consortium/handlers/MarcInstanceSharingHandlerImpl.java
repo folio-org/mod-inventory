@@ -7,6 +7,7 @@ import io.vertx.core.json.JsonObject;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.Authority;
 import org.folio.Link;
 import org.folio.LinkingRuleDto;
 import org.folio.Record;
@@ -125,7 +126,8 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
       authorityRecordCollection.findByCql(format("id==(%s)", getQueryParamForMultipleAuthorities(entityLinks)), PagingParameters.defaults(),
         findResults -> {
           List<String> localEntitiesIds = findResults.getResult().records.stream()
-            .map(entityLink -> entityLink.getSource().value()).filter(source -> !source.startsWith(CONSORTIUM_PREFIX)).toList();
+            .filter(source -> !source.getSource().value().startsWith(CONSORTIUM_PREFIX))
+            .map(Authority::getId).toList();
           promise.complete(localEntitiesIds);
         },
         failure -> promise.fail(failure.getReason()));
