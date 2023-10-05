@@ -35,6 +35,7 @@ import static org.folio.inventory.consortium.consumers.ConsortiumInstanceSharing
 import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.INSTANCE_ID_TYPE;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
+import static org.folio.inventory.domain.items.Item.HRID_KEY;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
 
@@ -58,7 +59,6 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
 
   public Future<String>  publishInstance(Instance instance, SharingInstance sharingInstanceMetadata,
                                          Source source, Target target, Map<String, String> kafkaHeaders) {
-
     String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
     String sourceTenant = sharingInstanceMetadata.getSourceTenantId();
 
@@ -75,10 +75,13 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
             if ("COMMITTED".equals(result)) {
               // Delete source record by instance ID if the result is "COMMITTED"
               return deleteSourceRecordByInstanceId(marcRecord.getId(), instanceId, sourceTenant, sourceStorageClient)
-                .compose(deletedInstanceId -> {
+                .compose(deletedInstanceId ->
+                  instanceOperations.getInstanceById(instanceId, target))
+                .compose(targetInstance -> {
                   // Update JSON instance to include SOURCE=CONSORTIUM-MARC
                   JsonObject jsonInstanceToPublish = instance.getJsonForStorage();
                   jsonInstanceToPublish.put(SOURCE, CONSORTIUM_MARC.getValue());
+                  jsonInstanceToPublish.put(HRID_KEY, targetInstance.getHrid());
                   // Update instance in sourceInstanceCollection
                   return instanceOperations.updateInstance(Instance.fromJson(jsonInstanceToPublish), source);
                 });

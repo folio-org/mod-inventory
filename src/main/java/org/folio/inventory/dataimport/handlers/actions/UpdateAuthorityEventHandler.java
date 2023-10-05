@@ -33,6 +33,7 @@ public class UpdateAuthorityEventHandler extends AbstractAuthorityEventHandler {
   private static final String CURRENT_EVENT_TYPE_PROPERTY = "CURRENT_EVENT_TYPE";
   private static final String CURRENT_AUTHORITY_PROPERTY = "CURRENT_AUTHORITY";
   private static final String CURRENT_NODE_PROPERTY = "CURRENT_NODE";
+  private static final String SOURCE_CONSORTIUM_PREFIX = "CONSORTIUM-";
   private static final String ERROR_UPDATING_AUTHORITY_MSG_TEMPLATE = "Failed updating Authority. Cause: %s, status: '%s'";
   private static final String AUTHORITY_NOT_FOUND_MSG = "Authority record was not found by id: %s";
   private final KafkaEventPublisher eventPublisher;
@@ -104,6 +105,10 @@ public class UpdateAuthorityEventHandler extends AbstractAuthorityEventHandler {
     collection.findById(mappedRecord.getId()).thenAccept(actualRecord -> {
       if (actualRecord == null) {
         promise.fail(new EventProcessingException(format(AUTHORITY_NOT_FOUND_MSG, mappedRecord.getId())));
+        return;
+      }
+      if (actualRecord.getSource() != null && actualRecord.getSource().value().startsWith(SOURCE_CONSORTIUM_PREFIX)) {
+        promise.fail(new DataImportException("Shared MARC authority record cannot be updated from this tenant"));
         return;
       }
 

@@ -31,6 +31,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -120,6 +121,7 @@ public class MarcInstanceSharingHandlerImplTest {
     Async async = testContext.async();
 
     String instanceId = "fea6477b-d8f5-4d22-9e86-6218407c780b";
+    String targetInstanceHrid = "consin0000000000101";
     Record record = sourceStorageRecordsResponseBuffer.bodyAsJson(Record.class);
 
     //given
@@ -137,7 +139,9 @@ public class MarcInstanceSharingHandlerImplTest {
 
     doReturn(Future.succeededFuture(instanceId)).when(marcHandler).deleteSourceRecordByInstanceId(any(), any(), any(), any());
     when(instance.getJsonForStorage()).thenReturn((JsonObject) Json.decodeValue(recordJson));
+    when(instance.getHrid()).thenReturn(targetInstanceHrid);
     when(instanceOperationsHelper.updateInstance(any(), any())).thenReturn(Future.succeededFuture());
+    when(instanceOperationsHelper.getInstanceById(any(), any())).thenReturn(Future.succeededFuture(instance));
 
     doReturn(Future.succeededFuture(instanceId)).when(instanceOperationsHelper).updateInstance(any(), any());
 

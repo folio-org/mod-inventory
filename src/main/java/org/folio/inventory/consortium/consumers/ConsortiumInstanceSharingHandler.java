@@ -22,12 +22,14 @@ import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.exceptions.NotFoundException;
+import org.folio.inventory.services.EventIdStorageService;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaHeaderUtils;
 import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.kafka.SimpleKafkaProducerManager;
+import org.folio.kafka.exception.DuplicateEventException;
 import org.folio.kafka.services.KafkaProducerRecordBuilder;
 
 import java.util.ArrayList;
@@ -56,16 +58,19 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   private final Storage storage;
   private final KafkaConfig kafkaConfig;
   private final InstanceOperationsHelper instanceOperations;
+  private final EventIdStorageService eventIdStorageService;
 
-  public ConsortiumInstanceSharingHandler(Vertx vertx, Storage storage, KafkaConfig kafkaConfig) {
+  public ConsortiumInstanceSharingHandler(Vertx vertx, Storage storage, KafkaConfig kafkaConfig, EventIdStorageService eventIdStorageService) {
     this.vertx = vertx;
     this.storage = storage;
     this.kafkaConfig = kafkaConfig;
     this.instanceOperations = new InstanceOperationsHelper();
+    this.eventIdStorageService = eventIdStorageService;
   }
 
   @Override
   public Future<String> handle(KafkaConsumerRecord<String, String> event) {
+    Promise<String> promise = Promise.promise();
     try {
       SharingInstance sharingInstanceMetadata = parseSharingInstance(event.value());
 
@@ -75,11 +80,38 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       LOGGER.info("Event CONSORTIUM_INSTANCE_SHARING_INIT has been received for InstanceId={}, sourceTenant={}, targetTenant={}",
         instanceId, sharingInstanceMetadata.getSourceTenantId(), sharingInstanceMetadata.getTargetTenantId());
 
-      return publishInstanceIfNeeded(sharingInstanceMetadata, kafkaHeaders);
+      Future<String> eventToSharedInstanceFuture = eventIdStorageService.store(event.key(), sharingInstanceMetadata.getTargetTenantId());
+      eventToSharedInstanceFuture.compose(r -> {
+
+        publishInstanceIfNeeded(sharingInstanceMetadata, kafkaHeaders).onComplete(t -> {
+          if (t.succeeded()) {
+            LOGGER.info("handle:: Checking if Instance exists on target tenant - COMPLETED SUCCESSFULLY for instanceId: {}, sourceTenant: {}, targetTenant: {}",
+              instanceId, sharingInstanceMetadata.getSourceTenantId(), sharingInstanceMetadata.getTargetTenantId());
+            promise.complete(t.result());
+          } else {
+            LOGGER.warn("handle:: Checking if Instance exists on target tenant - FAILED for instanceId: {}, sourceTenant: {}, targetTenant: {} error: {}",
+              instanceId, sharingInstanceMetadata.getSourceTenantId(), sharingInstanceMetadata.getTargetTenantId(), t.cause());
+            promise.fail(t.cause());
+          }
+        });
+        return promise.future();
+      }, throwable -> {
+        if (throwable instanceof DuplicateEventException) {
+          LOGGER.info("handle:: Duplicated event received for instanceId: {}, sourceTenant: {}, targetTenant: {}",
+            instanceId, sharingInstanceMetadata.getSourceTenantId(), sharingInstanceMetadata.getTargetTenantId());
+          promise.complete();
+        } else {
+          LOGGER.warn("handle:: Error creating inventory recordId and sharedInstanceId for instanceId: {}, sourceTenant: {}, targetTenant: {}",
+            instanceId, sharingInstanceMetadata.getSourceTenantId(), sharingInstanceMetadata.getTargetTenantId());
+          promise.fail(throwable);
+        }
+        return promise.future();
+      });
     } catch (Exception ex) {
       LOGGER.error(format("Failed to process data import kafka record from topic %s", event.topic()), ex);
       return Future.failedFuture(ex);
     }
+    return promise.future();
   }
 
   private Future<String> publishInstanceIfNeeded(SharingInstance sharingInstanceMetadata, Map<String, String> kafkaHeaders) {
@@ -217,9 +249,9 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   private KafkaProducerRecord<String, String> createProducerRecord(String topicName, SharingInstance sharingInstance,
                                                                    SharingStatus status, String message, List<KafkaHeader> kafkaHeaders) {
 
-    String logErrorMessage = SharingStatus.ERROR == status ? format(" Error: %s" , message) : EMPTY;
+    String logErrorMessage = SharingStatus.ERROR == status ? format(" Error: %s", message) : EMPTY;
     LOGGER.info("createKafkaMessage :: Create producer record for sharing instance with InstanceId={} with status {} " +
-        "to topic {}{}", sharingInstance.getInstanceIdentifier(), status, topicName, logErrorMessage);
+      "to topic {}{}", sharingInstance.getInstanceIdentifier(), status, topicName, logErrorMessage);
 
     sharingInstance.setStatus(status);
     if (SharingStatus.ERROR == sharingInstance.getStatus()) {

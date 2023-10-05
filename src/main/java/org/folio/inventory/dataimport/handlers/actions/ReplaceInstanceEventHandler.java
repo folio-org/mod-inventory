@@ -5,16 +5,15 @@ import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-
 import org.apache.http.HttpStatus;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.MappingMetadataDto;
+import org.folio.ParsedRecord;
 import org.folio.Record;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.consortium.services.ConsortiumService;
-
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.instances.Instance;
@@ -284,8 +283,9 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
     return client.getSourceStorageRecordsFormattedById(instanceId, INSTANCE_ID_TYPE).compose(resp -> {
       if (resp.statusCode() != 200) {
-        return Future.failedFuture(format("Failed to retrieve MARC record by instance id: '%s', status code: %s",
+        LOGGER.warn(format("Failed to retrieve MARC record by instance id: '%s', status code: %s",
           instanceId, resp.statusCode()));
+        return Future.succeededFuture(new Record().withParsedRecord(new ParsedRecord().withContent(new JsonObject())));
       }
       return Future.succeededFuture(resp.bodyAsJson(Record.class));
     });

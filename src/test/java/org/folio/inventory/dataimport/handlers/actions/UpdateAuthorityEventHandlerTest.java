@@ -49,6 +49,7 @@ import static org.folio.ActionProfile.Action.MODIFY;
 import static org.folio.ActionProfile.FolioRecord.AUTHORITY;
 import static org.folio.ActionProfile.FolioRecord.ITEM;
 import static org.folio.ActionProfile.FolioRecord.MARC_AUTHORITY;
+import static org.folio.Authority.Source.CONSORTIUM_MARC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_MATCHED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_UPDATED;
 import static org.folio.rest.jaxrs.model.DataImportEventTypes.DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING;
@@ -261,7 +262,31 @@ public class UpdateAuthorityEventHandlerTest {
     ExecutionException exception = assertThrows(ExecutionException.class, future::get);
     assertThat(exception.getCause().getMessage(), containsString("Authority record was not found"));
     verify(publisher, times(0)).publish(dataImportEventPayload);
+  }
 
+  @Test
+  public void shouldReturnFailedFutureOnShadowAuthorityUpdateForMemberTenant() throws IOException {
+    when(storage.getAuthorityRecordCollection(any())).thenReturn(authorityCollection);
+    when(authorityCollection.findById(anyString()))
+      .thenReturn(CompletableFuture.completedFuture(new Authority().withSource(CONSORTIUM_MARC)));
+
+    var parsedAuthorityRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_AUTHORITY_RECORD));
+    HashMap<String, String> context = new HashMap<>();
+    context.put(MARC_AUTHORITY.value(),
+      Json.encode(new Record().withParsedRecord(new ParsedRecord().withContent(parsedAuthorityRecord.encode()))));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_AUTHORITY_MATCHED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    ExecutionException exception =
+      assertThrows(ExecutionException.class, eventHandler.handle(dataImportEventPayload)::get);
+    assertThat(exception.getCause().getMessage(),
+      containsString("Shared MARC authority record cannot be updated from this tenant"));
+    verify(publisher, times(0)).publish(dataImportEventPayload);
   }
 
   @Test
