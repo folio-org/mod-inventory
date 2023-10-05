@@ -8,6 +8,7 @@ import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.Link;
+import org.folio.LinkingRuleDto;
 import org.folio.Record;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
@@ -95,16 +96,18 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
           return Future.succeededFuture(marcRecord);
         }
         AuthorityRecordCollection authorityRecordCollection = storage.getAuthorityRecordCollection(context);
-        return unlinkLocalAuthorities(entityLinks, marcRecord, instanceId, context, authorityRecordCollection);
+        return entitiesLinksService.getLinkingRules(context)
+          .compose(linkingRules -> unlinkLocalAuthorities(entityLinks, linkingRules, marcRecord, instanceId, context, authorityRecordCollection));
       });
   }
 
-  private Future<Record> unlinkLocalAuthorities(List<Link> entityLinks, Record marcRecord, String instanceId,
-                                                Context context, AuthorityRecordCollection authorityRecordCollection) {
+  private Future<Record> unlinkLocalAuthorities(List<Link> entityLinks, List<LinkingRuleDto> linkingRules, Record marcRecord,
+                                                String instanceId,Context context, AuthorityRecordCollection authorityRecordCollection) {
 
     return getLocalAuthoritiesIdsList(entityLinks, authorityRecordCollection)
       .compose(localAuthoritiesIds -> {
-        if (MarcRecordUtil.removeSubfieldsThatContainsValue(marcRecord, '9', localAuthoritiesIds)) {
+        List<String> fields = linkingRules.stream().map(LinkingRuleDto::getBibField).toList();
+        if (MarcRecordUtil.removeSubfieldsThatContainsValues(marcRecord, fields, '9', localAuthoritiesIds)) {
           return Future.succeededFuture(localAuthoritiesIds);
         }
         LOGGER.warn(format("unlinkLocalAuthorities:: Error during remove of 9 subfields from record: %s", marcRecord.getId()));

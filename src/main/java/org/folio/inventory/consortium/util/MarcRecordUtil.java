@@ -13,6 +13,7 @@ import org.marc4j.MarcStreamWriter;
 import org.marc4j.MarcWriter;
 import org.marc4j.marc.DataField;
 import org.marc4j.marc.Subfield;
+import org.marc4j.marc.VariableField;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -27,7 +28,7 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
 public final class MarcRecordUtil {
   private static final Logger LOGGER = LogManager.getLogger();
 
-  public static boolean removeSubfieldsThatContainsValue(Record record, char subfieldCode, List<String> values) {
+  public static boolean removeSubfieldsThatContainsValues(Record record, List<String> fields, char subfieldCode, List<String> values) {
     boolean isRemoveSucceed = true;
     try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
       if (record != null && record.getParsedRecord() != null && record.getParsedRecord().getContent() != null) {
@@ -35,7 +36,8 @@ public final class MarcRecordUtil {
         MarcJsonWriter marcJsonWriter = new MarcJsonWriter(baos);
         org.marc4j.marc.Record marcRecord = computeMarcRecord(record);
         if (marcRecord != null) {
-          for (DataField dataField : marcRecord.getDataFields()) {
+          for (VariableField variableField : marcRecord.getVariableFields(fields.toArray(new String[0]))) {
+            DataField dataField = (DataField) variableField;
             List<Subfield> subfields = dataField.getSubfields(subfieldCode);
             for (Subfield subfield : subfields) {
               if (subfield != null && values.contains(subfield.getData())) {

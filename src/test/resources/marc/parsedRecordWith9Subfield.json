@@ -37,6 +37,68 @@
       }
     },
     {
+      "245":
+      {
+        "subfields":
+        [
+          {
+            "a":"title"
+          },
+          {
+            "b":"remainder_of_title"
+          },
+          {
+            "c":"state_of_responsibility"
+          },
+          {
+            "f":"inclusive_dates"
+          },
+          {
+            "g":"bulk_dates"
+          },
+          {
+            "h":"medium"
+          },
+          {
+            "9":"e84e4dd4-9d27-4f42-8fda-408d78c7f7ee"
+          }
+        ],
+        "ind1": " ",
+        "ind2": " "
+      }
+    },
+    {
+      "248":
+      {
+        "subfields":
+        [
+          {
+            "a":"title"
+          },
+          {
+            "b":"remainder_of_title"
+          },
+          {
+            "c":"state_of_responsibility"
+          },
+          {
+            "f":"inclusive_dates"
+          },
+          {
+            "g":"bulk_dates"
+          },
+          {
+            "h":"medium"
+          },
+          {
+            "9":"e84e4dd4-9d27-4f42-8fda-408d78c7f7ee"
+          }
+        ],
+        "ind1": " ",
+        "ind2": " "
+      }
+    },
+    {
       "700":
       {
         "subfields":
