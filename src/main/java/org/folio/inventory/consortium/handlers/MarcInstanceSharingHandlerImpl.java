@@ -97,6 +97,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
     return entitiesLinksService.getInstanceAuthorityLinks(context, instanceId)
       .compose(entityLinks -> {
         if (entityLinks.isEmpty()) {
+          LOGGER.debug("unlinkAuthorityLinksIfNeeded:: Not found linked authorities for instance id: {} and tenant: {}", instanceId, context.getTenantId());
           return Future.succeededFuture(marcRecord);
         }
         AuthorityRecordCollection authorityRecordCollection = storage.getAuthorityRecordCollection(context);
@@ -110,17 +111,18 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
 
     return getLocalAuthoritiesIdsList(entityLinks, authorityRecordCollection)
       .compose(localAuthoritiesIds -> {
+        if (localAuthoritiesIds.isEmpty()) {
+          return Future.succeededFuture(marcRecord);
+        }
         List<String> fields = linkingRules.stream().map(LinkingRuleDto::getBibField).toList();
+        LOGGER.debug("unlinkLocalAuthorities:: Unlinking from tenant: {} local authorities: {}", context.getTenantId(), localAuthoritiesIds);
         if (MarcRecordUtil.removeSubfieldsThatContainsValues(marcRecord, fields, '9', localAuthoritiesIds)) {
-          return Future.succeededFuture(localAuthoritiesIds);
+          List<Link> sharedAuthorityLinks = getSharedAuthorityLinks(entityLinks, localAuthoritiesIds);
+          return entitiesLinksService.putInstanceAuthorityLinks(context, instanceId, sharedAuthorityLinks).map(marcRecord);
         }
         LOGGER.warn(format("unlinkLocalAuthorities:: Error during remove of 9 subfields from record: %s", marcRecord.getId()));
         return Future.failedFuture(new ConsortiumException("Error of unlinking local authorities from marc record during Instance sharing process"));
-      })
-      .compose(localAuthoritiesIds -> {
-        List<Link> sharedAuthorityLinks = getSharedAuthorityLinks(entityLinks, localAuthoritiesIds);
-        return entitiesLinksService.putInstanceAuthorityLinks(context, instanceId, sharedAuthorityLinks);
-      }).map(marcRecord);
+      });
   }
 
   private Future<List<String>> getLocalAuthoritiesIdsList(List<Link> entityLinks, AuthorityRecordCollection authorityRecordCollection) {
@@ -141,7 +143,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
   }
 
   private static List<Link> getSharedAuthorityLinks(List<Link> entityLinks, List<String> localAuthoritiesIds) {
-    return entityLinks.stream().filter(entityLink -> !localAuthoritiesIds.contains(entityLink.getAuthorityId())).collect(Collectors.toList());
+    return entityLinks.stream().filter(entityLink -> !localAuthoritiesIds.contains(entityLink.getAuthorityId())).toList();
   }
 
   private static String getQueryParamForMultipleAuthorities(List<Link> entityLinks) {

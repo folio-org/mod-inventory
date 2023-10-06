@@ -42,6 +42,36 @@ public class MarcRecordUtilTest {
     Assert.assertNotEquals(leader, newLeader);
     Assert.assertFalse(fields.isEmpty());
     content.remove("leader");
-    Assert.assertEquals(content.encode(), PARSED_CONTENT_WITHOUT_9_SUBFIELDS);
+    Assert.assertEquals(PARSED_CONTENT_WITHOUT_9_SUBFIELDS, content.encode());
+  }
+
+  @Test
+  public void  shouldReturnTrueIfNullMarcRecordDuringRemoveOfSubfield() throws IOException {
+    // given
+    String recordId = UUID.randomUUID().toString();
+
+    String parsedRecordContent = TestUtil.readFileFromPath(PARSED_MARC_RECORD_PATH);
+    ParsedRecord parsedRecord = new ParsedRecord();
+    parsedRecord.setContent(parsedRecordContent);
+    Record record = new Record().withId(recordId).withParsedRecord(parsedRecord);
+    // when
+    boolean removedSubfields = MarcRecordUtil.removeSubfieldsThatContainsValues(record, List.of("245", "700"), '9', List.of(UUID_1, UUID_3));
+    // then
+    Assert.assertTrue(removedSubfields);
+  }
+
+  @Test
+  public void  shouldReturnFalseIfExceptionDuringRemoveOfSubfield() throws IOException {
+    // given
+    String recordId = UUID.randomUUID().toString();
+
+    String parsedRecordContent = TestUtil.readFileFromPath(PARSED_MARC_RECORD_PATH);
+    ParsedRecord parsedRecord = new ParsedRecord();
+    parsedRecord.setContent(parsedRecordContent);
+    Record record = new Record().withId(recordId).withParsedRecord(parsedRecord);
+    // when
+    boolean removedSubfields = MarcRecordUtil.removeSubfieldsThatContainsValues(record, null, '9', List.of(UUID_1, UUID_3));
+    // then
+    Assert.assertFalse(removedSubfields);
   }
 }

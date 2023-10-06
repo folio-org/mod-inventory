@@ -28,6 +28,7 @@ public class EntitiesLinksServiceImpl implements EntitiesLinksService {
   private static final Logger LOGGER = LogManager.getLogger(EntitiesLinksServiceImpl.class);
   private static final String AUTHORITY_LINK_PATH = "/links/instances/%s";
   private static final String LINKING_RULES_PATH = "/linking-rules/instance-authority";
+  public static final String LINKS = "links";
   private final HttpClient httpClient;
   private final AsyncCache<String, List<LinkingRuleDto>> linkingRulesCache;
 
@@ -47,7 +48,7 @@ public class EntitiesLinksServiceImpl implements EntitiesLinksService {
         client.get(context.getOkapiLocation() + String.format(AUTHORITY_LINK_PATH, instanceId))
           .thenCompose(httpResponse -> {
             if (httpResponse.getStatusCode() == HttpStatus.SC_OK) {
-              List<Link> response = List.of(Json.decodeValue(Json.encode(httpResponse.getJson().getJsonArray("links")), Link[].class));
+              List<Link> response = List.of(Json.decodeValue(Json.encode(httpResponse.getJson().getJsonArray(LINKS)), Link[].class));
               LOGGER.debug("shareInstance:: Successfully retrieved entities links for instance with id: {}", instanceId);
               return CompletableFuture.completedFuture(response);
             } else {
@@ -61,13 +62,13 @@ public class EntitiesLinksServiceImpl implements EntitiesLinksService {
 
   @Override
   public Future<List<Link>> putInstanceAuthorityLinks(Context context, String instanceId, List<Link> entityLinks) {
-    JsonObject body = new JsonObject().put("links", new JsonArray(entityLinks));
+    JsonObject body = new JsonObject().put(LINKS, new JsonArray(entityLinks));
     CompletableFuture<List<Link>> completableFuture = createOkapiHttpClient(context, httpClient)
       .thenCompose(client ->
         client.put(context.getOkapiLocation() + String.format(AUTHORITY_LINK_PATH, instanceId), body)
           .thenCompose(httpResponse -> {
             if (httpResponse.getStatusCode() == HttpStatus.SC_OK) {
-              List<Link> response = List.of(Json.decodeValue(Json.encode(httpResponse.getJson().getJsonArray("links")), Link[].class));
+              List<Link> response = List.of(Json.decodeValue(Json.encode(httpResponse.getJson().getJsonArray(LINKS)), Link[].class));
               LOGGER.debug("shareInstance:: Successfully updated entities links for instance with id: {}", instanceId);
               return CompletableFuture.completedFuture(response);
             } else {

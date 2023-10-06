@@ -28,6 +28,17 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
 public final class MarcRecordUtil {
   private static final Logger LOGGER = LogManager.getLogger();
 
+  private MarcRecordUtil() {}
+
+  /**
+   * Removes subfields that contains values
+   *
+   * @param record   record that needs to be updated
+   * @param fields    fields that could contain subfield
+   * @param subfieldCode subfield to remove
+   * @param values    values of the subfield to remove
+   * @return true if succeeded, false otherwise
+   */
   public static boolean removeSubfieldsThatContainsValues(Record record, List<String> fields, char subfieldCode, List<String> values) {
     boolean isRemoveSucceed = true;
     try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
@@ -56,7 +67,7 @@ public final class MarcRecordUtil {
         }
       }
     } catch (Exception e) {
-      LOGGER.warn("removeField:: Failed to remove subfields {}, from record {}", subfieldCode, record.getId(), e);
+      LOGGER.warn("removeSubfieldsThatContainsValues:: Failed to remove subfields {}, from record {}", subfieldCode, record.getId(), e);
       isRemoveSucceed = false;
     }
     return isRemoveSucceed;
@@ -98,9 +109,9 @@ public final class MarcRecordUtil {
     return new MarcJsonReader(new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8)));
   }
 
-  private static String normalizeContent(Object content) {
-    return (content instanceof String)
-      ? (String) content
-      : Json.encode(content);
+  private static String normalizeContent(Object o) {
+    return (o instanceof String content)
+      ? content
+      : Json.encode(o);
   }
 }

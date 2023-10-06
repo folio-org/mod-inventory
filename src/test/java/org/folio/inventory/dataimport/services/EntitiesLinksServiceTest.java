@@ -100,6 +100,21 @@ public class EntitiesLinksServiceTest {
   }
 
   @Test
+  public void shouldReturnFailedIfExceptionDuringPutInstanceAuthorityLinks(TestContext testContext) {
+    Async async = testContext.async();
+    WireMock.stubFor(WireMock.put(new UrlPathPattern(new RegexPattern("/links/instances/" + instanceId), true))
+      .withRequestBody(WireMock.equalToJson(INSTANCE_AUTHORITY_LINKS))
+      .willReturn(WireMock.serverError()));
+
+    List<Link> instanceAuthorityLinks = List.of(Json.decodeValue(new JsonObject(INSTANCE_AUTHORITY_LINKS_BODY).getJsonArray("links").encode(), Link[].class));
+    entitiesLinksService.putInstanceAuthorityLinks(context, instanceId, instanceAuthorityLinks).onComplete(ar -> {
+      testContext.assertTrue(ar.failed());
+      testContext.assertTrue(ar.cause().getCause() instanceof ConsortiumException);
+      async.complete();
+    });
+  }
+
+  @Test
   public void shouldReturnLinkingRules(TestContext testContext) {
     Async async = testContext.async();
     entitiesLinksService.getLinkingRules(context).onComplete(ar -> {
