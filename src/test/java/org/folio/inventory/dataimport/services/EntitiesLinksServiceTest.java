@@ -22,7 +22,8 @@ import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.runner.RunWith;;import java.util.List;
+import org.junit.runner.RunWith;;import java.net.MalformedURLException;
+import java.util.List;
 import java.util.UUID;
 
 @RunWith(VertxUnitRunner.class)
@@ -134,6 +135,17 @@ public class EntitiesLinksServiceTest {
     entitiesLinksService.getLinkingRules(context).onComplete(ar -> {
       testContext.assertTrue(ar.failed());
       testContext.assertTrue(ar.cause().getCause() instanceof ConsortiumException);
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldFailedWhenInvalidContext(TestContext testContext) {
+    Async async = testContext.async();
+    context = EventHandlingUtil.constructContext(localTenant, token, "invalid");
+    entitiesLinksService.getInstanceAuthorityLinks(context, instanceId).onComplete(ar -> {
+      testContext.assertTrue(ar.failed());
+      testContext.assertTrue(ar.cause().getCause() instanceof MalformedURLException);
       async.complete();
     });
   }
