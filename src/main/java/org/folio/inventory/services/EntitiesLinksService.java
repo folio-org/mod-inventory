@@ -1,4 +1,4 @@
-package org.folio.inventory.consortium.services;
+package org.folio.inventory.services;
 
 import io.vertx.core.Future;
 import org.folio.Link;

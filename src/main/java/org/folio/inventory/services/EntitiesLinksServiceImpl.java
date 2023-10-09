@@ -1,4 +1,4 @@
-package org.folio.inventory.consortium.services;
+package org.folio.inventory.services;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
 import com.github.benmanes.caffeine.cache.Caffeine;

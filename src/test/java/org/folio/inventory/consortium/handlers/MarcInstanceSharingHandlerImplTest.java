@@ -4,6 +4,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.buffer.impl.BufferImpl;
+import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
@@ -20,7 +21,7 @@ import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.consortium.entities.SharingInstance;
-import org.folio.inventory.consortium.services.EntitiesLinksServiceImpl;
+import org.folio.inventory.services.EntitiesLinksServiceImpl;
 import org.folio.inventory.consortium.util.InstanceOperationsHelper;
 import org.folio.inventory.consortium.util.RestDataImportHelper;
 import org.folio.inventory.domain.AuthorityRecordCollection;
@@ -81,6 +82,7 @@ public class MarcInstanceSharingHandlerImplTest {
   private Source source;
   private Target target;
   private static Vertx vertx;
+  private static HttpClient httpClient;
   private Map<String, String> kafkaHeaders;
   private final String AUTHORITY_ID_1 = "58600684-c647-408d-bf3e-756e9055a988";
   private final String AUTHORITY_ID_2 = "3f2923d3-6f8e-41a6-94e1-09eaf32872e0";
@@ -90,6 +92,7 @@ public class MarcInstanceSharingHandlerImplTest {
   @BeforeClass
   public static void setUpClass() {
     vertx = Vertx.vertx();
+    httpClient = vertx.createHttpClient();
   }
 
   @Before
@@ -128,7 +131,7 @@ public class MarcInstanceSharingHandlerImplTest {
     //given
     kafkaHeaders = new HashMap<>();
 
-    marcHandler = spy(new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, storage, vertx));
+    marcHandler = spy(new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, storage, vertx, httpClient));
     setField(marcHandler, "restDataImportHelper", restDataImportHelper);
     setField(marcHandler, "entitiesLinksService", entitiesLinksService);
 
@@ -181,7 +184,7 @@ public class MarcInstanceSharingHandlerImplTest {
     //given
     kafkaHeaders = new HashMap<>();
 
-    marcHandler = spy(new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, storage, vertx));
+    marcHandler = spy(new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, storage, vertx, httpClient));
     setField(marcHandler, "restDataImportHelper", restDataImportHelper);
     setField(marcHandler, "entitiesLinksService", entitiesLinksService);
 
@@ -255,7 +258,7 @@ public class MarcInstanceSharingHandlerImplTest {
     //given
     kafkaHeaders = new HashMap<>();
 
-    marcHandler = spy(new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, storage, vertx));
+    marcHandler = spy(new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, storage, vertx, httpClient));
     setField(marcHandler, "restDataImportHelper", restDataImportHelper);
     setField(marcHandler, "entitiesLinksService", entitiesLinksService);
 
@@ -305,7 +308,7 @@ public class MarcInstanceSharingHandlerImplTest {
     //given
     kafkaHeaders = new HashMap<>();
 
-    marcHandler = spy(new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, storage, vertx));
+    marcHandler = spy(new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, storage, vertx, httpClient));
     setField(marcHandler, "restDataImportHelper", restDataImportHelper);
     setField(marcHandler, "entitiesLinksService", entitiesLinksService);
 
@@ -379,7 +382,7 @@ public class MarcInstanceSharingHandlerImplTest {
     when(recordHttpResponse.bodyAsString()).thenReturn("{\"id\":\"" + instanceId + "\"}");
     when(recordHttpResponse.bodyAsJson(Record.class)).thenReturn(mockRecord);
 
-    MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx);
+    MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx, httpClient);
     handler.getSourceMARCByInstanceId(instanceId, sourceTenant, sourceStorageClient).onComplete(result -> {
       Record record = result.result();
       assertEquals(instanceId, record.getId());
@@ -404,7 +407,7 @@ public class MarcInstanceSharingHandlerImplTest {
     when(recordHttpResponse.bodyAsString()).thenReturn("{\"id\":\"" + instanceId + "\"}");
     when(recordHttpResponse.bodyAsJson(Record.class)).thenReturn(mockRecord);
 
-    MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx);
+    MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx, httpClient);
     handler.getSourceMARCByInstanceId(instanceId, sourceTenant, sourceStorageClient)
       .onComplete(result -> assertTrue(result.failed()));
   }
@@ -419,7 +422,7 @@ public class MarcInstanceSharingHandlerImplTest {
     when(sourceStorageClient.deleteSourceStorageRecordsById(any()))
       .thenReturn(Future.succeededFuture());
 
-    MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx);
+    MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx, httpClient);
     handler.deleteSourceRecordByInstanceId(recordId, instanceId, tenant, sourceStorageClient)
       .onComplete(result -> assertEquals(instanceId, result.result()));
 
@@ -436,7 +439,7 @@ public class MarcInstanceSharingHandlerImplTest {
     when(sourceStorageClient.deleteSourceStorageRecordsById(any()))
       .thenReturn(Future.failedFuture(new NotFoundException("Not found")));
 
-    MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx);
+    MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx, httpClient);
     handler.deleteSourceRecordByInstanceId(recordId, instanceId, tenant, sourceStorageClient)
       .onComplete(result -> assertTrue(result.failed()));
 

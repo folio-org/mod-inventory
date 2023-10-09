@@ -4,6 +4,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
@@ -55,13 +56,15 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
   public static final String ID = "id";
   private final Vertx vertx;
+  private final HttpClient httpClient;
   private final Storage storage;
   private final KafkaConfig kafkaConfig;
   private final InstanceOperationsHelper instanceOperations;
   private final EventIdStorageService eventIdStorageService;
 
-  public ConsortiumInstanceSharingHandler(Vertx vertx, Storage storage, KafkaConfig kafkaConfig, EventIdStorageService eventIdStorageService) {
+  public ConsortiumInstanceSharingHandler(Vertx vertx, HttpClient httpClient, Storage storage, KafkaConfig kafkaConfig, EventIdStorageService eventIdStorageService) {
     this.vertx = vertx;
+    this.httpClient = httpClient;
     this.storage = storage;
     this.kafkaConfig = kafkaConfig;
     this.instanceOperations = new InstanceOperationsHelper();
@@ -161,7 +164,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
           Instance instance = result.result();
           Optional<InstanceSharingHandlerFactory> type = checkSourceType(instance.getSource());
           type.ifPresentOrElse(
-            sourceType -> getInstanceSharingHandler(sourceType, instanceOperations, storage, vertx)
+            sourceType -> getInstanceSharingHandler(sourceType, instanceOperations, storage, vertx, httpClient)
               .publishInstance(instance, sharingInstanceMetadata, source, target, kafkaHeaders)
               .onComplete(publishResult -> handleSharingResult(sharingInstanceMetadata, kafkaHeaders, promise, publishResult)),
             () -> {

@@ -3,6 +3,7 @@ package org.folio.inventory.consortium.handlers;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
@@ -15,8 +16,8 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.consortium.entities.SharingInstance;
 import org.folio.inventory.consortium.exceptions.ConsortiumException;
-import org.folio.inventory.consortium.services.EntitiesLinksService;
-import org.folio.inventory.consortium.services.EntitiesLinksServiceImpl;
+import org.folio.inventory.services.EntitiesLinksService;
+import org.folio.inventory.services.EntitiesLinksServiceImpl;
 import org.folio.inventory.consortium.util.InstanceOperationsHelper;
 import org.folio.inventory.consortium.util.MarcRecordUtil;
 import org.folio.inventory.consortium.util.RestDataImportHelper;
@@ -49,11 +50,11 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
   private final Storage storage;
   private final Vertx vertx;
 
-  public MarcInstanceSharingHandlerImpl(InstanceOperationsHelper instanceOperations, Storage storage, Vertx vertx) {
+  public MarcInstanceSharingHandlerImpl(InstanceOperationsHelper instanceOperations, Storage storage, Vertx vertx, HttpClient httpClient) {
     this.vertx = vertx;
     this.instanceOperations = instanceOperations;
     this.restDataImportHelper = new RestDataImportHelper(vertx);
-    this.entitiesLinksService = new EntitiesLinksServiceImpl(vertx, vertx.createHttpClient());
+    this.entitiesLinksService = new EntitiesLinksServiceImpl(vertx, httpClient);
     this.storage = storage;
   }
 
@@ -67,7 +68,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
 
     // Get source MARC by instance ID
     return getSourceMARCByInstanceId(instanceId, sourceTenant, sourceStorageClient)
-      .compose(marcRecord -> unlinkAuthorityLinksIfNeeded(marcRecord, instanceId, context, storage))
+      .compose(marcRecord -> detachLocalAuthorityLinksIfNeeded(marcRecord, instanceId, context, storage))
       .compose(marcRecord -> {
         // Publish instance with MARC source
         return restDataImportHelper.importMarcRecord(marcRecord, sharingInstanceMetadata, kafkaHeaders)
@@ -93,7 +94,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
       });
   }
 
-  private Future<Record> unlinkAuthorityLinksIfNeeded(Record marcRecord, String instanceId, Context context, Storage storage) {
+  private Future<Record> detachLocalAuthorityLinksIfNeeded(Record marcRecord, String instanceId, Context context, Storage storage) {
     return entitiesLinksService.getInstanceAuthorityLinks(context, instanceId)
       .compose(entityLinks -> {
         if (entityLinks.isEmpty()) {
@@ -116,7 +117,13 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
         }
         List<String> fields = linkingRules.stream().map(LinkingRuleDto::getBibField).toList();
         LOGGER.debug("unlinkLocalAuthorities:: Unlinking from tenant: {} local authorities: {}", context.getTenantId(), localAuthoritiesIds);
+        /*
+        * Removing $9 subfields containing local authorities ids from fields specified at linking-rules
+        */
         if (MarcRecordUtil.removeSubfieldsThatContainsValues(marcRecord, fields, '9', localAuthoritiesIds)) {
+          /*
+           * Updating instance-authority links to contain only links to shared authority, as far as instance will be shared
+           */
           List<Link> sharedAuthorityLinks = getSharedAuthorityLinks(entityLinks, localAuthoritiesIds);
           return entitiesLinksService.putInstanceAuthorityLinks(context, instanceId, sharedAuthorityLinks).map(marcRecord);
         }

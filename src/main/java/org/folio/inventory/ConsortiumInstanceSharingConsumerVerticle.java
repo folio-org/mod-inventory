@@ -3,6 +3,7 @@ package org.folio.inventory;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -11,7 +12,6 @@ import org.folio.inventory.common.dao.PostgresClientFactory;
 import org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler;
 import org.folio.inventory.consortium.entities.SharingInstanceEventType;
 import org.folio.inventory.dataimport.util.ConsumerWrapperUtil;
-import org.folio.inventory.services.EventIdStorageService;
 import org.folio.inventory.services.SharedInstanceEventIdStorageServiceImpl;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.AsyncRecordHandler;
@@ -43,9 +43,10 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
     KafkaConfig kafkaConfig = getKafkaConfig(config);
     LOGGER.info(format("kafkaConfig: %s", kafkaConfig));
 
-    Storage storage = Storage.basedUpon(config, vertx.createHttpClient());
+    HttpClient httpClient = vertx.createHttpClient();
+    Storage storage = Storage.basedUpon(config, httpClient);
     SharedInstanceEventIdStorageServiceImpl sharedInstanceEventIdStorageService = new SharedInstanceEventIdStorageServiceImpl(new EventIdStorageDaoImpl(new PostgresClientFactory(vertx)));
-    ConsortiumInstanceSharingHandler consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig, sharedInstanceEventIdStorageService);
+    ConsortiumInstanceSharingHandler consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig, sharedInstanceEventIdStorageService);
 
     var kafkaConsumerFuture = createKafkaConsumerWrapper(kafkaConfig, consortiumInstanceSharingHandler);
     kafkaConsumerFuture.onFailure(startPromise::fail)
