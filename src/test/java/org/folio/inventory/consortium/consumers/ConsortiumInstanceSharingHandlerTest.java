@@ -78,6 +78,7 @@ public class ConsortiumInstanceSharingHandlerTest {
   @BeforeClass
   public static void setUpClass() {
     vertx = Vertx.vertx();
+    httpClient = vertx.createHttpClient();
     kafkaConfig = KafkaConfig.builder()
       .envId("env")
       .maxRequestSize(1048576)
