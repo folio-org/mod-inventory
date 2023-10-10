@@ -2,6 +2,7 @@ package org.folio.inventory.consortium.consumers;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
@@ -57,6 +58,7 @@ public class ConsortiumInstanceSharingHandlerTest {
 
   private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
   private static Vertx vertx;
+  private static HttpClient httpClient;
   @Mock
   private Storage storage;
   @Mock
@@ -76,6 +78,7 @@ public class ConsortiumInstanceSharingHandlerTest {
   @BeforeClass
   public static void setUpClass() {
     vertx = Vertx.vertx();
+    httpClient = vertx.createHttpClient();
     kafkaConfig = KafkaConfig.builder()
       .envId("env")
       .maxRequestSize(1048576)
@@ -149,7 +152,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID().toString())).when(eventIdStorageService).store(any(), any());
 
     // when
-    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig, eventIdStorageService);
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig, eventIdStorageService);
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
@@ -212,7 +215,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID().toString())).when(eventIdStorageService).store(any(), any());
 
     // when
-    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig, eventIdStorageService);
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig, eventIdStorageService);
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
@@ -262,7 +265,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID().toString())).when(eventIdStorageService).store(any(), any());
 
     // when
-    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig, eventIdStorageService);
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig, eventIdStorageService);
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
@@ -310,7 +313,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID().toString())).when(eventIdStorageService).store(any(), any());
 
     // when
-    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig, eventIdStorageService);
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig, eventIdStorageService);
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
@@ -365,7 +368,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID().toString())).when(eventIdStorageService).store(any(), any());
 
     // when
-    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig, eventIdStorageService);
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig, eventIdStorageService);
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
@@ -428,7 +431,7 @@ public class ConsortiumInstanceSharingHandlerTest {
 
     mockedInstanceSharingHandler.when(() ->
         InstanceSharingHandlerFactory.getInstanceSharingHandler(eq(InstanceSharingHandlerFactory.MARC),
-        any(InstanceOperationsHelper.class), any(Vertx.class)))
+        any(InstanceOperationsHelper.class), any(Storage.class), any(Vertx.class), any(HttpClient.class)))
       .thenReturn(sharingHandler);
 
     when(sharingHandler.publishInstance(any(), any(), any(), any(), any()))
@@ -437,7 +440,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID().toString())).when(eventIdStorageService).store(any(), any());
 
     //when
-    consortiumInstanceSharingHandler = spy(new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig, eventIdStorageService));
+    consortiumInstanceSharingHandler = spy(new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig, eventIdStorageService));
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
@@ -499,7 +502,7 @@ public class ConsortiumInstanceSharingHandlerTest {
 
     mockedInstanceSharingHandler.when(() ->
         InstanceSharingHandlerFactory.getInstanceSharingHandler(eq(InstanceSharingHandlerFactory.MARC),
-          any(InstanceOperationsHelper.class), any(Vertx.class)))
+          any(InstanceOperationsHelper.class), any(Storage.class), any(Vertx.class), any(HttpClient.class)))
       .thenReturn(sharingHandler);
 
     when(sharingHandler.publishInstance(any(), any(), any(), any(), any()))
@@ -508,7 +511,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID().toString())).when(eventIdStorageService).store(any(), any());
 
     //when
-    consortiumInstanceSharingHandler = spy(new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig, eventIdStorageService));
+    consortiumInstanceSharingHandler = spy(new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig, eventIdStorageService));
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
@@ -548,7 +551,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     when(eventIdStorageService.store(any(), any())).thenReturn(Future.failedFuture(new DuplicateEventException("SQL Unique constraint violation prevented repeatedly saving the record")));
 
     // when
-    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, storage, kafkaConfig, eventIdStorageService);
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig, eventIdStorageService);
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);

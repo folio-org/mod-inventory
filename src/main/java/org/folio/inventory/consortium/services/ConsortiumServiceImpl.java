@@ -4,7 +4,6 @@ import io.vertx.core.Future;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.Json;
-import io.vertx.ext.web.client.WebClient;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -14,16 +13,14 @@ import org.folio.inventory.consortium.entities.ConsortiumConfiguration;
 import org.folio.inventory.consortium.entities.SharingInstance;
 import org.folio.inventory.consortium.entities.SharingStatus;
 import org.folio.inventory.consortium.exceptions.ConsortiumException;
-import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.okapi.common.XOkapiHeaders;
 
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+import static org.folio.inventory.consortium.util.ConsortiumUtil.createOkapiHttpClient;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
 
@@ -60,7 +57,7 @@ public class ConsortiumServiceImpl implements ConsortiumService {
   @Override
   public Future<SharingInstance> shareInstance(Context context, String consortiumId, SharingInstance sharingInstance) {
     Map<String, String> headers = Map.of(HttpHeaders.CONTENT_TYPE.toString(), APPLICATION_JSON);
-    CompletableFuture<SharingInstance> completableFuture = createOkapiHttpClient(context)
+    CompletableFuture<SharingInstance> completableFuture = createOkapiHttpClient(context, httpClient)
       .thenCompose(client ->
         client.post(context.getOkapiLocation() + String.format(SHARE_INSTANCE_ENDPOINT, consortiumId), Json.encode(sharingInstance), headers)
           .thenCompose(httpResponse -> {
@@ -77,15 +74,5 @@ public class ConsortiumServiceImpl implements ConsortiumService {
             }
           }));
     return Future.fromCompletionStage(completableFuture);
-  }
-
-  private CompletableFuture<OkapiHttpClient> createOkapiHttpClient(Context context) {
-    try {
-      return CompletableFuture.completedFuture(new OkapiHttpClient(WebClient.wrap(httpClient), new URL(context.getOkapiLocation()),
-        context.getTenantId(), context.getToken(), null, null, null));
-    } catch (MalformedURLException e) {
-      LOGGER.warn("createOkapiHttpClient:: Error during creation of OkapiHttpClient for URL: {}", context.getOkapiLocation(), e);
-      return CompletableFuture.failedFuture(e);
-    }
   }
 }
