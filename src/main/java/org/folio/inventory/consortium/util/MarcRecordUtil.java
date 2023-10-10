@@ -37,40 +37,33 @@ public final class MarcRecordUtil {
    * @param fields    fields that could contain subfield
    * @param subfieldCode subfield to remove
    * @param values    values of the subfield to remove
-   * @return true if succeeded, false otherwise
    */
-  public static boolean removeSubfieldsThatContainsValues(Record record, List<String> fields, char subfieldCode, List<String> values) {
-    boolean isRemoveSucceed = true;
-    try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-      if (record != null && record.getParsedRecord() != null && record.getParsedRecord().getContent() != null) {
-        MarcWriter marcStreamWriter = new MarcStreamWriter(new ByteArrayOutputStream());
-        MarcJsonWriter marcJsonWriter = new MarcJsonWriter(baos);
-        org.marc4j.marc.Record marcRecord = computeMarcRecord(record);
-        if (marcRecord != null) {
-          for (VariableField variableField : marcRecord.getVariableFields(fields.toArray(new String[0]))) {
-            DataField dataField = (DataField) variableField;
-            List<Subfield> subfields = dataField.getSubfields(subfieldCode);
-            for (Subfield subfield : subfields) {
-              if (subfield != null && values.contains(subfield.getData())) {
-                dataField.removeSubfield(subfield);
-              }
+  public static void removeSubfieldsThatContainsValues(Record record, List<String> fields, char subfieldCode, List<String> values) {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    if (record != null && record.getParsedRecord() != null && record.getParsedRecord().getContent() != null) {
+      MarcWriter marcStreamWriter = new MarcStreamWriter(new ByteArrayOutputStream());
+      MarcJsonWriter marcJsonWriter = new MarcJsonWriter(baos);
+      org.marc4j.marc.Record marcRecord = computeMarcRecord(record);
+      if (marcRecord != null) {
+        for (VariableField variableField : marcRecord.getVariableFields(fields.toArray(new String[0]))) {
+          DataField dataField = (DataField) variableField;
+          List<Subfield> subfields = dataField.getSubfields(subfieldCode);
+          for (Subfield subfield : subfields) {
+            if (subfield != null && values.contains(subfield.getData())) {
+              dataField.removeSubfield(subfield);
             }
           }
-
-          // use stream writer to recalculate leader
-          marcStreamWriter.write(marcRecord);
-          marcJsonWriter.write(marcRecord);
-
-          String parsedContentString = new JsonObject(baos.toString()).encode();
-          // save parsed content string to cache then set it on the record
-          record.setParsedRecord(record.getParsedRecord().withContent(parsedContentString));
         }
+
+        // use stream writer to recalculate leader
+        marcStreamWriter.write(marcRecord);
+        marcJsonWriter.write(marcRecord);
+
+        String parsedContentString = new JsonObject(baos.toString()).encode();
+        // save parsed content string to cache then set it on the record
+        record.setParsedRecord(record.getParsedRecord().withContent(parsedContentString));
       }
-    } catch (Exception e) {
-      LOGGER.warn("removeSubfieldsThatContainsValues:: Failed to remove subfields {}, from record {}", subfieldCode, record.getId(), e);
-      isRemoveSucceed = false;
     }
-    return isRemoveSucceed;
   }
 
   private static org.marc4j.marc.Record computeMarcRecord(Record record) {

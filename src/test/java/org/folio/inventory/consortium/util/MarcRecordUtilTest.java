@@ -33,9 +33,8 @@ public class MarcRecordUtilTest {
     parsedRecord.setContent(parsedRecordContent);
     Record record = new Record().withId(recordId).withParsedRecord(parsedRecord);
     // when
-    boolean removedSubfields = MarcRecordUtil.removeSubfieldsThatContainsValues(record, List.of("245", "700"), '9', List.of(UUID_1, UUID_3));
+    MarcRecordUtil.removeSubfieldsThatContainsValues(record, List.of("245", "700"), '9', List.of(UUID_1, UUID_3));
     // then
-    Assert.assertTrue(removedSubfields);
     JsonObject content = new JsonObject(parsedRecord.getContent().toString());
     JsonArray fields = content.getJsonArray("fields");
     String newLeader = content.getString("leader");
@@ -46,32 +45,14 @@ public class MarcRecordUtilTest {
   }
 
   @Test
-  public void  shouldReturnTrueIfNullMarcRecordDuringRemoveOfSubfield() throws IOException {
+  public void shouldNotThrowExceptionIfNullMarcRecordDuringRemoveOfSubfield() throws IOException {
     // given
     String recordId = UUID.randomUUID().toString();
 
-    String parsedRecordContent = TestUtil.readFileFromPath(PARSED_MARC_RECORD_PATH);
     ParsedRecord parsedRecord = new ParsedRecord();
-    parsedRecord.setContent(parsedRecordContent);
+    parsedRecord.setContent("null");
     Record record = new Record().withId(recordId).withParsedRecord(parsedRecord);
     // when
-    boolean removedSubfields = MarcRecordUtil.removeSubfieldsThatContainsValues(record, List.of("245", "700"), '9', List.of(UUID_1, UUID_3));
-    // then
-    Assert.assertTrue(removedSubfields);
-  }
-
-  @Test
-  public void  shouldReturnFalseIfExceptionDuringRemoveOfSubfield() throws IOException {
-    // given
-    String recordId = UUID.randomUUID().toString();
-
-    String parsedRecordContent = TestUtil.readFileFromPath(PARSED_MARC_RECORD_PATH);
-    ParsedRecord parsedRecord = new ParsedRecord();
-    parsedRecord.setContent(parsedRecordContent);
-    Record record = new Record().withId(recordId).withParsedRecord(parsedRecord);
-    // when
-    boolean removedSubfields = MarcRecordUtil.removeSubfieldsThatContainsValues(record, null, '9', List.of(UUID_1, UUID_3));
-    // then
-    Assert.assertFalse(removedSubfields);
+    MarcRecordUtil.removeSubfieldsThatContainsValues(record, List.of("245", "700"), '9', List.of(UUID_1, UUID_3));
   }
 }

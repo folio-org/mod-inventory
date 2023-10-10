@@ -108,7 +108,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
   }
 
   private Future<Record> unlinkLocalAuthorities(List<Link> entityLinks, List<LinkingRuleDto> linkingRules, Record marcRecord,
-                                                String instanceId,Context context, AuthorityRecordCollection authorityRecordCollection) {
+                                                String instanceId, Context context, AuthorityRecordCollection authorityRecordCollection) {
 
     return getLocalAuthoritiesIdsList(entityLinks, authorityRecordCollection)
       .compose(localAuthoritiesIds -> {
@@ -118,17 +118,19 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
         List<String> fields = linkingRules.stream().map(LinkingRuleDto::getBibField).toList();
         LOGGER.debug("unlinkLocalAuthorities:: Unlinking from tenant: {} local authorities: {}", context.getTenantId(), localAuthoritiesIds);
         /*
-        * Removing $9 subfields containing local authorities ids from fields specified at linking-rules
-        */
-        if (MarcRecordUtil.removeSubfieldsThatContainsValues(marcRecord, fields, '9', localAuthoritiesIds)) {
+         * Removing $9 subfields containing local authorities ids from fields specified at linking-rules
+         */
+        try {
+          MarcRecordUtil.removeSubfieldsThatContainsValues(marcRecord, fields, '9', localAuthoritiesIds);
           /*
            * Updating instance-authority links to contain only links to shared authority, as far as instance will be shared
            */
           List<Link> sharedAuthorityLinks = getSharedAuthorityLinks(entityLinks, localAuthoritiesIds);
           return entitiesLinksService.putInstanceAuthorityLinks(context, instanceId, sharedAuthorityLinks).map(marcRecord);
+        } catch (Exception e) {
+          LOGGER.warn(format("unlinkLocalAuthorities:: Error during remove of 9 subfields from record: %s", marcRecord.getId()), e);
+          return Future.failedFuture(new ConsortiumException("Error of unlinking local authorities from marc record during Instance sharing process"));
         }
-        LOGGER.warn(format("unlinkLocalAuthorities:: Error during remove of 9 subfields from record: %s", marcRecord.getId()));
-        return Future.failedFuture(new ConsortiumException("Error of unlinking local authorities from marc record during Instance sharing process"));
       });
   }
 
