@@ -53,6 +53,10 @@ public class MarcRecordUtilTest {
     parsedRecord.setContent("null");
     Record record = new Record().withId(recordId).withParsedRecord(parsedRecord);
     // when
-    MarcRecordUtil.removeSubfieldsThatContainsValues(record, List.of("245", "700"), '9', List.of(UUID_1, UUID_3));
+    try {
+      MarcRecordUtil.removeSubfieldsThatContainsValues(record, List.of("245", "700"), '9', List.of(UUID_1, UUID_3));
+    } catch (Exception e) {
+      Assert.fail("Exception thrown");
+    }
   }
 }
