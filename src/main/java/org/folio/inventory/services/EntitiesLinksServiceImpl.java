@@ -15,6 +15,7 @@ import org.folio.Link;
 import org.folio.LinkingRuleDto;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.consortium.exceptions.ConsortiumException;
+import org.folio.inventory.support.http.client.Response;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -47,15 +48,9 @@ public class EntitiesLinksServiceImpl implements EntitiesLinksService {
       .thenCompose(client ->
         client.get(context.getOkapiLocation() + String.format(AUTHORITY_LINK_PATH, instanceId))
           .thenCompose(httpResponse -> {
-            if (httpResponse.getStatusCode() == HttpStatus.SC_OK) {
-              List<Link> response = List.of(Json.decodeValue(Json.encode(httpResponse.getJson().getJsonArray(LINKS)), Link[].class));
-              LOGGER.debug("shareInstance:: Successfully retrieved entities links for instance with id: {}", instanceId);
-              return CompletableFuture.completedFuture(response);
-            } else {
-              String message = String.format("Error during retrieving entity links for instance with id: %s", instanceId);
-              LOGGER.warn(String.format("shareInstance:: %s", message));
-              return CompletableFuture.failedFuture(new ConsortiumException(message));
-            }
+            String successMessage = String.format("getInstanceAuthorityLinks:: Successfully retrieved entities links for instance with id: %s", instanceId);
+            String errorMessage = String.format("Error during retrieving entity links for instance with id: %s", instanceId);
+            return handleInstanceAuthorityLinksResponse(httpResponse, successMessage, errorMessage);
           }));
     return Future.fromCompletionStage(completableFuture);
   }
@@ -67,17 +62,22 @@ public class EntitiesLinksServiceImpl implements EntitiesLinksService {
       .thenCompose(client ->
         client.put(context.getOkapiLocation() + String.format(AUTHORITY_LINK_PATH, instanceId), body)
           .thenCompose(httpResponse -> {
-            if (httpResponse.getStatusCode() == HttpStatus.SC_OK) {
-              List<Link> response = List.of(Json.decodeValue(Json.encode(httpResponse.getJson().getJsonArray(LINKS)), Link[].class));
-              LOGGER.debug("shareInstance:: Successfully updated entities links for instance with id: {}", instanceId);
-              return CompletableFuture.completedFuture(response);
-            } else {
-              String message = String.format("Error during updating entity links for instance with id: %s", instanceId);
-              LOGGER.warn(String.format("shareInstance:: %s", message));
-              return CompletableFuture.failedFuture(new ConsortiumException(message));
-            }
+            String successMessage = String.format("getInstanceAuthorityLinks:: Successfully updated entities links for instance with id: %s", instanceId);
+            String errorMessage = String.format("Error during updating entity links for instance with id: %s", instanceId);
+            return handleInstanceAuthorityLinksResponse(httpResponse, successMessage, errorMessage);
           }));
     return Future.fromCompletionStage(completableFuture);
+  }
+
+  private static CompletableFuture<List<Link>> handleInstanceAuthorityLinksResponse(Response httpResponse, String successMessage, String errorMessage) {
+    if (httpResponse.getStatusCode() == HttpStatus.SC_OK) {
+      List<Link> response = List.of(Json.decodeValue(Json.encode(httpResponse.getJson().getJsonArray(LINKS)), Link[].class));
+      LOGGER.debug(successMessage);
+      return CompletableFuture.completedFuture(response);
+    } else {
+      LOGGER.warn(errorMessage);
+      return CompletableFuture.failedFuture(new ConsortiumException(errorMessage));
+    }
   }
 
   @Override
