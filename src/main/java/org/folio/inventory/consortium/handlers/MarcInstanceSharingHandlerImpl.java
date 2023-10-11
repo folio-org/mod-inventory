@@ -204,6 +204,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
             recordId, instanceId, tenantId, responseResult.cause());
           promise.fail(responseResult.cause());
         } else {
+          LOGGER.info("TEST: resp status: {}, body: {}", responseResult.result().statusCode(), responseResult.result().bodyAsString());
           LOGGER.info("deleteSourceRecordByInstanceId:: Source record with recordId={} for instance with InstanceId={} from tenant {} has been deleted.",
             recordId, instanceId, tenantId);
           promise.complete(instanceId);
