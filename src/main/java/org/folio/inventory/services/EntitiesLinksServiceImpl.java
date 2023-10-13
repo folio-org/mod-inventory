@@ -52,30 +52,37 @@ public class EntitiesLinksServiceImpl implements EntitiesLinksService {
     CompletableFuture<List<Link>> completableFuture = createOkapiHttpClient(context, httpClient)
       .thenCompose(client ->
         client.get(context.getOkapiLocation() + format(AUTHORITY_LINK_PATH, instanceId))
-          .thenCompose(httpResponse -> handleInstanceAuthorityLinksResponse(httpResponse, GET, instanceId)));
+          .thenCompose(httpResponse -> {
+            if (httpResponse.getStatusCode() == HttpStatus.SC_OK) {
+              List<Link> response = List.of(Json.decodeValue(Json.encode(httpResponse.getJson().getJsonArray(LINKS)), Link[].class));
+              LOGGER.debug(format(SUCCESS_MESSAGE, GET, instanceId));
+              return CompletableFuture.completedFuture(response);
+            } else {
+              String errorMessage = format(ERROR_MESSAGE, GET, instanceId, httpResponse.getStatusCode(), httpResponse.getBody());
+              LOGGER.warn(errorMessage, httpResponse.getBody());
+              return CompletableFuture.failedFuture(new ConsortiumException(errorMessage));
+            }
+          }));
     return Future.fromCompletionStage(completableFuture);
   }
 
   @Override
-  public Future<List<Link>> putInstanceAuthorityLinks(Context context, String instanceId, List<Link> entityLinks) {
+  public Future<Void> putInstanceAuthorityLinks(Context context, String instanceId, List<Link> entityLinks) {
     JsonObject body = new JsonObject().put(LINKS, new JsonArray(entityLinks));
-    CompletableFuture<List<Link>> completableFuture = createOkapiHttpClient(context, httpClient)
+    CompletableFuture<Void> completableFuture = createOkapiHttpClient(context, httpClient)
       .thenCompose(client ->
         client.put(context.getOkapiLocation() + format(AUTHORITY_LINK_PATH, instanceId), body)
-          .thenCompose(httpResponse -> handleInstanceAuthorityLinksResponse(httpResponse, UPDATE, instanceId)));
+          .thenCompose(httpResponse -> {
+            if (httpResponse.getStatusCode() == HttpStatus.SC_NO_CONTENT) {
+              LOGGER.debug(format(SUCCESS_MESSAGE, UPDATE, instanceId));
+              return CompletableFuture.completedFuture(null);
+            } else {
+              String errorMessage = format(ERROR_MESSAGE, UPDATE, instanceId, httpResponse.getStatusCode(), httpResponse.getBody());
+              LOGGER.warn(errorMessage, httpResponse.getBody());
+              return CompletableFuture.failedFuture(new ConsortiumException(errorMessage));
+            }
+          }));
     return Future.fromCompletionStage(completableFuture);
-  }
-
-  private static CompletableFuture<List<Link>> handleInstanceAuthorityLinksResponse(Response httpResponse, String action, String instanceId) {
-    if (httpResponse.getStatusCode() == HttpStatus.SC_OK) {
-      List<Link> response = List.of(Json.decodeValue(Json.encode(httpResponse.getJson().getJsonArray(LINKS)), Link[].class));
-      LOGGER.debug(format(SUCCESS_MESSAGE, action, instanceId));
-      return CompletableFuture.completedFuture(response);
-    } else {
-      String errorMessage = format(ERROR_MESSAGE, action, instanceId, httpResponse.getStatusCode(), httpResponse.getBody());
-      LOGGER.warn(errorMessage, httpResponse.getBody());
-      return CompletableFuture.failedFuture(new ConsortiumException(errorMessage));
-    }
   }
 
   @Override

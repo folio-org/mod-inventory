@@ -62,7 +62,7 @@ public class EntitiesLinksServiceTest {
 
     WireMock.stubFor(WireMock.put(new UrlPathPattern(new RegexPattern("/links/instances/" + instanceId), true))
         .withRequestBody(WireMock.equalToJson(INSTANCE_AUTHORITY_LINKS))
-      .willReturn(WireMock.ok().withBody(Json.encode(instanceAuthorityLinksResponse))));
+      .willReturn(WireMock.noContent()));
   }
 
   @Test
@@ -94,8 +94,6 @@ public class EntitiesLinksServiceTest {
     List<Link> instanceAuthorityLinks = List.of(Json.decodeValue(new JsonObject(INSTANCE_AUTHORITY_LINKS_BODY).getJsonArray("links").encode(), Link[].class));
     entitiesLinksService.putInstanceAuthorityLinks(context, instanceId, instanceAuthorityLinks).onComplete(ar -> {
       testContext.assertTrue(ar.succeeded());
-      testContext.assertTrue(!ar.result().isEmpty());
-      testContext.assertEquals(ar.result().get(0).getAuthorityId(), authorityId);
       async.complete();
     });
   }
