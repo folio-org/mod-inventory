@@ -75,7 +75,7 @@ public class EntitiesLinksServiceImpl implements EntitiesLinksService {
       LOGGER.debug(successMessage);
       return CompletableFuture.completedFuture(response);
     } else {
-      LOGGER.warn(errorMessage);
+      LOGGER.warn(errorMessage, httpResponse.getBody());
       return CompletableFuture.failedFuture(new ConsortiumException(errorMessage));
     }
   }
