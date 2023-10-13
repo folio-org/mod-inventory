@@ -95,7 +95,8 @@ public class EntitiesLinksServiceImpl implements EntitiesLinksService {
         LOGGER.debug("loadLinkingRules:: Successfully loaded linking rules for tenant with id: {}", context.getTenantId());
         return CompletableFuture.completedFuture(linkingRules);
       } else {
-        String message = format("Error during loading linking rules for tenant with id: %s", context.getTenantId());
+        String message = format("Error during loading linking rules for tenant with id: %s, status code: %s, response message: %s",
+          context.getTenantId(), httpResponse.getStatusCode(), httpResponse.getBody());
         LOGGER.warn(format("loadLinkingRules:: %s", message));
         return CompletableFuture.failedFuture(new ConsortiumException(message));
       }
