@@ -1,4 +1,4 @@
-## 20.1.0-SNAPSHOT 2023-XX-XX
+## 20.1.0 2023-10-13
 * Update status when user attempts to update shared auth record from member tenant ([MODDATAIMP-926](https://issues.folio.org/browse/MODDATAIMP-926))
 * Add cache to get and store consortium data configurations ([MODINV-872](https://issues.folio.org/browse/MODINV-872))
 * Data Import 3rd update Action on Item Record Fails ([MODINV-842](https://issues.folio.org/browse/MODINV-842))
