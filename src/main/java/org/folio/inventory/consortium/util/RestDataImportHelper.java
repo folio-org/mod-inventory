@@ -210,13 +210,13 @@ public class RestDataImportHelper {
     }
 
     LOGGER.info("checkDataImportStatus:: Checking import status by jobExecutionId={}. InstanceId={}.",
-      sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionId);
+      jobExecutionId, sharingInstanceMetadata.getInstanceIdentifier());
 
     getJobExecutionStatusByJobExecutionId(jobExecutionId, changeManagerClient).onComplete(jobExecution -> {
       if (jobExecution.succeeded()) {
         String jobExecutionStatus = jobExecution.result();
         LOGGER.info("checkDataImportStatus:: Check import status for DI with jobExecutionId={}, InstanceId={}, JobExecutionStatus={}",
-          sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionId, jobExecutionStatus);
+          jobExecutionId, sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionStatus);
         if (jobExecutionStatus.equals(STATUS_COMMITTED) || jobExecutionStatus.equals(STATUS_ERROR)) {
           promise.complete(jobExecutionStatus);
         } else {

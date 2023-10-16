@@ -453,7 +453,6 @@ public class MarcInstanceSharingHandlerImplTest {
 
   @Test
   public void deleteSourceRecordByInstanceIdFailedTestWhenResponseStatusIsNotNoContent() {
-
     String instanceId = "991f37c8-cd22-4db7-9543-a4ec68735e95";
     String recordId = "fea6477b-d8f5-4d22-9e86-6218407c780b";
     String tenant = "sourceTenant";
