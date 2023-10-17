@@ -71,6 +71,8 @@ public class RestDataImportHelper {
     LOGGER.info("publishInstanceWithMarcSource:: Importing MARC record for instance with InstanceId={} to target tenant={}.",
       sharingInstanceMetadata.getInstanceIdentifier(), sharingInstanceMetadata.getTargetTenantId());
 
+    LOGGER.info("importMarcRecord parsedContent:: {}", marcRecord.getParsedRecord().getContent());
+
     ChangeManagerClient changeManagerClient = getChangeManagerClient(kafkaHeaders);
 
     //TODO: move to config

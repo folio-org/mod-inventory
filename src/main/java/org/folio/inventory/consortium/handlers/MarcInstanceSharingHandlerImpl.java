@@ -148,7 +148,6 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
     try {
       authorityRecordCollection.findByCql(format("id==(%s)", getQueryParamForMultipleAuthorities(entityLinks)), PagingParameters.defaults(),
         findResults -> {
-        LOGGER.info("getLocalAuthoritiesIdsList:: found authorities {}", findResults.getResult().records);
           List<String> localEntitiesIds = findResults.getResult().records.stream()
             .filter(source -> !source.getSource().value().startsWith(CONSORTIUM_PREFIX))
             .map(Authority::getId).toList();
@@ -181,7 +180,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
             int statusCode = responseResult.result().statusCode();
             if (statusCode == HttpStatus.SC_OK) {
               String bodyAsString = responseResult.result().bodyAsString();
-              LOGGER.debug("MARC source for instance with InstanceId={} from tenant={}. Record={}.", instanceId, sourceTenant, bodyAsString);
+              LOGGER.info("MARC source for instance with InstanceId={} from tenant={}. Record={}.", instanceId, sourceTenant, bodyAsString);
               promise.complete(responseResult.result().bodyAsJson(Record.class));
             } else {
               String errorMessage = String.format("Failed to retrieve MARC record for instance with InstanceId=%s from tenant=%s. " +
