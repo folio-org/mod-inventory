@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <artifactId>mod-inventory</artifactId>
   <groupId>org.folio</groupId>
-  <version>20.1.0-SNAPSHOT</version>
+  <version>20.2.0-SNAPSHOT</version>
   <licenses>
     <license>
       <name>Apache License 2.0</name>
@@ -322,7 +322,7 @@
     <vertx.version>4.3.3</vertx.version>
     <jsonschema2pojo_output_dir>${project.build.directory}/generated-sources/jsonschema2pojo</jsonschema2pojo_output_dir>
     <httpcomponents.version>4.5.13</httpcomponents.version>
-    <lombok.version>1.18.22</lombok.version>
+    <lombok.version>1.18.30</lombok.version>
     <postgres.version>42.5.1</postgres.version>
     <liquibase.version>4.9.1</liquibase.version>
     <kafkaclients.version>3.1.0</kafkaclients.version>
