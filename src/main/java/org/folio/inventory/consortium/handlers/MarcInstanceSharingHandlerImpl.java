@@ -116,7 +116,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
       .compose(localAuthoritiesIds -> {
         if (!localAuthoritiesIds.isEmpty()) {
           List<String> fields = linkingRules.stream().map(LinkingRuleDto::getBibField).toList();
-          LOGGER.debug("relinkAuthorities:: Unlinking local authorities: {} from instance: {}, tenant: %s {}",
+          LOGGER.info("relinkAuthorities:: Unlinking local authorities: {} from instance: {}, tenant: %s {}",
             localAuthoritiesIds, instanceId, context.getTenantId());
           /*
            * Removing $9 subfields containing local authorities ids from fields specified at linking-rules
@@ -135,7 +135,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
            * Updating instance-authority links to contain only links to shared authority, as far as instance will be shared
            */
           Context targetTenantContext = constructContext(sharingInstanceMetadata.getTargetTenantId(), context.getToken(), context.getOkapiLocation());
-          LOGGER.debug("relinkAuthorities:: Linking shared authorities: {} to instance: {}, tenant: %s {}",
+          LOGGER.info("relinkAuthorities:: Linking shared authorities: {} to instance: {}, tenant: %s {}",
             sharedAuthorityLinks, instanceId, targetTenantContext.getTenantId());
           return entitiesLinksService.putInstanceAuthorityLinks(targetTenantContext, instanceId, sharedAuthorityLinks).map(marcRecord);
         }
@@ -148,6 +148,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
     try {
       authorityRecordCollection.findByCql(format("id==(%s)", getQueryParamForMultipleAuthorities(entityLinks)), PagingParameters.defaults(),
         findResults -> {
+        LOGGER.info("getLocalAuthoritiesIdsList:: found authorities {}", findResults.getResult().records);
           List<String> localEntitiesIds = findResults.getResult().records.stream()
             .filter(source -> !source.getSource().value().startsWith(CONSORTIUM_PREFIX))
             .map(Authority::getId).toList();
