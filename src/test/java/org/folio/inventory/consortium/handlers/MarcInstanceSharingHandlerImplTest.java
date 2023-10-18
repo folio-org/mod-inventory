@@ -294,79 +294,79 @@ public class MarcInstanceSharingHandlerImplTest {
     });
   }
 
-//  @Test
-//  public void shouldNotPutLinkInstanceAuthoritiesIfInstanceNotLinkedToLocalAuthorities(TestContext testContext) throws UnsupportedEncodingException {
-//    Async async = testContext.async();
-//
-//    String instanceId = "eb89b292-d2b7-4c36-9bfc-f816d6f96418";
-//    String targetInstanceHrid = "consin0000000000101";
-//
-//    Record record = buildHttpResponseWithBuffer(HttpStatus.HTTP_OK, BufferImpl.buffer(recordJsonWithLinkedAuthorities)).bodyAsJson(Record.class);
-//
-//    Authority authority1 = new Authority().withId(AUTHORITY_ID_1).withSource(Authority.Source.CONSORTIUM_MARC);
-//    Authority authority2 = new Authority().withId(AUTHORITY_ID_2).withSource(Authority.Source.CONSORTIUM_MARC);
-//
-//    //given
-//    kafkaHeaders = new HashMap<>();
-//
-//    marcHandler = spy(new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, storage, vertx, httpClient));
-//    setField(marcHandler, "restDataImportHelper", restDataImportHelper);
-//    setField(marcHandler, "entitiesLinksService", entitiesLinksService);
-//
-//    doReturn(sourceStorageClient).when(marcHandler).getSourceStorageRecordsClient(anyString(), eq(kafkaHeaders));
-//    doReturn(Future.succeededFuture(record)).when(marcHandler).getSourceMARCByInstanceId(any(), any(), any());
-//
-//    when(sharingInstanceMetadata.getInstanceIdentifier()).thenReturn(UUID.fromString(instanceId));
-//
-//    when(restDataImportHelper.importMarcRecord(any(), any(), any()))
-//      .thenReturn(Future.succeededFuture("COMMITTED"));
-//
-//    List<Link> links =  List.of(Json.decodeValue(INSTANCE_AUTHORITY_LINKS, Link[].class));
-//
-//    when(entitiesLinksService.getInstanceAuthorityLinks(any(), any()))
-//      .thenReturn(Future.succeededFuture(links));
-//
-//    doReturn(Future.succeededFuture(instanceId)).when(marcHandler).deleteSourceRecordByInstanceId(any(), any(), any(), any());
-//    when(instance.getJsonForStorage()).thenReturn((JsonObject) Json.decodeValue(recordJsonWithLinkedAuthorities));
-//    when(instance.getHrid()).thenReturn(targetInstanceHrid);
-//    when(instanceOperationsHelper.updateInstance(any(), any())).thenReturn(Future.succeededFuture());
-//    when(instanceOperationsHelper.getInstanceById(any(), any())).thenReturn(Future.succeededFuture(instance));
-//
-//    doAnswer(invocationOnMock -> {
-//      MultipleRecords result = new MultipleRecords<>(List.of(authority1, authority2), 2);
-//      Consumer<Success<MultipleRecords>> successHandler = invocationOnMock.getArgument(2);
-//      successHandler.accept(new Success<>(result));
-//      return null;
-//    }).when(authorityRecordCollection).findByCql(Mockito.argThat(cql -> cql.equals(String.format("id==(%s OR %s)", AUTHORITY_ID_1, AUTHORITY_ID_2))),
-//      any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
-//
-//    when(entitiesLinksService.putInstanceAuthorityLinks(any(), any(), any())).thenReturn(Future.succeededFuture());
-//
-//    doReturn(Future.succeededFuture(instanceId)).when(instanceOperationsHelper).updateInstance(any(), any());
-//
-//    // when
-//    Future<String> future = marcHandler.publishInstance(instance, sharingInstanceMetadata, source, target, kafkaHeaders);
-//
-//    //then
-//    verify(entitiesLinksService, times(1)).putInstanceAuthorityLinks(argThat(context -> context.getTenantId().equals(CONSORTIUM_TENANT)),
-//      Mockito.argThat(id -> id.equals(instanceId)),
-//      Mockito.argThat(sharedAuthorityLinks -> sharedAuthorityLinks.size() == 1
-//        && sharedAuthorityLinks.get(0).getAuthorityId().equals(AUTHORITY_ID_2)));
-//
-//    future.onComplete(ar -> {
-//      testContext.assertTrue(ar.succeeded());
-//      testContext.assertTrue(ar.result().equals(instanceId));
-//      testContext.assertTrue(ar.succeeded());
-//      testContext.assertTrue(ar.result().equals(instanceId));
-//
-//      ArgumentCaptor<Instance> updatedInstanceCaptor = ArgumentCaptor.forClass(Instance.class);
-//      verify(instanceOperationsHelper, times(1)).updateInstance(updatedInstanceCaptor.capture(), any());
-//      Instance updatedInstance = updatedInstanceCaptor.getValue();
-//      testContext.assertEquals("CONSORTIUM-MARC", updatedInstance.getSource());
-//      testContext.assertEquals(targetInstanceHrid, updatedInstance.getHrid());
-//      async.complete();
-//    });
-//  }
+  @Test
+  public void shouldNotPutLinkInstanceAuthoritiesIfInstanceNotLinkedToSharedAuthorities(TestContext testContext) throws UnsupportedEncodingException {
+    Async async = testContext.async();
+
+    String instanceId = "eb89b292-d2b7-4c36-9bfc-f816d6f96418";
+    String targetInstanceHrid = "consin0000000000101";
+
+    Record record = buildHttpResponseWithBuffer(HttpStatus.HTTP_OK, BufferImpl.buffer(recordJsonWithLinkedAuthorities)).bodyAsJson(Record.class);
+
+    Authority authority1 = new Authority().withId(AUTHORITY_ID_1).withSource(Authority.Source.MARC);
+    Authority authority2 = new Authority().withId(AUTHORITY_ID_2).withSource(Authority.Source.MARC);
+
+    //given
+    kafkaHeaders = new HashMap<>();
+
+    marcHandler = spy(new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, storage, vertx, httpClient));
+    setField(marcHandler, "restDataImportHelper", restDataImportHelper);
+    setField(marcHandler, "entitiesLinksService", entitiesLinksService);
+
+    doReturn(sourceStorageClient).when(marcHandler).getSourceStorageRecordsClient(anyString(), eq(kafkaHeaders));
+    doReturn(Future.succeededFuture(record)).when(marcHandler).getSourceMARCByInstanceId(any(), any(), any());
+
+    when(sharingInstanceMetadata.getInstanceIdentifier()).thenReturn(UUID.fromString(instanceId));
+
+    when(restDataImportHelper.importMarcRecord(any(), any(), any()))
+      .thenReturn(Future.succeededFuture("COMMITTED"));
+
+    List<Link> links =  List.of(Json.decodeValue(INSTANCE_AUTHORITY_LINKS, Link[].class));
+
+    when(entitiesLinksService.getInstanceAuthorityLinks(any(), any()))
+      .thenReturn(Future.succeededFuture(links));
+
+    doReturn(Future.succeededFuture(instanceId)).when(marcHandler).deleteSourceRecordByInstanceId(any(), any(), any(), any());
+    when(instance.getJsonForStorage()).thenReturn((JsonObject) Json.decodeValue(recordJsonWithLinkedAuthorities));
+    when(instance.getHrid()).thenReturn(targetInstanceHrid);
+    when(instanceOperationsHelper.updateInstance(any(), any())).thenReturn(Future.succeededFuture());
+    when(instanceOperationsHelper.getInstanceById(any(), any())).thenReturn(Future.succeededFuture(instance));
+
+    doAnswer(invocationOnMock -> {
+      MultipleRecords result = new MultipleRecords<>(List.of(authority1, authority2), 2);
+      Consumer<Success<MultipleRecords>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
+      return null;
+    }).when(authorityRecordCollection).findByCql(Mockito.argThat(cql -> cql.equals(String.format("id==(%s OR %s)", AUTHORITY_ID_1, AUTHORITY_ID_2))),
+      any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    when(entitiesLinksService.putInstanceAuthorityLinks(any(), any(), any())).thenReturn(Future.succeededFuture());
+
+    doReturn(Future.succeededFuture(instanceId)).when(instanceOperationsHelper).updateInstance(any(), any());
+
+    // when
+    Future<String> future = marcHandler.publishInstance(instance, sharingInstanceMetadata, source, target, kafkaHeaders);
+
+    //then
+    verify(entitiesLinksService, times(0)).putInstanceAuthorityLinks(any(),
+      Mockito.argThat(id -> id.equals(instanceId)),
+      Mockito.argThat(sharedAuthorityLinks -> sharedAuthorityLinks.size() == 1
+        && sharedAuthorityLinks.get(0).getAuthorityId().equals(AUTHORITY_ID_2)));
+
+    future.onComplete(ar -> {
+      testContext.assertTrue(ar.succeeded());
+      testContext.assertTrue(ar.result().equals(instanceId));
+      testContext.assertTrue(ar.succeeded());
+      testContext.assertTrue(ar.result().equals(instanceId));
+
+      ArgumentCaptor<Instance> updatedInstanceCaptor = ArgumentCaptor.forClass(Instance.class);
+      verify(instanceOperationsHelper, times(1)).updateInstance(updatedInstanceCaptor.capture(), any());
+      Instance updatedInstance = updatedInstanceCaptor.getValue();
+      testContext.assertEquals("CONSORTIUM-MARC", updatedInstance.getSource());
+      testContext.assertEquals(targetInstanceHrid, updatedInstance.getHrid());
+      async.complete();
+    });
+  }
 
   @Test
   public void getSourceMARCByInstanceIdSuccessTest() {

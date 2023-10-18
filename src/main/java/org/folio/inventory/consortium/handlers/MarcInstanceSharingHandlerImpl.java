@@ -116,7 +116,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
       .compose(localAuthoritiesIds -> {
         if (!localAuthoritiesIds.isEmpty()) {
           List<String> fields = linkingRules.stream().map(LinkingRuleDto::getBibField).toList();
-          LOGGER.info("relinkAuthorities:: Unlinking local authorities: {} from instance: {}, tenant: %s {}",
+          LOGGER.debug("relinkAuthorities:: Unlinking local authorities: {} from instance: {}, tenant: %s {}",
             localAuthoritiesIds, instanceId, context.getTenantId());
           /*
            * Removing $9 subfields containing local authorities ids from fields specified at linking-rules
@@ -135,7 +135,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
            * Updating instance-authority links to contain only links to shared authority, as far as instance will be shared
            */
           Context targetTenantContext = constructContext(sharingInstanceMetadata.getTargetTenantId(), context.getToken(), context.getOkapiLocation());
-          LOGGER.info("relinkAuthorities:: Linking shared authorities: {} to instance: {}, tenant: %s {}",
+          LOGGER.debug("relinkAuthorities:: Linking shared authorities: {} to instance: {}, tenant: %s {}",
             sharedAuthorityLinks, instanceId, targetTenantContext.getTenantId());
           return entitiesLinksService.putInstanceAuthorityLinks(targetTenantContext, instanceId, sharedAuthorityLinks).map(marcRecord);
         }
@@ -170,7 +170,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
 
   Future<Record> getSourceMARCByInstanceId(String instanceId, String sourceTenant, SourceStorageRecordsClient client) {
 
-    LOGGER.info("getSourceMARCByInstanceId:: Getting source MARC record for instance with InstanceId={} from tenant={}.",
+    LOGGER.debug("getSourceMARCByInstanceId:: Getting source MARC record for instance with InstanceId={} from tenant={}.",
       instanceId, sourceTenant);
 
     Promise<Record> promise = Promise.promise();
