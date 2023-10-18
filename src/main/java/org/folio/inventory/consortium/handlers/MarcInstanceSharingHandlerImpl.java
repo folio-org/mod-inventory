@@ -75,7 +75,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
         return restDataImportHelper.importMarcRecord(marcRecord, sharingInstanceMetadata, kafkaHeaders)
           .compose(result -> {
             if ("COMMITTED".equals(result)) {
-              // Delete source record by instance ID if the result is "COMMITTED"
+              // Delete source record by record ID if the result is "COMMITTED"
               return deleteSourceRecordByRecordId(marcRecord.getId(), instanceId, sourceTenant, sourceStorageClient)
                 .compose(deletedInstanceId ->
                   instanceOperations.getInstanceById(instanceId, target))
