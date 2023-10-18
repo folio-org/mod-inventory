@@ -47,6 +47,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
 
+import static org.folio.HttpStatus.HTTP_INTERNAL_SERVER_ERROR;
+import static org.folio.HttpStatus.HTTP_NO_CONTENT;
 import static org.folio.inventory.consortium.util.RestDataImportHelperTest.buildHttpResponseWithBuffer;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -142,7 +144,7 @@ public class MarcInstanceSharingHandlerImplTest {
     when(restDataImportHelper.importMarcRecord(any(), any(), any()))
       .thenReturn(Future.succeededFuture("COMMITTED"));
 
-    doReturn(Future.succeededFuture(instanceId)).when(marcHandler).deleteSourceRecordByInstanceId(any(), any(), any(), any());
+    doReturn(Future.succeededFuture(instanceId)).when(marcHandler).deleteSourceRecordByRecordId(any(), any(), any(), any());
     when(instance.getJsonForStorage()).thenReturn((JsonObject) Json.decodeValue(recordJson));
     when(instance.getHrid()).thenReturn(targetInstanceHrid);
     when(instanceOperationsHelper.updateInstance(any(), any())).thenReturn(Future.succeededFuture());
@@ -202,7 +204,7 @@ public class MarcInstanceSharingHandlerImplTest {
     when(entitiesLinksService.getInstanceAuthorityLinks(any(), any()))
       .thenReturn(Future.succeededFuture(links));
 
-    doReturn(Future.succeededFuture(instanceId)).when(marcHandler).deleteSourceRecordByInstanceId(any(), any(), any(), any());
+    doReturn(Future.succeededFuture(instanceId)).when(marcHandler).deleteSourceRecordByRecordId(any(), any(), any(), any());
     when(instance.getJsonForStorage()).thenReturn((JsonObject) Json.decodeValue(recordJsonWithLinkedAuthorities));
     when(instance.getHrid()).thenReturn(targetInstanceHrid);
     when(instanceOperationsHelper.updateInstance(any(), any())).thenReturn(Future.succeededFuture());
@@ -326,7 +328,7 @@ public class MarcInstanceSharingHandlerImplTest {
     when(entitiesLinksService.getInstanceAuthorityLinks(any(), any()))
       .thenReturn(Future.succeededFuture(links));
 
-    doReturn(Future.succeededFuture(instanceId)).when(marcHandler).deleteSourceRecordByInstanceId(any(), any(), any(), any());
+    doReturn(Future.succeededFuture(instanceId)).when(marcHandler).deleteSourceRecordByRecordId(any(), any(), any(), any());
     when(instance.getJsonForStorage()).thenReturn((JsonObject) Json.decodeValue(recordJsonWithLinkedAuthorities));
     when(instance.getHrid()).thenReturn(targetInstanceHrid);
     when(instanceOperationsHelper.updateInstance(any(), any())).thenReturn(Future.succeededFuture());
@@ -423,11 +425,14 @@ public class MarcInstanceSharingHandlerImplTest {
     String instanceId = "fea6477b-d8f5-4d22-9e86-6218407c780b";
     String tenant = "sourceTenant";
 
+    HttpResponse<Buffer> mockedResponse = mock(HttpResponse.class);
+
+    when(mockedResponse.statusCode()).thenReturn(HTTP_NO_CONTENT.toInt());
     when(sourceStorageClient.deleteSourceStorageRecordsById(any()))
-      .thenReturn(Future.succeededFuture());
+      .thenReturn(Future.succeededFuture(mockedResponse));
 
     MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx, httpClient);
-    handler.deleteSourceRecordByInstanceId(recordId, instanceId, tenant, sourceStorageClient)
+    handler.deleteSourceRecordByRecordId(recordId, instanceId, tenant, sourceStorageClient)
       .onComplete(result -> assertEquals(instanceId, result.result()));
 
     verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(recordId);
@@ -444,7 +449,25 @@ public class MarcInstanceSharingHandlerImplTest {
       .thenReturn(Future.failedFuture(new NotFoundException("Not found")));
 
     MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx, httpClient);
-    handler.deleteSourceRecordByInstanceId(recordId, instanceId, tenant, sourceStorageClient)
+    handler.deleteSourceRecordByRecordId(recordId, instanceId, tenant, sourceStorageClient)
+      .onComplete(result -> assertTrue(result.failed()));
+
+    verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(recordId);
+  }
+
+  @Test
+  public void deleteSourceRecordByInstanceIdFailedTestWhenResponseStatusIsNotNoContent() {
+    String instanceId = "991f37c8-cd22-4db7-9543-a4ec68735e95";
+    String recordId = "fea6477b-d8f5-4d22-9e86-6218407c780b";
+    String tenant = "sourceTenant";
+
+    HttpResponse<Buffer> mockedResponse = mock(HttpResponse.class);
+    when(mockedResponse.statusCode()).thenReturn(HTTP_INTERNAL_SERVER_ERROR.toInt());
+    when(sourceStorageClient.deleteSourceStorageRecordsById(any()))
+      .thenReturn(Future.succeededFuture(mockedResponse));
+
+    MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx, httpClient);
+    handler.deleteSourceRecordByRecordId(recordId, instanceId, tenant, sourceStorageClient)
       .onComplete(result -> assertTrue(result.failed()));
 
     verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(recordId);
