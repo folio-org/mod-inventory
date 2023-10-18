@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static org.apache.http.HttpStatus.SC_NO_CONTENT;
 import static org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler.SOURCE;
 import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.INSTANCE_ID_TYPE;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
@@ -74,8 +75,8 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
         return restDataImportHelper.importMarcRecord(marcRecord, sharingInstanceMetadata, kafkaHeaders)
           .compose(result -> {
             if ("COMMITTED".equals(result)) {
-              // Delete source record by instance ID if the result is "COMMITTED"
-              return deleteSourceRecordByInstanceId(marcRecord.getId(), instanceId, sourceTenant, sourceStorageClient)
+              // Delete source record by record ID if the result is "COMMITTED"
+              return deleteSourceRecordByRecordId(marcRecord.getId(), instanceId, sourceTenant, sourceStorageClient)
                 .compose(deletedInstanceId ->
                   instanceOperations.getInstanceById(instanceId, target))
                 .compose(targetInstance -> {
@@ -193,29 +194,25 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
     return promise.future();
   }
 
-  Future<String> deleteSourceRecordByInstanceId(String recordId, String instanceId, String tenantId, SourceStorageRecordsClient client) {
-    LOGGER.info("deleteSourceRecordByInstanceId :: Delete source record with recordId={} for instance by InstanceId={} from tenant {}",
+  Future<String> deleteSourceRecordByRecordId(String recordId, String instanceId, String tenantId, SourceStorageRecordsClient client) {
+    LOGGER.info("deleteSourceRecordByRecordId :: Delete source record with recordId={} for instance by InstanceId={} from tenant {}",
       recordId, instanceId, tenantId);
-    Promise<String> promise = Promise.promise();
-    client.deleteSourceStorageRecordsById(recordId).onComplete(responseResult -> {
-      try {
-        if (responseResult.failed()) {
-          LOGGER.error("deleteSourceRecordByInstanceId:: Error deleting source record with recordId={} by InstanceId={} from tenant {}",
-            recordId, instanceId, tenantId, responseResult.cause());
-          promise.fail(responseResult.cause());
-        } else {
-          LOGGER.info("deleteSourceRecordByInstanceId:: Source record with recordId={} for instance with InstanceId={} from tenant {} has been deleted.",
+
+    return client.deleteSourceStorageRecordsById(recordId)
+      .onFailure(e -> LOGGER.error("deleteSourceRecordByRecordId:: Error deleting source record with recordId={} by InstanceId={} from tenant {}",
+        recordId, instanceId, tenantId, e))
+      .compose(response -> {
+        if (response.statusCode() == SC_NO_CONTENT) {
+          LOGGER.info("deleteSourceRecordByRecordId:: Source record with recordId={} for instance with InstanceId={} from tenant {} has been deleted.",
             recordId, instanceId, tenantId);
-          promise.complete(instanceId);
+          return Future.succeededFuture(instanceId);
+        } else {
+          String msg = format("Error deleting source record with recordId=%s by InstanceId=%s from tenant %s, responseStatus=%s, body=%s",
+            recordId, instanceId, tenantId, response.statusCode(), response.bodyAsString());
+          LOGGER.error("deleteSourceRecordByRecordId:: {}", msg);
+          return Future.failedFuture(msg);
         }
-      } catch (Exception ex) {
-        String errorMessage = String.format("Error processing source record with recordId={} deletion for instance with InstanceId=%s from tenant=%s. Error message: %s",
-          recordId, instanceId, tenantId, responseResult.cause());
-        LOGGER.error("deleteSourceRecordByInstanceId:: {}", errorMessage, ex);
-        promise.fail(errorMessage);
-      }
-    });
-    return promise.future();
+      });
   }
 
   public SourceStorageRecordsClient getSourceStorageRecordsClient(String tenant, Map<String, String> kafkaHeaders) {
