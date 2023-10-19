@@ -402,7 +402,7 @@ public class MarcInstanceSharingHandlerImplTest {
     when(entitiesLinksService.getInstanceAuthorityLinks(any(), any()))
       .thenReturn(Future.succeededFuture(links));
 
-    doReturn(Future.succeededFuture(instanceId)).when(marcHandler).deleteSourceRecordByInstanceId(any(), any(), any(), any());
+    doReturn(Future.succeededFuture(instanceId)).when(marcHandler).deleteSourceRecordByRecordId(any(), any(), any(), any());
     when(instance.getJsonForStorage()).thenReturn((JsonObject) Json.decodeValue(recordJsonWithLinkedAuthorities));
     when(instance.getHrid()).thenReturn(targetInstanceHrid);
     when(instanceOperationsHelper.updateInstance(any(), any())).thenReturn(Future.succeededFuture());
