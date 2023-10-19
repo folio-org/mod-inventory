@@ -10,6 +10,9 @@ public class PartialError {
     this.error = error;
   }
 
+  public PartialError() {
+  }
+
   public String getId() {
     return id;
   }
