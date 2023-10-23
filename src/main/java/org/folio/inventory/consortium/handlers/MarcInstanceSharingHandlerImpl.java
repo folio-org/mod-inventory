@@ -69,7 +69,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
 
     // Get source MARC by instance ID
     return getSourceMARCByInstanceId(instanceId, sourceTenant, sourceStorageClient)
-      .compose(marcRecord -> detachLocalAuthorityLinksIfNeeded(marcRecord, instanceId, context, storage))
+      .compose(marcRecord -> detachLocalAuthorityLinksIfNeeded(marcRecord, instanceId, context, sharingInstanceMetadata, storage))
       .compose(marcRecord -> {
         // Publish instance with MARC source
         return restDataImportHelper.importMarcRecord(marcRecord, sharingInstanceMetadata, kafkaHeaders)
@@ -95,7 +95,8 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
       });
   }
 
-  private Future<Record> detachLocalAuthorityLinksIfNeeded(Record marcRecord, String instanceId, Context context, Storage storage) {
+  private Future<Record> detachLocalAuthorityLinksIfNeeded(Record marcRecord, String instanceId, Context context,
+                                                           SharingInstance sharingInstanceMetadata, Storage storage) {
     return entitiesLinksService.getInstanceAuthorityLinks(context, instanceId)
       .compose(entityLinks -> {
         if (entityLinks.isEmpty()) {
@@ -104,34 +105,42 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
         }
         AuthorityRecordCollection authorityRecordCollection = storage.getAuthorityRecordCollection(context);
         return entitiesLinksService.getLinkingRules(context)
-          .compose(linkingRules -> unlinkLocalAuthorities(entityLinks, linkingRules, marcRecord, instanceId, context, authorityRecordCollection));
+          .compose(linkingRules -> relinkAuthorities(entityLinks, linkingRules, marcRecord, instanceId, context, sharingInstanceMetadata, authorityRecordCollection));
       });
   }
 
-  private Future<Record> unlinkLocalAuthorities(List<Link> entityLinks, List<LinkingRuleDto> linkingRules, Record marcRecord,
-                                                String instanceId, Context context, AuthorityRecordCollection authorityRecordCollection) {
+  private Future<Record> relinkAuthorities(List<Link> entityLinks, List<LinkingRuleDto> linkingRules, Record marcRecord,
+                                                String instanceId, Context context, SharingInstance sharingInstanceMetadata,
+                                                AuthorityRecordCollection authorityRecordCollection) {
 
     return getLocalAuthoritiesIdsList(entityLinks, authorityRecordCollection)
       .compose(localAuthoritiesIds -> {
-        if (localAuthoritiesIds.isEmpty()) {
-          return Future.succeededFuture(marcRecord);
+        if (!localAuthoritiesIds.isEmpty()) {
+          List<String> fields = linkingRules.stream().map(LinkingRuleDto::getBibField).toList();
+          LOGGER.debug("relinkAuthorities:: Unlinking local authorities: {} from instance: {}, tenant: %s {}",
+            localAuthoritiesIds, instanceId, context.getTenantId());
+          /*
+           * Removing $9 subfields containing local authorities ids from fields specified at linking-rules
+           */
+          try {
+            MarcRecordUtil.removeSubfieldsThatContainsValues(marcRecord, fields, '9', localAuthoritiesIds);
+          } catch (Exception e) {
+            LOGGER.warn(format("unlinkLocalAuthorities:: Error during remove of 9 subfields from record: %s", marcRecord.getId()), e);
+            return Future.failedFuture(new ConsortiumException("Error of unlinking local authorities from marc record during Instance sharing process"));
+          }
         }
-        List<String> fields = linkingRules.stream().map(LinkingRuleDto::getBibField).toList();
-        LOGGER.debug("unlinkLocalAuthorities:: Unlinking from tenant: {} local authorities: {}", context.getTenantId(), localAuthoritiesIds);
-        /*
-         * Removing $9 subfields containing local authorities ids from fields specified at linking-rules
-         */
-        try {
-          MarcRecordUtil.removeSubfieldsThatContainsValues(marcRecord, fields, '9', localAuthoritiesIds);
+
+        List<Link> sharedAuthorityLinks = localAuthoritiesIds.isEmpty() ? entityLinks : getSharedAuthorityLinks(entityLinks, localAuthoritiesIds);
+        if (!sharedAuthorityLinks.isEmpty()) {
           /*
            * Updating instance-authority links to contain only links to shared authority, as far as instance will be shared
            */
-          List<Link> sharedAuthorityLinks = getSharedAuthorityLinks(entityLinks, localAuthoritiesIds);
-          return entitiesLinksService.putInstanceAuthorityLinks(context, instanceId, sharedAuthorityLinks).map(marcRecord);
-        } catch (Exception e) {
-          LOGGER.warn(format("unlinkLocalAuthorities:: Error during remove of 9 subfields from record: %s", marcRecord.getId()), e);
-          return Future.failedFuture(new ConsortiumException("Error of unlinking local authorities from marc record during Instance sharing process"));
+          Context targetTenantContext = constructContext(sharingInstanceMetadata.getTargetTenantId(), context.getToken(), context.getOkapiLocation());
+          LOGGER.debug("relinkAuthorities:: Linking shared authorities: {} to instance: {}, tenant: %s {}",
+            sharedAuthorityLinks, instanceId, targetTenantContext.getTenantId());
+          return entitiesLinksService.putInstanceAuthorityLinks(targetTenantContext, instanceId, sharedAuthorityLinks).map(marcRecord);
         }
+        return Future.succeededFuture(marcRecord);
       });
   }
 
