@@ -262,74 +262,6 @@ public class UpdateHoldingEventHandlerTest {
   }
 
   @Test
-  public void shouldUpdateHoldingOnOLRetryAndRemoveRetryCounterFromPayload() throws InterruptedException, ExecutionException, TimeoutException, UnsupportedEncodingException {
-    Reader fakeReader = Mockito.mock(Reader.class);
-
-    String holdingId = UUID.randomUUID().toString();
-    String hrid = UUID.randomUUID().toString();
-    String instanceId = String.valueOf(UUID.randomUUID());
-    String permanentLocationId = UUID.randomUUID().toString();
-
-    HoldingsRecord actualHoldings = new HoldingsRecord()
-      .withId(holdingId)
-      .withHrid(hrid)
-      .withInstanceId(instanceId)
-      .withPermanentLocationId(permanentLocationId)
-      .withVersion(2);
-
-    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
-    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
-    when(storage.getItemCollection(any())).thenReturn(itemCollection);
-    when(holdingsRecordsCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(actualHoldings));
-
-    doAnswer(invocationOnMock -> {
-      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
-      failureHandler.accept(new Failure(format("Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", holdingId), 409));
-      return null;
-    }).doAnswer(invocationOnMock -> {
-      HoldingsRecord holdingsRecord = invocationOnMock.getArgument(0);
-      Consumer<Success<HoldingsRecord>> successHandler = invocationOnMock.getArgument(1);
-      successHandler.accept(new Success<>(holdingsRecord));
-      return null;
-    }).when(holdingsRecordsCollection).update(any(), any(), any());
-
-    MappingManager.registerReaderFactory(fakeReaderFactory);
-    MappingManager.registerWriterFactory(new HoldingWriterFactory());
-    MappingManager.registerMapperFactory(new HoldingsMapperFactory());
-
-    HoldingsRecord holdingsRecord = new HoldingsRecord()
-      .withId(holdingId)
-      .withInstanceId(instanceId)
-      .withHrid(hrid)
-      .withPermanentLocationId(permanentLocationId);
-    JsonArray holdingsList = new JsonArray();
-    holdingsList.add(new JsonObject().put("holdings", holdingsRecord));
-
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
-    HashMap<String, String> context = new HashMap<>();
-    context.put(HOLDINGS.value(), Json.encode(holdingsList));
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
-
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
-      .withJobExecutionId(UUID.randomUUID().toString())
-      .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
-
-    CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
-    DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
-    verify(holdingsRecordsCollection, times(1)).update(any(), any(), any());
-    verify(holdingsRecordsCollection).findByCql(any(), any(), any(), any());
-
-    Assert.assertEquals(DI_INVENTORY_HOLDING_UPDATED.value(), actualDataImportEventPayload.getEventType());
-    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
-    Assert.assertNull(actualDataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER));
-  }
-
-
-  @Test
   public void shouldUpdateMultipleHoldingsOnOLRetryAndRemoveRetryCounterFromPayloadViaSeveralRuns() throws InterruptedException, ExecutionException, TimeoutException, UnsupportedEncodingException {
     Reader fakeReader = Mockito.mock(Reader.class);
 
@@ -681,6 +613,175 @@ public class UpdateHoldingEventHandlerTest {
     Assert.assertEquals(1, resultedErrorListSecondRun.size());
     assertEquals(partialErrorHoldingsRecord3.getId(), String.valueOf(resultedErrorListSecondRun.get(0).getId()));
     assertEquals(resultedErrorListSecondRun.get(0).getError(), format("Cannot update record %s not found", partialErrorHoldingsRecord3.getId()));
+  }
+
+  @Test
+  public void shouldUpdateSingleHoldingEvenIfOLErrorExistsAndRemoveRetryCounterFromPayload() throws InterruptedException, ExecutionException, TimeoutException, UnsupportedEncodingException {
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    String holdingId = UUID.randomUUID().toString();
+
+    String hrid = UUID.randomUUID().toString();
+
+    String instanceId = String.valueOf(UUID.randomUUID());
+
+    String permanentLocationId = UUID.randomUUID().toString();
+
+
+    HoldingsRecord actualHoldings = new HoldingsRecord()
+      .withId(holdingId)
+      .withHrid(hrid)
+      .withInstanceId(instanceId)
+      .withPermanentLocationId(permanentLocationId)
+      .withVersion(2);
+
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
+    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
+    when(storage.getItemCollection(any())).thenReturn(itemCollection);
+
+    HoldingsRecord olHoldingsRecord1 = new HoldingsRecord()
+      .withId(holdingId)
+      .withInstanceId(instanceId)
+      .withHrid(hrid)
+      .withPermanentLocationId(permanentLocationId);
+    JsonArray holdingsList = new JsonArray();
+    holdingsList.add(new JsonObject().put("holdings", olHoldingsRecord1));
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure(format("Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", holdingId), 409));
+      return null;
+    }).doAnswer(invocationOnMock -> {
+      HoldingsRecord tmpHoldingsRecord = invocationOnMock.getArgument(0);
+      Consumer<Success<HoldingsRecord>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(tmpHoldingsRecord));
+      return null;
+    }).when(holdingsRecordsCollection).update(any(), any(), any());
+
+    doAnswer(invocationOnMock -> {
+      MultipleRecords result = new MultipleRecords<>(List.of(actualHoldings), 1);
+      Consumer<Success<MultipleRecords>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
+      return null;
+    }).when(holdingsRecordsCollection).findByCql(Mockito.argThat(cql -> cql.equals(String.format("id==(%s)", holdingId))),
+      any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new HoldingWriterFactory());
+    MappingManager.registerMapperFactory(new HoldingsMapperFactory());
+
+
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    HashMap<String, String> context = new HashMap<>();
+    context.put(HOLDINGS.value(), Json.encode(holdingsList));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
+    verify(holdingsRecordsCollection, times(2)).update(any(), any(), any());
+    verify(holdingsRecordsCollection, times(1)).findByCql(any(), any(), any(), any());
+
+    Assert.assertEquals(DI_INVENTORY_HOLDING_UPDATED.value(), actualDataImportEventPayload.getEventType());
+    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
+    Assert.assertNull(actualDataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER));
+    List<HoldingsRecord> resultedHoldingsRecords = List.of(Json.decodeValue(actualDataImportEventPayload.getContext().get(HOLDINGS.value()), HoldingsRecord[].class));
+    Assert.assertEquals(1, resultedHoldingsRecords.size());
+    assertEquals(olHoldingsRecord1.getId(), String.valueOf(resultedHoldingsRecords.get(0).getId()));
+    List<PartialError> resultedErrorList = List.of(Json.decodeValue(actualDataImportEventPayload.getContext().get(ERRORS), PartialError[].class));
+    Assert.assertEquals(0, resultedErrorList.size());
+  }
+
+  @Test
+  public void shouldNotUpdateSingleHoldingIfOLErrorExistsAndRetryNumberIsExceeded() throws InterruptedException, ExecutionException, TimeoutException, UnsupportedEncodingException {
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    String holdingId = UUID.randomUUID().toString();
+
+    String hrid = UUID.randomUUID().toString();
+
+    String instanceId = String.valueOf(UUID.randomUUID());
+
+    String permanentLocationId = UUID.randomUUID().toString();
+
+
+    HoldingsRecord actualHoldings = new HoldingsRecord()
+      .withId(holdingId)
+      .withHrid(hrid)
+      .withInstanceId(instanceId)
+      .withPermanentLocationId(permanentLocationId)
+      .withVersion(2);
+
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
+    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
+    when(storage.getItemCollection(any())).thenReturn(itemCollection);
+
+    HoldingsRecord olHoldingsRecord1 = new HoldingsRecord()
+      .withId(holdingId)
+      .withInstanceId(instanceId)
+      .withHrid(hrid)
+      .withPermanentLocationId(permanentLocationId);
+    JsonArray holdingsList = new JsonArray();
+    holdingsList.add(new JsonObject().put("holdings", olHoldingsRecord1));
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure(format("Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", holdingId), 409));
+      return null;
+    }).doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure(format("Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", holdingId), 409));
+      return null;
+    }).when(holdingsRecordsCollection).update(any(), any(), any());
+
+    doAnswer(invocationOnMock -> {
+      MultipleRecords result = new MultipleRecords<>(List.of(actualHoldings), 1);
+      Consumer<Success<MultipleRecords>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
+      return null;
+    }).when(holdingsRecordsCollection).findByCql(Mockito.argThat(cql -> cql.equals(String.format("id==(%s)", holdingId))),
+      any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new HoldingWriterFactory());
+    MappingManager.registerMapperFactory(new HoldingsMapperFactory());
+
+
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    HashMap<String, String> context = new HashMap<>();
+    context.put(HOLDINGS.value(), Json.encode(holdingsList));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
+    verify(holdingsRecordsCollection, times(2)).update(any(), any(), any());
+    verify(holdingsRecordsCollection, times(1)).findByCql(any(), any(), any(), any());
+
+    Assert.assertEquals(DI_INVENTORY_HOLDING_UPDATED.value(), actualDataImportEventPayload.getEventType());
+    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
+    Assert.assertNull(actualDataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER));
+    List<HoldingsRecord> resultedHoldingsRecords = List.of(Json.decodeValue(actualDataImportEventPayload.getContext().get(HOLDINGS.value()), HoldingsRecord[].class));
+    Assert.assertEquals(0, resultedHoldingsRecords.size());
+    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(ERRORS));
+    List<PartialError> resultedErrorList = List.of(Json.decodeValue(actualDataImportEventPayload.getContext().get(ERRORS), PartialError[].class));
+    Assert.assertEquals(1, resultedErrorList.size());
+    assertEquals(holdingId, String.valueOf(resultedErrorList.get(0).getId()));
+    assertEquals(format("Current retry number 1 exceeded or equal given number 1 for the Holding update for jobExecutionId '%s' ", actualDataImportEventPayload.getJobExecutionId()), resultedErrorList.get(0).getError());
   }
 
   @Test
@@ -1063,73 +1164,6 @@ public class UpdateHoldingEventHandlerTest {
     JsonObject partialError = errors.getJsonObject(0);
     Assert.assertEquals("Internal Server Error", partialError.getString("error"));
     Assert.assertEquals(itemId, partialError.getString("id"));
-  }
-
-  @Test
-  public void shouldNotMapHoldingsAndAndNotFillPartialErrorsIfOptimisticLockingExists() throws InterruptedException, ExecutionException, TimeoutException {
-    Reader fakeReader = mock(Reader.class);
-
-    String permanentLocationId = UUID.randomUUID().toString();
-    String instanceId = UUID.randomUUID().toString();
-    String firstId = UUID.randomUUID().toString();
-    String secondId = UUID.randomUUID().toString();
-    String firstHrid = UUID.randomUUID().toString();
-    String secondHrid = UUID.randomUUID().toString();
-
-    HoldingsRecord firstHoldingsRecord = new HoldingsRecord()
-      .withId(firstId)
-      .withInstanceId(instanceId)
-      .withHrid(firstHrid)
-      .withPermanentLocationId(permanentLocationId);
-
-    HoldingsRecord secondHoldingsRecord = new HoldingsRecord()
-      .withId(secondId)
-      .withInstanceId(instanceId)
-      .withHrid(secondHrid)
-      .withPermanentLocationId(permanentLocationId);
-
-    JsonArray holdingsList = new JsonArray();
-    holdingsList.add(new JsonObject().put("holdings", firstHoldingsRecord));
-    holdingsList.add(new JsonObject().put("holdings", secondHoldingsRecord));
-
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
-
-    HoldingsRecord returnedHoldings = new HoldingsRecord().withId(firstId).withHrid(firstHrid).withInstanceId(instanceId).withPermanentLocationId(permanentLocationId).withVersion(1);
-
-    when(holdingsRecordsCollection.findById(firstId)).thenReturn(CompletableFuture.completedFuture(returnedHoldings));
-
-    doAnswer(invocationOnMock -> {
-      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
-      failureHandler.accept(new Failure("Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", 409));
-      return null;
-    }).when(holdingsRecordsCollection).update(any(), any(), any());
-
-    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
-
-    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
-
-    MappingManager.registerReaderFactory(fakeReaderFactory);
-    MappingManager.registerWriterFactory(new HoldingWriterFactory());
-
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
-    HashMap<String, String> context = new HashMap<>();
-    context.put(HOLDINGS.value(), Json.encode(holdingsList));
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
-
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
-      .withJobExecutionId(UUID.randomUUID().toString())
-      .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapperForMultipleHoldings)
-      .withCurrentNode(profileSnapshotWrapperForMultipleHoldings.getChildSnapshotWrappers().get(0));
-
-    CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
-    DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
-
-    Assert.assertEquals(DI_INVENTORY_HOLDING_UPDATED.value(), actualDataImportEventPayload.getEventType());
-    Assert.assertEquals(0, new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).size());
-    JsonArray errors = new JsonArray(actualDataImportEventPayload.getContext().get(ERRORS));
-    Assert.assertEquals(0, errors.size());
   }
 
   @Test

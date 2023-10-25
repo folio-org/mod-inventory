@@ -76,8 +76,8 @@ public class UpdateHoldingEventHandler implements EventHandler {
   private final Storage storage;
   private final MappingMetadataCache mappingMetadataCache;
   boolean isPayloadConstructed = false;
-  private List<PartialError> errorHoldings = new ArrayList<>();
-  private List<HoldingsRecord> successHoldings = new ArrayList<>();
+  private final List<PartialError> resultedErrorHoldings = new ArrayList<>();
+  private final List<HoldingsRecord> resultedSuccessHoldings = new ArrayList<>();
 
   public UpdateHoldingEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache) {
     this.storage = storage;
@@ -155,24 +155,20 @@ public class UpdateHoldingEventHandler implements EventHandler {
           }
           CompositeFuture.all(updatedHoldingsRecordFutures)
             .onSuccess(ar -> {
-              successHoldings.addAll(updatedHoldingsRecord);
+              resultedSuccessHoldings.addAll(updatedHoldingsRecord);
               if (!expiredHoldings.isEmpty()) {
                 processOLError(dataImportEventPayload, future, holdingsRecordCollection, expiredHoldings, errors);
-              }
-              String errorsAsStringJson = Json.encode(errors);
-              if (!errorHoldings.isEmpty()) {
-                errorsAsStringJson = Json.encode(errorHoldings);
-              }
-              if (!successHoldings.isEmpty() || errors.isEmpty()) {
-                LOGGER.warn(format("handle:: Errors during holdings update: %s", Json.encode(successHoldings)));
-                dataImportEventPayload.getContext().put(ERRORS, errorsAsStringJson);
-                dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encode(successHoldings));
-                successHoldings.clear();
-                errorHoldings.clear();
-                dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
-                future.complete(dataImportEventPayload);
+                String errorsAsStringJson = formatErrorsAsString(errors);
+                if (!resultedErrorHoldings.isEmpty()) {
+                  fillPayloadAndClearLists(dataImportEventPayload, errorsAsStringJson, future);
+                }
               } else {
-                future.completeExceptionally(new EventProcessingException(errorsAsStringJson));
+                String errorsAsStringJson = formatErrorsAsString(errors);
+                if (!resultedSuccessHoldings.isEmpty() || errors.isEmpty()) {
+                  fillPayloadAndClearLists(dataImportEventPayload, errorsAsStringJson, future);
+                } else {
+                  future.completeExceptionally(new EventProcessingException(errorsAsStringJson));
+                }
               }
             })
             .onFailure(future::completeExceptionally);
@@ -250,15 +246,15 @@ public class UpdateHoldingEventHandler implements EventHandler {
     int currentRetryNumber = dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER) == null ? 0 : Integer.parseInt(dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER));
     if (currentRetryNumber < MAX_RETRIES_COUNT) {
       dataImportEventPayload.getContext().put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
-      LOGGER.warn("processOLError:: Error updating Holding by id '{}'. Retry UpdateHoldingEventHandler handler...", expiredHoldings);
+      LOGGER.warn("processOLError:: Error updating Holdings. Expired Holdings: '{} '.Current retry number = '{}'. Retry UpdateHoldingEventHandler handler...", expiredHoldings, currentRetryNumber);
       getActualHoldingsList(expiredHoldings, holdingsRecords)
         .onSuccess(actualHoldingsList -> prepareDataAndReInvokeCurrentHandler(dataImportEventPayload, future, actualHoldingsList, errors))
         .onFailure(e -> {
-          String errMessage = format("Cannot get actual Holding by id: '%s' for jobExecutionId '%s'. Error: %s ", expiredHoldings, dataImportEventPayload.getJobExecutionId(), e.getCause());
+          String errMessage = format("Cannot get actual Holdings.Expired Holdings: '%s' for jobExecutionId '%s'. Error: %s ", expiredHoldings, dataImportEventPayload.getJobExecutionId(), e.getCause());
           for (HoldingsRecord expiredHolding : expiredHoldings) {
             errors.add(new PartialError(expiredHolding.getId() != null ? expiredHolding.getId() : BLANK, errMessage));
           }
-          errorHoldings.addAll(errors);
+          resultedErrorHoldings.addAll(errors);
           dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
           future.complete(dataImportEventPayload);
         });
@@ -268,9 +264,8 @@ public class UpdateHoldingEventHandler implements EventHandler {
       for (HoldingsRecord expiredHolding : expiredHoldings) {
         errors.add(new PartialError(expiredHolding.getId() != null ? expiredHolding.getId() : BLANK, errMessage));
       }
-      errorHoldings.addAll(errors);
+      resultedErrorHoldings.addAll(errors);
       dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
-      future.complete(dataImportEventPayload);
     }
   }
 
@@ -285,8 +280,10 @@ public class UpdateHoldingEventHandler implements EventHandler {
     dataImportEventPayload.getContext().remove(CURRENT_EVENT_TYPE_PROPERTY);
     dataImportEventPayload.getContext().remove(CURRENT_NODE_PROPERTY);
     dataImportEventPayload.getContext().remove(CURRENT_HOLDING_PROPERTY);
-    errorHoldings.addAll(errors);
-    handle(dataImportEventPayload).whenComplete((res, e) -> future.complete(dataImportEventPayload));
+    resultedErrorHoldings.addAll(errors);
+    handle(dataImportEventPayload).whenComplete((res, e) -> {
+      future.complete(res);
+    });
   }
 
   private void constructDataImportEventPayload(Promise<Void> promise, DataImportEventPayload dataImportEventPayload, List<HoldingsRecord> holdings, Context context, List<PartialError> errors) {
@@ -347,5 +344,22 @@ public class UpdateHoldingEventHandler implements EventHandler {
 
   private static String getQueryParamForMultipleHoldings(List<HoldingsRecord> holdings) {
     return holdings.stream().map(HoldingsRecord::getId).collect(Collectors.joining(" OR "));
+  }
+
+  private void fillPayloadAndClearLists(DataImportEventPayload dataImportEventPayload, String errorsAsStringJson, CompletableFuture<DataImportEventPayload> future) {
+    dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encode(resultedSuccessHoldings));
+    dataImportEventPayload.getContext().put(ERRORS, errorsAsStringJson);
+    resultedSuccessHoldings.clear();
+    resultedErrorHoldings.clear();
+    dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
+    future.complete(dataImportEventPayload);
+  }
+
+  private String formatErrorsAsString(List<PartialError> errors) {
+    String errorsAsStringJson = Json.encode(errors);
+    if (!resultedErrorHoldings.isEmpty()) {
+      errorsAsStringJson = Json.encode(resultedErrorHoldings);
+    }
+    return errorsAsStringJson;
   }
 }
