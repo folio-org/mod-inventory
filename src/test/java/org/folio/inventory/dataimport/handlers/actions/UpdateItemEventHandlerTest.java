@@ -1,46 +1,11 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import static org.folio.ActionProfile.Action.UPDATE;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_MATCHED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_UPDATED;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
-import static org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler.ACTION_HAS_NO_MAPPING_MSG;
-import static org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler.CURRENT_RETRY_NUMBER;
-import static org.folio.inventory.domain.items.Item.HRID_KEY;
-import static org.folio.inventory.domain.items.Item.STATUS_KEY;
-import static org.folio.inventory.domain.items.ItemStatusName.AVAILABLE;
-import static org.folio.inventory.domain.items.ItemStatusName.IN_PROCESS;
-import static org.folio.inventory.support.JsonHelper.getNestedProperty;
-import static org.folio.rest.jaxrs.model.EntityType.HOLDINGS;
-import static org.folio.rest.jaxrs.model.EntityType.ITEM;
-import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.function.Consumer;
-
+import io.vertx.core.Future;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.DataImportEventTypes;
@@ -53,9 +18,12 @@ import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.dataimport.HoldingWriterFactory;
+import org.folio.inventory.dataimport.HoldingsMapperFactory;
 import org.folio.inventory.dataimport.ItemWriterFactory;
 import org.folio.inventory.dataimport.ItemsMapperFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.entities.PartialError;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
@@ -83,11 +51,47 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 
-import io.vertx.core.Future;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
+
+import static java.lang.String.format;
+import static org.folio.ActionProfile.Action.UPDATE;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_MATCHED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_UPDATED;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
+import static org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler.ACTION_HAS_NO_MAPPING_MSG;
+import static org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler.CURRENT_RETRY_NUMBER;
+import static org.folio.inventory.domain.items.Item.HRID_KEY;
+import static org.folio.inventory.domain.items.Item.STATUS_KEY;
+import static org.folio.inventory.domain.items.ItemStatusName.AVAILABLE;
+import static org.folio.inventory.domain.items.ItemStatusName.IN_PROCESS;
+import static org.folio.inventory.support.JsonHelper.getNestedProperty;
+import static org.folio.rest.jaxrs.model.EntityType.HOLDINGS;
+import static org.folio.rest.jaxrs.model.EntityType.ITEM;
+import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @RunWith(JUnitParamsRunner.class)
 public class UpdateItemEventHandlerTest {
@@ -159,6 +163,7 @@ public class UpdateItemEventHandlerTest {
   private static final String HOLDINGS_IDENTIFIERS = "HOLDINGS_IDENTIFIERS";
   private static final String ERRORS = "ERRORS";
   private static final String PERMANENT_LOCATION_ID = "fe19bae4-da28-472b-be90-d442e2428ead";
+
   @Before
   public void setUp() {
     MockitoAnnotations.initMocks(this);
@@ -198,7 +203,7 @@ public class UpdateItemEventHandlerTest {
       Consumer<Success<HoldingsRecord>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(returnedHoldings));
       return null;
-    }).when(mockedHoldingsCollection).findById(anyString(),any(Consumer.class),any(Consumer.class));
+    }).when(mockedHoldingsCollection).findById(anyString(), any(Consumer.class), any(Consumer.class));
 
     when(mappingMetadataCache.get(anyString(), any(Context.class)))
       .thenReturn(Future.succeededFuture(Optional.of(new MappingMetadataDto()
@@ -362,73 +367,6 @@ public class UpdateItemEventHandlerTest {
   }
 
   @Test
-  public void shouldUpdateItemWithRetryAndRemoveRetryCounterFromPayload()
-    throws UnsupportedEncodingException, InterruptedException, ExecutionException, TimeoutException {
-
-    String itemId = UUID.randomUUID().toString();
-    String holdingId = UUID.randomUUID().toString();
-    String materialTypeId = UUID.randomUUID().toString();
-    String permanentLoanTypeId = UUID.randomUUID().toString();
-    JsonObject metadata = new JsonObject();
-
-    Item actualItem = new Item(itemId, "2", holdingId, "test", new Status(AVAILABLE), materialTypeId, permanentLoanTypeId, metadata);
-
-    when(mockedItemCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(actualItem));
-
-    doAnswer(invocationOnMock -> {
-      MultipleRecords<Item> result = new MultipleRecords<>(new ArrayList<>(), 0);
-      Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
-      successHandler.accept(new Success<>(result));
-      return null;
-    }).when(mockedItemCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
-
-    doAnswer(invocationOnMock -> {
-      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
-      failureHandler.accept(new Failure("", 409));
-      return null;
-    }).doAnswer(invocationOnMock -> {
-      Item itemRecord = invocationOnMock.getArgument(0);
-      Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
-      successHandler.accept(new Success<>(itemRecord));
-      return null;
-    }).when(mockedItemCollection).update(any(), any(), any());
-
-    MappingManager.registerReaderFactory(fakeReaderFactory);
-    MappingManager.registerWriterFactory(new ItemWriterFactory());
-
-    JsonObject firstExistingItemJson = new JsonObject()
-      .put("id", itemId)
-      .put("status", new JsonObject().put("name", AVAILABLE.value()))
-      .put("materialType", new JsonObject().put("id", materialTypeId))
-      .put("permanentLoanType", new JsonObject().put("id", permanentLoanTypeId))
-      .put("holdingsRecordId", holdingId);
-
-    JsonArray itemsList = new JsonArray();
-    itemsList.add(new JsonObject().put("item", firstExistingItemJson));
-
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
-    HashMap<String, String> context = new HashMap<>();
-    context.put(ITEM.value(), itemsList.encode());
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
-
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_ITEM_UPDATED.value())
-      .withJobExecutionId(UUID.randomUUID().toString())
-      .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
-
-    CompletableFuture<DataImportEventPayload> future = updateItemHandler.handle(dataImportEventPayload);
-    DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.SECONDS);
-    verify(mockedItemCollection, times(2)).update(any(), any(), any());
-    verify(mockedItemCollection).findById(itemId);
-
-    Assert.assertEquals(DI_INVENTORY_ITEM_UPDATED.value(), actualDataImportEventPayload.getEventType());
-    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(ITEM.value()));
-    Assert.assertNull(actualDataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER));
-  }
-
-  @Test
   public void shouldUpdateMultipleItemsWithNewStatusesIfHoldingAlreadyInPayload()
     throws UnsupportedEncodingException, InterruptedException, ExecutionException, TimeoutException {
     // given
@@ -504,83 +442,522 @@ public class UpdateItemEventHandlerTest {
     Assert.assertNotNull(eventPayload.getContext().get(HOLDINGS.value()));
   }
 
+
   @Test
-  public void shouldNotMapItemsAndNotFillPartialErrorsIfOptimisticLockingExists()
-    throws UnsupportedEncodingException, InterruptedException, ExecutionException, TimeoutException {
-    // given
-    String firstItemId = UUID.randomUUID().toString();
-    String secondItemId = UUID.randomUUID().toString();
+  public void shouldUpdateMultipleItemsOnOLRetryAndRemoveRetryCounterFromPayloadViaSeveralRuns() throws InterruptedException, ExecutionException, TimeoutException, UnsupportedEncodingException {
 
-    JsonObject firstExistingItemJson = new JsonObject()
-      .put("id", firstItemId)
+    String itemId = UUID.randomUUID().toString();
+    String itemId2 = UUID.randomUUID().toString();
+    String itemId3 = UUID.randomUUID().toString();
+    String itemId4 = UUID.randomUUID().toString();
+    String itemId5 = UUID.randomUUID().toString();
+    String itemId6 = UUID.randomUUID().toString();
+    String itemId7 = UUID.randomUUID().toString();
+    String itemId8 = UUID.randomUUID().toString();
+    String itemId9 = UUID.randomUUID().toString();
+    String itemId10 = UUID.randomUUID().toString();
+
+    String holdingId = String.valueOf(UUID.randomUUID());
+    String holdingId2 = String.valueOf(UUID.randomUUID());
+    String holdingId3 = String.valueOf(UUID.randomUUID());
+    String holdingId4 = String.valueOf(UUID.randomUUID());
+    String holdingId5 = String.valueOf(UUID.randomUUID());
+    String holdingId6 = String.valueOf(UUID.randomUUID());
+    String holdingId7 = String.valueOf(UUID.randomUUID());
+    String holdingId8 = String.valueOf(UUID.randomUUID());
+    String holdingId9 = String.valueOf(UUID.randomUUID());
+    String holdingId10 = String.valueOf(UUID.randomUUID());
+
+    String commonId = UUID.randomUUID().toString();
+    String commonId2 = UUID.randomUUID().toString();
+    String commonId3 = UUID.randomUUID().toString();
+    String commonId4 = UUID.randomUUID().toString();
+    String commonId5 = UUID.randomUUID().toString();
+    String commonId6 = UUID.randomUUID().toString();
+    String commonId7 = UUID.randomUUID().toString();
+    String commonId8 = UUID.randomUUID().toString();
+    String commonId9 = UUID.randomUUID().toString();
+    String commonId10 = UUID.randomUUID().toString();
+
+    JsonObject metadata = new JsonObject();
+
+    Item actualItem = new Item(itemId, "2", holdingId, "test", new Status(AVAILABLE), commonId, commonId, metadata);
+
+    Item actualItem2 = new Item(itemId4, "2", holdingId4, "test", new Status(AVAILABLE), commonId, commonId, metadata);
+
+    Item actualItem3 = new Item(itemId5, "2", holdingId5, "test", new Status(AVAILABLE), commonId, commonId, metadata);
+
+    Item actualItem4 = new Item(itemId6, "2", holdingId6, "test", new Status(AVAILABLE), commonId, commonId, metadata);
+
+    JsonObject olItem1 = new JsonObject()
+      .put("id", itemId)
       .put("status", new JsonObject().put("name", AVAILABLE.value()))
-      .put("materialType", new JsonObject().put("id", UUID.randomUUID().toString()))
-      .put("permanentLoanType", new JsonObject().put("id", UUID.randomUUID().toString()))
-      .put("holdingsRecordId", UUID.randomUUID().toString());
-
-    JsonObject secondExistingItemJson = new JsonObject()
-      .put("id", secondItemId)
+      .put("materialType", new JsonObject().put("id", commonId))
+      .put("permanentLoanType", new JsonObject().put("id", commonId))
+      .put("holdingsRecordId", holdingId);
+    JsonObject successfulItem2 = new JsonObject()
+      .put("id", itemId2)
       .put("status", new JsonObject().put("name", AVAILABLE.value()))
-      .put("materialType", new JsonObject().put("id", UUID.randomUUID().toString()))
-      .put("permanentLoanType", new JsonObject().put("id", UUID.randomUUID().toString()))
-      .put("holdingsRecordId", UUID.randomUUID().toString());
+      .put("materialType", new JsonObject().put("id", commonId2))
+      .put("permanentLoanType", new JsonObject().put("id", commonId2))
+      .put("holdingsRecordId", holdingId2);
+    JsonObject partialErrorItem3 = new JsonObject()
+      .put("id", itemId3)
+      .put("status", new JsonObject().put("name", AVAILABLE.value()))
+      .put("materialType", new JsonObject().put("id", commonId3))
+      .put("permanentLoanType", new JsonObject().put("id", commonId3))
+      .put("holdingsRecordId", holdingId3);
+    JsonObject olItem4 = new JsonObject()
+      .put("id", itemId4)
+      .put("status", new JsonObject().put("name", AVAILABLE.value()))
+      .put("materialType", new JsonObject().put("id", commonId4))
+      .put("permanentLoanType", new JsonObject().put("id", commonId4))
+      .put("holdingsRecordId", holdingId4);
+    JsonObject olItem5 = new JsonObject()
+      .put("id", itemId5)
+      .put("status", new JsonObject().put("name", AVAILABLE.value()))
+      .put("materialType", new JsonObject().put("id", commonId5))
+      .put("permanentLoanType", new JsonObject().put("id", commonId5))
+      .put("holdingsRecordId", holdingId5);
+    JsonObject olItem6 = new JsonObject()
+      .put("id", itemId6)
+      .put("status", new JsonObject().put("name", AVAILABLE.value()))
+      .put("materialType", new JsonObject().put("id", commonId6))
+      .put("permanentLoanType", new JsonObject().put("id", commonId6))
+      .put("holdingsRecordId", holdingId6);
+    JsonObject successfulItem7 = new JsonObject()
+      .put("id", itemId7)
+      .put("status", new JsonObject().put("name", AVAILABLE.value()))
+      .put("materialType", new JsonObject().put("id", commonId7))
+      .put("permanentLoanType", new JsonObject().put("id", commonId7))
+      .put("holdingsRecordId", holdingId7);
+    JsonObject successfulItem8 = new JsonObject()
+      .put("id", itemId8)
+      .put("status", new JsonObject().put("name", AVAILABLE.value()))
+      .put("materialType", new JsonObject().put("id", commonId8))
+      .put("permanentLoanType", new JsonObject().put("id", commonId8))
+      .put("holdingsRecordId", holdingId8);
+    JsonObject partialErrorItem9 = new JsonObject()
+      .put("id", itemId9)
+      .put("status", new JsonObject().put("name", AVAILABLE.value()))
+      .put("materialType", new JsonObject().put("id", commonId9))
+      .put("permanentLoanType", new JsonObject().put("id", commonId9))
+      .put("holdingsRecordId", holdingId9);
+    JsonObject partialErrorItem10 = new JsonObject()
+      .put("id", itemId10)
+      .put("status", new JsonObject().put("name", AVAILABLE.value()))
+      .put("materialType", new JsonObject().put("id", commonId10))
+      .put("permanentLoanType", new JsonObject().put("id", commonId10))
+      .put("holdingsRecordId", holdingId10);
 
-    JsonArray itemsList = new JsonArray();
-    itemsList.add(new JsonObject().put("item", firstExistingItemJson));
-    itemsList.add(new JsonObject().put("item", secondExistingItemJson));
-
-    String permanentLocationId2 = UUID.randomUUID().toString();
-
-    String expectedHoldingId2 = UUID.randomUUID().toString();
-    String expectedHoldingId1 = UUID.randomUUID().toString();
-    JsonArray holdingsAsJson = new JsonArray(List.of(
-      new JsonObject()
-        .put("id", expectedHoldingId1)
-        .put("permanentLocationId", PERMANENT_LOCATION_ID),
-      new JsonObject()
-        .put("id", expectedHoldingId2)
-        .put("permanentLocationId", permanentLocationId2)));
-
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_HOLDING_ID));
-    doAnswer(invocationOnMock -> {
-      MultipleRecords<Item> result = new MultipleRecords<>(new ArrayList<>(), 0);
-      Consumer<Success<MultipleRecords<Item>>> successHandler = invocationOnMock.getArgument(2);
-      successHandler.accept(new Success<>(result));
-      return null;
-    }).when(mockedItemCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+    JsonArray itemList = new JsonArray();
+    itemList.add(new JsonObject().put("item", olItem1));
+    itemList.add(new JsonObject().put("item", successfulItem2));
+    itemList.add(new JsonObject().put("item", partialErrorItem3));
+    itemList.add(new JsonObject().put("item", olItem4));
+    itemList.add(new JsonObject().put("item", olItem5));
+    itemList.add(new JsonObject().put("item", olItem6));
+    itemList.add(new JsonObject().put("item", successfulItem7));
+    itemList.add(new JsonObject().put("item", successfulItem8));
+    itemList.add(new JsonObject().put("item", partialErrorItem9));
+    itemList.add(new JsonObject().put("item", partialErrorItem10));
 
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
-      failureHandler.accept(new Failure("Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", 409));
+      failureHandler.accept(new Failure(format("Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", itemId), 409));
       return null;
-    }).when(mockedItemCollection).update(any(), any(), any());
+    }).doAnswer(invocationOnMock -> {
+        Item itemRecord = invocationOnMock.getArgument(0);
+        Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
+        successHandler.accept(new Success<>(itemRecord));
+        return null;
+      }).doAnswer(invocationOnMock -> {
+        Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+        failureHandler.accept(new Failure(format("Cannot update record %s not found", itemId3), 404));
+        return null;
+      }).doAnswer(invocationOnMock -> {
+        Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+        failureHandler.accept(new Failure(format("Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", itemId4), 409));
+        return null;
+      })
+      .doAnswer(invocationOnMock -> {
+        Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+        failureHandler.accept(new Failure(format("Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", itemId5), 409));
+        return null;
+      })
+      .doAnswer(invocationOnMock -> {
+        Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+        failureHandler.accept(new Failure(format("Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", itemId6), 409));
+        return null;
+      })
+      .doAnswer(invocationOnMock -> {
+        Item itemRecord = invocationOnMock.getArgument(0);
+        Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
+        successHandler.accept(new Success<>(itemRecord));
+        return null;
+      })
+      .doAnswer(invocationOnMock -> {
+        Item itemRecord = invocationOnMock.getArgument(0);
+        Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
+        successHandler.accept(new Success<>(itemRecord));
+        return null;
+      })
+      .doAnswer(invocationOnMock -> {
+        Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+        failureHandler.accept(new Failure(format("Cannot update record %s not found", itemId9), 404));
+        return null;
+      })
+      .doAnswer(invocationOnMock -> {
+        Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+        failureHandler.accept(new Failure(format("Cannot update record %s not found", itemId10), 404));
+        return null;
+      })// 10 tries. Next invocation will be on the second run 'handle()'-method.
+      .doAnswer(invocationOnMock -> {
+        Item itemRecord = invocationOnMock.getArgument(0);
+        Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
+        successHandler.accept(new Success<>(itemRecord));
+        return null;
+      })
+      .doAnswer(invocationOnMock -> {
+        Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+        failureHandler.accept(new Failure(format("Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", itemId4), 409));
+        return null;
+      })
+      .doAnswer(invocationOnMock -> {
+        Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+        failureHandler.accept(new Failure(format("Cannot update record %s not found", itemId5), 404));
+        return null;
+      })
+      .doAnswer(invocationOnMock -> {
+        Item itemRecord = invocationOnMock.getArgument(0);
+        Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
+        successHandler.accept(new Success<>(itemRecord));
+        return null;
+      }).when(mockedItemCollection).update(any(), any(), any());
 
-    Item returnedItem = new Item(firstItemId, "1", UUID.randomUUID().toString(), "test", new Status(AVAILABLE),
-      UUID.randomUUID().toString(), UUID.randomUUID().toString(), new JsonObject());
 
-    when(mockedItemCollection.findById(firstItemId)).thenReturn(CompletableFuture.completedFuture(returnedItem));
+    doAnswer(invocationOnMock -> {
+      MultipleRecords<Item> result = new MultipleRecords<>(new ArrayList<>(), 0);
+      Consumer<Success<MultipleRecords>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
+      return null;
+    }).when(mockedItemCollection).findByCql(Mockito.argThat(cql -> cql.contains("AND id <>")),
+      any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    HashMap<String, String> payloadContext = new HashMap<>();
-    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
-    payloadContext.put(EntityType.HOLDINGS.value(), holdingsAsJson.encode());
-    payloadContext.put(ITEM.value(), itemsList.encode());
-    payloadContext.put(MULTIPLE_HOLDINGS_FIELD, "945");
-    payloadContext.put(HOLDINGS_IDENTIFIERS, Json.encode(List.of(PERMANENT_LOCATION_ID, permanentLocationId2)));
+    doAnswer(invocationOnMock -> {
+      MultipleRecords result = new MultipleRecords<>(List.of(actualItem, actualItem2, actualItem3, actualItem4), 4);
+      Consumer<Success<MultipleRecords>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
+      return null;
+    }).when(mockedItemCollection).findByCql(Mockito.argThat(cql -> cql.equals(String.format("id==(%s OR %s OR %s OR %s)", itemId, itemId4, itemId5, itemId6))),
+      any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new ItemWriterFactory());
+
+
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    HashMap<String, String> context = new HashMap<>();
+    context.put(ITEM.value(), itemList.encode());
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_ITEM_MATCHED.value())
+      .withEventType(DI_INVENTORY_ITEM_UPDATED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
-      .withContext(payloadContext)
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = updateItemHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
+    verify(mockedItemCollection, times(14)).update(any(), any(), any());
+    verify(mockedItemCollection, times(1)).findByCql(Mockito.argThat(cql -> cql.equals(String.format("id==(%s OR %s OR %s OR %s)", itemId, itemId4, itemId5, itemId6))), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
     Assert.assertEquals(DI_INVENTORY_ITEM_UPDATED.value(), actualDataImportEventPayload.getEventType());
-    Assert.assertEquals(0, new JsonArray(actualDataImportEventPayload.getContext().get(ITEM.value())).size());
-    Assert.assertEquals(0, new JsonArray(actualDataImportEventPayload.getContext().get(ERRORS)).size());
+    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(ITEM.value()));
+    Assert.assertNull(actualDataImportEventPayload.getContext().get(UpdateHoldingEventHandler.CURRENT_RETRY_NUMBER));
+    JsonArray resultedItems = new JsonArray(actualDataImportEventPayload.getContext().get(ITEM.value()));
+
+    Assert.assertEquals(5, resultedItems.size());
+    assertEquals(itemId2, String.valueOf(resultedItems.getJsonObject(0).getString("id")));
+    assertEquals(itemId7, String.valueOf(resultedItems.getJsonObject(1).getString("id")));
+    assertEquals(itemId8, String.valueOf(resultedItems.getJsonObject(2).getString("id")));
+    assertEquals(itemId, String.valueOf(resultedItems.getJsonObject(3).getString("id")));
+    assertEquals(itemId6, String.valueOf(resultedItems.getJsonObject(4).getString("id")));
+
+    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(ERRORS));
+    List<PartialError> resultedErrorList = List.of(Json.decodeValue(actualDataImportEventPayload.getContext().get(ERRORS), PartialError[].class));
+    Assert.assertEquals(5, resultedErrorList.size());
+    assertEquals(itemId3, String.valueOf(resultedErrorList.get(0).getId()));
+    assertEquals(itemId9, String.valueOf(resultedErrorList.get(1).getId()));
+    assertEquals(itemId10, String.valueOf(resultedErrorList.get(2).getId()));
+    assertEquals(itemId5, String.valueOf(resultedErrorList.get(3).getId()));
+    assertEquals(itemId4, String.valueOf(resultedErrorList.get(4).getId()));
+    assertEquals(resultedErrorList.get(0).getError(), format("Cannot update record %s not found", itemId3));
+    assertEquals(resultedErrorList.get(1).getError(), format("Cannot update record %s not found", itemId9));
+    assertEquals(resultedErrorList.get(2).getError(), format("Cannot update record %s not found", itemId10));
+    assertEquals(resultedErrorList.get(3).getError(), format("Cannot update record %s not found", itemId5));
+    assertEquals(resultedErrorList.get(4).getError(), format("Current retry number %s exceeded or equal given number %s for the Holding update for jobExecutionId '%s' ", 1, 1, actualDataImportEventPayload.getJobExecutionId()));
+
+
+    //Second run. We need it to verify that CURRENT_RETRY_NUMBER and all lists are cleared.
+    JsonArray itemsListSecondRun = new JsonArray();
+    itemsListSecondRun.add(new JsonObject().put("item", olItem1));
+    itemsListSecondRun.add(new JsonObject().put("item", successfulItem2));
+    itemsListSecondRun.add(new JsonObject().put("item", partialErrorItem3));
+    itemsListSecondRun.add(new JsonObject().put("item", olItem4));
+
+    HashMap<String, String> contextSecondRun = new HashMap<>();
+    contextSecondRun.put(ActionProfile.FolioRecord.ITEM.value(), Json.encode(itemsListSecondRun));
+    contextSecondRun.put(ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayloadSecondRun = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_ITEM_UPDATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(contextSecondRun)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure(format("Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", itemId), 409));
+      return null;
+    }).doAnswer(invocationOnMock -> {
+        Item tmpHoldingsRecord = invocationOnMock.getArgument(0);
+        Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
+        successHandler.accept(new Success<>(tmpHoldingsRecord));
+        return null;
+      }).doAnswer(invocationOnMock -> {
+        Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+        failureHandler.accept(new Failure(format("Cannot update record %s not found", itemId3), 404));
+        return null;
+      }).doAnswer(invocationOnMock -> {
+        Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+        failureHandler.accept(new Failure(format("Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", itemId4), 409));
+        return null;
+      })
+      .doAnswer(invocationOnMock -> {
+        Item tmpHoldingsRecord = invocationOnMock.getArgument(0);
+        Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
+        successHandler.accept(new Success<>(tmpHoldingsRecord));
+        return null;
+      })
+      .doAnswer(invocationOnMock -> {
+        Item tmpHoldingsRecord = invocationOnMock.getArgument(0);
+        Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
+        successHandler.accept(new Success<>(tmpHoldingsRecord));
+        return null;
+      })
+      .when(mockedItemCollection).update(any(), any(), any());
+
+    doAnswer(invocationOnMock -> {
+      MultipleRecords<Item> result = new MultipleRecords<>(List.of(actualItem, actualItem2), 2);
+      Consumer<Success<MultipleRecords>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
+      return null;
+    }).when(mockedItemCollection).findByCql(Mockito.argThat(cql -> cql.equals(String.format("id==(%s OR %s)", itemId, itemId4))),
+      any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    CompletableFuture<DataImportEventPayload> futureSecondRun = updateItemHandler.handle(dataImportEventPayloadSecondRun);
+    DataImportEventPayload actualDataImportEventPayloadSecondRun = futureSecondRun.get(10000, TimeUnit.MILLISECONDS);
+    verify(mockedItemCollection, times(20)).update(any(), any(), any());
+    verify(mockedItemCollection, times(1)).findByCql(Mockito.argThat(cql -> cql.equals(String.format("id==(%s OR %s)", itemId, itemId4))), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+    Assert.assertEquals(DI_INVENTORY_ITEM_UPDATED.value(), actualDataImportEventPayloadSecondRun.getEventType());
+    Assert.assertNotNull(actualDataImportEventPayloadSecondRun.getContext().get(ITEM.value()));
+    Assert.assertNull(actualDataImportEventPayloadSecondRun.getContext().get(UpdateHoldingEventHandler.CURRENT_RETRY_NUMBER));
+
+    JsonArray resultedItemsRecordsSecondRun = new JsonArray(actualDataImportEventPayloadSecondRun.getContext().get(ITEM.value()));
+    Assert.assertEquals(3, resultedItemsRecordsSecondRun.size());
+
+    assertEquals(successfulItem2.getString("id"), String.valueOf(resultedItemsRecordsSecondRun.getJsonObject(0).getString("id")));
+    assertEquals(olItem1.getString("id"), String.valueOf(resultedItemsRecordsSecondRun.getJsonObject(1).getString("id")));
+    assertEquals(olItem4.getString("id"), String.valueOf(resultedItemsRecordsSecondRun.getJsonObject(2).getString("id")));
+
+    Assert.assertNotNull(actualDataImportEventPayloadSecondRun.getContext().get(ERRORS));
+    List<PartialError> resultedErrorListSecondRun = List.of(Json.decodeValue(actualDataImportEventPayloadSecondRun.getContext().get(ERRORS), PartialError[].class));
+    Assert.assertEquals(1, resultedErrorListSecondRun.size());
+    assertEquals(partialErrorItem3.getString("id"), String.valueOf(resultedErrorListSecondRun.get(0).getId()));
+    assertEquals(resultedErrorListSecondRun.get(0).getError(), format("Cannot update record %s not found", partialErrorItem3.getString("id")));
   }
 
+  @Test
+  public void shouldNotUpdateSingleItemIfOLErrorExistsAndRetryNumberIsExceeded() throws InterruptedException, ExecutionException, TimeoutException, UnsupportedEncodingException {
+    String itemId = UUID.randomUUID().toString();
+
+    String holdingId = String.valueOf(UUID.randomUUID());
+
+    String commonId = UUID.randomUUID().toString();
+
+    JsonObject metadata = new JsonObject();
+
+    Item actualItem = new Item(itemId, "2", holdingId, "test", new Status(AVAILABLE), commonId, commonId, metadata);
+
+    JsonObject olItem1 = new JsonObject()
+      .put("id", itemId)
+      .put("status", new JsonObject().put("name", AVAILABLE.value()))
+      .put("materialType", new JsonObject().put("id", commonId))
+      .put("permanentLoanType", new JsonObject().put("id", commonId))
+      .put("holdingsRecordId", holdingId);
+
+    JsonArray itemList = new JsonArray();
+    itemList.add(new JsonObject().put("item", olItem1));
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new ItemWriterFactory());
+
+
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    HashMap<String, String> context = new HashMap<>();
+    context.put(ITEM.value(), itemList.encode());
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_ITEM_UPDATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure(format("Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", itemId), 409));
+      return null;
+    }).doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure(format("Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", itemId), 409));
+      return null;
+    }).when(mockedItemCollection).update(any(), any(), any());
+
+    doAnswer(invocationOnMock -> {
+      MultipleRecords<Item> result = new MultipleRecords<>(new ArrayList<>(), 0);
+      Consumer<Success<MultipleRecords>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
+      return null;
+    }).when(mockedItemCollection).findByCql(Mockito.argThat(cql -> cql.contains("AND id <>")),
+      any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    doAnswer(invocationOnMock -> {
+      MultipleRecords<Item> result = new MultipleRecords<>(List.of(actualItem), 1);
+      Consumer<Success<MultipleRecords>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
+      return null;
+    }).when(mockedItemCollection).findByCql(Mockito.argThat(cql -> cql.equals(String.format("id==(%s)", itemId))),
+      any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new HoldingWriterFactory());
+    MappingManager.registerMapperFactory(new HoldingsMapperFactory());
+
+
+    CompletableFuture<DataImportEventPayload> future = updateItemHandler.handle(dataImportEventPayload);
+    DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
+    verify(mockedItemCollection, times(2)).update(any(), any(), any());
+    verify(mockedItemCollection, times(1)).findByCql(Mockito.argThat(cql -> cql.equals(String.format("id==(%s)", itemId))), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    Assert.assertEquals(DI_INVENTORY_ITEM_UPDATED.value(), actualDataImportEventPayload.getEventType());
+    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(ActionProfile.FolioRecord.ITEM.value()));
+    Assert.assertNull(actualDataImportEventPayload.getContext().get(UpdateHoldingEventHandler.CURRENT_RETRY_NUMBER));
+
+
+    JsonArray resultedItemsRecordsSecondRun = new JsonArray(actualDataImportEventPayload.getContext().get(ITEM.value()));
+    Assert.assertEquals(0, resultedItemsRecordsSecondRun.size());
+
+    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(ERRORS));
+    List<PartialError> resultedErrorList = List.of(Json.decodeValue(actualDataImportEventPayload.getContext().get(ERRORS), PartialError[].class));
+    Assert.assertEquals(1, resultedErrorList.size());
+    assertEquals(itemId, String.valueOf(resultedErrorList.get(0).getId()));
+    assertEquals(format("Current retry number 1 exceeded or equal given number 1 for the Holding update for jobExecutionId '%s' ", actualDataImportEventPayload.getJobExecutionId()), resultedErrorList.get(0).getError());
+  }
+
+
+  @Test
+  public void shouldUpdateSingleItemEvenIfOLErrorExistsAndRemoveRetryCounterFromPayload() throws InterruptedException, ExecutionException, TimeoutException, UnsupportedEncodingException {
+    String itemId = UUID.randomUUID().toString();
+
+    String holdingId = String.valueOf(UUID.randomUUID());
+
+    String commonId = UUID.randomUUID().toString();
+
+    JsonObject metadata = new JsonObject();
+
+    Item actualItem = new Item(itemId, "2", holdingId, "test", new Status(AVAILABLE), commonId, commonId, metadata);
+
+    JsonObject olItem1 = new JsonObject()
+      .put("id", itemId)
+      .put("status", new JsonObject().put("name", AVAILABLE.value()))
+      .put("materialType", new JsonObject().put("id", commonId))
+      .put("permanentLoanType", new JsonObject().put("id", commonId))
+      .put("holdingsRecordId", holdingId);
+
+    JsonArray itemList = new JsonArray();
+    itemList.add(new JsonObject().put("item", olItem1));
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new ItemWriterFactory());
+
+
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    HashMap<String, String> context = new HashMap<>();
+    context.put(ITEM.value(), itemList.encode());
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_ITEM_UPDATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapper)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure(format("Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", itemId), 409));
+      return null;
+    }).doAnswer(invocationOnMock -> {
+      Item tmpHoldingsRecord = invocationOnMock.getArgument(0);
+      Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(tmpHoldingsRecord));
+      return null;
+    }).when(mockedItemCollection).update(any(), any(), any());
+
+    doAnswer(invocationOnMock -> {
+      MultipleRecords<Item> result = new MultipleRecords<>(new ArrayList<>(), 0);
+      Consumer<Success<MultipleRecords>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
+      return null;
+    }).when(mockedItemCollection).findByCql(Mockito.argThat(cql -> cql.contains("AND id <>")),
+      any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    doAnswer(invocationOnMock -> {
+      MultipleRecords<Item> result = new MultipleRecords<>(List.of(actualItem), 1);
+      Consumer<Success<MultipleRecords>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(result));
+      return null;
+    }).when(mockedItemCollection).findByCql(Mockito.argThat(cql -> cql.equals(String.format("id==(%s)", itemId))),
+      any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new HoldingWriterFactory());
+    MappingManager.registerMapperFactory(new HoldingsMapperFactory());
+
+
+    CompletableFuture<DataImportEventPayload> future = updateItemHandler.handle(dataImportEventPayload);
+    DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
+    verify(mockedItemCollection, times(2)).update(any(), any(), any());
+    verify(mockedItemCollection, times(1)).findByCql(Mockito.argThat(cql -> cql.equals(String.format("id==(%s)", itemId))), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    Assert.assertEquals(DI_INVENTORY_ITEM_UPDATED.value(), actualDataImportEventPayload.getEventType());
+    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(ActionProfile.FolioRecord.ITEM.value()));
+    Assert.assertNull(actualDataImportEventPayload.getContext().get(UpdateHoldingEventHandler.CURRENT_RETRY_NUMBER));
+
+    JsonArray resultedItems = new JsonArray(actualDataImportEventPayload.getContext().get(ITEM.value()));
+    Assert.assertEquals(1, resultedItems.size());
+    assertEquals(itemId, String.valueOf(resultedItems.getJsonObject(0).getString("id")));
+
+    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(ERRORS));
+    List<PartialError> resultedErrorList = List.of(Json.decodeValue(actualDataImportEventPayload.getContext().get(ERRORS), PartialError[].class));
+    Assert.assertEquals(0, resultedErrorList.size());
+  }
 
   @Test(expected = ExecutionException.class)
   public void shouldNotUpdateMultipleItemsWithNewStatusesAndReturnDiErrorIfNoItemsUpdated()

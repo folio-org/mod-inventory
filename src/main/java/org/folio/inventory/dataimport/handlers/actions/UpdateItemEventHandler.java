@@ -1,47 +1,12 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import static java.lang.String.format;
-import static java.util.Objects.isNull;
-import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.folio.ActionProfile.Action.UPDATE;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_UPDATED;
-import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
-import static org.folio.inventory.domain.items.Item.STATUS_KEY;
-import static org.folio.inventory.support.ItemUtil.ID;
-import static org.folio.inventory.support.ItemUtil.MATERIAL_TYPE;
-import static org.folio.inventory.support.ItemUtil.MATERIAL_TYPE_ID_KEY;
-import static org.folio.inventory.support.ItemUtil.PERMANENT_LOAN_TYPE;
-import static org.folio.inventory.support.ItemUtil.PERMANENT_LOAN_TYPE_ID_KEY;
-import static org.folio.inventory.support.ItemUtil.PERMANENT_LOCATION;
-import static org.folio.inventory.support.ItemUtil.PERMANENT_LOCATION_ID_KEY;
-import static org.folio.inventory.support.ItemUtil.TEMPORARY_LOAN_TYPE;
-import static org.folio.inventory.support.ItemUtil.TEMPORARY_LOAN_TYPE_ID_KEY;
-import static org.folio.inventory.support.ItemUtil.TEMPORARY_LOCATION;
-import static org.folio.inventory.support.ItemUtil.TEMPORARY_LOCATION_ID_KEY;
-import static org.folio.inventory.support.JsonHelper.getString;
-import static org.folio.rest.jaxrs.model.EntityType.HOLDINGS;
-import static org.folio.rest.jaxrs.model.EntityType.ITEM;
-import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
-
-import java.io.UnsupportedEncodingException;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
-
+import com.fasterxml.jackson.core.JsonProcessingException;
 import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
@@ -69,12 +34,46 @@ import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingPa
 import org.folio.processing.mapping.mapper.MappingContext;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import java.io.UnsupportedEncodingException;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
+import static java.lang.String.format;
+import static java.util.Objects.isNull;
+import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.folio.ActionProfile.Action.UPDATE;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_UPDATED;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
+import static org.folio.inventory.domain.items.Item.STATUS_KEY;
+import static org.folio.inventory.support.ItemUtil.ID;
+import static org.folio.inventory.support.ItemUtil.MATERIAL_TYPE;
+import static org.folio.inventory.support.ItemUtil.MATERIAL_TYPE_ID_KEY;
+import static org.folio.inventory.support.ItemUtil.PERMANENT_LOAN_TYPE;
+import static org.folio.inventory.support.ItemUtil.PERMANENT_LOAN_TYPE_ID_KEY;
+import static org.folio.inventory.support.ItemUtil.PERMANENT_LOCATION;
+import static org.folio.inventory.support.ItemUtil.PERMANENT_LOCATION_ID_KEY;
+import static org.folio.inventory.support.ItemUtil.TEMPORARY_LOAN_TYPE;
+import static org.folio.inventory.support.ItemUtil.TEMPORARY_LOAN_TYPE_ID_KEY;
+import static org.folio.inventory.support.ItemUtil.TEMPORARY_LOCATION;
+import static org.folio.inventory.support.ItemUtil.TEMPORARY_LOCATION_ID_KEY;
+import static org.folio.inventory.support.JsonHelper.getString;
+import static org.folio.rest.jaxrs.model.EntityType.HOLDINGS;
+import static org.folio.rest.jaxrs.model.EntityType.ITEM;
+import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 public class UpdateItemEventHandler implements EventHandler {
 
@@ -102,6 +101,9 @@ public class UpdateItemEventHandler implements EventHandler {
 
   private final Storage storage;
   private final MappingMetadataCache mappingMetadataCache;
+
+  private final List<PartialError> resultedErrorItems = new ArrayList<>();
+  private final List<Item> resultedSuccessItems = new ArrayList<>();
 
   public UpdateItemEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache) {
     this.storage = storage;
@@ -192,22 +194,21 @@ public class UpdateItemEventHandler implements EventHandler {
                 });
             }
           }
-
           CompositeFuture.all(updatedItemsRecordFutures).onComplete(ar -> {
+            resultedSuccessItems.addAll(updatedItemEntities);
             if (!expiredItems.isEmpty()) {
-              processOLError(dataImportEventPayload, future, itemCollection, expiredItems.get(0), errors);
-            }
-            if (ar.succeeded()) {
-              String errorsAsStringJson = Json.encode(errors);
-              if (!updatedItemEntities.isEmpty() || errors.size() == 0) {
-                dataImportEventPayload.getContext().put(ERRORS, errorsAsStringJson);
-                dataImportEventPayload.getContext().put(ITEM.value(), getItemsMappedToJsonArrayAsString(updatedItemEntities));
-                future.complete(dataImportEventPayload);
+              processOLError(dataImportEventPayload, future, itemCollection, expiredItems, errors);
+              String errorsAsStringJson = formatErrorsAsString(errors);
+              if (!resultedErrorItems.isEmpty()) {
+                fillPayloadAndClearLists(dataImportEventPayload, errorsAsStringJson, future);
+              }
+            } else {
+              String errorsAsStringJson = formatErrorsAsString(errors);
+              if (!resultedSuccessItems.isEmpty() || errors.isEmpty()) {
+                fillPayloadAndClearLists(dataImportEventPayload, errorsAsStringJson, future);
               } else {
                 future.completeExceptionally(new EventProcessingException(errorsAsStringJson));
               }
-            } else {
-              future.completeExceptionally(ar.cause());
             }
             dataImportEventPayload.getContext().remove(TEMPORARY_MULTIPLE_HOLDINGS_FIELD);
           });
@@ -250,7 +251,8 @@ public class UpdateItemEventHandler implements EventHandler {
 
   private static void putValueNestedIfNotNull(JsonObject item, String objectPropertyName,
                                               String nestedPropertyName, String value) {
-    if (value != null) item.put(objectPropertyName, new JsonObject().put(nestedPropertyName, value));
+    if (value != null)
+      item.put(objectPropertyName, new JsonObject().put(nestedPropertyName, value));
   }
 
   private static String getItemsMappedToJsonArrayAsString(List<Item> updatedItemEntities) {
@@ -379,12 +381,14 @@ public class UpdateItemEventHandler implements EventHandler {
       .withSource(null)
       .withDate(dateTimeFormatter.format(ZonedDateTime.now())));
 
-    itemCollection.update(item, success -> promise.complete(item),
+    itemCollection.update(item, success -> {
+        //updatePromise.complete();
+        promise.complete(item);
+      },
       failure -> {
         if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
           expiredItems.add(item);
         } else {
-          eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
           errors.add(new PartialError(item.getId() != null ? item.getId() : BLANK, failure.getReason()));
           LOGGER.warn(format("updateItemAndRetryIfOLExists:: updating Item - %s, status code %s", failure.getReason(), failure.getStatusCode()));
         }
@@ -394,33 +398,37 @@ public class UpdateItemEventHandler implements EventHandler {
     return promise.future();
   }
 
-  private void processOLError(DataImportEventPayload dataImportEventPayload, CompletableFuture<DataImportEventPayload> future, ItemCollection itemCollection, Item item, List<PartialError> errors) {
+  private void processOLError(DataImportEventPayload dataImportEventPayload, CompletableFuture<DataImportEventPayload> future, ItemCollection itemCollection, List<Item> expiredItems, List<PartialError> errors) {
     int currentRetryNumber = dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER) == null ? 0 : Integer.parseInt(dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER));
+
+
     if (currentRetryNumber < MAX_RETRIES_COUNT) {
       dataImportEventPayload.getContext().put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
-      LOGGER.warn("processOLError:: Error updating Item by id '{}'. Retry UpdateItemEventHandler handler...", item.getId());
-      itemCollection.findById(item.getId())
-        .thenAccept(actuaItem -> prepareDataAndReInvokeCurrentHandler(dataImportEventPayload, future, actuaItem))
-        .thenAccept(v -> dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER))
-        .exceptionally(e -> {
+      LOGGER.warn("processOLError:: Error updating Items. Expired Items: '{} '.Current retry number = '{}'. Retry UpdateItemEventHandler handler...", expiredItems, currentRetryNumber);
+      getActualItemsList(expiredItems, itemCollection)
+        .onSuccess(actualItemsList -> prepareDataAndReInvokeCurrentHandler(dataImportEventPayload, future, actualItemsList, errors))
+        .onFailure(e -> {
+          String errMessage = format("Cannot get actual Items.Expired Items: '%s' for jobExecutionId '%s'. Error: %s ", expiredItems, dataImportEventPayload.getJobExecutionId(), e.getCause());
+          for (Item expiredHolding : expiredItems) {
+            errors.add(new PartialError(expiredHolding.getId() != null ? expiredHolding.getId() : BLANK, errMessage));
+          }
+          resultedErrorItems.addAll(errors);
           dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
-          String errMessage = format("Cannot get actual Item by id: '%s' for jobExecutionId '%s'. Error: %s ", item.getId(), dataImportEventPayload.getJobExecutionId(), e.getCause());
-          LOGGER.warn("processOLError:: " + errMessage);
-          errors.add(new PartialError(item.getId() != null ? item.getId() : BLANK, errMessage));
           future.complete(dataImportEventPayload);
-          return null;
         });
     } else {
-      dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
       String errMessage = format("Current retry number %s exceeded or equal given number %s for the Item update for jobExecutionId '%s' ", MAX_RETRIES_COUNT, currentRetryNumber, dataImportEventPayload.getJobExecutionId());
       LOGGER.warn("processOLError:: " + errMessage);
-      errors.add(new PartialError(item.getId() != null ? item.getId() : BLANK, errMessage));
-      future.complete(dataImportEventPayload);
+      for (Item expiredHolding : expiredItems) {
+        errors.add(new PartialError(expiredHolding.getId() != null ? expiredHolding.getId() : BLANK, errMessage));
+      }
+      resultedErrorItems.addAll(errors);
+      dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
     }
   }
 
-  private void prepareDataAndReInvokeCurrentHandler(DataImportEventPayload dataImportEventPayload, CompletableFuture<DataImportEventPayload> future, Item actualItem) {
-    JsonArray resultedItems = updateActualItemAndConvertItemListAsJsonArray(dataImportEventPayload, actualItem);
+  private void prepareDataAndReInvokeCurrentHandler(DataImportEventPayload dataImportEventPayload, CompletableFuture<DataImportEventPayload> future, List<Item> actualItems, List<PartialError> errors) {
+    JsonArray resultedItems = convertItemListAsJsonArray(actualItems);
     dataImportEventPayload.getContext().put(ITEM.value(), Json.encode(resultedItems));
     dataImportEventPayload.getEventsChain().remove(dataImportEventPayload.getContext().get(CURRENT_EVENT_TYPE_PROPERTY));
     try {
@@ -432,30 +440,53 @@ public class UpdateItemEventHandler implements EventHandler {
     dataImportEventPayload.getContext().remove(CURRENT_NODE_PROPERTY);
     dataImportEventPayload.getContext().put(MULTIPLE_HOLDINGS_FIELD, dataImportEventPayload.getContext().get(TEMPORARY_MULTIPLE_HOLDINGS_FIELD));
     dataImportEventPayload.getContext().remove(TEMPORARY_MULTIPLE_HOLDINGS_FIELD);
-    handle(dataImportEventPayload).whenComplete((res, e) -> future.complete(dataImportEventPayload));
+    resultedErrorItems.addAll(errors);
+    handle(dataImportEventPayload).whenComplete((res, e) -> {
+      future.complete(res);
+    });
   }
 
-  private static JsonArray updateActualItemAndConvertItemListAsJsonArray(DataImportEventPayload dataImportEventPayload, Item actualItem) {
-    List<Item> initialItemList = new ArrayList<>();
-    JsonArray itemsJsonArray = new JsonArray(dataImportEventPayload.getContext().get(ITEM.value()));
-    for (int i = 0; i < itemsJsonArray.size(); i++) {
-      Item currentItem = ItemUtil.jsonToItem(itemsJsonArray.getJsonObject(i).getJsonObject(ITEM_PATH_FIELD));
-      initialItemList.add(currentItem);
-    }
-    List<Item> itemsList = new ArrayList<>(initialItemList);
-
-    List<Item> updatedItemsList = new ArrayList<>(itemsList);
-    for (int i = 0; i < itemsList.size(); i++) {
-      Item item = itemsList.get(i);
-      if (item.getId().equals(actualItem.getId())) {
-        updatedItemsList.set(i, actualItem);
-      }
-    }
-
+  private static JsonArray convertItemListAsJsonArray(List<Item> actualItems) {
     JsonArray resultedItems = new JsonArray();
-    for (Item currentItem : updatedItemsList) {
+    for (Item currentItem : actualItems) {
       resultedItems.add(new JsonObject().put(ITEM_PATH_FIELD, new JsonObject(ItemUtil.mapToMappingResultRepresentation(currentItem))));
     }
     return resultedItems;
+  }
+
+  private Future<List<Item>> getActualItemsList(List<Item> items, ItemCollection itemsCollection) {
+    Promise<List<Item>> promise = Promise.promise();
+    try {
+      itemsCollection.findByCql(format("id==(%s)", getQueryParamForMultipleItems(items)), PagingParameters.defaults(),
+        findResults -> {
+          List<Item> actualItems = findResults.getResult().records;
+          promise.complete(actualItems);
+        },
+        failure -> promise.fail(failure.getReason()));
+    } catch (UnsupportedEncodingException e) {
+      promise.fail(e);
+    }
+    return promise.future();
+  }
+
+  private static String getQueryParamForMultipleItems(List<Item> items) {
+    return items.stream().map(Item::getId).collect(Collectors.joining(" OR "));
+  }
+
+  private void fillPayloadAndClearLists(DataImportEventPayload dataImportEventPayload, String errorsAsStringJson, CompletableFuture<DataImportEventPayload> future) {
+    dataImportEventPayload.getContext().put(ActionProfile.FolioRecord.ITEM.value(), getItemsMappedToJsonArrayAsString(resultedSuccessItems));
+    dataImportEventPayload.getContext().put(ERRORS, errorsAsStringJson);
+    resultedSuccessItems.clear();
+    resultedErrorItems.clear();
+    dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
+    future.complete(dataImportEventPayload);
+  }
+
+  private String formatErrorsAsString(List<PartialError> errors) {
+    String errorsAsStringJson = Json.encode(errors);
+    if (!resultedErrorItems.isEmpty()) {
+      errorsAsStringJson = Json.encode(resultedErrorItems);
+    }
+    return errorsAsStringJson;
   }
 }
