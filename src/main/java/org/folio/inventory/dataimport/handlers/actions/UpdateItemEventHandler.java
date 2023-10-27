@@ -382,7 +382,6 @@ public class UpdateItemEventHandler implements EventHandler {
       .withDate(dateTimeFormatter.format(ZonedDateTime.now())));
 
     itemCollection.update(item, success -> {
-        //updatePromise.complete();
         promise.complete(item);
       },
       failure -> {
