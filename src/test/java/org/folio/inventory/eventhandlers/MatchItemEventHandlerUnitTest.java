@@ -318,12 +318,12 @@ public class MatchItemEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(itemCollection)
-      .findByCql(eq(format("hrid == \"%s\" AND id == \"%s\"", ITEM_HRID, ITEM_ID)),
+      .findByCql(eq(format("hrid == \"%s\" AND id == (%s)", ITEM_HRID, ITEM_ID)),
         any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
     EventHandler eventHandler = new MatchItemEventHandler(mappingMetadataCache, null);
     HashMap<String, String> context = new HashMap<>();
-    context.put(EntityType.ITEM.value(), JsonObject.mapFrom(createItem()).encode());
+    context.put(EntityType.ITEM.value(), JsonArray.of(JsonObject.mapFrom(createItem())).encode());
     context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
     context.put(RELATIONS, MATCHING_RELATIONS);
     DataImportEventPayload eventPayload = createEventPayload().withContext(context);
