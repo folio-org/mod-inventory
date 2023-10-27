@@ -53,8 +53,8 @@ public class RestDataImportHelper {
   }
 
   public static final JobProfileInfo JOB_PROFILE_INFO = new JobProfileInfo()
-    .withId("e34d7b92-9b83-11eb-a8b3-0242ac130003") //default stub id
-    .withName("Default - Create instance and SRS MARC Bib")
+    .withId("90fd4389-e5a9-4cc5-88cf-1568c0ff7e8b") //default stub id
+    .withName("ECS - Create instance and SRS MARC Bib")
     .withDataType(JobProfileInfo.DataType.MARC);
 
   /**
@@ -82,7 +82,7 @@ public class RestDataImportHelper {
       .compose(jobExecutionId -> setDefaultJobProfileToJobExecution(jobExecutionId, changeManagerClient))
       .compose(jobExecutionId -> {
         RawRecordsDto dataChunk = buildDataChunk(false, singletonList(new InitialRecord().withRecord(
-          JsonObject.mapFrom(marcRecord.getParsedRecord().getContent()).toString())));
+          getParsedRecordContentAsString(marcRecord))));
         return postChunk(jobExecutionId, true, dataChunk, changeManagerClient)
           .compose(response -> {
             //Sending empty chunk to finish import
@@ -91,6 +91,13 @@ public class RestDataImportHelper {
           });
       })
       .compose(jobExecutionId -> checkDataImportStatus(jobExecutionId, sharingInstanceMetadata, durationInSec, attemptsNumber, changeManagerClient));
+  }
+
+  private static String getParsedRecordContentAsString(Record marcRecord) {
+    if (marcRecord.getParsedRecord().getContent() instanceof String parsedRecordContent) {
+      return parsedRecordContent;
+    }
+    return JsonObject.mapFrom(marcRecord.getParsedRecord().getContent()).toString();
   }
 
   protected Future<String> initJobExecution(String instanceId, ChangeManagerClient changeManagerClient, Map<String, String> kafkaHeaders) {
@@ -210,13 +217,13 @@ public class RestDataImportHelper {
     }
 
     LOGGER.info("checkDataImportStatus:: Checking import status by jobExecutionId={}. InstanceId={}.",
-      sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionId);
+      jobExecutionId, sharingInstanceMetadata.getInstanceIdentifier());
 
     getJobExecutionStatusByJobExecutionId(jobExecutionId, changeManagerClient).onComplete(jobExecution -> {
       if (jobExecution.succeeded()) {
         String jobExecutionStatus = jobExecution.result();
         LOGGER.info("checkDataImportStatus:: Check import status for DI with jobExecutionId={}, InstanceId={}, JobExecutionStatus={}",
-          sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionId, jobExecutionStatus);
+          jobExecutionId, sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionStatus);
         if (jobExecutionStatus.equals(STATUS_COMMITTED) || jobExecutionStatus.equals(STATUS_ERROR)) {
           promise.complete(jobExecutionStatus);
         } else {

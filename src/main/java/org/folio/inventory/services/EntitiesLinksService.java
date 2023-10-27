@@ -9,6 +9,6 @@ import java.util.List;
 
 public interface EntitiesLinksService {
   Future<List<Link>> getInstanceAuthorityLinks(Context context, String instanceId);
-  Future<List<Link>> putInstanceAuthorityLinks(Context context, String instanceId, List<Link> entityLinks);
+  Future<Void> putInstanceAuthorityLinks(Context context, String instanceId, List<Link> entityLinks);
   Future<List<LinkingRuleDto>> getLinkingRules(Context context);
 }
