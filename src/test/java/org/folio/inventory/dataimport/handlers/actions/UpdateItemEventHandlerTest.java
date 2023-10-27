@@ -697,7 +697,7 @@ public class UpdateItemEventHandlerTest {
     assertEquals(resultedErrorList.get(1).getError(), format("Cannot update record %s not found", itemId9));
     assertEquals(resultedErrorList.get(2).getError(), format("Cannot update record %s not found", itemId10));
     assertEquals(resultedErrorList.get(3).getError(), format("Cannot update record %s not found", itemId5));
-    assertEquals(resultedErrorList.get(4).getError(), format("Current retry number %s exceeded or equal given number %s for the Holding update for jobExecutionId '%s' ", 1, 1, actualDataImportEventPayload.getJobExecutionId()));
+    assertEquals(resultedErrorList.get(4).getError(), format("Current retry number %s exceeded or equal given number %s for the Item update for jobExecutionId '%s' ", 1, 1, actualDataImportEventPayload.getJobExecutionId()));
 
 
     //Second run. We need it to verify that CURRENT_RETRY_NUMBER and all lists are cleared.
@@ -867,7 +867,7 @@ public class UpdateItemEventHandlerTest {
     List<PartialError> resultedErrorList = List.of(Json.decodeValue(actualDataImportEventPayload.getContext().get(ERRORS), PartialError[].class));
     Assert.assertEquals(1, resultedErrorList.size());
     assertEquals(itemId, String.valueOf(resultedErrorList.get(0).getId()));
-    assertEquals(format("Current retry number 1 exceeded or equal given number 1 for the Holding update for jobExecutionId '%s' ", actualDataImportEventPayload.getJobExecutionId()), resultedErrorList.get(0).getError());
+    assertEquals(format("Current retry number 1 exceeded or equal given number 1 for the Item update for jobExecutionId '%s' ", actualDataImportEventPayload.getJobExecutionId()), resultedErrorList.get(0).getError());
   }
 
 
