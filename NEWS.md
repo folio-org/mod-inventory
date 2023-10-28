@@ -1,3 +1,6 @@
+## 20.1.2 2023-10-28
+* Update data-import-processing-core dependency to v4.1.1 ([MODINV-908](https://issues.folio.org/browse/MODINV-908))
+
 ## 20.1.1 2023-10-24
 * Fix problem with Inventory Single Record Imports for UPDATES in member tenant, for shared instances ([MODINV-886](https://issues.folio.org/browse/MODINV-886))
 
