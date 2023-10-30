@@ -60,8 +60,13 @@ public class ItemLoader extends AbstractLoader<Item> {
       if (isNotEmpty(eventPayload.getContext().get(AbstractLoader.MULTI_MATCH_IDS))) {
         cqlSubMatch = getConditionByMultiMatchResult(eventPayload);
       } else if (isNotEmpty(eventPayload.getContext().get(EntityType.ITEM.value()))) {
-        JsonObject itemAsJson = new JsonObject(eventPayload.getContext().get(EntityType.ITEM.value()));
-        cqlSubMatch = format(" AND id == \"%s\"", itemAsJson.getString("id"));
+        JsonArray itemsAsJson = new JsonArray(eventPayload.getContext().get(EntityType.ITEM.value()));
+        if (!itemsAsJson.isEmpty()) {
+          String itemIds = itemsAsJson.stream().map(JsonObject.class::cast)
+            .map(jsonObj -> jsonObj.getString("id"))
+            .collect(Collectors.joining(" OR "));
+          cqlSubMatch = format(" AND id == (%s)", itemIds);
+        }
       } else if (isNotEmpty(eventPayload.getContext().get(EntityType.HOLDINGS.value()))) {
         JsonArray holdingsAsJson = new JsonArray(eventPayload.getContext().get(EntityType.HOLDINGS.value()));
         if (!holdingsAsJson.isEmpty()) {
