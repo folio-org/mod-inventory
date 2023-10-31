@@ -574,6 +574,53 @@ public class CreateItemEventHandlerTest {
   }
 
   @Test
+  public void shouldCreateItemAndFillInHoldingsRecordIdFromMatchedHolding()
+    throws InterruptedException,
+    ExecutionException,
+    TimeoutException {
+    // given
+    Mockito.doAnswer(invocationOnMock -> {
+      Item item = invocationOnMock.getArgument(0);
+      Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(item));
+      return null;
+    }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
+
+    String permanentLocationId = UUID.randomUUID().toString();
+    String expectedHoldingId = UUID.randomUUID().toString();
+    JsonObject holdingAsJson = new JsonObject().put("id", expectedHoldingId).put("permanentLocationId", permanentLocationId);
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_HOLDING_ID));
+    HashMap<String, String> payloadContext = new HashMap<>();
+    payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    payloadContext.put(EntityType.HOLDINGS.value(), Json.encode(List.of(holdingAsJson)));
+    payloadContext.put(ERRORS, Json.encode(new PartialError(null, "testError")));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    // when
+    CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
+
+    // then
+    DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
+    Assert.assertEquals(DI_INVENTORY_ITEM_CREATED.value(), eventPayload.getEventType());
+    Assert.assertNotNull(eventPayload.getContext().get(ITEM.value()));
+
+    JsonArray createdItems = new JsonArray(eventPayload.getContext().get(ITEM.value()));
+    JsonArray errors = new JsonArray(eventPayload.getContext().get(ERRORS));
+    Assert.assertEquals(0, errors.size());
+    Assert.assertEquals(1, createdItems.size());
+    JsonObject createdItem = createdItems.getJsonObject(0);
+    Assert.assertNotNull(createdItem.getJsonObject("status").getString("name"));
+    Assert.assertNotNull(createdItem.getString("permanentLoanTypeId"));
+    Assert.assertNotNull(createdItem.getString("materialTypeId"));
+    Assert.assertEquals(createdItem.getString("holdingId"), expectedHoldingId);
+  }
+
+  @Test
   public void shouldNotReturnFailedFutureIfInventoryStorageErrorExists()
     throws InterruptedException,
     ExecutionException,
