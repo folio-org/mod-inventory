@@ -35,13 +35,13 @@ public class FolioInstanceSharingHandlerImpl implements InstanceSharingHandler {
       instanceId, sourceTenantId, targetTenantId);
 
     // Remove HRID_KEY from the instance JSON
-    JsonObject jsonInstance = instance.getJsonForStorage();
+    JsonObject jsonInstance = new JsonObject(instance.getJsonForStorage().encode());
     jsonInstance.remove(HRID_KEY);
 
     // Add instance to the targetInstanceCollection
     return instanceOperations.addInstance(Instance.fromJson(jsonInstance), target)
       .compose(targetInstance -> {
-        JsonObject jsonInstanceToPublish = instance.getJsonForStorage();
+        JsonObject jsonInstanceToPublish = new JsonObject(instance.getJsonForStorage().encode());
         jsonInstanceToPublish.put(SOURCE, CONSORTIUM_FOLIO.getValue());
         jsonInstanceToPublish.put(HRID_KEY, targetInstance.getHrid());
 

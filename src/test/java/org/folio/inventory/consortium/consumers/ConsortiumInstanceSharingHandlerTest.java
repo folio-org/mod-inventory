@@ -4,6 +4,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -20,6 +21,7 @@ import org.folio.inventory.consortium.handlers.InstanceSharingHandlerFactory;
 import org.folio.inventory.consortium.util.InstanceOperationsHelper;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.times;
 import org.folio.inventory.services.EventIdStorageService;
 import org.folio.kafka.exception.DuplicateEventException;
@@ -97,6 +99,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     Async async = context.async();
     JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
     jsonInstance.put("source", "FOLIO");
+    jsonInstance.put("subjects", new JsonArray().add(new JsonObject().put("authorityId", "null").put("value", "\\\"Test subject\\\"")));
     existingInstance = Instance.fromJson(jsonInstance);
 
     String targetInstanceHrid = "consin0000000000123";
@@ -163,9 +166,11 @@ public class ConsortiumInstanceSharingHandlerTest {
 
       ArgumentCaptor<Instance> updatedInstanceCaptor = ArgumentCaptor.forClass(Instance.class);
       verify(mockedSourceInstanceCollection, times(1)).update(updatedInstanceCaptor.capture(), any(), any());
+      verify(mockedTargetInstanceCollection, times(1)).add(argThat(instance -> !instance.getSubjects().isEmpty()), any(), any());
       Instance updatedInstance = updatedInstanceCaptor.getValue();
       context.assertEquals("CONSORTIUM-FOLIO", updatedInstance.getSource());
       context.assertEquals(targetInstanceHrid, updatedInstance.getHrid());
+      context.assertFalse(updatedInstance.getSubjects().isEmpty());
 
       async.complete();
     });

@@ -6,6 +6,7 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.buffer.impl.BufferImpl;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -16,6 +17,7 @@ import org.folio.HttpStatus;
 import org.folio.Link;
 import org.folio.LinkingRuleDto;
 import org.folio.Record;
+import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
@@ -38,6 +40,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -92,6 +95,7 @@ public class MarcInstanceSharingHandlerImplTest {
   private final String INSTANCE_AUTHORITY_LINKS = "[{\"id\":1,\"authorityId\":\"58600684-c647-408d-bf3e-756e9055a988\",\"authorityNaturalId\":\"test123\",\"instanceId\":\"eb89b292-d2b7-4c36-9bfc-f816d6f96418\",\"linkingRuleId\":1,\"status\":\"ACTUAL\"},{\"id\":2,\"authorityId\":\"3f2923d3-6f8e-41a6-94e1-09eaf32872e0\",\"authorityNaturalId\":\"test123\",\"instanceId\":\"eb89b292-d2b7-4c36-9bfc-f816d6f96418\",\"linkingRuleId\":2,\"status\":\"ACTUAL\"}]";
   private final String LINKING_RULES = "[{\"id\":1,\"bibField\":\"100\",\"authorityField\":\"100\",\"authoritySubfields\":[\"a\",\"b\",\"c\",\"d\",\"j\",\"q\"],\"validation\":{\"existence\":[{\"t\":false}]},\"autoLinkingEnabled\":true}]";
   private final String CONSORTIUM_TENANT = "consortium";
+  private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
 
   @BeforeClass
   public static void setUpClass() {
@@ -100,10 +104,14 @@ public class MarcInstanceSharingHandlerImplTest {
   }
 
   @Before
-  public void setUp() {
+  public void setUp() throws IOException {
     MockitoAnnotations.openMocks(this);
 
     instance = mock(Instance.class);
+    JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
+    jsonInstance.put("source", "MARC");
+    jsonInstance.put("subjects", new JsonArray().add(new JsonObject().put("authorityId", "null").put("value", "\\\"Test subject\\\"")));
+    when(instance.getJsonForStorage()).thenReturn(Instance.fromJson(jsonInstance).getJsonForStorage());
 
     source = mock(Source.class);
     target = mock(Target.class);
@@ -147,7 +155,6 @@ public class MarcInstanceSharingHandlerImplTest {
       .thenReturn(Future.succeededFuture("COMMITTED"));
 
     doReturn(Future.succeededFuture(instanceId)).when(marcHandler).deleteSourceRecordByRecordId(any(), any(), any(), any());
-    when(instance.getJsonForStorage()).thenReturn((JsonObject) Json.decodeValue(recordJson));
     when(instance.getHrid()).thenReturn(targetInstanceHrid);
     when(instanceOperationsHelper.updateInstance(any(), any())).thenReturn(Future.succeededFuture());
     when(instanceOperationsHelper.getInstanceById(any(), any())).thenReturn(Future.succeededFuture(instance));
@@ -169,6 +176,7 @@ public class MarcInstanceSharingHandlerImplTest {
       Instance updatedInstance = updatedInstanceCaptor.getValue();
       testContext.assertEquals("CONSORTIUM-MARC", updatedInstance.getSource());
       testContext.assertEquals(targetInstanceHrid, updatedInstance.getHrid());
+      testContext.assertFalse(updatedInstance.getSubjects().isEmpty());
       async.complete();
     });
 
@@ -207,7 +215,6 @@ public class MarcInstanceSharingHandlerImplTest {
       .thenReturn(Future.succeededFuture(links));
 
     doReturn(Future.succeededFuture(instanceId)).when(marcHandler).deleteSourceRecordByRecordId(any(), any(), any(), any());
-    when(instance.getJsonForStorage()).thenReturn((JsonObject) Json.decodeValue(recordJsonWithLinkedAuthorities));
     when(instance.getHrid()).thenReturn(targetInstanceHrid);
     when(instanceOperationsHelper.updateInstance(any(), any())).thenReturn(Future.succeededFuture());
     when(instanceOperationsHelper.getInstanceById(any(), any())).thenReturn(Future.succeededFuture(instance));
@@ -331,7 +338,6 @@ public class MarcInstanceSharingHandlerImplTest {
       .thenReturn(Future.succeededFuture(links));
 
     doReturn(Future.succeededFuture(instanceId)).when(marcHandler).deleteSourceRecordByRecordId(any(), any(), any(), any());
-    when(instance.getJsonForStorage()).thenReturn((JsonObject) Json.decodeValue(recordJsonWithLinkedAuthorities));
     when(instance.getHrid()).thenReturn(targetInstanceHrid);
     when(instanceOperationsHelper.updateInstance(any(), any())).thenReturn(Future.succeededFuture());
     when(instanceOperationsHelper.getInstanceById(any(), any())).thenReturn(Future.succeededFuture(instance));
@@ -405,7 +411,6 @@ public class MarcInstanceSharingHandlerImplTest {
       .thenReturn(Future.succeededFuture(links));
 
     doReturn(Future.succeededFuture(instanceId)).when(marcHandler).deleteSourceRecordByRecordId(any(), any(), any(), any());
-    when(instance.getJsonForStorage()).thenReturn((JsonObject) Json.decodeValue(recordJsonWithLinkedAuthorities));
     when(instance.getHrid()).thenReturn(targetInstanceHrid);
     when(instanceOperationsHelper.updateInstance(any(), any())).thenReturn(Future.succeededFuture());
     when(instanceOperationsHelper.getInstanceById(any(), any())).thenReturn(Future.succeededFuture(instance));
