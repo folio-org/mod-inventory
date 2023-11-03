@@ -154,9 +154,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
               });
           }
           CompositeFuture.all(updatedHoldingsRecordFutures)
-            .onSuccess(ar -> {
-              processResults(dataImportEventPayload, updatedHoldingsRecord, expiredHoldings, future, holdingsRecordCollection, errors);
-            })
+            .onSuccess(ar -> processResults(dataImportEventPayload, updatedHoldingsRecord, expiredHoldings, future, holdingsRecordCollection, errors))
             .onFailure(future::completeExceptionally);
         })
         .onFailure(e -> {
