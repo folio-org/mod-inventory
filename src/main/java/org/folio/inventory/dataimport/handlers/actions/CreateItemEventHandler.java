@@ -239,7 +239,7 @@ public class CreateItemEventHandler implements EventHandler {
   private JsonArray processMappingResult(DataImportEventPayload dataImportEventPayload, String deduplicationItemId) {
     JsonArray items = new JsonArray(dataImportEventPayload.getContext().get(ITEM.value()));
     JsonArray mappedItems = new JsonArray();
-    JsonArray holdingsIdentifiers = new JsonArray(dataImportEventPayload.getContext().remove(HOLDING_IDENTIFIERS));
+    JsonArray holdingsIdentifiers = getHoldingsIdentifiers(dataImportEventPayload);
     String holdingsAsString = dataImportEventPayload.getContext().get(EntityType.HOLDINGS.value());
 
     for (int i = 0; i < items.size(); i++) {
@@ -256,6 +256,13 @@ public class CreateItemEventHandler implements EventHandler {
       itemAsJson.put(ITEM_ID_FIELD, (i == 0) ? deduplicationItemId : UUID.randomUUID().toString());
     }
     return mappedItems;
+  }
+
+  private static JsonArray getHoldingsIdentifiers(DataImportEventPayload dataImportEventPayload) {
+    if (dataImportEventPayload.getContext().containsKey(HOLDING_IDENTIFIERS)) {
+      return new JsonArray(dataImportEventPayload.getContext().remove(HOLDING_IDENTIFIERS));
+    }
+    return new JsonArray();
   }
 
   @Override
