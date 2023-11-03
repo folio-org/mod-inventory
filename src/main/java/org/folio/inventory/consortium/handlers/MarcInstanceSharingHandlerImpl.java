@@ -81,7 +81,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
                   instanceOperations.getInstanceById(instanceId, target))
                 .compose(targetInstance -> {
                   // Update JSON instance to include SOURCE=CONSORTIUM-MARC
-                  JsonObject jsonInstanceToPublish = instance.getJsonForStorage();
+                  JsonObject jsonInstanceToPublish = new JsonObject(instance.getJsonForStorage().encode());
                   jsonInstanceToPublish.put(SOURCE, CONSORTIUM_MARC.getValue());
                   jsonInstanceToPublish.put(HRID_KEY, targetInstance.getHrid());
                   // Update instance in sourceInstanceCollection
