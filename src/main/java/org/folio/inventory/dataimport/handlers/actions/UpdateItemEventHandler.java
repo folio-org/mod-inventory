@@ -176,7 +176,7 @@ public class UpdateItemEventHandler implements EventHandler {
 
               Item itemToUpdate = ItemUtil.jsonToItem(mappedItemAsJson);
               verifyItemBarcodeUniqueness(itemToUpdate, itemCollection, updatePromise, errors)
-                .compose(v -> updateItemAndRetryIfOLExists(itemToUpdate, itemCollection, dataImportEventPayload, updatePromise, errors, expiredItems))
+                .compose(v -> updateItemAndRetryIfOLExists(itemToUpdate, itemCollection, updatePromise, errors, expiredItems))
                 .onSuccess(updatedItem -> {
                   if (isProtectedStatusChanged.get()) {
                     String msg = format(STATUS_UPDATE_ERROR_MSG, oldItemStatuses.get(updatedItem.getId()), newItemStatus);
@@ -195,22 +195,7 @@ public class UpdateItemEventHandler implements EventHandler {
             }
           }
           CompositeFuture.all(updatedItemsRecordFutures).onComplete(ar -> {
-            OlItemAccumulativeResults olAccumulativeResults = buildOLAccumulativeResults(dataImportEventPayload);
-            olAccumulativeResults.getResultedSuccessItems().addAll(getItemsMappedToJsonArray(updatedItemEntities));
-            if (!expiredItems.isEmpty()) {
-              processOLError(dataImportEventPayload, future, itemCollection, expiredItems, errors, olAccumulativeResults);
-              String errorsAsStringJson = formatErrorsAsString(errors, olAccumulativeResults.getResultedErrorItems());
-              if (!olAccumulativeResults.getResultedErrorItems().isEmpty()) {
-                fillPayloadAndClearLists(dataImportEventPayload, errorsAsStringJson, future, olAccumulativeResults);
-              }
-            } else {
-              String errorsAsStringJson = formatErrorsAsString(errors, olAccumulativeResults.getResultedErrorItems());
-              if (!olAccumulativeResults.getResultedSuccessItems().isEmpty() || errors.isEmpty()) {
-                fillPayloadAndClearLists(dataImportEventPayload, errorsAsStringJson, future, olAccumulativeResults);
-              } else {
-                future.completeExceptionally(new EventProcessingException(errorsAsStringJson));
-              }
-            }
+            processResults(dataImportEventPayload, updatedItemEntities, expiredItems, future, itemCollection, errors);
             dataImportEventPayload.getContext().remove(TEMPORARY_MULTIPLE_HOLDINGS_FIELD);
           });
         })
@@ -226,6 +211,25 @@ public class UpdateItemEventHandler implements EventHandler {
       dataImportEventPayload.getContext().remove(TEMPORARY_MULTIPLE_HOLDINGS_FIELD);
     }
     return future;
+  }
+
+  private void processResults(DataImportEventPayload dataImportEventPayload, List<Item> updatedItemEntities, List<Item> expiredItems, CompletableFuture<DataImportEventPayload> future, ItemCollection itemCollection, List<PartialError> errors) {
+    OlItemAccumulativeResults olAccumulativeResults = buildOLAccumulativeResults(dataImportEventPayload);
+    olAccumulativeResults.getResultedSuccessItems().addAll(getItemsMappedToJsonArray(updatedItemEntities));
+    if (!expiredItems.isEmpty()) {
+      processOLError(dataImportEventPayload, future, itemCollection, expiredItems, errors, olAccumulativeResults);
+      String errorsAsStringJson = formatErrorsAsString(errors, olAccumulativeResults.getResultedErrorItems());
+      if (!olAccumulativeResults.getResultedErrorItems().isEmpty()) {
+        fillPayloadAndClearLists(dataImportEventPayload, errorsAsStringJson, future, olAccumulativeResults);
+      }
+    } else {
+      String errorsAsStringJson = formatErrorsAsString(errors, olAccumulativeResults.getResultedErrorItems());
+      if (!olAccumulativeResults.getResultedSuccessItems().isEmpty() || errors.isEmpty()) {
+        fillPayloadAndClearLists(dataImportEventPayload, errorsAsStringJson, future, olAccumulativeResults);
+      } else {
+        future.completeExceptionally(new EventProcessingException(errorsAsStringJson));
+      }
+    }
   }
 
   private static JsonObject getItemAsJsonWithProperFields(JsonObject item) {
@@ -374,16 +378,14 @@ public class UpdateItemEventHandler implements EventHandler {
     return promise.future();
   }
 
-  private Future<Item> updateItemAndRetryIfOLExists(Item item, ItemCollection itemCollection, DataImportEventPayload eventPayload, Promise<Void> updatePromise, List<PartialError> errors, List<Item> expiredItems) {
+  private Future<Item> updateItemAndRetryIfOLExists(Item item, ItemCollection itemCollection, Promise<Void> updatePromise, List<PartialError> errors, List<Item> expiredItems) {
     Promise<Item> promise = Promise.promise();
     item.getCirculationNotes().forEach(note -> note
       .withId(UUID.randomUUID().toString())
       .withSource(null)
       .withDate(dateTimeFormatter.format(ZonedDateTime.now())));
 
-    itemCollection.update(item, success -> {
-        promise.complete(item);
-      },
+    itemCollection.update(item, success -> promise.complete(item),
       failure -> {
         if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
           expiredItems.add(item);
