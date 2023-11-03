@@ -154,24 +154,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
               });
           }
           CompositeFuture.all(updatedHoldingsRecordFutures)
-            .onSuccess(ar -> {
-              OlHoldingsAccumulativeResults olAccumulativeResults = buildOLAccumulativeResults(dataImportEventPayload);
-              olAccumulativeResults.getResultedSuccessHoldings().addAll(updatedHoldingsRecord);
-              if (!expiredHoldings.isEmpty()) {
-                processOLError(dataImportEventPayload, future, holdingsRecordCollection, expiredHoldings, errors, olAccumulativeResults);
-                String errorsAsStringJson = formatErrorsAsString(errors, olAccumulativeResults.getResultedErrorHoldings());
-                if (!olAccumulativeResults.getResultedErrorHoldings().isEmpty()) {
-                  fillPayloadAndClearLists(dataImportEventPayload, errorsAsStringJson, future, olAccumulativeResults);
-                }
-              } else {
-                String errorsAsStringJson = formatErrorsAsString(errors, olAccumulativeResults.getResultedErrorHoldings());
-                if (!olAccumulativeResults.getResultedSuccessHoldings().isEmpty() || errors.isEmpty()) {
-                  fillPayloadAndClearLists(dataImportEventPayload, errorsAsStringJson, future, olAccumulativeResults);
-                } else {
-                  future.completeExceptionally(new EventProcessingException(errorsAsStringJson));
-                }
-              }
-            })
+            .onSuccess(ar -> processResults(dataImportEventPayload, updatedHoldingsRecord, expiredHoldings, future, holdingsRecordCollection, errors))
             .onFailure(future::completeExceptionally);
         })
         .onFailure(e -> {
@@ -183,6 +166,25 @@ public class UpdateHoldingEventHandler implements EventHandler {
       future.completeExceptionally(e);
     }
     return future;
+  }
+
+  private void processResults(DataImportEventPayload dataImportEventPayload, List<HoldingsRecord> updatedHoldingsRecord, List<HoldingsRecord> expiredHoldings, CompletableFuture<DataImportEventPayload> future, HoldingsRecordCollection holdingsRecordCollection, List<PartialError> errors) {
+    OlHoldingsAccumulativeResults olAccumulativeResults = buildOLAccumulativeResults(dataImportEventPayload);
+    olAccumulativeResults.getResultedSuccessHoldings().addAll(updatedHoldingsRecord);
+    if (!expiredHoldings.isEmpty()) {
+      processOLError(dataImportEventPayload, future, holdingsRecordCollection, expiredHoldings, errors, olAccumulativeResults);
+      String errorsAsStringJson = formatErrorsAsString(errors, olAccumulativeResults.getResultedErrorHoldings());
+      if (!olAccumulativeResults.getResultedErrorHoldings().isEmpty()) {
+        fillPayloadAndClearLists(dataImportEventPayload, errorsAsStringJson, future, olAccumulativeResults);
+      }
+    } else {
+      String errorsAsStringJson = formatErrorsAsString(errors, olAccumulativeResults.getResultedErrorHoldings());
+      if (!olAccumulativeResults.getResultedSuccessHoldings().isEmpty() || errors.isEmpty()) {
+        fillPayloadAndClearLists(dataImportEventPayload, errorsAsStringJson, future, olAccumulativeResults);
+      } else {
+        future.completeExceptionally(new EventProcessingException(errorsAsStringJson));
+      }
+    }
   }
 
   private static void convertHoldings(DataImportEventPayload dataImportEventPayload) {
@@ -267,6 +269,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
       }
       olAccumulativeResults.getResultedErrorHoldings().addAll(errors);
       dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
+      future.complete(dataImportEventPayload);
     }
   }
 
