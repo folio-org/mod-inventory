@@ -179,7 +179,7 @@ public class DataImportKafkaHandlerTest {
     EventHandler mockedEventHandler = mock(EventHandler.class);
     when(mockedEventHandler.isEligible(any(DataImportEventPayload.class))).thenReturn(true);
     when(mockedEventHandler.handle(any(DataImportEventPayload.class)))
-      .thenReturn(CompletableFuture.completedFuture(new DataImportEventPayload()));
+      .thenReturn(CompletableFuture.completedFuture(new DataImportEventPayload().withContext(new HashMap<>(Map.of("TEST_ENTITY_KEY", "TEST_ENTITY_VALUE")))));
     EventManager.registerEventHandler(mockedEventHandler);
 
     // when
