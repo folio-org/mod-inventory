@@ -267,6 +267,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
       }
       olAccumulativeResults.getResultedErrorHoldings().addAll(errors);
       dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
+      future.complete(dataImportEventPayload);
     }
   }
 

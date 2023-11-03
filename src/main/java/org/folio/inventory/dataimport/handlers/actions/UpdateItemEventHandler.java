@@ -423,6 +423,7 @@ public class UpdateItemEventHandler implements EventHandler {
       }
       olAccumulativeResults.getResultedErrorItems().addAll(errors);
       dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
+      future.complete(dataImportEventPayload);
     }
   }
 
