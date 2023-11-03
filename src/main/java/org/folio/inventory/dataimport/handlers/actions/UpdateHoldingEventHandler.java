@@ -20,6 +20,7 @@ import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.entities.PartialError;
 import org.folio.inventory.domain.HoldingsRecordCollection;
+import org.folio.inventory.dataimport.entities.OlHoldingsAccumulativeResults;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.ItemUtil;
@@ -73,11 +74,10 @@ public class UpdateHoldingEventHandler implements EventHandler {
   private static final String CANNOT_GET_ACTUAL_ITEM_MESSAGE = "Cannot get actual Item after successfully updating holdings, by ITEM id: '%s' - '%s', status code '%s'";
   private static final String BLANK = "";
   private static final String ERRORS = "ERRORS";
+  private static final String OL_ACCUMULATIVE_RESULTS = "OL_ACCUMULATIVE_RESULTS";
   private final Storage storage;
   private final MappingMetadataCache mappingMetadataCache;
   boolean isPayloadConstructed = false;
-  private final List<PartialError> resultedErrorHoldings = new ArrayList<>();
-  private final List<HoldingsRecord> resultedSuccessHoldings = new ArrayList<>();
 
   public UpdateHoldingEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache) {
     this.storage = storage;
@@ -155,17 +155,18 @@ public class UpdateHoldingEventHandler implements EventHandler {
           }
           CompositeFuture.all(updatedHoldingsRecordFutures)
             .onSuccess(ar -> {
-              resultedSuccessHoldings.addAll(updatedHoldingsRecord);
+              OlHoldingsAccumulativeResults olAccumulativeResults = buildOLAccumulativeResults(dataImportEventPayload);
+              olAccumulativeResults.getResultedSuccessHoldings().addAll(updatedHoldingsRecord);
               if (!expiredHoldings.isEmpty()) {
-                processOLError(dataImportEventPayload, future, holdingsRecordCollection, expiredHoldings, errors);
-                String errorsAsStringJson = formatErrorsAsString(errors);
-                if (!resultedErrorHoldings.isEmpty()) {
-                  fillPayloadAndClearLists(dataImportEventPayload, errorsAsStringJson, future);
+                processOLError(dataImportEventPayload, future, holdingsRecordCollection, expiredHoldings, errors, olAccumulativeResults);
+                String errorsAsStringJson = formatErrorsAsString(errors, olAccumulativeResults.getResultedErrorHoldings());
+                if (!olAccumulativeResults.getResultedErrorHoldings().isEmpty()) {
+                  fillPayloadAndClearLists(dataImportEventPayload, errorsAsStringJson, future, olAccumulativeResults);
                 }
               } else {
-                String errorsAsStringJson = formatErrorsAsString(errors);
-                if (!resultedSuccessHoldings.isEmpty() || errors.isEmpty()) {
-                  fillPayloadAndClearLists(dataImportEventPayload, errorsAsStringJson, future);
+                String errorsAsStringJson = formatErrorsAsString(errors, olAccumulativeResults.getResultedErrorHoldings());
+                if (!olAccumulativeResults.getResultedSuccessHoldings().isEmpty() || errors.isEmpty()) {
+                  fillPayloadAndClearLists(dataImportEventPayload, errorsAsStringJson, future, olAccumulativeResults);
                 } else {
                   future.completeExceptionally(new EventProcessingException(errorsAsStringJson));
                 }
@@ -242,19 +243,19 @@ public class UpdateHoldingEventHandler implements EventHandler {
     dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
   }
 
-  private void processOLError(DataImportEventPayload dataImportEventPayload, CompletableFuture<DataImportEventPayload> future, HoldingsRecordCollection holdingsRecords, List<HoldingsRecord> expiredHoldings, List<PartialError> errors) {
+  private void processOLError(DataImportEventPayload dataImportEventPayload, CompletableFuture<DataImportEventPayload> future, HoldingsRecordCollection holdingsRecords, List<HoldingsRecord> expiredHoldings, List<PartialError> errors, OlHoldingsAccumulativeResults olAccumulativeResults) {
     int currentRetryNumber = dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER) == null ? 0 : Integer.parseInt(dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER));
     if (currentRetryNumber < MAX_RETRIES_COUNT) {
       dataImportEventPayload.getContext().put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
       LOGGER.warn("processOLError:: Error updating Holdings. Expired Holdings: '{} '.Current retry number = '{}'. Retry UpdateHoldingEventHandler handler...", expiredHoldings, currentRetryNumber);
       getActualHoldingsList(expiredHoldings, holdingsRecords)
-        .onSuccess(actualHoldingsList -> prepareDataAndReInvokeCurrentHandler(dataImportEventPayload, future, actualHoldingsList, errors))
+        .onSuccess(actualHoldingsList -> prepareDataAndReInvokeCurrentHandler(dataImportEventPayload, future, actualHoldingsList, errors, olAccumulativeResults))
         .onFailure(e -> {
           String errMessage = format("Cannot get actual Holdings.Expired Holdings: '%s' for jobExecutionId '%s'. Error: %s ", expiredHoldings, dataImportEventPayload.getJobExecutionId(), e.getCause());
           for (HoldingsRecord expiredHolding : expiredHoldings) {
             errors.add(new PartialError(expiredHolding.getId() != null ? expiredHolding.getId() : BLANK, errMessage));
           }
-          resultedErrorHoldings.addAll(errors);
+          olAccumulativeResults.getResultedErrorHoldings().addAll(errors);
           dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
           future.complete(dataImportEventPayload);
         });
@@ -264,12 +265,12 @@ public class UpdateHoldingEventHandler implements EventHandler {
       for (HoldingsRecord expiredHolding : expiredHoldings) {
         errors.add(new PartialError(expiredHolding.getId() != null ? expiredHolding.getId() : BLANK, errMessage));
       }
-      resultedErrorHoldings.addAll(errors);
+      olAccumulativeResults.getResultedErrorHoldings().addAll(errors);
       dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
     }
   }
 
-  private void prepareDataAndReInvokeCurrentHandler(DataImportEventPayload dataImportEventPayload, CompletableFuture<DataImportEventPayload> future, List<HoldingsRecord> actualHoldings, List<PartialError> errors) {
+  private void prepareDataAndReInvokeCurrentHandler(DataImportEventPayload dataImportEventPayload, CompletableFuture<DataImportEventPayload> future, List<HoldingsRecord> actualHoldings, List<PartialError> errors, OlHoldingsAccumulativeResults olAccumulativeResults) {
     dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encode(actualHoldings));
     dataImportEventPayload.getEventsChain().remove(dataImportEventPayload.getContext().get(CURRENT_EVENT_TYPE_PROPERTY));
     try {
@@ -280,8 +281,10 @@ public class UpdateHoldingEventHandler implements EventHandler {
     dataImportEventPayload.getContext().remove(CURRENT_EVENT_TYPE_PROPERTY);
     dataImportEventPayload.getContext().remove(CURRENT_NODE_PROPERTY);
     dataImportEventPayload.getContext().remove(CURRENT_HOLDING_PROPERTY);
-    resultedErrorHoldings.addAll(errors);
+    olAccumulativeResults.getResultedErrorHoldings().addAll(errors);
+    dataImportEventPayload.getContext().put(OL_ACCUMULATIVE_RESULTS, Json.encode(olAccumulativeResults));
     handle(dataImportEventPayload).whenComplete((res, e) -> {
+      actualizeOLAccumulativeResults(olAccumulativeResults, res);
       future.complete(res);
     });
   }
@@ -346,20 +349,36 @@ public class UpdateHoldingEventHandler implements EventHandler {
     return holdings.stream().map(HoldingsRecord::getId).collect(Collectors.joining(" OR "));
   }
 
-  private void fillPayloadAndClearLists(DataImportEventPayload dataImportEventPayload, String errorsAsStringJson, CompletableFuture<DataImportEventPayload> future) {
-    dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encode(resultedSuccessHoldings));
+  private void fillPayloadAndClearLists(DataImportEventPayload dataImportEventPayload, String errorsAsStringJson, CompletableFuture<DataImportEventPayload> future, OlHoldingsAccumulativeResults olAccumulativeResults) {
+    dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encode(olAccumulativeResults.getResultedSuccessHoldings()));
     dataImportEventPayload.getContext().put(ERRORS, errorsAsStringJson);
-    resultedSuccessHoldings.clear();
-    resultedErrorHoldings.clear();
     dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
+    dataImportEventPayload.getContext().put(OL_ACCUMULATIVE_RESULTS, Json.encode(olAccumulativeResults));
+    olAccumulativeResults.cleanup();
     future.complete(dataImportEventPayload);
   }
 
-  private String formatErrorsAsString(List<PartialError> errors) {
+  private String formatErrorsAsString(List<PartialError> errors, List<PartialError> resultedErrorHoldings) {
     String errorsAsStringJson = Json.encode(errors);
     if (!resultedErrorHoldings.isEmpty()) {
       errorsAsStringJson = Json.encode(resultedErrorHoldings);
     }
     return errorsAsStringJson;
+  }
+
+  private OlHoldingsAccumulativeResults buildOLAccumulativeResults(DataImportEventPayload dataImportEventPayload) {
+    OlHoldingsAccumulativeResults olAccumulativeResults;
+    if (dataImportEventPayload.getContext().get(OL_ACCUMULATIVE_RESULTS) == null) {
+      olAccumulativeResults = new OlHoldingsAccumulativeResults();
+    } else {
+      olAccumulativeResults = Json.decodeValue(dataImportEventPayload.getContext().get(OL_ACCUMULATIVE_RESULTS), OlHoldingsAccumulativeResults.class);
+    }
+    return olAccumulativeResults;
+  }
+
+  private void actualizeOLAccumulativeResults(OlHoldingsAccumulativeResults olAccumulativeResults, DataImportEventPayload res) {
+    OlHoldingsAccumulativeResults actualOlAccumulativeResults = Json.decodeValue(res.getContext().get(OL_ACCUMULATIVE_RESULTS), OlHoldingsAccumulativeResults.class);
+    olAccumulativeResults.setResultedErrorHoldings(actualOlAccumulativeResults.getResultedErrorHoldings());
+    olAccumulativeResults.setResultedSuccessHoldings(actualOlAccumulativeResults.getResultedSuccessHoldings());
   }
 }

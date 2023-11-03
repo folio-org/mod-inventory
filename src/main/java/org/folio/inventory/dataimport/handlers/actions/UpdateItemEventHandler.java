@@ -20,6 +20,7 @@ import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.entities.PartialError;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.HoldingsRecordCollection;
+import org.folio.inventory.dataimport.entities.OlItemAccumulativeResults;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.ItemStatusName;
@@ -91,6 +92,8 @@ public class UpdateItemEventHandler implements EventHandler {
   private static final String CURRENT_EVENT_TYPE_PROPERTY = "CURRENT_EVENT_TYPE";
   private static final String CURRENT_NODE_PROPERTY = "CURRENT_NODE";
   private static final String ERRORS = "ERRORS";
+  private static final String OL_ACCUMULATIVE_RESULTS = "OL_ACCUMULATIVE_RESULTS";
+
   private static final String BLANK = "";
   private static final String BLANK_JSON_ARRAY = "[]";
   private static final String MULTIPLE_HOLDINGS_FIELD = "MULTIPLE_HOLDINGS_FIELD";
@@ -101,9 +104,6 @@ public class UpdateItemEventHandler implements EventHandler {
 
   private final Storage storage;
   private final MappingMetadataCache mappingMetadataCache;
-
-  private final List<PartialError> resultedErrorItems = new ArrayList<>();
-  private final List<Item> resultedSuccessItems = new ArrayList<>();
 
   public UpdateItemEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache) {
     this.storage = storage;
@@ -195,17 +195,18 @@ public class UpdateItemEventHandler implements EventHandler {
             }
           }
           CompositeFuture.all(updatedItemsRecordFutures).onComplete(ar -> {
-            resultedSuccessItems.addAll(updatedItemEntities);
+            OlItemAccumulativeResults olAccumulativeResults = buildOLAccumulativeResults(dataImportEventPayload);
+            olAccumulativeResults.getResultedSuccessItems().addAll(updatedItemEntities);
             if (!expiredItems.isEmpty()) {
-              processOLError(dataImportEventPayload, future, itemCollection, expiredItems, errors);
-              String errorsAsStringJson = formatErrorsAsString(errors);
-              if (!resultedErrorItems.isEmpty()) {
-                fillPayloadAndClearLists(dataImportEventPayload, errorsAsStringJson, future);
+              processOLError(dataImportEventPayload, future, itemCollection, expiredItems, errors, olAccumulativeResults);
+              String errorsAsStringJson = formatErrorsAsString(errors, olAccumulativeResults.getResultedErrorItems());
+              if (!olAccumulativeResults.getResultedErrorItems().isEmpty()) {
+                fillPayloadAndClearLists(dataImportEventPayload, errorsAsStringJson, future, olAccumulativeResults);
               }
             } else {
-              String errorsAsStringJson = formatErrorsAsString(errors);
-              if (!resultedSuccessItems.isEmpty() || errors.isEmpty()) {
-                fillPayloadAndClearLists(dataImportEventPayload, errorsAsStringJson, future);
+              String errorsAsStringJson = formatErrorsAsString(errors, olAccumulativeResults.getResultedErrorItems());
+              if (!olAccumulativeResults.getResultedSuccessItems().isEmpty() || errors.isEmpty()) {
+                fillPayloadAndClearLists(dataImportEventPayload, errorsAsStringJson, future, olAccumulativeResults);
               } else {
                 future.completeExceptionally(new EventProcessingException(errorsAsStringJson));
               }
@@ -397,7 +398,7 @@ public class UpdateItemEventHandler implements EventHandler {
     return promise.future();
   }
 
-  private void processOLError(DataImportEventPayload dataImportEventPayload, CompletableFuture<DataImportEventPayload> future, ItemCollection itemCollection, List<Item> expiredItems, List<PartialError> errors) {
+  private void processOLError(DataImportEventPayload dataImportEventPayload, CompletableFuture<DataImportEventPayload> future, ItemCollection itemCollection, List<Item> expiredItems, List<PartialError> errors, OlItemAccumulativeResults olAccumulativeResults) {
     int currentRetryNumber = dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER) == null ? 0 : Integer.parseInt(dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER));
 
 
@@ -405,28 +406,28 @@ public class UpdateItemEventHandler implements EventHandler {
       dataImportEventPayload.getContext().put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
       LOGGER.warn("processOLError:: Error updating Items. Expired Items: '{} '.Current retry number = '{}'. Retry UpdateItemEventHandler handler...", expiredItems, currentRetryNumber);
       getActualItemsList(expiredItems, itemCollection)
-        .onSuccess(actualItemsList -> prepareDataAndReInvokeCurrentHandler(dataImportEventPayload, future, actualItemsList, errors))
+        .onSuccess(actualItemsList -> prepareDataAndReInvokeCurrentHandler(dataImportEventPayload, future, actualItemsList, errors, olAccumulativeResults))
         .onFailure(e -> {
           String errMessage = format("Cannot get actual Items.Expired Items: '%s' for jobExecutionId '%s'. Error: %s ", expiredItems, dataImportEventPayload.getJobExecutionId(), e.getCause());
-          for (Item expiredHolding : expiredItems) {
-            errors.add(new PartialError(expiredHolding.getId() != null ? expiredHolding.getId() : BLANK, errMessage));
+          for (Item expiredItem : expiredItems) {
+            errors.add(new PartialError(expiredItem.getId() != null ? expiredItem.getId() : BLANK, errMessage));
           }
-          resultedErrorItems.addAll(errors);
+          olAccumulativeResults.getResultedErrorItems().addAll(errors);
           dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
           future.complete(dataImportEventPayload);
         });
     } else {
       String errMessage = format("Current retry number %s exceeded or equal given number %s for the Item update for jobExecutionId '%s' ", MAX_RETRIES_COUNT, currentRetryNumber, dataImportEventPayload.getJobExecutionId());
       LOGGER.warn("processOLError:: " + errMessage);
-      for (Item expiredHolding : expiredItems) {
-        errors.add(new PartialError(expiredHolding.getId() != null ? expiredHolding.getId() : BLANK, errMessage));
+      for (Item expiredItem : expiredItems) {
+        errors.add(new PartialError(expiredItem.getId() != null ? expiredItem.getId() : BLANK, errMessage));
       }
-      resultedErrorItems.addAll(errors);
+      olAccumulativeResults.getResultedErrorItems().addAll(errors);
       dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
     }
   }
 
-  private void prepareDataAndReInvokeCurrentHandler(DataImportEventPayload dataImportEventPayload, CompletableFuture<DataImportEventPayload> future, List<Item> actualItems, List<PartialError> errors) {
+  private void prepareDataAndReInvokeCurrentHandler(DataImportEventPayload dataImportEventPayload, CompletableFuture<DataImportEventPayload> future, List<Item> actualItems, List<PartialError> errors, OlItemAccumulativeResults olAccumulativeResults) {
     JsonArray resultedItems = convertItemListAsJsonArray(actualItems);
     dataImportEventPayload.getContext().put(ITEM.value(), Json.encode(resultedItems));
     dataImportEventPayload.getEventsChain().remove(dataImportEventPayload.getContext().get(CURRENT_EVENT_TYPE_PROPERTY));
@@ -439,8 +440,10 @@ public class UpdateItemEventHandler implements EventHandler {
     dataImportEventPayload.getContext().remove(CURRENT_NODE_PROPERTY);
     dataImportEventPayload.getContext().put(MULTIPLE_HOLDINGS_FIELD, dataImportEventPayload.getContext().get(TEMPORARY_MULTIPLE_HOLDINGS_FIELD));
     dataImportEventPayload.getContext().remove(TEMPORARY_MULTIPLE_HOLDINGS_FIELD);
-    resultedErrorItems.addAll(errors);
+    olAccumulativeResults.getResultedErrorItems().addAll(errors);
+    dataImportEventPayload.getContext().put(OL_ACCUMULATIVE_RESULTS, Json.encode(olAccumulativeResults));
     handle(dataImportEventPayload).whenComplete((res, e) -> {
+      actualizeOLAccumulativeResults(olAccumulativeResults, res);
       future.complete(res);
     });
   }
@@ -472,20 +475,36 @@ public class UpdateItemEventHandler implements EventHandler {
     return items.stream().map(Item::getId).collect(Collectors.joining(" OR "));
   }
 
-  private void fillPayloadAndClearLists(DataImportEventPayload dataImportEventPayload, String errorsAsStringJson, CompletableFuture<DataImportEventPayload> future) {
-    dataImportEventPayload.getContext().put(ActionProfile.FolioRecord.ITEM.value(), getItemsMappedToJsonArrayAsString(resultedSuccessItems));
+  private void fillPayloadAndClearLists(DataImportEventPayload dataImportEventPayload, String errorsAsStringJson, CompletableFuture<DataImportEventPayload> future, OlItemAccumulativeResults olAccumulativeResults) {
+    dataImportEventPayload.getContext().put(ActionProfile.FolioRecord.ITEM.value(), getItemsMappedToJsonArrayAsString(olAccumulativeResults.getResultedSuccessItems()));
     dataImportEventPayload.getContext().put(ERRORS, errorsAsStringJson);
-    resultedSuccessItems.clear();
-    resultedErrorItems.clear();
     dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
+    dataImportEventPayload.getContext().put(OL_ACCUMULATIVE_RESULTS, Json.encode(olAccumulativeResults));
+    olAccumulativeResults.cleanup();
     future.complete(dataImportEventPayload);
   }
 
-  private String formatErrorsAsString(List<PartialError> errors) {
+  private String formatErrorsAsString(List<PartialError> errors, List<PartialError> resultedErrorItems) {
     String errorsAsStringJson = Json.encode(errors);
     if (!resultedErrorItems.isEmpty()) {
       errorsAsStringJson = Json.encode(resultedErrorItems);
     }
     return errorsAsStringJson;
+  }
+
+  private OlItemAccumulativeResults buildOLAccumulativeResults(DataImportEventPayload dataImportEventPayload) {
+    OlItemAccumulativeResults olAccumulativeResults;
+    if (dataImportEventPayload.getContext().get(OL_ACCUMULATIVE_RESULTS) == null) {
+      olAccumulativeResults = new OlItemAccumulativeResults();
+    } else {
+      olAccumulativeResults = Json.decodeValue(dataImportEventPayload.getContext().get(OL_ACCUMULATIVE_RESULTS), OlItemAccumulativeResults.class);
+    }
+    return olAccumulativeResults;
+  }
+
+  private void actualizeOLAccumulativeResults(OlItemAccumulativeResults olAccumulativeResults, DataImportEventPayload res) {
+    OlItemAccumulativeResults actualOlAccumulativeResults = Json.decodeValue(res.getContext().get(OL_ACCUMULATIVE_RESULTS), OlItemAccumulativeResults.class);
+    olAccumulativeResults.setResultedErrorItems(actualOlAccumulativeResults.getResultedErrorItems());
+    olAccumulativeResults.setResultedSuccessItems(actualOlAccumulativeResults.getResultedSuccessItems());
   }
 }

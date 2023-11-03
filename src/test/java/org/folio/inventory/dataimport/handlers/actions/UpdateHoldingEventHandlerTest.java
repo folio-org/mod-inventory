@@ -46,6 +46,7 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -265,77 +266,57 @@ public class UpdateHoldingEventHandlerTest {
   public void shouldUpdateMultipleHoldingsOnOLRetryAndRemoveRetryCounterFromPayloadViaSeveralRuns() throws InterruptedException, ExecutionException, TimeoutException, UnsupportedEncodingException {
     Reader fakeReader = Mockito.mock(Reader.class);
 
-    String holdingId = UUID.randomUUID().toString();
-    String holdingId2 = UUID.randomUUID().toString();
-    String holdingId3 = UUID.randomUUID().toString();
-    String holdingId4 = UUID.randomUUID().toString();
-    String holdingId5 = UUID.randomUUID().toString();
-    String holdingId6 = UUID.randomUUID().toString();
-    String holdingId7 = UUID.randomUUID().toString();
-    String holdingId8 = UUID.randomUUID().toString();
-    String holdingId9 = UUID.randomUUID().toString();
-    String holdingId10 = UUID.randomUUID().toString();
+    // 10 holdingsIds
+    List<String> holdingsIds = new ArrayList<>();
+    for (int i = 0; i < 10; i++) {
+      holdingsIds.add(UUID.randomUUID().toString());
+    }
 
-    String hrid = UUID.randomUUID().toString();
-    String hrid2 = UUID.randomUUID().toString();
-    String hrid3 = UUID.randomUUID().toString();
-    String hrid4 = UUID.randomUUID().toString();
-    String hrid5 = UUID.randomUUID().toString();
-    String hrid6 = UUID.randomUUID().toString();
-    String hrid7 = UUID.randomUUID().toString();
-    String hrid8 = UUID.randomUUID().toString();
-    String hrid9 = UUID.randomUUID().toString();
-    String hrid10 = UUID.randomUUID().toString();
+    // 10 hrids for Holdings
+    List<String> holdingsHrids = new ArrayList<>();
+    for (int i = 0; i < 10; i++) {
+      holdingsHrids.add(UUID.randomUUID().toString());
+    }
 
-    String instanceId = String.valueOf(UUID.randomUUID());
-    String instanceId2 = String.valueOf(UUID.randomUUID());
-    String instanceId3 = String.valueOf(UUID.randomUUID());
-    String instanceId4 = String.valueOf(UUID.randomUUID());
-    String instanceId5 = String.valueOf(UUID.randomUUID());
-    String instanceId6 = String.valueOf(UUID.randomUUID());
-    String instanceId7 = String.valueOf(UUID.randomUUID());
-    String instanceId8 = String.valueOf(UUID.randomUUID());
-    String instanceId9 = String.valueOf(UUID.randomUUID());
-    String instanceId10 = String.valueOf(UUID.randomUUID());
+    // 10 instanceIds for Holdings
+    List<String> instanceIds = new ArrayList<>();
+    for (int i = 0; i < 10; i++) {
+      instanceIds.add(UUID.randomUUID().toString());
+    }
 
-    String permanentLocationId = UUID.randomUUID().toString();
-    String permanentLocationId2 = UUID.randomUUID().toString();
-    String permanentLocationId3 = UUID.randomUUID().toString();
-    String permanentLocationId4 = UUID.randomUUID().toString();
-    String permanentLocationId5 = UUID.randomUUID().toString();
-    String permanentLocationId6 = UUID.randomUUID().toString();
-    String permanentLocationId7 = UUID.randomUUID().toString();
-    String permanentLocationId8 = UUID.randomUUID().toString();
-    String permanentLocationId9 = UUID.randomUUID().toString();
-    String permanentLocationId10 = UUID.randomUUID().toString();
+    // 10 permanentLocationIds for Holdings
+    List<String> permLocationIds = new ArrayList<>();
+    for (int i = 0; i < 10; i++) {
+      permLocationIds.add(UUID.randomUUID().toString());
+    }
 
-
+    //actual Holdings which will returned as "actual" after optimistic locking errors
     HoldingsRecord actualHoldings = new HoldingsRecord()
-      .withId(holdingId)
-      .withHrid(hrid)
-      .withInstanceId(instanceId)
+      .withId(holdingsIds.get(0))
+      .withHrid(holdingsHrids.get(0))
+      .withInstanceId(instanceIds.get(0))
       .withPermanentLocationId(permanentLocationId)
       .withVersion(2);
 
     HoldingsRecord actualHoldings2 = new HoldingsRecord()
-      .withId(holdingId4)
-      .withHrid(hrid4)
-      .withInstanceId(instanceId4)
-      .withPermanentLocationId(permanentLocationId4)
+      .withId(holdingsIds.get(3))
+      .withHrid(holdingsHrids.get(3))
+      .withInstanceId(instanceIds.get(3))
+      .withPermanentLocationId(permLocationIds.get(3))
       .withVersion(2);
 
     HoldingsRecord actualHoldings3 = new HoldingsRecord()
-      .withId(holdingId5)
-      .withHrid(hrid5)
-      .withInstanceId(instanceId5)
-      .withPermanentLocationId(permanentLocationId5)
+      .withId(holdingsIds.get(4))
+      .withHrid(holdingsHrids.get(4))
+      .withInstanceId(instanceIds.get(4))
+      .withPermanentLocationId(permLocationIds.get(4))
       .withVersion(2);
 
     HoldingsRecord actualHoldings4 = new HoldingsRecord()
-      .withId(holdingId6)
-      .withHrid(hrid6)
-      .withInstanceId(instanceId6)
-      .withPermanentLocationId(permanentLocationId6)
+      .withId(holdingsIds.get(5))
+      .withHrid(holdingsHrids.get(5))
+      .withInstanceId(instanceIds.get(5))
+      .withPermanentLocationId(permLocationIds.get(5))
       .withVersion(2);
 
     when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
@@ -343,56 +324,57 @@ public class UpdateHoldingEventHandlerTest {
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
     when(storage.getItemCollection(any())).thenReturn(itemCollection);
 
+    //Real Holdings which will have specific behavior: successful, optimistic locking error (ol), failure by another reason.
     HoldingsRecord olHoldingsRecord1 = new HoldingsRecord()
-      .withId(holdingId)
-      .withInstanceId(instanceId)
-      .withHrid(hrid)
-      .withPermanentLocationId(permanentLocationId);
+      .withId(holdingsIds.get(0))
+      .withInstanceId(instanceIds.get(0))
+      .withHrid(holdingsHrids.get(0))
+      .withPermanentLocationId(permLocationIds.get(0));
     HoldingsRecord successfulHoldingsRecord2 = new HoldingsRecord()
-      .withId(holdingId2)
-      .withInstanceId(instanceId2)
-      .withHrid(hrid2)
-      .withPermanentLocationId(permanentLocationId2);
+      .withId(holdingsIds.get(1))
+      .withInstanceId(instanceIds.get(1))
+      .withHrid(holdingsHrids.get(1))
+      .withPermanentLocationId(permLocationIds.get(1));
     HoldingsRecord partialErrorHoldingsRecord3 = new HoldingsRecord()
-      .withId(holdingId3)
-      .withInstanceId(instanceId3)
-      .withHrid(hrid3)
-      .withPermanentLocationId(permanentLocationId3);
+      .withId(holdingsIds.get(2))
+      .withInstanceId(instanceIds.get(2))
+      .withHrid(holdingsHrids.get(2))
+      .withPermanentLocationId(permLocationIds.get(2));
     HoldingsRecord olHoldingsRecord4 = new HoldingsRecord()
-      .withId(holdingId4)
-      .withInstanceId(instanceId4)
-      .withHrid(hrid4)
-      .withPermanentLocationId(permanentLocationId4);
+      .withId(holdingsIds.get(3))
+      .withInstanceId(instanceIds.get(3))
+      .withHrid(holdingsHrids.get(3))
+      .withPermanentLocationId(permLocationIds.get(3));
     HoldingsRecord olHoldingsRecord5 = new HoldingsRecord()
-      .withId(holdingId5)
-      .withInstanceId(instanceId5)
-      .withHrid(hrid5)
-      .withPermanentLocationId(permanentLocationId5);
+      .withId(holdingsIds.get(4))
+      .withInstanceId(instanceIds.get(4))
+      .withHrid(holdingsHrids.get(4))
+      .withPermanentLocationId(permLocationIds.get(4));
     HoldingsRecord olHoldingsRecord6 = new HoldingsRecord()
-      .withId(holdingId6)
-      .withInstanceId(instanceId6)
-      .withHrid(hrid6)
-      .withPermanentLocationId(permanentLocationId6);
+      .withId(holdingsIds.get(5))
+      .withInstanceId(instanceIds.get(5))
+      .withHrid(holdingsHrids.get(5))
+      .withPermanentLocationId(permLocationIds.get(5));
     HoldingsRecord successfulHoldingsRecord7 = new HoldingsRecord()
-      .withId(holdingId7)
-      .withInstanceId(instanceId7)
-      .withHrid(hrid7)
-      .withPermanentLocationId(permanentLocationId7);
+      .withId(holdingsIds.get(6))
+      .withInstanceId(instanceIds.get(6))
+      .withHrid(holdingsHrids.get(6))
+      .withPermanentLocationId(permLocationIds.get(6));
     HoldingsRecord successfulHoldingsRecord8 = new HoldingsRecord()
-      .withId(holdingId8)
-      .withInstanceId(instanceId8)
-      .withHrid(hrid8)
-      .withPermanentLocationId(permanentLocationId8);
+      .withId(holdingsIds.get(7))
+      .withInstanceId(instanceIds.get(7))
+      .withHrid(holdingsHrids.get(7))
+      .withPermanentLocationId(permLocationIds.get(7));
     HoldingsRecord partialErrorHoldingsRecord9 = new HoldingsRecord()
-      .withId(holdingId9)
-      .withInstanceId(instanceId9)
-      .withHrid(hrid9)
-      .withPermanentLocationId(permanentLocationId9);
+      .withId(holdingsIds.get(8))
+      .withInstanceId(instanceIds.get(8))
+      .withHrid(holdingsHrids.get(8))
+      .withPermanentLocationId(permLocationIds.get(8));
     HoldingsRecord partialErrorHoldingsRecord10 = new HoldingsRecord()
-      .withId(holdingId10)
-      .withInstanceId(instanceId10)
-      .withHrid(hrid10)
-      .withPermanentLocationId(permanentLocationId10);
+      .withId(holdingsIds.get(9))
+      .withInstanceId(instanceIds.get(9))
+      .withHrid(holdingsHrids.get(9))
+      .withPermanentLocationId(permLocationIds.get(9  ));
     JsonArray holdingsList = new JsonArray();
     holdingsList.add(new JsonObject().put("holdings", olHoldingsRecord1));
     holdingsList.add(new JsonObject().put("holdings", successfulHoldingsRecord2));
@@ -405,9 +387,10 @@ public class UpdateHoldingEventHandlerTest {
     holdingsList.add(new JsonObject().put("holdings", partialErrorHoldingsRecord9));
     holdingsList.add(new JsonObject().put("holdings", partialErrorHoldingsRecord10));
 
+    // Provide behavior for the Holdings
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
-      failureHandler.accept(new Failure(format("Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", holdingId), 409));
+      failureHandler.accept(new Failure(format("Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", holdingsIds.get(0)), 409));
       return null;
     }).doAnswer(invocationOnMock -> {
         HoldingsRecord tmpHoldingsRecord = invocationOnMock.getArgument(0);
@@ -454,8 +437,8 @@ public class UpdateHoldingEventHandlerTest {
         Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
         failureHandler.accept(new Failure(format("Cannot update record %s not found", partialErrorHoldingsRecord10.getId()), 404));
         return null;
-      })// 10 tries. Next invocation will be on the second run 'handle()'-method.
-      .doAnswer(invocationOnMock -> {
+      })// 10 Holdings processed. Next iteration will be on the second run 'handle()'-method.
+    .doAnswer(invocationOnMock -> {
         HoldingsRecord tmpHoldingsRecord = invocationOnMock.getArgument(0);
         Consumer<Success<HoldingsRecord>> successHandler = invocationOnMock.getArgument(1);
         successHandler.accept(new Success<>(tmpHoldingsRecord));
@@ -468,7 +451,7 @@ public class UpdateHoldingEventHandlerTest {
       })
       .doAnswer(invocationOnMock -> {
         Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
-        failureHandler.accept(new Failure(format("Cannot update record %s not found", holdingId5), 404));
+        failureHandler.accept(new Failure(format("Cannot update record %s not found", holdingsIds.get(4)), 404));
         return null;
       })
       .doAnswer(invocationOnMock -> {
@@ -484,7 +467,7 @@ public class UpdateHoldingEventHandlerTest {
       Consumer<Success<MultipleRecords>> successHandler = invocationOnMock.getArgument(2);
       successHandler.accept(new Success<>(result));
       return null;
-    }).when(holdingsRecordsCollection).findByCql(Mockito.argThat(cql -> cql.equals(String.format("id==(%s OR %s OR %s OR %s)", holdingId, holdingId4, holdingId5, holdingId6))),
+    }).when(holdingsRecordsCollection).findByCql(Mockito.argThat(cql -> cql.equals(String.format("id==(%s OR %s OR %s OR %s)", holdingsIds.get(0), holdingsIds.get(3), holdingsIds.get(4), holdingsIds.get(5)))),
       any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
     MappingManager.registerReaderFactory(fakeReaderFactory);
@@ -533,7 +516,6 @@ public class UpdateHoldingEventHandlerTest {
     assertEquals(resultedErrorList.get(2).getError(), format("Cannot update record %s not found", partialErrorHoldingsRecord10.getId()));
     assertEquals(resultedErrorList.get(3).getError(), format("Cannot update record %s not found", olHoldingsRecord5.getId()));
     assertEquals(resultedErrorList.get(4).getError(), format("Current retry number %s exceeded or equal given number %s for the Holding update for jobExecutionId '%s' ", 1, 1, actualDataImportEventPayload.getJobExecutionId()));
-
 
     //Second run. We need it to verify that CURRENT_RETRY_NUMBER and all lists are cleared.
     JsonArray holdingsListSecondRun = new JsonArray();
@@ -591,7 +573,7 @@ public class UpdateHoldingEventHandlerTest {
       Consumer<Success<MultipleRecords>> successHandler = invocationOnMock.getArgument(2);
       successHandler.accept(new Success<>(result));
       return null;
-    }).when(holdingsRecordsCollection).findByCql(Mockito.argThat(cql -> cql.equals(String.format("id==(%s OR %s)", holdingId, holdingId4))),
+    }).when(holdingsRecordsCollection).findByCql(Mockito.argThat(cql -> cql.equals(String.format("id==(%s OR %s)", holdingsIds.get(0), holdingsIds.get(3)))),
       any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
     CompletableFuture<DataImportEventPayload> futureSecondRun = updateHoldingEventHandler.handle(dataImportEventPayloadSecondRun);
