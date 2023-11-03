@@ -1,5 +1,56 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpStatus;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.folio.ActionProfile;
+import org.folio.DataImportEventPayload;
+import org.folio.dbschema.ObjectMapperTool;
+import org.folio.inventory.common.Context;
+import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.entities.PartialError;
+import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
+import org.folio.inventory.domain.HoldingsRecordCollection;
+import org.folio.inventory.dataimport.entities.OlItemAccumulativeResults;
+import org.folio.inventory.domain.items.Item;
+import org.folio.inventory.domain.items.ItemCollection;
+import org.folio.inventory.domain.items.ItemStatusName;
+import org.folio.inventory.storage.Storage;
+import org.folio.inventory.support.CqlHelper;
+import org.folio.inventory.support.ItemUtil;
+import org.folio.inventory.support.JsonHelper;
+import org.folio.processing.events.services.handler.EventHandler;
+import org.folio.processing.exceptions.EventProcessingException;
+import org.folio.processing.mapping.MappingManager;
+import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
+import org.folio.processing.mapping.mapper.MappingContext;
+import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+
+import java.io.UnsupportedEncodingException;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
+
 import static java.lang.String.format;
 import static java.util.Objects.isNull;
 import static org.apache.commons.lang3.StringUtils.isBlank;
@@ -25,57 +76,6 @@ import static org.folio.rest.jaxrs.model.EntityType.ITEM;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
-import java.io.UnsupportedEncodingException;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import io.vertx.core.CompositeFuture;
-import io.vertx.core.json.JsonArray;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.http.HttpStatus;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.folio.ActionProfile;
-import org.folio.DataImportEventPayload;
-import org.folio.dbschema.ObjectMapperTool;
-import org.folio.inventory.common.Context;
-import org.folio.inventory.common.api.request.PagingParameters;
-import org.folio.inventory.dataimport.cache.MappingMetadataCache;
-import org.folio.inventory.dataimport.entities.PartialError;
-import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
-import org.folio.inventory.domain.HoldingsRecordCollection;
-import org.folio.inventory.domain.items.Item;
-import org.folio.inventory.domain.items.ItemCollection;
-import org.folio.inventory.domain.items.ItemStatusName;
-import org.folio.inventory.storage.Storage;
-import org.folio.inventory.support.CqlHelper;
-import org.folio.inventory.support.ItemUtil;
-import org.folio.inventory.support.JsonHelper;
-import org.folio.processing.events.services.handler.EventHandler;
-import org.folio.processing.exceptions.EventProcessingException;
-import org.folio.processing.mapping.MappingManager;
-import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
-import org.folio.processing.mapping.mapper.MappingContext;
-import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
-
 public class UpdateItemEventHandler implements EventHandler {
 
   private static final Logger LOGGER = LogManager.getLogger(UpdateItemEventHandler.class);
@@ -92,6 +92,8 @@ public class UpdateItemEventHandler implements EventHandler {
   private static final String CURRENT_EVENT_TYPE_PROPERTY = "CURRENT_EVENT_TYPE";
   private static final String CURRENT_NODE_PROPERTY = "CURRENT_NODE";
   private static final String ERRORS = "ERRORS";
+  private static final String OL_ACCUMULATIVE_RESULTS = "OL_ACCUMULATIVE_RESULTS";
+
   private static final String BLANK = "";
   private static final String BLANK_JSON_ARRAY = "[]";
   private static final String MULTIPLE_HOLDINGS_FIELD = "MULTIPLE_HOLDINGS_FIELD";
@@ -192,22 +194,22 @@ public class UpdateItemEventHandler implements EventHandler {
                 });
             }
           }
-
           CompositeFuture.all(updatedItemsRecordFutures).onComplete(ar -> {
+            OlItemAccumulativeResults olAccumulativeResults = buildOLAccumulativeResults(dataImportEventPayload);
+            olAccumulativeResults.getResultedSuccessItems().addAll(getItemsMappedToJsonArray(updatedItemEntities));
             if (!expiredItems.isEmpty()) {
-              processOLError(dataImportEventPayload, future, itemCollection, expiredItems.get(0), errors);
-            }
-            if (ar.succeeded()) {
-              String errorsAsStringJson = Json.encode(errors);
-              if (!updatedItemEntities.isEmpty() || errors.size() == 0) {
-                dataImportEventPayload.getContext().put(ERRORS, errorsAsStringJson);
-                dataImportEventPayload.getContext().put(ITEM.value(), getItemsMappedToJsonArrayAsString(updatedItemEntities));
-                future.complete(dataImportEventPayload);
+              processOLError(dataImportEventPayload, future, itemCollection, expiredItems, errors, olAccumulativeResults);
+              String errorsAsStringJson = formatErrorsAsString(errors, olAccumulativeResults.getResultedErrorItems());
+              if (!olAccumulativeResults.getResultedErrorItems().isEmpty()) {
+                fillPayloadAndClearLists(dataImportEventPayload, errorsAsStringJson, future, olAccumulativeResults);
+              }
+            } else {
+              String errorsAsStringJson = formatErrorsAsString(errors, olAccumulativeResults.getResultedErrorItems());
+              if (!olAccumulativeResults.getResultedSuccessItems().isEmpty() || errors.isEmpty()) {
+                fillPayloadAndClearLists(dataImportEventPayload, errorsAsStringJson, future, olAccumulativeResults);
               } else {
                 future.completeExceptionally(new EventProcessingException(errorsAsStringJson));
               }
-            } else {
-              future.completeExceptionally(ar.cause());
             }
             dataImportEventPayload.getContext().remove(TEMPORARY_MULTIPLE_HOLDINGS_FIELD);
           });
@@ -250,15 +252,15 @@ public class UpdateItemEventHandler implements EventHandler {
 
   private static void putValueNestedIfNotNull(JsonObject item, String objectPropertyName,
                                               String nestedPropertyName, String value) {
-    if (value != null) item.put(objectPropertyName, new JsonObject().put(nestedPropertyName, value));
+    if (value != null)
+      item.put(objectPropertyName, new JsonObject().put(nestedPropertyName, value));
   }
-
-  private static String getItemsMappedToJsonArrayAsString(List<Item> updatedItemEntities) {
+  private static List<JsonObject> getItemsMappedToJsonArray(List<Item> updatedItemEntities) {
     List<JsonObject> itemsAsJsons = new ArrayList<>();
     for (Item updatedItemEntity : updatedItemEntities) {
       itemsAsJsons.add(ItemUtil.mapToJson(updatedItemEntity));
     }
-    return Json.encode(itemsAsJsons);
+    return itemsAsJsons;
   }
 
   @Override
@@ -379,12 +381,13 @@ public class UpdateItemEventHandler implements EventHandler {
       .withSource(null)
       .withDate(dateTimeFormatter.format(ZonedDateTime.now())));
 
-    itemCollection.update(item, success -> promise.complete(item),
+    itemCollection.update(item, success -> {
+        promise.complete(item);
+      },
       failure -> {
         if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
           expiredItems.add(item);
         } else {
-          eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
           errors.add(new PartialError(item.getId() != null ? item.getId() : BLANK, failure.getReason()));
           LOGGER.warn(format("updateItemAndRetryIfOLExists:: updating Item - %s, status code %s", failure.getReason(), failure.getStatusCode()));
         }
@@ -394,33 +397,37 @@ public class UpdateItemEventHandler implements EventHandler {
     return promise.future();
   }
 
-  private void processOLError(DataImportEventPayload dataImportEventPayload, CompletableFuture<DataImportEventPayload> future, ItemCollection itemCollection, Item item, List<PartialError> errors) {
+  private void processOLError(DataImportEventPayload dataImportEventPayload, CompletableFuture<DataImportEventPayload> future, ItemCollection itemCollection, List<Item> expiredItems, List<PartialError> errors, OlItemAccumulativeResults olAccumulativeResults) {
     int currentRetryNumber = dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER) == null ? 0 : Integer.parseInt(dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER));
+
+
     if (currentRetryNumber < MAX_RETRIES_COUNT) {
       dataImportEventPayload.getContext().put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
-      LOGGER.warn("processOLError:: Error updating Item by id '{}'. Retry UpdateItemEventHandler handler...", item.getId());
-      itemCollection.findById(item.getId())
-        .thenAccept(actuaItem -> prepareDataAndReInvokeCurrentHandler(dataImportEventPayload, future, actuaItem))
-        .thenAccept(v -> dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER))
-        .exceptionally(e -> {
+      LOGGER.warn("processOLError:: Error updating Items. Expired Items: '{} '.Current retry number = '{}'. Retry UpdateItemEventHandler handler...", expiredItems, currentRetryNumber);
+      getActualItemsList(expiredItems, itemCollection)
+        .onSuccess(actualItemsList -> prepareDataAndReInvokeCurrentHandler(dataImportEventPayload, future, actualItemsList, errors, olAccumulativeResults))
+        .onFailure(e -> {
+          String errMessage = format("Cannot get actual Items.Expired Items: '%s' for jobExecutionId '%s'. Error: %s ", expiredItems, dataImportEventPayload.getJobExecutionId(), e.getCause());
+          for (Item expiredItem : expiredItems) {
+            errors.add(new PartialError(expiredItem.getId() != null ? expiredItem.getId() : BLANK, errMessage));
+          }
+          olAccumulativeResults.getResultedErrorItems().addAll(errors);
           dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
-          String errMessage = format("Cannot get actual Item by id: '%s' for jobExecutionId '%s'. Error: %s ", item.getId(), dataImportEventPayload.getJobExecutionId(), e.getCause());
-          LOGGER.warn("processOLError:: " + errMessage);
-          errors.add(new PartialError(item.getId() != null ? item.getId() : BLANK, errMessage));
           future.complete(dataImportEventPayload);
-          return null;
         });
     } else {
-      dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
       String errMessage = format("Current retry number %s exceeded or equal given number %s for the Item update for jobExecutionId '%s' ", MAX_RETRIES_COUNT, currentRetryNumber, dataImportEventPayload.getJobExecutionId());
       LOGGER.warn("processOLError:: " + errMessage);
-      errors.add(new PartialError(item.getId() != null ? item.getId() : BLANK, errMessage));
-      future.complete(dataImportEventPayload);
+      for (Item expiredItem : expiredItems) {
+        errors.add(new PartialError(expiredItem.getId() != null ? expiredItem.getId() : BLANK, errMessage));
+      }
+      olAccumulativeResults.getResultedErrorItems().addAll(errors);
+      dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
     }
   }
 
-  private void prepareDataAndReInvokeCurrentHandler(DataImportEventPayload dataImportEventPayload, CompletableFuture<DataImportEventPayload> future, Item actualItem) {
-    JsonArray resultedItems = updateActualItemAndConvertItemListAsJsonArray(dataImportEventPayload, actualItem);
+  private void prepareDataAndReInvokeCurrentHandler(DataImportEventPayload dataImportEventPayload, CompletableFuture<DataImportEventPayload> future, List<Item> actualItems, List<PartialError> errors, OlItemAccumulativeResults olAccumulativeResults) {
+    JsonArray resultedItems = convertItemListAsJsonArray(actualItems);
     dataImportEventPayload.getContext().put(ITEM.value(), Json.encode(resultedItems));
     dataImportEventPayload.getEventsChain().remove(dataImportEventPayload.getContext().get(CURRENT_EVENT_TYPE_PROPERTY));
     try {
@@ -432,30 +439,95 @@ public class UpdateItemEventHandler implements EventHandler {
     dataImportEventPayload.getContext().remove(CURRENT_NODE_PROPERTY);
     dataImportEventPayload.getContext().put(MULTIPLE_HOLDINGS_FIELD, dataImportEventPayload.getContext().get(TEMPORARY_MULTIPLE_HOLDINGS_FIELD));
     dataImportEventPayload.getContext().remove(TEMPORARY_MULTIPLE_HOLDINGS_FIELD);
-    handle(dataImportEventPayload).whenComplete((res, e) -> future.complete(dataImportEventPayload));
+    olAccumulativeResults.getResultedErrorItems().addAll(errors);
+    dataImportEventPayload.getContext().put(OL_ACCUMULATIVE_RESULTS, Json.encode(olAccumulativeResults));
+    handle(dataImportEventPayload).whenComplete((res, e) -> {
+      actualizeOLAccumulativeResults(olAccumulativeResults, res);
+      future.complete(res);
+    });
   }
 
-  private static JsonArray updateActualItemAndConvertItemListAsJsonArray(DataImportEventPayload dataImportEventPayload, Item actualItem) {
-    List<Item> initialItemList = new ArrayList<>();
-    JsonArray itemsJsonArray = new JsonArray(dataImportEventPayload.getContext().get(ITEM.value()));
-    for (int i = 0; i < itemsJsonArray.size(); i++) {
-      Item currentItem = ItemUtil.jsonToItem(itemsJsonArray.getJsonObject(i).getJsonObject(ITEM_PATH_FIELD));
-      initialItemList.add(currentItem);
-    }
-    List<Item> itemsList = new ArrayList<>(initialItemList);
-
-    List<Item> updatedItemsList = new ArrayList<>(itemsList);
-    for (int i = 0; i < itemsList.size(); i++) {
-      Item item = itemsList.get(i);
-      if (item.getId().equals(actualItem.getId())) {
-        updatedItemsList.set(i, actualItem);
-      }
-    }
-
+  private static JsonArray convertItemListAsJsonArray(List<Item> actualItems) {
     JsonArray resultedItems = new JsonArray();
-    for (Item currentItem : updatedItemsList) {
+    for (Item currentItem : actualItems) {
       resultedItems.add(new JsonObject().put(ITEM_PATH_FIELD, new JsonObject(ItemUtil.mapToMappingResultRepresentation(currentItem))));
     }
     return resultedItems;
+  }
+
+  private Future<List<Item>> getActualItemsList(List<Item> items, ItemCollection itemsCollection) {
+    Promise<List<Item>> promise = Promise.promise();
+    try {
+      itemsCollection.findByCql(format("id==(%s)", getQueryParamForMultipleItems(items)), PagingParameters.defaults(),
+        findResults -> {
+          List<Item> actualItems = findResults.getResult().records;
+          promise.complete(actualItems);
+        },
+        failure -> promise.fail(failure.getReason()));
+    } catch (UnsupportedEncodingException e) {
+      promise.fail(e);
+    }
+    return promise.future();
+  }
+
+  private static String getQueryParamForMultipleItems(List<Item> items) {
+    return items.stream().map(Item::getId).collect(Collectors.joining(" OR "));
+  }
+
+  private void fillPayloadAndClearLists(DataImportEventPayload dataImportEventPayload, String errorsAsStringJson, CompletableFuture<DataImportEventPayload> future, OlItemAccumulativeResults olAccumulativeResults) {
+    dataImportEventPayload.getContext().put(ActionProfile.FolioRecord.ITEM.value(), Json.encode(olAccumulativeResults.getResultedSuccessItems()));
+    dataImportEventPayload.getContext().put(ERRORS, errorsAsStringJson);
+    dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
+    dataImportEventPayload.getContext().put(OL_ACCUMULATIVE_RESULTS, Json.encode(olAccumulativeResults));
+    olAccumulativeResults.cleanup();
+    future.complete(dataImportEventPayload);
+  }
+
+  private String formatErrorsAsString(List<PartialError> errors, List<PartialError> resultedErrorItems) {
+    String errorsAsStringJson = Json.encode(errors);
+    if (!resultedErrorItems.isEmpty()) {
+      errorsAsStringJson = Json.encode(resultedErrorItems);
+    }
+    return errorsAsStringJson;
+  }
+
+  private OlItemAccumulativeResults buildOLAccumulativeResults(DataImportEventPayload dataImportEventPayload) {
+    OlItemAccumulativeResults olAccumulativeResults;
+    if (dataImportEventPayload.getContext().get(OL_ACCUMULATIVE_RESULTS) == null) {
+      olAccumulativeResults = new OlItemAccumulativeResults();
+    } else {
+      olAccumulativeResults = constructOlAccumulativeResults(dataImportEventPayload);
+    }
+    return olAccumulativeResults;
+  }
+
+  private void actualizeOLAccumulativeResults(OlItemAccumulativeResults olAccumulativeResults, DataImportEventPayload dataImportEventPayload) {
+    OlItemAccumulativeResults actualOlAccumulativeResults = constructOlAccumulativeResults(dataImportEventPayload);
+    olAccumulativeResults.setResultedErrorItems(actualOlAccumulativeResults.getResultedErrorItems());
+    olAccumulativeResults.setResultedSuccessItems(actualOlAccumulativeResults.getResultedSuccessItems());
+  }
+
+  private static OlItemAccumulativeResults constructOlAccumulativeResults(DataImportEventPayload dataImportEventPayload) {
+    OlItemAccumulativeResults olAccumulativeResults;
+    JsonObject olAccumulativeResultsAsJson = new JsonObject(dataImportEventPayload.getContext().get(OL_ACCUMULATIVE_RESULTS));
+    List<Item> items = convertJsonToItemsList(olAccumulativeResultsAsJson);
+
+    JsonArray errorsAsJson = olAccumulativeResultsAsJson.getJsonArray("resultedErrorItems");
+    List<PartialError> errors = Json.decodeValue(String.valueOf(errorsAsJson), List.class);
+
+    olAccumulativeResults = new OlItemAccumulativeResults();
+    olAccumulativeResults.setResultedSuccessItems(getItemsMappedToJsonArray(items));
+    olAccumulativeResults.setResultedErrorItems(errors);
+    return olAccumulativeResults;
+  }
+
+  private static List<Item> convertJsonToItemsList(JsonObject olAccumulativeResultsAsJson) {
+    JsonArray itemsAsJson = olAccumulativeResultsAsJson.getJsonArray("resultedSuccessItems");
+    List<Item> items = new ArrayList<>();
+    for (Object item : itemsAsJson) {
+      Item itemToUpdate = ItemUtil.jsonToItem((JsonObject) item);
+      items.add(itemToUpdate);
+    }
+    return items;
   }
 }
