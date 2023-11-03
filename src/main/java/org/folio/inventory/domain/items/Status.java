@@ -5,8 +5,6 @@
  */
 package org.folio.inventory.domain.items;
 
-import lombok.NoArgsConstructor;
-
 import java.util.Objects;
 
 /**

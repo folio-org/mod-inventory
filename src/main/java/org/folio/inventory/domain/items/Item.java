@@ -1,14 +1,12 @@
 package org.folio.inventory.domain.items;
 
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-
-import io.vertx.core.json.JsonArray;
-import lombok.NoArgsConstructor;
-import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
-
-import io.vertx.core.json.JsonObject;
 
 public class Item {
 
