@@ -1,8 +1,8 @@
 package org.folio.inventory.dataimport.entities;
 
+import io.vertx.core.json.JsonObject;
 import lombok.Getter;
 import lombok.Setter;
-import org.folio.inventory.domain.items.Item;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,7 +16,7 @@ import java.util.List;
 @Setter
 public class OlItemAccumulativeResults{
 
-  private List<Item> resultedSuccessItems;
+  private List<JsonObject> resultedSuccessItems;
   private List<PartialError> resultedErrorItems;
 
   public OlItemAccumulativeResults() {

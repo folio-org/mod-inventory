@@ -12,7 +12,6 @@ import java.util.Objects;
 /**
  * @author ne
  */
-@NoArgsConstructor(force = true)
 public class Status {
   private final ItemStatusName name;
   private final String date;

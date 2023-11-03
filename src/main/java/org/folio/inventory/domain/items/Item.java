@@ -10,7 +10,6 @@ import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 
 import io.vertx.core.json.JsonObject;
 
-@NoArgsConstructor(force = true)
 public class Item {
 
   public static final String VERSION_KEY = "_version";

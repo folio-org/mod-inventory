@@ -196,7 +196,7 @@ public class UpdateItemEventHandler implements EventHandler {
           }
           CompositeFuture.all(updatedItemsRecordFutures).onComplete(ar -> {
             OlItemAccumulativeResults olAccumulativeResults = buildOLAccumulativeResults(dataImportEventPayload);
-            olAccumulativeResults.getResultedSuccessItems().addAll(updatedItemEntities);
+            olAccumulativeResults.getResultedSuccessItems().addAll(getItemsMappedToJsonArray(updatedItemEntities));
             if (!expiredItems.isEmpty()) {
               processOLError(dataImportEventPayload, future, itemCollection, expiredItems, errors, olAccumulativeResults);
               String errorsAsStringJson = formatErrorsAsString(errors, olAccumulativeResults.getResultedErrorItems());
@@ -255,13 +255,12 @@ public class UpdateItemEventHandler implements EventHandler {
     if (value != null)
       item.put(objectPropertyName, new JsonObject().put(nestedPropertyName, value));
   }
-
-  private static String getItemsMappedToJsonArrayAsString(List<Item> updatedItemEntities) {
+  private static List<JsonObject> getItemsMappedToJsonArray(List<Item> updatedItemEntities) {
     List<JsonObject> itemsAsJsons = new ArrayList<>();
     for (Item updatedItemEntity : updatedItemEntities) {
       itemsAsJsons.add(ItemUtil.mapToJson(updatedItemEntity));
     }
-    return Json.encode(itemsAsJsons);
+    return itemsAsJsons;
   }
 
   @Override
@@ -476,7 +475,7 @@ public class UpdateItemEventHandler implements EventHandler {
   }
 
   private void fillPayloadAndClearLists(DataImportEventPayload dataImportEventPayload, String errorsAsStringJson, CompletableFuture<DataImportEventPayload> future, OlItemAccumulativeResults olAccumulativeResults) {
-    dataImportEventPayload.getContext().put(ActionProfile.FolioRecord.ITEM.value(), getItemsMappedToJsonArrayAsString(olAccumulativeResults.getResultedSuccessItems()));
+    dataImportEventPayload.getContext().put(ActionProfile.FolioRecord.ITEM.value(), Json.encode(olAccumulativeResults.getResultedSuccessItems()));
     dataImportEventPayload.getContext().put(ERRORS, errorsAsStringJson);
     dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
     dataImportEventPayload.getContext().put(OL_ACCUMULATIVE_RESULTS, Json.encode(olAccumulativeResults));
@@ -497,14 +496,38 @@ public class UpdateItemEventHandler implements EventHandler {
     if (dataImportEventPayload.getContext().get(OL_ACCUMULATIVE_RESULTS) == null) {
       olAccumulativeResults = new OlItemAccumulativeResults();
     } else {
-      olAccumulativeResults = Json.decodeValue(dataImportEventPayload.getContext().get(OL_ACCUMULATIVE_RESULTS), OlItemAccumulativeResults.class);
+      olAccumulativeResults = constructOlAccumulativeResults(dataImportEventPayload);
     }
     return olAccumulativeResults;
   }
 
-  private void actualizeOLAccumulativeResults(OlItemAccumulativeResults olAccumulativeResults, DataImportEventPayload res) {
-    OlItemAccumulativeResults actualOlAccumulativeResults = Json.decodeValue(res.getContext().get(OL_ACCUMULATIVE_RESULTS), OlItemAccumulativeResults.class);
+  private void actualizeOLAccumulativeResults(OlItemAccumulativeResults olAccumulativeResults, DataImportEventPayload dataImportEventPayload) {
+    OlItemAccumulativeResults actualOlAccumulativeResults = constructOlAccumulativeResults(dataImportEventPayload);
     olAccumulativeResults.setResultedErrorItems(actualOlAccumulativeResults.getResultedErrorItems());
     olAccumulativeResults.setResultedSuccessItems(actualOlAccumulativeResults.getResultedSuccessItems());
+  }
+
+  private static OlItemAccumulativeResults constructOlAccumulativeResults(DataImportEventPayload dataImportEventPayload) {
+    OlItemAccumulativeResults olAccumulativeResults;
+    JsonObject olAccumulativeResultsAsJson = new JsonObject(dataImportEventPayload.getContext().get(OL_ACCUMULATIVE_RESULTS));
+    List<Item> items = convertJsonToItemsList(olAccumulativeResultsAsJson);
+
+    JsonArray errorsAsJson = olAccumulativeResultsAsJson.getJsonArray("resultedErrorItems");
+    List<PartialError> errors = Json.decodeValue(String.valueOf(errorsAsJson), List.class);
+
+    olAccumulativeResults = new OlItemAccumulativeResults();
+    olAccumulativeResults.setResultedSuccessItems(getItemsMappedToJsonArray(items));
+    olAccumulativeResults.setResultedErrorItems(errors);
+    return olAccumulativeResults;
+  }
+
+  private static List<Item> convertJsonToItemsList(JsonObject olAccumulativeResultsAsJson) {
+    JsonArray itemsAsJson = olAccumulativeResultsAsJson.getJsonArray("resultedSuccessItems");
+    List<Item> items = new ArrayList<>();
+    for (Object item : itemsAsJson) {
+      Item itemToUpdate = ItemUtil.jsonToItem((JsonObject) item);
+      items.add(itemToUpdate);
+    }
+    return items;
   }
 }
