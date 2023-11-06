@@ -1,3 +1,12 @@
+## 20.1.3 2023-11-06
+* Unlink local MARC authorities from shared MARC bib SRS records - PART 2 ([MODINV-890](https://issues.folio.org/browse/MODINV-890))
+* Adjust Optimistic locking for multiple holdings and multiple items update ([MODINV-860](https://issues.folio.org/browse/MODINV-860))
+* Data Import 3rd update Action on Item Record Fails ([MODINV-858](https://issues.folio.org/browse/MODINV-858))
+* NullException when attempting to create item without SRS and Instance ([MODINV-907](https://issues.folio.org/browse/MODINV-907))
+* The 'Log details result' table is not displayed after clicking on the file name in "File name" column ([MODINV-911](https://issues.folio.org/browse/MODINV-911))
+* Consortial: When promoting Source = FOLIO instance, a lot of instance data is lost ([MODINV-913](https://issues.folio.org/browse/MODINV-913))
+* Consortial: When promoting Source = MARC instance, additional refresh is needed to see all data ([MODINV-914](https://issues.folio.org/browse/MODINV-914))
+
 ## 20.1.2 2023-10-28
 * Update data-import-processing-core dependency to v4.1.1 ([MODINV-908](https://issues.folio.org/browse/MODINV-908))
 
