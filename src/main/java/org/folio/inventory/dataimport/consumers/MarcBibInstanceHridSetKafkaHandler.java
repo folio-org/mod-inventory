@@ -108,7 +108,7 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
       ? 0 : Integer.parseInt(eventPayload.get(CURRENT_RETRY_NUMBER));
     if (currentRetryNumber < MAX_RETRIES_COUNT) {
       eventPayload.put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
-      LOGGER.warn("Error updating Instance - {}. Retry MarcBibModifiedPostProcessingEventHandler handler...", ar.cause().getMessage());
+      LOGGER.warn("Error updating Instance - {}. Retry MarcBibInstanceHridSetKafkaHandler handler...", ar.cause().getMessage());
       handle(value).onComplete(res -> {
         if (res.succeeded()) {
           promise.complete(value.key());
