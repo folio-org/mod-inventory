@@ -139,10 +139,11 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
             }
             return Future.succeededFuture();
           });
-
       } else {
-        InstanceCollection instanceCollection = storage.getInstanceCollection(context);
-        processInstanceUpdate(dataImportEventPayload, instanceCollection, context, instanceToUpdate, future, context.getTenantId());
+        String targetInstanceTenantId = dataImportEventPayload.getContext().getOrDefault(CENTRAL_TENANT_ID, dataImportEventPayload.getTenant());
+        Context instanceUpdateContext = EventHandlingUtil.constructContext(targetInstanceTenantId, dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+        InstanceCollection instanceCollection = storage.getInstanceCollection(instanceUpdateContext);
+        processInstanceUpdate(dataImportEventPayload, instanceCollection, context, instanceToUpdate, future, targetInstanceTenantId);
       }
     } catch (Exception e) {
       LOGGER.error("Error updating inventory Instance", e);
