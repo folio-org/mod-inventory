@@ -67,6 +67,7 @@ public class CreateItemEventHandler implements EventHandler {
   private static final String HOLDING_PERMANENT_LOCATION_SHOULD_NOT_BE_BLANK = "Holding permanent location id should not be blank";
   private static final String PAYLOAD_DATA_HAS_NO_PO_LINE_ID_MSG = "Failed to extract poLineId from poLine entity";
   private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingMetadata snapshot was not found by jobExecutionId '%s'. RecordId: '%s', chunkId: '%s' ";
+  private static final String ITEMS_SHOULD_HAVE_SAME_MATERIAL_TYPE_MSG = "All Items should have the same material type, during the creation of open order";
   static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create an Item requires a mapping profile";
   public static final String HOLDINGS_RECORD_ID_FIELD = "holdingsRecordId";
   public static final String ITEM_PATH_FIELD = "item";
@@ -255,7 +256,24 @@ public class CreateItemEventHandler implements EventHandler {
       JsonObject itemAsJson = getItemFromJson(mappedItems.getJsonObject(i));
       itemAsJson.put(ITEM_ID_FIELD, (i == 0) ? deduplicationItemId : UUID.randomUUID().toString());
     }
+
+    if (dataImportEventPayload.getContext().containsKey(EntityType.PO_LINE.value())) {
+      validateItemsToContainSameMaterialType(mappedItems);
+    }
+
     return mappedItems;
+  }
+
+  private void validateItemsToContainSameMaterialType(JsonArray mappedItems) {
+    List<String> materialTypes = mappedItems.stream().map(o -> {
+      JsonObject materialType = getItemFromJson((JsonObject) o).getJsonObject("materialType");
+      return materialType == null ? null : materialType.getString("id");
+    }).toList();
+
+    if (materialTypes.stream().distinct().count() != 1) {
+      LOGGER.warn("validateItemsToContainSameMaterialType:: " + ITEMS_SHOULD_HAVE_SAME_MATERIAL_TYPE_MSG);
+      throw new EventProcessingException(ITEMS_SHOULD_HAVE_SAME_MATERIAL_TYPE_MSG);
+    }
   }
 
   private static JsonArray getHoldingsIdentifiers(DataImportEventPayload dataImportEventPayload) {
