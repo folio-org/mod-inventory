@@ -2,35 +2,9 @@ package org.folio.inventory;
 
 import static java.lang.String.format;
 
-import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_MATCHED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_NOT_MATCHED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_UPDATED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_NOT_MATCHED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_CREATED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_MATCHED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_NOT_MATCHED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_UPDATED;
-import static org.folio.DataImportEventTypes.DI_MARC_FOR_UPDATE_RECEIVED;
-import static org.folio.DataImportEventTypes.DI_PENDING_ORDER_CREATED;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_AUTHORITY_RECORD_CREATED;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_AUTHORITY_RECORD_MODIFIED_READY_FOR_POST_PROCESSING;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_AUTHORITY_RECORD_NOT_MATCHED;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MATCHED;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MATCHED_READY_FOR_POST_PROCESSING;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_NOT_MATCHED;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_UPDATED;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_HOLDINGS_RECORD_MODIFIED_READY_FOR_POST_PROCESSING;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_HOLDINGS_RECORD_NOT_MATCHED;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_HOLDING_RECORD_CREATED;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_AUTHORITY_RECORD_DELETED;
+import static org.folio.DataImportEventTypes.*;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
+import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_RECORD_PARSED;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX_REQUEST_SIZE;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_PORT;
@@ -88,7 +62,7 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
     DI_SRS_MARC_AUTHORITY_RECORD_DELETED,
     DI_SRS_MARC_AUTHORITY_RECORD_MODIFIED_READY_FOR_POST_PROCESSING,
     DI_SRS_MARC_AUTHORITY_RECORD_NOT_MATCHED,
-    DI_SRS_MARC_BIB_RECORD_CREATED,
+    DI_INCOMING_MARC_BIB_RECORD_PARSED,
     DI_SRS_MARC_BIB_RECORD_UPDATED,
     DI_SRS_MARC_BIB_RECORD_MATCHED,
     DI_SRS_MARC_BIB_RECORD_MATCHED_READY_FOR_POST_PROCESSING,
