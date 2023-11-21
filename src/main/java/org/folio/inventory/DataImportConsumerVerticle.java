@@ -19,7 +19,7 @@ import static org.folio.DataImportEventTypes.DI_PENDING_ORDER_CREATED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_AUTHORITY_RECORD_CREATED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_AUTHORITY_RECORD_MODIFIED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_AUTHORITY_RECORD_NOT_MATCHED;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
+import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_RECORD_PARSED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MATCHED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MATCHED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED;
@@ -87,7 +87,7 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
     DI_SRS_MARC_AUTHORITY_RECORD_DELETED,
     DI_SRS_MARC_AUTHORITY_RECORD_MODIFIED_READY_FOR_POST_PROCESSING,
     DI_SRS_MARC_AUTHORITY_RECORD_NOT_MATCHED,
-    DI_SRS_MARC_BIB_RECORD_CREATED,
+    DI_INCOMING_MARC_BIB_RECORD_PARSED,
     DI_SRS_MARC_BIB_RECORD_MATCHED,
     DI_SRS_MARC_BIB_RECORD_MATCHED_READY_FOR_POST_PROCESSING,
     DI_SRS_MARC_BIB_RECORD_MODIFIED,
