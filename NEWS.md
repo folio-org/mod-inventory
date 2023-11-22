@@ -1,6 +1,3 @@
-## 20.2.0-SNAPSHOT 2023-XX-XX
-* [MODSOURMAN-1022](https://issues.folio.org/browse/MODSOURMAN-1022) Remove step of initial saving of incoming records to SRS
-
 ## 20.1.0 2023-10-13
 * Update status when user attempts to update shared auth record from member tenant ([MODDATAIMP-926](https://issues.folio.org/browse/MODDATAIMP-926))
 * Add cache to get and store consortium data configurations ([MODINV-872](https://issues.folio.org/browse/MODINV-872))
