@@ -15,7 +15,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import org.apache.commons.collections15.ListUtils;
+import org.apache.commons.collections4.ListUtils;
 import org.folio.HoldingsRecord;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.domain.HoldingsRecordCollection;
