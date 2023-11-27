@@ -82,6 +82,7 @@ public class CreateItemEventHandlerTest {
   private static final String PARSED_CONTENT_WITHOUT_HOLDING_ID = "{ \"leader\":\"01314nam  22003851a 4500\", \"fields\":[ { \"001\":\"ybp7406411\" } ] }";
   private static final String PARSED_CONTENT_WITH_HOLDING_ID = "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"945\":{\"subfields\":[{\"a\":\"OM\"},{\"h\":\"KU/CC/DI/M\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"945\":{\"subfields\":[{\"a\":\"AM\"},{\"h\":\"KU/CC/DI/M\"}],\"ind1\":\" \",\"ind2\":\" \"}}, {\"999\": {\"ind1\":\"f\", \"ind2\":\"f\", \"subfields\":[ { \"h\": \"957985c6-97e3-4038-b0e7-343ecd0b8120\"} ] } }]}";
   private static final String PARSED_CONTENT_WITH_INVALID_MULTIPLE_FIELDS = "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"945\":{\"subfields\":[{\"a\":\"AM\"}],\"ind1\":\" \",\"ind2\":\" \"}}, {\"945\":{\"subfields\":[{\"a\":\"OM\"},{\"h\":\"KU/CC/DI/M\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"945\":{\"subfields\":[{\"a\":\"AM\"},{\"h\":\"KU/CC/DI/M\"}],\"ind1\":\" \",\"ind2\":\" \"}}, {\"945\":{\"subfields\":[{\"h\":\"fake\"}],\"ind1\":\" \",\"ind2\":\" \"}}, {\"999\": {\"ind1\":\"f\", \"ind2\":\"f\", \"subfields\":[ { \"h\": \"957985c6-97e3-4038-b0e7-343ecd0b8120\"} ] } }]}";
+  private static final String ITEMS_SHOULD_HAVE_SAME_MATERIAL_TYPE = "All Items should have the same material type, during the creation of open order";
   private static final String RECORD_ID = UUID.randomUUID().toString();
   private static final String ITEM_ID = UUID.randomUUID().toString();
   private static final String PERMANENT_LOCATION_ID = "ff4524ee-89b2-461d-82d6-2b4127b801f9";
@@ -245,13 +246,14 @@ public class CreateItemEventHandlerTest {
       return null;
     }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
 
+    String materialTypeId = UUID.randomUUID().toString();
     Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(AVAILABLE.value()),
       StringValue.of(UUID.randomUUID().toString()),
-      StringValue.of(UUID.randomUUID().toString()),
+      StringValue.of(materialTypeId),
       StringValue.of("745398607547"),
       StringValue.of(AVAILABLE.value()),
       StringValue.of(UUID.randomUUID().toString()),
-      StringValue.of(UUID.randomUUID().toString()),
+      StringValue.of(materialTypeId),
       StringValue.of("645398607547"));
     String permanentLocationId2 = UUID.randomUUID().toString();
 
@@ -315,21 +317,22 @@ public class CreateItemEventHandlerTest {
       return null;
     }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
 
+    String materialTypeId = UUID.randomUUID().toString();
     Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(AVAILABLE.value()),
       StringValue.of(UUID.randomUUID().toString()),
-      StringValue.of(UUID.randomUUID().toString()),
+      StringValue.of(materialTypeId),
       StringValue.of("745398607547"),
       StringValue.of(AVAILABLE.value()),
       StringValue.of(UUID.randomUUID().toString()),
-      StringValue.of(UUID.randomUUID().toString()),
+      StringValue.of(materialTypeId),
       StringValue.of("645398607547"),
       StringValue.of(AVAILABLE.value()),
       StringValue.of(UUID.randomUUID().toString()),
-      StringValue.of(UUID.randomUUID().toString()),
+      StringValue.of(materialTypeId),
       StringValue.of("645398607547"),
       StringValue.of(AVAILABLE.value()),
       StringValue.of(UUID.randomUUID().toString()),
-      StringValue.of(UUID.randomUUID().toString()),
+      StringValue.of(materialTypeId),
       StringValue.of("645398607547"));
     String permanentLocationId2 = UUID.randomUUID().toString();
 
@@ -403,13 +406,14 @@ public class CreateItemEventHandlerTest {
       return null;
     }).when(mockedItemCollection).add(argThat(itemRecord -> itemRecord.getHoldingId().equals(expectedHoldingId1)), any(), any());
 
+    String materialTypeId = UUID.randomUUID().toString();
     Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(AVAILABLE.value()),
       StringValue.of(UUID.randomUUID().toString()),
-      StringValue.of(UUID.randomUUID().toString()),
+      StringValue.of(materialTypeId),
       StringValue.of("745398607547"),
       StringValue.of(AVAILABLE.value()),
       StringValue.of(UUID.randomUUID().toString()),
-      StringValue.of(UUID.randomUUID().toString()),
+      StringValue.of(materialTypeId),
       StringValue.of("645398607547"));
     String permanentLocationId2 = UUID.randomUUID().toString();
 
@@ -473,13 +477,14 @@ public class CreateItemEventHandlerTest {
       return null;
     }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
 
+    String materialTypeId = UUID.randomUUID().toString();
     Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(AVAILABLE.value()),
       StringValue.of(UUID.randomUUID().toString()),
-      StringValue.of(UUID.randomUUID().toString()),
+      StringValue.of(materialTypeId),
       StringValue.of("745398607547"),
       StringValue.of(AVAILABLE.value()),
       StringValue.of(UUID.randomUUID().toString()),
-      StringValue.of(UUID.randomUUID().toString()),
+      StringValue.of(materialTypeId),
       StringValue.of("645398607547"));
 
     String expectedHoldingId1 = UUID.randomUUID().toString();
@@ -1232,5 +1237,124 @@ public class CreateItemEventHandlerTest {
 
     // then
     future.get(5, TimeUnit.SECONDS);
+  }
+
+  @Test
+  public void shouldReturnFailedFutureWhenTryingToCreateItemsWithDifferentMaterialTypesDuringCreationOfOpenOrder() {
+    // given
+    Mockito.doAnswer(invocationOnMock -> {
+      Item item = invocationOnMock.getArgument(0);
+      Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(item));
+      return null;
+    }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
+
+    Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(AVAILABLE.value()),
+      StringValue.of(UUID.randomUUID().toString()),
+      StringValue.of(UUID.randomUUID().toString()),
+      StringValue.of("745398607547"),
+      StringValue.of(AVAILABLE.value()),
+      StringValue.of(UUID.randomUUID().toString()),
+      StringValue.of(UUID.randomUUID().toString()),
+      StringValue.of("645398607547"));
+    String permanentLocationId2 = UUID.randomUUID().toString();
+
+    String expectedHoldingId2 = UUID.randomUUID().toString();
+    String expectedHoldingId1 = UUID.randomUUID().toString();
+    JsonArray holdingsAsJson = new JsonArray(List.of(
+      new JsonObject()
+        .put("id", expectedHoldingId1)
+        .put("permanentLocationId", PERMANENT_LOCATION_ID),
+      new JsonObject()
+        .put("id", expectedHoldingId2)
+        .put("permanentLocationId", permanentLocationId2)));
+    String expectedPoLineId = UUID.randomUUID().toString();
+    JsonObject poLineAsJson = new JsonObject().put("id", expectedPoLineId);
+    HashMap<String, String> payloadContext = new HashMap<>();
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_HOLDING_ID));
+    payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    payloadContext.put(EntityType.HOLDINGS.value(), holdingsAsJson.encode());
+    payloadContext.put(EntityType.PO_LINE.value(), poLineAsJson.encode());
+    payloadContext.put(MULTIPLE_HOLDINGS_FIELD, "945");
+    payloadContext.put(HOLDINGS_IDENTIFIERS, Json.encode(List.of(PERMANENT_LOCATION_ID, permanentLocationId2)));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    // when
+    CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
+
+    // then
+    ExecutionException exception = Assert.assertThrows(ExecutionException.class, future::get);
+    Assert.assertEquals(ITEMS_SHOULD_HAVE_SAME_MATERIAL_TYPE, exception.getCause().getMessage());
+  }
+
+  @Test
+  public void shouldCreateMultipleItemsWithDifferentMaterialTypesWhenNoPoLineInTheContext()
+    throws InterruptedException,
+    ExecutionException,
+    TimeoutException {
+    // given
+    Mockito.doAnswer(invocationOnMock -> {
+      Item item = invocationOnMock.getArgument(0);
+      Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(item));
+      return null;
+    }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
+
+    Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(AVAILABLE.value()),
+      StringValue.of(UUID.randomUUID().toString()),
+      StringValue.of(UUID.randomUUID().toString()),
+      StringValue.of("745398607547"),
+      StringValue.of(AVAILABLE.value()),
+      StringValue.of(UUID.randomUUID().toString()),
+      StringValue.of(UUID.randomUUID().toString()),
+      StringValue.of("645398607547"));
+    String permanentLocationId2 = UUID.randomUUID().toString();
+
+    String expectedHoldingId2 = UUID.randomUUID().toString();
+    String expectedHoldingId1 = UUID.randomUUID().toString();
+    JsonArray holdingsAsJson = new JsonArray(List.of(
+      new JsonObject()
+        .put("id", expectedHoldingId1)
+        .put("permanentLocationId", PERMANENT_LOCATION_ID),
+      new JsonObject()
+        .put("id", expectedHoldingId2)
+        .put("permanentLocationId", permanentLocationId2)));
+    HashMap<String, String> payloadContext = new HashMap<>();
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_HOLDING_ID));
+    payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    payloadContext.put(EntityType.HOLDINGS.value(), holdingsAsJson.encode());
+    payloadContext.put(MULTIPLE_HOLDINGS_FIELD, "945");
+    payloadContext.put(HOLDINGS_IDENTIFIERS, Json.encode(List.of(PERMANENT_LOCATION_ID, permanentLocationId2)));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    // when
+    CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
+
+    // then
+    DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
+    Assert.assertEquals(DI_INVENTORY_ITEM_CREATED.value(), eventPayload.getEventType());
+    Assert.assertNotNull(eventPayload.getContext().get(ITEM.value()));
+    Assert.assertEquals(EMPTY_JSON_ARRAY, eventPayload.getContext().get(ERRORS));
+
+    JsonArray createdItems = new JsonArray(eventPayload.getContext().get(ITEM.value()));
+    Assert.assertEquals(2, createdItems.size());
+
+    for (int i = 0; i < createdItems.size(); i++) {
+      JsonObject createdItem = createdItems.getJsonObject(i);
+      Assert.assertNotNull(createdItem.getJsonObject("status").getString("name"));
+      Assert.assertNotNull(createdItem.getString("permanentLoanTypeId"));
+      Assert.assertNotNull(createdItem.getString("materialTypeId"));
+      Assert.assertEquals(holdingsAsJson.getJsonObject(i).getString("id"), createdItem.getString("holdingId"));
+    }
   }
 }
