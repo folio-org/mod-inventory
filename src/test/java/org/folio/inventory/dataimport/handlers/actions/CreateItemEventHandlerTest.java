@@ -1279,7 +1279,7 @@ public class CreateItemEventHandlerTest {
     payloadContext.put(HOLDINGS_IDENTIFIERS, Json.encode(List.of(PERMANENT_LOCATION_ID, permanentLocationId2)));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
@@ -1332,7 +1332,7 @@ public class CreateItemEventHandlerTest {
     payloadContext.put(HOLDINGS_IDENTIFIERS, Json.encode(List.of(PERMANENT_LOCATION_ID, permanentLocationId2)));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
