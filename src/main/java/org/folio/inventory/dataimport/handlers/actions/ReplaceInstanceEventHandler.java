@@ -152,7 +152,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
     return future;
   }
 
-  private void processInstanceUpdate(DataImportEventPayload dataImportEventPayload, InstanceCollection instanceCollection, Context context, Instance instanceToUpdate, CompletableFuture<DataImportEventPayload> future, String centralTenantId) {
+  private void processInstanceUpdate(DataImportEventPayload dataImportEventPayload, InstanceCollection instanceCollection, Context context, Instance instanceToUpdate, CompletableFuture<DataImportEventPayload> future, String tenantId) {
     prepareEvent(dataImportEventPayload);
 
     String jobExecutionId = dataImportEventPayload.getJobExecutionId();
@@ -163,7 +163,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
     mappingMetadataCache.get(jobExecutionId, context)
       .compose(parametersOptional -> parametersOptional
-        .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, mappingMetadata, instanceToUpdate, centralTenantId))
+        .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, mappingMetadata, instanceToUpdate, tenantId))
         .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, jobExecutionId,
           recordId, chunkId))))
       .compose(e -> {
