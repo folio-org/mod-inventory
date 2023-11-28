@@ -300,7 +300,6 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           processOLError(instance, instanceCollection, eventPayload, promise, failure);
         } else {
           eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
-          LOGGER.info("Payload content keys: {}", eventPayload.getContext().keySet());
           LOGGER.error(format("Error updating Instance - %s, status code %s", failure.getReason(), failure.getStatusCode()));
           promise.fail(failure.getReason());
         }

@@ -24,6 +24,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -36,9 +37,11 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 import static org.folio.inventory.dataimport.consumers.MarcHoldingsRecordHridSetKafkaHandler.JOB_EXECUTION_ID_KEY;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @RunWith(VertxUnitRunner.class)
@@ -47,6 +50,8 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/bib-rules.json";
   private static final String RECORD_PATH = "src/test/resources/handlers/bib-record.json";
   private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
+  private static final String CENTRAL_TENANT_ID = "consortium";
+  private static final String CENTRAL_TENANT_ID_KEY = "CENTRAL_TENANT_ID";
 
   @Mock
   private Storage mockedStorage;
@@ -62,6 +67,7 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
   private Instance existingInstance;
   private MarcBibInstanceHridSetKafkaHandler marcBibInstanceHridSetKafkaHandler;
   private AutoCloseable mocks;
+  private InstanceUpdateDelegate instanceUpdateDelegate;
 
   @Before
   public void setUp() throws IOException {
@@ -91,6 +97,7 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
         .withMappingRules(mappingRules.encode())
         .withMappingParams(Json.encode(new MappingParameters())))));
 
+    instanceUpdateDelegate = new InstanceUpdateDelegate(mockedStorage);
     marcBibInstanceHridSetKafkaHandler = new MarcBibInstanceHridSetKafkaHandler(new InstanceUpdateDelegate(mockedStorage), mappingMetadataCache);
   }
 
@@ -190,6 +197,31 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
       context.assertTrue(ar.failed());
       async.complete();
     });
+  }
+
+  @Test
+  public void shouldUpdateSharedInstanceOnCentralTenantIfPayloadContextContainsCentralTenantId(TestContext context) {
+    // given
+    Map<String, String> payload = new HashMap<>();
+    payload.put("MARC_BIB", Json.encode(record));
+    payload.put(CENTRAL_TENANT_ID_KEY, CENTRAL_TENANT_ID);
+    payload.put(JOB_EXECUTION_ID_KEY, UUID.randomUUID().toString());
+
+    Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
+    String expectedKafkaRecordKey = "test_key";
+    when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
+    when(kafkaRecord.value()).thenReturn(Json.encode(event));
+    assertEquals(CENTRAL_TENANT_ID, payload.get(CENTRAL_TENANT_ID_KEY));
+
+    // when
+    Future<String> future = marcBibInstanceHridSetKafkaHandler.handle(kafkaRecord);
+
+    // then
+    future.onComplete(context.asyncAssertSuccess(v -> {
+      ArgumentCaptor<Context> contextCaptor = ArgumentCaptor.forClass(Context.class);
+      verify(mockedStorage).getInstanceCollection(contextCaptor.capture());
+      assertEquals(CENTRAL_TENANT_ID, contextCaptor.getValue().getTenantId());
+    }));
   }
 
 }

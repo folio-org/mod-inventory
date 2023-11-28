@@ -82,7 +82,7 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
         .map(metadataOptional -> metadataOptional.orElseThrow(() ->
           new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId))))
         .onSuccess(mappingMetadataDto -> ensureEventPayloadWithMappingMetadata(eventPayload, mappingMetadataDto))
-        .compose(v -> updateInstance(eventPayload, headersMap, marcRecord))
+        .compose(v -> updateInstance(eventPayload, marcRecord, headersMap))
         .onComplete(ar -> {
           if (ar.succeeded()) {
             eventPayload.remove(CURRENT_RETRY_NUMBER);
@@ -104,7 +104,7 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
     }
   }
 
-  private Future<Instance> updateInstance(HashMap<String, String> eventPayload, Map<String, String> headersMap, Record marcRecord) {
+  private Future<Instance> updateInstance(HashMap<String, String> eventPayload, Record marcRecord, Map<String, String> headersMap) {
     String tenantId = eventPayload.getOrDefault(CENTRAL_TENANT_ID, eventPayload.get(OKAPI_TENANT_HEADER));
     Context context = EventHandlingUtil.constructContext(tenantId, headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER));
     return instanceUpdateDelegate.handle(eventPayload, marcRecord, context);
