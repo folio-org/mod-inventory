@@ -46,6 +46,7 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
   private static final String JOB_EXECUTION_ID_HEADER = "JOB_EXECUTION_ID";
   private static final String CURRENT_RETRY_NUMBER = "CURRENT_RETRY_NUMBER";
   private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
+  private static final String CENTRAL_TENANT_ID = "CENTRAL_TENANT_ID";
 
   private final InstanceUpdateDelegate instanceUpdateDelegate;
   private final MappingMetadataCache mappingMetadataCache;
@@ -81,7 +82,7 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
         .map(metadataOptional -> metadataOptional.orElseThrow(() ->
           new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId))))
         .onSuccess(mappingMetadataDto -> ensureEventPayloadWithMappingMetadata(eventPayload, mappingMetadataDto))
-        .compose(v -> instanceUpdateDelegate.handle(eventPayload, marcRecord, context))
+        .compose(v -> updateInstance(eventPayload, headersMap, marcRecord))
         .onComplete(ar -> {
           if (ar.succeeded()) {
             eventPayload.remove(CURRENT_RETRY_NUMBER);
@@ -91,7 +92,7 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
               processOLError(record, promise, eventPayload, ar);
             } else {
               eventPayload.remove(CURRENT_RETRY_NUMBER);
-              LOGGER.error("Failed to set MarcBib Hrid by jobExecutionId {}:{}", jobExecutionId, ar.cause());
+              LOGGER.error("Failed to set MarcBib Hrid by jobExecutionId {}", jobExecutionId, ar.cause());
               promise.fail(ar.cause());
             }
           }
@@ -101,6 +102,12 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
       LOGGER.error(format("Failed to process data import kafka record from topic %s", record.topic()), e);
       return Future.failedFuture(e);
     }
+  }
+
+  private Future<Instance> updateInstance(HashMap<String, String> eventPayload, Map<String, String> headersMap, Record marcRecord) {
+    String tenantId = eventPayload.getOrDefault(CENTRAL_TENANT_ID, eventPayload.get(OKAPI_TENANT_HEADER));
+    Context context = EventHandlingUtil.constructContext(tenantId, headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER));
+    return instanceUpdateDelegate.handle(eventPayload, marcRecord, context);
   }
 
   private void processOLError(KafkaConsumerRecord<String, String> value, Promise<String> promise, HashMap<String, String> eventPayload, AsyncResult<Instance> ar) {
