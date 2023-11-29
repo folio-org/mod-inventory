@@ -46,7 +46,7 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
   private static final String JOB_EXECUTION_ID_HEADER = "JOB_EXECUTION_ID";
   private static final String CURRENT_RETRY_NUMBER = "CURRENT_RETRY_NUMBER";
   private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
-  private static final String CENTRAL_TENANT_ID = "CENTRAL_TENANT_ID";
+  private static final String CENTRAL_TENANT_ID_KEY = "CENTRAL_TENANT_ID";
 
   private final InstanceUpdateDelegate instanceUpdateDelegate;
   private final MappingMetadataCache mappingMetadataCache;
@@ -105,7 +105,7 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
   }
 
   private Future<Instance> updateInstance(HashMap<String, String> eventPayload, Record marcRecord, Map<String, String> headersMap) {
-    String tenantId = eventPayload.getOrDefault(CENTRAL_TENANT_ID, eventPayload.get(OKAPI_TENANT_HEADER));
+    String tenantId = eventPayload.getOrDefault(CENTRAL_TENANT_ID_KEY, eventPayload.get(OKAPI_TENANT_HEADER));
     Context context = EventHandlingUtil.constructContext(tenantId, headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER));
     return instanceUpdateDelegate.handle(eventPayload, marcRecord, context);
   }

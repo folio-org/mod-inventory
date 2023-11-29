@@ -80,7 +80,6 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING;
 import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.ACTION_HAS_NO_MAPPING_MSG;
-import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.CENTRAL_TENANT_ID;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
 import static org.folio.inventory.domain.instances.InstanceSource.FOLIO;
 import static org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle.TITLE_KEY;
@@ -110,7 +109,8 @@ public class ReplaceInstanceEventHandlerTest {
   private static final String SOURCE_RECORDS_PATH = "/source-storage/records";
   private static final String PRECEDING_SUCCEEDING_TITLES_KEY = "precedingSucceedingTitles";
   private static final String TENANT_ID = "diku";
-  private static final String CENTRAL_TENANT_ID = "CENTRAL_TENANT_ID";
+  private static final String CENTRAL_TENANT_ID_KEY = "CENTRAL_TENANT_ID";
+  private static final String CENTRAL_TENANT_INSTANCE_UPDATED_KEY = "CENTRAL_TENANT_INSTANCE_UPDATED";
   private static final String TOKEN = "dummy";
   private static final Integer INSTANCE_VERSION = 1;
   private static final String INSTANCE_VERSION_AS_STRING = "1";
@@ -431,7 +431,7 @@ public class ReplaceInstanceEventHandlerTest {
 
     HashMap<String, String> context = new HashMap<>();
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
-    context.put(CENTRAL_TENANT_ID, consortiumTenant);
+    context.put(CENTRAL_TENANT_ID_KEY, consortiumTenant);
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
     context.put(INSTANCE.value(), new JsonObject()
       .put("id", UUID.randomUUID().toString())
@@ -449,13 +449,14 @@ public class ReplaceInstanceEventHandlerTest {
       .withContext(context)
       .withJobExecutionId(UUID.randomUUID().toString());
 
-    assertEquals(consortiumTenant, dataImportEventPayload.getContext().get(CENTRAL_TENANT_ID));
+    assertEquals(consortiumTenant, dataImportEventPayload.getContext().get(CENTRAL_TENANT_ID_KEY));
 
     CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(20, TimeUnit.SECONDS);
 
     assertEquals(DI_INVENTORY_INSTANCE_UPDATED.value(), actualDataImportEventPayload.getEventType());
     assertNotNull(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
+    assertTrue(Boolean.parseBoolean(actualDataImportEventPayload.getContext().get(CENTRAL_TENANT_INSTANCE_UPDATED_KEY)));
     JsonObject updatedInstance = new JsonObject(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
     assertEquals(title, updatedInstance.getString("title"));
     assertEquals(MARC_INSTANCE_SOURCE, updatedInstance.getString("source"));

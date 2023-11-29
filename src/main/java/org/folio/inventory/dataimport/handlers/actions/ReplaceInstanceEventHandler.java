@@ -189,8 +189,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       })
       .onComplete(ar -> {
         if (ar.succeeded()) {
-          dataImportEventPayload.getContext().put(INSTANCE.value(), ar.result().encode());
-          dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
+          prepareSucceededResultPayload(dataImportEventPayload, ar.result());
           future.complete(dataImportEventPayload);
         } else {
           dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
@@ -345,6 +344,14 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         promise.fail(format("Cannot get actual Instance by id: %s, cause: %s", instance.getId(), e.getMessage()));
         return null;
       });
+  }
+
+  private void prepareSucceededResultPayload(DataImportEventPayload dataImportEventPayload, JsonObject updatedInstanceJson) {
+    if (dataImportEventPayload.getContext().containsKey(CENTRAL_TENANT_ID)) {
+      dataImportEventPayload.getContext().put(CENTRAL_TENANT_INSTANCE_UPDATED_FLAG, Boolean.TRUE.toString());
+    }
+    dataImportEventPayload.getContext().put(INSTANCE.value(), updatedInstanceJson.encode());
+    dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
   }
 
 }

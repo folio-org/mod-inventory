@@ -31,7 +31,7 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
   private static final String MATCHING_RELATIONS = "MATCHING_PARAMETERS_RELATIONS";
   private static final String MAPPING_PARAMS = "MAPPING_PARAMS";
   private static final String FOUND_MULTIPLE_ENTITIES = "Found multiple entities during matching on localTenant: %s and centralTenant: %s";
-  private static final String CENTRAL_TENANT_ID = "CENTRAL_TENANT_ID";
+  private static final String CENTRAL_TENANT_ID_KEY = "CENTRAL_TENANT_ID";
 
   private MappingMetadataCache mappingMetadataCache;
   private ConsortiumService consortiumService;
@@ -105,7 +105,7 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
               if (StringUtils.isEmpty(dataImportEventPayload.getContext().get(getEntityType().value()))) {
                 dataImportEventPayload.getContext().put(getEntityType().value(), localMatchedInstance);
               } else {
-                dataImportEventPayload.getContext().put(CENTRAL_TENANT_ID, consortiumConfiguration.get().getCentralTenantId());
+                dataImportEventPayload.getContext().put(CENTRAL_TENANT_ID_KEY, consortiumConfiguration.get().getCentralTenantId());
                 LOGGER.info("matchCentralTenantIfNeeded:: Matched on central tenant: {}", consortiumConfiguration.get().getCentralTenantId());
               }
               return CompletableFuture.completedFuture(isMatchedConsortium || isMatchedLocal);
