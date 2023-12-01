@@ -12,6 +12,7 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.dataimport.services.OrderHelperService;
+import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
@@ -100,8 +101,12 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
           String instanceId = res.getEntityId();
           mappingMetadataCache.get(jobExecutionId, context)
             .compose(parametersOptional -> parametersOptional
-              .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()),
-                Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class)))
+              .map(mappingMetadata -> {
+                MappingParameters mappingParameters = Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class);
+                AdditionalFieldsUtil.updateLatestTransactionDate(targetRecord, mappingParameters);
+                payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(targetRecord));
+                return prepareAndExecuteMapping(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()), mappingParameters);
+              })
               .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, jobExecutionId, recordId, chunkId))))
             .compose(v -> {
               InstanceCollection instanceCollection = storage.getInstanceCollection(context);
@@ -121,10 +126,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
             .onSuccess(ar -> {
               dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(ar));
               orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload, DI_INVENTORY_INSTANCE_CREATED, context)
-                .onComplete(result -> {
-                    future.complete(dataImportEventPayload);
-                  }
-                );
+                .onComplete(result -> future.complete(dataImportEventPayload));
             })
             .onFailure(e -> {
               if (!(e instanceof DuplicateEventException)) {
