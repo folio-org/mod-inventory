@@ -160,9 +160,9 @@ public class UpdateItemEventHandler implements EventHandler {
             LOGGER.debug(format("handle:: Updating Item with id: %s", mappedItemAsJson.getString("id")));
             List<String> validationErrors = validateItem(mappedItemAsJson, requiredFields);
             if (!validationErrors.isEmpty()) {
-              String msg = format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", validationErrors,
+              String msg = format("Mapped Item is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", validationErrors,
                 jobExecutionId, recordId, chunkId);
-              LOGGER.warn("handle:: " + msg);
+              LOGGER.warn("handle:: {}", msg);
               dataImportEventPayload.getContext().put(ERRORS, Json.encode(validationErrors));
               errors.add(new PartialError(mappedItemAsJson.getString(ID_PATH_FIELD) != null ? mappedItemAsJson.getString(ID_PATH_FIELD) : BLANK, msg));
               updatePromise.complete();
@@ -180,7 +180,7 @@ public class UpdateItemEventHandler implements EventHandler {
                 .onSuccess(updatedItem -> {
                   if (isProtectedStatusChanged.get()) {
                     String msg = format(STATUS_UPDATE_ERROR_MSG, oldItemStatuses.get(updatedItem.getId()), newItemStatus);
-                    LOGGER.warn("handle:: " + msg);
+                    LOGGER.warn("handle:: {}", msg);
                     updatedItemEntities.add(updatedItem);
                     errors.add(new PartialError(updatedItem.getId() != null ? updatedItem.getId() : BLANK, msg));
                     updatePromise.complete();
@@ -370,7 +370,7 @@ public class UpdateItemEventHandler implements EventHandler {
         });
     } catch (UnsupportedEncodingException e) {
       String msg = format("Failed to find items by barcode '%s'", item.getBarcode());
-      LOGGER.warn("verifyItemBarcodeUniqueness:: " + msg, e);
+      LOGGER.warn("verifyItemBarcodeUniqueness:: {}", msg, e);
       errors.add(new PartialError(item.getId() != null ? item.getId() : BLANK, format("Failed to find items by barcode '%s'", item.getBarcode())));
       updatePromise.complete();
       promise.fail(msg);
@@ -391,7 +391,7 @@ public class UpdateItemEventHandler implements EventHandler {
           expiredItems.add(item);
         } else {
           errors.add(new PartialError(item.getId() != null ? item.getId() : BLANK, failure.getReason()));
-          LOGGER.warn(format("updateItemAndRetryIfOLExists:: updating Item - %s, status code %s", failure.getReason(), failure.getStatusCode()));
+          LOGGER.warn("updateItemAndRetryIfOLExists:: updating Item - {}, status code {}", failure.getReason(), failure.getStatusCode());
         }
         updatePromise.complete();
         promise.fail(failure.getReason());
@@ -419,7 +419,7 @@ public class UpdateItemEventHandler implements EventHandler {
         });
     } else {
       String errMessage = format("Current retry number %s exceeded or equal given number %s for the Item update for jobExecutionId '%s' ", MAX_RETRIES_COUNT, currentRetryNumber, dataImportEventPayload.getJobExecutionId());
-      LOGGER.warn("processOLError:: " + errMessage);
+      LOGGER.warn("processOLError:: {}", errMessage);
       for (Item expiredItem : expiredItems) {
         errors.add(new PartialError(expiredItem.getId() != null ? expiredItem.getId() : BLANK, errMessage));
       }

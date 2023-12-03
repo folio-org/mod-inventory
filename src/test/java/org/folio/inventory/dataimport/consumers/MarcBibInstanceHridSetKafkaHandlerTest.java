@@ -7,6 +7,7 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
+import org.folio.MappingMetadataDto;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
@@ -18,7 +19,6 @@ import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.Event;
-import org.folio.MappingMetadataDto;
 import org.folio.rest.jaxrs.model.Record;
 import org.junit.After;
 import org.junit.Before;
@@ -36,6 +36,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
 
+import static org.folio.Record.RecordType.MARC_BIB;
 import static org.folio.inventory.dataimport.consumers.MarcHoldingsRecordHridSetKafkaHandler.JOB_EXECUTION_ID_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -67,7 +68,6 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
   private Instance existingInstance;
   private MarcBibInstanceHridSetKafkaHandler marcBibInstanceHridSetKafkaHandler;
   private AutoCloseable mocks;
-  private InstanceUpdateDelegate instanceUpdateDelegate;
 
   @Before
   public void setUp() throws IOException {
@@ -97,7 +97,6 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
         .withMappingRules(mappingRules.encode())
         .withMappingParams(Json.encode(new MappingParameters())))));
 
-    instanceUpdateDelegate = new InstanceUpdateDelegate(mockedStorage);
     marcBibInstanceHridSetKafkaHandler = new MarcBibInstanceHridSetKafkaHandler(new InstanceUpdateDelegate(mockedStorage), mappingMetadataCache);
   }
 
@@ -107,7 +106,7 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
   }
 
   @Test
-  public void shouldReturnSucceededFutureWithObtainedRecordKey(TestContext context) throws IOException {
+  public void shouldReturnSucceededFutureWithObtainedRecordKey(TestContext context) {
     // given
     Async async = context.async();
     Map<String, String> payload = new HashMap<>();
@@ -131,7 +130,7 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
   }
 
   @Test
-  public void shouldReturnFailedFutureWhenPayloadHasNoMarcRecord(TestContext context) throws IOException {
+  public void shouldReturnFailedFutureWhenPayloadHasNoMarcRecord(TestContext context) {
     // given
     Async async = context.async();
     Map<String, String> payload = new HashMap<>();
@@ -203,7 +202,7 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
   public void shouldUpdateSharedInstanceOnCentralTenantIfPayloadContextContainsCentralTenantId(TestContext context) {
     // given
     Map<String, String> payload = new HashMap<>();
-    payload.put("MARC_BIB", Json.encode(record));
+    payload.put(MARC_BIB.value(), Json.encode(record));
     payload.put(CENTRAL_TENANT_ID_KEY, CENTRAL_TENANT_ID);
     payload.put(JOB_EXECUTION_ID_KEY, UUID.randomUUID().toString());
 
