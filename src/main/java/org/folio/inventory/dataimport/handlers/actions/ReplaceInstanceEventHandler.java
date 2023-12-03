@@ -139,10 +139,11 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
             }
             return Future.succeededFuture();
           });
-
       } else {
-        InstanceCollection instanceCollection = storage.getInstanceCollection(context);
-        processInstanceUpdate(dataImportEventPayload, instanceCollection, context, instanceToUpdate, future, context.getTenantId());
+        String targetInstanceTenantId = dataImportEventPayload.getContext().getOrDefault(CENTRAL_TENANT_ID, dataImportEventPayload.getTenant());
+        Context instanceUpdateContext = EventHandlingUtil.constructContext(targetInstanceTenantId, dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+        InstanceCollection instanceCollection = storage.getInstanceCollection(instanceUpdateContext);
+        processInstanceUpdate(dataImportEventPayload, instanceCollection, context, instanceToUpdate, future, targetInstanceTenantId);
       }
     } catch (Exception e) {
       LOGGER.error("Error updating inventory Instance", e);
@@ -151,7 +152,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
     return future;
   }
 
-  private void processInstanceUpdate(DataImportEventPayload dataImportEventPayload, InstanceCollection instanceCollection, Context context, Instance instanceToUpdate, CompletableFuture<DataImportEventPayload> future, String centralTenantId) {
+  private void processInstanceUpdate(DataImportEventPayload dataImportEventPayload, InstanceCollection instanceCollection, Context context, Instance instanceToUpdate, CompletableFuture<DataImportEventPayload> future, String tenantId) {
     prepareEvent(dataImportEventPayload);
 
     String jobExecutionId = dataImportEventPayload.getJobExecutionId();
@@ -162,7 +163,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
     mappingMetadataCache.get(jobExecutionId, context)
       .compose(parametersOptional -> parametersOptional
-        .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, mappingMetadata, instanceToUpdate, centralTenantId))
+        .map(mappingMetadata -> prepareAndExecuteMapping(dataImportEventPayload, mappingMetadata, instanceToUpdate, tenantId))
         .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, jobExecutionId,
           recordId, chunkId))))
       .compose(e -> {
@@ -188,8 +189,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       })
       .onComplete(ar -> {
         if (ar.succeeded()) {
-          dataImportEventPayload.getContext().put(INSTANCE.value(), ar.result().encode());
-          dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
+          prepareSucceededResultPayload(dataImportEventPayload, ar.result());
           future.complete(dataImportEventPayload);
         } else {
           dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
@@ -344,6 +344,14 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         promise.fail(format("Cannot get actual Instance by id: %s, cause: %s", instance.getId(), e.getMessage()));
         return null;
       });
+  }
+
+  private void prepareSucceededResultPayload(DataImportEventPayload dataImportEventPayload, JsonObject updatedInstanceJson) {
+    if (dataImportEventPayload.getContext().containsKey(CENTRAL_TENANT_ID)) {
+      dataImportEventPayload.getContext().put(CENTRAL_TENANT_INSTANCE_UPDATED_FLAG, Boolean.TRUE.toString());
+    }
+    dataImportEventPayload.getContext().put(INSTANCE.value(), updatedInstanceJson.encode());
+    dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
   }
 
 }
