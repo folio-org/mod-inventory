@@ -1,3 +1,6 @@
+## 20.1.4 2023-12-05
+* "io.vertx.core.impl.NoStackTraceThrowable: Not found" error when overlaying shared FOLIO source Instance ([MODINV-923](https://issues.folio.org/browse/MODINV-923))
+
 ## 20.1.3 2023-11-06
 * Unlink local MARC authorities from shared MARC bib SRS records - PART 2 ([MODINV-890](https://issues.folio.org/browse/MODINV-890))
 * Adjust Optimistic locking for multiple holdings and multiple items update ([MODINV-860](https://issues.folio.org/browse/MODINV-860))
