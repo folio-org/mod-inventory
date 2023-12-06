@@ -1,3 +1,6 @@
+## 20.1.5 2023-12-06
+* Upgrade di-processing-core library to v4.1.3 to pick up the fix for proper statistical codes mapping ([MODINV-934](https://issues.folio.org/browse/MODINV-934))
+
 ## 20.1.4 2023-12-05
 * "io.vertx.core.impl.NoStackTraceThrowable: Not found" error when overlaying shared FOLIO source Instance ([MODINV-923](https://issues.folio.org/browse/MODINV-923))
 
