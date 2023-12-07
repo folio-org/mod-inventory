@@ -2,12 +2,14 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
+import org.folio.HttpStatus;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
@@ -24,6 +26,7 @@ import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.processing.mapping.mapper.MappingContext;
+import org.folio.rest.client.SourceStorageRecordsClient;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Record;
 
@@ -40,6 +43,7 @@ import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
 import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
@@ -60,14 +64,17 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
   private MappingMetadataCache mappingMetadataCache;
   private IdStorageService idStorageService;
   private OrderHelperService orderHelperService;
+  private HttpClient httpClient;
 
-  public CreateInstanceEventHandler(Storage storage, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper, MappingMetadataCache mappingMetadataCache, IdStorageService idStorageService,
-                                    OrderHelperService orderHelperService) {
+  public CreateInstanceEventHandler(Storage storage, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper,
+                                    MappingMetadataCache mappingMetadataCache, IdStorageService idStorageService,
+                                    OrderHelperService orderHelperService, HttpClient httpClient) {
     super(storage);
     this.orderHelperService = orderHelperService;
     this.mappingMetadataCache = mappingMetadataCache;
     this.precedingSucceedingTitlesHelper = precedingSucceedingTitlesHelper;
     this.idStorageService = idStorageService;
+    this.httpClient = httpClient;
   }
 
   @Override
@@ -104,6 +111,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
               .map(mappingMetadata -> {
                 MappingParameters mappingParameters = Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class);
                 AdditionalFieldsUtil.updateLatestTransactionDate(targetRecord, mappingParameters);
+                AdditionalFieldsUtil.move001To035(targetRecord);
                 payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(targetRecord));
                 return prepareAndExecuteMapping(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()), mappingParameters);
               })
@@ -121,7 +129,9 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
               Instance mappedInstance = Instance.fromJson(instanceAsJson);
               return addInstance(mappedInstance, instanceCollection)
-                .compose(createdInstance -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(mappedInstance, context).map(createdInstance));
+                .compose(createdInstance -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(mappedInstance, context).map(createdInstance))
+                .compose(createdInstance -> fill001And999IFields(createdInstance, targetRecord))
+                .compose(createdInstance -> saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, createdInstance, instanceCollection));
             })
             .onSuccess(ar -> {
               dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(ar));
@@ -146,6 +156,40 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
       future.completeExceptionally(e);
     }
     return future;
+  }
+
+  private Future<Instance> fill001And999IFields(Instance instance, Record record) {
+    AdditionalFieldsUtil.fill001FieldInMarcRecord(record, instance.getHrid());
+    return AdditionalFieldsUtil.addFieldToMarcRecord(record, TAG_999, 'i', instance.getId())
+      ? Future.succeededFuture(instance)
+      : Future.failedFuture(format("Failed to add instance id '%s' to record with id '%s'", instance.getId(), record.getId()));
+  }
+
+  private Future<Instance> saveRecordInSrsAndHandleResponse(DataImportEventPayload payload, Record record,
+                                                            Instance instance, InstanceCollection instanceCollection) {
+    Promise<Instance> promise = Promise.promise();
+    getSourceStorageRecordsClient(payload).postSourceStorageRecords(record)
+      .onComplete(ar -> {
+        var result = ar.result();
+        if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_CREATED.toInt()) {
+          payload.getContext().put(EntityType.MARC_BIBLIOGRAPHIC.value(), result.bodyAsJsonObject().encode());
+          LOGGER.info("Created MARC record in SRS with id: '{}', instanceId: '{}', from tenant: {}, jobExecutionId: {}",
+            record.getId(), instance.getId(), payload.getTenant(), payload.getJobExecutionId());
+          promise.complete(instance);
+        } else {
+          String msg = format("Failed to create MARC record in SRS, instanceId: '%s', jobExecutionId: '%s', status code: %s, Record: %s",
+            instance.getId(), payload.getJobExecutionId(), result != null ? result.statusCode() : "", result != null ? result.bodyAsString() : "");
+          LOGGER.warn(msg);
+          deleteInstance(instance.getId(), payload.getJobExecutionId(), instanceCollection);
+          promise.fail(msg);
+        }
+      });
+    return promise.future();
+  }
+
+  public SourceStorageRecordsClient getSourceStorageRecordsClient(DataImportEventPayload payload) {
+    return new SourceStorageRecordsClient(payload.getOkapiUrl(), payload.getTenant(),
+      payload.getToken(), httpClient);
   }
 
   private String getInstanceId(Record record) {
@@ -177,7 +221,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
   @Override
   public boolean isPostProcessingNeeded() {
-    return true;
+    return false;
   }
 
   @Override
@@ -211,5 +255,19 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
         }
       });
     return promise.future();
+  }
+
+  private void deleteInstance(String id, String jobExecutionId, InstanceCollection instanceCollection) {
+    Promise<Void> promise = Promise.promise();
+    instanceCollection.delete(id, success -> {
+        LOGGER.info("deleteInstance:: Instance was deleted by id: '{}', jobExecutionId: '{}'", id, jobExecutionId);
+        promise.complete(success.getResult());
+      },
+      failure -> {
+        LOGGER.warn("deleteInstance:: Error deleting Instance by id: '{}', jobExecutionId: '{}', cause: {}, status code: {}",
+          id, jobExecutionId, failure.getReason(), failure.getStatusCode());
+        promise.fail(failure.getReason());
+      });
+    promise.future();
   }
 }
