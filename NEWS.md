@@ -1,3 +1,6 @@
+## 20.1.6 2023-12-08
+* MARC source shared instance overlay fails occasionally ([MODINV-937](https://issues.folio.org/browse/MODINV-937))
+
 ## 20.1.5 2023-12-06
 * Upgrade di-processing-core library to v4.1.3 to pick up the fix for proper statistical codes mapping ([MODINV-934](https://issues.folio.org/browse/MODINV-934))
 
