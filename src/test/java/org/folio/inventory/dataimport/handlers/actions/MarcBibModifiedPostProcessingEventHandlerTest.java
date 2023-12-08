@@ -56,6 +56,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
@@ -67,6 +68,7 @@ public class MarcBibModifiedPostProcessingEventHandlerTest {
   private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
   private static final String PRECEDING_SUCCEEDING_TITLES_KEY = "precedingSucceedingTitles";
   private static final String OKAPI_URL = "http://localhost";
+  private static final String TENANT_ID = "diku";
   private static final String CENTRAL_TENANT_ID = "centralTenantId";
 
   @Mock
@@ -154,6 +156,7 @@ public class MarcBibModifiedPostProcessingEventHandlerTest {
       .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
+      .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
@@ -165,6 +168,7 @@ public class MarcBibModifiedPostProcessingEventHandlerTest {
     Instance updatedInstance = Instance.fromJson(instanceJson);
 
     // then
+    Mockito.verify(mappingMetadataCache).get(eq(dataImportEventPayload.getJobExecutionId()), argThat(context -> context.getTenantId().equals(TENANT_ID)));
     Mockito.verify(mockedStorage).getInstanceCollection(argThat(context -> context.getTenantId().equals(CENTRAL_TENANT_ID)));
     Assert.assertEquals(existingInstance.getId(), instanceJson.getString("id"));
     Assert.assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
