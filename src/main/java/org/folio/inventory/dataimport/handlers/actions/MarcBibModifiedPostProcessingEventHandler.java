@@ -79,21 +79,22 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
       }
 
       record.setExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId));
-      Context context = EventHandlingUtil.constructContext(getTenant(dataImportEventPayload), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+      Context localTenantContext = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+      Context targetInstanceContext = EventHandlingUtil.constructContext(getTenant(dataImportEventPayload), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       Promise<Instance> instanceUpdatePromise = Promise.promise();
 
-      mappingMetadataCache.get(dataImportEventPayload.getJobExecutionId(), context)
+      mappingMetadataCache.get(dataImportEventPayload.getJobExecutionId(), localTenantContext)
         .map(parametersOptional -> parametersOptional.orElseThrow(() ->
           new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, dataImportEventPayload.getJobExecutionId()))))
         .map(mappingMetadataDto -> buildPayloadForInstanceUpdate(dataImportEventPayload, mappingMetadataDto))
-        .compose(payloadForUpdate -> instanceUpdateDelegate.handle(payloadForUpdate, record, context))
+        .compose(payloadForUpdate -> instanceUpdateDelegate.handle(payloadForUpdate, record, targetInstanceContext))
         .onSuccess(instanceUpdatePromise::complete)
-        .compose(updatedInstance -> precedingSucceedingTitlesHelper.getExistingPrecedingSucceedingTitles(updatedInstance, context))
+        .compose(updatedInstance -> precedingSucceedingTitlesHelper.getExistingPrecedingSucceedingTitles(updatedInstance, targetInstanceContext))
         .map(precedingSucceedingTitles -> precedingSucceedingTitles.stream()
           .map(titleJson -> titleJson.getString("id"))
           .collect(Collectors.toSet()))
-        .compose(precedingSucceedingTitles -> precedingSucceedingTitlesHelper.deletePrecedingSucceedingTitles(precedingSucceedingTitles, context))
-        .compose(ar -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(instanceUpdatePromise.future().result(), context))
+        .compose(precedingSucceedingTitles -> precedingSucceedingTitlesHelper.deletePrecedingSucceedingTitles(precedingSucceedingTitles, targetInstanceContext))
+        .compose(ar -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(instanceUpdatePromise.future().result(), targetInstanceContext))
         .onComplete(updateAr -> {
           if (updateAr.succeeded()) {
             dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
