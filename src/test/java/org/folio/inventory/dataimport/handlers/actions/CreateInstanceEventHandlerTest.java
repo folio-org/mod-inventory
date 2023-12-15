@@ -10,8 +10,13 @@ import com.google.common.collect.Lists;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.buffer.impl.BufferImpl;
+import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.HttpResponse;
+import io.vertx.ext.web.client.impl.HttpResponseImpl;
 import org.apache.http.HttpStatus;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
@@ -38,6 +43,7 @@ import org.folio.processing.mapping.mapper.reader.Reader;
 import org.folio.processing.mapping.mapper.reader.record.marc.MarcBibReaderFactory;
 import org.folio.processing.value.MissingValue;
 import org.folio.processing.value.StringValue;
+import org.folio.rest.client.SourceStorageRecordsClient;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.MappingDetail;
 import org.folio.rest.jaxrs.model.MappingRule;
@@ -48,6 +54,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -89,13 +96,15 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class CreateInstanceEventHandlerTest {
 
-  private static final String PARSED_CONTENT = "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"245\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"a\":\"titleValue\"}]}},{\"336\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"b\":\"b6698d38-149f-11ec-82a8-0242ac130003\"}]}},{\"780\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"Houston oil directory\"}]}},{\"785\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"SAIS review of international affairs\"},{\"x\":\"1945-4724\"}]}},{\"500\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Adaptation of Xi xiang ji by Wang Shifu.\"}]}},{\"520\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\"}]}} , {\"999\": {\"ind1\":\"f\", \"ind2\":\"f\", \"subfields\":[ { \"i\": \"957985c6-97e3-4038-b0e7-343ecd0b8120\"} ] } }]}";
+  private static final String PARSED_CONTENT = "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"003\":\"in001\"},{\"245\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"a\":\"titleValue\"}]}},{\"336\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"b\":\"b6698d38-149f-11ec-82a8-0242ac130003\"}]}},{\"780\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"Houston oil directory\"}]}},{\"785\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"SAIS review of international affairs\"},{\"x\":\"1945-4724\"}]}},{\"500\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Adaptation of Xi xiang ji by Wang Shifu.\"}]}},{\"520\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\"}]}} , {\"999\": {\"ind1\":\"f\", \"ind2\":\"f\", \"subfields\":[ { \"i\": \"957985c6-97e3-4038-b0e7-343ecd0b8120\"} ] } }]}";
   private static final String PARSED_CONTENT_999ffi = "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"245\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"a\":\"titleValue\"}]}},{\"336\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"b\":\"b6698d38-149f-11ec-82a8-0242ac130003\"}]}},{\"780\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"Houston oil directory\"}]}},{\"785\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"SAIS review of international affairs\"},{\"x\":\"1945-4724\"}]}},{\"500\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Adaptation of Xi xiang ji by Wang Shifu.\"}]}},{\"520\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\"}]}}]}";
   private static final String PARSED_CONTENT_WITH_005 = "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"005\":\"20141107001016.0\"},{\"245\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"a\":\"titleValue\"}]}},{\"336\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"b\":\"b6698d38-149f-11ec-82a8-0242ac130003\"}]}},{\"780\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"Houston oil directory\"}]}},{\"785\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"SAIS review of international affairs\"},{\"x\":\"1945-4724\"}]}},{\"500\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Adaptation of Xi xiang ji by Wang Shifu.\"}]}},{\"520\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\"}]}} , {\"999\": {\"ind1\":\"f\", \"ind2\":\"f\", \"subfields\":[ { \"i\": \"957985c6-97e3-4038-b0e7-343ecd0b8120\"} ] } }]}";
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/bib-rules.json";
@@ -113,6 +122,8 @@ public class CreateInstanceEventHandlerTest {
   private InstanceIdStorageService instanceIdStorageService;
   @Mock
   private OrderHelperServiceImpl orderHelperService;
+  @Mock
+  private SourceStorageRecordsClient sourceStorageClient;
   @Spy
   private MarcBibReaderFactory fakeReaderFactory = new MarcBibReaderFactory();
 
@@ -173,14 +184,13 @@ public class CreateInstanceEventHandlerTest {
         .withMappingParams(Json.encode(new MappingParameters()))
         .withMappingRules(mappingRules.toString())))));
 
-
     Vertx vertx = Vertx.vertx();
-    createInstanceEventHandler = new CreateInstanceEventHandler(storage,
+    HttpClient httpClient = vertx.createHttpClient();
+    createInstanceEventHandler = spy(new CreateInstanceEventHandler(storage,
       new PrecedingSucceedingTitlesHelper(context -> mockedClient), new MappingMetadataCache(vertx,
-      vertx.createHttpClient(), 3600),
-      instanceIdStorageService, orderHelperService);
+      httpClient, 3600), instanceIdStorageService, orderHelperService, httpClient));
 
-
+    doReturn(sourceStorageClient).when(createInstanceEventHandler).getSourceStorageRecordsClient(any());
     doAnswer(invocationOnMock -> {
       Instance instanceRecord = invocationOnMock.getArgument(0);
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
@@ -220,6 +230,10 @@ public class CreateInstanceEventHandlerTest {
     record.setId(recordId);
 
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+
+    Buffer buffer = BufferImpl.buffer("{\"leader\":\"00574nam  22001211a 4500\",\"fields\":[{\"035\":{\"subfields\":[{\"a\":\"(in001)ybp7406411\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"245\":{\"subfields\":[{\"a\":\"titleValue\"}],\"ind1\":\"1\",\"ind2\":\"0\"}},{\"336\":{\"subfields\":[{\"b\":\"b6698d38-149f-11ec-82a8-0242ac130003\"}],\"ind1\":\"1\",\"ind2\":\"0\"}},{\"780\":{\"subfields\":[{\"t\":\"Houston oil directory\"}],\"ind1\":\"0\",\"ind2\":\"0\"}},{\"785\":{\"subfields\":[{\"t\":\"SAIS review of international affairs\"},{\"x\":\"1945-4724\"}],\"ind1\":\"0\",\"ind2\":\"0\"}},{\"500\":{\"subfields\":[{\"a\":\"Adaptation of Xi xiang ji by Wang Shifu.\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"520\":{\"subfields\":[{\"a\":\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"999\":{\"subfields\":[{\"i\":\"4d4545df-b5ba-4031-a031-70b1c1b2fc5d\"}],\"ind1\":\"f\",\"ind2\":\"f\"}}]}");
+    HttpResponse<Buffer> resp = buildHttpResponseWithBuffer(buffer);
+    when(sourceStorageClient.postSourceStorageRecords(any())).thenReturn(Future.succeededFuture(resp));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
@@ -270,6 +284,10 @@ public class CreateInstanceEventHandlerTest {
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
 
+    HttpResponse<Buffer> resp = buildHttpResponseWithBuffer(BufferImpl.buffer("{}"));
+    ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
+    when(sourceStorageClient.postSourceStorageRecords(any())).thenReturn(Future.succeededFuture(resp));
+
     HashMap<String, String> context = new HashMap<>();
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_005));
     record.setId(recordId);
@@ -288,15 +306,56 @@ public class CreateInstanceEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(20, TimeUnit.SECONDS);
 
+    verify(sourceStorageClient).postSourceStorageRecords(recordCaptor.capture());
     assertEquals(DI_INVENTORY_INSTANCE_CREATED.value(), actualDataImportEventPayload.getEventType());
     assertNotNull(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
     JsonObject createdInstance = new JsonObject(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
     String actualInstanceId = createdInstance.getString("id");
     assertNotNull(actualInstanceId);
     assertEquals(instanceId, actualInstanceId);
-    String actualDate = AdditionalFieldsUtil.getValueFromControlledField(
-      Json.decodeValue(context.get(MARC_BIBLIOGRAPHIC.value()), Record.class), TAG_005);
+    String actualDate = AdditionalFieldsUtil.getValueFromControlledField(recordCaptor.getValue(), TAG_005);
+    assertNotNull(actualDate);
     assertEquals(expectedDate.substring(0, 10), actualDate.substring(0, 10));
+  }
+
+  @Test(expected = ExecutionException.class)
+  public void shouldProcessEventAndDeleteInstanceIfFailedCreateRecord() throws InterruptedException, ExecutionException, TimeoutException {
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    String instanceTypeId = "fe19bae4-da28-472b-be90-d442e2428ead";
+    String recordId = "567859ad-505a-400d-a699-0028a1fdbf84";
+    String instanceId = "4d4545df-b5ba-4031-a031-70b1c1b2fc5d";
+    String title = "titleValue";
+    RecordToEntity recordToInstance = RecordToEntity.builder().recordId(recordId).entityId(instanceId).build();
+
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId), StringValue.of(title));
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+    when(instanceIdStorageService.store(any(), any(), any())).thenReturn(Future.succeededFuture(recordToInstance));
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new InstanceWriterFactory());
+
+    HttpResponseImpl<Buffer> response = new HttpResponseImpl<>(null, HttpStatus.SC_BAD_REQUEST, "",
+      null, null, null, BufferImpl.buffer("{}"), null);
+    when(sourceStorageClient.postSourceStorageRecords(any())).thenReturn(Future.succeededFuture(response));
+
+    HashMap<String, String> context = new HashMap<>();
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_005));
+    record.setId(recordId);
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(mockServer.baseUrl())
+      .withToken(TOKEN)
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl());
+
+    CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
+    future.get(5, TimeUnit.SECONDS);
   }
 
   @Test
@@ -325,6 +384,10 @@ public class CreateInstanceEventHandlerTest {
     record.setId(recordId);
 
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+
+    Buffer buffer = BufferImpl.buffer("{\"id\":\"567859ad-505a-400d-a699-0028a1fdbf84\",\"parsedRecord\":{\"content\":\"{\\\"leader\\\":\\\"00567nam  22001211a 4500\\\",\\\"fields\\\":[{\\\"035\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"ybp7406411\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"245\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"titleValue\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"336\\\":{\\\"subfields\\\":[{\\\"b\\\":\\\"b6698d38-149f-11ec-82a8-0242ac130003\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"780\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"Houston oil directory\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"785\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"SAIS review of international affairs\\\"},{\\\"x\\\":\\\"1945-4724\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"500\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Adaptation of Xi xiang ji by Wang Shifu.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"520\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"999\\\":{\\\"subfields\\\":[{\\\"i\\\":\\\"957985c6-97e3-4038-b0e7-343ecd0b8120\\\"}],\\\"ind1\\\":\\\"f\\\",\\\"ind2\\\":\\\"f\\\"}}]}\"},\"deleted\":false,\"state\":\"ACTUAL\"}");
+    HttpResponse<Buffer> resp = buildHttpResponseWithBuffer(buffer);
+    when(sourceStorageClient.postSourceStorageRecords(any())).thenReturn(Future.succeededFuture(resp));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
@@ -566,7 +629,7 @@ public class CreateInstanceEventHandlerTest {
 
   @Test
   public void isPostProcessingNeededShouldReturnTrue() {
-    assertTrue(createInstanceEventHandler.isPostProcessingNeeded());
+    assertFalse(createInstanceEventHandler.isPostProcessingNeeded());
   }
 
   @Test
@@ -703,6 +766,11 @@ public class CreateInstanceEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
 
     future.get(5, TimeUnit.SECONDS);
+  }
+
+  private static HttpResponseImpl<Buffer> buildHttpResponseWithBuffer(Buffer buffer) {
+    return new HttpResponseImpl<>(null, HttpStatus.SC_CREATED, "",
+      null, null, null, buffer, null);
   }
 
   private Response createdResponse() {
