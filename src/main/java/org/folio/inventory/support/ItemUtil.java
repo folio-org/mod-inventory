@@ -1,5 +1,6 @@
 package org.folio.inventory.support;
 
+import static java.util.Collections.emptyList;
 import static org.folio.inventory.domain.converters.EntityConverters.converterForClass;
 import static org.folio.inventory.support.JsonArrayHelper.toList;
 import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
@@ -192,8 +193,7 @@ public final class ItemUtil {
     List<String> formerIds = toListOfStrings(
       itemRequest.getJsonArray(Item.FORMER_IDS_KEY));
 
-    List<String> statisticalCodeIds = toListOfStrings(
-      itemRequest.getJsonArray(Item.STATISTICAL_CODE_IDS_KEY));
+    List<String> statisticalCodeIds = getStatisticalCodeIds(itemRequest.getJsonArray(Item.STATISTICAL_CODE_IDS_KEY));
 
     List<String> yearCaption = toListOfStrings(
       itemRequest.getJsonArray(Item.YEAR_CAPTION_KEY));
@@ -224,7 +224,6 @@ public final class ItemUtil {
 
     List<String> tags = itemRequest.containsKey(Item.TAGS_KEY)
       ? getTags(itemRequest) : new ArrayList<>();
-
 
     String materialTypeId = getNestedProperty(itemRequest, MATERIAL_TYPE, ID);
     String permanentLocationId = getNestedProperty(itemRequest, PERMANENT_LOCATION, ID);
@@ -277,6 +276,19 @@ public final class ItemUtil {
       .withTags(tags);
   }
 
+  private static List<String> getStatisticalCodeIds(JsonArray jsonArray) {
+    // fix only for the case when Statistical Code value is empty, not for the case when value is a Statistical Code name
+    if (jsonArray == null) return emptyList();
+    try {
+      if (jsonArray.stream().allMatch(obj -> JsonObject.mapFrom(obj).isEmpty())) {
+        return emptyList();
+      }
+    } catch (Exception e) {
+      return toListOfStrings(jsonArray);
+    }
+    return toListOfStrings(jsonArray);
+  }
+
   private static List<String> getTags(JsonObject itemRequest) {
     final JsonObject tags = itemRequest.getJsonObject(Item.TAGS_KEY);
     return tags.containsKey(Item.TAG_LIST_KEY) ?
@@ -292,7 +304,7 @@ public final class ItemUtil {
     includeIfPresent(itemJson, Item.VERSION_KEY, item.getVersion());
     itemJson.put(STATUS, converterForClass(Status.class).toJson(item.getStatus()));
 
-    if(item.getLastCheckIn() != null) {
+    if (item.getLastCheckIn() != null) {
       itemJson.put(Item.LAST_CHECK_IN, item.getLastCheckIn().toJson());
     }
 

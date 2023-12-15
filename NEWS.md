@@ -1,4 +1,5 @@
-## 20.2.0-SNAPSHOT 2023-xx-xx
+## 20.2.0-SNAPSHOT
+* Create Item action discards when stat codes are in field mapping but not incoming MARC file ([MODINV-906](https://issues.folio.org/browse/MODINV-906))
 * Inventory cannot process Holdings with virtual fields ([MODINV-941](https://issues.folio.org/browse/MODINV-941))
 
 ## 20.1.0 2023-10-13

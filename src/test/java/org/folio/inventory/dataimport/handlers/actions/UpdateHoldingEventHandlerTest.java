@@ -781,7 +781,8 @@ public class UpdateHoldingEventHandlerTest {
       .put("status", new JsonObject().put("name", AVAILABLE.value()))
       .put("materialType", new JsonObject().put("id", UUID.randomUUID().toString()))
       .put("permanentLoanType", new JsonObject().put("id", UUID.randomUUID().toString()))
-      .put("holdingsRecordId", UUID.randomUUID().toString());
+      .put("holdingsRecordId", UUID.randomUUID().toString())
+      .put("statisticalCodeIds", JsonArray.of(JsonObject.of()));
 
     doAnswer(invocationOnMock -> {
       Consumer<Success<org.folio.inventory.domain.items.Item>> successHandler = invocationOnMock.getArgument(1);
