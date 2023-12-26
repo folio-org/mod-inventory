@@ -164,7 +164,7 @@ public class ItemApiMoveExamples extends ApiTests {
 
     final var moveItemsResponse = moveItems(newHoldingsId, item);
 
-    assertThat(moveItemsResponse.getStatusCode(), is(500));
+    assertThat(moveItemsResponse.getStatusCode(), is(200));
 
     final var updatedItem = itemsClient.getById(item.getId());
 
