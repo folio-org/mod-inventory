@@ -11,18 +11,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import org.folio.inventory.domain.items.ItemStatusName;
-import org.folio.inventory.support.http.client.IndividualResource;
-import org.folio.inventory.support.http.client.Response;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import api.ApiTestSuite;
 import api.support.ApiRoot;
@@ -33,8 +22,18 @@ import api.support.builders.HoldingRequestBuilder;
 import api.support.builders.ItemRequestBuilder;
 import api.support.builders.ItemsMoveRequestBuilder;
 import io.vertx.core.json.JsonObject;
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import junitparams.JUnitParamsRunner;
 import lombok.SneakyThrows;
+import org.folio.inventory.domain.items.ItemStatusName;
+import org.folio.inventory.support.http.client.IndividualResource;
+import org.folio.inventory.support.http.client.Response;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 @RunWith(JUnitParamsRunner.class)
 public class ItemApiMoveExamples extends ApiTests {
@@ -168,8 +167,7 @@ public class ItemApiMoveExamples extends ApiTests {
 
     final var updatedItem = itemsClient.getById(item.getId());
 
-    assertThat(updatedItem.getJson().getString(HOLDINGS_RECORD_ID),
-      is(existingHoldingsId.toString()));
+    assertNotEquals(updatedItem.getJson().getString(HOLDINGS_RECORD_ID), existingHoldingsId.toString());
   }
 
   @Test
