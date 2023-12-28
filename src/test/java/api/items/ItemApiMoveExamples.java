@@ -149,7 +149,7 @@ public class ItemApiMoveExamples extends ApiTests {
   }
 
   @Test
-  public void cannotMoveItemToHoldingsThatDoesNotMatchSchema() {
+  public void canMoveItemToHoldingsThatDoesNotMatchSchema() {
     final var instanceId = createInstance();
 
     final var existingHoldingsId = createHoldingsForInstance(instanceId);

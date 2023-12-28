@@ -19,6 +19,7 @@ class ExternalStorageModuleHoldingsRecordCollection
   private static final Logger LOGGER = LogManager.getLogger(ExternalStorageModuleHoldingsRecordCollection.class);
   private static final ObjectMapper mapper = ObjectMapperTool.getMapper();
 
+  // added to ignore unknown fields
   static {
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
   }
