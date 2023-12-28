@@ -554,6 +554,70 @@ public class MarcInstanceSharingHandlerImplTest {
     verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(recordId);
   }
 
+  @Test
+  public void shouldPopulateTargetInstanceWithNonMarcControlledFields(TestContext testContext) {
+    //given
+    Async async = testContext.async();
+    String instanceId = "fea6477b-d8f5-4d22-9e86-6218407c780b";
+    String targetInstanceHrid = "consin001";
+    Record record = sourceStorageRecordsResponseBuffer.bodyAsJson(Record.class);
+
+    Instance localSourceInstance = new Instance(instanceId, "1", "001", "MARC", "testTitle", UUID.randomUUID().toString())
+      .setDiscoverySuppress(Boolean.TRUE)
+      .setStaffSuppress(Boolean.TRUE)
+      .setCatalogedDate("1970-01-01")
+      .setStatusId(UUID.randomUUID().toString())
+      .setStatisticalCodeIds(List.of(UUID.randomUUID().toString()))
+      .setAdministrativeNotes(List.of("test-note"))
+      .setNatureOfContentTermIds(List.of(UUID.randomUUID().toString()));
+
+    Instance importedTargetInstance = new Instance(instanceId, "1", targetInstanceHrid, "MARC", "testTitle", UUID.randomUUID().toString());
+
+    SharingInstance sharingInstanceMetadata = new SharingInstance()
+      .withInstanceIdentifier(UUID.fromString(instanceId))
+      .withSourceTenantId("diku")
+      .withTargetTenantId(CONSORTIUM_TENANT);
+
+    kafkaHeaders = new HashMap<>();
+    marcHandler = spy(new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, storage, vertx, httpClient));
+    setField(marcHandler, "restDataImportHelper", restDataImportHelper);
+    setField(marcHandler, "entitiesLinksService", entitiesLinksService);
+
+    Target targetTenantProvider = when(mock(Target.class).getTenantId()).thenReturn(CONSORTIUM_TENANT).getMock();
+    doReturn(sourceStorageClient).when(marcHandler).getSourceStorageRecordsClient(anyString(), eq(kafkaHeaders));
+    doReturn(Future.succeededFuture(record)).when(marcHandler).getSourceMARCByInstanceId(any(), any(), any());
+    doReturn(Future.succeededFuture(instanceId)).when(marcHandler).deleteSourceRecordByRecordId(any(), any(), any(), any());
+
+    when(restDataImportHelper.importMarcRecord(any(), any(), any()))
+      .thenReturn(Future.succeededFuture("COMMITTED"));
+    when(instance.getHrid()).thenReturn(targetInstanceHrid);
+    when(instanceOperationsHelper.getInstanceById(any(), any())).thenReturn(Future.succeededFuture(importedTargetInstance));
+    when(instanceOperationsHelper.updateInstance(any(), any())).thenReturn(Future.succeededFuture(instanceId));
+
+    // when
+    Future<String> future = marcHandler.publishInstance(localSourceInstance, sharingInstanceMetadata, source, targetTenantProvider, kafkaHeaders);
+
+    //then
+    future.onComplete(ar -> {
+      testContext.assertTrue(ar.succeeded());
+      testContext.assertTrue(ar.result().equals(instanceId));
+
+      ArgumentCaptor<Instance> updatedInstanceCaptor = ArgumentCaptor.forClass(Instance.class);
+      verify(instanceOperationsHelper).updateInstance(updatedInstanceCaptor.capture(), argThat(p -> CONSORTIUM_TENANT.equals(p.getTenantId())));
+      Instance targetInstanceWithNonMarcData = updatedInstanceCaptor.getValue();
+      testContext.assertEquals("MARC", targetInstanceWithNonMarcData.getSource());
+      testContext.assertEquals(targetInstanceHrid, targetInstanceWithNonMarcData.getHrid());
+      testContext.assertEquals(localSourceInstance.getDiscoverySuppress(), targetInstanceWithNonMarcData.getDiscoverySuppress());
+      testContext.assertEquals(localSourceInstance.getStaffSuppress(), targetInstanceWithNonMarcData.getStaffSuppress());
+      testContext.assertEquals(localSourceInstance.getCatalogedDate(), targetInstanceWithNonMarcData.getCatalogedDate());
+      testContext.assertEquals(localSourceInstance.getStatusId(), targetInstanceWithNonMarcData.getStatusId());
+      testContext.assertEquals(localSourceInstance.getStatisticalCodeIds(), targetInstanceWithNonMarcData.getStatisticalCodeIds());
+      testContext.assertEquals(localSourceInstance.getAdministrativeNotes(), targetInstanceWithNonMarcData.getAdministrativeNotes());
+      testContext.assertEquals(localSourceInstance.getNatureOfContentTermIds(), targetInstanceWithNonMarcData.getNatureOfContentTermIds());
+      async.complete();
+    });
+  }
+
   private static void setField(Object instance, String fieldName, Object fieldValue) {
     try {
       Field field = instance.getClass().getDeclaredField(fieldName);
