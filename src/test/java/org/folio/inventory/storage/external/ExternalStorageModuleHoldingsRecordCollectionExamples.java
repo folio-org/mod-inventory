@@ -34,7 +34,7 @@ public class ExternalStorageModuleHoldingsRecordCollectionExamples extends Exter
   }
 
   @Test
-  public void shouldNotMapFromJsonAndNotThrowException() {
+  public void shouldMapFromJsonAndNotThrowException() {
     JsonObject holdingsRecord = new JsonObject()
       .put("holdingsItems", "testValue")
       .put("bareHoldingsItems", "testValue");
