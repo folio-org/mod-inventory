@@ -33,12 +33,14 @@ public class ExternalStorageModuleHoldingsRecordCollectionExamples extends Exter
     assertEquals(permanentLocationId, holdingsrecord.getPermanentLocationId());
   }
 
-  @Test(expected = JsonMappingException.class)
-  public void shouldNotMapFromJsonAndThrowException() {
+  @Test
+  public void shouldNotMapFromJsonAndNotThrowException() {
     JsonObject holdingsRecord = new JsonObject()
-      .put("testField", "testValue");
+      .put("holdingsItems", "testValue")
+      .put("bareHoldingsItems", "testValue");
 
-    storage.mapFromJson(holdingsRecord);
+    var result = storage.mapFromJson(holdingsRecord);
+    assertNotNull(result);
   }
 
   @Test
