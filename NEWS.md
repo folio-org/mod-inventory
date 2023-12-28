@@ -1,3 +1,6 @@
+## 20.2.0-SNAPSHOT 2023-xx-xx
+* Inventory cannot process Holdings with virtual fields ([MODINV-941](https://issues.folio.org/browse/MODINV-941))
+
 ## 20.1.0 2023-10-13
 * Update status when user attempts to update shared auth record from member tenant ([MODDATAIMP-926](https://issues.folio.org/browse/MODDATAIMP-926))
 * Add cache to get and store consortium data configurations ([MODINV-872](https://issues.folio.org/browse/MODINV-872))

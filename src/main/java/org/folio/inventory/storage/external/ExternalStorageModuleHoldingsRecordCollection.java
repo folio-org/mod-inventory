@@ -1,7 +1,10 @@
 package org.folio.inventory.storage.external;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.JsonObject;
 import java.io.IOException;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.HoldingsRecord;
@@ -9,14 +12,20 @@ import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
 
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.JsonObject;
-
 class ExternalStorageModuleHoldingsRecordCollection
   extends ExternalStorageModuleCollection<HoldingsRecord>
   implements HoldingsRecordCollection {
 
   private static final Logger LOGGER = LogManager.getLogger(ExternalStorageModuleHoldingsRecordCollection.class);
+  private static final ObjectMapper mapper = ObjectMapperTool.getMapper();
+
+  /*
+    Exclude 'holdingItems' and 'bareHoldingItems' from the response mapping to HoldingsRecord
+    due to incompatibilities with changes in mod-inventory-storage.
+   */
+  static {
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+  }
 
   ExternalStorageModuleHoldingsRecordCollection(String baseAddress,
                                          String tenant,
