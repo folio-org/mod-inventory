@@ -19,7 +19,10 @@ class ExternalStorageModuleHoldingsRecordCollection
   private static final Logger LOGGER = LogManager.getLogger(ExternalStorageModuleHoldingsRecordCollection.class);
   private static final ObjectMapper mapper = ObjectMapperTool.getMapper();
 
-  // added to ignore unknown fields
+  /*
+    Exclude 'holdingItems' and 'bareHoldingItems' from the response mapping to HoldingsRecord
+    due to incompatibilities with changes in mod-inventory-storage.
+   */
   static {
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
   }

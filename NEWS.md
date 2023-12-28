@@ -1,3 +1,6 @@
+## 20.2.0-SNAPSHOT 2023-xx-xx
+* Inventory cannot process Holdings with virtual fields ([MODINV-941](https://issues.folio.org/browse/MODINV-941))
+
 ## 20.1.0 2023-10-13
 * Update status when user attempts to update shared auth record from member tenant ([MODDATAIMP-926](https://issues.folio.org/browse/MODDATAIMP-926))
 * Add cache to get and store consortium data configurations ([MODINV-872](https://issues.folio.org/browse/MODINV-872))
@@ -7,7 +10,6 @@
 * Upgrade folio-kafka-wrapper to 3.0.0 version ([MODINV-834](https://issues.folio.org/browse/MODINV-834))
 * Add deduplication mechanism for sharing Instance ([MODINV-866](https://issues.folio.org/browse/MODINV-866))
 * Allow to overlay source 'MARC' instances without related MARC record ([MODINV-846](https://issues.folio.org/browse/MODINV-847))
-* Inventory cannot process Holdings with virtual fields ([MODINV-941](https://issues.folio.org/browse/MODINV-941))
 
 ## 20.0.0 2023-02-20
 * Controlled Instance's field properly reflects updates made by user in MARC Authority's 1XX fields ([MODINV-773] (https://issues.folio.org/browse/MODINV-773))
