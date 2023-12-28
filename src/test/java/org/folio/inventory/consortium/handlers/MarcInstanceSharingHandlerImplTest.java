@@ -69,6 +69,17 @@ import static org.mockito.Mockito.when;
 @RunWith(VertxUnitRunner.class)
 public class MarcInstanceSharingHandlerImplTest {
 
+  private static final String AUTHORITY_ID_1 = "58600684-c647-408d-bf3e-756e9055a988";
+  private static final String AUTHORITY_ID_2 = "3f2923d3-6f8e-41a6-94e1-09eaf32872e0";
+  private static final String INSTANCE_AUTHORITY_LINKS = "[{\"id\":1,\"authorityId\":\"58600684-c647-408d-bf3e-756e9055a988\",\"authorityNaturalId\":\"test123\",\"instanceId\":\"eb89b292-d2b7-4c36-9bfc-f816d6f96418\",\"linkingRuleId\":1,\"status\":\"ACTUAL\"},{\"id\":2,\"authorityId\":\"3f2923d3-6f8e-41a6-94e1-09eaf32872e0\",\"authorityNaturalId\":\"test123\",\"instanceId\":\"eb89b292-d2b7-4c36-9bfc-f816d6f96418\",\"linkingRuleId\":2,\"status\":\"ACTUAL\"}]";
+  private static final String LINKING_RULES = "[{\"id\":1,\"bibField\":\"100\",\"authorityField\":\"100\",\"authoritySubfields\":[\"a\",\"b\",\"c\",\"d\",\"j\",\"q\"],\"validation\":{\"existence\":[{\"t\":false}]},\"autoLinkingEnabled\":true}]";
+  private static final String CONSORTIUM_TENANT = "consortium";
+  private static final String MEMBER_TENANT = "diku";
+  private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
+
+  private static Vertx vertx;
+  private static HttpClient httpClient;
+
   private MarcInstanceSharingHandlerImpl marcHandler;
   @Mock
   private InstanceOperationsHelper instanceOperationsHelper;
@@ -82,20 +93,14 @@ public class MarcInstanceSharingHandlerImplTest {
   private Storage storage;
   @Mock
   private AuthorityRecordCollection authorityRecordCollection;
+  @Mock
+  private Source source;
+  @Mock
+  private Target target;
 
   private Instance instance;
   private SharingInstance sharingInstanceMetadata;
-  private Source source;
-  private Target target;
-  private static Vertx vertx;
-  private static HttpClient httpClient;
   private Map<String, String> kafkaHeaders;
-  private final String AUTHORITY_ID_1 = "58600684-c647-408d-bf3e-756e9055a988";
-  private final String AUTHORITY_ID_2 = "3f2923d3-6f8e-41a6-94e1-09eaf32872e0";
-  private final String INSTANCE_AUTHORITY_LINKS = "[{\"id\":1,\"authorityId\":\"58600684-c647-408d-bf3e-756e9055a988\",\"authorityNaturalId\":\"test123\",\"instanceId\":\"eb89b292-d2b7-4c36-9bfc-f816d6f96418\",\"linkingRuleId\":1,\"status\":\"ACTUAL\"},{\"id\":2,\"authorityId\":\"3f2923d3-6f8e-41a6-94e1-09eaf32872e0\",\"authorityNaturalId\":\"test123\",\"instanceId\":\"eb89b292-d2b7-4c36-9bfc-f816d6f96418\",\"linkingRuleId\":2,\"status\":\"ACTUAL\"}]";
-  private final String LINKING_RULES = "[{\"id\":1,\"bibField\":\"100\",\"authorityField\":\"100\",\"authoritySubfields\":[\"a\",\"b\",\"c\",\"d\",\"j\",\"q\"],\"validation\":{\"existence\":[{\"t\":false}]},\"autoLinkingEnabled\":true}]";
-  private final String CONSORTIUM_TENANT = "consortium";
-  private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
 
   @BeforeClass
   public static void setUpClass() {
@@ -113,8 +118,8 @@ public class MarcInstanceSharingHandlerImplTest {
     jsonInstance.put("subjects", new JsonArray().add(new JsonObject().put("authorityId", "null").put("value", "\\\"Test subject\\\"")));
     when(instance.getJsonForStorage()).thenReturn(Instance.fromJson(jsonInstance).getJsonForStorage());
 
-    source = mock(Source.class);
-    target = mock(Target.class);
+    when(source.getTenantId()).thenReturn(MEMBER_TENANT);
+    when(target.getTenantId()).thenReturn(CONSORTIUM_TENANT);
 
     sharingInstanceMetadata = mock(SharingInstance.class);
     when(sharingInstanceMetadata.getInstanceIdentifier()).thenReturn(UUID.randomUUID());
@@ -172,7 +177,7 @@ public class MarcInstanceSharingHandlerImplTest {
       testContext.assertTrue(ar.result().equals(instanceId));
 
       ArgumentCaptor<Instance> updatedInstanceCaptor = ArgumentCaptor.forClass(Instance.class);
-      verify(instanceOperationsHelper, times(1)).updateInstance(updatedInstanceCaptor.capture(), any());
+      verify(instanceOperationsHelper).updateInstance(updatedInstanceCaptor.capture(), argThat(p -> MEMBER_TENANT.equals(p.getTenantId())));
       Instance updatedInstance = updatedInstanceCaptor.getValue();
       testContext.assertEquals("CONSORTIUM-MARC", updatedInstance.getSource());
       testContext.assertEquals(targetInstanceHrid, updatedInstance.getHrid());
@@ -252,7 +257,8 @@ public class MarcInstanceSharingHandlerImplTest {
       testContext.assertTrue(ar.result().equals(instanceId));
 
       ArgumentCaptor<Instance> updatedInstanceCaptor = ArgumentCaptor.forClass(Instance.class);
-      verify(instanceOperationsHelper, times(1)).updateInstance(updatedInstanceCaptor.capture(), any());
+      verify(instanceOperationsHelper).updateInstance(updatedInstanceCaptor.capture(), argThat(p -> MEMBER_TENANT.equals(p.getTenantId())));
+
       Instance updatedInstance = updatedInstanceCaptor.getValue();
       testContext.assertEquals("CONSORTIUM-MARC", updatedInstance.getSource());
       testContext.assertEquals(targetInstanceHrid, updatedInstance.getHrid());
@@ -370,7 +376,7 @@ public class MarcInstanceSharingHandlerImplTest {
       testContext.assertTrue(ar.result().equals(instanceId));
 
       ArgumentCaptor<Instance> updatedInstanceCaptor = ArgumentCaptor.forClass(Instance.class);
-      verify(instanceOperationsHelper, times(1)).updateInstance(updatedInstanceCaptor.capture(), any());
+      verify(instanceOperationsHelper).updateInstance(updatedInstanceCaptor.capture(), argThat(p -> MEMBER_TENANT.equals(p.getTenantId())));
       Instance updatedInstance = updatedInstanceCaptor.getValue();
       testContext.assertEquals("CONSORTIUM-MARC", updatedInstance.getSource());
       testContext.assertEquals(targetInstanceHrid, updatedInstance.getHrid());
@@ -443,7 +449,7 @@ public class MarcInstanceSharingHandlerImplTest {
       testContext.assertTrue(ar.result().equals(instanceId));
 
       ArgumentCaptor<Instance> updatedInstanceCaptor = ArgumentCaptor.forClass(Instance.class);
-      verify(instanceOperationsHelper, times(1)).updateInstance(updatedInstanceCaptor.capture(), any());
+      verify(instanceOperationsHelper).updateInstance(updatedInstanceCaptor.capture(), argThat(p -> MEMBER_TENANT.equals(p.getTenantId())));
       Instance updatedInstance = updatedInstanceCaptor.getValue();
       testContext.assertEquals("CONSORTIUM-MARC", updatedInstance.getSource());
       testContext.assertEquals(targetInstanceHrid, updatedInstance.getHrid());
