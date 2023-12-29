@@ -75,10 +75,10 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
         return restDataImportHelper.importMarcRecord(marcRecord, sharingInstanceMetadata, kafkaHeaders)
           .compose(result -> {
             if ("COMMITTED".equals(result)) {
-              // Delete source record by record ID if the result is "COMMITTED"
-              return deleteSourceRecordByRecordId(marcRecord.getId(), instanceId, sourceTenant, sourceStorageClient)
-                .compose(deletedInstanceId ->
-                  instanceOperations.getInstanceById(instanceId, target))
+              return updateTargetInstanceWithNonMarcControlledFields(instance, target)
+                // Delete source record by record ID if the result is "COMMITTED"
+                .compose(targetInstance -> deleteSourceRecordByRecordId(marcRecord.getId(), instanceId, sourceTenant, sourceStorageClient)
+                  .map(targetInstance))
                 .compose(targetInstance -> {
                   // Update JSON instance to include SOURCE=CONSORTIUM-MARC
                   JsonObject jsonInstanceToPublish = new JsonObject(instance.getJsonForStorage().encode());
@@ -94,6 +94,25 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
           });
       });
   }
+
+  private Future<Instance> updateTargetInstanceWithNonMarcControlledFields(Instance sourceInstance, Target targetTenantProvider) {
+    return instanceOperations.getInstanceById(sourceInstance.getId(), targetTenantProvider)
+      .map(targetInstance -> populateTargetInstanceWithNonMarcControlledFields(targetInstance, sourceInstance))
+      .compose(targetInstance -> instanceOperations.updateInstance(targetInstance, targetTenantProvider)
+        .map(targetInstance));
+  }
+
+  private Instance populateTargetInstanceWithNonMarcControlledFields(Instance targetInstance, Instance sourceInstance) {
+    targetInstance.setStaffSuppress(sourceInstance.getStaffSuppress());
+    targetInstance.setDiscoverySuppress(sourceInstance.getDiscoverySuppress());
+    targetInstance.setCatalogedDate(sourceInstance.getCatalogedDate());
+    targetInstance.setStatusId(sourceInstance.getStatusId());
+    targetInstance.setStatisticalCodeIds(sourceInstance.getStatisticalCodeIds());
+    targetInstance.setAdministrativeNotes(sourceInstance.getAdministrativeNotes());
+    targetInstance.setNatureOfContentTermIds(sourceInstance.getNatureOfContentTermIds());
+    return targetInstance;
+  }
+
 
   private Future<Record> detachLocalAuthorityLinksIfNeeded(Record marcRecord, String instanceId, Context context,
                                                            SharingInstance sharingInstanceMetadata, Storage storage) {
