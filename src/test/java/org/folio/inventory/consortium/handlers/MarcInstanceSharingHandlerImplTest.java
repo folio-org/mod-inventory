@@ -69,6 +69,17 @@ import static org.mockito.Mockito.when;
 @RunWith(VertxUnitRunner.class)
 public class MarcInstanceSharingHandlerImplTest {
 
+  private static final String AUTHORITY_ID_1 = "58600684-c647-408d-bf3e-756e9055a988";
+  private static final String AUTHORITY_ID_2 = "3f2923d3-6f8e-41a6-94e1-09eaf32872e0";
+  private static final String INSTANCE_AUTHORITY_LINKS = "[{\"id\":1,\"authorityId\":\"58600684-c647-408d-bf3e-756e9055a988\",\"authorityNaturalId\":\"test123\",\"instanceId\":\"eb89b292-d2b7-4c36-9bfc-f816d6f96418\",\"linkingRuleId\":1,\"status\":\"ACTUAL\"},{\"id\":2,\"authorityId\":\"3f2923d3-6f8e-41a6-94e1-09eaf32872e0\",\"authorityNaturalId\":\"test123\",\"instanceId\":\"eb89b292-d2b7-4c36-9bfc-f816d6f96418\",\"linkingRuleId\":2,\"status\":\"ACTUAL\"}]";
+  private static final String LINKING_RULES = "[{\"id\":1,\"bibField\":\"100\",\"authorityField\":\"100\",\"authoritySubfields\":[\"a\",\"b\",\"c\",\"d\",\"j\",\"q\"],\"validation\":{\"existence\":[{\"t\":false}]},\"autoLinkingEnabled\":true}]";
+  private static final String CONSORTIUM_TENANT = "consortium";
+  private static final String MEMBER_TENANT = "diku";
+  private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
+
+  private static Vertx vertx;
+  private static HttpClient httpClient;
+
   private MarcInstanceSharingHandlerImpl marcHandler;
   @Mock
   private InstanceOperationsHelper instanceOperationsHelper;
@@ -82,20 +93,14 @@ public class MarcInstanceSharingHandlerImplTest {
   private Storage storage;
   @Mock
   private AuthorityRecordCollection authorityRecordCollection;
+  @Mock
+  private Source source;
+  @Mock
+  private Target target;
 
   private Instance instance;
   private SharingInstance sharingInstanceMetadata;
-  private Source source;
-  private Target target;
-  private static Vertx vertx;
-  private static HttpClient httpClient;
   private Map<String, String> kafkaHeaders;
-  private final String AUTHORITY_ID_1 = "58600684-c647-408d-bf3e-756e9055a988";
-  private final String AUTHORITY_ID_2 = "3f2923d3-6f8e-41a6-94e1-09eaf32872e0";
-  private final String INSTANCE_AUTHORITY_LINKS = "[{\"id\":1,\"authorityId\":\"58600684-c647-408d-bf3e-756e9055a988\",\"authorityNaturalId\":\"test123\",\"instanceId\":\"eb89b292-d2b7-4c36-9bfc-f816d6f96418\",\"linkingRuleId\":1,\"status\":\"ACTUAL\"},{\"id\":2,\"authorityId\":\"3f2923d3-6f8e-41a6-94e1-09eaf32872e0\",\"authorityNaturalId\":\"test123\",\"instanceId\":\"eb89b292-d2b7-4c36-9bfc-f816d6f96418\",\"linkingRuleId\":2,\"status\":\"ACTUAL\"}]";
-  private final String LINKING_RULES = "[{\"id\":1,\"bibField\":\"100\",\"authorityField\":\"100\",\"authoritySubfields\":[\"a\",\"b\",\"c\",\"d\",\"j\",\"q\"],\"validation\":{\"existence\":[{\"t\":false}]},\"autoLinkingEnabled\":true}]";
-  private final String CONSORTIUM_TENANT = "consortium";
-  private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
 
   @BeforeClass
   public static void setUpClass() {
@@ -107,14 +112,15 @@ public class MarcInstanceSharingHandlerImplTest {
   public void setUp() throws IOException {
     MockitoAnnotations.openMocks(this);
 
+    kafkaHeaders = new HashMap<>();
     instance = mock(Instance.class);
     JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
     jsonInstance.put("source", "MARC");
     jsonInstance.put("subjects", new JsonArray().add(new JsonObject().put("authorityId", "null").put("value", "\\\"Test subject\\\"")));
     when(instance.getJsonForStorage()).thenReturn(Instance.fromJson(jsonInstance).getJsonForStorage());
 
-    source = mock(Source.class);
-    target = mock(Target.class);
+    when(source.getTenantId()).thenReturn(MEMBER_TENANT);
+    when(target.getTenantId()).thenReturn(CONSORTIUM_TENANT);
 
     sharingInstanceMetadata = mock(SharingInstance.class);
     when(sharingInstanceMetadata.getInstanceIdentifier()).thenReturn(UUID.randomUUID());
@@ -142,8 +148,6 @@ public class MarcInstanceSharingHandlerImplTest {
     Record record = sourceStorageRecordsResponseBuffer.bodyAsJson(Record.class);
 
     //given
-    kafkaHeaders = new HashMap<>();
-
     marcHandler = spy(new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, storage, vertx, httpClient));
     setField(marcHandler, "restDataImportHelper", restDataImportHelper);
     setField(marcHandler, "entitiesLinksService", entitiesLinksService);
@@ -168,11 +172,9 @@ public class MarcInstanceSharingHandlerImplTest {
     future.onComplete(ar -> {
       testContext.assertTrue(ar.succeeded());
       testContext.assertTrue(ar.result().equals(instanceId));
-      testContext.assertTrue(ar.succeeded());
-      testContext.assertTrue(ar.result().equals(instanceId));
 
       ArgumentCaptor<Instance> updatedInstanceCaptor = ArgumentCaptor.forClass(Instance.class);
-      verify(instanceOperationsHelper, times(1)).updateInstance(updatedInstanceCaptor.capture(), any());
+      verify(instanceOperationsHelper).updateInstance(updatedInstanceCaptor.capture(), argThat(p -> MEMBER_TENANT.equals(p.getTenantId())));
       Instance updatedInstance = updatedInstanceCaptor.getValue();
       testContext.assertEquals("CONSORTIUM-MARC", updatedInstance.getSource());
       testContext.assertEquals(targetInstanceHrid, updatedInstance.getHrid());
@@ -195,8 +197,6 @@ public class MarcInstanceSharingHandlerImplTest {
     Authority authority2 = new Authority().withId(AUTHORITY_ID_2).withSource(Authority.Source.CONSORTIUM_MARC);
 
     //given
-    kafkaHeaders = new HashMap<>();
-
     marcHandler = spy(new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, storage, vertx, httpClient));
     setField(marcHandler, "restDataImportHelper", restDataImportHelper);
     setField(marcHandler, "entitiesLinksService", entitiesLinksService);
@@ -248,11 +248,10 @@ public class MarcInstanceSharingHandlerImplTest {
     future.onComplete(ar -> {
       testContext.assertTrue(ar.succeeded());
       testContext.assertTrue(ar.result().equals(instanceId));
-      testContext.assertTrue(ar.succeeded());
-      testContext.assertTrue(ar.result().equals(instanceId));
 
       ArgumentCaptor<Instance> updatedInstanceCaptor = ArgumentCaptor.forClass(Instance.class);
-      verify(instanceOperationsHelper, times(1)).updateInstance(updatedInstanceCaptor.capture(), any());
+      verify(instanceOperationsHelper).updateInstance(updatedInstanceCaptor.capture(), argThat(p -> MEMBER_TENANT.equals(p.getTenantId())));
+
       Instance updatedInstance = updatedInstanceCaptor.getValue();
       testContext.assertEquals("CONSORTIUM-MARC", updatedInstance.getSource());
       testContext.assertEquals(targetInstanceHrid, updatedInstance.getHrid());
@@ -269,8 +268,6 @@ public class MarcInstanceSharingHandlerImplTest {
     Record record = buildHttpResponseWithBuffer(HttpStatus.HTTP_OK, BufferImpl.buffer(recordJsonWithLinkedAuthorities)).bodyAsJson(Record.class);
 
     //given
-    kafkaHeaders = new HashMap<>();
-
     marcHandler = spy(new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, storage, vertx, httpClient));
     setField(marcHandler, "restDataImportHelper", restDataImportHelper);
     setField(marcHandler, "entitiesLinksService", entitiesLinksService);
@@ -318,8 +315,6 @@ public class MarcInstanceSharingHandlerImplTest {
     Authority authority2 = new Authority().withId(AUTHORITY_ID_2).withSource(Authority.Source.MARC);
 
     //given
-    kafkaHeaders = new HashMap<>();
-
     marcHandler = spy(new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, storage, vertx, httpClient));
     setField(marcHandler, "restDataImportHelper", restDataImportHelper);
     setField(marcHandler, "entitiesLinksService", entitiesLinksService);
@@ -366,11 +361,9 @@ public class MarcInstanceSharingHandlerImplTest {
     future.onComplete(ar -> {
       testContext.assertTrue(ar.succeeded());
       testContext.assertTrue(ar.result().equals(instanceId));
-      testContext.assertTrue(ar.succeeded());
-      testContext.assertTrue(ar.result().equals(instanceId));
 
       ArgumentCaptor<Instance> updatedInstanceCaptor = ArgumentCaptor.forClass(Instance.class);
-      verify(instanceOperationsHelper, times(1)).updateInstance(updatedInstanceCaptor.capture(), any());
+      verify(instanceOperationsHelper).updateInstance(updatedInstanceCaptor.capture(), argThat(p -> MEMBER_TENANT.equals(p.getTenantId())));
       Instance updatedInstance = updatedInstanceCaptor.getValue();
       testContext.assertEquals("CONSORTIUM-MARC", updatedInstance.getSource());
       testContext.assertEquals(targetInstanceHrid, updatedInstance.getHrid());
@@ -391,8 +384,6 @@ public class MarcInstanceSharingHandlerImplTest {
     Authority authority2 = new Authority().withId(AUTHORITY_ID_2).withSource(Authority.Source.CONSORTIUM_MARC);
 
     //given
-    kafkaHeaders = new HashMap<>();
-
     marcHandler = spy(new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, storage, vertx, httpClient));
     setField(marcHandler, "restDataImportHelper", restDataImportHelper);
     setField(marcHandler, "entitiesLinksService", entitiesLinksService);
@@ -439,11 +430,9 @@ public class MarcInstanceSharingHandlerImplTest {
     future.onComplete(ar -> {
       testContext.assertTrue(ar.succeeded());
       testContext.assertTrue(ar.result().equals(instanceId));
-      testContext.assertTrue(ar.succeeded());
-      testContext.assertTrue(ar.result().equals(instanceId));
 
       ArgumentCaptor<Instance> updatedInstanceCaptor = ArgumentCaptor.forClass(Instance.class);
-      verify(instanceOperationsHelper, times(1)).updateInstance(updatedInstanceCaptor.capture(), any());
+      verify(instanceOperationsHelper).updateInstance(updatedInstanceCaptor.capture(), argThat(p -> MEMBER_TENANT.equals(p.getTenantId())));
       Instance updatedInstance = updatedInstanceCaptor.getValue();
       testContext.assertEquals("CONSORTIUM-MARC", updatedInstance.getSource());
       testContext.assertEquals(targetInstanceHrid, updatedInstance.getHrid());
@@ -552,6 +541,67 @@ public class MarcInstanceSharingHandlerImplTest {
       .onComplete(result -> assertTrue(result.failed()));
 
     verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(recordId);
+  }
+
+  @Test
+  public void shouldPopulateTargetInstanceWithNonMarcControlledFields(TestContext testContext) {
+    //given
+    Async async = testContext.async();
+    String instanceId = UUID.randomUUID().toString();
+    String targetInstanceHrid = "consin001";
+    Record record = sourceStorageRecordsResponseBuffer.bodyAsJson(Record.class);
+
+    Instance localSourceInstance = new Instance(instanceId, "1", "001", "MARC", "testTitle", UUID.randomUUID().toString())
+      .setDiscoverySuppress(Boolean.TRUE)
+      .setStaffSuppress(Boolean.TRUE)
+      .setCatalogedDate("1970-01-01")
+      .setStatusId(UUID.randomUUID().toString())
+      .setStatisticalCodeIds(List.of(UUID.randomUUID().toString()))
+      .setAdministrativeNotes(List.of("test-note"))
+      .setNatureOfContentTermIds(List.of(UUID.randomUUID().toString()));
+
+    Instance importedTargetInstance = new Instance(instanceId, "1", targetInstanceHrid, "MARC", "testTitle", UUID.randomUUID().toString());
+
+    SharingInstance sharingInstanceMetadata = new SharingInstance()
+      .withInstanceIdentifier(UUID.fromString(instanceId))
+      .withSourceTenantId("diku")
+      .withTargetTenantId(CONSORTIUM_TENANT);
+
+    marcHandler = spy(new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, storage, vertx, httpClient));
+    setField(marcHandler, "restDataImportHelper", restDataImportHelper);
+    setField(marcHandler, "entitiesLinksService", entitiesLinksService);
+
+    doReturn(sourceStorageClient).when(marcHandler).getSourceStorageRecordsClient(anyString(), eq(kafkaHeaders));
+    doReturn(Future.succeededFuture(record)).when(marcHandler).getSourceMARCByInstanceId(any(), any(), any());
+    doReturn(Future.succeededFuture(instanceId)).when(marcHandler).deleteSourceRecordByRecordId(any(), any(), any(), any());
+
+    when(restDataImportHelper.importMarcRecord(any(), any(), any()))
+      .thenReturn(Future.succeededFuture("COMMITTED"));
+    when(instanceOperationsHelper.getInstanceById(any(), any())).thenReturn(Future.succeededFuture(importedTargetInstance));
+    when(instanceOperationsHelper.updateInstance(any(), any())).thenReturn(Future.succeededFuture(instanceId));
+
+    // when
+    Future<String> future = marcHandler.publishInstance(localSourceInstance, sharingInstanceMetadata, source, target, kafkaHeaders);
+
+    //then
+    future.onComplete(ar -> {
+      testContext.assertTrue(ar.succeeded());
+      testContext.assertTrue(ar.result().equals(instanceId));
+
+      ArgumentCaptor<Instance> updatedInstanceCaptor = ArgumentCaptor.forClass(Instance.class);
+      verify(instanceOperationsHelper).updateInstance(updatedInstanceCaptor.capture(), argThat(p -> CONSORTIUM_TENANT.equals(p.getTenantId())));
+      Instance targetInstanceWithNonMarcData = updatedInstanceCaptor.getValue();
+      testContext.assertEquals("MARC", targetInstanceWithNonMarcData.getSource());
+      testContext.assertEquals(targetInstanceHrid, targetInstanceWithNonMarcData.getHrid());
+      testContext.assertEquals(localSourceInstance.getDiscoverySuppress(), targetInstanceWithNonMarcData.getDiscoverySuppress());
+      testContext.assertEquals(localSourceInstance.getStaffSuppress(), targetInstanceWithNonMarcData.getStaffSuppress());
+      testContext.assertEquals(localSourceInstance.getCatalogedDate(), targetInstanceWithNonMarcData.getCatalogedDate());
+      testContext.assertEquals(localSourceInstance.getStatusId(), targetInstanceWithNonMarcData.getStatusId());
+      testContext.assertEquals(localSourceInstance.getStatisticalCodeIds(), targetInstanceWithNonMarcData.getStatisticalCodeIds());
+      testContext.assertEquals(localSourceInstance.getAdministrativeNotes(), targetInstanceWithNonMarcData.getAdministrativeNotes());
+      testContext.assertEquals(localSourceInstance.getNatureOfContentTermIds(), targetInstanceWithNonMarcData.getNatureOfContentTermIds());
+      async.complete();
+    });
   }
 
   private static void setField(Object instance, String fieldName, Object fieldValue) {
