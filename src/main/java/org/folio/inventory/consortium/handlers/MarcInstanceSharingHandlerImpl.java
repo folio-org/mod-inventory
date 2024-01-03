@@ -72,6 +72,8 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
       .compose(marcRecord -> detachLocalAuthorityLinksIfNeeded(marcRecord, instanceId, context, sharingInstanceMetadata, storage))
       .compose(marcRecord -> {
         // Publish instance with MARC source
+        var updatedMarcRecord = removeFieldFromMarcRecord(marcRecord.getParsedRecord().getFormattedContent(), "001");
+        marcRecord.getParsedRecord().setFormattedContent(updatedMarcRecord);
         return restDataImportHelper.importMarcRecord(marcRecord, sharingInstanceMetadata, kafkaHeaders)
           .compose(result -> {
             if ("COMMITTED".equals(result)) {
@@ -93,6 +95,10 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
             }
           });
       });
+  }
+
+  private String removeFieldFromMarcRecord(String marcRecord, String fieldTag) {
+    return marcRecord.replaceAll("(?m)^" + fieldTag + ".*\n?", "");
   }
 
   private Future<Instance> updateTargetInstanceWithNonMarcControlledFields(Instance sourceInstance, Target targetTenantProvider) {
