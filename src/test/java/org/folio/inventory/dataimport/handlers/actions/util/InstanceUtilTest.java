@@ -1,6 +1,14 @@
 package org.folio.inventory.dataimport.handlers.actions.util;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import com.google.common.collect.Lists;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import org.folio.AlternativeTitle;
 import org.folio.Contributor;
 import org.folio.Instance;
@@ -8,16 +16,6 @@ import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
 import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
 import org.folio.inventory.support.InstanceUtil;
 import org.junit.Test;
-
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
-import static org.folio.inventory.support.InstanceUtil.removeFieldFromMarcRecord;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNotNull;
 
 public class InstanceUtilTest {
 
@@ -109,25 +107,5 @@ public class InstanceUtilTest {
     org.folio.inventory.domain.instances.Instance merged = InstanceUtil.mergeFieldsWhichAreNotControlled(existing, mapped);
     assertEquals("id", merged.getId());
     assertEquals("3", merged.getVersion());
-  }
-
-  @Test
-  public void testRemoveFieldFromMarcRecord() {
-    String marcRecordWithField001 =
-      """
-        LEADER 01819cas a2200469 a 4500
-        001 in00000000001
-        006 m     o  d       \s
-        999 ff$s0ecd6e9f-f02f-47b7-8326-2743bfa3fc43$ifea6477b-d8f5-4d22-9e86-6218407c780b
-        """;
-
-    String expectedMarcRecordWithoutField001 =
-      """
-        LEADER 01819cas a2200469 a 4500
-        006 m     o  d       \s
-        999 ff$s0ecd6e9f-f02f-47b7-8326-2743bfa3fc43$ifea6477b-d8f5-4d22-9e86-6218407c780b
-        """;
-    String result = removeFieldFromMarcRecord(marcRecordWithField001, "001");
-    assertEquals(expectedMarcRecordWithoutField001, result);
   }
 }

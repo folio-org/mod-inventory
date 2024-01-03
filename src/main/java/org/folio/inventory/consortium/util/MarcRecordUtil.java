@@ -1,6 +1,7 @@
 package org.folio.inventory.consortium.util;
 
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -106,5 +107,26 @@ public final class MarcRecordUtil {
     return (o instanceof String content)
       ? content
       : Json.encode(o);
+  }
+
+  public static Record removeFieldFromMarcRecord(Record marcRecord, String fieldTag) {
+    JsonObject content = JsonObject.mapFrom(marcRecord.getParsedRecord().getContent());
+
+    JsonArray fields = content.getJsonArray("fields");
+    if (fields != null) {
+      for (int i = 0; i < fields.size(); i++) {
+        JsonObject field = fields.getJsonObject(i);
+        if (field != null && field.getMap().containsKey(fieldTag)) {
+          field.remove(fieldTag);
+          fields.remove(i);
+          i--;
+        }
+      }
+    }
+
+    String updatedFormattedContent = content.encodePrettily();
+    marcRecord.getParsedRecord().setFormattedContent(updatedFormattedContent);
+    marcRecord.getParsedRecord().setContent(content);
+    return marcRecord;
   }
 }

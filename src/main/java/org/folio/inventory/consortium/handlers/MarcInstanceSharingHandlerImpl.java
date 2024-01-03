@@ -34,11 +34,11 @@ import java.util.stream.Collectors;
 import static java.lang.String.format;
 import static org.apache.http.HttpStatus.SC_NO_CONTENT;
 import static org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler.SOURCE;
+import static org.folio.inventory.consortium.util.MarcRecordUtil.removeFieldFromMarcRecord;
 import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.INSTANCE_ID_TYPE;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
 import static org.folio.inventory.domain.items.Item.HRID_KEY;
-import static org.folio.inventory.support.InstanceUtil.removeFieldFromMarcRecord;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
 
@@ -73,8 +73,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
       .compose(marcRecord -> detachLocalAuthorityLinksIfNeeded(marcRecord, instanceId, context, sharingInstanceMetadata, storage))
       .compose(marcRecord -> {
         // Publish instance with MARC source
-        var updatedMarcRecord = removeFieldFromMarcRecord(marcRecord.getParsedRecord().getFormattedContent(), "001");
-        marcRecord.getParsedRecord().setFormattedContent(updatedMarcRecord);
+        removeFieldFromMarcRecord(marcRecord, "001");
         return restDataImportHelper.importMarcRecord(marcRecord, sharingInstanceMetadata, kafkaHeaders)
           .compose(result -> {
             if ("COMMITTED".equals(result)) {

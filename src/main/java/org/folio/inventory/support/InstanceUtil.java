@@ -1,9 +1,13 @@
 package org.folio.inventory.support;
 
+import static java.lang.String.format;
+
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -15,11 +19,6 @@ import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
 import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
 import org.folio.inventory.exceptions.NotFoundException;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import static java.lang.String.format;
 
 public class InstanceUtil {
   private static final Logger LOGGER = LogManager.getLogger(InstanceUtil.class);
@@ -133,9 +132,5 @@ public class InstanceUtil {
         promise.fail(failure.getReason());
       });
     return promise.future();
-  }
-
-  public static String removeFieldFromMarcRecord(String marcRecord, String fieldTag) {
-    return marcRecord.replaceAll("(?m)^" + fieldTag + ".*\n?", "");
   }
 }
