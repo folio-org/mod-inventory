@@ -134,4 +134,8 @@ public class InstanceUtil {
       });
     return promise.future();
   }
+
+  public static String removeFieldFromMarcRecord(String marcRecord, String fieldTag) {
+    return marcRecord.replaceAll("(?m)^" + fieldTag + ".*\n?", "");
+  }
 }

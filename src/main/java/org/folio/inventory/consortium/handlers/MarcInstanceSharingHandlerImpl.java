@@ -38,6 +38,7 @@ import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEve
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
 import static org.folio.inventory.domain.items.Item.HRID_KEY;
+import static org.folio.inventory.support.InstanceUtil.removeFieldFromMarcRecord;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
 
@@ -95,10 +96,6 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
             }
           });
       });
-  }
-
-  private String removeFieldFromMarcRecord(String marcRecord, String fieldTag) {
-    return marcRecord.replaceAll("(?m)^" + fieldTag + ".*\n?", "");
   }
 
   private Future<Instance> updateTargetInstanceWithNonMarcControlledFields(Instance sourceInstance, Target targetTenantProvider) {
