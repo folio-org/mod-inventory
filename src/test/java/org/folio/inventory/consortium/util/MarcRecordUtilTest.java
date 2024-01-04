@@ -83,7 +83,7 @@ public class MarcRecordUtilTest {
   }
 
   @Test
-  public void removeFieldFromMarcRecord_RemovesCorrectField() {
+  public void removeFieldFromMarcRecord_Remove001Field() {
     Record updatedRecord = removeFieldFromMarcRecord(marcRecord, fieldTagToRemove);
 
     JsonObject content = JsonObject.mapFrom(updatedRecord.getParsedRecord().getContent());
