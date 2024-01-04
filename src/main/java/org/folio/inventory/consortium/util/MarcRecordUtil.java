@@ -111,7 +111,7 @@ public final class MarcRecordUtil {
 
   public static Record removeFieldFromMarcRecord(Record marcRecord, String fieldTag) {
     var content = marcRecord.getParsedRecord().getContent();
-    JsonObject contentObject = (content instanceof String) ? new JsonObject((String) content) :
+    JsonObject contentObject = (content instanceof String contentStr) ? new JsonObject(contentStr) :
                                 JsonObject.mapFrom(content);
 
     JsonArray fields = contentObject.getJsonArray("fields");
@@ -121,7 +121,6 @@ public final class MarcRecordUtil {
         if (field != null && field.getMap().containsKey(fieldTag)) {
           field.remove(fieldTag);
           fields.remove(i);
-          i--;
         }
       }
     }
