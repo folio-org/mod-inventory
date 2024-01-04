@@ -128,7 +128,7 @@ public final class MarcRecordUtil {
 
     String updatedFormattedContent = contentObject.encodePrettily();
     marcRecord.getParsedRecord().setFormattedContent(updatedFormattedContent);
-    marcRecord.getParsedRecord().setContent(content);
+    marcRecord.getParsedRecord().setContent(contentObject);
     return marcRecord;
   }
 }
