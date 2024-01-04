@@ -191,7 +191,8 @@ public class MarcInstanceSharingHandlerImplTest {
     String instanceId = "eb89b292-d2b7-4c36-9bfc-f816d6f96418";
     String targetInstanceHrid = "consin0000000000101";
 
-    Record record = buildHttpResponseWithBuffer(HttpStatus.HTTP_OK, BufferImpl.buffer(recordJsonWithLinkedAuthorities)).bodyAsJson(Record.class);
+    Record record = buildHttpResponseWithBuffer(HttpStatus.HTTP_OK,
+      BufferImpl.buffer(recordJsonWithLinkedAuthorities)).bodyAsJson(Record.class);
 
     Authority authority1 = new Authority().withId(AUTHORITY_ID_1).withSource(Authority.Source.MARC);
     Authority authority2 = new Authority().withId(AUTHORITY_ID_2).withSource(Authority.Source.CONSORTIUM_MARC);
