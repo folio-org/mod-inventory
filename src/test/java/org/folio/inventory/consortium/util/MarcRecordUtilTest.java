@@ -1,26 +1,48 @@
 package org.folio.inventory.consortium.util;
 
+import static org.folio.inventory.consortium.util.MarcRecordUtil.removeFieldFromMarcRecord;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import org.folio.inventory.TestUtil;
-import org.folio.ParsedRecord;
-import org.folio.Record;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
+import org.folio.ParsedRecord;
+import org.folio.Record;
+import org.folio.inventory.TestUtil;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 @RunWith(VertxUnitRunner.class)
 public class MarcRecordUtilTest {
   private static final String PARSED_MARC_RECORD_PATH = "src/test/resources/marc/parsedRecordWith9Subfield.json";
   private static final String PARSED_CONTENT_WITHOUT_9_SUBFIELDS = "{\"fields\":[{\"001\":\"ybp7406411\"},{\"245\":{\"subfields\":[{\"a\":\"title\"},{\"b\":\"remainder_of_title\"},{\"c\":\"state_of_responsibility\"},{\"f\":\"inclusive_dates\"},{\"g\":\"bulk_dates\"},{\"h\":\"medium\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"245\":{\"subfields\":[{\"a\":\"title\"},{\"b\":\"remainder_of_title\"},{\"c\":\"state_of_responsibility\"},{\"f\":\"inclusive_dates\"},{\"g\":\"bulk_dates\"},{\"h\":\"medium\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"248\":{\"subfields\":[{\"a\":\"title\"},{\"b\":\"remainder_of_title\"},{\"c\":\"state_of_responsibility\"},{\"f\":\"inclusive_dates\"},{\"g\":\"bulk_dates\"},{\"h\":\"medium\"},{\"9\":\"e84e4dd4-9d27-4f42-8fda-408d78c7f7ee\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"700\":{\"subfields\":[{\"a\":\"personal_name_1\"},{\"b\":\"numeration_1\"},{\"9\":\"3f2923d3-6f8e-41a6-94e1-09eaf32872e0\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"700\":{\"subfields\":[{\"a\":\"personal_name_2\"},{\"b\":\"numeration_2\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
   private static final String UUID_1 = "e84e4dd4-9d27-4f42-8fda-408d78c7f7ee";
-  private static final String UUID_2 = "3f2923d3-6f8e-41a6-94e1-09eaf32872e0";
   private static final String UUID_3 = "7e11b935-2b3a-4e79-8e57-5cde4561a2a8";
+  private Record marcRecord;
+  private static final String fieldTagToRemove = "001";
+
+  @Before
+  public void setUp() {
+    marcRecord = new Record();
+    marcRecord.setParsedRecord(new ParsedRecord());
+    ParsedRecord parsedRecord = marcRecord.getParsedRecord();
+    JsonObject content = new JsonObject();
+    JsonArray fields = new JsonArray();
+
+    fields.add(new JsonObject().put("001", "in00000000001"));
+    fields.add(new JsonObject().put("245", "Some Title"));
+    fields.add(new JsonObject().put("100", "Main Author"));
+    content.put("fields", fields);
+
+    parsedRecord.setContent(content);
+    parsedRecord.setFormattedContent(content.encodePrettily());
+  }
 
   @Test
   public void shouldRemove9subfieldsThatContainValue() throws IOException {
@@ -57,6 +79,21 @@ public class MarcRecordUtilTest {
       MarcRecordUtil.removeSubfieldsThatContainsValues(record, List.of("245", "700"), '9', List.of(UUID_1, UUID_3));
     } catch (Exception e) {
       Assert.fail("Exception thrown");
+    }
+  }
+
+  @Test
+  public void removeFieldFromMarcRecord_Remove001Field() {
+    Record updatedRecord = removeFieldFromMarcRecord(marcRecord, fieldTagToRemove);
+
+    JsonObject content = JsonObject.mapFrom(updatedRecord.getParsedRecord().getContent());
+    JsonArray fields = content.getJsonArray("fields");
+
+    assertEquals(2, fields.size());
+
+    for (int i = 0; i < fields.size(); i++) {
+      JsonObject field = fields.getJsonObject(i);
+      assertFalse(field.containsKey(fieldTagToRemove));
     }
   }
 }
