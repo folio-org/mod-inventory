@@ -316,6 +316,7 @@ public class CreateInstanceEventHandlerTest {
     String actualDate = AdditionalFieldsUtil.getValueFromControlledField(recordCaptor.getValue(), TAG_005);
     assertNotNull(actualDate);
     assertEquals(expectedDate.substring(0, 10), actualDate.substring(0, 10));
+    assertEquals(recordId, recordCaptor.getValue().getMatchedId());
   }
 
   @Test(expected = ExecutionException.class)

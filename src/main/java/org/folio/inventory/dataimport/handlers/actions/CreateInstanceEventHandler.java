@@ -5,6 +5,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile;
@@ -130,7 +131,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
               Instance mappedInstance = Instance.fromJson(instanceAsJson);
               return addInstance(mappedInstance, instanceCollection)
                 .compose(createdInstance -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(mappedInstance, context).map(createdInstance))
-                .compose(createdInstance -> fill001And999IFields(createdInstance, targetRecord))
+                .compose(createdInstance -> fill001And999IFieldsAndSetMatchedId(createdInstance, targetRecord))
                 .compose(createdInstance -> saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, createdInstance, instanceCollection));
             })
             .onSuccess(ar -> {
@@ -158,8 +159,11 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
     return future;
   }
 
-  private Future<Instance> fill001And999IFields(Instance instance, Record record) {
+  private Future<Instance> fill001And999IFieldsAndSetMatchedId(Instance instance, Record record) {
     AdditionalFieldsUtil.fill001FieldInMarcRecord(record, instance.getHrid());
+    if (StringUtils.isBlank(record.getMatchedId())) {
+      record.setMatchedId(record.getId());
+    }
     return AdditionalFieldsUtil.addFieldToMarcRecord(record, TAG_999, 'i', instance.getId())
       ? Future.succeededFuture(instance)
       : Future.failedFuture(format("Failed to add instance id '%s' to record with id '%s'", instance.getId(), record.getId()));
