@@ -79,6 +79,7 @@ public class Instances extends AbstractInstances {
     router.get(INSTANCES_PATH + "/:id").handler(this::getById);
     router.put(INSTANCES_PATH + "/:id").handler(this::update);
     router.delete(INSTANCES_PATH + "/:id").handler(this::deleteById);
+    router.delete(INSTANCES_PATH + "/:id" + "/mark-deleted").handler(this::softDelete);
   }
 
   private void getAll(RoutingContext routingContext) {
@@ -299,6 +300,34 @@ public class Instances extends AbstractInstances {
     storage.getInstanceCollection(context).delete(
       routingContext.request().getParam("id"),
       v -> noContent(routingContext.response()),
+      FailureResponseConsumer.serverError(routingContext.response()));
+  }
+
+  private void softDelete(RoutingContext routingContext) {
+    WebContext webContext = new WebContext(routingContext);
+    InstanceCollection instanceCollection = storage.getInstanceCollection(webContext);
+    instanceCollection.findById(routingContext.request().getParam("id"),
+    it -> {
+      Instance instance = it.getResult();
+      if (instance != null) {
+        updateVisibility(instance, routingContext, instanceCollection);
+        if (isInstanceControlledByRecord(instance)) {
+          updateSuppressFromDiscoveryFlag(webContext, instance); //
+        }
+      } else {
+        ClientErrorResponse.notFound(routingContext.response());
+      }
+    }, FailureResponseConsumer.serverError(routingContext.response()));
+  }
+
+  private void updateVisibility(Instance instance, RoutingContext routingContext,  InstanceCollection instanceCollection) {
+    instance.setDiscoverySuppress(true);
+    instance.setStaffSuppress(true);
+    instanceCollection.update(instance, v -> {
+      log.info("staffSuppress and discoverySuppress properties are set to true for instance {}",
+        instance.getId());
+      noContent(routingContext.response());
+      },
       FailureResponseConsumer.serverError(routingContext.response()));
   }
 

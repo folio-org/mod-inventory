@@ -735,6 +735,32 @@ public class InstancesApiExamples extends ApiTests {
   }
 
   @Test
+  @SneakyThrows
+  public void canSoftDeleteInstance() {
+    JsonObject instanceToDelete = createInstance(marcInstanceWithDefaultBlockedFields(UUID.randomUUID()));
+
+    URL softDeleteUrl = new URL(String.format("%s/%s/%s",
+      ApiRoot.instances(), instanceToDelete.getString("id"), "mark-deleted" ));
+
+    URL getByIdUrl = new URL(String.format("%s/%s",
+      ApiRoot.instances(), instanceToDelete.getString("id")));
+
+    final var deleteCompleted = okapiClient.delete(softDeleteUrl);
+
+    Response deleteResponse = deleteCompleted.toCompletableFuture().get(5, SECONDS);
+
+    assertThat(deleteResponse.getStatusCode(), is(204));
+    assertThat(deleteResponse.hasBody(), is(false));
+
+    final var getCompleted = okapiClient.get(getByIdUrl);
+
+    Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
+
+    assertTrue(getResponse.getJson().getBoolean("staffSuppress"));
+    assertTrue(getResponse.getJson().getBoolean("discoverySuppress"));
+  }
+
+  @Test
   public void canGetAllInstances()
     throws InterruptedException,
     MalformedURLException,
