@@ -312,7 +312,7 @@ public class Instances extends AbstractInstances {
       if (instance != null) {
         updateVisibility(instance, routingContext, instanceCollection);
         if (isInstanceControlledByRecord(instance)) {
-          updateSuppressFromDiscoveryFlag(webContext, instance); //
+          updateSuppressFromDiscoveryFlag(webContext, instance); //todo: will be replaced by soft delete by instance
         }
       } else {
         ClientErrorResponse.notFound(routingContext.response());
