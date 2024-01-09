@@ -24,7 +24,8 @@
             "inventory-storage.instances.item.get",
             "inventory-storage.bound-with-parts.collection.get"
           ]
-        }, {
+        },
+        {
           "methods": ["GET"],
           "pathPattern": "/inventory/items/{id}",
           "permissionsRequired": ["inventory.items.item.get"],
@@ -297,7 +298,8 @@
             "inventory-storage.bound-with-parts.collection.get",
             "users.item.get"
           ]
-        }, {
+        },
+        {
           "methods": ["PUT"],
           "pathPattern": "/inventory/items/{id}",
           "permissionsRequired": ["inventory.items.item.put"],
@@ -313,12 +315,14 @@
           "pathPattern": "/inventory/items/{id}",
           "permissionsRequired": ["inventory.items.item.delete"],
           "modulePermissions": ["inventory-storage.items.item.delete"]
-        }, {
+        },
+        {
           "methods": ["DELETE"],
           "pathPattern": "/inventory/items",
           "permissionsRequired": ["inventory.items.collection.delete"],
           "modulePermissions": ["inventory-storage.items.collection.delete"]
-        }, {
+        },
+        {
           "methods": ["PUT"],
           "pathPattern": "/inventory/holdings/{id}",
           "permissionsRequired": ["inventory.holdings.item.put"],
@@ -326,7 +330,8 @@
             "inventory-storage.holdings.item.get",
             "inventory-storage.holdings.item.put"
           ]
-        }, {
+        },
+        {
           "methods": ["GET"],
           "pathPattern": "/inventory/instances",
           "permissionsRequired": ["inventory.instances.collection.get"],
@@ -339,7 +344,8 @@
             "inventory-storage.holdings.collection.get",
             "inventory-storage.items.collection.get"
           ]
-        }, {
+        },
+        {
           "methods": ["GET"],
           "pathPattern": "/inventory/items-by-holdings-id",
           "permissionsRequired": ["inventory.items.collection.get"],
@@ -358,7 +364,8 @@
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get"
           ]
-        }, {
+        },
+        {
           "methods": ["GET"],
           "pathPattern": "/inventory/instances/{id}",
           "permissionsRequired": ["inventory.instances.item.get"],
@@ -370,7 +377,8 @@
             "inventory-storage.holdings.collection.get",
             "inventory-storage.items.collection.get"
           ]
-        }, {
+        },
+        {
           "methods": ["POST"],
           "pathPattern": "/inventory/instances",
           "permissionsRequired": ["inventory.instances.item.post"],
@@ -386,7 +394,8 @@
             "inventory-storage.instance-relationships.item.put",
             "inventory-storage.instance-relationships.item.delete"
           ]
-        }, {
+        },
+        {
           "methods": ["PUT"],
           "pathPattern": "/inventory/instances/{id}",
           "permissionsRequired": ["inventory.instances.item.put"],
@@ -405,16 +414,24 @@
             "inventory-storage.instance-relationships.item.put",
             "inventory-storage.instance-relationships.item.delete"
           ]
-        }, {
+        },
+        {
           "methods": ["DELETE"],
           "pathPattern": "/inventory/instances/{id}",
           "permissionsRequired": ["inventory.instances.item.delete"],
           "modulePermissions": ["inventory-storage.instances.item.delete"]
-        }, {
+        },
+        {
           "methods": ["DELETE"],
           "pathPattern": "/inventory/instances",
           "permissionsRequired": ["inventory.instances.collection.delete"],
           "modulePermissions": ["inventory-storage.instances.collection.delete"]
+        },
+        {
+          "methods": ["DELETE"],
+          "pathPattern": "/inventory/instances/{id}/mark-deleted",
+          "permissionsRequired": [],
+          "modulePermissions": []
         }
       ]
     },
