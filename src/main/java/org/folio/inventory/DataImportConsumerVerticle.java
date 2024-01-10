@@ -127,7 +127,7 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
 
     ProfileSnapshotCache profileSnapshotCache = new ProfileSnapshotCache(vertx, client, Long.parseLong(profileSnapshotExpirationTime));
     MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, client, Long.parseLong(mappingMetadataExpirationTime));
-    ConsortiumDataCache consortiumDataCache = new ConsortiumDataCache(vertx, client);
+    ConsortiumDataCache consortiumDataCache = context.get(ConsortiumDataCache.class.getName());
 
     DataImportKafkaHandler dataImportKafkaHandler = new DataImportKafkaHandler(
       vertx, storage, client, profileSnapshotCache, kafkaConfig, mappingMetadataCache, consortiumDataCache);

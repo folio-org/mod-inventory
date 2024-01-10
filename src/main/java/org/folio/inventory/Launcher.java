@@ -1,8 +1,11 @@
 package org.folio.inventory;
 
+import io.vertx.core.Context;
+import io.vertx.core.Vertx;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.VertxAssistant;
+import org.folio.inventory.consortium.cache.ConsortiumDataCache;
 
 import java.lang.invoke.MethodHandles;
 import java.util.HashMap;
@@ -78,6 +81,8 @@ public class Launcher {
     vertxAssistant.start();
 
     log.info("Server Starting");
+
+    initConsortiumDataCache(vertxAssistant.getVertx(), vertxAssistant.getVertx().getOrCreateContext());
 
     CompletableFuture<String> deployed = new CompletableFuture<>();
 
@@ -162,5 +167,10 @@ public class Launcher {
     putNonNullConfig("storage.type", storageType, configMap);
     putNonNullConfig("storage.location", storageLocation, configMap);
     return configMap;
+  }
+
+  private static void initConsortiumDataCache(Vertx vertx, Context context) {
+    ConsortiumDataCache consortiumDataCache = new ConsortiumDataCache(vertx, vertx.createHttpClient());
+    context.put(ConsortiumDataCache.class.getName(), consortiumDataCache);
   }
 }

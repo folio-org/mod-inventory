@@ -10,6 +10,7 @@ import static org.folio.inventory.validation.InstancePrecedingSucceedingTitleVal
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonArray;
@@ -20,6 +21,8 @@ import io.vertx.ext.web.handler.BodyHandler;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.folio.inventory.common.WebContext;
+import org.folio.inventory.consortium.cache.ConsortiumDataCache;
+import org.folio.inventory.consortium.services.ConsortiumServiceImpl;
 import org.folio.inventory.domain.BatchResult;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
@@ -40,7 +43,7 @@ public class InstancesBatch extends AbstractInstances {
   public static final String BATCH_RESPONSE_FIELD_TOTAL_RECORDS = "totalRecords";
 
   public InstancesBatch(final Storage storage, final HttpClient client) {
-    super(storage, client);
+    super(storage, client, new ConsortiumServiceImpl(client, Vertx.vertx().getOrCreateContext().get(ConsortiumDataCache.class.getName())));
   }
 
   public void register(Router router) {

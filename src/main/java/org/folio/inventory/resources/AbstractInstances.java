@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -19,6 +20,10 @@ import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.config.InventoryConfiguration;
 import org.folio.inventory.config.InventoryConfigurationImpl;
+import org.folio.inventory.consortium.entities.ConsortiumConfiguration;
+import org.folio.inventory.consortium.entities.SharingInstance;
+import org.folio.inventory.consortium.services.ConsortiumService;
+import org.folio.inventory.consortium.util.ConsortiumUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceRelationship;
 import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
@@ -42,6 +47,7 @@ import io.vertx.ext.web.client.WebClient;
 
 public abstract class AbstractInstances {
 
+  private ConsortiumService consortiumService;
   protected static final String INVENTORY_PATH = "/inventory";
   protected static final String INSTANCES_PATH = INVENTORY_PATH + "/instances";
   protected static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
@@ -50,7 +56,8 @@ public abstract class AbstractInstances {
   protected final InventoryConfiguration config;
 
 
-  public AbstractInstances(final Storage storage, final HttpClient client) {
+  public AbstractInstances(final Storage storage, final HttpClient client, ConsortiumService consortiumService) {
+    this.consortiumService = consortiumService;
     this.storage = storage;
     this.client = client;
     this.config = new InventoryConfigurationImpl();
@@ -83,11 +90,11 @@ public abstract class AbstractInstances {
     instanceRelationshipsClient.getAll(query, future::complete);
 
     return future.thenCompose(result ->
-      updateInstanceRelationships(instance, instanceRelationshipsRepository, result));
+      updateInstanceRelationships(instance, instanceRelationshipsRepository, context, result));
   }
 
   private CompletableFuture<List<Response>> updateInstanceRelationships(Instance instance,
-    CollectionResourceRepository instanceRelationshipsClient, Response result) {
+    CollectionResourceRepository instanceRelationshipsClient, WebContext context, Response result) {
 
     JsonObject json = result.getJson();
     List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("instanceRelationships"));
@@ -118,10 +125,36 @@ public abstract class AbstractInstances {
       });
     }
 
-    List<CompletableFuture<Response>> allFutures = update(instanceRelationshipsClient,
-      existingRelationships, updatingRelationships);
+    return createShadowInstancesIfNeeded(context, existingRelationships, updatingRelationships, instance)
+      .thenCompose(v -> allResultsOf(update(instanceRelationshipsClient, existingRelationships, updatingRelationships)));
+  }
 
-    return allResultsOf(allFutures);
+  private CompletableFuture<List<SharingInstance>> createShadowInstancesIfNeeded(WebContext context, Map<String, InstanceRelationship> existingRelationships,
+                                                                                 Map<String, InstanceRelationship> updatingRelationships, Instance instance) {
+    return consortiumService.getConsortiumConfiguration(context).toCompletionStage().toCompletableFuture()
+      .thenCompose(consortiumConfigurationOptional -> {
+        List<CompletableFuture<Optional<SharingInstance>>> shadowInstanceCreateFutures = new ArrayList<>();
+        if (consortiumConfigurationOptional.isPresent()) {
+          List<InstanceRelationship> createRelationships = updatingRelationships.keySet().stream().filter(key -> !existingRelationships.containsKey(key))
+            .map(updatingRelationships::get).toList();
+
+          createRelationships.forEach(relationship -> {
+            String instanceId = getRelatedInstanceId(instance, relationship);
+            shadowInstanceCreateFutures.add(createShadowInstance(context, consortiumConfigurationOptional.get(), instanceId));
+          });
+        }
+        return allResultsOf(shadowInstanceCreateFutures);
+      })
+      .thenApply(sharingInstances -> sharingInstances.stream().filter(Optional::isPresent).map(Optional::get).toList());
+  }
+
+  private CompletableFuture<Optional<SharingInstance>> createShadowInstance(WebContext context, ConsortiumConfiguration consortiumConfigurationOptional, String instanceId) {
+    return ConsortiumUtil.createShadowInstanceIfNeeded(consortiumService, storage.getInstanceCollection(context), context, instanceId, consortiumConfigurationOptional)
+      .toCompletionStage().toCompletableFuture();
+  }
+
+  private static String getRelatedInstanceId(Instance instance, InstanceRelationship relationship) {
+    return !relationship.superInstanceId.equals(instance.getId()) ? relationship.superInstanceId : relationship.subInstanceId;
   }
 
   protected CompletableFuture<List<Response>> updatePrecedingSucceedingTitles(
