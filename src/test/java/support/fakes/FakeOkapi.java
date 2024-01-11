@@ -240,6 +240,12 @@ public class FakeOkapi extends AbstractVerticle {
       .withRootPath("/users")
       .withCollectionPropertyName("users")
       .create().register(router);
+
+    new FakeStorageModuleBuilder()
+      .withRecordName("user-tenants")
+      .withRootPath("/user-tenants")
+      .withCollectionPropertyName("userTenants")
+      .create().register(router);
   }
 
   private void registerFakeNatureOfContentTermsModule(Router router) {

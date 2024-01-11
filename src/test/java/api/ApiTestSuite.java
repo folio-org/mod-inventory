@@ -11,7 +11,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import io.vertx.core.Vertx;
 import org.folio.inventory.InventoryVerticle;
+import org.folio.inventory.Launcher;
 import org.folio.inventory.common.VertxAssistant;
 import org.folio.inventory.rest.impl.PgPoolContainer;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
@@ -264,8 +266,11 @@ public class ApiTestSuite {
     config.put("storage.type", storageType);
     config.put("storage.location", storageLocation);
 
-    vertxAssistant.deployVerticle(
-      InventoryVerticle.class.getName(), config, deployed);
+    Vertx vertx = vertxAssistant.getVertx();
+
+    Launcher.initConsortiumDataCache(vertx, vertx.getOrCreateContext());
+
+    vertxAssistant.deployVerticle(new InventoryVerticle(Launcher.getConsortiumDataCache(vertx.getOrCreateContext())), config, deployed);
 
     inventoryModuleDeploymentId = deployed.get(20000, TimeUnit.MILLISECONDS);
   }

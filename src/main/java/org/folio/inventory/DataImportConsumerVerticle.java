@@ -104,6 +104,11 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
   private final int loadLimit = getLoadLimit();
   private final int maxDistributionNumber = getMaxDistributionNumber();
   private List<KafkaConsumerWrapper<String, String>> consumerWrappers = new ArrayList<>();
+  private final ConsortiumDataCache consortiumDataCache;
+
+  public DataImportConsumerVerticle(ConsortiumDataCache consortiumDataCache) {
+    this.consortiumDataCache = consortiumDataCache;
+  }
 
   @Override
   public void start(Promise<Void> startPromise) {
@@ -127,7 +132,6 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
 
     ProfileSnapshotCache profileSnapshotCache = new ProfileSnapshotCache(vertx, client, Long.parseLong(profileSnapshotExpirationTime));
     MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, client, Long.parseLong(mappingMetadataExpirationTime));
-    ConsortiumDataCache consortiumDataCache = context.get(ConsortiumDataCache.class.getName());
 
     DataImportKafkaHandler dataImportKafkaHandler = new DataImportKafkaHandler(
       vertx, storage, client, profileSnapshotCache, kafkaConfig, mappingMetadataCache, consortiumDataCache);

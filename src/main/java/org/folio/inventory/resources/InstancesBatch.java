@@ -22,6 +22,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.consortium.cache.ConsortiumDataCache;
+import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.consortium.services.ConsortiumServiceImpl;
 import org.folio.inventory.domain.BatchResult;
 import org.folio.inventory.domain.instances.Instance;
@@ -42,8 +43,8 @@ public class InstancesBatch extends AbstractInstances {
   public static final String BATCH_RESPONSE_FIELD_ERROR_MESSAGES = "errorMessages";
   public static final String BATCH_RESPONSE_FIELD_TOTAL_RECORDS = "totalRecords";
 
-  public InstancesBatch(final Storage storage, final HttpClient client) {
-    super(storage, client, new ConsortiumServiceImpl(client, Vertx.vertx().getOrCreateContext().get(ConsortiumDataCache.class.getName())));
+  public InstancesBatch(final Storage storage, final HttpClient client, final ConsortiumService consortiumService) {
+    super(storage, client, consortiumService);
   }
 
   public void register(Router router) {

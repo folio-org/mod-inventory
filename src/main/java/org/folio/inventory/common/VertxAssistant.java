@@ -1,6 +1,8 @@
 package org.folio.inventory.common;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.DeploymentOptions;
+import io.vertx.core.Verticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
@@ -58,31 +60,30 @@ public class VertxAssistant {
     deployVerticle(verticleClass, config, 1, deployed);
   }
 
+  public void deployVerticle(Verticle verticle,
+                             Map<String, Object> config,
+                             CompletableFuture<String> deployed) {
+    deployVerticle(verticle, config, 1, deployed);
+  }
+
   public void deployVerticle(String verticleClass,
                              Map<String, Object> config,
                              int verticleInstancesNumber,
                              CompletableFuture<String> deployed) {
     long startTime = System.currentTimeMillis();
+    DeploymentOptions options = getDeploymentOptions(config, verticleInstancesNumber);
 
-    DeploymentOptions options = new DeploymentOptions();
+    vertx.deployVerticle(verticleClass, options, result -> processDeployResult(verticleClass, deployed, startTime, result));
+  }
 
-    options.setConfig(new JsonObject(config));
-    options.setWorker(true);
-    options.setInstances(verticleInstancesNumber);
+  public void deployVerticle(Verticle verticle,
+                             Map<String, Object> config,
+                             int verticleInstancesNumber,
+                             CompletableFuture<String> deployed) {
+    long startTime = System.currentTimeMillis();
+    DeploymentOptions options = getDeploymentOptions(config, verticleInstancesNumber);
 
-    vertx.deployVerticle(verticleClass, options, result -> {
-      if (result.succeeded()) {
-        long elapsedTime = System.currentTimeMillis() - startTime;
-
-        log.info(String.format(
-          "%s deployed in %s milliseconds", verticleClass, elapsedTime));
-
-        deployed.complete(result.result());
-      } else {
-        deployed.completeExceptionally(result.cause());
-      }
-    });
-
+    vertx.deployVerticle(verticle, options, result -> processDeployResult(verticle.getClass().getName(), deployed, startTime, result));
   }
 
   public void undeployVerticle(String deploymentId,
@@ -101,5 +102,27 @@ public class VertxAssistant {
     CompletableFuture<Void> future = new CompletableFuture<>();
     undeployVerticle(deploymentId, future);
     return future;
+  }
+
+  private void processDeployResult(String className, CompletableFuture<String> deployed, long startTime, AsyncResult<String> result) {
+    if (result.succeeded()) {
+      long elapsedTime = System.currentTimeMillis() - startTime;
+
+      log.info(String.format(
+        "%s deployed in %s milliseconds", className, elapsedTime));
+
+      deployed.complete(result.result());
+    } else {
+      deployed.completeExceptionally(result.cause());
+    }
+  }
+
+  private static DeploymentOptions getDeploymentOptions(Map<String, Object> config, int verticleInstancesNumber) {
+    DeploymentOptions options = new DeploymentOptions();
+
+    options.setConfig(new JsonObject(config));
+    options.setWorker(true);
+    options.setInstances(verticleInstancesNumber);
+    return options;
   }
 }

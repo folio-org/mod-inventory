@@ -86,7 +86,7 @@ public class Launcher {
 
     CompletableFuture<String> deployed = new CompletableFuture<>();
 
-    vertxAssistant.deployVerticle(InventoryVerticle.class.getName(),
+    vertxAssistant.deployVerticle(new InventoryVerticle(getConsortiumDataCache(vertxAssistant.getVertx().getOrCreateContext())),
       config, deployed);
 
     deployed.thenAccept(v -> log.info("Server Started"));
@@ -107,7 +107,7 @@ public class Launcher {
     CompletableFuture<String> future3 = new CompletableFuture<>();
     CompletableFuture<String> future4 = new CompletableFuture<>();
     CompletableFuture<String> future5 = new CompletableFuture<>();
-    vertxAssistant.deployVerticle(DataImportConsumerVerticle.class.getName(),
+    vertxAssistant.deployVerticle(new DataImportConsumerVerticle(getConsortiumDataCache(vertxAssistant.getVertx().getOrCreateContext())),
       consumerVerticlesConfig, dataImportConsumerVerticleNumber, future1);
     vertxAssistant.deployVerticle(MarcHridSetConsumerVerticle.class.getName(),
       consumerVerticlesConfig, instanceHridSetConsumerVerticleNumber, future2);
@@ -169,8 +169,12 @@ public class Launcher {
     return configMap;
   }
 
-  private static void initConsortiumDataCache(Vertx vertx, Context context) {
+  public static void initConsortiumDataCache(Vertx vertx, Context context) {
     ConsortiumDataCache consortiumDataCache = new ConsortiumDataCache(vertx, vertx.createHttpClient());
     context.put(ConsortiumDataCache.class.getName(), consortiumDataCache);
+  }
+
+  public static ConsortiumDataCache getConsortiumDataCache(Context context) {
+    return context.get(ConsortiumDataCache.class.getName());
   }
 }
