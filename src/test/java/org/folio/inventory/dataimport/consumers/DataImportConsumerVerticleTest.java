@@ -145,7 +145,7 @@ public class DataImportConsumerVerticleTest {
         .put(KAFKA_REPLICATION_FACTOR, "1")
         .put(KAFKA_ENV, KAFKA_ENV_NAME)
         .put(KAFKA_MAX_REQUEST_SIZE, "1048576"));
-    vertx.deployVerticle(DataImportConsumerVerticle.class.getName(), options, deployAr -> async.complete());
+    vertx.deployVerticle(new DataImportConsumerVerticle(null), options, deployAr -> async.complete());
   }
 
   @Before
