@@ -29,6 +29,7 @@ import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingPa
 import org.folio.processing.mapping.mapper.MappingContext;
 import org.folio.rest.client.SourceStorageRecordsClient;
 import org.folio.rest.jaxrs.model.EntityType;
+import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.Record;
 
 import java.util.HashMap;
@@ -176,7 +177,8 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
       .onComplete(ar -> {
         var result = ar.result();
         if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_CREATED.toInt()) {
-          payload.getContext().put(EntityType.MARC_BIBLIOGRAPHIC.value(), result.bodyAsJsonObject().encode());
+          payload.getContext().put(EntityType.MARC_BIBLIOGRAPHIC.value(),
+            Json.encode(encodeParsedRecordContent(result.bodyAsJson(Record.class))));
           LOGGER.info("Created MARC record in SRS with id: '{}', instanceId: '{}', from tenant: {}, jobExecutionId: {}",
             record.getId(), instance.getId(), payload.getTenant(), payload.getJobExecutionId());
           promise.complete(instance);
@@ -189,6 +191,15 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
         }
       });
     return promise.future();
+  }
+
+  private Record encodeParsedRecordContent(Record record) {
+    ParsedRecord parsedRecord = record.getParsedRecord();
+    if (parsedRecord != null) {
+      parsedRecord.setContent(Json.encode(parsedRecord.getContent()));
+      return record.withParsedRecord(parsedRecord);
+    }
+    return record;
   }
 
   public SourceStorageRecordsClient getSourceStorageRecordsClient(DataImportEventPayload payload) {
