@@ -29,6 +29,7 @@ import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingPa
 import org.folio.processing.mapping.mapper.MappingContext;
 import org.folio.rest.client.SourceStorageRecordsClient;
 import org.folio.rest.jaxrs.model.EntityType;
+import org.folio.rest.jaxrs.model.ExternalIdsHolder;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.Record;
 
@@ -39,6 +40,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
+import static org.apache.commons.lang.StringUtils.isNotEmpty;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
@@ -132,7 +134,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
               Instance mappedInstance = Instance.fromJson(instanceAsJson);
               return addInstance(mappedInstance, instanceCollection)
                 .compose(createdInstance -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(mappedInstance, context).map(createdInstance))
-                .compose(createdInstance -> fill001And999IFieldsAndSetMatchedId(createdInstance, targetRecord))
+                .compose(createdInstance -> executeFieldsManipulation(createdInstance, targetRecord))
                 .compose(createdInstance -> saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, createdInstance, instanceCollection));
             })
             .onSuccess(ar -> {
@@ -160,14 +162,41 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
     return future;
   }
 
-  private Future<Instance> fill001And999IFieldsAndSetMatchedId(Instance instance, Record record) {
+  private Future<Instance> executeFieldsManipulation(Instance instance, Record record) {
     AdditionalFieldsUtil.fill001FieldInMarcRecord(record, instance.getHrid());
     if (StringUtils.isBlank(record.getMatchedId())) {
       record.setMatchedId(record.getId());
     }
+    setExternalIds(record, instance);
     return AdditionalFieldsUtil.addFieldToMarcRecord(record, TAG_999, 'i', instance.getId())
       ? Future.succeededFuture(instance)
       : Future.failedFuture(format("Failed to add instance id '%s' to record with id '%s'", instance.getId(), record.getId()));
+  }
+
+  /**
+   * Adds specified externalId and externalHrid to record and additional custom field with externalId to parsed record.
+   *
+   * @param record   record to update
+   * @param instance externalEntity in Json
+   */
+  private void setExternalIds(Record record, Instance instance) {
+    if (record.getExternalIdsHolder() == null) {
+      record.setExternalIdsHolder(new ExternalIdsHolder());
+    }
+    String externalId = record.getExternalIdsHolder().getInstanceId();
+    String externalHrid = record.getExternalIdsHolder().getInstanceHrid();
+    if (isNotEmpty(externalId) || isNotEmpty(externalHrid)) {
+      if (AdditionalFieldsUtil.isFieldsFillingNeeded(record, instance)) {
+        setIdAndHrid(record, instance);
+      }
+    } else {
+      setIdAndHrid(record, instance);
+    }
+  }
+
+  private void setIdAndHrid(Record record, Instance instance) {
+    record.getExternalIdsHolder().setInstanceId(instance.getId());
+    record.getExternalIdsHolder().setInstanceHrid(instance.getHrid());
   }
 
   private Future<Instance> saveRecordInSrsAndHandleResponse(DataImportEventPayload payload, Record record,
