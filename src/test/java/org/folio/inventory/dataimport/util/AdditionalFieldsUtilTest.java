@@ -5,6 +5,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.TestUtil;
+import org.folio.inventory.domain.instances.Instance;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.ExternalIdsHolder;
 import org.folio.rest.jaxrs.model.ParsedRecord;
@@ -217,6 +218,24 @@ public class AdditionalFieldsUtilTest {
   }
 
   @Test
+  public void isFieldsFillingNeededTrue() {
+    String instanceId = UUID.randomUUID().toString();
+    String instanceHrId = UUID.randomUUID().toString();
+    Record record = new Record().withExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId).withInstanceHrid(UUID.randomUUID().toString()));
+    Instance instance = new Instance(instanceId, "0", instanceHrId, "", "", "");
+    Assert.assertTrue(AdditionalFieldsUtil.isFieldsFillingNeeded(record, instance));
+  }
+
+  @Test
+  public void isFieldsFillingNeededFalse() {
+    String instanceId = UUID.randomUUID().toString();
+    String instanceHrId = UUID.randomUUID().toString();
+    Record record = new Record().withExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId).withInstanceHrid(instanceHrId));
+    Instance instance = new Instance(instanceId, "0", instanceHrId, "", "", "");
+    Assert.assertFalse(AdditionalFieldsUtil.isFieldsFillingNeeded(record, instance));
+  }
+
+  @Test
   public void shouldAddFieldToMarcRecordInNumericalOrder() throws IOException {
     // given
     String instanceHrId = UUID.randomUUID().toString();
@@ -238,8 +257,8 @@ public class AdditionalFieldsUtilTest {
       JsonObject targetField = fields.getJsonObject(i);
       if (targetField.containsKey("035")) {
         existsNewField = true;
-        String currentTag = fields.getJsonObject(i).stream().map(Map.Entry::getKey).findFirst().get();
-        String nextTag = fields.getJsonObject(i + 1).stream().map(Map.Entry::getKey).findFirst().get();
+        String currentTag = fields.getJsonObject(i).stream().map(Map.Entry::getKey).findFirst().orElse("");
+        String nextTag = fields.getJsonObject(i + 1).stream().map(Map.Entry::getKey).findFirst().orElse("");
         MatcherAssert.assertThat(currentTag, lessThanOrEqualTo(nextTag));
       }
     }

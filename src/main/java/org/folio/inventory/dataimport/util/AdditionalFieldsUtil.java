@@ -12,6 +12,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.inventory.domain.instances.Instance;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.MarcFieldProtectionSetting;
@@ -464,6 +465,23 @@ public final class AdditionalFieldsUtil {
       }
     }
     return isFieldFound;
+  }
+
+  /**
+   * Check if record should be filled with specific fields.
+   *
+   * @param record   - source record.
+   * @param instance - instance.
+   * @return - true if filling needed.
+   */
+  public static boolean isFieldsFillingNeeded(Record record, Instance instance) {
+    var externalIdsHolder = record.getExternalIdsHolder();
+    return isValidIdAndHrid(instance.getId(), instance.getHrid(),
+      externalIdsHolder.getInstanceId(), externalIdsHolder.getInstanceHrid());
+  }
+
+  private static boolean isValidIdAndHrid(String id, String hrid, String externalId, String externalHrid) {
+    return (isNotEmpty(externalId) && isNotEmpty(externalHrid)) && (id.equals(externalId) && !hrid.equals(externalHrid));
   }
 
   /**
