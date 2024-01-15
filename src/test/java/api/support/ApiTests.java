@@ -18,6 +18,7 @@ import api.support.http.ResourceClient;
 public abstract class ApiTests {
   private static boolean runningOnOwn;
   protected static OkapiHttpClient okapiClient;
+  protected static OkapiHttpClient consortiaOkapiClient;
 
   protected final ResourceClient holdingsStorageClient;
   protected final ResourceClient itemsStorageClient;
@@ -26,10 +27,12 @@ public abstract class ApiTests {
   protected final ResourceClient instancesStorageClient;
   protected final ResourceClient isbnClient;
   protected final ResourceClient usersClient;
+  protected final ResourceClient userTenantsClient;
   protected final ResourceClient instancesBatchClient;
   protected final ResourceClient precedingSucceedingTitlesClient;
   protected final ResourceClient instanceRelationshipClient;
   protected final ResourceClient requestStorageClient;
+  protected final ResourceClient consortiaClient;
 
   protected final InstanceRelationshipTypeFixture instanceRelationshipTypeFixture;
   protected final MarkItemFixture markItemFixture;
@@ -42,10 +45,12 @@ public abstract class ApiTests {
     instancesStorageClient = ResourceClient.forInstancesStorage(okapiClient);
     isbnClient = ResourceClient.forIsbns(okapiClient);
     usersClient = ResourceClient.forUsers(okapiClient);
+    userTenantsClient = ResourceClient.forUserTenants(okapiClient);
     instancesBatchClient = ResourceClient.forInstancesBatch(okapiClient);
     precedingSucceedingTitlesClient = ResourceClient.forPrecedingSucceedingTitles(okapiClient);
     instanceRelationshipClient = ResourceClient.forInstanceRelationship(okapiClient);
     requestStorageClient = ResourceClient.forRequestStorage(okapiClient);
+    consortiaClient = ResourceClient.forConsortia(consortiaOkapiClient);
     instanceRelationshipTypeFixture = new InstanceRelationshipTypeFixture(okapiClient);
     markItemFixture = new MarkItemFixture(okapiClient);
   }
@@ -64,6 +69,7 @@ public abstract class ApiTests {
     }
 
     okapiClient = ApiTestSuite.createOkapiHttpClient();
+    consortiaOkapiClient = ApiTestSuite.createOkapiHttpClient(ApiTestSuite.CONSORTIA_TENANT_ID);
   }
 
   @AfterClass

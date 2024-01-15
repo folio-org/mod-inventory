@@ -10,6 +10,7 @@ import static support.matchers.ResponseMatchers.hasValidationError;
 
 import java.net.MalformedURLException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
@@ -34,11 +35,15 @@ import support.fakes.EndpointFailureDescriptor;
 
 public class InstanceRelationshipsTest extends ApiTests {
   private static final String PARENT_INSTANCES = "parentInstances";
+  private static final String CENTRAL_TENANT_ID_FIELD = "centralTenantId";
+  private static final String CONSORTIUM_ID_FIELD = "consortiumId";
 
   @After
-  public void disableFailureEmulation() throws Exception {
+  public void disableFailureEmulationAndClearConsortia() throws Exception {
     precedingSucceedingTitlesClient.disableFailureEmulation();
     instanceRelationshipClient.disableFailureEmulation();
+    userTenantsClient.deleteAll();
+    consortiaClient.deleteAll();
   }
 
   @Test
@@ -481,6 +486,80 @@ public class InstanceRelationshipsTest extends ApiTests {
       updatedInstance);
     verifyInstancesInRelationship(updatedInstance,
       instancesClient.getById(childInstance.getId()).getJson());
+  }
+
+  @Test
+  public void canLinkLocalInstanceToSharedInstance() throws MalformedURLException, ExecutionException, InterruptedException, TimeoutException {
+    UUID parentId = UUID.randomUUID();
+
+    initConsortiumTenant();
+
+    final JsonObject parentRelationship = createParentRelationship(parentId.toString(),
+      instanceRelationshipTypeFixture.boundWith().getId());
+
+    final IndividualResource createdInstance = instancesClient.create(nod(UUID.randomUUID())
+      .put(PARENT_INSTANCES, new JsonArray().add(parentRelationship)));
+
+    assertThat(createdInstance.getJson().getJsonArray(PARENT_INSTANCES).getJsonObject(0),
+      is(parentRelationship));
+
+    Response getParent = instancesClient.getById(parentId);
+    assertThat(getParent.getStatusCode(), is(200));
+
+    verifyInstancesInRelationship(getParent.getJson(), createdInstance.getJson());
+
+    List<JsonObject> allSharingInstances = consortiaClient.getAll();
+
+    assertThat(allSharingInstances.size(), is(1));
+    assertThat(allSharingInstances.get(0).getString("instanceIdentifier"), is(parentId.toString()));
+  }
+
+  @Test
+  public void canUpdateLocalInstanceWithSharedInstanceRelation() throws MalformedURLException, ExecutionException, InterruptedException, TimeoutException {
+    final IndividualResource parentInstance = instancesClient.create(nod(UUID.randomUUID()));
+    UUID childId = UUID.randomUUID();
+
+    initConsortiumTenant();
+
+    final JsonObject parentRelationship = createParentRelationship(parentInstance.getId().toString(),
+      instanceRelationshipTypeFixture.boundWith().getId());
+
+    final IndividualResource createdInstance = instancesClient.create(nod(UUID.randomUUID())
+      .put(PARENT_INSTANCES, new JsonArray().add(parentRelationship)));
+
+    assertThat(createdInstance.getJson().getJsonArray(PARENT_INSTANCES).getJsonObject(0),
+      is(parentRelationship));
+
+    final JsonObject childRelationships = createChildRelationship(childId.toString(),
+      instanceRelationshipTypeFixture.monographicSeries().getId());
+
+    instancesClient.replace(createdInstance.getId(), createdInstance.copyJson()
+      .put("childInstances", new JsonArray().add(childRelationships)));
+
+    final JsonObject updatedInstance = instancesClient.getById(createdInstance.getId())
+      .getJson();
+
+    Response getChild = instancesClient.getById(childId);
+    assertThat(getChild.getStatusCode(), is(200));
+
+    verifyInstancesInRelationship(instancesClient.getById(parentInstance.getId()).getJson(),
+      updatedInstance);
+    verifyInstancesInRelationship(updatedInstance, getChild.getJson());
+
+    List<JsonObject> allSharingInstances = consortiaClient.getAll();
+
+    assertThat(allSharingInstances.size(), is(1));
+    assertThat(allSharingInstances.get(0).getString("instanceIdentifier"), is(childId.toString()));
+  }
+
+  private void initConsortiumTenant() {
+    String expectedConsortiumId = UUID.randomUUID().toString();
+
+    JsonObject userTenantsCollection = new JsonObject()
+      .put(CENTRAL_TENANT_ID_FIELD, ApiTestSuite.CONSORTIA_TENANT_ID)
+      .put(CONSORTIUM_ID_FIELD, expectedConsortiumId);
+
+    userTenantsClient.create(userTenantsCollection);
   }
 
   private JsonObject createParentRelationship(String superInstanceId, String relationshipType) {
