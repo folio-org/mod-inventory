@@ -32,11 +32,6 @@ import io.vertx.ext.web.Router;
 
 public class InventoryVerticle extends AbstractVerticle {
   private HttpServer server;
-  private final ConsortiumDataCache consortiumDataCache;
-
-  public InventoryVerticle(ConsortiumDataCache consortiumDataCache) {
-    this.consortiumDataCache = consortiumDataCache;
-  }
 
   @Override
   public void start(Promise<Void> started) {
@@ -61,6 +56,7 @@ public class InventoryVerticle extends AbstractVerticle {
 
     router.route().handler(WebRequestDiagnostics::outputDiagnostics);
 
+    ConsortiumDataCache consortiumDataCache = new ConsortiumDataCache(vertx, client);
     ConsortiumService consortiumService = new ConsortiumServiceImpl(client, consortiumDataCache);
 
     new AdminApi().register(router);

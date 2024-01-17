@@ -272,11 +272,10 @@ public class ApiTestSuite {
     config.put("storage.type", storageType);
     config.put("storage.location", storageLocation);
 
-    Vertx vertx = vertxAssistant.getVertx();
     System.setProperty(ConsortiumUtil.EXPIRATION_TIME_PARAM, "0");
-    Launcher.initConsortiumDataCache(vertx, vertx.getOrCreateContext());
 
-    vertxAssistant.deployVerticle(new InventoryVerticle(Launcher.getConsortiumDataCache(vertx.getOrCreateContext())), config, deployed);
+    vertxAssistant.deployVerticle(
+      InventoryVerticle.class.getName(), config, deployed);
 
     inventoryModuleDeploymentId = deployed.get(20000, TimeUnit.MILLISECONDS);
   }
