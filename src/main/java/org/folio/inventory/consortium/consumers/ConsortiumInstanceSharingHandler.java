@@ -218,7 +218,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   private void sendCompleteEventToKafka(SharingInstance sharingInstance, SharingStatus status, String errorMessage,
                                         Map<String, String> kafkaHeaders) {
 
-    SharingInstanceEventType evenType = CONSORTIUM_INSTANCE_SHARING_COMPLETE;
+    SharingInstanceEventType eventType = CONSORTIUM_INSTANCE_SHARING_COMPLETE;
 
     try {
       String tenantId = kafkaHeaders.get(OKAPI_TENANT_HEADER);
@@ -228,24 +228,38 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
         " to tenant {}. Status: {}, Message: {}", sharingInstance.getInstanceIdentifier(), tenantId, status.getValue(), errorMessage);
 
       KafkaProducerRecord<String, String> kafkaRecord =
-        createProducerRecord(getTopicName(tenantId, evenType),
+        createProducerRecord(getTopicName(tenantId, eventType),
           sharingInstance,
           status,
           errorMessage,
           kafkaHeadersList);
 
-      var kafkaProducer = createProducer(tenantId, getTopicName(tenantId, evenType));
-      kafkaProducer.send(kafkaRecord)
-        .onSuccess(res -> LOGGER.info("Event with type {}, was sent to kafka about sharing instance with InstanceId={}",
-          evenType.value(), sharingInstance.getInstanceIdentifier()))
-        .onFailure(err -> {
-          var cause = err.getCause();
-          LOGGER.info("Failed to sent event {} to kafka about sharing instance with InstanceId={}, cause: {}",
-            evenType.value(), sharingInstance.getInstanceIdentifier(), cause);
-        });
+      sendKafkaRecord(tenantId, eventType, kafkaRecord, sharingInstance);
     } catch (Exception e) {
       LOGGER.error("Failed to send an event for eventType {} about sharing instance with InstanceId={}, cause {}",
-        evenType.value(), sharingInstance.getInstanceIdentifier(), e);
+        eventType.value(), sharingInstance.getInstanceIdentifier(), e);
+    }
+  }
+
+  private void sendKafkaRecord(String tenantId, SharingInstanceEventType eventType,
+                    KafkaProducerRecord<String, String> kafkaRecord, SharingInstance sharingInstance) {
+    KafkaProducer<String, String> kafkaProducer = null;
+    try {
+      kafkaProducer = createProducer(tenantId, getTopicName(tenantId, eventType));
+      kafkaProducer.send(kafkaRecord)
+        .onSuccess(res -> LOGGER.info("Event with type {}, was sent to Kafka about sharing instance with InstanceId={}",
+          eventType.value(), sharingInstance.getInstanceIdentifier()))
+        .onFailure(err -> {
+          Throwable cause = err.getCause();
+          LOGGER.error("Failed to sent event {} to Kafka about sharing instance with InstanceId={}, cause: {}",
+            eventType.value(), sharingInstance.getInstanceIdentifier(), cause);
+        });
+    } catch (Exception e) {
+      LOGGER.error("Exception when trying to produce to Kafka or close the KafkaProducer", e);
+    } finally {
+      if (kafkaProducer != null) {
+        kafkaProducer.close();
+      }
     }
   }
 
