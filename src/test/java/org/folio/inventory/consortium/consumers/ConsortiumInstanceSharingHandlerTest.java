@@ -1,5 +1,19 @@
 package org.folio.inventory.consortium.consumers;
 
+import static org.folio.inventory.consortium.entities.SharingStatus.IN_PROGRESS;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
@@ -11,6 +25,10 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
+import java.io.IOException;
+import java.util.List;
+import java.util.UUID;
+import java.util.function.Consumer;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
@@ -21,12 +39,10 @@ import org.folio.inventory.consortium.handlers.InstanceSharingHandlerFactory;
 import org.folio.inventory.consortium.util.InstanceOperationsHelper;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.times;
 import org.folio.inventory.services.EventIdStorageService;
-import org.folio.kafka.exception.DuplicateEventException;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.KafkaConfig;
+import org.folio.kafka.exception.DuplicateEventException;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -38,22 +54,6 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.UUID;
-import java.util.function.Consumer;
-
-import static org.folio.inventory.consortium.entities.SharingStatus.IN_PROGRESS;
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @RunWith(VertxUnitRunner.class)
 public class ConsortiumInstanceSharingHandlerTest {
@@ -122,7 +122,8 @@ public class ConsortiumInstanceSharingHandlerTest {
     when(kafkaRecord.value()).thenReturn(Json.encode(sharingInstance));
     when(kafkaRecord.headers()).thenReturn(
       List.of(KafkaHeader.header(OKAPI_TOKEN_HEADER, "token"),
-        KafkaHeader.header(OKAPI_URL_HEADER, "url")));
+        KafkaHeader.header(OKAPI_URL_HEADER, "url"),
+        KafkaHeader.header(OKAPI_TENANT_HEADER, "university")));
 
     when(storage.getInstanceCollection(any(Context.class)))
       .thenReturn(mockedSourceInstanceCollection)
