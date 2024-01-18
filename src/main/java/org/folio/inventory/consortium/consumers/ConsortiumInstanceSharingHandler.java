@@ -258,7 +258,6 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     }
   }
 
-
   private KafkaProducerRecord<String, String> createProducerRecord(String topicName, SharingInstance sharingInstance,
                                                                    SharingStatus status, String message, List<KafkaHeader> kafkaHeaders) {
 
