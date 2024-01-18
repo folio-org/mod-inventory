@@ -1,3 +1,6 @@
+## 20.1.7 2024-01-18
+* Consortial: non-MARC data not saved when local source = MARC instance is promoted ([MODINV-929](https://issues.folio.org/browse/MODINV-929))
+
 ## 20.1.6 2023-12-08
 * MARC source shared instance overlay fails occasionally ([MODINV-937](https://issues.folio.org/browse/MODINV-937))
 
