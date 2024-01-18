@@ -1,13 +1,5 @@
 package org.folio.inventory;
 
-import static java.lang.String.format;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX_REQUEST_SIZE;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_PORT;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_REPLICATION_FACTOR;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.OKAPI_URL;
-
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -18,7 +10,6 @@ import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.dao.EventIdStorageDaoImpl;
 import org.folio.inventory.common.dao.PostgresClientFactory;
 import org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler;
-import org.folio.inventory.consortium.consumers.SimpleKafkaProducer;
 import org.folio.inventory.consortium.entities.SharingInstanceEventType;
 import org.folio.inventory.dataimport.util.ConsumerWrapperUtil;
 import org.folio.inventory.services.SharedInstanceEventIdStorageServiceImpl;
@@ -29,6 +20,14 @@ import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaConsumerWrapper;
 import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.kafka.SubscriptionDefinition;
+
+import static java.lang.String.format;
+import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
+import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
+import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX_REQUEST_SIZE;
+import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_PORT;
+import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_REPLICATION_FACTOR;
+import static org.folio.inventory.dataimport.util.KafkaConfigConstants.OKAPI_URL;
 
 public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle {
 
@@ -45,11 +44,9 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
     LOGGER.info(format("kafkaConfig: %s", kafkaConfig));
 
     HttpClient httpClient = vertx.createHttpClient();
-    SimpleKafkaProducer<String, String> kafkaProducerManager = new SimpleKafkaProducer<>();
     Storage storage = Storage.basedUpon(config, httpClient);
     SharedInstanceEventIdStorageServiceImpl sharedInstanceEventIdStorageService = new SharedInstanceEventIdStorageServiceImpl(new EventIdStorageDaoImpl(new PostgresClientFactory(vertx)));
-    ConsortiumInstanceSharingHandler consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx,
-      httpClient, storage, kafkaConfig, sharedInstanceEventIdStorageService, kafkaProducerManager);
+    ConsortiumInstanceSharingHandler consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig, sharedInstanceEventIdStorageService);
 
     var kafkaConsumerFuture = createKafkaConsumerWrapper(kafkaConfig, consortiumInstanceSharingHandler);
     kafkaConsumerFuture.onFailure(startPromise::fail)

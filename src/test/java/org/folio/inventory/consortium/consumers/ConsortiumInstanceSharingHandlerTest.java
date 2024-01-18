@@ -1,20 +1,5 @@
 package org.folio.inventory.consortium.consumers;
 
-import static org.folio.inventory.consortium.entities.SharingInstanceEventType.CONSORTIUM_INSTANCE_SHARING_COMPLETE;
-import static org.folio.inventory.consortium.entities.SharingStatus.IN_PROGRESS;
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
@@ -26,29 +11,24 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
-import io.vertx.kafka.client.producer.KafkaProducer;
-import io.vertx.kafka.client.producer.KafkaProducerRecord;
-import io.vertx.kafka.client.producer.RecordMetadata;
-import java.io.IOException;
-import java.util.List;
-import java.util.UUID;
-import java.util.function.Consumer;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.consortium.entities.SharingInstance;
-import org.folio.inventory.consortium.entities.SharingInstanceEventType;
 import org.folio.inventory.consortium.handlers.InstanceSharingHandler;
 import org.folio.inventory.consortium.handlers.InstanceSharingHandlerFactory;
 import org.folio.inventory.consortium.util.InstanceOperationsHelper;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
+
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.times;
 import org.folio.inventory.services.EventIdStorageService;
+import org.folio.kafka.exception.DuplicateEventException;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.KafkaConfig;
-import org.folio.kafka.KafkaTopicNameHelper;
-import org.folio.kafka.exception.DuplicateEventException;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -60,6 +40,22 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.UUID;
+import java.util.function.Consumer;
+
+import static org.folio.inventory.consortium.entities.SharingStatus.IN_PROGRESS;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @RunWith(VertxUnitRunner.class)
 public class ConsortiumInstanceSharingHandlerTest {
@@ -79,10 +75,6 @@ public class ConsortiumInstanceSharingHandlerTest {
   private static KafkaConfig kafkaConfig;
   @Mock
   private EventIdStorageService eventIdStorageService;
-  @Mock
-  private SimpleKafkaProducer<String, String> kafkaProducerManager;
-  @Mock
-  private KafkaProducer<String, String> mockKafkaProducer;
   private Instance existingInstance;
   private ConsortiumInstanceSharingHandler consortiumInstanceSharingHandler;
   private MockedStatic<InstanceSharingHandlerFactory> mockedInstanceSharingHandler;
@@ -132,8 +124,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     when(kafkaRecord.value()).thenReturn(Json.encode(sharingInstance));
     when(kafkaRecord.headers()).thenReturn(
       List.of(KafkaHeader.header(OKAPI_TOKEN_HEADER, "token"),
-        KafkaHeader.header(OKAPI_URL_HEADER, "url"),
-        KafkaHeader.header(OKAPI_TENANT_HEADER, "university")));
+        KafkaHeader.header(OKAPI_URL_HEADER, "url")));
 
     when(storage.getInstanceCollection(any(Context.class)))
       .thenReturn(mockedSourceInstanceCollection)
@@ -165,15 +156,8 @@ public class ConsortiumInstanceSharingHandlerTest {
 
     doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID().toString())).when(eventIdStorageService).store(any(), any());
 
-    var topicName = getTopicName("university", CONSORTIUM_INSTANCE_SHARING_COMPLETE);
-
-    when(kafkaProducerManager.create(vertx, kafkaConfig, topicName)).thenReturn(mockKafkaProducer);
-
-    when(mockKafkaProducer.send(any(KafkaProducerRecord.class))).thenReturn(Future.succeededFuture(new RecordMetadata()));
-
     // when
-    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig,
-      eventIdStorageService, kafkaProducerManager);
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig, eventIdStorageService);
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
@@ -238,8 +222,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID().toString())).when(eventIdStorageService).store(any(), any());
 
     // when
-    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig,
-      eventIdStorageService, kafkaProducerManager);
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig, eventIdStorageService);
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
@@ -289,8 +272,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID().toString())).when(eventIdStorageService).store(any(), any());
 
     // when
-    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig,
-      eventIdStorageService, kafkaProducerManager);
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig, eventIdStorageService);
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
@@ -324,7 +306,9 @@ public class ConsortiumInstanceSharingHandlerTest {
     when(kafkaRecord.value()).thenReturn(Json.encode(sharingInstance));
     when(kafkaRecord.headers()).thenReturn(
       List.of(KafkaHeader.header(OKAPI_TOKEN_HEADER, "token"),
-        KafkaHeader.header(OKAPI_URL_HEADER, "url")));
+        KafkaHeader.header(OKAPI_URL_HEADER, "url"),
+        KafkaHeader.header(OKAPI_TENANT_HEADER, "consortium")
+      ));
 
     when(storage.getInstanceCollection(any(Context.class)))
       .thenReturn(mockedTargetInstanceCollection);
@@ -338,8 +322,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID().toString())).when(eventIdStorageService).store(any(), any());
 
     // when
-    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig,
-      eventIdStorageService, kafkaProducerManager);
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig, eventIdStorageService);
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
@@ -394,8 +377,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID().toString())).when(eventIdStorageService).store(any(), any());
 
     // when
-    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig,
-      eventIdStorageService, kafkaProducerManager);
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig, eventIdStorageService);
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
@@ -454,11 +436,11 @@ public class ConsortiumInstanceSharingHandlerTest {
     InstanceSharingHandler sharingHandler = mock(InstanceSharingHandler.class);
 
     mockedInstanceSharingHandler.when(InstanceSharingHandlerFactory :: values)
-    .thenReturn(new InstanceSharingHandlerFactory[]{InstanceSharingHandlerFactory.MARC});
+      .thenReturn(new InstanceSharingHandlerFactory[]{InstanceSharingHandlerFactory.MARC});
 
     mockedInstanceSharingHandler.when(() ->
         InstanceSharingHandlerFactory.getInstanceSharingHandler(eq(InstanceSharingHandlerFactory.MARC),
-        any(InstanceOperationsHelper.class), any(Storage.class), any(Vertx.class), any(HttpClient.class)))
+          any(InstanceOperationsHelper.class), any(Storage.class), any(Vertx.class), any(HttpClient.class)))
       .thenReturn(sharingHandler);
 
     when(sharingHandler.publishInstance(any(), any(), any(), any(), any()))
@@ -467,8 +449,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID().toString())).when(eventIdStorageService).store(any(), any());
 
     //when
-    consortiumInstanceSharingHandler = spy(new ConsortiumInstanceSharingHandler(vertx, httpClient, storage,
-      kafkaConfig, eventIdStorageService, kafkaProducerManager));
+    consortiumInstanceSharingHandler = spy(new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig, eventIdStorageService));
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
@@ -539,8 +520,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID().toString())).when(eventIdStorageService).store(any(), any());
 
     //when
-    consortiumInstanceSharingHandler = spy(new ConsortiumInstanceSharingHandler(vertx, httpClient, storage,
-      kafkaConfig, eventIdStorageService, kafkaProducerManager));
+    consortiumInstanceSharingHandler = spy(new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig, eventIdStorageService));
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
@@ -580,8 +560,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     when(eventIdStorageService.store(any(), any())).thenReturn(Future.failedFuture(new DuplicateEventException("SQL Unique constraint violation prevented repeatedly saving the record")));
 
     // when
-    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig,
-      eventIdStorageService, kafkaProducerManager);
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig, eventIdStorageService);
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
@@ -592,11 +571,6 @@ public class ConsortiumInstanceSharingHandlerTest {
 
     Mockito.verify(mockedSourceInstanceCollection, times(0)).add(any(), any(), any());
     Mockito.verify(storage, times(0)).getInstanceCollection(any());
-  }
-
-  private String getTopicName(String tenantId, SharingInstanceEventType eventType) {
-    return KafkaTopicNameHelper.formatTopicName(kafkaConfig.getEnvId(),
-      KafkaTopicNameHelper.getDefaultNameSpace(), tenantId, eventType.value());
   }
 
   @After

@@ -44,6 +44,7 @@ import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaHeaderUtils;
 import org.folio.kafka.KafkaTopicNameHelper;
+import org.folio.kafka.SimpleKafkaProducerManager;
 import org.folio.kafka.exception.DuplicateEventException;
 import org.folio.kafka.services.KafkaProducerRecordBuilder;
 
@@ -59,18 +60,15 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   private final KafkaConfig kafkaConfig;
   private final InstanceOperationsHelper instanceOperations;
   private final EventIdStorageService eventIdStorageService;
-  private final SimpleKafkaProducer<String, String> kafkaProducer;
 
   public ConsortiumInstanceSharingHandler(Vertx vertx, HttpClient httpClient, Storage storage, KafkaConfig kafkaConfig,
-                                          EventIdStorageService eventIdStorageService,
-                                          SimpleKafkaProducer<String, String> kafkaProducer) {
+                                          EventIdStorageService eventIdStorageService) {
     this.vertx = vertx;
     this.httpClient = httpClient;
     this.storage = storage;
     this.kafkaConfig = kafkaConfig;
     this.instanceOperations = new InstanceOperationsHelper();
     this.eventIdStorageService = eventIdStorageService;
-    this.kafkaProducer = kafkaProducer;
   }
 
   @Override
@@ -290,7 +288,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
   private KafkaProducer<String, String> createProducer(String tenantId, String topicName) {
     LOGGER.info("createProducer :: tenantId: {}, topicName: {}", tenantId, topicName);
-    return kafkaProducer.create(vertx, kafkaConfig, topicName);
+    return new SimpleKafkaProducerManager(vertx, kafkaConfig).createShared(topicName);
   }
 
   private SharingInstance parseSharingInstance(String eventValue) {
