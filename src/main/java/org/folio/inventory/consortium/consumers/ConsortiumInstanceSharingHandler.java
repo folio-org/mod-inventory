@@ -1,15 +1,5 @@
 package org.folio.inventory.consortium.consumers;
 
-import static java.lang.String.format;
-import static org.apache.commons.lang.StringUtils.EMPTY;
-import static org.folio.inventory.consortium.entities.SharingInstanceEventType.CONSORTIUM_INSTANCE_SHARING_COMPLETE;
-import static org.folio.inventory.consortium.entities.SharingStatus.COMPLETE;
-import static org.folio.inventory.consortium.handlers.InstanceSharingHandlerFactory.getInstanceSharingHandler;
-import static org.folio.inventory.consortium.handlers.InstanceSharingHandlerFactory.values;
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
-
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -20,11 +10,6 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
 import io.vertx.kafka.client.producer.KafkaProducer;
 import io.vertx.kafka.client.producer.KafkaProducerRecord;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Stream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.consortium.entities.SharingInstance;
@@ -48,6 +33,22 @@ import org.folio.kafka.SimpleKafkaProducerManager;
 import org.folio.kafka.exception.DuplicateEventException;
 import org.folio.kafka.services.KafkaProducerRecordBuilder;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Stream;
+
+import static java.lang.String.format;
+import static org.apache.commons.lang.StringUtils.EMPTY;
+import static org.folio.inventory.consortium.entities.SharingInstanceEventType.CONSORTIUM_INSTANCE_SHARING_COMPLETE;
+import static org.folio.inventory.consortium.entities.SharingStatus.COMPLETE;
+import static org.folio.inventory.consortium.handlers.InstanceSharingHandlerFactory.getInstanceSharingHandler;
+import static org.folio.inventory.consortium.handlers.InstanceSharingHandlerFactory.values;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
+
 public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<String, String> {
 
   private static final Logger LOGGER = LogManager.getLogger(ConsortiumInstanceSharingHandler.class);
@@ -61,8 +62,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   private final InstanceOperationsHelper instanceOperations;
   private final EventIdStorageService eventIdStorageService;
 
-  public ConsortiumInstanceSharingHandler(Vertx vertx, HttpClient httpClient, Storage storage, KafkaConfig kafkaConfig,
-                                          EventIdStorageService eventIdStorageService) {
+  public ConsortiumInstanceSharingHandler(Vertx vertx, HttpClient httpClient, Storage storage, KafkaConfig kafkaConfig, EventIdStorageService eventIdStorageService) {
     this.vertx = vertx;
     this.httpClient = httpClient;
     this.storage = storage;
@@ -233,28 +233,30 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
           status,
           errorMessage,
           kafkaHeadersList);
-
-      KafkaProducer<String, String> kafkaProducer = null;
-      try {
-        kafkaProducer = createProducer(tenantId, getTopicName(tenantId, eventType));
-        kafkaProducer.send(kafkaRecord)
-          .onSuccess(res -> LOGGER.info("Event with type {}, was sent to Kafka about sharing instance with InstanceId={}",
-            eventType.value(), sharingInstance.getInstanceIdentifier()))
-          .onFailure(err -> {
-            Throwable cause = err.getCause();
-            LOGGER.error("Failed to sent event {} to Kafka about sharing instance with InstanceId={}, cause: {}",
-              eventType.value(), sharingInstance.getInstanceIdentifier(), cause);
-          });
-      } catch (Exception e) {
-        LOGGER.error("Exception when trying to produce to Kafka or close the KafkaProducer", e);
-      } finally {
-        if (kafkaProducer != null) {
-          kafkaProducer.close();
-        }
-      }
+      sendKafkaRecord(tenantId, eventType, kafkaRecord, sharingInstance);
     } catch (Exception e) {
       LOGGER.error("Failed to send an event for eventType {} about sharing instance with InstanceId={}, cause {}",
         eventType.value(), sharingInstance.getInstanceIdentifier(), e);
+    }
+  }
+
+  private void sendKafkaRecord(String tenantId, SharingInstanceEventType eventType,
+                               KafkaProducerRecord<String, String> kafkaRecord, SharingInstance sharingInstance) {
+    KafkaProducer<String, String> kafkaProducer = null;
+    try {
+      kafkaProducer = createProducer(tenantId, getTopicName(tenantId, eventType));
+      kafkaProducer.send(kafkaRecord)
+        .onSuccess(res -> LOGGER.info("Event with type {}, was sent to kafka about sharing instance with InstanceId={}",
+          eventType.value(), sharingInstance.getInstanceIdentifier()))
+        .onFailure(err -> {
+          var cause = err.getCause();
+          LOGGER.info("Failed to sent event {} to kafka about sharing instance with InstanceId={}, cause: {}",
+            eventType.value(), sharingInstance.getInstanceIdentifier(), cause);
+        });
+    } finally {
+      if (kafkaProducer != null) {
+        kafkaProducer.close();
+      }
     }
   }
 
