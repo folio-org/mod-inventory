@@ -1,11 +1,8 @@
 package org.folio.inventory;
 
-import io.vertx.core.Context;
-import io.vertx.core.Vertx;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.VertxAssistant;
-import org.folio.inventory.consortium.cache.ConsortiumDataCache;
 
 import java.lang.invoke.MethodHandles;
 import java.util.HashMap;

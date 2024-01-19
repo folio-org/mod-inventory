@@ -13,22 +13,22 @@ import api.ApiTestSuite;
 import support.fakes.processors.RecordPreProcessor;
 
 public class FakeStorageModuleBuilder {
-  protected String rootPath;
-  protected String collectionPropertyName;
-  protected String tenantId;
-  protected Collection<String> requiredProperties;
-  protected Collection<String> uniqueProperties;
-  protected Map<String, Supplier<Object>> defaultProperties;
-  protected Boolean hasCollectionDelete;
-  protected String recordName;
-  protected List<RecordPreProcessor> recordPreProcessors;
+  private final String rootPath;
+  private final String collectionPropertyName;
+  private final String tenantId;
+  private final Collection<String> requiredProperties;
+  private final Collection<String> uniqueProperties;
+  private final Map<String, Supplier<Object>> defaultProperties;
+  private final Boolean hasCollectionDelete;
+  private final String recordName;
+  private final List<RecordPreProcessor> recordPreProcessors;
 
   FakeStorageModuleBuilder() {
     this(null, null, ApiTestSuite.TENANT_ID, new ArrayList<>(), true, "",
       new ArrayList<>(), new HashMap<>(), Collections.emptyList());
   }
 
-  protected FakeStorageModuleBuilder(
+  private FakeStorageModuleBuilder(
     String rootPath,
     String collectionPropertyName,
     String tenantId,
@@ -61,25 +61,57 @@ public class FakeStorageModuleBuilder {
       ? rootPath.substring(rootPath.lastIndexOf("/") + 1)
       : collectionPropertyName;
 
-    this.rootPath = rootPath;
-    this.collectionPropertyName = newCollectionPropertyName;
-    return this;
+    return new FakeStorageModuleBuilder(
+      rootPath,
+      newCollectionPropertyName,
+      this.tenantId,
+      this.requiredProperties,
+      this.hasCollectionDelete,
+      this.recordName,
+      this.uniqueProperties,
+      this.defaultProperties,
+      this.recordPreProcessors);
   }
 
   FakeStorageModuleBuilder withCollectionPropertyName(String collectionPropertyName) {
-    this.collectionPropertyName = collectionPropertyName;
-    return this;
+    return new FakeStorageModuleBuilder(
+      this.rootPath,
+      collectionPropertyName,
+      this.tenantId,
+      this.requiredProperties,
+      this.hasCollectionDelete,
+      this.recordName,
+      this.uniqueProperties,
+      this.defaultProperties,
+      this.recordPreProcessors);
   }
 
   FakeStorageModuleBuilder withRecordName(String recordName) {
-    this.recordName = recordName;
-    return this;
+    return new FakeStorageModuleBuilder(
+      this.rootPath,
+      this.collectionPropertyName,
+      this.tenantId,
+      this.requiredProperties,
+      this.hasCollectionDelete,
+      recordName,
+      this.uniqueProperties,
+      this.defaultProperties,
+      this.recordPreProcessors);
   }
 
   private FakeStorageModuleBuilder withRequiredProperties(
     Collection<String> requiredProperties) {
-    this.requiredProperties = requiredProperties;
-    return this;
+
+    return new FakeStorageModuleBuilder(
+      this.rootPath,
+      this.collectionPropertyName,
+      this.tenantId,
+      requiredProperties,
+      this.hasCollectionDelete,
+      this.recordName,
+      this.uniqueProperties,
+      this.defaultProperties,
+      this.recordPreProcessors);
   }
 
   FakeStorageModuleBuilder withRequiredProperties(String... requiredProperties) {
@@ -91,13 +123,29 @@ public class FakeStorageModuleBuilder {
 
     newDefaults.put(property, () -> value);
 
-    this.defaultProperties = newDefaults;
-    return this;
+    return new FakeStorageModuleBuilder(
+      this.rootPath,
+      this.collectionPropertyName,
+      this.tenantId,
+      this.requiredProperties,
+      this.hasCollectionDelete,
+      this.recordName,
+      this.uniqueProperties,
+      newDefaults,
+      this.recordPreProcessors);
   }
 
   final FakeStorageModuleBuilder withRecordPreProcessors(RecordPreProcessor... preProcessors) {
-    this.recordPreProcessors = Arrays.asList(preProcessors);
-    return this;
+    return new FakeStorageModuleBuilder(
+      this.rootPath,
+      this.collectionPropertyName,
+      this.tenantId,
+      this.requiredProperties,
+      this.hasCollectionDelete,
+      this.recordName,
+      this.uniqueProperties,
+      this.defaultProperties,
+      Arrays.asList(preProcessors));
   }
 }
 

@@ -10,7 +10,6 @@ import static support.matchers.ResponseMatchers.hasValidationError;
 
 import java.net.MalformedURLException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
@@ -43,7 +42,6 @@ public class InstanceRelationshipsTest extends ApiTests {
     precedingSucceedingTitlesClient.disableFailureEmulation();
     instanceRelationshipClient.disableFailureEmulation();
     userTenantsClient.deleteAll();
-    consortiaClient.deleteAll();
   }
 
   @Test
@@ -489,7 +487,7 @@ public class InstanceRelationshipsTest extends ApiTests {
   }
 
   @Test
-  public void canLinkLocalInstanceToSharedInstance() throws MalformedURLException, ExecutionException, InterruptedException, TimeoutException {
+  public void cannotLinkLocalInstanceToSharedInstance() throws MalformedURLException, ExecutionException, InterruptedException, TimeoutException {
     UUID parentId = UUID.randomUUID();
 
     initConsortiumTenant();
@@ -497,29 +495,18 @@ public class InstanceRelationshipsTest extends ApiTests {
     final JsonObject parentRelationship = createParentRelationship(parentId.toString(),
       instanceRelationshipTypeFixture.boundWith().getId());
 
-    final IndividualResource createdInstance = instancesClient.create(nod(UUID.randomUUID())
+    Response createInstance = instancesClient.attemptToCreate(nod(UUID.randomUUID())
       .put(PARENT_INSTANCES, new JsonArray().add(parentRelationship)));
 
-    assertThat(createdInstance.getJson().getJsonArray(PARENT_INSTANCES).getJsonObject(0),
-      is(parentRelationship));
-
-    Response getParent = instancesClient.getById(parentId);
-    assertThat(getParent.getStatusCode(), is(200));
-
-    verifyInstancesInRelationship(getParent.getJson(), createdInstance.getJson());
-
-    List<JsonObject> allSharingInstances = consortiaClient.getAll();
-
-    assertThat(allSharingInstances.size(), is(1));
-    assertThat(allSharingInstances.get(0).getString("instanceIdentifier"), is(parentId.toString()));
+    assertThat(createInstance.getStatusCode(), is(400));
+    assertThat(createInstance.getBody(), is("One instance is local and one is shared. To be linked, both instances must be local or shared."));
   }
 
   @Test
-  public void canUpdateLocalInstanceWithSharedInstanceRelation() throws MalformedURLException, ExecutionException, InterruptedException, TimeoutException {
-    final IndividualResource parentInstance = instancesClient.create(nod(UUID.randomUUID()));
-    UUID childId = UUID.randomUUID();
-
+  public void canCreateInstanceWithParentInstancesWhenConsortiaEnabled() {
     initConsortiumTenant();
+
+    final IndividualResource parentInstance = instancesClient.create(nod(UUID.randomUUID()));
 
     final JsonObject parentRelationship = createParentRelationship(parentInstance.getId().toString(),
       instanceRelationshipTypeFixture.boundWith().getId());
@@ -529,27 +516,6 @@ public class InstanceRelationshipsTest extends ApiTests {
 
     assertThat(createdInstance.getJson().getJsonArray(PARENT_INSTANCES).getJsonObject(0),
       is(parentRelationship));
-
-    final JsonObject childRelationships = createChildRelationship(childId.toString(),
-      instanceRelationshipTypeFixture.monographicSeries().getId());
-
-    instancesClient.replace(createdInstance.getId(), createdInstance.copyJson()
-      .put("childInstances", new JsonArray().add(childRelationships)));
-
-    final JsonObject updatedInstance = instancesClient.getById(createdInstance.getId())
-      .getJson();
-
-    Response getChild = instancesClient.getById(childId);
-    assertThat(getChild.getStatusCode(), is(200));
-
-    verifyInstancesInRelationship(instancesClient.getById(parentInstance.getId()).getJson(),
-      updatedInstance);
-    verifyInstancesInRelationship(updatedInstance, getChild.getJson());
-
-    List<JsonObject> allSharingInstances = consortiaClient.getAll();
-
-    assertThat(allSharingInstances.size(), is(1));
-    assertThat(allSharingInstances.get(0).getString("instanceIdentifier"), is(childId.toString()));
   }
 
   private void initConsortiumTenant() {

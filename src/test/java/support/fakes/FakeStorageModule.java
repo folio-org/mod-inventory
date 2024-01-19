@@ -32,13 +32,13 @@ import static api.ApiTestSuite.ID_FOR_FAILURE;
 import static api.ApiTestSuite.ID_FOR_OPTIMISTIC_LOCKING_FAILURE;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
-public class FakeStorageModule extends AbstractVerticle {
-  protected final String rootPath;
+class FakeStorageModule extends AbstractVerticle {
+  private final String rootPath;
   private final String collectionPropertyName;
   private final boolean hasCollectionDelete;
   private final Collection<String> requiredProperties;
   private final Map<String, Map<String, JsonObject>> storedResourcesByTenant;
-  protected final String recordTypeName;
+  private final String recordTypeName;
   private final Collection<String> uniqueProperties;
   private final Map<String, Supplier<Object>> defaultProperties;
   private final List<RecordPreProcessor> recordPreProcessors;
@@ -144,7 +144,7 @@ public class FakeStorageModule extends AbstractVerticle {
       setDefaultProperties(element);
       String id = element.getString("id");
 
-      lastCreate = lastCreate.thenCompose(prev -> createElement(context.getTenantId(), element));
+      lastCreate = lastCreate.thenCompose(prev -> createElement(context, element));
 
       System.out.printf("Created %s resource: %s%n", recordTypeName, id);
     }
@@ -158,7 +158,7 @@ public class FakeStorageModule extends AbstractVerticle {
     });
   }
 
-  protected void create(RoutingContext routingContext) {
+  private void create(RoutingContext routingContext) {
 
     WebContext context = new WebContext(routingContext);
 
@@ -168,7 +168,7 @@ public class FakeStorageModule extends AbstractVerticle {
 
     String id = body.getString("id");
 
-    createElement(context.getTenantId(), body).thenAccept(notUsed -> {
+    createElement(context, body).thenAccept(notUsed -> {
       System.out.printf("Created %s resource: %s%n", recordTypeName, id);
 
       JsonResponse.created(routingContext.response(), body);
@@ -180,10 +180,10 @@ public class FakeStorageModule extends AbstractVerticle {
     });
   }
 
-  public CompletableFuture<Void> createElement(String tenantId, JsonObject rawBody) {
+  private CompletableFuture<Void> createElement(WebContext context, JsonObject rawBody) {
     String id = rawBody.getString("id");
 
-    return preProcessRecords(null, rawBody).thenAccept(body -> getResourcesForTenant(tenantId).put(id, body));
+    return preProcessRecords(null, rawBody).thenAccept(body -> getResourcesForTenant(context).put(id, body));
   }
 
   private void replace(RoutingContext routingContext) {
@@ -192,7 +192,7 @@ public class FakeStorageModule extends AbstractVerticle {
     String id = routingContext.request().getParam("id");
 
     JsonObject rawBody = getJsonFromBody(routingContext);
-    Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context.getTenantId());
+    Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
 
     preProcessRecords(resourcesForTenant.get(id), rawBody).thenAccept(body -> {
       setDefaultProperties(body);
@@ -220,7 +220,7 @@ public class FakeStorageModule extends AbstractVerticle {
 
     String id = routingContext.request().getParam("id");
 
-    Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context.getTenantId());
+    Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
 
     if (resourcesForTenant.containsKey(id)) {
       final JsonObject resourceRepresentation = resourcesForTenant.get(id);
@@ -236,7 +236,7 @@ public class FakeStorageModule extends AbstractVerticle {
     }
   }
 
-  protected void getMany(RoutingContext routingContext) {
+  private void getMany(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
 
     Integer limit = context.getIntegerParameter("limit", 10);
@@ -245,7 +245,7 @@ public class FakeStorageModule extends AbstractVerticle {
 
     System.out.printf("Handling %s%n", routingContext.request().uri());
 
-    Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context.getTenantId());
+    Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
 
     List<JsonObject> filteredItems = new FakeCQLToJSONInterpreter(false)
       .execute(resourcesForTenant.values(), query);
@@ -266,7 +266,7 @@ public class FakeStorageModule extends AbstractVerticle {
     JsonResponse.success(routingContext.response(), result);
   }
 
-  protected void empty(RoutingContext routingContext) {
+  private void empty(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
 
     if (!hasCollectionDelete) {
@@ -274,7 +274,7 @@ public class FakeStorageModule extends AbstractVerticle {
       return;
     }
 
-    Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context.getTenantId());
+    Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
     List<String> queries = routingContext.queryParam("query");
     String query = queries.size() == 1 ? queries.get(0) : "";
 
@@ -292,7 +292,7 @@ public class FakeStorageModule extends AbstractVerticle {
 
     String id = routingContext.request().getParam("id");
 
-    Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context.getTenantId());
+    Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
 
     if (resourcesForTenant.containsKey(id)) {
       resourcesForTenant.remove(id);
@@ -303,11 +303,11 @@ public class FakeStorageModule extends AbstractVerticle {
     }
   }
 
-  private Map<String, JsonObject> getResourcesForTenant(String tenantId) {
-    return storedResourcesByTenant.get(tenantId);
+  private Map<String, JsonObject> getResourcesForTenant(WebContext context) {
+    return storedResourcesByTenant.get(context.getTenantId());
   }
 
-  protected static JsonObject getJsonFromBody(RoutingContext routingContext) {
+  private static JsonObject getJsonFromBody(RoutingContext routingContext) {
     if (hasBody(routingContext)) {
       return routingContext.getBodyAsJson();
     } else {
@@ -373,7 +373,7 @@ public class FakeStorageModule extends AbstractVerticle {
     uniqueProperties.forEach(uniqueProperty -> {
       String proposedValue = body.getString(uniqueProperty);
 
-      Map<String, JsonObject> records = getResourcesForTenant(new WebContext(routingContext).getTenantId());
+      Map<String, JsonObject> records = getResourcesForTenant(new WebContext(routingContext));
 
       if (records.values().stream()
         .map(record -> record.getString(uniqueProperty))
@@ -393,7 +393,7 @@ public class FakeStorageModule extends AbstractVerticle {
     }
   }
 
-  protected void setDefaultProperties(JsonObject representation) {
+  private void setDefaultProperties(JsonObject representation) {
     defaultProperties.forEach((property, valueSupplier) -> {
       if (!representation.containsKey(property)) {
         representation.put(property, valueSupplier.get());

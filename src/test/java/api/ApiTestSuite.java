@@ -11,9 +11,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import io.vertx.core.Vertx;
 import org.folio.inventory.InventoryVerticle;
-import org.folio.inventory.Launcher;
 import org.folio.inventory.common.VertxAssistant;
 import org.folio.inventory.consortium.util.ConsortiumUtil;
 import org.folio.inventory.rest.impl.PgPoolContainer;
@@ -219,15 +217,10 @@ public class ApiTestSuite {
 
   public static OkapiHttpClient createOkapiHttpClient()
     throws MalformedURLException {
-    return createOkapiHttpClient(TENANT_ID);
-  }
-
-  public static OkapiHttpClient createOkapiHttpClient(String tenantId)
-    throws MalformedURLException {
 
     return new OkapiHttpClient(
       vertxAssistant.getVertx(),
-      new URL(storageOkapiUrl()), tenantId, TOKEN, USER_ID, null,
+      new URL(storageOkapiUrl()), TENANT_ID, TOKEN, USER_ID, null,
       it -> System.out.println(String.format("Request failed: %s", it.toString())));
   }
 

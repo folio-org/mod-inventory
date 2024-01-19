@@ -104,11 +104,6 @@ public class ResourceClient {
       "user-tenants");
   }
 
-  public static ResourceClient forConsortia(OkapiHttpClient client) {
-    return new ResourceClient(client, StorageInterfaceUrls::consortiaStorageUrl,
-      "sharingInstances");
-  }
-
   public static ResourceClient forNatureOfContentTerms(OkapiHttpClient client) {
     return new ResourceClient(
       client,

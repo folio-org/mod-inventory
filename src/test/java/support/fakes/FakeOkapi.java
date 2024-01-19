@@ -79,15 +79,6 @@ public class FakeOkapi extends AbstractVerticle {
     fakeInstanceStorageModule.register(router);
     fakeInstanceStorageModule.registerBatch(router, "/instance-storage/batch/instances");
 
-    new FakeConsortiaModuleBuilder()
-      .withInstanceStorageModule(fakeInstanceStorageModule)
-      .withRecordName("consortia")
-      .withRootPath("/consortia")
-      .withCollectionPropertyName("sharingInstances")
-      .withDefault("status", "COMPLETE")
-      .create()
-      .register(router);
-
     new FakeStorageModuleBuilder()
       .withRecordName("instance relationship")
       .withRootPath("/instance-storage/instance-relationships")
