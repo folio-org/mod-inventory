@@ -8,6 +8,7 @@ import org.folio.inventory.TestUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.ExternalIdsHolder;
+import org.folio.rest.jaxrs.model.MarcFieldProtectionSetting;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.Record;
 import org.hamcrest.MatcherAssert;
@@ -20,6 +21,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.IntStream;
@@ -176,6 +178,16 @@ public class AdditionalFieldsUtilTest {
     boolean contains001Field = IntStream.range(0, fields.size()).mapToObj(fields::getJsonObject)
       .anyMatch(targetField -> targetField.containsKey("001"));
     Assert.assertFalse(contains001Field);
+  }
+
+  @Test
+  public void shouldNotAddControlledFieldToMarcRecord() throws IOException {
+    String recordId = UUID.randomUUID().toString();
+    String parsedRecordContent = TestUtil.readFileFromPath(PARSED_MARC_RECORD_PATH);
+    ParsedRecord parsedRecord = new ParsedRecord().withContent(parsedRecordContent);
+    Record record = new Record().withId(recordId).withParsedRecord(parsedRecord);
+    boolean added = AdditionalFieldsUtil.addControlledFieldToMarcRecord(record, "002", "", null);
+    Assert.assertFalse(added);
   }
 
   @Test
@@ -372,6 +384,23 @@ public class AdditionalFieldsUtilTest {
   }
 
   @Test
+  public void shouldNotUpdate005Field() {
+    String parsedContent = "{\"leader\":\"00115nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"},{\"003\":\"qwerty\"},{\"005\":\"20141107001016.0\"},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    Record record = new Record().withId(UUID.randomUUID().toString())
+      .withParsedRecord(new ParsedRecord().withContent(parsedContent))
+      .withGeneration(0)
+      .withState(Record.State.ACTUAL)
+      .withExternalIdsHolder(new ExternalIdsHolder().withInstanceId("001").withInstanceHrid("in001"));
+
+    AdditionalFieldsUtil.updateLatestTransactionDate(record,
+      new MappingParameters().withMarcFieldProtectionSettings(List.of(new MarcFieldProtectionSetting().withField("*").withData("*"))));
+
+    String actualDate = AdditionalFieldsUtil.getValueFromControlledField(record, TAG_005);
+    assertNotNull(actualDate);
+    assertEquals("20141107001016.0", actualDate);
+  }
+
+  @Test
   public void shouldUpdate005Field() {
     String parsedContent = "{\"leader\":\"00115nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"},{\"003\":\"qwerty\"},{\"005\":\"20141107001016.0\"},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
     Record record = new Record().withId(UUID.randomUUID().toString())
@@ -387,6 +416,14 @@ public class AdditionalFieldsUtilTest {
     String actualDate = AdditionalFieldsUtil.getValueFromControlledField(record, TAG_005);
     assertNotNull(actualDate);
     assertEquals(expectedDate.substring(0, 10), actualDate.substring(0, 10));
+  }
+
+  @Test
+  public void shouldExistControlField() throws IOException {
+    String parsedRecordContent = TestUtil.readFileFromPath(PARSED_MARC_RECORD_PATH);
+    ParsedRecord parsedRecord = new ParsedRecord().withContent(parsedRecordContent);
+    Record record = new Record().withId(UUID.randomUUID().toString()).withParsedRecord(parsedRecord);
+    Assert.assertTrue(isFieldExist(record, "001", ' ', "ybp7406411"));
   }
 
   @Test

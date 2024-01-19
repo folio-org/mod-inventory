@@ -372,47 +372,13 @@ public final class AdditionalFieldsUtil {
   }
 
   /**
-   * Checks if the field contains a certain value in the selected subfield
-   *
-   * @param field    from MARC BIB record
-   * @param subfield subfield of the field
-   * @param value    value of the field
-   * @return true if contains, false otherwise
-   */
-  private static boolean isFieldContainsValue(VariableField field, char subfield, String value) {
-    boolean isContains = false;
-    if (field instanceof DataField dataField) {
-      for (Subfield sub : dataField.getSubfields(subfield)) {
-        if (isNotEmpty(sub.getData()) && sub.getData().contains(value.trim())) {
-          isContains = true;
-          break;
-        }
-      }
-    }
-    return isContains;
-  }
-
-  /**
-   * remove field from marc record
-   *
-   * @param record record that needs to be updated
-   * @param field  tag of the field
-   * @return true if succeeded, false otherwise
-   */
-  public static boolean removeField(Record record, String field) {
-    return removeField(record, field, '\0', null);
-  }
-
-  /**
-   * remove field from marc record
+   * Remove field from marc record
    *
    * @param record    record that needs to be updated
    * @param fieldName tag of the field
-   * @param subfield  subfield of the field
-   * @param value     value of the field
    * @return true if succeeded, false otherwise
    */
-  public static boolean removeField(Record record, String fieldName, char subfield, String value) {
+  public static boolean removeField(Record record, String fieldName) {
     boolean isFieldRemoveSucceed = false;
     try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
       if (record != null && record.getParsedRecord() != null && record.getParsedRecord().getContent() != null) {
@@ -420,12 +386,7 @@ public final class AdditionalFieldsUtil {
         MarcJsonWriter marcJsonWriter = new MarcJsonWriter(baos);
         org.marc4j.marc.Record marcRecord = computeMarcRecord(record);
         if (marcRecord != null) {
-          if (StringUtils.isEmpty(value)) {
-            isFieldRemoveSucceed = removeFirstFoundFieldByName(marcRecord, fieldName);
-          } else {
-            isFieldRemoveSucceed = removeFieldByNameAndValue(marcRecord, fieldName, subfield, value);
-          }
-
+          isFieldRemoveSucceed = removeFirstFoundFieldByName(marcRecord, fieldName);
           if (isFieldRemoveSucceed) {
             // use stream writer to recalculate leader
             marcStreamWriter.write(marcRecord);
@@ -451,18 +412,6 @@ public final class AdditionalFieldsUtil {
     if (variableField != null) {
       marcRecord.removeVariableField(variableField);
       isFieldFound = true;
-    }
-    return isFieldFound;
-  }
-
-  private static boolean removeFieldByNameAndValue(org.marc4j.marc.Record marcRecord, String fieldName, char subfield, String value) {
-    boolean isFieldFound = false;
-    for (VariableField variableField : marcRecord.getVariableFields(fieldName)) {
-      if (isFieldContainsValue(variableField, subfield, value)) {
-        marcRecord.removeVariableField(variableField);
-        isFieldFound = true;
-        break;
-      }
     }
     return isFieldFound;
   }
