@@ -129,6 +129,10 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
         });
     } catch (Exception e) {
       LOGGER.error("Failed to send an event for eventType {}, jobId {}, cause {}", LINKS_STATS.topicName(), linkUpdateReport.getJobId(), e);
+    } finally {
+      if (producer != null) {
+        producer.close();
+      }
     }
   }
 

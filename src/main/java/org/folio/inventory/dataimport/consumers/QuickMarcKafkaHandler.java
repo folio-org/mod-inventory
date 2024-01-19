@@ -167,16 +167,20 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
     KafkaProducerRecord<String, String> producerRecord = createRecord(eventPayload, eventType, key, params);
 
     Promise<Boolean> promise = Promise.promise();
-    producer.send(producerRecord)
-      .onSuccess(res -> {
-        LOGGER.info("Event with type: {} was sent to kafka", eventType);
-        promise.complete(true);
-      })
-      .onFailure(err -> {
-        Throwable cause = err.getCause();
-        LOGGER.error("Write error for event {}:", eventType, cause);
-        promise.fail(cause);
-      });
+    try {
+      producer.send(producerRecord)
+        .onSuccess(res -> {
+          LOGGER.info("Event with type: {} was sent to kafka", eventType);
+          promise.complete(true);
+        })
+        .onFailure(err -> {
+          Throwable cause = err.getCause();
+          LOGGER.error("Write error for event {}:", eventType, cause);
+          promise.fail(cause);
+        });
+    } finally {
+      producer.close();
+    }
     return promise.future();
   }
 
