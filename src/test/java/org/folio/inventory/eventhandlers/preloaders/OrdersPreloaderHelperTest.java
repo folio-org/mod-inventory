@@ -53,7 +53,7 @@ public class OrdersPreloaderHelperTest {
                 .collect(Collectors.toList()));
 
         List<String> poLineNumbersMock = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
-        String orderLinesCql = String.format("purchaseOrder.workflowStatus==Open AND poLineNumber==(%s or %s)",
+        String orderLinesCql = String.format("poLineNumber==(%s or %s)",
                 poLineNumbersMock.get(0),
                 poLineNumbersMock.get(1));
 
@@ -79,7 +79,7 @@ public class OrdersPreloaderHelperTest {
 
         List<String> vendorReferenceNumbersMock = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
         String orderLinesCql = String.format(
-                "purchaseOrder.workflowStatus==Open AND vendorDetail.referenceNumbers=/@refNumber (%s or %s)",
+                "vendorDetail.referenceNumbers=/@refNumber (%s or %s)",
                 vendorReferenceNumbersMock.get(0),
                 vendorReferenceNumbersMock.get(1));
 
