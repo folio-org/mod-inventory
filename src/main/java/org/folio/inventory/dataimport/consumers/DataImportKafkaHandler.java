@@ -181,7 +181,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     EventManager.registerEventHandler(new MatchAuthorityEventHandler(mappingMetadataCache, consortiumService));
     EventManager.registerEventHandler(new CreateItemEventHandler(storage, mappingMetadataCache, new ItemIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))), orderHelperService));
     EventManager.registerEventHandler(new CreateHoldingEventHandler(storage, mappingMetadataCache, new HoldingsIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))), orderHelperService, consortiumService));
-    EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, new InstanceIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))), orderHelperService));
+    EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, new InstanceIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))), orderHelperService, client));
     EventManager.registerEventHandler(new CreateMarcHoldingsEventHandler(storage, mappingMetadataCache, new HoldingsIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))), new HoldingsCollectionService()));
     EventManager.registerEventHandler(new UpdateMarcHoldingsEventHandler(storage, mappingMetadataCache, new KafkaEventPublisher(kafkaConfig, vertx, 100)));
     EventManager.registerEventHandler(new CreateAuthorityEventHandler(storage, mappingMetadataCache, new AuthorityIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx)))));
