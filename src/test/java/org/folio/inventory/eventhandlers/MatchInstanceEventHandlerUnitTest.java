@@ -17,7 +17,7 @@ import static org.mockito.Mockito.when;
 
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_NOT_MATCHED;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
+import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_RECORD_PARSED;
 import static org.folio.MatchDetail.MatchCriterion.EXACTLY_MATCHES;
 import static org.folio.inventory.dataimport.handlers.matching.loaders.AbstractLoader.MULTI_MATCH_IDS;
 import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
@@ -158,7 +158,7 @@ public class MatchInstanceEventHandlerUnitTest {
       testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
       testContext.assertEquals(
         updatedEventPayload.getEventsChain(),
-        singletonList(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+        singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       );
       testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
       async.complete();
@@ -248,7 +248,7 @@ public class MatchInstanceEventHandlerUnitTest {
       testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
       testContext.assertEquals(
         updatedEventPayload.getEventsChain(),
-        singletonList(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+        singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       );
       testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
       JsonObject matchedInstanceAsJsonObject = new JsonObject(updatedEventPayload.getContext().get(INSTANCE.value()));
@@ -296,7 +296,7 @@ public class MatchInstanceEventHandlerUnitTest {
       testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
       testContext.assertEquals(
         updatedEventPayload.getEventsChain(),
-        singletonList(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+        singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       );
       testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
       JsonObject matchedInstanceAsJsonObject = new JsonObject(updatedEventPayload.getContext().get(INSTANCE.value()));
@@ -345,7 +345,7 @@ public class MatchInstanceEventHandlerUnitTest {
       testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
       testContext.assertEquals(
         updatedEventPayload.getEventsChain(),
-        singletonList(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+        singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       );
       testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
       JsonObject matchedInstanceAsJsonObject = new JsonObject(updatedEventPayload.getContext().get(INSTANCE.value()));
@@ -375,7 +375,7 @@ public class MatchInstanceEventHandlerUnitTest {
       testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
       testContext.assertEquals(
         updatedEventPayload.getEventsChain(),
-        singletonList(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+        singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       );
       testContext.assertEquals(DI_INVENTORY_INSTANCE_NOT_MATCHED.value(), updatedEventPayload.getEventType());
       async.complete();
@@ -453,7 +453,7 @@ public class MatchInstanceEventHandlerUnitTest {
       testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
       testContext.assertEquals(
         updatedEventPayload.getEventsChain(),
-        singletonList(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+        singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       );
       testContext.assertEquals(DI_INVENTORY_INSTANCE_NOT_MATCHED.value(), updatedEventPayload.getEventType());
       async.complete();
@@ -533,7 +533,7 @@ public class MatchInstanceEventHandlerUnitTest {
       testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
       testContext.assertEquals(
         updatedEventPayload.getEventsChain(),
-        singletonList(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+        singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       );
       testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
       async.complete();
@@ -569,7 +569,7 @@ public class MatchInstanceEventHandlerUnitTest {
       testContext.assertEquals(1, processedPayload.getEventsChain().size());
       testContext.assertEquals(
         processedPayload.getEventsChain(),
-        singletonList(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+        singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       );
       testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), processedPayload.getEventType());
       testContext.assertEquals(new JsonObject(processedPayload.getContext().get(INSTANCE.value())).getString("id"), expectedInstance.getId());
@@ -652,7 +652,7 @@ public class MatchInstanceEventHandlerUnitTest {
 
   private DataImportEventPayload createEventPayload() {
     return new DataImportEventPayload()
-      .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withEventsChain(new ArrayList<>())
       .withOkapiUrl("http://localhost:9493")
