@@ -49,7 +49,7 @@ public abstract class AbstractInstances {
 
   private ConsortiumService consortiumService;
   protected static final String INVENTORY_PATH = "/inventory";
-  private static final String LINKING_SHARED_AND_LOCAl_INSTANCE = "One instance is local and one is shared. To be linked, both instances must be local or shared.";
+  private static final String LINKING_SHARED_AND_LOCAL_INSTANCE_ERROR = "One instance is local and one is shared. To be linked, both instances must be local or shared.";
   protected static final String INSTANCES_PATH = INVENTORY_PATH + "/instances";
   protected static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
   protected final Storage storage;
@@ -153,7 +153,7 @@ public abstract class AbstractInstances {
       .recover(throwable -> {
         if (throwable instanceof NotFoundException) {
           log.warn("confirmInstanceExistAtLocalMember:: Trying to link shared and local instance, instanceId: {}", instanceId);
-          return Future.failedFuture(new BadRequestException(LINKING_SHARED_AND_LOCAl_INSTANCE));
+          return Future.failedFuture(new BadRequestException(LINKING_SHARED_AND_LOCAL_INSTANCE_ERROR));
         }
         return Future.failedFuture(throwable);
       }).toCompletionStage().toCompletableFuture();
