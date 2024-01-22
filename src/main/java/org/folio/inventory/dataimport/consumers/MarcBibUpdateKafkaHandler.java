@@ -129,10 +129,6 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
         });
     } catch (Exception e) {
       LOGGER.error("Failed to send an event for eventType {}, jobId {}, cause {}", LINKS_STATS.topicName(), linkUpdateReport.getJobId(), e);
-    } finally {
-      if (producer != null) {
-        producer.close();
-      }
     }
   }
 
@@ -171,5 +167,11 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
       .withFailCause(errMessage)
       .withTenant(marcBibUpdate.getTenant())
       .withTs(marcBibUpdate.getTs());
+  }
+
+  public void shutdown() {
+    if (producer != null) {
+      producer.close();
+    }
   }
 }

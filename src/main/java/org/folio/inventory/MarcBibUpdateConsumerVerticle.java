@@ -30,6 +30,7 @@ public class MarcBibUpdateConsumerVerticle extends AbstractVerticle {
   private static final String METADATA_EXPIRATION_TIME = "inventory.mapping-metadata-cache.expiration.time.seconds";
   private final int loadLimit = getLoadLimit();
   private KafkaConsumerWrapper<String, String> marcBibUpdateConsumerWrapper;
+  private MarcBibUpdateKafkaHandler marcBibUpdateKafkaHandler;
 
   @Override
   public void start(Promise<Void> startPromise) {
@@ -43,7 +44,7 @@ public class MarcBibUpdateConsumerVerticle extends AbstractVerticle {
     var mappingMetadataExpirationTime = getCacheEnvVariable(config, METADATA_EXPIRATION_TIME);
     MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, client, Long.parseLong(mappingMetadataExpirationTime));
 
-    var marcBibUpdateKafkaHandler = new MarcBibUpdateKafkaHandler(vertx, getMaxDistributionNumber(), kafkaConfig, instanceUpdateDelegate, mappingMetadataCache);
+    marcBibUpdateKafkaHandler = new MarcBibUpdateKafkaHandler(vertx, getMaxDistributionNumber(), kafkaConfig, instanceUpdateDelegate, mappingMetadataCache);
 
     marcBibUpdateConsumerWrapper = createConsumer(kafkaConfig, SRS_MARC_BIB_TOPIC_NAME);
     marcBibUpdateConsumerWrapper.start(marcBibUpdateKafkaHandler, constructModuleName())
@@ -71,6 +72,7 @@ public class MarcBibUpdateConsumerVerticle extends AbstractVerticle {
   public void stop(Promise<Void> stopPromise) {
     marcBibUpdateConsumerWrapper.stop()
       .onComplete(ar -> stopPromise.complete());
+    marcBibUpdateKafkaHandler.shutdown();
   }
 
   private int getLoadLimit() {
