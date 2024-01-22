@@ -204,6 +204,46 @@ public class HoldingsApiMoveExamples extends ApiTests {
     assertThat(oldInstanceId.toString(), equalTo(updatedHoldingsRecord2.getString(INSTANCE_ID)));
   }
 
+  @Test
+  public void canMoveHoldingsToDifferentInstanceWithExtraRedundantFields() throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+
+    UUID oldInstanceId = UUID.randomUUID();
+    InstanceApiClient.createInstance(okapiClient, smallAngryPlanet(oldInstanceId));
+    UUID newInstanceId = UUID.randomUUID();
+    InstanceApiClient.createInstance(okapiClient, nod(newInstanceId));
+
+    JsonObject firstJsonHoldingsAsRequest = new HoldingRequestBuilder().forInstance(oldInstanceId).create();
+    final UUID createHoldingsRecord1 = holdingsStorageClient.create(firstJsonHoldingsAsRequest
+        .put("holdingItems", new JsonArray().add(new JsonObject().put("id", UUID.randomUUID())).add(new JsonObject().put("id", UUID.randomUUID())))
+        .put("bareHoldingItems", new JsonArray().add(new JsonObject().put("id", UUID.randomUUID())).add(new JsonObject().put("id", UUID.randomUUID()))))
+      .getId();
+
+    JsonObject secondJsonHoldingsAsRequest = new HoldingRequestBuilder().forInstance(oldInstanceId).create();
+    final UUID createHoldingsRecord2 = holdingsStorageClient.create(secondJsonHoldingsAsRequest
+        .put("holdingItems", new JsonArray().add(new JsonObject().put("id", UUID.randomUUID())).add(new JsonObject().put("id", UUID.randomUUID())))
+        .put("bareHoldingItems", new JsonArray().add(new JsonObject().put("id", UUID.randomUUID())).add(new JsonObject().put("id", UUID.randomUUID()))))
+      .getId();
+
+    Assert.assertNotEquals(createHoldingsRecord1, createHoldingsRecord2);
+
+    JsonObject holdingsRecordMoveRequestBody = new HoldingsRecordMoveRequestBuilder(newInstanceId,
+      new JsonArray(Arrays.asList(createHoldingsRecord1.toString(), createHoldingsRecord2.toString()))).create();
+
+    Response postHoldingsMoveResponse = moveHoldingsRecords(holdingsRecordMoveRequestBody);
+
+    assertThat(postHoldingsMoveResponse.getStatusCode(), is(200));
+    assertThat(new JsonObject(postHoldingsMoveResponse.getBody()).getJsonArray("nonUpdatedIds").size(), is(0));
+    assertThat(postHoldingsMoveResponse.getContentType(), containsString(APPLICATION_JSON));
+
+    JsonObject holdingsRecord1 = holdingsStorageClient.getById(createHoldingsRecord1)
+      .getJson();
+    JsonObject holdingsRecord2 = holdingsStorageClient.getById(createHoldingsRecord1)
+      .getJson();
+
+    Assert.assertEquals(newInstanceId.toString(), holdingsRecord1.getString(INSTANCE_ID));
+    Assert.assertEquals(newInstanceId.toString(), holdingsRecord2.getString(INSTANCE_ID));
+  }
+
   private Response moveHoldingsRecords(JsonObject holdingsRecordMoveRequestBody) throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
     final var postHoldingRecordsMoveCompleted = okapiClient.post(
       ApiRoot.moveHoldingsRecords(), holdingsRecordMoveRequestBody);
