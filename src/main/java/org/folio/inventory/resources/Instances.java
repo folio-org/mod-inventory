@@ -30,6 +30,7 @@ import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.domain.instances.InstanceRelationship;
@@ -66,8 +67,8 @@ public class Instances extends AbstractInstances {
   private static final String ID = "id";
   private static final String INSTANCE_ID = "instanceId";
 
-  public Instances(final Storage storage, final HttpClient client) {
-    super(storage, client);
+  public Instances(final Storage storage, final HttpClient client, final ConsortiumService consortiumService) {
+    super(storage, client, consortiumService);
   }
 
   public void register(Router router) {

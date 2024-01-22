@@ -13,6 +13,7 @@ import java.util.concurrent.TimeoutException;
 
 import org.folio.inventory.InventoryVerticle;
 import org.folio.inventory.common.VertxAssistant;
+import org.folio.inventory.consortium.util.ConsortiumUtil;
 import org.folio.inventory.rest.impl.PgPoolContainer;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.junit.AfterClass;
@@ -72,7 +73,7 @@ import support.fakes.FakeOkapi;
 public class ApiTestSuite {
   public static final int INVENTORY_VERTICLE_TEST_PORT = 9603;
   public static final String TENANT_ID = "test_tenant";
-
+  public static final String CONSORTIA_TENANT_ID = "consortium";
   public static final UUID ID_FOR_FAILURE = UUID.fromString("fa45a95b-38a3-430b-8f34-548ca005a176");
   public static final UUID ID_FOR_OPTIMISTIC_LOCKING_FAILURE = UUID.fromString("40900409-0409-4444-8888-409000000409");
 
@@ -263,6 +264,8 @@ public class ApiTestSuite {
     config.put("port", INVENTORY_VERTICLE_TEST_PORT);
     config.put("storage.type", storageType);
     config.put("storage.location", storageLocation);
+
+    System.setProperty(ConsortiumUtil.EXPIRATION_TIME_PARAM, "0");
 
     vertxAssistant.deployVerticle(
       InventoryVerticle.class.getName(), config, deployed);

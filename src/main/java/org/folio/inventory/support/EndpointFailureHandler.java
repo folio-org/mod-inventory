@@ -6,6 +6,7 @@ import static org.folio.inventory.support.http.server.JsonResponse.unprocessable
 import java.util.function.Function;
 
 import org.folio.inventory.exceptions.AbstractInventoryException;
+import org.folio.inventory.exceptions.BadRequestException;
 import org.folio.inventory.exceptions.ExternalResourceFetchException;
 import org.folio.inventory.exceptions.InternalServerErrorException;
 import org.folio.inventory.exceptions.NotFoundException;
@@ -38,7 +39,8 @@ public final class EndpointFailureHandler {
     } else if (failureToHandle instanceof NotFoundException) {
       ClientErrorResponse.notFound(context.response(), failureToHandle.getMessage());
     } else if (failureToHandle instanceof ExternalResourceFetchException
-        || failureToHandle instanceof InternalServerErrorException) {
+        || failureToHandle instanceof InternalServerErrorException
+        || failureToHandle instanceof BadRequestException) {
       final AbstractInventoryException exceptionToForward =
         (AbstractInventoryException) failureToHandle;
 

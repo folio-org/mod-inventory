@@ -99,6 +99,11 @@ public class ResourceClient {
       "users");
   }
 
+  public static ResourceClient forUserTenants(OkapiHttpClient client) {
+    return new ResourceClient(client, StorageInterfaceUrls::userTenantsStorageUrl,
+      "user-tenants");
+  }
+
   public static ResourceClient forNatureOfContentTerms(OkapiHttpClient client) {
     return new ResourceClient(
       client,
