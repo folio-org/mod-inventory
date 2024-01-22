@@ -18,9 +18,6 @@ import org.folio.inventory.common.Context;
 import org.folio.processing.exceptions.MatchingException;
 
 public class OrdersPreloaderHelper {
-
-    private static final String ORDER_LINES_CQL_PATTERN = "purchaseOrder.workflowStatus==Open AND %s";
-
     private OrdersClient ordersClient;
 
     public OrdersPreloaderHelper(OrdersClient ordersClient) {
@@ -51,11 +48,10 @@ public class OrdersPreloaderHelper {
         }
     }
 
-    private CompletableFuture<List<String>> getPoLineCollection(String cqlCondition,
+    private CompletableFuture<List<String>> getPoLineCollection(String cql,
                                                                 DataImportEventPayload eventPayload,
                                                                 Function<JsonArray, List<String>> convertPreloadResult) {
         Context context = constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl());
-        String cql = String.format(ORDER_LINES_CQL_PATTERN, cqlCondition);
 
         return ordersClient.getPoLineCollection(cql, context)
                 .thenApply(poLines -> {
