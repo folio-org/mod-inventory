@@ -6,6 +6,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.WebRequestDiagnostics;
 import org.folio.inventory.common.dao.PostgresClientFactory;
+import org.folio.inventory.consortium.cache.ConsortiumDataCache;
+import org.folio.inventory.consortium.services.ConsortiumService;
+import org.folio.inventory.consortium.services.ConsortiumServiceImpl;
 import org.folio.inventory.resources.AdminApi;
 import org.folio.inventory.resources.Holdings;
 import org.folio.inventory.resources.Instances;
@@ -53,12 +56,15 @@ public class InventoryVerticle extends AbstractVerticle {
 
     router.route().handler(WebRequestDiagnostics::outputDiagnostics);
 
+    ConsortiumDataCache consortiumDataCache = new ConsortiumDataCache(vertx, client);
+    ConsortiumService consortiumService = new ConsortiumServiceImpl(client, consortiumDataCache);
+
     new AdminApi().register(router);
     new Items(storage, client).register(router);
     new MoveApi(storage, client).register(router);
-    new Instances(storage, client).register(router);
+    new Instances(storage, client, consortiumService).register(router);
     new Holdings(storage).register(router);
-    new InstancesBatch(storage, client).register(router);
+    new InstancesBatch(storage, client, consortiumService).register(router);
     new IsbnUtilsApi().register(router);
     new ItemsByHoldingsRecordId(storage, client).register(router);
     new InventoryConfigApi().register(router);

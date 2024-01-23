@@ -48,6 +48,8 @@ public class MoveApi extends AbstractInventoryResource {
   public static final String ITEMS_PROPERTY = "items";
   public static final String HOLDINGS_RECORDS_PROPERTY = "holdingsRecords";
   public static final String HOLDINGS_STORAGE = "/holdings-storage/holdings";
+  private static final String HOLDING_ITEMS_PROPERTY = "holdingItems";
+  private static final String BARE_HOLDING_ITEMS_PROPERTY = "bareHoldingItems";
 
   public MoveApi(final Storage storage, final HttpClient client) {
     super(storage, client);
@@ -175,9 +177,15 @@ public class MoveApi extends AbstractInventoryResource {
 
   private List<HoldingsRecord> updateInstanceIdForHoldings(String toInstanceId, List<JsonObject> jsons) {
     return jsons.stream()
+      .peek(this::removeExtraRedundantFields)
       .map(json -> json.mapTo(HoldingsRecord.class))
       .map(holding -> holding.withInstanceId(toInstanceId))
       .collect(toList());
+  }
+
+  private void removeExtraRedundantFields(JsonObject json) {
+    json.remove(HOLDING_ITEMS_PROPERTY);
+    json.remove(BARE_HOLDING_ITEMS_PROPERTY);
   }
 
   private void updateHoldings(RoutingContext routingContext, WebContext context, List<String> idsToUpdate,

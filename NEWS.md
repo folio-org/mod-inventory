@@ -3,6 +3,8 @@
 * Set instance record as deleted ([MODINV-883](https://issues.folio.org/browse/MODINV-883))
 * Remove step of initial saving of incoming records to SRS [MODSOURMAN-1022](https://issues.folio.org/browse/MODSOURMAN-1022)
 * Apply 005 logic before saving MARC Bib in SRS [MODINV-921](https://issues.folio.org/browse/MODINV-921)
+* Remove extra fields from 'holdings/move' mechanism [MODINV-948](https://issues.folio.org/browse/MODINV-948)
+* Allow to link local instance to shared instance [MODINV-901](https://issues.folio.org/browse/MODINV-901)
 * OOM issue in mod-inventory ([MODINV-944](https://issues.folio.org/browse/MODINV-944))
 
 ## 20.1.0 2023-10-13

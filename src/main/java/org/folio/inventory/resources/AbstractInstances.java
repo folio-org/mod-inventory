@@ -15,18 +15,23 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import io.vertx.core.Future;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.config.InventoryConfiguration;
 import org.folio.inventory.config.InventoryConfigurationImpl;
+import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceRelationship;
 import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
 import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
+import org.folio.inventory.exceptions.BadRequestException;
+import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.storage.external.CollectionResourceRepository;
+import org.folio.inventory.support.InstanceUtil;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
@@ -42,7 +47,9 @@ import io.vertx.ext.web.client.WebClient;
 
 public abstract class AbstractInstances {
 
+  private ConsortiumService consortiumService;
   protected static final String INVENTORY_PATH = "/inventory";
+  private static final String LINKING_SHARED_AND_LOCAL_INSTANCE_ERROR = "One instance is local and one is shared. To be linked, both instances must be local or shared.";
   protected static final String INSTANCES_PATH = INVENTORY_PATH + "/instances";
   protected static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
   protected final Storage storage;
@@ -50,7 +57,8 @@ public abstract class AbstractInstances {
   protected final InventoryConfiguration config;
 
 
-  public AbstractInstances(final Storage storage, final HttpClient client) {
+  public AbstractInstances(final Storage storage, final HttpClient client, ConsortiumService consortiumService) {
+    this.consortiumService = consortiumService;
     this.storage = storage;
     this.client = client;
     this.config = new InventoryConfigurationImpl();
@@ -83,11 +91,11 @@ public abstract class AbstractInstances {
     instanceRelationshipsClient.getAll(query, future::complete);
 
     return future.thenCompose(result ->
-      updateInstanceRelationships(instance, instanceRelationshipsRepository, result));
+      updateInstanceRelationships(instance, instanceRelationshipsRepository, context, result));
   }
 
   private CompletableFuture<List<Response>> updateInstanceRelationships(Instance instance,
-    CollectionResourceRepository instanceRelationshipsClient, Response result) {
+    CollectionResourceRepository instanceRelationshipsClient, WebContext context, Response result) {
 
     JsonObject json = result.getJson();
     List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("instanceRelationships"));
@@ -118,10 +126,41 @@ public abstract class AbstractInstances {
       });
     }
 
-    List<CompletableFuture<Response>> allFutures = update(instanceRelationshipsClient,
-      existingRelationships, updatingRelationships);
+    return validateNewRelationships(context, existingRelationships, updatingRelationships, instance)
+      .thenCompose(v -> allResultsOf(update(instanceRelationshipsClient, existingRelationships, updatingRelationships)));
+  }
 
-    return allResultsOf(allFutures);
+  private CompletableFuture<List<Instance>> validateNewRelationships(WebContext context, Map<String, InstanceRelationship> existingRelationships,
+                                                                     Map<String, InstanceRelationship> updatingRelationships, Instance instance) {
+    return consortiumService.getConsortiumConfiguration(context).toCompletionStage().toCompletableFuture()
+      .thenCompose(consortiumConfigurationOptional -> {
+        List<CompletableFuture<Instance>> validateNewRelationshipFutures = new ArrayList<>();
+        if (consortiumConfigurationOptional.isPresent()) {
+          List<InstanceRelationship> newRelationships = updatingRelationships.keySet().stream().filter(key -> !existingRelationships.containsKey(key))
+            .map(updatingRelationships::get).toList();
+
+          newRelationships.forEach(relationship -> {
+            String instanceId = getRelatedInstanceId(instance, relationship);
+            validateNewRelationshipFutures.add(checkIfInstanceExistAtLocalMember(context, instanceId));
+          });
+        }
+        return allResultsOf(validateNewRelationshipFutures);
+      });
+  }
+
+  private CompletableFuture<Instance> checkIfInstanceExistAtLocalMember(WebContext context, String instanceId) {
+    return InstanceUtil.findInstanceById(instanceId, storage.getInstanceCollection(context))
+      .recover(throwable -> {
+        if (throwable instanceof NotFoundException) {
+          log.warn("confirmInstanceExistAtLocalMember:: Trying to link shared and local instance, instanceId: {}", instanceId);
+          return Future.failedFuture(new BadRequestException(LINKING_SHARED_AND_LOCAL_INSTANCE_ERROR));
+        }
+        return Future.failedFuture(throwable);
+      }).toCompletionStage().toCompletableFuture();
+  }
+
+  private static String getRelatedInstanceId(Instance instance, InstanceRelationship relationship) {
+    return !relationship.superInstanceId.equals(instance.getId()) ? relationship.superInstanceId : relationship.subInstanceId;
   }
 
   protected CompletableFuture<List<Response>> updatePrecedingSucceedingTitles(

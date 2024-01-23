@@ -46,6 +46,7 @@ public class ConsortiumServiceTest {
   private static final String TENANT_HEADER = "X-Okapi-Tenant";
   private static final String TOKEN_HEADER = "X-Okapi-Token";
   private static final String OKAPI_URL_HEADER = "X-Okapi-Url";
+  private Context context;
 
   @Rule
   public WireMockRule mockServer = new WireMockRule(
@@ -56,6 +57,7 @@ public class ConsortiumServiceTest {
   @Before
   public void setUp() {
     baseUrl = mockServer.baseUrl();
+    context = EventHandlingUtil.constructContext(localTenant, token, baseUrl);
 
     JsonObject centralTenantIdResponse = new JsonObject()
       .put("userTenants", new JsonArray().add(new JsonObject().put("centralTenantId", centralTenantId).put("consortiumId", consortiumId)));
@@ -78,7 +80,6 @@ public class ConsortiumServiceTest {
   @Test
   public void shouldReturnConsortiumCredentials(TestContext testContext) {
     Async async = testContext.async();
-    Context context = EventHandlingUtil.constructContext(localTenant, token, baseUrl);
     consortiumServiceImpl.getConsortiumConfiguration(context).onComplete(ar -> {
       testContext.assertTrue(ar.succeeded());
       testContext.assertTrue(ar.result().isPresent());
@@ -93,7 +94,6 @@ public class ConsortiumServiceTest {
     WireMock.stubFor(WireMock.get(new UrlPathPattern(new RegexPattern("/user-tenants"), true))
       .willReturn(WireMock.ok().withBody(Json.encode(new JsonObject().put("userTenants", new JsonArray())))));
     Async async = testContext.async();
-    Context context = EventHandlingUtil.constructContext(localTenant, token, baseUrl);
     consortiumServiceImpl.getConsortiumConfiguration(context).onComplete(ar -> {
       testContext.assertTrue(ar.succeeded());
       testContext.assertTrue(ar.result().isEmpty());
@@ -110,7 +110,6 @@ public class ConsortiumServiceTest {
     sharingInstance.setInstanceIdentifier(instanceId);
     sharingInstance.setTargetTenantId(localTenant);
 
-    Context context = EventHandlingUtil.constructContext(localTenant, token, baseUrl);
     consortiumServiceImpl.shareInstance(context, consortiumId, sharingInstance).onComplete(ar -> {
       testContext.assertTrue(ar.succeeded());
       testContext.assertEquals(ar.result().getStatus(), SharingStatus.COMPLETE);
@@ -140,7 +139,6 @@ public class ConsortiumServiceTest {
     incomingSharingInstance.setInstanceIdentifier(instanceId);
     incomingSharingInstance.setTargetTenantId(localTenant);
 
-    Context context = EventHandlingUtil.constructContext(localTenant, token, baseUrl);
     consortiumServiceImpl.shareInstance(context, consortiumId, incomingSharingInstance).onComplete(ar -> {
       testContext.assertTrue(ar.failed());
       testContext.assertTrue(ar.cause().getMessage().contains(testError));
@@ -152,7 +150,6 @@ public class ConsortiumServiceTest {
   public void shouldCreateShadowInstance(TestContext testContext) {
     Async async = testContext.async();
 
-    Context context = EventHandlingUtil.constructContext(localTenant, token, baseUrl);
     consortiumServiceImpl.createShadowInstance(context, instanceId.toString(), new ConsortiumConfiguration(centralTenantId, consortiumId)).onComplete(ar -> {
       WireMock.verify(WireMock.postRequestedFor(WireMock.urlEqualTo("/consortia/" + consortiumId + "/sharing/instances"))
         .withHeader(TENANT_HEADER, equalTo(centralTenantId))
