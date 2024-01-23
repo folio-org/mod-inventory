@@ -46,10 +46,21 @@ public class RestDataImportHelper {
   public static final String STATUS_COMMITTED = "COMMITTED";
   public static final String STATUS_ERROR = "ERROR";
 
+  private static final String IMPORT_STATUS_POLL_INTERVAL_SEC_PARAM =
+    "inventory.sharing.di.status.poll.interval.seconds";
+  private static final String IMPORT_STATUS_POLL_NUMBER_PARAM =
+    "inventory.sharing.di.status.poll.number";
+  private static final String DEFAULT_IMPORT_STATUS_POLL_INTERVAL_SEC = "5";
+  private static final String DEFAULT_IMPORT_STATUS_POLL_NUMBER = "5";
+
   private final Vertx vertx;
+  private final long durationInSec;
+  private final int attemptsNumber;
 
   public RestDataImportHelper(Vertx vertx) {
     this.vertx = vertx;
+    this.durationInSec = Integer.parseInt(System.getProperty(IMPORT_STATUS_POLL_INTERVAL_SEC_PARAM, DEFAULT_IMPORT_STATUS_POLL_INTERVAL_SEC));
+    this.attemptsNumber = Integer.parseInt(System.getProperty(IMPORT_STATUS_POLL_NUMBER_PARAM, DEFAULT_IMPORT_STATUS_POLL_NUMBER));
   }
 
   public static final JobProfileInfo JOB_PROFILE_INFO = new JobProfileInfo()
@@ -72,11 +83,6 @@ public class RestDataImportHelper {
       sharingInstanceMetadata.getInstanceIdentifier(), sharingInstanceMetadata.getTargetTenantId());
 
     ChangeManagerClient changeManagerClient = getChangeManagerClient(kafkaHeaders);
-
-    //TODO: move to config
-    //Constants for checkDataImportStatus method
-    final long durationInSec = 20;
-    final int attemptsNumber = 3;
 
     return initJobExecution(instanceId, changeManagerClient, kafkaHeaders)
       .compose(jobExecutionId -> setDefaultJobProfileToJobExecution(jobExecutionId, changeManagerClient))
