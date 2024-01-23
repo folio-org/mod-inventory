@@ -1,4 +1,4 @@
-package org.folio.inventory.dataimport.consumers;
+package org.folio.inventory.consortium.consumers;
 
 import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
 import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
@@ -16,7 +16,7 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
-import org.folio.inventory.MarcBibUpdateConsumerVerticle;
+import org.folio.inventory.ConsortiumInstanceSharingConsumerVerticle;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
@@ -25,13 +25,14 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 @RunWith(VertxUnitRunner.class)
-public class MarcBibUpdateConsumerVerticleTest {
+public class ConsortiumInstanceSharingConsumerVerticleTest {
+
   private static final String KAFKA_ENV_NAME = "test-env";
   private static Vertx vertx = Vertx.vertx();
   public static EmbeddedKafkaCluster cluster;
 
   @Mock
-  private static MarcBibUpdateKafkaHandler marcBibUpdateKafkaHandler;
+  private static ConsortiumInstanceSharingHandler consortiumInstanceSharingHandler;
 
   @Before
   public void setUp() {
@@ -54,7 +55,7 @@ public class MarcBibUpdateConsumerVerticleTest {
       .setWorker(true);
 
     Promise<String> promise = Promise.promise();
-    vertx.deployVerticle(MarcBibUpdateConsumerVerticle.class.getName(), options, promise);
+    vertx.deployVerticle(ConsortiumInstanceSharingConsumerVerticle.class.getName(), options, promise);
 
     promise.future().onComplete(ar -> {
       context.assertTrue(ar.succeeded());
@@ -68,7 +69,7 @@ public class MarcBibUpdateConsumerVerticleTest {
     Async async = context.async();
     vertx.close(ar -> {
       cluster.stop();
-      marcBibUpdateKafkaHandler.shutdown();
+      consortiumInstanceSharingHandler.shutdown();
       async.complete();
     });
   }

@@ -203,4 +203,11 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
     return producerRecord;
   }
 
+  public void shutdown() {
+    producerMap.values().forEach(producer -> {
+      if (producer != null) {
+        producer.close();
+      }
+    });
+  }
 }
