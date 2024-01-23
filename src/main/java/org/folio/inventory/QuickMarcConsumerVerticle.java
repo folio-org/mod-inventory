@@ -19,7 +19,6 @@ import org.folio.kafka.GlobalLoadSensor;
 import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaConsumerWrapper;
 
-import static java.lang.String.format;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX_REQUEST_SIZE;
@@ -36,6 +35,7 @@ public class QuickMarcConsumerVerticle extends AbstractVerticle {
   private final int loadLimit = getLoadLimit();
   private final int maxDistributionNumber = getMaxDistributionNumber();
   private KafkaConsumerWrapper<String, String> consumer;
+  private QuickMarcKafkaHandler handler;
 
   @Override
   public void start(Promise<Void> startPromise) {
@@ -47,7 +47,7 @@ public class QuickMarcConsumerVerticle extends AbstractVerticle {
 
     var precedingSucceedingTitlesHelper = new PrecedingSucceedingTitlesHelper(WebClient.wrap(client));
     HoldingsCollectionService holdingsCollectionService = new HoldingsCollectionService();
-    var handler = new QuickMarcKafkaHandler(vertx, storage, maxDistributionNumber, kafkaConfig, precedingSucceedingTitlesHelper, holdingsCollectionService);
+    handler = new QuickMarcKafkaHandler(vertx, storage, maxDistributionNumber, kafkaConfig, precedingSucceedingTitlesHelper, holdingsCollectionService);
 
     var kafkaConsumerFuture = createKafkaConsumer(kafkaConfig, QMEventTypes.QM_SRS_MARC_RECORD_UPDATED, handler);
 
@@ -74,7 +74,10 @@ public class QuickMarcConsumerVerticle extends AbstractVerticle {
 
   @Override
   public void stop(Promise<Void> stopPromise) {
-    consumer.stop().onComplete(ar -> stopPromise.complete());
+    consumer.stop().onComplete(ar -> {
+      handler.shutdown();
+      stopPromise.complete();
+    });
   }
 
   private Future<KafkaConsumerWrapper<String, String>> createKafkaConsumer(KafkaConfig kafkaConfig, QMEventTypes eventType,
