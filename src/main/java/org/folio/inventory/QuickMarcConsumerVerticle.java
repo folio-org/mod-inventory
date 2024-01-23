@@ -74,8 +74,10 @@ public class QuickMarcConsumerVerticle extends AbstractVerticle {
 
   @Override
   public void stop(Promise<Void> stopPromise) {
-    handler.shutdown();
-    consumer.stop().onComplete(ar -> stopPromise.complete());
+    consumer.stop().onComplete(ar -> {
+      handler.shutdown();
+      stopPromise.complete();
+    });
   }
 
   private Future<KafkaConsumerWrapper<String, String>> createKafkaConsumer(KafkaConfig kafkaConfig, QMEventTypes eventType,

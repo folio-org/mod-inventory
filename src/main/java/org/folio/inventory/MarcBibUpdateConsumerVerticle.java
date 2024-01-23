@@ -71,8 +71,10 @@ public class MarcBibUpdateConsumerVerticle extends AbstractVerticle {
   @Override
   public void stop(Promise<Void> stopPromise) {
     marcBibUpdateConsumerWrapper.stop()
-      .onComplete(ar -> stopPromise.complete());
-    marcBibUpdateKafkaHandler.shutdown();
+      .onComplete(ar -> {
+        marcBibUpdateKafkaHandler.shutdown();
+        stopPromise.complete();
+      });
   }
 
   private int getLoadLimit() {
