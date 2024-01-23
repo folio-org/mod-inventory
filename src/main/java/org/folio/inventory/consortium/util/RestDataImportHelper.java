@@ -11,6 +11,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.Record;
 import org.folio.inventory.consortium.entities.SharingInstance;
+import org.folio.kafka.SimpleConfigurationReader;
 import org.folio.rest.client.ChangeManagerClient;
 import org.folio.rest.jaxrs.model.InitJobExecutionsRqDto;
 import org.folio.rest.jaxrs.model.InitialRecord;
@@ -59,8 +60,10 @@ public class RestDataImportHelper {
 
   public RestDataImportHelper(Vertx vertx) {
     this.vertx = vertx;
-    this.durationInSec = Integer.parseInt(System.getProperty(IMPORT_STATUS_POLL_INTERVAL_SEC_PARAM, DEFAULT_IMPORT_STATUS_POLL_INTERVAL_SEC));
-    this.attemptsNumber = Integer.parseInt(System.getProperty(IMPORT_STATUS_POLL_NUMBER_PARAM, DEFAULT_IMPORT_STATUS_POLL_NUMBER));
+    this.durationInSec = Integer.parseInt(SimpleConfigurationReader.getValue(
+      IMPORT_STATUS_POLL_INTERVAL_SEC_PARAM, DEFAULT_IMPORT_STATUS_POLL_INTERVAL_SEC));
+    this.attemptsNumber = Integer.parseInt(SimpleConfigurationReader.getValue(
+      IMPORT_STATUS_POLL_NUMBER_PARAM, DEFAULT_IMPORT_STATUS_POLL_NUMBER));
   }
 
   public static final JobProfileInfo JOB_PROFILE_INFO = new JobProfileInfo()
