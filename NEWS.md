@@ -5,6 +5,7 @@
 * Apply 005 logic before saving MARC Bib in SRS [MODINV-921](https://issues.folio.org/browse/MODINV-921)
 * Remove extra fields from 'holdings/move' mechanism [MODINV-948](https://issues.folio.org/browse/MODINV-948)
 * Allow to link local instance to shared instance [MODINV-901](https://issues.folio.org/browse/MODINV-901)
+* Make configurable params for instance sharing [MODINV-950](https://issues.folio.org/browse/MODINV-950)
 
 ## 20.1.0 2023-10-13
 * Update status when user attempts to update shared auth record from member tenant ([MODDATAIMP-926](https://issues.folio.org/browse/MODDATAIMP-926))
