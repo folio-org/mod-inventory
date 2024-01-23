@@ -1,3 +1,6 @@
+## 20.1.8-SNAPSHOT 2024-02-dd
+* Make configurable params for instance sharing [MODINV-950](https://issues.folio.org/browse/MODINV-950)
+
 ## 20.1.7 2024-01-18
 * Consortial: non-MARC data not saved when local source = MARC instance is promoted ([MODINV-929](https://issues.folio.org/browse/MODINV-929))
 
