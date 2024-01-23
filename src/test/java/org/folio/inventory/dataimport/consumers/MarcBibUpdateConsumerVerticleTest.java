@@ -18,14 +18,25 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
 import org.folio.inventory.MarcBibUpdateConsumerVerticle;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 @RunWith(VertxUnitRunner.class)
 public class MarcBibUpdateConsumerVerticleTest {
   private static final String KAFKA_ENV_NAME = "test-env";
   private static Vertx vertx = Vertx.vertx();
   public static EmbeddedKafkaCluster cluster;
+
+  @Mock
+  private static MarcBibUpdateKafkaHandler marcBibUpdateKafkaHandler;
+
+  @Before
+  public void setUp() {
+    MockitoAnnotations.openMocks(this);
+  }
 
   @Test
   public void shouldDeployVerticle(TestContext context) {
@@ -57,6 +68,7 @@ public class MarcBibUpdateConsumerVerticleTest {
     Async async = context.async();
     vertx.close(ar -> {
       cluster.stop();
+      marcBibUpdateKafkaHandler.shutdown();
       async.complete();
     });
   }
