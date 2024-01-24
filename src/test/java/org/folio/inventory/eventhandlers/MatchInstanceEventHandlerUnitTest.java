@@ -14,6 +14,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_NOT_MATCHED;
@@ -47,6 +48,7 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.folio.inventory.consortium.entities.ConsortiumConfiguration;
 import org.folio.inventory.consortium.services.ConsortiumService;
+import org.folio.inventory.dataimport.handlers.matching.preloaders.PreloadingFields;
 import org.folio.processing.exceptions.MatchingException;
 import org.junit.Before;
 import org.junit.Test;
@@ -356,6 +358,106 @@ public class MatchInstanceEventHandlerUnitTest {
   }
 
   @Test
+  public void shouldNotTryToMatchOnCentralTenantIfMatchingByPol(TestContext testContext) throws UnsupportedEncodingException {
+    Async async = testContext.async();
+
+    String centralTenantId = "consortium";
+    String consortiumId = "consortiumId";
+
+    Instance instance = new Instance(UUID.randomUUID().toString(), "5", INSTANCE_HRID, "MARC", "Wonderful", "12334");
+
+    InstanceCollection instanceCollectionCentralTenant = Mockito.mock(InstanceCollection.class);
+    when(storage.getInstanceCollection(Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)))).thenReturn(instanceCollectionCentralTenant);
+
+    doAnswer(ans -> {
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Success<MultipleRecords<Instance>> result =
+        new Success<>(new MultipleRecords<>(singletonList(instance), 1));
+      callback.accept(result);
+      return null;
+    }).when(instanceCollectionCentralTenant)
+      .findByCql(eq(format("%s == \"%s\"", PreloadingFields.POL.getExistingMatchField(), INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    doAnswer(ans -> {
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Success<MultipleRecords<Instance>> result =
+        new Success<>(new MultipleRecords<>(singletonList(createInstance()), 1));
+      callback.accept(result);
+      return null;
+    }).when(instanceCollection)
+      .findByCql(eq(format("%s == \"%s\"", PreloadingFields.POL.getExistingMatchField(), INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    doAnswer(invocationOnMock -> Future.succeededFuture(Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
+      .when(consortiumService).getConsortiumConfiguration(any());
+
+    DataImportEventPayload eventPayload = createEventPayload("instance." + PreloadingFields.POL.getExistingMatchField());
+
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
+      testContext.assertNull(throwable);
+      testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
+      testContext.assertEquals(
+        updatedEventPayload.getEventsChain(),
+        singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
+      );
+      testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
+      JsonObject matchedInstanceAsJsonObject = new JsonObject(updatedEventPayload.getContext().get(INSTANCE.value()));
+      testContext.assertEquals(matchedInstanceAsJsonObject.getString("id"), INSTANCE_ID);
+      verify(storage, times(0)).getInstanceCollection(Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)));
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldNotTryToMatchOnCentralTenantIfMatchingByVrn(TestContext testContext) throws UnsupportedEncodingException {
+    Async async = testContext.async();
+
+    String centralTenantId = "consortium";
+    String consortiumId = "consortiumId";
+
+    Instance instance = new Instance(UUID.randomUUID().toString(), "5", INSTANCE_HRID, "MARC", "Wonderful", "12334");
+
+    InstanceCollection instanceCollectionCentralTenant = Mockito.mock(InstanceCollection.class);
+    when(storage.getInstanceCollection(Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)))).thenReturn(instanceCollectionCentralTenant);
+
+    doAnswer(ans -> {
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Success<MultipleRecords<Instance>> result =
+        new Success<>(new MultipleRecords<>(singletonList(instance), 1));
+      callback.accept(result);
+      return null;
+    }).when(instanceCollectionCentralTenant)
+      .findByCql(eq(format("%s == \"%s\"", PreloadingFields.VRN.getExistingMatchField(), INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    doAnswer(ans -> {
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Success<MultipleRecords<Instance>> result =
+        new Success<>(new MultipleRecords<>(singletonList(createInstance()), 1));
+      callback.accept(result);
+      return null;
+    }).when(instanceCollection)
+      .findByCql(eq(format("%s == \"%s\"", PreloadingFields.VRN.getExistingMatchField(), INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    doAnswer(invocationOnMock -> Future.succeededFuture(Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
+      .when(consortiumService).getConsortiumConfiguration(any());
+
+    DataImportEventPayload eventPayload = createEventPayload("instance." + PreloadingFields.VRN.getExistingMatchField());
+
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
+      testContext.assertNull(throwable);
+      testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
+      testContext.assertEquals(
+        updatedEventPayload.getEventsChain(),
+        singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
+      );
+      testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
+      JsonObject matchedInstanceAsJsonObject = new JsonObject(updatedEventPayload.getContext().get(INSTANCE.value()));
+      testContext.assertEquals(matchedInstanceAsJsonObject.getString("id"), INSTANCE_ID);
+      verify(storage, times(0)).getInstanceCollection(Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)));
+      async.complete();
+    });
+  }
+
+  @Test
   public void shouldNotMatchOnHandleEventPayload(TestContext testContext) throws UnsupportedEncodingException {
     Async async = testContext.async();
 
@@ -651,6 +753,10 @@ public class MatchInstanceEventHandlerUnitTest {
   }
 
   private DataImportEventPayload createEventPayload() {
+    return createEventPayload("instance.hrid");
+  }
+
+  private DataImportEventPayload createEventPayload(String matchValue) {
     return new DataImportEventPayload()
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
@@ -670,7 +776,7 @@ public class MatchInstanceEventHandlerUnitTest {
             .withExistingMatchExpression(new MatchExpression()
               .withDataValueType(VALUE_FROM_RECORD)
               .withFields(singletonList(
-                new Field().withLabel("field").withValue("instance.hrid"))
+                new Field().withLabel("field").withValue(matchValue))
               ))))));
   }
 

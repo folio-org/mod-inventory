@@ -2,9 +2,12 @@ package org.folio.inventory.dataimport.handlers.matching.util;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
+import io.vertx.core.json.Json;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.DataImportEventPayload;
+import org.folio.MatchProfile;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.support.JsonHelper;
 
@@ -57,6 +60,21 @@ public final class EventHandlingUtil {
       return centralTenantId;
     }
     return payload.getTenant();
+  }
+
+  /**
+   * Extracts match profile from event payload
+   * Additional json encoding is needed to return a copy of object not to modify eventPayload
+   * @return MatchProfile object deep copy
+   * */
+  public static MatchProfile extractMatchProfile(DataImportEventPayload dataImportEventPayload) {
+    if (dataImportEventPayload.getCurrentNode().getContent() instanceof Map) {
+      return (new JsonObject((Map)dataImportEventPayload.getCurrentNode().getContent()))
+        .mapTo(MatchProfile.class);
+    }
+
+    return new JsonObject(Json.encode(dataImportEventPayload.getCurrentNode().getContent()))
+      .mapTo(MatchProfile.class);
   }
 
   private static boolean isExistsRequiredProperty(JsonObject representation, String propertyName, String nestedPropertyName) {
