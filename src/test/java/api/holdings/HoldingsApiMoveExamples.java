@@ -214,14 +214,14 @@ public class HoldingsApiMoveExamples extends ApiTests {
 
     JsonObject firstJsonHoldingsAsRequest = new HoldingRequestBuilder().forInstance(oldInstanceId).create();
     final UUID createHoldingsRecord1 = holdingsStorageClient.create(firstJsonHoldingsAsRequest
-        .put("holdingItems", new JsonArray().add(new JsonObject().put("id", UUID.randomUUID())).add(new JsonObject().put("id", UUID.randomUUID())))
-        .put("bareHoldingItems", new JsonArray().add(new JsonObject().put("id", UUID.randomUUID())).add(new JsonObject().put("id", UUID.randomUUID()))))
+        .put("holdingsItems", new JsonArray().add(new JsonObject().put("id", UUID.randomUUID())).add(new JsonObject().put("id", UUID.randomUUID())))
+        .put("bareHoldingsItems", new JsonArray().add(new JsonObject().put("id", UUID.randomUUID())).add(new JsonObject().put("id", UUID.randomUUID()))))
       .getId();
 
     JsonObject secondJsonHoldingsAsRequest = new HoldingRequestBuilder().forInstance(oldInstanceId).create();
     final UUID createHoldingsRecord2 = holdingsStorageClient.create(secondJsonHoldingsAsRequest
-        .put("holdingItems", new JsonArray().add(new JsonObject().put("id", UUID.randomUUID())).add(new JsonObject().put("id", UUID.randomUUID())))
-        .put("bareHoldingItems", new JsonArray().add(new JsonObject().put("id", UUID.randomUUID())).add(new JsonObject().put("id", UUID.randomUUID()))))
+        .put("holdingsItems", new JsonArray().add(new JsonObject().put("id", UUID.randomUUID())).add(new JsonObject().put("id", UUID.randomUUID())))
+        .put("bareHoldingsItems", new JsonArray().add(new JsonObject().put("id", UUID.randomUUID())).add(new JsonObject().put("id", UUID.randomUUID()))))
       .getId();
 
     Assert.assertNotEquals(createHoldingsRecord1, createHoldingsRecord2);
