@@ -11,6 +11,7 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
+import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
@@ -21,6 +22,10 @@ import org.folio.inventory.consortium.handlers.InstanceSharingHandlerFactory;
 import org.folio.inventory.consortium.util.InstanceOperationsHelper;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
+
+import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
+import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.times;
 import org.folio.inventory.services.EventIdStorageService;
@@ -61,6 +66,9 @@ public class ConsortiumInstanceSharingHandlerTest {
   private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
   private static Vertx vertx;
   private static HttpClient httpClient;
+  private static EmbeddedKafkaCluster cluster;
+  private static KafkaConfig kafkaConfig;
+
   @Mock
   private Storage storage;
   @Mock
@@ -69,8 +77,6 @@ public class ConsortiumInstanceSharingHandlerTest {
   private InstanceCollection mockedSourceInstanceCollection;
   @Mock
   private KafkaConsumerRecord<String, String> kafkaRecord;
-  @Mock
-  private static KafkaConfig kafkaConfig;
   @Mock
   private EventIdStorageService eventIdStorageService;
   private Instance existingInstance;
@@ -81,8 +87,13 @@ public class ConsortiumInstanceSharingHandlerTest {
   public static void setUpClass() {
     vertx = Vertx.vertx();
     httpClient = vertx.createHttpClient();
+    cluster = provisionWith(defaultClusterConfig());
+    cluster.start();
+    String[] hostAndPort = cluster.getBrokerList().split(":");
     kafkaConfig = KafkaConfig.builder()
       .envId("env")
+      .kafkaHost(hostAndPort[0])
+      .kafkaPort(hostAndPort[1])
       .maxRequestSize(1048576)
       .build();
   }
@@ -304,7 +315,9 @@ public class ConsortiumInstanceSharingHandlerTest {
     when(kafkaRecord.value()).thenReturn(Json.encode(sharingInstance));
     when(kafkaRecord.headers()).thenReturn(
       List.of(KafkaHeader.header(OKAPI_TOKEN_HEADER, "token"),
-        KafkaHeader.header(OKAPI_URL_HEADER, "url")));
+        KafkaHeader.header(OKAPI_URL_HEADER, "url"),
+        KafkaHeader.header(OKAPI_TENANT_HEADER, "consortium")
+      ));
 
     when(storage.getInstanceCollection(any(Context.class)))
       .thenReturn(mockedTargetInstanceCollection);
@@ -432,11 +445,11 @@ public class ConsortiumInstanceSharingHandlerTest {
     InstanceSharingHandler sharingHandler = mock(InstanceSharingHandler.class);
 
     mockedInstanceSharingHandler.when(InstanceSharingHandlerFactory :: values)
-    .thenReturn(new InstanceSharingHandlerFactory[]{InstanceSharingHandlerFactory.MARC});
+      .thenReturn(new InstanceSharingHandlerFactory[]{InstanceSharingHandlerFactory.MARC});
 
     mockedInstanceSharingHandler.when(() ->
         InstanceSharingHandlerFactory.getInstanceSharingHandler(eq(InstanceSharingHandlerFactory.MARC),
-        any(InstanceOperationsHelper.class), any(Storage.class), any(Vertx.class), any(HttpClient.class)))
+          any(InstanceOperationsHelper.class), any(Storage.class), any(Vertx.class), any(HttpClient.class)))
       .thenReturn(sharingHandler);
 
     when(sharingHandler.publishInstance(any(), any(), any(), any(), any()))
@@ -578,7 +591,10 @@ public class ConsortiumInstanceSharingHandlerTest {
   @AfterClass
   public static void tearDownClass(TestContext context) {
     Async async = context.async();
-    vertx.close(ar -> async.complete());
+    vertx.close(ar -> {
+      cluster.stop();
+      async.complete();
+    });
   }
 
   private final static String recordJson = "{\"id\":\"5e525f1e-d373-4a07-9aff-b80856bacfef\",\"snapshotId\":\"7376bb73-845e-44ce-ade4-53394f7526a6\",\"matchedId\":\"0ecd6e9f-f02f-47b7-8326-2743bfa3fc43\",\"generation\":1,\"recordType\":\"MARC_BIB\"," +

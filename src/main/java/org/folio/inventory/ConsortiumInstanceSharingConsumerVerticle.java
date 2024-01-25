@@ -36,6 +36,7 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
   private final int loadLimit = getLoadLimit();
 
   private KafkaConsumerWrapper<String, String> consumer;
+  private ConsortiumInstanceSharingHandler consortiumInstanceSharingHandler;
 
   @Override
   public void start(Promise<Void> startPromise) {
@@ -46,7 +47,7 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
     HttpClient httpClient = vertx.createHttpClient();
     Storage storage = Storage.basedUpon(config, httpClient);
     SharedInstanceEventIdStorageServiceImpl sharedInstanceEventIdStorageService = new SharedInstanceEventIdStorageServiceImpl(new EventIdStorageDaoImpl(new PostgresClientFactory(vertx)));
-    ConsortiumInstanceSharingHandler consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig, sharedInstanceEventIdStorageService);
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig, sharedInstanceEventIdStorageService);
 
     var kafkaConsumerFuture = createKafkaConsumerWrapper(kafkaConfig, consortiumInstanceSharingHandler);
     kafkaConsumerFuture.onFailure(startPromise::fail)
@@ -90,11 +91,13 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
 
   @Override
   public void stop(Promise<Void> stopPromise) {
-    consumer.stop().onComplete(ar -> stopPromise.complete());
+    consumer.stop().onComplete(ar -> {
+      consortiumInstanceSharingHandler.shutdown();
+      stopPromise.complete();
+    });
   }
 
   private int getLoadLimit() {
     return Integer.parseInt(System.getProperty("inventory.kafka.ConsortiumInstanceSharingConsumer.loadLimit", "5"));
   }
-
 }

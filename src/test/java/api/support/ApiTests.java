@@ -18,7 +18,6 @@ import api.support.http.ResourceClient;
 public abstract class ApiTests {
   private static boolean runningOnOwn;
   protected static OkapiHttpClient okapiClient;
-
   protected final ResourceClient holdingsStorageClient;
   protected final ResourceClient itemsStorageClient;
   protected final ResourceClient itemsClient;
@@ -26,6 +25,7 @@ public abstract class ApiTests {
   protected final ResourceClient instancesStorageClient;
   protected final ResourceClient isbnClient;
   protected final ResourceClient usersClient;
+  protected final ResourceClient userTenantsClient;
   protected final ResourceClient instancesBatchClient;
   protected final ResourceClient precedingSucceedingTitlesClient;
   protected final ResourceClient instanceRelationshipClient;
@@ -42,6 +42,7 @@ public abstract class ApiTests {
     instancesStorageClient = ResourceClient.forInstancesStorage(okapiClient);
     isbnClient = ResourceClient.forIsbns(okapiClient);
     usersClient = ResourceClient.forUsers(okapiClient);
+    userTenantsClient = ResourceClient.forUserTenants(okapiClient);
     instancesBatchClient = ResourceClient.forInstancesBatch(okapiClient);
     precedingSucceedingTitlesClient = ResourceClient.forPrecedingSucceedingTitles(okapiClient);
     instanceRelationshipClient = ResourceClient.forInstanceRelationship(okapiClient);

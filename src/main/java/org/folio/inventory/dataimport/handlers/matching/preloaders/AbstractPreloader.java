@@ -23,6 +23,8 @@ import org.folio.processing.value.Value;
 import org.folio.rest.jaxrs.model.Field;
 import org.folio.rest.jaxrs.model.MatchExpression;
 
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.extractMatchProfile;
+
 /**
  * Preloader intended to run some logic to modify existing loading query before passing it to Loader
  * It check whether match expression contains any of defined fields that imply preloading
@@ -56,21 +58,6 @@ public abstract class AbstractPreloader {
 
                     return LoadQueryBuilder.build(ListValue.of(values), matchDetail);
                 });
-    }
-
-    /**
-     * Extracts match profile from event payload
-     * Additional json encoding is needed to return a copy of object not to modify eventPayload
-     * @return MatchProfile object deep copy
-     * */
-    private MatchProfile extractMatchProfile(DataImportEventPayload dataImportEventPayload) {
-        if (dataImportEventPayload.getCurrentNode().getContent() instanceof Map) {
-            return (new JsonObject((Map)dataImportEventPayload.getCurrentNode().getContent()))
-                    .mapTo(MatchProfile.class);
-        }
-
-        return new JsonObject(Json.encode(dataImportEventPayload.getCurrentNode().getContent()))
-                .mapTo(MatchProfile.class);
     }
 
     /**

@@ -11,6 +11,7 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.consortium.entities.ConsortiumConfiguration;
 import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.handlers.matching.preloaders.PreloadingFields;
 import org.folio.inventory.dataimport.handlers.matching.util.MatchingParametersRelations;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
@@ -18,10 +19,12 @@ import org.folio.processing.exceptions.MatchingException;
 import org.folio.processing.matching.MatchingManager;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.MappingMetadataDto;
+import org.folio.rest.jaxrs.model.MatchExpression;
 
 import java.util.concurrent.CompletableFuture;
 
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.extractMatchProfile;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MATCH_PROFILE;
 
@@ -57,6 +60,7 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
         .orElse(CompletableFuture.failedFuture(new EventProcessingException(MAPPING_METADATA_NOT_FOUND_MSG))))
       .whenComplete((matched, throwable) -> {
         if (throwable != null) {
+          LOGGER.warn("handle:: Error during matching", throwable);
           future.completeExceptionally(throwable);
         } else {
           if (Boolean.TRUE.equals(matched)) {
@@ -90,7 +94,8 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
     return consortiumService.getConsortiumConfiguration(context)
       .toCompletionStage().toCompletableFuture()
       .thenCompose(consortiumConfiguration -> {
-        if (consortiumConfiguration.isPresent() && !consortiumConfiguration.get().getCentralTenantId().equals(context.getTenantId())) {
+        if (consortiumConfiguration.isPresent() && !consortiumConfiguration.get().getCentralTenantId().equals(context.getTenantId())
+          && !isMatchByPolOrVrn(dataImportEventPayload)) {
           LOGGER.debug("matchCentralTenantIfNeeded:: Start matching on central tenant with id: {}", consortiumConfiguration.get().getCentralTenantId());
           String localMatchedInstance = dataImportEventPayload.getContext().get(getEntityType().value());
           preparePayloadBeforeConsortiumProcessing(dataImportEventPayload, consortiumConfiguration.get(), mappingMetadataDto, matchingParametersRelations);
@@ -99,7 +104,7 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
               dataImportEventPayload.setTenant(context.getTenantId());
               if (isMatchedConsortium && isMatchedLocal && !isShadowEntity(localMatchedInstance, dataImportEventPayload.getContext().get(getEntityType().value()))) {
                 LOGGER.warn("matchCentralTenantIfNeeded:: Found multiple results during matching on local tenant: {} and central tenant: {} ",
-                  consortiumConfiguration.get().getCentralTenantId(), context.getTenantId());
+                  context.getTenantId(), consortiumConfiguration.get().getCentralTenantId());
                 return CompletableFuture.failedFuture(new MatchingException(String.format(FOUND_MULTIPLE_ENTITIES, context.getTenantId(), consortiumConfiguration.get().getCentralTenantId())));
               }
               if (StringUtils.isEmpty(dataImportEventPayload.getContext().get(getEntityType().value()))) {
@@ -114,6 +119,14 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
         LOGGER.debug("matchCentralTenantIfNeeded:: Consortium configuration for tenant: {} not found", context.getTenantId());
         return CompletableFuture.completedFuture(isMatchedLocal);
       });
+  }
+
+  private boolean isMatchByPolOrVrn(DataImportEventPayload dataImportEventPayload) {
+    MatchProfile matchProfile = extractMatchProfile(dataImportEventPayload);
+    MatchExpression matchExpression = matchProfile.getMatchDetails().get(0).getExistingMatchExpression();
+    return matchExpression.getFields().stream()
+      .anyMatch(field -> field.getValue().endsWith("." + PreloadingFields.POL.getExistingMatchField())
+        || field.getValue().endsWith("." + PreloadingFields.VRN.getExistingMatchField()));
   }
 
   private void preparePayloadBeforeConsortiumProcessing(DataImportEventPayload dataImportEventPayload, ConsortiumConfiguration consortiumConfiguration,

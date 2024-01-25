@@ -168,4 +168,10 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
       .withTenant(marcBibUpdate.getTenant())
       .withTs(marcBibUpdate.getTs());
   }
+
+  public void shutdown() {
+    if (producer != null) {
+      producer.close();
+    }
+  }
 }
