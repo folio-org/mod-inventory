@@ -2,6 +2,7 @@ package org.folio.inventory.dataimport.handlers.matching.preloaders;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -34,9 +35,9 @@ public class ItemPreloader extends AbstractPreloader {
     }
 
     @Override
-    protected CompletableFuture<List<String>> doPreloading(DataImportEventPayload eventPayload,
-                                                           PreloadingFields preloadingField,
-                                                           List<String> loadingParameters) {
+    protected CompletableFuture<Optional<List<String>>> doPreloading(DataImportEventPayload eventPayload,
+                                                                    PreloadingFields preloadingField,
+                                                                    List<String> loadingParameters) {
         return ordersPreloaderHelper.preload(eventPayload, preloadingField, loadingParameters, this::extractHoldingsIdsForItems);
     }
 

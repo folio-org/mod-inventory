@@ -12,6 +12,7 @@ import static org.folio.rest.jaxrs.model.MatchExpression.DataValueType.VALUE_FRO
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MATCH_PROFILE;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -80,7 +81,7 @@ public class ItemPreloaderTest {
         List<String> holdingsIdsMock = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
 
         when(ordersPreloaderHelper.preload(eq(eventPayload), eq(PreloadingFields.POL), any(), any()))
-                .thenReturn(CompletableFuture.completedFuture(holdingsIdsMock));
+                .thenReturn(CompletableFuture.completedFuture(Optional.of(holdingsIdsMock)));
 
         LoadQuery initialLoadQuery = LoadQueryBuilder.build(ListValue.of(POLS), matchDetail);
         LoadQuery loadQuery = preloader.preload(initialLoadQuery, eventPayload)

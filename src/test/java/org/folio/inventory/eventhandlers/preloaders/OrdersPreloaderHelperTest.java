@@ -60,13 +60,14 @@ public class OrdersPreloaderHelperTest {
         when(ordersClient.getPoLineCollection(eq(orderLinesCql), any()))
                 .thenReturn(CompletableFuture.completedFuture(Optional.of(poLineCollectionMock)));
 
-        List<String> instanceIds = ordersPreloaderHelper.preload(createEventPayload(),
+        Optional<List<String>> instanceIds = ordersPreloaderHelper.preload(createEventPayload(),
                         PreloadingFields.POL,
                         poLineNumbersMock,
                         getPreloadResultConverter())
                 .get(20, TimeUnit.SECONDS);
 
-        Assertions.assertThat(instanceIds).isEqualTo(instanceIdsMock);
+        Assertions.assertThat(instanceIds.isPresent()).isTrue();
+        Assertions.assertThat(instanceIds.get()).isEqualTo(instanceIdsMock);
     }
 
     @Test
@@ -86,13 +87,14 @@ public class OrdersPreloaderHelperTest {
         when(ordersClient.getPoLineCollection(eq(orderLinesCql), any()))
                 .thenReturn(CompletableFuture.completedFuture(Optional.of(poLineCollectionMock)));
 
-        List<String> instanceIds = ordersPreloaderHelper.preload(createEventPayload(),
+        Optional<List<String>> instanceIds = ordersPreloaderHelper.preload(createEventPayload(),
                         PreloadingFields.VRN,
                         vendorReferenceNumbersMock,
                         getPreloadResultConverter())
                 .get(20, TimeUnit.SECONDS);
 
-        Assertions.assertThat(instanceIds).isEqualTo(instanceIdsMock);
+      Assertions.assertThat(instanceIds.isPresent()).isTrue();
+      Assertions.assertThat(instanceIds.get()).isEqualTo(instanceIdsMock);
     }
 
     @Test
@@ -108,17 +110,17 @@ public class OrdersPreloaderHelperTest {
 
     @Test
     @SneakyThrows
-    public void shouldFailOnEmptyResponseFromOrdersClient() {
+    public void shouldReturnEmptyOptionalOnEmptyResponseFromOrdersClient() {
         when(ordersClient.getPoLineCollection(any(), any()))
                 .thenReturn(CompletableFuture.completedFuture(Optional.empty()));
 
-        Assertions.assertThatThrownBy(() -> ordersPreloaderHelper.preload(createEventPayload(),
-                                PreloadingFields.POL,
-                                Collections.singletonList(UUID.randomUUID().toString()),
-                                getPreloadResultConverter())
-                        .get(20, TimeUnit.SECONDS))
-                .getCause()
-                .hasMessage(NOT_FOUND_POL_MESSAGE);
+        Optional<List<String>> instanceIds = ordersPreloaderHelper.preload(createEventPayload(),
+            PreloadingFields.POL,
+            Collections.singletonList(UUID.randomUUID().toString()),
+            getPreloadResultConverter())
+          .get(20, TimeUnit.SECONDS);
+
+        Assertions.assertThat(instanceIds.isEmpty()).isTrue();
     }
 
     private Function<JsonArray, List<String>> getPreloadResultConverter() {
