@@ -94,6 +94,31 @@ public class InstancePreloaderTest {
 
     @Test
     @SneakyThrows
+    public void shouldReturnNullLoadQueryWhenLoadedNoPol() {
+        MatchExpression incomingMatchExpression = new MatchExpression()
+          .withDataValueType(VALUE_FROM_RECORD)
+          .withFields(List.of(
+            new Field().withLabel("field").withValue("935"),
+            new Field().withLabel("indicator1").withValue(""),
+            new Field().withLabel("indicator2").withValue(""),
+            new Field().withLabel("recordSubfield").withValue("a")
+          ));
+        DataImportEventPayload eventPayload = createEventPayload();
+        MatchDetail matchDetail =((MatchProfile) eventPayload.getCurrentNode().getContent()).getMatchDetails().get(0);
+        matchDetail.setIncomingMatchExpression(incomingMatchExpression);
+
+        when(ordersPreloaderHelper.preload(eq(eventPayload), eq(PreloadingFields.POL), any(), any()))
+          .thenReturn(CompletableFuture.completedFuture(Optional.empty()));
+
+        LoadQuery initialLoadQuery = LoadQueryBuilder.build(ListValue.of(POLS), matchDetail);
+        LoadQuery loadQuery = preloader.preload(initialLoadQuery, eventPayload)
+          .get(20, TimeUnit.SECONDS);
+
+        Assertions.assertThat(loadQuery).isNull();
+    }
+
+    @Test
+    @SneakyThrows
     public void shouldReturnNullForNullLoadQuery() {
         LoadQuery loadQuery = preloader.preload(null, createEventPayload())
                 .get(20, TimeUnit.SECONDS);
