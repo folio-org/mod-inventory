@@ -379,9 +379,11 @@ public final class AdditionalFieldsUtil {
    *
    * @param record    record that needs to be updated
    * @param fieldName tag of the field
+   * @param subfield  subfield of the field
+   * @param value     value of the field
    * @return true if succeeded, false otherwise
    */
-  public static boolean removeField(Record record, String fieldName) {
+  public static boolean removeField(Record record, String fieldName, char subfield, String value) {
     boolean isFieldRemoveSucceed = false;
     try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
       if (record != null && record.getParsedRecord() != null && record.getParsedRecord().getContent() != null) {
@@ -389,7 +391,12 @@ public final class AdditionalFieldsUtil {
         MarcJsonWriter marcJsonWriter = new MarcJsonWriter(baos);
         org.marc4j.marc.Record marcRecord = computeMarcRecord(record);
         if (marcRecord != null) {
-          isFieldRemoveSucceed = removeFirstFoundFieldByName(marcRecord, fieldName);
+          if (StringUtils.isEmpty(value)) {
+            isFieldRemoveSucceed = removeFirstFoundFieldByName(marcRecord, fieldName);
+          } else {
+            isFieldRemoveSucceed = removeFieldByNameAndValue(marcRecord, fieldName, subfield, value);
+          }
+
           if (isFieldRemoveSucceed) {
             // use stream writer to recalculate leader
             marcStreamWriter.write(marcRecord);
@@ -409,6 +416,19 @@ public final class AdditionalFieldsUtil {
     return isFieldRemoveSucceed;
   }
 
+  private static boolean removeFieldByNameAndValue(org.marc4j.marc.Record marcRecord, String fieldName, char subfield, String value) {
+    boolean isFieldFound = false;
+    List<VariableField> variableFields = marcRecord.getVariableFields(fieldName);
+    for (VariableField variableField : variableFields) {
+      if (isFieldContainsValue(variableField, subfield, value)) {
+        marcRecord.removeVariableField(variableField);
+        isFieldFound = true;
+        break;
+      }
+    }
+    return isFieldFound;
+  }
+
   private static boolean removeFirstFoundFieldByName(org.marc4j.marc.Record marcRecord, String fieldName) {
     boolean isFieldFound = false;
     VariableField variableField = marcRecord.getVariableField(fieldName);
@@ -417,6 +437,38 @@ public final class AdditionalFieldsUtil {
       isFieldFound = true;
     }
     return isFieldFound;
+  }
+
+  /**
+   * Checks if the field contains a certain value in the selected subfield
+   *
+   * @param field    from MARC BIB record
+   * @param subfield subfield of the field
+   * @param value    value of the field
+   * @return true if contains, false otherwise
+   */
+  private static boolean isFieldContainsValue(VariableField field, char subfield, String value) {
+    boolean isContains = false;
+    if (field instanceof DataField) {
+      for (Subfield sub : ((DataField) field).getSubfields(subfield)) {
+        if (isNotEmpty(sub.getData()) && sub.getData().contains(value.trim())) {
+          isContains = true;
+          break;
+        }
+      }
+    }
+    return isContains;
+  }
+
+  /**
+   * remove field from marc record
+   *
+   * @param record record that needs to be updated
+   * @param field  tag of the field
+   * @return true if succeeded, false otherwise
+   */
+  public static boolean removeField(Record record, String field) {
+    return removeField(record, field, '\0', null);
   }
 
   /**
@@ -528,5 +580,16 @@ public final class AdditionalFieldsUtil {
 
   private static String getRecordId(Record record) {
     return record != null ? record.getId() : "";
+  }
+
+  public static void remove035FieldWhenRecordContainsHrId(Record record) {
+      if(Record.RecordType.MARC_BIB.equals(record.getRecordType())) {
+        String hrid = getValueFromControlledField(record, TAG_001);
+        remove035WithActualHrId(record, hrid);
+      }
+  }
+
+  public static void remove035WithActualHrId(Record record, String actualHrId) {
+    removeField(record,  TAG_001, 'a', actualHrId);
   }
 }

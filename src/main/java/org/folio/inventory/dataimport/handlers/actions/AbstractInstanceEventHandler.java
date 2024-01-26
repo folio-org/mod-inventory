@@ -1,25 +1,44 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import static java.lang.String.format;
+import static org.codehaus.plexus.util.StringUtils.isNotEmpty;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.http.HttpClient;
+import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
+import org.folio.HttpStatus;
+import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
+import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.mapping.defaultmapper.RecordMapper;
 import org.folio.processing.mapping.defaultmapper.RecordMapperBuilder;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
-import org.folio.rest.jaxrs.model.Record;
+import org.folio.rest.client.SourceStorageRecordsClient;
 
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import org.folio.rest.jaxrs.model.AdditionalInfo;
+import org.folio.rest.jaxrs.model.EntityType;
+import org.folio.rest.jaxrs.model.ExternalIdsHolder;
+import org.folio.rest.jaxrs.model.ParsedRecord;
+import org.folio.rest.jaxrs.model.Record;
+import org.folio.rest.jaxrs.model.Record;
 
 public abstract class AbstractInstanceEventHandler implements EventHandler {
   protected static final Logger LOGGER = LogManager.getLogger(AbstractInstanceEventHandler.class);
@@ -29,9 +48,20 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   protected static final List<String> requiredFields = Arrays.asList("source", "title", "instanceTypeId");
 
   protected final Storage storage;
+  @Getter
+  private final PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
+  @Getter
+  private final MappingMetadataCache mappingMetadataCache;
+  @Getter
+  private final HttpClient httpClient;
 
-  public AbstractInstanceEventHandler(Storage storage) {
+  public AbstractInstanceEventHandler(Storage storage,
+                                      PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper,
+                                      MappingMetadataCache mappingMetadataCache, HttpClient httpClient) {
     this.storage = storage;
+    this.mappingMetadataCache = mappingMetadataCache;
+    this.precedingSucceedingTitlesHelper = precedingSucceedingTitlesHelper;
+    this.httpClient = httpClient;
   }
 
   protected void prepareEvent(DataImportEventPayload dataImportEventPayload) {
@@ -56,6 +86,125 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     } catch (Exception e) {
       LOGGER.error("Failed to map Record to Instance", e);
       throw new JsonMappingException("Error in default mapper.", e);
+    }
+  }
+
+  protected Future<Instance> saveRecordInSrsAndHandleResponse(DataImportEventPayload payload, Record record,
+                                                            Instance instance, InstanceCollection instanceCollection) {
+    Promise<Instance> promise = Promise.promise();
+    getSourceStorageRecordsClient(payload).postSourceStorageRecords(record)
+      .onComplete(ar -> {
+        var result = ar.result();
+        if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_CREATED.toInt()) {
+          payload.getContext().put(EntityType.MARC_BIBLIOGRAPHIC.value(),
+            Json.encode(encodeParsedRecordContent(result.bodyAsJson(Record.class))));
+          LOGGER.info("Created MARC record in SRS with id: '{}', instanceId: '{}', from tenant: {}, jobExecutionId: {}",
+            record.getId(), instance.getId(), payload.getTenant(), payload.getJobExecutionId());
+          promise.complete(instance);
+        } else {
+          String msg = format("Failed to create MARC record in SRS, instanceId: '%s', jobExecutionId: '%s', status code: %s, Record: %s",
+            instance.getId(), payload.getJobExecutionId(), result != null ? result.statusCode() : "", result != null ? result.bodyAsString() : "");
+          LOGGER.warn(msg);
+          deleteInstance(instance.getId(), payload.getJobExecutionId(), instanceCollection);
+          promise.fail(msg);
+        }
+      });
+    return promise.future();
+  }
+
+  protected Future<Instance> putRecordInSrsAndHandleResponse(DataImportEventPayload payload, Record record,
+                                                             Instance instance, String matchedId) {
+    Promise<Instance> promise = Promise.promise();
+    getSourceStorageRecordsClient(payload).putSourceStorageRecordsGenerationById(matchedId ,record)
+      .onComplete(ar -> {
+        var result = ar.result();
+        if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_OK.toInt()) {
+          payload.getContext().put(EntityType.MARC_BIBLIOGRAPHIC.value(),
+            Json.encode(encodeParsedRecordContent(result.bodyAsJson(Record.class))));
+          LOGGER.info("Update MARC record in SRS with id: '{}', instanceId: '{}', from tenant: {}, jobExecutionId: {}",
+            record.getId(), instance.getId(), payload.getTenant(), payload.getJobExecutionId());
+          promise.complete(instance);
+        } else {
+          String msg = format("Failed to update MARC record in SRS, instanceId: '%s', jobExecutionId: '%s', status code: %s, Record: %s",
+            instance.getId(), payload.getJobExecutionId(), result != null ? result.statusCode() : "", result != null ? result.bodyAsString() : "");
+          LOGGER.warn(msg);
+          promise.fail(msg);
+        }
+      });
+    return promise.future();
+  }
+
+  protected Future<Instance> executeFieldsManipulation(Instance instance, Record record) {
+    AdditionalFieldsUtil.fill001FieldInMarcRecord(record, instance.getHrid());
+    if (StringUtils.isBlank(record.getMatchedId())) {
+      record.setMatchedId(record.getId());
+    }
+    setExternalIds(record, instance);
+    return AdditionalFieldsUtil.addFieldToMarcRecord(record, TAG_999, 'i', instance.getId())
+      ? Future.succeededFuture(instance)
+      : Future.failedFuture(format("Failed to add instance id '%s' to record with id '%s'", instance.getId(), record.getId()));
+  }
+
+  /**
+   * Adds specified externalId and externalHrid to record and additional custom field with externalId to parsed record.
+   *
+   * @param record   record to update
+   * @param instance externalEntity in Json
+   */
+  protected void setExternalIds(Record record, Instance instance) {
+    if (record.getExternalIdsHolder() == null) {
+      record.setExternalIdsHolder(new ExternalIdsHolder());
+    }
+    String externalId = record.getExternalIdsHolder().getInstanceId();
+    String externalHrid = record.getExternalIdsHolder().getInstanceHrid();
+    if (isNotEmpty(externalId) || isNotEmpty(externalHrid)) {
+      if (AdditionalFieldsUtil.isFieldsFillingNeeded(record, instance)) {
+        setIdAndHrid(record, instance);
+      }
+    } else {
+      setIdAndHrid(record, instance);
+    }
+  }
+
+  private void deleteInstance(String id, String jobExecutionId, InstanceCollection instanceCollection) {
+    Promise<Void> promise = Promise.promise();
+    instanceCollection.delete(id, success -> {
+        LOGGER.info("deleteInstance:: Instance was deleted by id: '{}', jobExecutionId: '{}'", id, jobExecutionId);
+        promise.complete(success.getResult());
+      },
+      failure -> {
+        LOGGER.warn("deleteInstance:: Error deleting Instance by id: '{}', jobExecutionId: '{}', cause: {}, status code: {}",
+          id, jobExecutionId, failure.getReason(), failure.getStatusCode());
+        promise.fail(failure.getReason());
+      });
+    promise.future();
+  }
+
+  public SourceStorageRecordsClient getSourceStorageRecordsClient(DataImportEventPayload payload) {
+    return new SourceStorageRecordsClient(payload.getOkapiUrl(), payload.getTenant(),
+      payload.getToken(), getHttpClient());
+  }
+
+  private Record encodeParsedRecordContent(Record record) {
+    ParsedRecord parsedRecord = record.getParsedRecord();
+    if (parsedRecord != null) {
+      parsedRecord.setContent(Json.encode(parsedRecord.getContent()));
+      return record.withParsedRecord(parsedRecord);
+    }
+    return record;
+  }
+
+  private void setIdAndHrid(Record record, Instance instance) {
+    record.getExternalIdsHolder().setInstanceId(instance.getId());
+    record.getExternalIdsHolder().setInstanceHrid(instance.getHrid());
+  }
+
+  protected void setSuppressFormDiscovery(Record record, boolean suppressFromDiscovery) {
+    AdditionalInfo info = record.getAdditionalInfo();
+    if (info != null) {
+      info.setSuppressDiscovery(suppressFromDiscovery);
+    } else {
+      record.setAdditionalInfo(new AdditionalInfo().withSuppressDiscovery(suppressFromDiscovery));
     }
   }
 }
