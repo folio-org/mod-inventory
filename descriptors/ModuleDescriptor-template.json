@@ -392,7 +392,8 @@
             "inventory-storage.instance-relationships.collection.get",
             "inventory-storage.instance-relationships.item.post",
             "inventory-storage.instance-relationships.item.put",
-            "inventory-storage.instance-relationships.item.delete"
+            "inventory-storage.instance-relationships.item.delete",
+            "user-tenants.collection.get"
           ]
         },
         {
@@ -412,7 +413,8 @@
             "inventory-storage.instance-relationships.collection.get",
             "inventory-storage.instance-relationships.item.post",
             "inventory-storage.instance-relationships.item.put",
-            "inventory-storage.instance-relationships.item.delete"
+            "inventory-storage.instance-relationships.item.delete",
+            "user-tenants.collection.get"
           ]
         },
         {
@@ -456,7 +458,8 @@
             "inventory-storage.instance-relationships.collection.get",
             "inventory-storage.instance-relationships.item.post",
             "inventory-storage.instance-relationships.item.put",
-            "inventory-storage.instance-relationships.item.delete"
+            "inventory-storage.instance-relationships.item.delete",
+            "user-tenants.collection.get"
           ]
         }
       ]
