@@ -113,6 +113,7 @@ class ItemRepresentation {
     includeIfPresent(representation, Item.ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY, item.getItemLevelCallNumberSuffix());
     includeIfPresent(representation, Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY, item.getItemLevelCallNumberTypeId());
     includeIfPresent(representation, Item.VOLUME_KEY, item.getVolume());
+    includeIfPresent(representation, "displaySummary", item.getDisplaySummary());
     includeIfPresent(representation, "enumeration", item.getEnumeration());
     includeIfPresent(representation, "chronology", item.getChronology());
     includeIfPresent(representation, Item.COPY_NUMBER_KEY, item.getCopyNumber());
