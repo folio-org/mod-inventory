@@ -26,7 +26,8 @@ public class InventoryKafkaTopicService {
 
     return new InventoryKafkaTopic[] {instanceCreated, holdingCreated,
                                       itemCreated, instanceMatched, holdingMatched, itemMatched,
-                                      instanceUpdated, holdingUpdated, itemUpdated, instanceNotMatched, authorityUpdated};
+                                      instanceUpdated, holdingUpdated, itemUpdated, instanceNotMatched,
+                                      holdingNotMatched, itemNotMatched, authorityUpdated};
   }
 
   private Integer instanceCreatedPartitions() {
