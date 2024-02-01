@@ -66,8 +66,8 @@ public class OrdersPreloaderHelperTest {
                         getPreloadResultConverter())
                 .get(20, TimeUnit.SECONDS);
 
-        Assertions.assertThat(instanceIds.isPresent()).isTrue();
-        Assertions.assertThat(instanceIds.get()).isEqualTo(instanceIdsMock);
+        Assertions.assertThat(instanceIds).isPresent();
+        Assertions.assertThat(instanceIds).contains(instanceIdsMock);
     }
 
     @Test
@@ -93,8 +93,8 @@ public class OrdersPreloaderHelperTest {
                         getPreloadResultConverter())
                 .get(20, TimeUnit.SECONDS);
 
-      Assertions.assertThat(instanceIds.isPresent()).isTrue();
-      Assertions.assertThat(instanceIds.get()).isEqualTo(instanceIdsMock);
+      Assertions.assertThat(instanceIds).isPresent();
+      Assertions.assertThat(instanceIds).contains(instanceIdsMock);
     }
 
     @Test
@@ -120,7 +120,7 @@ public class OrdersPreloaderHelperTest {
             getPreloadResultConverter())
           .get(20, TimeUnit.SECONDS);
 
-        Assertions.assertThat(instanceIds.isEmpty()).isTrue();
+        Assertions.assertThat(instanceIds).isNotPresent();
     }
 
     private Function<JsonArray, List<String>> getPreloadResultConverter() {
