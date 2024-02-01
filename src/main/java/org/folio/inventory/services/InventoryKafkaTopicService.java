@@ -7,8 +7,6 @@ import org.folio.kafka.services.KafkaTopic;
 public class InventoryKafkaTopicService {
 
   public KafkaTopic[] createTopicObjects() {
-    var instanceCreatedReadyForPostProcessing = new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING",
-      instanceCreatedReadyForPostProcessingPartitions());
     var instanceCreated = new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_CREATED", instanceCreatedPartitions());
     var holdingCreated = new InventoryKafkaTopic("DI_INVENTORY_HOLDING_CREATED", holdingCreatedPartitions());
     var itemCreated = new InventoryKafkaTopic("DI_INVENTORY_ITEM_CREATED", itemCreatedPartitions());
@@ -22,10 +20,11 @@ public class InventoryKafkaTopicService {
     var itemUpdated = new InventoryKafkaTopic("DI_INVENTORY_ITEM_UPDATED", itemUpdatedPartitions());
 
     var instanceNotMatched = new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_NOT_MATCHED", instanceNotMatchedPartitions());
-
+    var holdingNotMatched = new InventoryKafkaTopic("DI_INVENTORY_HOLDING_NOT_MATCHED", holdingNotMatchedPartitions());
+    var itemNotMatched = new InventoryKafkaTopic("DI_INVENTORY_ITEM_NOT_MATCHED", itemNotMatchedPartitions());
     var authorityUpdated = new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_UPDATED", authorityUpdatedPartitions());
 
-    return new InventoryKafkaTopic[] {instanceCreatedReadyForPostProcessing, instanceCreated, holdingCreated,
+    return new InventoryKafkaTopic[] {instanceCreated, holdingCreated,
                                       itemCreated, instanceMatched, holdingMatched, itemMatched,
                                       instanceUpdated, holdingUpdated, itemUpdated, instanceNotMatched, authorityUpdated};
   }
@@ -36,10 +35,6 @@ public class InventoryKafkaTopicService {
 
   private Integer holdingCreatedPartitions() {
     return Integer.valueOf(firstNonBlank(System.getenv("DI_INVENTORY_HOLDING_CREATED_PARTITIONS"), "1"));
-  }
-
-  private Integer instanceCreatedReadyForPostProcessingPartitions() {
-    return Integer.valueOf(firstNonBlank(System.getenv("DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING_PARTITIONS"), "1"));
   }
 
   private Integer itemCreatedPartitions() {
@@ -72,6 +67,14 @@ public class InventoryKafkaTopicService {
 
   private Integer instanceNotMatchedPartitions() {
     return Integer.valueOf(firstNonBlank(System.getenv("DI_INVENTORY_INSTANCE_NOT_MATCHED_PARTITIONS"), "1"));
+  }
+
+  private Integer itemNotMatchedPartitions() {
+    return Integer.valueOf(firstNonBlank(System.getenv("DI_INVENTORY_HOLDING_NOT_MATCHED_PARTITIONS"), "1"));
+  }
+
+  private Integer holdingNotMatchedPartitions() {
+    return Integer.valueOf(firstNonBlank(System.getenv("DI_INVENTORY_ITEM_NOT_MATCHED_PARTITIONS"), "1"));
   }
 
   private Integer authorityUpdatedPartitions() {

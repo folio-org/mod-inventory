@@ -50,7 +50,6 @@ public class KafkaAdminClientServiceTest {
     mockClient = mock(KafkaAdminClient.class);
     inventoryKafkaTopicService = mock(InventoryKafkaTopicService.class);
     KafkaTopic[] topicObjects = {
-      new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING", 1),
         new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_CREATED", 1),
         new InventoryKafkaTopic("DI_INVENTORY_HOLDING_CREATED", 1),
         new InventoryKafkaTopic("DI_INVENTORY_ITEM_CREATED", 1),
@@ -61,6 +60,8 @@ public class KafkaAdminClientServiceTest {
         new InventoryKafkaTopic("DI_INVENTORY_HOLDING_UPDATED", 1),
         new InventoryKafkaTopic("DI_INVENTORY_ITEM_UPDATED", 1),
         new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_NOT_MATCHED", 1),
+        new InventoryKafkaTopic("DI_INVENTORY_HOLDING_NOT_MATCHED", 1),
+        new InventoryKafkaTopic("DI_INVENTORY_ITEM_NOT_MATCHED", 1),
         new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_UPDATED", 1)
     };
 
@@ -149,7 +150,6 @@ public class KafkaAdminClientServiceTest {
   }
 
   private final Set<String> allExpectedTopics = Set.of(
-    "folio.foo-tenant.inventory.DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING",
       "folio.foo-tenant.inventory.DI_INVENTORY_INSTANCE_CREATED",
       "folio.foo-tenant.inventory.DI_INVENTORY_HOLDING_CREATED",
       "folio.foo-tenant.inventory.DI_INVENTORY_ITEM_CREATED",
@@ -160,6 +160,8 @@ public class KafkaAdminClientServiceTest {
       "folio.foo-tenant.inventory.DI_INVENTORY_HOLDING_UPDATED",
       "folio.foo-tenant.inventory.DI_INVENTORY_ITEM_UPDATED",
       "folio.foo-tenant.inventory.DI_INVENTORY_INSTANCE_NOT_MATCHED",
+      "folio.foo-tenant.inventory.DI_INVENTORY_HOLDING_NOT_MATCHED",
+      "folio.foo-tenant.inventory.DI_INVENTORY_ITEM_NOT_MATCHED",
       "folio.foo-tenant.inventory.DI_INVENTORY_AUTHORITY_UPDATED"
   );
 }
