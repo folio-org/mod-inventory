@@ -433,7 +433,11 @@
           "methods": ["DELETE"],
           "pathPattern": "/inventory/instances/{id}/mark-deleted",
           "permissionsRequired": [],
-          "modulePermissions": []
+          "modulePermissions": [
+            "inventory-storage.instances.item.get",
+            "inventory-storage.instances.item.put",
+            "source-storage.records.update"
+          ]
         }
       ]
     },
