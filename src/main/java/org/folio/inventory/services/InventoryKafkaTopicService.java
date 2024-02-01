@@ -1,78 +1,80 @@
 package org.folio.inventory.services;
 
+import static org.apache.commons.lang3.StringUtils.firstNonBlank;
+
 import org.folio.kafka.services.KafkaTopic;
 
 public class InventoryKafkaTopicService {
 
   public KafkaTopic[] createTopicObjects() {
     var instanceCreatedReadyForPostProcessing = new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING",
-      instanceCreatedReadyForPostProcessingNumPartitions());
-    var instanceCreated = new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_CREATED", instanceCreatedNumPartitions());
-    var holdingCreated = new InventoryKafkaTopic("DI_INVENTORY_HOLDING_CREATED", holdingCreatedNumPartitions());
-    var itemCreated = new InventoryKafkaTopic("DI_INVENTORY_ITEM_CREATED", itemCreatedNumPartitions());
+      instanceCreatedReadyForPostProcessingPartitions());
+    var instanceCreated = new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_CREATED", instanceCreatedPartitions());
+    var holdingCreated = new InventoryKafkaTopic("DI_INVENTORY_HOLDING_CREATED", holdingCreatedPartitions());
+    var itemCreated = new InventoryKafkaTopic("DI_INVENTORY_ITEM_CREATED", itemCreatedPartitions());
 
-    var instanceMatched = new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_MATCHED", instanceMatchedNumPartitions());
-    var holdingMatched = new InventoryKafkaTopic("DI_INVENTORY_HOLDING_MATCHED", holdingMatchedNumPartitions());
-    var itemMatched = new InventoryKafkaTopic("DI_INVENTORY_ITEM_MATCHED", itemMatchedNumPartitions());
+    var instanceMatched = new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_MATCHED", instanceMatchedPartitions());
+    var holdingMatched = new InventoryKafkaTopic("DI_INVENTORY_HOLDING_MATCHED", holdingMatchedPartitions());
+    var itemMatched = new InventoryKafkaTopic("DI_INVENTORY_ITEM_MATCHED", itemMatchedPartitions());
 
-    var instanceUpdated = new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_UPDATED", instanceUpdatedNumPartitions());
-    var holdingUpdated = new InventoryKafkaTopic("DI_INVENTORY_HOLDING_UPDATED", holdingUpdatedNumPartitions());
-    var itemUpdated = new InventoryKafkaTopic("DI_INVENTORY_ITEM_UPDATED", itemUpdatedNumPartitions());
+    var instanceUpdated = new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_UPDATED", instanceUpdatedPartitions());
+    var holdingUpdated = new InventoryKafkaTopic("DI_INVENTORY_HOLDING_UPDATED", holdingUpdatedPartitions());
+    var itemUpdated = new InventoryKafkaTopic("DI_INVENTORY_ITEM_UPDATED", itemUpdatedPartitions());
 
-    var instanceNotMatched = new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_NOT_MATCHED", instanceNotMatchedNumPartitions());
+    var instanceNotMatched = new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_NOT_MATCHED", instanceNotMatchedPartitions());
 
-    var authorityUpdated = new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_UPDATED", authorityUpdatedNumPartitions());
+    var authorityUpdated = new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_UPDATED", authorityUpdatedPartitions());
 
     return new InventoryKafkaTopic[] {instanceCreatedReadyForPostProcessing, instanceCreated, holdingCreated,
                                       itemCreated, instanceMatched, holdingMatched, itemMatched,
                                       instanceUpdated, holdingUpdated, itemUpdated, instanceNotMatched, authorityUpdated};
   }
 
-  private Integer instanceCreatedNumPartitions() {
-    return Integer.valueOf(System.getProperty("inventory.kafka.instanceCreated.partitions", "1"));
+  private Integer instanceCreatedPartitions() {
+    return Integer.valueOf(firstNonBlank(System.getenv("DI_INVENTORY_INSTANCE_CREATED_PARTITIONS"), "1"));
   }
 
-  private Integer holdingCreatedNumPartitions() {
-    return Integer.valueOf(System.getProperty("inventory.kafka.holdingCreated.partitions", "1"));
+  private Integer holdingCreatedPartitions() {
+    return Integer.valueOf(firstNonBlank(System.getenv("DI_INVENTORY_HOLDING_CREATED_PARTITIONS"), "1"));
   }
 
-  private Integer instanceCreatedReadyForPostProcessingNumPartitions() {
-    return Integer.valueOf(System.getProperty("inventory.kafka.instanceCreatedReadyForPostProcessing.partitions", "1"));
+  private Integer instanceCreatedReadyForPostProcessingPartitions() {
+    return Integer.valueOf(firstNonBlank(System.getenv("DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING_PARTITIONS"), "1"));
   }
 
-  private Integer itemCreatedNumPartitions() {
-    return Integer.valueOf(System.getProperty("inventory.kafka.itemCreated.partitions", "1"));
+  private Integer itemCreatedPartitions() {
+    return Integer.valueOf(firstNonBlank(System.getenv("DI_INVENTORY_ITEM_CREATED_PARTITIONS"), "1"));
   }
 
-  private Integer instanceMatchedNumPartitions() {
-    return Integer.valueOf(System.getProperty("inventory.kafka.instanceMatched.partitions", "1"));
+  private Integer instanceMatchedPartitions() {
+    return Integer.valueOf(firstNonBlank(System.getenv("DI_INVENTORY_INSTANCE_MATCHED_PARTITIONS"), "1"));
   }
 
-  private Integer holdingMatchedNumPartitions() {
-    return Integer.valueOf(System.getProperty("inventory.kafka.holdingMatched.partitions", "1"));
+  private Integer holdingMatchedPartitions() {
+    return Integer.valueOf(firstNonBlank(System.getenv("DI_INVENTORY_HOLDING_MATCHED_PARTITIONS"), "1"));
   }
 
-  private Integer itemMatchedNumPartitions() {
-    return Integer.valueOf(System.getProperty("inventory.kafka.itemMatched.partitions", "1"));
+  private Integer itemMatchedPartitions() {
+    return Integer.valueOf(firstNonBlank(System.getenv("DI_INVENTORY_ITEM_MATCHED_PARTITIONS"), "1"));
   }
 
-  private Integer instanceUpdatedNumPartitions() {
-    return Integer.valueOf(System.getProperty("inventory.kafka.instanceUpdated.partitions", "1"));
+  private Integer instanceUpdatedPartitions() {
+    return Integer.valueOf(firstNonBlank(System.getenv("DI_INVENTORY_INSTANCE_UPDATED_PARTITIONS"), "1"));
   }
 
-  private Integer holdingUpdatedNumPartitions() {
-    return Integer.valueOf(System.getProperty("inventory.kafka.holdingUpdated.partitions", "1"));
+  private Integer holdingUpdatedPartitions() {
+    return Integer.valueOf(firstNonBlank(System.getenv("DI_INVENTORY_HOLDING_UPDATED_PARTITIONS"), "1"));
   }
 
-  private Integer itemUpdatedNumPartitions() {
-    return Integer.valueOf(System.getProperty("inventory.kafka.itemUpdated.partitions", "1"));
+  private Integer itemUpdatedPartitions() {
+    return Integer.valueOf(firstNonBlank(System.getenv("DI_INVENTORY_ITEM_UPDATED_PARTITIONS"), "1"));
   }
 
-  private Integer instanceNotMatchedNumPartitions() {
-    return Integer.valueOf(System.getProperty("inventory.kafka.instanceNotMatched.partitions", "1"));
+  private Integer instanceNotMatchedPartitions() {
+    return Integer.valueOf(firstNonBlank(System.getenv("DI_INVENTORY_INSTANCE_NOT_MATCHED_PARTITIONS"), "1"));
   }
 
-  private Integer authorityUpdatedNumPartitions() {
-    return Integer.valueOf(System.getProperty("inventory.kafka.authorityUpdated.partitions", "1"));
+  private Integer authorityUpdatedPartitions() {
+    return Integer.valueOf(firstNonBlank(System.getenv("DI_INVENTORY_AUTHORITY_UPDATED_PARTITIONS"), "1"));
   }
 }

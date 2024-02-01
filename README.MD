@@ -107,6 +107,20 @@ After setup, it is good to check logs in all related modules for errors.
     * "_inventory.kafka.MarcBibUpdateConsumerVerticle.instancesNumber_": 3
     * "_inventory.kafka.MarcBibUpdateConsumer.loadLimit_": 5
     * "_inventory.kafka.MarcBibUpdateConsumer.maxDistributionNumber_": 100
+* Variables for setting number of partitions of topics:
+  * DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING
+  * DI_INVENTORY_INSTANCE_CREATED
+  * DI_INVENTORY_HOLDING_CREATED
+  * DI_INVENTORY_ITEM_CREATED
+  * DI_INVENTORY_INSTANCE_MATCHED
+  * DI_INVENTORY_HOLDING_MATCHED
+  * DI_INVENTORY_ITEM_MATCHED
+  * DI_INVENTORY_INSTANCE_UPDATED
+  * DI_INVENTORY_HOLDING_UPDATED
+  * DI_INVENTORY_ITEM_UPDATED
+  * DI_INVENTORY_INSTANCE_NOT_MATCHED
+  * DI_INVENTORY_AUTHORITY_UPDATED
+Default value for all partitions is 1
 
 # Making Requests
 
