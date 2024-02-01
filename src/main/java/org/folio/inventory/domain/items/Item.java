@@ -63,6 +63,7 @@ public class Item {
   private String accessionNumber;
   private String itemIdentifier;
   private List<String> yearCaption = new ArrayList<>();
+  private String displaySummary;
   private String enumeration;
   private String chronology;
   private String copyNumber;
@@ -233,6 +234,15 @@ public class Item {
   public Item withVolume(String volume) {
     this.volume = volume;
     return this;
+  }
+
+  public Item withDisplaySummary(String displaySummary) {
+    this.displaySummary = displaySummary;
+    return this;
+  }
+
+  public String getDisplaySummary() {
+    return displaySummary;
   }
 
   public Item withEnumeration(String enumeration) {
@@ -526,6 +536,7 @@ public class Item {
             .withItemLevelCallNumberSuffix(this.itemLevelCallNumberSuffix)
             .withItemLevelCallNumberTypeId(this.itemLevelCallNumberTypeId)
             .withVolume(this.volume)
+            .withDisplaySummary(this.displaySummary)
             .withEnumeration(this.enumeration)
             .withChronology(this.chronology)
             .withCopyNumber(this.copyNumber)
@@ -563,6 +574,7 @@ public class Item {
       .withItemLevelCallNumberSuffix(this.itemLevelCallNumberSuffix)
       .withItemLevelCallNumberTypeId(this.itemLevelCallNumberTypeId)
       .withVolume(this.volume)
+      .withDisplaySummary(this.displaySummary)
       .withEnumeration(this.enumeration)
       .withChronology(this.chronology)
       .withCopyNumber(this.copyNumber)
