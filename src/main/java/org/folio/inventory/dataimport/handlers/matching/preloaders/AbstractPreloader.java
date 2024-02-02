@@ -52,11 +52,14 @@ public abstract class AbstractPreloader {
 
         return doPreloading(dataImportEventPayload, preloadingField.get(), preloadValues)
                 .thenApply(values -> {
+                    if (values.isEmpty()) {
+                      return null;
+                    }
                     matchExpression.setFields(Collections.singletonList(
                             new Field().withLabel("field").withValue(getLoaderTargetFieldName())));
                     matchDetail.setExistingMatchExpression(matchExpression);
 
-                    return LoadQueryBuilder.build(ListValue.of(values), matchDetail);
+                    return LoadQueryBuilder.build(ListValue.of(values.get()), matchDetail);
                 });
     }
 
@@ -86,7 +89,7 @@ public abstract class AbstractPreloader {
 
     protected abstract String getMatchEntityName();
     protected abstract String getLoaderTargetFieldName();
-    protected abstract CompletableFuture<List<String>> doPreloading(DataImportEventPayload eventPayload,
+    protected abstract CompletableFuture<Optional<List<String>>> doPreloading(DataImportEventPayload eventPayload,
                                                                     PreloadingFields preloadingField,
                                                                     List<String> loadingParameters);
 }
