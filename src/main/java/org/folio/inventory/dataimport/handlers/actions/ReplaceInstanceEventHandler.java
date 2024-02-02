@@ -142,10 +142,9 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         Context instanceUpdateContext = EventHandlingUtil.constructContext(targetInstanceTenantId, dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
         InstanceCollection instanceCollection = storage.getInstanceCollection(instanceUpdateContext);
 
-        //Check existing Instance source
         InstanceUtil.findInstanceById(instanceToUpdate.getId(), instanceCollection)
           .onSuccess(existingInstance -> {
-            LOGGER.info("handle:: Processed Instance jobExecutionId: {}.", dataImportEventPayload.getJobExecutionId());
+            LOGGER.info("handle:: Instance retrieved jobExecutionId: {}.", dataImportEventPayload.getJobExecutionId());
             processInstanceUpdate(dataImportEventPayload, instanceCollection, context, existingInstance, future, payloadContext);
           })
           .onFailure(e -> {
