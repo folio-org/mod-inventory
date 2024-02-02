@@ -12,6 +12,7 @@ import static org.folio.rest.jaxrs.model.MatchExpression.DataValueType.VALUE_FRO
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MATCH_PROFILE;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -80,7 +81,7 @@ public class InstancePreloaderTest {
         List<String> instanceIdsMock = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
 
         when(ordersPreloaderHelper.preload(eq(eventPayload), eq(PreloadingFields.POL), any(), any()))
-                .thenReturn(CompletableFuture.completedFuture(instanceIdsMock));
+                .thenReturn(CompletableFuture.completedFuture(Optional.of(instanceIdsMock)));
 
         LoadQuery initialLoadQuery = LoadQueryBuilder.build(ListValue.of(POLS), matchDetail);
         LoadQuery loadQuery = preloader.preload(initialLoadQuery, eventPayload)
@@ -89,6 +90,31 @@ public class InstancePreloaderTest {
         Assertions.assertThat(loadQuery.getCql()).isNotEqualTo(initialLoadQuery.getCql());
         Assertions.assertThat(loadQuery.getCql())
                 .isEqualTo(String.format("(id == \"%s\" OR id == \"%s\")", instanceIdsMock.get(0), instanceIdsMock.get(1)));
+    }
+
+    @Test
+    @SneakyThrows
+    public void shouldReturnNullLoadQueryWhenLoadedNoPol() {
+        MatchExpression incomingMatchExpression = new MatchExpression()
+          .withDataValueType(VALUE_FROM_RECORD)
+          .withFields(List.of(
+            new Field().withLabel("field").withValue("935"),
+            new Field().withLabel("indicator1").withValue(""),
+            new Field().withLabel("indicator2").withValue(""),
+            new Field().withLabel("recordSubfield").withValue("a")
+          ));
+        DataImportEventPayload eventPayload = createEventPayload();
+        MatchDetail matchDetail =((MatchProfile) eventPayload.getCurrentNode().getContent()).getMatchDetails().get(0);
+        matchDetail.setIncomingMatchExpression(incomingMatchExpression);
+
+        when(ordersPreloaderHelper.preload(eq(eventPayload), eq(PreloadingFields.POL), any(), any()))
+          .thenReturn(CompletableFuture.completedFuture(Optional.empty()));
+
+        LoadQuery initialLoadQuery = LoadQueryBuilder.build(ListValue.of(POLS), matchDetail);
+        LoadQuery loadQuery = preloader.preload(initialLoadQuery, eventPayload)
+          .get(20, TimeUnit.SECONDS);
+
+        Assertions.assertThat(loadQuery).isNull();
     }
 
     @Test
