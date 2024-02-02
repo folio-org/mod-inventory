@@ -33,6 +33,7 @@ public final class ItemUtil {
   public static final String NUMBER_OF_PIECES = "numberOfPieces";
   public static final String COPY_NUMBER = "copyNumber";
   public static final String CHRONOLOGY = "chronology";
+  public static final String DISPLAY_SUMMARY = "displaySummary";
   public static final String ENUMERATION = "enumeration";
   public static final String BARCODE = "barcode";
   public static final String NOTES = "notes";
@@ -102,6 +103,7 @@ public final class ItemUtil {
       .withItemLevelCallNumberSuffix(itemFromServer.getString(Item.ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY))
       .withItemLevelCallNumberTypeId(itemFromServer.getString(Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY))
       .withVolume(itemFromServer.getString(Item.VOLUME_KEY))
+      .withDisplaySummary(itemFromServer.getString(DISPLAY_SUMMARY))
       .withEnumeration(itemFromServer.getString(ENUMERATION))
       .withChronology(itemFromServer.getString(CHRONOLOGY))
       .withCopyNumber(itemFromServer.getString(COPY_NUMBER))
@@ -162,6 +164,7 @@ public final class ItemUtil {
     includeIfPresent(itemToSend, Item.ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY, item.getItemLevelCallNumberSuffix());
     includeIfPresent(itemToSend, Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY, item.getItemLevelCallNumberTypeId());
     includeIfPresent(itemToSend, Item.VOLUME_KEY, item.getVolume());
+    includeIfPresent(itemToSend, DISPLAY_SUMMARY, item.getDisplaySummary());
     includeIfPresent(itemToSend, ENUMERATION, item.getEnumeration());
     includeIfPresent(itemToSend, CHRONOLOGY, item.getChronology());
     includeIfPresent(itemToSend, NUMBER_OF_PIECES, item.getNumberOfPieces());
@@ -251,6 +254,7 @@ public final class ItemUtil {
       .withItemLevelCallNumberSuffix(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY))
       .withItemLevelCallNumberTypeId(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY))
       .withVolume(itemRequest.getString(Item.VOLUME_KEY))
+      .withDisplaySummary(itemRequest.getString(DISPLAY_SUMMARY))
       .withEnumeration(itemRequest.getString(ENUMERATION))
       .withChronology(itemRequest.getString(CHRONOLOGY))
       .withNumberOfPieces(itemRequest.getString(NUMBER_OF_PIECES))
@@ -311,6 +315,7 @@ public final class ItemUtil {
     includeIfPresent(itemJson, Item.ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY, item.getItemLevelCallNumberSuffix());
     includeIfPresent(itemJson, Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY, item.getItemLevelCallNumberTypeId());
     includeIfPresent(itemJson, Item.VOLUME_KEY, item.getVolume());
+    includeIfPresent(itemJson, DISPLAY_SUMMARY, item.getDisplaySummary());
     includeIfPresent(itemJson, ENUMERATION, item.getEnumeration());
     includeIfPresent(itemJson, CHRONOLOGY, item.getChronology());
     includeIfPresent(itemJson, NUMBER_OF_PIECES, item.getNumberOfPieces());
