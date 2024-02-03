@@ -49,9 +49,6 @@ import org.folio.util.PercentCodec;
 import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Test;
-
-import com.github.jsonldjava.core.JsonLdError;
-
 import api.support.ApiRoot;
 import api.support.ApiTests;
 import api.support.InstanceApiClient;
@@ -76,8 +73,7 @@ public class InstancesApiExamples extends ApiTests {
     throws InterruptedException,
     MalformedURLException,
     TimeoutException,
-    ExecutionException,
-    JsonLdError {
+    ExecutionException {
 
     String testNote = "this is a note";
     JsonArray adminNote = new JsonArray();
@@ -171,8 +167,7 @@ public class InstancesApiExamples extends ApiTests {
     throws InterruptedException,
     MalformedURLException,
     TimeoutException,
-    ExecutionException,
-    JsonLdError {
+    ExecutionException {
 
     String instanceId = UUID.randomUUID().toString();
     final String hrid = "in777";
