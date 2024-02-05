@@ -150,18 +150,18 @@ public class KafkaAdminClientServiceTest {
   }
 
   private final Set<String> allExpectedTopics = Set.of(
-      "folio.foo-tenant.inventory.DI_INVENTORY_INSTANCE_CREATED",
-      "folio.foo-tenant.inventory.DI_INVENTORY_HOLDING_CREATED",
-      "folio.foo-tenant.inventory.DI_INVENTORY_ITEM_CREATED",
-      "folio.foo-tenant.inventory.DI_INVENTORY_INSTANCE_MATCHED",
-      "folio.foo-tenant.inventory.DI_INVENTORY_HOLDING_MATCHED",
-      "folio.foo-tenant.inventory.DI_INVENTORY_ITEM_MATCHED",
-      "folio.foo-tenant.inventory.DI_INVENTORY_INSTANCE_UPDATED",
-      "folio.foo-tenant.inventory.DI_INVENTORY_HOLDING_UPDATED",
-      "folio.foo-tenant.inventory.DI_INVENTORY_ITEM_UPDATED",
-      "folio.foo-tenant.inventory.DI_INVENTORY_INSTANCE_NOT_MATCHED",
-      "folio.foo-tenant.inventory.DI_INVENTORY_HOLDING_NOT_MATCHED",
-      "folio.foo-tenant.inventory.DI_INVENTORY_ITEM_NOT_MATCHED",
-      "folio.foo-tenant.inventory.DI_INVENTORY_AUTHORITY_UPDATED"
+      "folio.foo-tenant.DI_INVENTORY_INSTANCE_CREATED",
+      "folio.foo-tenant.DI_INVENTORY_HOLDING_CREATED",
+      "folio.foo-tenant.DI_INVENTORY_ITEM_CREATED",
+      "folio.foo-tenant.DI_INVENTORY_INSTANCE_MATCHED",
+      "folio.foo-tenant.DI_INVENTORY_HOLDING_MATCHED",
+      "folio.foo-tenant.DI_INVENTORY_ITEM_MATCHED",
+      "folio.foo-tenant.DI_INVENTORY_INSTANCE_UPDATED",
+      "folio.foo-tenant.DI_INVENTORY_HOLDING_UPDATED",
+      "folio.foo-tenant.DI_INVENTORY_ITEM_UPDATED",
+      "folio.foo-tenant.DI_INVENTORY_INSTANCE_NOT_MATCHED",
+      "folio.foo-tenant.DI_INVENTORY_HOLDING_NOT_MATCHED",
+      "folio.foo-tenant.DI_INVENTORY_ITEM_NOT_MATCHED",
+      "folio.foo-tenant.DI_INVENTORY_AUTHORITY_UPDATED"
   );
 }
