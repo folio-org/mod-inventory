@@ -7,6 +7,7 @@ import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlin
 import static org.folio.inventory.support.CqlHelper.buildMultipleValuesCqlQuery;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
@@ -15,7 +16,6 @@ import io.vertx.core.json.JsonArray;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.client.OrdersClient;
 import org.folio.inventory.common.Context;
-import org.folio.processing.exceptions.MatchingException;
 
 public class OrdersPreloaderHelper {
     private OrdersClient ordersClient;
@@ -24,10 +24,10 @@ public class OrdersPreloaderHelper {
         this.ordersClient = ordersClient;
     }
 
-    public CompletableFuture<List<String>> preload(DataImportEventPayload eventPayload,
-                                                   PreloadingFields preloadingField,
-                                                   List<String> loadingParameters,
-                                                   Function<JsonArray, List<String>> convertPreloadResult) {
+    public CompletableFuture<Optional<List<String>>> preload(DataImportEventPayload eventPayload,
+                                                            PreloadingFields preloadingField,
+                                                            List<String> loadingParameters,
+                                                            Function<JsonArray, List<String>> convertPreloadResult) {
         if (isNull(loadingParameters) || loadingParameters.isEmpty()) {
             throw new IllegalArgumentException("Loading parameters for Orders preloading must not be empty");
         }
@@ -48,7 +48,7 @@ public class OrdersPreloaderHelper {
         }
     }
 
-    private CompletableFuture<List<String>> getPoLineCollection(String cql,
+    private CompletableFuture<Optional<List<String>>> getPoLineCollection(String cql,
                                                                 DataImportEventPayload eventPayload,
                                                                 Function<JsonArray, List<String>> convertPreloadResult) {
         Context context = constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl());
@@ -56,9 +56,9 @@ public class OrdersPreloaderHelper {
         return ordersClient.getPoLineCollection(cql, context)
                 .thenApply(poLines -> {
                     if (poLines.isEmpty() || poLines.get().isEmpty()) {
-                        throw new MatchingException("Not found POL");
+                        return Optional.empty();
                     }
-                    return convertPreloadResult.apply(poLines.get());
+                    return poLines.map(convertPreloadResult);
                 });
     }
 }
