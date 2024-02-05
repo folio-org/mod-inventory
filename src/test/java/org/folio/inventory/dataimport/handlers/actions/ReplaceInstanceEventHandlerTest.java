@@ -125,7 +125,6 @@ public class ReplaceInstanceEventHandlerTest {
   private static final Integer INSTANCE_VERSION = 1;
   private static final String INSTANCE_VERSION_AS_STRING = "1";
   private static final String MARC_INSTANCE_SOURCE = "MARC";
-  private String baseUrl;
   private final String localTenant = "tenant";
   private final String consortiumTenant = "consortiumTenant";
   private final UUID instanceId = UUID.randomUUID();
@@ -279,7 +278,7 @@ public class ReplaceInstanceEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString());
 
     CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
-    DataImportEventPayload actualDataImportEventPayload = future.get(400, TimeUnit.SECONDS);
+    DataImportEventPayload actualDataImportEventPayload = future.get(20, TimeUnit.SECONDS);
 
     assertEquals(DI_INVENTORY_INSTANCE_UPDATED.value(), actualDataImportEventPayload.getEventType());
     assertNotNull(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
@@ -379,8 +378,6 @@ public class ReplaceInstanceEventHandlerTest {
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
 
     mockInstance(CONSORTIUM_MARC.getValue());
-
-    baseUrl = mockServer.baseUrl();
 
     JsonObject centralTenantIdResponse = new JsonObject()
       .put("userTenants", new JsonArray().add(new JsonObject().put("centralTenantId", consortiumTenant)));
@@ -847,7 +844,7 @@ public class ReplaceInstanceEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString());
 
     CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
-    DataImportEventPayload actualDataImportEventPayload = future.get(400, TimeUnit.SECONDS);
+    DataImportEventPayload actualDataImportEventPayload = future.get(20, TimeUnit.SECONDS);
 
     assertEquals(DI_INVENTORY_INSTANCE_UPDATED.value(), actualDataImportEventPayload.getEventType());
     assertNotNull(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
