@@ -315,8 +315,11 @@ public final class AdditionalFieldsUtil {
       MarcReader reader = new MarcJsonReader(new ByteArrayInputStream(record.getParsedRecord().getContent().toString().getBytes()));
       if (reader.hasNext()) {
         org.marc4j.marc.Record marcRecord = reader.next();
-        VariableField field = marcRecord.getVariableFields(TAG_005).get(0);
-        needToUpdate = isNotProtected(fieldProtectionSettings, (ControlField) field);
+        List<VariableField> variableFields = marcRecord.getVariableFields(TAG_005);
+        if(!variableFields.isEmpty()) {
+          VariableField field = marcRecord.getVariableFields(TAG_005).get(0);
+          needToUpdate = isNotProtected(fieldProtectionSettings, (ControlField) field);
+        }
       }
     }
     return needToUpdate;
