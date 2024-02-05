@@ -7,27 +7,20 @@ import org.folio.kafka.services.KafkaTopic;
 public class InventoryKafkaTopicService {
 
   public KafkaTopic[] createTopicObjects() {
-    var instanceCreated = new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_CREATED", instanceCreatedPartitions());
-    var holdingCreated = new InventoryKafkaTopic("DI_INVENTORY_HOLDING_CREATED", holdingCreatedPartitions());
-    var itemCreated = new InventoryKafkaTopic("DI_INVENTORY_ITEM_CREATED", itemCreatedPartitions());
-
-    var instanceMatched = new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_MATCHED", instanceMatchedPartitions());
-    var holdingMatched = new InventoryKafkaTopic("DI_INVENTORY_HOLDING_MATCHED", holdingMatchedPartitions());
-    var itemMatched = new InventoryKafkaTopic("DI_INVENTORY_ITEM_MATCHED", itemMatchedPartitions());
-
-    var instanceUpdated = new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_UPDATED", instanceUpdatedPartitions());
-    var holdingUpdated = new InventoryKafkaTopic("DI_INVENTORY_HOLDING_UPDATED", holdingUpdatedPartitions());
-    var itemUpdated = new InventoryKafkaTopic("DI_INVENTORY_ITEM_UPDATED", itemUpdatedPartitions());
-
-    var instanceNotMatched = new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_NOT_MATCHED", instanceNotMatchedPartitions());
-    var holdingNotMatched = new InventoryKafkaTopic("DI_INVENTORY_HOLDING_NOT_MATCHED", holdingNotMatchedPartitions());
-    var itemNotMatched = new InventoryKafkaTopic("DI_INVENTORY_ITEM_NOT_MATCHED", itemNotMatchedPartitions());
-    var authorityUpdated = new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_UPDATED", authorityUpdatedPartitions());
-
-    return new InventoryKafkaTopic[] {instanceCreated, holdingCreated,
-                                      itemCreated, instanceMatched, holdingMatched, itemMatched,
-                                      instanceUpdated, holdingUpdated, itemUpdated, instanceNotMatched,
-                                      holdingNotMatched, itemNotMatched, authorityUpdated};
+    return new InventoryKafkaTopic[] {
+      new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_CREATED", instanceCreatedPartitions()),
+      new InventoryKafkaTopic("DI_INVENTORY_HOLDING_CREATED", holdingCreatedPartitions()),
+      new InventoryKafkaTopic("DI_INVENTORY_ITEM_CREATED", itemCreatedPartitions()),
+      new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_MATCHED", instanceMatchedPartitions()),
+      new InventoryKafkaTopic("DI_INVENTORY_HOLDING_MATCHED", holdingMatchedPartitions()),
+      new InventoryKafkaTopic("DI_INVENTORY_ITEM_MATCHED", itemMatchedPartitions()),
+      new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_UPDATED", instanceUpdatedPartitions()),
+      new InventoryKafkaTopic("DI_INVENTORY_HOLDING_UPDATED", holdingUpdatedPartitions()),
+      new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_NOT_MATCHED", instanceNotMatchedPartitions()),
+      new InventoryKafkaTopic("DI_INVENTORY_HOLDING_NOT_MATCHED", holdingNotMatchedPartitions()),
+      new InventoryKafkaTopic("DI_INVENTORY_ITEM_UPDATED", itemUpdatedPartitions()),
+      new InventoryKafkaTopic("DI_INVENTORY_ITEM_NOT_MATCHED", itemNotMatchedPartitions()),
+      new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_UPDATED", authorityUpdatedPartitions())};
   }
 
   private Integer instanceCreatedPartitions() {
