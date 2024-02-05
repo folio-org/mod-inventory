@@ -7,6 +7,7 @@
 * Allow to link local instance to shared instance [MODINV-901](https://issues.folio.org/browse/MODINV-901)
 * OOM issue in mod-inventory ([MODINV-944](https://issues.folio.org/browse/MODINV-944))
 * Make configurable params for instance sharing [MODINV-950](https://issues.folio.org/browse/MODINV-950)
+* Create Kafka topics instead of relying on auto create in mod-inventory [MODINV-957](https://issues.folio.org/browse/MODINV-957)
 
 ## 20.1.0 2023-10-13
 * Update status when user attempts to update shared auth record from member tenant ([MODDATAIMP-926](https://issues.folio.org/browse/MODDATAIMP-926))
