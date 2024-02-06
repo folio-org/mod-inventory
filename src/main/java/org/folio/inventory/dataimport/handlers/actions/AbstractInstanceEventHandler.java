@@ -56,7 +56,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   @Getter
   private final HttpClient httpClient;
 
-  public AbstractInstanceEventHandler(Storage storage,
+  protected AbstractInstanceEventHandler(Storage storage,
                                       PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper,
                                       MappingMetadataCache mappingMetadataCache, HttpClient httpClient) {
     this.storage = storage;
