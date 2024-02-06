@@ -15,6 +15,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
@@ -26,6 +27,7 @@ import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
 import org.folio.processing.events.services.handler.EventHandler;
+import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.defaultmapper.RecordMapper;
 import org.folio.processing.mapping.defaultmapper.RecordMapperBuilder;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
@@ -158,10 +160,10 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     String externalHrid = record.getExternalIdsHolder().getInstanceHrid();
     if (isNotEmpty(externalId) || isNotEmpty(externalHrid)) {
       if (AdditionalFieldsUtil.isFieldsFillingNeeded(record, instance)) {
-        setIdAndHrid(record, instance);
+        executeHrIdManipulation(record, instance.getJsonForStorage());
       }
     } else {
-      setIdAndHrid(record, instance);
+      executeHrIdManipulation(record, instance.getJsonForStorage());
     }
   }
 
@@ -193,11 +195,6 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     return record;
   }
 
-  private void setIdAndHrid(Record record, Instance instance) {
-    record.getExternalIdsHolder().setInstanceId(instance.getId());
-    record.getExternalIdsHolder().setInstanceHrid(instance.getHrid());
-  }
-
   protected void setSuppressFormDiscovery(Record record, boolean suppressFromDiscovery) {
     AdditionalInfo info = record.getAdditionalInfo();
     if (info != null) {
@@ -205,5 +202,33 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     } else {
       record.setAdditionalInfo(new AdditionalInfo().withSuppressDiscovery(suppressFromDiscovery));
     }
+  }
+
+  private void executeHrIdManipulation(Record record, JsonObject externalEntity) {
+    var externalId = externalEntity.getString("id");
+    var externalHrId = extractHridForInstance(externalEntity);
+    var externalIdsHolder = record.getExternalIdsHolder();
+    setExternalIdsForInstance(externalIdsHolder, externalId, externalHrId);
+    boolean isAddedField = AdditionalFieldsUtil.addFieldToMarcRecord(record, TAG_999, 'i', externalId);
+    if (isHridFillingNeededForInstance()) {
+      AdditionalFieldsUtil.fillHrIdFieldInMarcRecord(Pair.of(record, externalEntity));
+    }
+    if (!isAddedField) {
+      throw new EventProcessingException(
+        format("Failed to add externalEntity id '%s' to record with id '%s'", externalId, record.getId()));
+    }
+  }
+
+  private String extractHridForInstance(JsonObject externalEntity) {
+    return externalEntity.getString("hrid");
+  }
+
+  private void setExternalIdsForInstance(ExternalIdsHolder externalIdsHolder, String externalId, String externalHrid) {
+    externalIdsHolder.setInstanceId(externalId);
+    externalIdsHolder.setInstanceHrid(externalHrid);
+  }
+
+  private boolean isHridFillingNeededForInstance() {
+    return true;
   }
 }
