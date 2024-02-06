@@ -317,7 +317,7 @@ public final class AdditionalFieldsUtil {
         org.marc4j.marc.Record marcRecord = reader.next();
         List<VariableField> variableFields = marcRecord.getVariableFields(TAG_005);
         if(!variableFields.isEmpty()) {
-          VariableField field = marcRecord.getVariableFields(TAG_005).get(0);
+          VariableField field = variableFields.get(0);
           needToUpdate = isNotProtected(fieldProtectionSettings, (ControlField) field);
         }
       }
