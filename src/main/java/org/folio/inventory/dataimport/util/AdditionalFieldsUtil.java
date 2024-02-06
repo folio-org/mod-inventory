@@ -309,7 +309,8 @@ public final class AdditionalFieldsUtil {
    * @return true for case when field 005 have to updated
    */
   private static boolean isField005NeedToUpdate(Record record, MappingParameters mappingParameters) {
-      return Optional.of(buildMarcReader(record))
+      return Optional.ofNullable(record)
+              .map(AdditionalFieldsUtil::buildMarcReader)
               .filter(MarcReader::hasNext)
               .flatMap(it -> it.next().getVariableFields(TAG_005).stream().findFirst())
               .map(field -> isNotProtected(mappingParameters.getMarcFieldProtectionSettings(), (ControlField) field))
