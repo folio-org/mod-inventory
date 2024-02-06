@@ -309,16 +309,11 @@ public final class AdditionalFieldsUtil {
    * @return true for case when field 005 have to updated
    */
   private static boolean isField005NeedToUpdate(Record record, MappingParameters mappingParameters) {
-    List<MarcFieldProtectionSetting> fieldProtectionSettings = mappingParameters.getMarcFieldProtectionSettings();
-    if (CollectionUtils.isNotEmpty(fieldProtectionSettings)) {
-      var bytes = record.getParsedRecord().getContent().toString().getBytes();
-      return Optional.of(new MarcJsonReader(new ByteArrayInputStream(bytes)))
-              .filter(MarcJsonReader::hasNext)
+      return Optional.of(buildMarcReader(record))
+              .filter(MarcReader::hasNext)
               .flatMap(it -> it.next().getVariableFields(TAG_005).stream().findFirst())
-              .map(field -> isNotProtected(fieldProtectionSettings, (ControlField) field))
-              .orElse(true);
-    }
-    return true;
+              .map(field -> isNotProtected(mappingParameters.getMarcFieldProtectionSettings(), (ControlField) field))
+              .orElse(false);
   }
 
   /**
