@@ -47,6 +47,8 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   protected static final String MARC_BIB_RECORD_FORMAT = "MARC_BIB";
   protected static final String INSTANCE_PATH = "instance";
   protected static final List<String> requiredFields = Arrays.asList("source", "title", "instanceTypeId");
+  private static final String ID_FIELD = "id";
+  private static final boolean IS_HRID_FILLING_NEEDED_FOR_INSTANCE = true;
 
   protected final Storage storage;
   @Getter
@@ -205,12 +207,12 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   }
 
   private void executeHrIdManipulation(Record record, JsonObject externalEntity) {
-    var externalId = externalEntity.getString("id");
+    var externalId = externalEntity.getString(ID_FIELD);
     var externalHrId = extractHridForInstance(externalEntity);
     var externalIdsHolder = record.getExternalIdsHolder();
     setExternalIdsForInstance(externalIdsHolder, externalId, externalHrId);
     boolean isAddedField = AdditionalFieldsUtil.addFieldToMarcRecord(record, TAG_999, 'i', externalId);
-    if (isHridFillingNeededForInstance()) {
+    if (IS_HRID_FILLING_NEEDED_FOR_INSTANCE) {
       AdditionalFieldsUtil.fillHrIdFieldInMarcRecord(Pair.of(record, externalEntity));
     }
     if (!isAddedField) {
@@ -226,9 +228,5 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   private void setExternalIdsForInstance(ExternalIdsHolder externalIdsHolder, String externalId, String externalHrid) {
     externalIdsHolder.setInstanceId(externalId);
     externalIdsHolder.setInstanceHrid(externalHrid);
-  }
-
-  private boolean isHridFillingNeededForInstance() {
-    return true;
   }
 }
