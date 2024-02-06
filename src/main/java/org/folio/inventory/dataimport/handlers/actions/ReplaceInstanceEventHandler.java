@@ -184,8 +184,8 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           LOGGER.warn(msg);
           return Future.failedFuture(msg);
         }
-        String MARC_BIB_TO_JSON = payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value());
-        org.folio.rest.jaxrs.model.Record targetRecord = Json.decodeValue(MARC_BIB_TO_JSON, org.folio.rest.jaxrs.model.Record.class);
+        String marcBibAsJson = payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value());
+        org.folio.rest.jaxrs.model.Record targetRecord = Json.decodeValue(marcBibAsJson, org.folio.rest.jaxrs.model.Record.class);
 
         Instance mappedInstance = Instance.fromJson(instanceAsJson);
         return updateInstanceAndRetryIfOlExists(mappedInstance, instanceCollection, dataImportEventPayload)

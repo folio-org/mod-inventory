@@ -92,17 +92,17 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     }
   }
 
-  protected Future<Instance> saveRecordInSrsAndHandleResponse(DataImportEventPayload payload, Record record,
+  protected Future<Instance> saveRecordInSrsAndHandleResponse(DataImportEventPayload payload, Record srcRecord,
                                                             Instance instance, InstanceCollection instanceCollection) {
     Promise<Instance> promise = Promise.promise();
-    getSourceStorageRecordsClient(payload).postSourceStorageRecords(record)
+    getSourceStorageRecordsClient(payload).postSourceStorageRecords(srcRecord)
       .onComplete(ar -> {
         var result = ar.result();
         if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_CREATED.toInt()) {
           payload.getContext().put(EntityType.MARC_BIBLIOGRAPHIC.value(),
             Json.encode(encodeParsedRecordContent(result.bodyAsJson(Record.class))));
           LOGGER.info("Created MARC record in SRS with id: '{}', instanceId: '{}', from tenant: {}, jobExecutionId: {}",
-            record.getId(), instance.getId(), payload.getTenant(), payload.getJobExecutionId());
+            srcRecord.getId(), instance.getId(), payload.getTenant(), payload.getJobExecutionId());
           promise.complete(instance);
         } else {
           String msg = format("Failed to create MARC record in SRS, instanceId: '%s', jobExecutionId: '%s', status code: %s, Record: %s",
@@ -115,17 +115,17 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     return promise.future();
   }
 
-  protected Future<Instance> putRecordInSrsAndHandleResponse(DataImportEventPayload payload, Record record,
+  protected Future<Instance> putRecordInSrsAndHandleResponse(DataImportEventPayload payload, Record srcRecord,
                                                              Instance instance, String matchedId) {
     Promise<Instance> promise = Promise.promise();
-    getSourceStorageRecordsClient(payload).putSourceStorageRecordsGenerationById(matchedId ,record)
+    getSourceStorageRecordsClient(payload).putSourceStorageRecordsGenerationById(matchedId ,srcRecord)
       .onComplete(ar -> {
         var result = ar.result();
         if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_OK.toInt()) {
           payload.getContext().put(EntityType.MARC_BIBLIOGRAPHIC.value(),
             Json.encode(encodeParsedRecordContent(result.bodyAsJson(Record.class))));
           LOGGER.info("Update MARC record in SRS with id: '{}', instanceId: '{}', from tenant: {}, jobExecutionId: {}",
-            record.getId(), instance.getId(), payload.getTenant(), payload.getJobExecutionId());
+            srcRecord.getId(), instance.getId(), payload.getTenant(), payload.getJobExecutionId());
           promise.complete(instance);
         } else {
           String msg = format("Failed to update MARC record in SRS, instanceId: '%s', jobExecutionId: '%s', status code: %s, Record: %s",
@@ -137,35 +137,35 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     return promise.future();
   }
 
-  protected Future<Instance> executeFieldsManipulation(Instance instance, Record record) {
-    AdditionalFieldsUtil.fill001FieldInMarcRecord(record, instance.getHrid());
-    if (StringUtils.isBlank(record.getMatchedId())) {
-      record.setMatchedId(record.getId());
+  protected Future<Instance> executeFieldsManipulation(Instance instance, Record srcRecord) {
+    AdditionalFieldsUtil.fill001FieldInMarcRecord(srcRecord, instance.getHrid());
+    if (StringUtils.isBlank(srcRecord.getMatchedId())) {
+      srcRecord.setMatchedId(srcRecord.getId());
     }
-    setExternalIds(record, instance);
-    return AdditionalFieldsUtil.addFieldToMarcRecord(record, TAG_999, 'i', instance.getId())
+    setExternalIds(srcRecord, instance);
+    return AdditionalFieldsUtil.addFieldToMarcRecord(srcRecord, TAG_999, 'i', instance.getId())
       ? Future.succeededFuture(instance)
-      : Future.failedFuture(format("Failed to add instance id '%s' to record with id '%s'", instance.getId(), record.getId()));
+      : Future.failedFuture(format("Failed to add instance id '%s' to record with id '%s'", instance.getId(), srcRecord.getId()));
   }
 
   /**
    * Adds specified externalId and externalHrid to record and additional custom field with externalId to parsed record.
    *
-   * @param record   record to update
+   * @param srcRecord   record to update
    * @param instance externalEntity in Json
    */
-  protected void setExternalIds(Record record, Instance instance) {
-    if (record.getExternalIdsHolder() == null) {
-      record.setExternalIdsHolder(new ExternalIdsHolder());
+  protected void setExternalIds(Record srcRecord, Instance instance) {
+    if (srcRecord.getExternalIdsHolder() == null) {
+      srcRecord.setExternalIdsHolder(new ExternalIdsHolder());
     }
-    String externalId = record.getExternalIdsHolder().getInstanceId();
-    String externalHrid = record.getExternalIdsHolder().getInstanceHrid();
+    String externalId = srcRecord.getExternalIdsHolder().getInstanceId();
+    String externalHrid = srcRecord.getExternalIdsHolder().getInstanceHrid();
     if (isNotEmpty(externalId) || isNotEmpty(externalHrid)) {
-      if (AdditionalFieldsUtil.isFieldsFillingNeeded(record, instance)) {
-        executeHrIdManipulation(record, instance.getJsonForStorage());
+      if (AdditionalFieldsUtil.isFieldsFillingNeeded(srcRecord, instance)) {
+        executeHrIdManipulation(srcRecord, instance.getJsonForStorage());
       }
     } else {
-      executeHrIdManipulation(record, instance.getJsonForStorage());
+      executeHrIdManipulation(srcRecord, instance.getJsonForStorage());
     }
   }
 
@@ -188,36 +188,36 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
       payload.getToken(), getHttpClient());
   }
 
-  private Record encodeParsedRecordContent(Record record) {
-    ParsedRecord parsedRecord = record.getParsedRecord();
+  private Record encodeParsedRecordContent(Record srcRecord) {
+    ParsedRecord parsedRecord = srcRecord.getParsedRecord();
     if (parsedRecord != null) {
       parsedRecord.setContent(Json.encode(parsedRecord.getContent()));
-      return record.withParsedRecord(parsedRecord);
+      return srcRecord.withParsedRecord(parsedRecord);
     }
-    return record;
+    return srcRecord;
   }
 
-  protected void setSuppressFormDiscovery(Record record, boolean suppressFromDiscovery) {
-    AdditionalInfo info = record.getAdditionalInfo();
+  protected void setSuppressFormDiscovery(Record srcRecord, boolean suppressFromDiscovery) {
+    AdditionalInfo info = srcRecord.getAdditionalInfo();
     if (info != null) {
       info.setSuppressDiscovery(suppressFromDiscovery);
     } else {
-      record.setAdditionalInfo(new AdditionalInfo().withSuppressDiscovery(suppressFromDiscovery));
+      srcRecord.setAdditionalInfo(new AdditionalInfo().withSuppressDiscovery(suppressFromDiscovery));
     }
   }
 
-  private void executeHrIdManipulation(Record record, JsonObject externalEntity) {
+  private void executeHrIdManipulation(Record srcRecord, JsonObject externalEntity) {
     var externalId = externalEntity.getString(ID_FIELD);
     var externalHrId = extractHridForInstance(externalEntity);
-    var externalIdsHolder = record.getExternalIdsHolder();
+    var externalIdsHolder = srcRecord.getExternalIdsHolder();
     setExternalIdsForInstance(externalIdsHolder, externalId, externalHrId);
-    boolean isAddedField = AdditionalFieldsUtil.addFieldToMarcRecord(record, TAG_999, 'i', externalId);
+    boolean isAddedField = AdditionalFieldsUtil.addFieldToMarcRecord(srcRecord, TAG_999, 'i', externalId);
     if (IS_HRID_FILLING_NEEDED_FOR_INSTANCE) {
-      AdditionalFieldsUtil.fillHrIdFieldInMarcRecord(Pair.of(record, externalEntity));
+      AdditionalFieldsUtil.fillHrIdFieldInMarcRecord(Pair.of(srcRecord, externalEntity));
     }
     if (!isAddedField) {
       throw new EventProcessingException(
-        format("Failed to add externalEntity id '%s' to record with id '%s'", externalId, record.getId()));
+        format("Failed to add externalEntity id '%s' to record with id '%s'", externalId, srcRecord.getId()));
     }
   }
 

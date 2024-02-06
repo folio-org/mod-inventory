@@ -238,18 +238,18 @@ public final class AdditionalFieldsUtil {
   /**
    * Move 001 tag value to 035 tag
    *
-   * @param record input record to modify
+   * @param srcRecord input record to modify
    */
-  public static void move001To035(Record record) {
-    String valueFrom001 = getValueFromControlledField(record, TAG_001);
+  public static void move001To035(Record srcRecord) {
+    String valueFrom001 = getValueFromControlledField(srcRecord, TAG_001);
     if (StringUtils.isNotEmpty(valueFrom001)) {
-      String valueFrom003 = getValueFromControlledField(record, TAG_003);
+      String valueFrom003 = getValueFromControlledField(srcRecord, TAG_003);
       String new035Value = mergeFieldsFor035(valueFrom003, valueFrom001);
-      if (!isFieldExist(record, TAG_035, TAG_035_SUB, new035Value)) {
-        addDataFieldToMarcRecord(record, TAG_035, TAG_035_IND, TAG_035_IND, TAG_035_SUB, new035Value);
+      if (!isFieldExist(srcRecord, TAG_035, TAG_035_SUB, new035Value)) {
+        addDataFieldToMarcRecord(srcRecord, TAG_035, TAG_035_IND, TAG_035_IND, TAG_035_SUB, new035Value);
       }
     }
-    removeField(record, TAG_003);
+    removeField(srcRecord, TAG_003);
   }
 
   public static void fill001FieldInMarcRecord(Record marcRecord, String hrId) {
@@ -288,8 +288,8 @@ public final class AdditionalFieldsUtil {
     return null;
   }
 
-  private static MarcReader buildMarcReader(Record record) {
-    String content = normalizeContent(record.getParsedRecord());
+  private static MarcReader buildMarcReader(Record srcRecord) {
+    String content = normalizeContent(srcRecord.getParsedRecord());
     return new MarcJsonReader(new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8)));
   }
 
@@ -340,15 +340,15 @@ public final class AdditionalFieldsUtil {
       .noneMatch(setting -> setting.getData().equals(ANY_STRING) || setting.getData().equals(field.getData()));
   }
 
-  private static org.marc4j.marc.Record computeMarcRecord(Record record) {
-    if (record != null && record.getParsedRecord() != null && isNotBlank(record.getParsedRecord().getContent().toString())) {
+  private static org.marc4j.marc.Record computeMarcRecord(Record srcRecord) {
+    if (srcRecord != null && srcRecord.getParsedRecord() != null && isNotBlank(srcRecord.getParsedRecord().getContent().toString())) {
       try {
-        var content = normalizeContent(record.getParsedRecord().getContent());
+        var content = normalizeContent(srcRecord.getParsedRecord().getContent());
         return parsedRecordContentCache.get(content);
       } catch (Exception e) {
         LOGGER.warn("computeMarcRecord:: Error during the transformation to marc record", e);
         try {
-          MarcReader reader = buildMarcReader(record);
+          MarcReader reader = buildMarcReader(srcRecord);
           if (reader.hasNext()) {
             return reader.next();
           }
@@ -580,14 +580,14 @@ public final class AdditionalFieldsUtil {
     return false;
   }
 
-  private static String getRecordId(Record record) {
-    return record != null ? record.getId() : "";
+  private static String getRecordId(Record srcRecord) {
+    return srcRecord != null ? srcRecord.getId() : "";
   }
 
-  public static void remove035FieldWhenRecordContainsHrId(Record record) {
-    if (Record.RecordType.MARC_BIB.equals(record.getRecordType())) {
-      String hrid = getValueFromControlledField(record, TAG_001);
-      remove035WithActualHrId(record, hrid);
+  public static void remove035FieldWhenRecordContainsHrId(Record srcRecord) {
+    if (Record.RecordType.MARC_BIB.equals(srcRecord.getRecordType())) {
+      String hrid = getValueFromControlledField(srcRecord, TAG_001);
+      remove035WithActualHrId(srcRecord, hrid);
     }
   }
 
