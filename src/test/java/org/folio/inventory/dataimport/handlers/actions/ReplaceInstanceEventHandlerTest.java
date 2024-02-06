@@ -949,6 +949,51 @@ public class ReplaceInstanceEventHandlerTest {
     verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
   }
 
+  @Test(expected = ExecutionException.class)
+  public void shouldProcessEventAnd() throws InterruptedException, ExecutionException, TimeoutException {
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    String instanceTypeId = UUID.randomUUID().toString();
+    String title = "titleValue";
+
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId), StringValue.of(title));
+
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new InstanceWriterFactory());
+
+    HashMap<String, String> context = new HashMap<>();
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(INSTANCE.value(), new JsonObject()
+      .put("id", instanceId)
+      .put("hrid", UUID.randomUUID().toString())
+      .put("source", MARC_INSTANCE_SOURCE)
+      .put("_version", INSTANCE_VERSION)
+      .put("discoverySuppress", false)
+      .encode());
+
+    mockInstance(MARC_INSTANCE_SOURCE);
+
+    HttpResponse<Buffer> respForPass = buildHttpResponseWithBuffer(BufferImpl.buffer("{}"), HttpStatus.SC_BAD_REQUEST);
+    when(sourceStorageClient.putSourceStorageRecordsGenerationById(any(), any())).thenReturn(Future.succeededFuture(respForPass));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(mockServer.baseUrl())
+      .withToken(TOKEN)
+      .withJobExecutionId(UUID.randomUUID().toString());
+
+    CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
+    future.get(5, TimeUnit.SECONDS);
+  }
+
   @Test
   public void isEligibleShouldReturnTrue() {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
