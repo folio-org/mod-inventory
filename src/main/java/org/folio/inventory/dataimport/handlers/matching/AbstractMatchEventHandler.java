@@ -58,7 +58,11 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
       .whenComplete((matched, throwable) -> {
         LOGGER.info("handle :: after doMatching result: dataImportEventPayload.tenant {}", dataImportEventPayload.getTenant());
         if (throwable != null) {
-          LOGGER.error("handle :: after doMatching result: {}", getMatchedEventType(), throwable.getCause());
+          LOGGER.error("handle :: after doMatching : tenant {}, result: {}",
+            dataImportEventPayload.getTenant(), throwable.getMessage());
+          if (!context.getTenantId().equals(dataImportEventPayload.getTenant())) {
+            dataImportEventPayload.setTenant(context.getTenantId());
+          }
           future.completeExceptionally(throwable);
         } else {
           LOGGER.info("handle :: after doMatching result: set type {}", getMatchedEventType());
