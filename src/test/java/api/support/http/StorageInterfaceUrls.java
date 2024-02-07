@@ -61,6 +61,10 @@ public class StorageInterfaceUrls {
     return viaOkapiURL("/request-storage/requests" + subPath);
   }
 
+  public static URL sourceRecordStorageUrl(String subPath) {
+    return viaOkapiURL("/source-storage/records" + subPath);
+  }
+
   public static URL boundWithPartsUrl(String subPath) {
     return viaOkapiURL( "/inventory-storage/bound-with-parts" + subPath );
   }

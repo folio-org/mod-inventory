@@ -499,14 +499,14 @@ public class MarcInstanceSharingHandlerImplTest {
     HttpResponse<Buffer> mockedResponse = mock(HttpResponse.class);
 
     when(mockedResponse.statusCode()).thenReturn(HTTP_NO_CONTENT.toInt());
-    when(sourceStorageClient.deleteSourceStorageRecordsById(any()))
+    when(sourceStorageClient.deleteSourceStorageRecordsById(any(), any()))
       .thenReturn(Future.succeededFuture(mockedResponse));
 
     MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx, httpClient);
     handler.deleteSourceRecordByRecordId(recordId, instanceId, tenant, sourceStorageClient)
       .onComplete(result -> assertEquals(instanceId, result.result()));
 
-    verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(recordId);
+    verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(recordId, "SRS_RECORD");
   }
 
   @Test
@@ -516,14 +516,14 @@ public class MarcInstanceSharingHandlerImplTest {
     String recordId = "fea6477b-d8f5-4d22-9e86-6218407c780b";
     String tenant = "sourceTenant";
 
-    when(sourceStorageClient.deleteSourceStorageRecordsById(any()))
+    when(sourceStorageClient.deleteSourceStorageRecordsById(any(), any()))
       .thenReturn(Future.failedFuture(new NotFoundException("Not found")));
 
     MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx, httpClient);
     handler.deleteSourceRecordByRecordId(recordId, instanceId, tenant, sourceStorageClient)
       .onComplete(result -> assertTrue(result.failed()));
 
-    verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(recordId);
+    verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(recordId, "SRS_RECORD");
   }
 
   @Test
@@ -534,14 +534,14 @@ public class MarcInstanceSharingHandlerImplTest {
 
     HttpResponse<Buffer> mockedResponse = mock(HttpResponse.class);
     when(mockedResponse.statusCode()).thenReturn(HTTP_INTERNAL_SERVER_ERROR.toInt());
-    when(sourceStorageClient.deleteSourceStorageRecordsById(any()))
+    when(sourceStorageClient.deleteSourceStorageRecordsById(any(), any()))
       .thenReturn(Future.succeededFuture(mockedResponse));
 
     MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx, httpClient);
     handler.deleteSourceRecordByRecordId(recordId, instanceId, tenant, sourceStorageClient)
       .onComplete(result -> assertTrue(result.failed()));
 
-    verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(recordId);
+    verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(recordId, "SRS_RECORD");
   }
 
   @Test

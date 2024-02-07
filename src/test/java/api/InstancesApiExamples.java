@@ -37,6 +37,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+import org.folio.HttpStatus;
 import org.folio.inventory.config.InventoryConfiguration;
 import org.folio.inventory.config.InventoryConfigurationImpl;
 import org.folio.inventory.domain.instances.PublicationPeriod;
@@ -737,7 +738,15 @@ public class InstancesApiExamples extends ApiTests {
   @Test
   @SneakyThrows
   public void canSoftDeleteInstance() {
-    JsonObject instanceToDelete = createInstance(marcInstanceWithDefaultBlockedFields(UUID.randomUUID()));
+    UUID instanceId = UUID.randomUUID();
+    JsonObject instanceToDelete = createInstance(marcInstanceWithDefaultBlockedFields(instanceId));
+
+    JsonObject sourceRecord = new JsonObject().put("id", instanceId.toString());
+
+    sourceRecordStorageClient.create(sourceRecord);
+    Response getCreatedSourceRecordResponse = sourceRecordStorageClient.getById(instanceId);
+    assertEquals(getCreatedSourceRecordResponse.getStatusCode(), HttpStatus.HTTP_OK.toInt());
+    assertEquals(instanceId.toString(), getCreatedSourceRecordResponse.getJson().getString("id"));
 
     URL softDeleteUrl = new URL(String.format("%s/%s/%s",
       ApiRoot.instances(), instanceToDelete.getString("id"), "mark-deleted" ));
@@ -758,6 +767,9 @@ public class InstancesApiExamples extends ApiTests {
 
     assertTrue(getResponse.getJson().getBoolean("staffSuppress"));
     assertTrue(getResponse.getJson().getBoolean("discoverySuppress"));
+
+    Response getDeletedSourceRecordResponse = sourceRecordStorageClient.getById(instanceId);
+    assertEquals(getDeletedSourceRecordResponse.getStatusCode(), HttpStatus.HTTP_NOT_FOUND.toInt());
   }
 
   @Test
