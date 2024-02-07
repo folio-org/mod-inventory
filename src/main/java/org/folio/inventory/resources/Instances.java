@@ -215,7 +215,7 @@ public class Instances extends AbstractInstances {
     try {
       SourceStorageRecordsClient srsClient = getSourceStorageRecordsClient(wContext);
       srsClient.deleteSourceStorageRecordsById(instanceId, INSTANCE_ID_TYPE, httpClientResponse -> {
-        if (httpClientResponse.result().statusCode() == HttpStatus.HTTP_OK.toInt()) {
+        if (httpClientResponse.result().statusCode() == HttpStatus.HTTP_NO_CONTENT.toInt()) {
           log.info(format("Source storage record was successfully deleted in SRS. InstanceID: %s", instanceId));
         } else {
           log.error(format("Source storage record was not deleted. InstanceID: %s StatusCode: %s", instanceId, httpClientResponse.result().statusCode()));
