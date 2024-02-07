@@ -56,9 +56,12 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
         .map(mappingMetadataDto -> doMatching(dataImportEventPayload, mappingMetadataDto, new MatchingParametersRelations(), context))
         .orElse(CompletableFuture.failedFuture(new EventProcessingException(MAPPING_METADATA_NOT_FOUND_MSG))))
       .whenComplete((matched, throwable) -> {
+        LOGGER.info("handle :: after doMatching result: dataImportEventPayload.tenant {}", dataImportEventPayload.getTenant());
         if (throwable != null) {
+          LOGGER.error("handle :: after doMatching result: {}", getMatchedEventType(), throwable.getCause());
           future.completeExceptionally(throwable);
         } else {
+          LOGGER.info("handle :: after doMatching result: set type {}", getMatchedEventType());
           if (Boolean.TRUE.equals(matched)) {
             dataImportEventPayload.setEventType(getMatchedEventType());
           } else {
