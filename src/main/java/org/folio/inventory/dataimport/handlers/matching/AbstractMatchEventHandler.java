@@ -61,6 +61,9 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
       .whenComplete((matched, throwable) -> {
         if (throwable != null) {
           LOGGER.warn("handle:: Error during matching", throwable);
+          if (!dataImportEventPayload.getTenant().equals(context.getTenantId())) {
+            dataImportEventPayload.setTenant(context.getTenantId());
+          }
           future.completeExceptionally(throwable);
         } else {
           if (Boolean.TRUE.equals(matched)) {
@@ -91,6 +94,7 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
 
   private CompletableFuture<Boolean> matchCentralTenantIfNeeded(DataImportEventPayload dataImportEventPayload, boolean isMatchedLocal, Context context,
                                                                 MappingMetadataDto mappingMetadataDto, MatchingParametersRelations matchingParametersRelations) {
+    LOGGER.debug("matchCentralTenantIfNeeded :: dataImportEventPayload.tenant: {}, isMatchedLocal: {}", dataImportEventPayload.getTenant(), isMatchedLocal);
     return consortiumService.getConsortiumConfiguration(context)
       .toCompletionStage().toCompletableFuture()
       .thenCompose(consortiumConfiguration -> {
