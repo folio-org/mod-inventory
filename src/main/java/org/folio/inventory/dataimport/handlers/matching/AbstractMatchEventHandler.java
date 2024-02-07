@@ -87,15 +87,18 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
 
   private CompletableFuture<Boolean> matchCentralTenantIfNeeded(DataImportEventPayload dataImportEventPayload, boolean isMatchedLocal, Context context,
                                                                 MappingMetadataDto mappingMetadataDto, MatchingParametersRelations matchingParametersRelations) {
+    LOGGER.info("matchCentralTenantIfNeeded :: dataImportEventPayload.tenant: {}", dataImportEventPayload.getTenant());
     return consortiumService.getConsortiumConfiguration(context)
       .toCompletionStage().toCompletableFuture()
       .thenCompose(consortiumConfiguration -> {
         if (consortiumConfiguration.isPresent() && !consortiumConfiguration.get().getCentralTenantId().equals(context.getTenantId())) {
-          LOGGER.debug("matchCentralTenantIfNeeded:: Start matching on central tenant with id: {}", consortiumConfiguration.get().getCentralTenantId());
+          LOGGER.info("matchCentralTenantIfNeeded:: Start matching on central tenant with id: {}", consortiumConfiguration.get().getCentralTenantId());
           String localMatchedInstance = dataImportEventPayload.getContext().get(getEntityType().value());
           preparePayloadBeforeConsortiumProcessing(dataImportEventPayload, consortiumConfiguration.get(), mappingMetadataDto, matchingParametersRelations);
+          LOGGER.info("matchCentralTenantIfNeeded :: preparedPayload : dataImportEventPayload.tenant: {}", dataImportEventPayload.getTenant());
           return MatchingManager.match(dataImportEventPayload)
             .thenCompose(isMatchedConsortium -> {
+              LOGGER.info("matchCentralTenantIfNeeded :: after matching : dataImportEventPayload.tenant: {}", dataImportEventPayload.getTenant());
               dataImportEventPayload.setTenant(context.getTenantId());
               if (isMatchedConsortium && isMatchedLocal && !isShadowEntity(localMatchedInstance, dataImportEventPayload.getContext().get(getEntityType().value()))) {
                 LOGGER.warn("matchCentralTenantIfNeeded:: Found multiple results during matching on local tenant: {} and central tenant: {} ",
@@ -103,15 +106,17 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
                 return CompletableFuture.failedFuture(new MatchingException(String.format(FOUND_MULTIPLE_ENTITIES, context.getTenantId(), consortiumConfiguration.get().getCentralTenantId())));
               }
               if (StringUtils.isEmpty(dataImportEventPayload.getContext().get(getEntityType().value()))) {
+                LOGGER.info("matchCentralTenantIfNeeded :: isEmpty : dataImportEventPayload.tenant: {}", dataImportEventPayload.getTenant());
                 dataImportEventPayload.getContext().put(getEntityType().value(), localMatchedInstance);
               } else {
+                LOGGER.info("matchCentralTenantIfNeeded :: isNotEmpty : dataImportEventPayload.tenant: {}", dataImportEventPayload.getTenant());
                 dataImportEventPayload.getContext().put(CENTRAL_TENANT_ID_KEY, consortiumConfiguration.get().getCentralTenantId());
                 LOGGER.info("matchCentralTenantIfNeeded:: Matched on central tenant: {}", consortiumConfiguration.get().getCentralTenantId());
               }
               return CompletableFuture.completedFuture(isMatchedConsortium || isMatchedLocal);
             });
         }
-        LOGGER.debug("matchCentralTenantIfNeeded:: Consortium configuration for tenant: {} not found", context.getTenantId());
+        LOGGER.warn("matchCentralTenantIfNeeded:: Consortium configuration for tenant: {} not found", context.getTenantId());
         return CompletableFuture.completedFuture(isMatchedLocal);
       });
   }
