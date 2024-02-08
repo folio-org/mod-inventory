@@ -1,4 +1,5 @@
 ## 20.1.8-SNAPSHOT 2024-02-dd
+* Consortial: correct tenantId for DI_ERROR message is set [MODINV-952](https://issues.folio.org/browse/MODINV-952)
 * Make configurable params for instance sharing [MODINV-950](https://issues.folio.org/browse/MODINV-950)
 
 ## 20.1.7 2024-01-18
