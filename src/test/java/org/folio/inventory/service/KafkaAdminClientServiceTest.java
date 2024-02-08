@@ -62,7 +62,10 @@ public class KafkaAdminClientServiceTest {
         new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_NOT_MATCHED", 1),
         new InventoryKafkaTopic("DI_INVENTORY_HOLDING_NOT_MATCHED", 1),
         new InventoryKafkaTopic("DI_INVENTORY_ITEM_NOT_MATCHED", 1),
-        new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_UPDATED", 1)
+        new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_UPDATED", 1),
+        new InventoryKafkaTopic("DI_INVENTORY_HOLDINGS_CREATED_READY_FOR_POST_PROCESSING", 1),
+        new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING", 1),
+        new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING", 1)
     };
 
 
@@ -162,6 +165,9 @@ public class KafkaAdminClientServiceTest {
       "folio.Default.foo-tenant.DI_INVENTORY_INSTANCE_NOT_MATCHED",
       "folio.Default.foo-tenant.DI_INVENTORY_HOLDING_NOT_MATCHED",
       "folio.Default.foo-tenant.DI_INVENTORY_ITEM_NOT_MATCHED",
-      "folio.Default.foo-tenant.DI_INVENTORY_AUTHORITY_UPDATED"
+      "folio.Default.foo-tenant.DI_INVENTORY_AUTHORITY_UPDATED",
+      "folio.Default.foo-tenant.DI_INVENTORY_HOLDINGS_CREATED_READY_FOR_POST_PROCESSING",
+      "folio.Default.foo-tenant.DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING",
+      "folio.Default.foo-tenant.DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING"
   );
 }
