@@ -46,6 +46,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
 
   private static final Logger LOGGER = LogManager.getLogger(MarcInstanceSharingHandlerImpl.class);
   private static final String CONSORTIUM_PREFIX = "CONSORTIUM-";
+  public static final String SRS_RECORD_ID_TYPE = "SRS_RECORD";
   private final RestDataImportHelper restDataImportHelper;
   private final InstanceOperationsHelper instanceOperations;
   private final EntitiesLinksService entitiesLinksService;
@@ -228,7 +229,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
     LOGGER.info("deleteSourceRecordByRecordId :: Delete source record with recordId={} for instance by InstanceId={} from tenant {}",
       recordId, instanceId, tenantId);
 
-    return client.deleteSourceStorageRecordsById(recordId)
+    return client.deleteSourceStorageRecordsById(recordId, SRS_RECORD_ID_TYPE)
       .onFailure(e -> LOGGER.error("deleteSourceRecordByRecordId:: Error deleting source record with recordId={} by InstanceId={} from tenant {}",
         recordId, instanceId, tenantId, e))
       .compose(response -> {

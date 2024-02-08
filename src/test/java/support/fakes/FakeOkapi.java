@@ -40,6 +40,7 @@ public class FakeOkapi extends AbstractVerticle {
     registerFakeNatureOfContentTermsModule(router);
     registerFakePubSubModule(router);
     registerFakeRequestsModule(router);
+    registerFakeSourceRecordStorage(router);
 
     server.requestHandler(router)
       .listen(PORT_TO_USE, result -> {
@@ -118,6 +119,14 @@ public class FakeOkapi extends AbstractVerticle {
       .withCollectionPropertyName("requests")
       .withRequiredProperties("itemId", "requesterId", "requestType", "requestDate",
         "fulfillmentPreference")
+      .create().register(router);
+  }
+
+  private void registerFakeSourceRecordStorage(Router router) {
+    new FakeStorageModuleBuilder()
+      .withRecordName("Source record storage")
+      .withRootPath("/source-storage/records")
+      .withCollectionPropertyName("records")
       .create().register(router);
   }
 
