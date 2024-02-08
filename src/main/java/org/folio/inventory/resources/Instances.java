@@ -197,7 +197,7 @@ public class Instances extends AbstractInstances {
   private void updateSuppressFromDiscoveryFlag(WebContext wContext, Instance updatedInstance) {
     try {
       SourceStorageRecordsClient client = getSourceStorageRecordsClient(wContext);
-      client.putSourceStorageRecordsSuppressFromDiscoveryById(updatedInstance.getId(), "INSTANCE", updatedInstance.getDiscoverySuppress(), httpClientResponse -> {
+      client.putSourceStorageRecordsSuppressFromDiscoveryById(updatedInstance.getId(), INSTANCE_ID_TYPE, updatedInstance.getDiscoverySuppress(), httpClientResponse -> {
         if (httpClientResponse.result().statusCode() == HttpStatus.HTTP_OK.toInt()) {
           log.info(format("Suppress from discovery flag was successfully updated for record in SRS. InstanceID: %s",
             updatedInstance.getId()));
