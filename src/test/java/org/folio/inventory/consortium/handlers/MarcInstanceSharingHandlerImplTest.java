@@ -523,7 +523,7 @@ public class MarcInstanceSharingHandlerImplTest {
     MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx, httpClient);
     handler.deleteSourceRecordByRecordId(recordId, instanceId, tenant, sourceStorageClient)
       .onComplete(result -> assertTrue(result.failed()));
-
+    
     verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(recordId, SRS_RECORD_ID_TYPE);
   }
 

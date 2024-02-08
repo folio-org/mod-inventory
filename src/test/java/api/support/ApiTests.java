@@ -30,6 +30,7 @@ public abstract class ApiTests {
   protected final ResourceClient precedingSucceedingTitlesClient;
   protected final ResourceClient instanceRelationshipClient;
   protected final ResourceClient requestStorageClient;
+  protected final ResourceClient sourceRecordStorageClient;
 
   protected final InstanceRelationshipTypeFixture instanceRelationshipTypeFixture;
   protected final MarkItemFixture markItemFixture;
@@ -47,6 +48,7 @@ public abstract class ApiTests {
     precedingSucceedingTitlesClient = ResourceClient.forPrecedingSucceedingTitles(okapiClient);
     instanceRelationshipClient = ResourceClient.forInstanceRelationship(okapiClient);
     requestStorageClient = ResourceClient.forRequestStorage(okapiClient);
+    sourceRecordStorageClient = ResourceClient.forSourceRecordStorage(okapiClient);
     instanceRelationshipTypeFixture = new InstanceRelationshipTypeFixture(okapiClient);
     markItemFixture = new MarkItemFixture(okapiClient);
   }
