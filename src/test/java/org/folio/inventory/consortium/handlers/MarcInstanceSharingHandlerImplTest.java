@@ -52,6 +52,7 @@ import java.util.function.Consumer;
 
 import static org.folio.HttpStatus.HTTP_INTERNAL_SERVER_ERROR;
 import static org.folio.HttpStatus.HTTP_NO_CONTENT;
+import static org.folio.inventory.consortium.handlers.MarcInstanceSharingHandlerImpl.SRS_RECORD_ID_TYPE;
 import static org.folio.inventory.consortium.util.RestDataImportHelperTest.buildHttpResponseWithBuffer;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -506,7 +507,7 @@ public class MarcInstanceSharingHandlerImplTest {
     handler.deleteSourceRecordByRecordId(recordId, instanceId, tenant, sourceStorageClient)
       .onComplete(result -> assertEquals(instanceId, result.result()));
 
-    verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(recordId, "SRS_RECORD");
+    verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(recordId, SRS_RECORD_ID_TYPE);
   }
 
   @Test
@@ -522,8 +523,8 @@ public class MarcInstanceSharingHandlerImplTest {
     MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx, httpClient);
     handler.deleteSourceRecordByRecordId(recordId, instanceId, tenant, sourceStorageClient)
       .onComplete(result -> assertTrue(result.failed()));
-
-    verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(recordId, "SRS_RECORD");
+    
+    verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(recordId, SRS_RECORD_ID_TYPE);
   }
 
   @Test
@@ -541,7 +542,7 @@ public class MarcInstanceSharingHandlerImplTest {
     handler.deleteSourceRecordByRecordId(recordId, instanceId, tenant, sourceStorageClient)
       .onComplete(result -> assertTrue(result.failed()));
 
-    verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(recordId, "SRS_RECORD");
+    verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(recordId, SRS_RECORD_ID_TYPE);
   }
 
   @Test
