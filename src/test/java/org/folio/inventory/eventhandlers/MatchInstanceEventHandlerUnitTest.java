@@ -397,7 +397,7 @@ public class MatchInstanceEventHandlerUnitTest {
       testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
       testContext.assertEquals(
         updatedEventPayload.getEventsChain(),
-        singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
+        singletonList(DI_SRS_MARC_BIB_RECORD_CREATED.value())
       );
       testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
       JsonObject matchedInstanceAsJsonObject = new JsonObject(updatedEventPayload.getContext().get(INSTANCE.value()));
@@ -447,7 +447,7 @@ public class MatchInstanceEventHandlerUnitTest {
       testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
       testContext.assertEquals(
         updatedEventPayload.getEventsChain(),
-        singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
+        singletonList(DI_SRS_MARC_BIB_RECORD_CREATED.value())
       );
       testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
       JsonObject matchedInstanceAsJsonObject = new JsonObject(updatedEventPayload.getContext().get(INSTANCE.value()));
