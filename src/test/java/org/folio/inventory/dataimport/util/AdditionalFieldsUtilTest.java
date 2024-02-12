@@ -4,6 +4,7 @@ import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
@@ -518,5 +519,92 @@ public class AdditionalFieldsUtilTest {
     Assert.assertEquals(7, cacheStats.hitCount());
     Assert.assertEquals(2, cacheStats.missCount());
     Assert.assertEquals(2, cacheStats.loadCount());
+  }
+
+  @Test
+  public void shouldRemove003ifHRIDManipulationAlreadyDone() {
+    // given
+    String parsedContent = "{\"leader\":\"00115nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"},{\"003\":\"qwerty\"},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    String expectedParsedContent = "{\"leader\":\"00086nam  22000611a 4500\",\"fields\":[{\"001\":\"in001\"},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    ParsedRecord parsedRecord = new ParsedRecord();
+    parsedRecord.setContent(parsedContent);
+
+    Record record = new Record().withId(UUID.randomUUID().toString())
+      .withParsedRecord(parsedRecord)
+      .withGeneration(0)
+      .withState(Record.State.ACTUAL)
+      .withExternalIdsHolder(new ExternalIdsHolder().withInstanceId("001").withInstanceHrid("in001"));
+
+    JsonObject jsonObject = new JsonObject("{\"hrid\":\"in001\"}");
+    Pair<Record, JsonObject> pair = Pair.of(record, jsonObject);
+    // when
+    AdditionalFieldsUtil.fillHrIdFieldInMarcRecord(pair);
+    // then
+    Assert.assertEquals(expectedParsedContent, parsedRecord.getContent());
+  }
+
+  @Test
+  public void shouldNotProcessRecord() {
+    // given
+    String parsedContent = "{\"leader\":\"00115nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"},{\"003\":\"qwerty\"},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    String expectedParsedContent = "{\"leader\":\"00086nam  22000611a 4500\",\"fields\":[{\"001\":\"in001\"},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    ParsedRecord parsedRecord = new ParsedRecord();
+    parsedRecord.setContent(parsedContent);
+
+    Record record = new Record().withId(UUID.randomUUID().toString())
+      .withParsedRecord(parsedRecord)
+      .withGeneration(0)
+      .withState(Record.State.ACTUAL)
+      .withExternalIdsHolder(new ExternalIdsHolder().withInstanceId("001").withInstanceHrid("in001"));
+
+    JsonObject jsonObject = new JsonObject("{\"hrid\":\"in003\"}");
+    Pair<Record, JsonObject> pair = Pair.of(record, jsonObject);
+    // when
+    AdditionalFieldsUtil.fillHrIdFieldInMarcRecord(pair);
+    // then
+    Assert.assertNotEquals(expectedParsedContent, parsedRecord.getContent());
+  }
+
+  @Test
+  public void shouldNotAdd035AndAdd001FieldsIf001And003FieldsNotExists() {
+    // given
+    String parsedContent = "{\"leader\":\"00116nam  22000732a 4900\",\"fields\":[{\"003\":\"in001\"},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    String expectedParsedContent = "{\"leader\":\"00086nam  22000612a 4900\",\"fields\":[{\"001\":\"in001\"},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    ParsedRecord parsedRecord = new ParsedRecord();
+    parsedRecord.setContent(parsedContent);
+
+    Record record = new Record().withId(UUID.randomUUID().toString())
+      .withParsedRecord(parsedRecord)
+      .withGeneration(0)
+      .withState(Record.State.ACTUAL)
+      .withExternalIdsHolder(new ExternalIdsHolder().withInstanceId("001").withInstanceHrid("in001"));
+
+    JsonObject jsonObject = new JsonObject("{\"hrid\":\"in001\"}");
+    Pair<Record, JsonObject> pair = Pair.of(record, jsonObject);
+    // when
+    AdditionalFieldsUtil.fillHrIdFieldInMarcRecord(pair);
+    // then
+    Assert.assertEquals(expectedParsedContent, parsedRecord.getContent());
+  }
+
+  @Test
+  public void shouldRemove035() {
+    // given
+    String parsedContent = "{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"},{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    String expectedParsedContent = "{\"leader\":\"00086nam  22000611a 4500\",\"fields\":[{\"001\":\"in001\"},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    ParsedRecord parsedRecord = new ParsedRecord();
+    parsedRecord.setContent(parsedContent);
+
+    Record record = new Record().withId(UUID.randomUUID().toString())
+      .withParsedRecord(parsedRecord)
+      .withRecordType(Record.RecordType.MARC_BIB)
+      .withGeneration(0)
+      .withState(Record.State.ACTUAL)
+      .withExternalIdsHolder(new ExternalIdsHolder().withInstanceId("001").withInstanceHrid("in001"));
+
+    // when
+    AdditionalFieldsUtil.remove035FieldWhenRecordContainsHrId(record);
+    // then
+    Assert.assertEquals(expectedParsedContent, parsedRecord.getContent());
   }
 }

@@ -66,6 +66,7 @@ public class Instances extends AbstractInstances {
   private static final String BLOCKED_FIELDS_UPDATE_ERROR_MESSAGE = "Instance is controlled by MARC record, these fields are blocked and can not be updated: ";
   private static final String ID = "id";
   private static final String INSTANCE_ID = "instanceId";
+  public static final String INSTANCE_ID_TYPE = "INSTANCE";
 
   public Instances(final Storage storage, final HttpClient client, final ConsortiumService consortiumService) {
     super(storage, client, consortiumService);
@@ -195,9 +196,8 @@ public class Instances extends AbstractInstances {
    */
   private void updateSuppressFromDiscoveryFlag(WebContext wContext, Instance updatedInstance) {
     try {
-      SourceStorageRecordsClient client = new SourceStorageRecordsClient(wContext.getOkapiLocation(),
-        wContext.getTenantId(), wContext.getToken());
-      client.putSourceStorageRecordsSuppressFromDiscoveryById(updatedInstance.getId(), "INSTANCE", updatedInstance.getDiscoverySuppress(), httpClientResponse -> {
+      SourceStorageRecordsClient client = getSourceStorageRecordsClient(wContext);
+      client.putSourceStorageRecordsSuppressFromDiscoveryById(updatedInstance.getId(), INSTANCE_ID_TYPE, updatedInstance.getDiscoverySuppress(), httpClientResponse -> {
         if (httpClientResponse.result().statusCode() == HttpStatus.HTTP_OK.toInt()) {
           log.info(format("Suppress from discovery flag was successfully updated for record in SRS. InstanceID: %s",
             updatedInstance.getId()));
@@ -209,6 +209,25 @@ public class Instances extends AbstractInstances {
     } catch (Exception e) {
       log.error("Error during updating suppress from discovery flag for record in SRS", e);
     }
+  }
+
+  private void deleteSourceStorageRecord(WebContext wContext, String instanceId) {
+    try {
+      SourceStorageRecordsClient srsClient = getSourceStorageRecordsClient(wContext);
+      srsClient.deleteSourceStorageRecordsById(instanceId, INSTANCE_ID_TYPE, httpClientResponse -> {
+        if (httpClientResponse.result().statusCode() == HttpStatus.HTTP_NO_CONTENT.toInt()) {
+          log.info(format("Source storage record was successfully deleted in SRS. InstanceID: %s", instanceId));
+        } else {
+          log.error(format("Source storage record was not deleted. InstanceID: %s StatusCode: %s", instanceId, httpClientResponse.result().statusCode()));
+        }
+      });
+    } catch (Exception e) {
+      log.error("Error during source storage record deletion in SRS", e);
+    }
+  }
+
+  private SourceStorageRecordsClient getSourceStorageRecordsClient(WebContext wContext) {
+    return new SourceStorageRecordsClient(wContext.getOkapiLocation(), wContext.getTenantId(), wContext.getToken(), client);
   }
 
   /**
@@ -313,7 +332,7 @@ public class Instances extends AbstractInstances {
       if (instance != null) {
         updateVisibility(instance, routingContext, instanceCollection);
         if (isInstanceControlledByRecord(instance)) {
-          updateSuppressFromDiscoveryFlag(webContext, instance); //todo: will be replaced by soft delete by instance
+          deleteSourceStorageRecord(webContext, instance.getId());
         }
       } else {
         ClientErrorResponse.notFound(routingContext.response());

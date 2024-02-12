@@ -436,7 +436,7 @@
           "modulePermissions": [
             "inventory-storage.instances.item.get",
             "inventory-storage.instances.item.put",
-            "source-storage.records.update"
+            "source-storage.records.delete"
           ]
         }
       ]

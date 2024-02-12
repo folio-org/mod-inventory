@@ -1,8 +1,13 @@
 package org.folio.inventory.resources;
 
+import static java.lang.String.format;
+import static org.folio.inventory.common.dao.PostgresConnectionOptions.convertToPsqlStandard;
+
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import java.sql.Connection;
 import liquibase.Contexts;
 import liquibase.Liquibase;
 import liquibase.database.DatabaseFactory;
@@ -14,11 +19,8 @@ import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.rest.impl.SingleConnectionProvider;
-
-import java.sql.Connection;
-
-import static java.lang.String.format;
-import static org.folio.inventory.common.dao.PostgresConnectionOptions.convertToPsqlStandard;
+import org.folio.inventory.services.InventoryKafkaTopicService;
+import org.folio.kafka.services.KafkaAdminClientService;
 
 public class TenantApi {
   private static final Logger LOGGER = LogManager.getLogger(TenantApi.class);
@@ -27,6 +29,7 @@ public class TenantApi {
   private static final String DROP_SCHEMA_SQL = "DROP SCHEMA IF EXISTS %s CASCADE";
   private static final String CHANGELOG_TENANT_PATH = "liquibase/tenant/changelog.xml";
   private static final String TENANT_PATH = "/_/tenant";
+  private InventoryKafkaTopicService inventoryKafkaTopicService = new InventoryKafkaTopicService();
 
   public void register(Router router) {
     router.post(TENANT_PATH).handler(this::create);
@@ -37,7 +40,13 @@ public class TenantApi {
     WebContext context = new WebContext(routingContext);
 
     initializeSchemaForTenant(context.getTenantId())
-      .onSuccess(result -> routingContext.response().setStatusCode(HttpStatus.HTTP_NO_CONTENT.toInt()).end())
+      .onSuccess(result -> {
+          Vertx vertx = routingContext.vertx();
+          var kafkaAdminClientService = new KafkaAdminClientService(vertx);
+          kafkaAdminClientService.createKafkaTopics(inventoryKafkaTopicService.createTopicObjects(), context.getTenantId());
+          routingContext.response().setStatusCode(HttpStatus.HTTP_NO_CONTENT.toInt()).end();
+        }
+      )
       .onFailure(fail -> routingContext.response().setStatusCode(HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt()).end(fail.toString()));
   }
 
