@@ -20,7 +20,11 @@ public class InventoryKafkaTopicService {
       new InventoryKafkaTopic("DI_INVENTORY_HOLDING_NOT_MATCHED", holdingNotMatchedPartitions()),
       new InventoryKafkaTopic("DI_INVENTORY_ITEM_UPDATED", itemUpdatedPartitions()),
       new InventoryKafkaTopic("DI_INVENTORY_ITEM_NOT_MATCHED", itemNotMatchedPartitions()),
-      new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_UPDATED", authorityUpdatedPartitions())};
+      new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_UPDATED", authorityUpdatedPartitions()),
+      new InventoryKafkaTopic("DI_INVENTORY_HOLDINGS_CREATED_READY_FOR_POST_PROCESSING", holdingCreatedReadyForPostProcessingPartitions()),
+      new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING", authorityCreatedReadyForPostProcessingPartitions()),
+      new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING", authorityUpdatedReadyForPostProcessingPartitions())
+    };
   }
 
   private Integer instanceCreatedPartitions() {
@@ -73,5 +77,20 @@ public class InventoryKafkaTopicService {
 
   private Integer authorityUpdatedPartitions() {
     return Integer.valueOf(firstNonBlank(System.getenv("DI_INVENTORY_AUTHORITY_UPDATED_PARTITIONS"), "1"));
+  }
+
+  private Integer holdingCreatedReadyForPostProcessingPartitions() {
+    return Integer.valueOf(firstNonBlank(System.getenv(
+      "DI_INVENTORY_HOLDINGS_CREATED_READY_FOR_POST_PROCESSING_PARTITIONS"), "1"));
+  }
+
+  private Integer authorityCreatedReadyForPostProcessingPartitions() {
+    return Integer.valueOf(firstNonBlank(System.getenv(
+      "DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING_PARTITIONS"), "1"));
+  }
+
+  private Integer authorityUpdatedReadyForPostProcessingPartitions() {
+    return Integer.valueOf(firstNonBlank(System.getenv(
+      "DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING_PARTITIONS"), "1"));
   }
 }
