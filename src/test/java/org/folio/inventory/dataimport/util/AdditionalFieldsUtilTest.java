@@ -219,7 +219,7 @@ public class AdditionalFieldsUtilTest {
     String leader = new JsonObject(parsedRecordContent).getString("leader");
     Record record = new Record().withId(recordId).withParsedRecord(parsedRecord);
     boolean added = AdditionalFieldsUtil.addControlledFieldToMarcRecord(
-      record, "003", "test", AdditionalFieldsUtil::replaceControlledFieldInMarcRecord);
+      record, "003", "test", AdditionalFieldsUtil::replaceOrAddControlledFieldInMarcRecord);
     Assert.assertTrue(added);
     JsonObject content = new JsonObject(parsedRecord.getContent().toString());
     JsonArray fields = content.getJsonArray("fields");
