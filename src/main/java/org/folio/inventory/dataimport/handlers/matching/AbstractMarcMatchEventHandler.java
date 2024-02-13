@@ -100,6 +100,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
             return Future.succeededFuture(localMatchedRecords.stream().toList());
           })
           .compose(recordList -> processSucceededResult(recordList, payload))
+          .onFailure(e -> LOG.warn("handle:: Failed to process event for MARC record matching", e))
           .recover(throwable -> Future.failedFuture(mapToMatchException(throwable)))
           .toCompletionStage().toCompletableFuture();
       }
@@ -194,7 +195,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
           SourceStorageRecordsClient sourceStorageRecordsClient =
             new SourceStorageRecordsClient(payload.getOkapiUrl(), consortiumConfigurationOptional.get().getCentralTenantId(), payload.getToken(), httpClient);
 
-          retrieveMarcRecords(recordMatchingDto, sourceStorageRecordsClient, payload)
+          return retrieveMarcRecords(recordMatchingDto, sourceStorageRecordsClient, payload)
             .map(centralRecordOptional -> {
               centralRecordOptional.ifPresent(r -> payload.getContext().put(CENTRAL_TENANT_ID, consortiumConfigurationOptional.get().getCentralTenantId()));
               return Stream.concat(localMatchedRecord.stream(), centralRecordOptional.stream()).toList();
