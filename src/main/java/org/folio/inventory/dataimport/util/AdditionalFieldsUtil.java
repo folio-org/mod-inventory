@@ -177,7 +177,7 @@ public final class AdditionalFieldsUtil {
     if (isField005NeedToUpdate(recordForUpdate, mappingParameters)) {
       String date = dateTime005Formatter.format(ZonedDateTime.ofInstant(Instant.now(), ZoneId.systemDefault()));
       boolean isLatestTransactionDateUpdated = addControlledFieldToMarcRecord(
-        recordForUpdate, TAG_005, date, AdditionalFieldsUtil::replaceControlledFieldInMarcRecord);
+        recordForUpdate, TAG_005, date, AdditionalFieldsUtil::replaceOrAddControlledFieldInMarcRecord);
       if (!isLatestTransactionDateUpdated) {
         throw new EventProcessingException(format("Failed to update field '005' to record with id '%s'",
           recordForUpdate != null ? recordForUpdate.getId() : "null"));
@@ -227,11 +227,13 @@ public final class AdditionalFieldsUtil {
     marcRecord.addVariableField(dataField);
   }
 
-  public static void replaceControlledFieldInMarcRecord(String field, String value, org.marc4j.marc.Record marcRecord) {
-    ControlField currentField = (ControlField) marcRecord.getVariableField(field);
+  public static void replaceOrAddControlledFieldInMarcRecord(String field, String value, org.marc4j.marc.Record marcRecord) {
+    var currentField =  (ControlField) marcRecord.getVariableField(field);
+    var newControlField = MarcFactory.newInstance().newControlField(field, value);
     if (currentField != null) {
-      ControlField newControlField = MarcFactory.newInstance().newControlField(field, value);
       marcRecord.getControlFields().set(marcRecord.getControlFields().indexOf(currentField), newControlField);
+    } else {
+      marcRecord.addVariableField(newControlField);
     }
   }
 
