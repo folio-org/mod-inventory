@@ -52,12 +52,12 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
 
   private static final Logger LOG = LogManager.getLogger(AbstractMarcMatchEventHandler.class);
 
+  protected static final String CENTRAL_TENANT_ID_KEY = "CENTRAL_TENANT_ID";
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
   private static final String FOUND_MULTIPLE_RECORDS_ERROR_MESSAGE = "Found multiple records matching specified conditions";
   private static final String RECORDS_NOT_FOUND_MESSAGE = "Can`t find records matching specified conditions";
   private static final String MATCH_DETAIL_IS_NOT_VALID = "Match detail is not valid: %s";
   private static final String USER_ID_HEADER = "userId";
-  private static final String CENTRAL_TENANT_ID = "CENTRAL_TENANT_ID";
 
   private final ConsortiumService consortiumService;
   private final DataImportEventTypes matchedEventType;
@@ -77,6 +77,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload payload) {
     try {
+      payload.setEventType(notMatchedEventType.value());
       HashMap<String, String> context = payload.getContext();
 
       if (MapUtils.isEmpty(context) || isEmpty(payload.getContext().get(getMarcType())) || Objects.isNull(payload.getCurrentNode()) || Objects.isNull(payload.getEventsChain())) {
@@ -158,7 +159,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
     String ind1 = matchDetailFields.get(1).getValue();
     String ind2 = matchDetailFields.get(2).getValue();
     String subfield = matchDetailFields.get(3).getValue();
-    Value value = MarcValueReaderUtil.readValueFromRecord(record, matchDetail.getIncomingMatchExpression());
+    Value<?> value = MarcValueReaderUtil.readValueFromRecord(record, matchDetail.getIncomingMatchExpression());
 
     List<String> values = new ArrayList<>();
     if (value.getType() == Value.ValueType.STRING) {
@@ -197,7 +198,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
 
           return retrieveMarcRecords(recordMatchingDto, sourceStorageRecordsClient, payload)
             .map(centralRecordOptional -> {
-              centralRecordOptional.ifPresent(r -> payload.getContext().put(CENTRAL_TENANT_ID, consortiumConfigurationOptional.get().getCentralTenantId()));
+              centralRecordOptional.ifPresent(r -> payload.getContext().put(CENTRAL_TENANT_ID_KEY, consortiumConfigurationOptional.get().getCentralTenantId()));
               return Stream.concat(localMatchedRecord.stream(), centralRecordOptional.stream()).toList();
             });
         }
@@ -218,7 +219,6 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
     return StringUtils.EMPTY;
   }
 
-  /* Verifies a correctness of the given {@link MatchDetail} */
   private boolean isValidMatchDetail(MatchDetail matchDetail) {
     if (matchDetail.getExistingMatchExpression() != null && matchDetail.getExistingMatchExpression().getDataValueType() == VALUE_FROM_RECORD) {
       List<Field> fields = matchDetail.getExistingMatchExpression().getFields();
