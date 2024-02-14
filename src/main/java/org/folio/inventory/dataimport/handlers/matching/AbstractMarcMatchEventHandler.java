@@ -96,7 +96,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
         return retrieveMarcRecords(recordMatchingDto, sourceStorageRecordsClient, payload)
           .compose(localMatchedRecords -> {
             if (isMatchingOnCentralTenantRequired()) {
-              return matchCentralTenantIfNeededAndCombineWithLocalMatchedRecords2(recordMatchingDto, payload, localMatchedRecords);
+              return matchCentralTenantIfNeededAndCombineWithLocalMatchedRecords(recordMatchingDto, payload, localMatchedRecords);
             }
             return Future.succeededFuture(localMatchedRecords.stream().toList());
           })
@@ -113,7 +113,8 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
     }
   }
 
-  private Future<Optional<Record>> retrieveMarcRecords(RecordMatchingDto recordMatchingDto, SourceStorageRecordsClient sourceStorageRecordsClient, DataImportEventPayload payload) {
+  private Future<Optional<Record>> retrieveMarcRecords(RecordMatchingDto recordMatchingDto, SourceStorageRecordsClient sourceStorageRecordsClient,
+                                                       DataImportEventPayload payload) {
     return getMatchedRecordsIdentifiers(recordMatchingDto, payload, sourceStorageRecordsClient)
       .compose(recordsIdentifiersCollection -> {
         if (recordsIdentifiersCollection.getIdentifiers().size() > 1) {
@@ -125,7 +126,8 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
       });
   }
 
-  private Future<RecordsIdentifiersCollection> getMatchedRecordsIdentifiers (RecordMatchingDto recordMatchingDto, DataImportEventPayload payload, SourceStorageRecordsClient sourceStorageRecordsClient) {
+  private Future<RecordsIdentifiersCollection> getMatchedRecordsIdentifiers(RecordMatchingDto recordMatchingDto, DataImportEventPayload payload,
+                                                                            SourceStorageRecordsClient sourceStorageRecordsClient) {
     return sourceStorageRecordsClient.postSourceStorageRecordsMatching(recordMatchingDto)
       .compose(response -> {
         if (response.statusCode() == SC_OK) {
@@ -137,7 +139,8 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
       });
   }
 
-  private Future<Optional<Record>> getRecordById(RecordIdentifiersDto recordIdentifiersDto, SourceStorageRecordsClient sourceStorageRecordsClient, DataImportEventPayload payload) {
+  private Future<Optional<Record>> getRecordById(RecordIdentifiersDto recordIdentifiersDto, SourceStorageRecordsClient sourceStorageRecordsClient,
+                                                 DataImportEventPayload payload) {
     String recordId = recordIdentifiersDto.getRecordId();
 
     return sourceStorageRecordsClient.getSourceStorageRecordsById(recordId)
@@ -185,7 +188,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
 
   protected abstract RecordMatchingDto.RecordType getMatchedRecordType();
 
-  private Future<List<Record>> matchCentralTenantIfNeededAndCombineWithLocalMatchedRecords2(RecordMatchingDto recordMatchingDto, DataImportEventPayload payload,
+  private Future<List<Record>> matchCentralTenantIfNeededAndCombineWithLocalMatchedRecords(RecordMatchingDto recordMatchingDto, DataImportEventPayload payload,
                                                                                             Optional<Record> localMatchedRecord) {
     Context context = EventHandlingUtil.constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl());
     return consortiumService.getConsortiumConfiguration(context)
