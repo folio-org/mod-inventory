@@ -71,6 +71,8 @@ public class MarcBibliographicMatchEventHandlerTest {
   private static final String CENTRAL_TENANT_ID = "mobius";
   private static final String TOKEN = "token";
   private static final String MATCHED_MARC_BIB_KEY = "MATCHED_MARC_BIBLIOGRAPHIC";
+  private static final String USER_ID = UUID.randomUUID().toString();
+  private static final String USER_ID_KEY = "userId";
 
   @ClassRule
   public static WireMockRule mockServer = new WireMockRule(
@@ -79,9 +81,9 @@ public class MarcBibliographicMatchEventHandlerTest {
       .dynamicPort());
 
   @Mock
-  private ConsortiumService consortiumServiceImpl;
-  private final Vertx vertx = Vertx.vertx();
+  private ConsortiumService consortiumService;
   private AutoCloseable closeable;
+  private final Vertx vertx = Vertx.vertx();
 
   private MarcBibliographicMatchEventHandler matchMarcBibEventHandler;
 
@@ -111,10 +113,10 @@ public class MarcBibliographicMatchEventHandlerTest {
   public void setUp() {
     WireMock.reset();
     this.closeable = MockitoAnnotations.openMocks(this);
-    when(consortiumServiceImpl.getConsortiumConfiguration(ArgumentMatchers.any(Context.class)))
+    when(consortiumService.getConsortiumConfiguration(ArgumentMatchers.any(Context.class)))
       .thenReturn(Future.succeededFuture(Optional.of(new ConsortiumConfiguration(CENTRAL_TENANT_ID, UUID.randomUUID().toString()))));
 
-    matchMarcBibEventHandler = new MarcBibliographicMatchEventHandler(consortiumServiceImpl, vertx.createHttpClient());
+    matchMarcBibEventHandler = new MarcBibliographicMatchEventHandler(consortiumService, vertx.createHttpClient());
   }
 
   @After
@@ -125,7 +127,7 @@ public class MarcBibliographicMatchEventHandlerTest {
   @Test
   public void shouldMatchMarcBibAtNonConsortiumTenant(TestContext context) {
     Async async = context.async();
-    when(consortiumServiceImpl.getConsortiumConfiguration(ArgumentMatchers.any(Context.class)))
+    when(consortiumService.getConsortiumConfiguration(ArgumentMatchers.any(Context.class)))
       .thenReturn(Future.succeededFuture(Optional.empty()));
 
     Record expectedMatchedRecord = new Record()
@@ -143,6 +145,7 @@ public class MarcBibliographicMatchEventHandlerTest {
       .willReturn(WireMock.ok().withBody(Json.encodePrettily(expectedMatchedRecord))));
 
     DataImportEventPayload eventPayload = createEventPayload(TENANT_ID);
+    eventPayload.getContext().put(USER_ID_KEY, USER_ID);
 
     CompletableFuture<DataImportEventPayload> future = matchMarcBibEventHandler.handle(eventPayload);
 
@@ -153,6 +156,7 @@ public class MarcBibliographicMatchEventHandlerTest {
       context.assertEquals(1, payload.getEventsChain().size());
       Record actualRecord = Json.decodeValue(payload.getContext().get(MATCHED_MARC_BIB_KEY), Record.class);
       context.assertEquals(expectedMatchedRecord.getId(), actualRecord.getId());
+      context.assertEquals(USER_ID, payload.getAdditionalProperties().get(USER_ID_KEY));
       async.complete();
     });
   }
