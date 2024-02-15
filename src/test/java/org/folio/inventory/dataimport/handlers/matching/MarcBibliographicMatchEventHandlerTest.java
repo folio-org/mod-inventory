@@ -263,6 +263,46 @@ public class MarcBibliographicMatchEventHandlerTest {
   }
 
   @Test
+  public void shouldNotMatchMarcBibIfIncomingRecordHasNoSpecifiedIncomingField(TestContext context) {
+    Async async = context.async();
+    MatchProfile matchProfile = new MatchProfile()
+      .withIncomingRecordType(MARC_BIBLIOGRAPHIC)
+      .withExistingRecordType(MARC_BIBLIOGRAPHIC)
+      .withMatchDetails(List.of(new MatchDetail()
+        .withIncomingRecordType(MARC_BIBLIOGRAPHIC)
+        .withExistingRecordType(MARC_BIBLIOGRAPHIC)
+        .withMatchCriterion(EXACTLY_MATCHES)
+        .withIncomingMatchExpression(new MatchExpression()
+          .withDataValueType(VALUE_FROM_RECORD)
+          .withFields(List.of(
+            new Field().withLabel("field").withValue("900"),
+            new Field().withLabel("indicator1").withValue(""),
+            new Field().withLabel("indicator2").withValue(""),
+            new Field().withLabel("recordSubfield").withValue("a"))))
+        .withExistingMatchExpression(new MatchExpression()
+          .withDataValueType(VALUE_FROM_RECORD)
+          .withFields(List.of(
+            new Field().withLabel("field").withValue("900"),
+            new Field().withLabel("indicator1").withValue(""),
+            new Field().withLabel("indicator2").withValue(""),
+            new Field().withLabel("recordSubfield").withValue("a"))))));
+
+    DataImportEventPayload eventPayload = createEventPayload(TENANT_ID);
+    eventPayload.withCurrentNode(new ProfileSnapshotWrapper()
+      .withContentType(MATCH_PROFILE)
+      .withContent(matchProfile));
+
+    CompletableFuture<DataImportEventPayload> future = matchMarcBibEventHandler.handle(eventPayload);
+
+    future.whenComplete((payload, throwable) -> {
+      context.assertNull(throwable);
+      context.assertEquals(DI_SRS_MARC_BIB_RECORD_NOT_MATCHED.value(), payload.getEventType());
+      context.assertEquals(1, payload.getEventsChain().size());
+      async.complete();
+    });
+  }
+
+  @Test
   public void shouldMatchAtLocalTenantAndNotMatchAtCentralTenant(TestContext context) {
     Async async = context.async();
     Record expectedMatchedRecord = new Record()

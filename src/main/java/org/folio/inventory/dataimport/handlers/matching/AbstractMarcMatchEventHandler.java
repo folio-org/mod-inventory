@@ -5,7 +5,6 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.collections.MapUtils;
-import org.apache.commons.lang.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
@@ -33,7 +32,7 @@ import org.folio.rest.jaxrs.model.RecordIdentifiersDto;
 import org.folio.rest.jaxrs.model.RecordMatchingDto;
 import org.folio.rest.jaxrs.model.RecordsIdentifiersCollection;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +44,7 @@ import java.util.stream.Stream;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.http.HttpStatus.SC_NOT_FOUND;
 import static org.apache.http.HttpStatus.SC_OK;
+import static org.folio.processing.value.Value.ValueType.MISSING;
 import static org.folio.rest.jaxrs.model.MatchExpression.DataValueType.VALUE_FROM_RECORD;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MATCH_PROFILE;
 
@@ -53,7 +53,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
   private static final Logger LOG = LogManager.getLogger(AbstractMarcMatchEventHandler.class);
 
   protected static final String CENTRAL_TENANT_ID_KEY = "CENTRAL_TENANT_ID";
-  private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
+  private static final String PAYLOAD_HAS_NO_DATA_MESSAGE = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
   private static final String FOUND_MULTIPLE_RECORDS_ERROR_MESSAGE = "Found multiple records matching specified conditions";
   private static final String RECORDS_NOT_FOUND_MESSAGE = "Can`t find records matching specified conditions";
   private static final String MATCH_DETAIL_IS_NOT_VALID = "Match detail is not valid: %s";
@@ -81,34 +81,41 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
       HashMap<String, String> context = payload.getContext();
 
       if (MapUtils.isEmpty(context) || isEmpty(payload.getContext().get(getMarcType())) || Objects.isNull(payload.getCurrentNode()) || Objects.isNull(payload.getEventsChain())) {
-        LOG.warn(PAYLOAD_HAS_NO_DATA_MSG);
-        return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
+        LOG.warn(PAYLOAD_HAS_NO_DATA_MESSAGE);
+        return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MESSAGE));
       }
       payload.getEventsChain().add(payload.getEventType());
       payload.setAdditionalProperty(USER_ID_HEADER, context.get(USER_ID_HEADER));
       SourceStorageRecordsClient sourceStorageRecordsClient = new SourceStorageRecordsClient(payload.getOkapiUrl(), payload.getTenant(), payload.getToken(), httpClient);
 
-      String record = context.get(getMarcType());
+      String recordAsString = context.get(getMarcType());
       MatchDetail matchDetail = retrieveMatchDetail(payload);
 
-      if (isValidMatchDetail(matchDetail)) {
-        RecordMatchingDto recordMatchingDto = buildRecordsMatchingRequest(record, matchDetail);
-        return retrieveMarcRecords(recordMatchingDto, sourceStorageRecordsClient, payload)
-          .compose(localMatchedRecords -> {
-            if (isMatchingOnCentralTenantRequired()) {
-              return matchCentralTenantIfNeededAndCombineWithLocalMatchedRecords(recordMatchingDto, payload, localMatchedRecords);
-            }
-            return Future.succeededFuture(localMatchedRecords.stream().toList());
-          })
-          .compose(recordList -> processSucceededResult(recordList, payload))
-          .onFailure(e -> LOG.warn("handle:: Failed to process event for MARC record matching", e))
-          .recover(throwable -> Future.failedFuture(mapToMatchException(throwable)))
-          .toCompletionStage().toCompletableFuture();
+      if (!isValidMatchDetail(matchDetail)) {
+        constructError(payload, String.format(MATCH_DETAIL_IS_NOT_VALID, matchDetail));
+        return CompletableFuture.completedFuture(payload);
       }
-      constructError(payload, String.format(MATCH_DETAIL_IS_NOT_VALID, matchDetail));
-      return CompletableFuture.completedFuture(payload);
+
+      Value<?> value = MarcValueReaderUtil.readValueFromRecord(recordAsString, matchDetail.getIncomingMatchExpression());
+      if (value.getType() == MISSING) {
+        LOG.info("Could not find records by matching criteria because incoming record does not contain specified field");
+        return CompletableFuture.completedFuture(payload);
+      }
+
+      RecordMatchingDto recordMatchingDto = buildRecordsMatchingRequest(matchDetail, value);
+      return retrieveMarcRecords(recordMatchingDto, sourceStorageRecordsClient, payload)
+        .compose(localMatchedRecords -> {
+          if (isMatchingOnCentralTenantRequired()) {
+            return matchCentralTenantIfNeededAndCombineWithLocalMatchedRecords(recordMatchingDto, payload, localMatchedRecords);
+          }
+          return Future.succeededFuture(localMatchedRecords.stream().toList());
+        })
+        .compose(recordList -> processSucceededResult(recordList, payload))
+        .onFailure(e -> LOG.warn("handle:: Failed to process event for MARC record matching, jobExecutionId: '{}'", payload.getJobExecutionId(), e))
+        .recover(throwable -> Future.failedFuture(mapToMatchException(throwable)))
+        .toCompletionStage().toCompletableFuture();
     } catch (Exception e) {
-      LOG.warn("handle:: Error while processing event for MARC record matching", e);
+      LOG.warn("handle:: Error while processing event for MARC record matching, jobExecutionId: '{}'", payload.getJobExecutionId(), e);
       return CompletableFuture.failedFuture(e);
     }
   }
@@ -156,20 +163,18 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
       });
   }
 
-  private RecordMatchingDto buildRecordsMatchingRequest(String record, MatchDetail matchDetail) {
+  private RecordMatchingDto buildRecordsMatchingRequest(MatchDetail matchDetail, Value<?> value) {
     List<Field> matchDetailFields = matchDetail.getExistingMatchExpression().getFields();
     String field = matchDetailFields.get(0).getValue();
     String ind1 = matchDetailFields.get(1).getValue();
     String ind2 = matchDetailFields.get(2).getValue();
     String subfield = matchDetailFields.get(3).getValue();
-    Value<?> value = MarcValueReaderUtil.readValueFromRecord(record, matchDetail.getIncomingMatchExpression());
 
-    List<String> values = new ArrayList<>();
-    if (value.getType() == Value.ValueType.STRING) {
-      values = List.of(((StringValue) value).getValue());
-    } else if (value.getType() == Value.ValueType.LIST) {
-      values = ((ListValue) value).getValue();
-    }
+    List<String> values = switch (value.getType()) {
+      case STRING -> List.of(((StringValue) value).getValue());
+      case LIST -> ((ListValue) value).getValue();
+      default -> Collections.emptyList();
+    };
 
     Filter filter = new Filter()
       .withValues(values)
@@ -178,7 +183,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
       .withIndicator2(ind2)
       .withSubfield(subfield);
 
-    return  new RecordMatchingDto()
+    return new RecordMatchingDto()
       .withRecordType(getMatchedRecordType())
       .withFilters(List.of(filter))
       .withReturnTotalRecordsCount(false);
@@ -189,7 +194,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
   protected abstract RecordMatchingDto.RecordType getMatchedRecordType();
 
   private Future<List<Record>> matchCentralTenantIfNeededAndCombineWithLocalMatchedRecords(RecordMatchingDto recordMatchingDto, DataImportEventPayload payload,
-                                                                                            Optional<Record> localMatchedRecord) {
+                                                                                           Optional<Record> localMatchedRecord) {
     Context context = EventHandlingUtil.constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl());
     return consortiumService.getConsortiumConfiguration(context)
       .compose(consortiumConfigurationOptional -> {
@@ -215,16 +220,11 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
 
   abstract boolean isMatchingOnCentralTenantRequired();
 
-  private String getStringValue(Value value) {
-    if (Value.ValueType.STRING.equals(value.getType())) {
-      return String.valueOf(value.getValue());
-    }
-    return StringUtils.EMPTY;
-  }
-
   private boolean isValidMatchDetail(MatchDetail matchDetail) {
-    if (matchDetail.getExistingMatchExpression() != null && matchDetail.getExistingMatchExpression().getDataValueType() == VALUE_FROM_RECORD) {
+    if (matchDetail.getExistingMatchExpression() != null
+      && matchDetail.getExistingMatchExpression().getDataValueType() == VALUE_FROM_RECORD) {
       List<Field> fields = matchDetail.getExistingMatchExpression().getFields();
+
       return fields != null && fields.size() == 4
         && matchDetail.getIncomingRecordType() == EntityType.fromValue(getMarcType())
         && matchDetail.getExistingRecordType() == EntityType.fromValue(getMarcType());
@@ -286,7 +286,6 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
     return Future.succeededFuture(payload);
   }
 
-  /* Logic for processing errors */
   private void constructError(DataImportEventPayload payload, String errorMessage) {
     LOG.warn(errorMessage);
     payload.setEventType(notMatchedEventType.toString());
