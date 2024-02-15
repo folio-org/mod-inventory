@@ -5,6 +5,7 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
@@ -27,7 +28,6 @@ import org.folio.rest.jaxrs.model.Field;
 import org.folio.rest.jaxrs.model.Filter;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
-import org.folio.rest.jaxrs.model.RecordCollection;
 import org.folio.rest.jaxrs.model.RecordIdentifiersDto;
 import org.folio.rest.jaxrs.model.RecordMatchingDto;
 import org.folio.rest.jaxrs.model.RecordsIdentifiersCollection;
@@ -41,7 +41,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
-import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static java.lang.String.format;
 import static org.apache.http.HttpStatus.SC_NOT_FOUND;
 import static org.apache.http.HttpStatus.SC_OK;
 import static org.folio.processing.value.Value.ValueType.MISSING;
@@ -55,9 +55,11 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
   protected static final String CENTRAL_TENANT_ID_KEY = "CENTRAL_TENANT_ID";
   private static final String PAYLOAD_HAS_NO_DATA_MESSAGE = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
   private static final String FOUND_MULTIPLE_RECORDS_ERROR_MESSAGE = "Found multiple records matching specified conditions";
-  private static final String RECORDS_NOT_FOUND_MESSAGE = "Can`t find records matching specified conditions";
-  private static final String MATCH_DETAIL_IS_NOT_VALID = "Match detail is not valid: %s";
+  private static final String RECORDS_NOT_FOUND_MESSAGE = "Could not find records matching specified conditions";
+  private static final String MATCH_DETAIL_IS_NOT_VALID_MSG_TEMPLATE = "Match detail is not valid, jobExecutionId: '%s', match detail: '%s'";
+  private static final String MATCH_RESULT_KEY_PREFIX = "MATCHED_%s";
   private static final String USER_ID_HEADER = "userId";
+  private static final int EXPECTED_MATCH_EXPRESSION_FIELDS_NUMBER = 4;
 
   private final ConsortiumService consortiumService;
   private final DataImportEventTypes matchedEventType;
@@ -80,30 +82,29 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
       payload.setEventType(notMatchedEventType.value());
       HashMap<String, String> context = payload.getContext();
 
-      if (MapUtils.isEmpty(context) || isEmpty(payload.getContext().get(getMarcType())) || Objects.isNull(payload.getCurrentNode()) || Objects.isNull(payload.getEventsChain())) {
+      if (isNotValidPayload(payload)) {
         LOG.warn(PAYLOAD_HAS_NO_DATA_MESSAGE);
         return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MESSAGE));
       }
       payload.getEventsChain().add(payload.getEventType());
       payload.setAdditionalProperty(USER_ID_HEADER, context.get(USER_ID_HEADER));
-      SourceStorageRecordsClient sourceStorageRecordsClient = new SourceStorageRecordsClient(payload.getOkapiUrl(), payload.getTenant(), payload.getToken(), httpClient);
 
       String recordAsString = context.get(getMarcType());
       MatchDetail matchDetail = retrieveMatchDetail(payload);
 
       if (!isValidMatchDetail(matchDetail)) {
-        constructError(payload, String.format(MATCH_DETAIL_IS_NOT_VALID, matchDetail));
+        constructError(payload, format(MATCH_DETAIL_IS_NOT_VALID_MSG_TEMPLATE, payload.getJobExecutionId(), matchDetail));
         return CompletableFuture.completedFuture(payload);
       }
 
       Value<?> value = MarcValueReaderUtil.readValueFromRecord(recordAsString, matchDetail.getIncomingMatchExpression());
       if (value.getType() == MISSING) {
-        LOG.info("Could not find records by matching criteria because incoming record does not contain specified field");
+        LOG.info("handle:: Could not find records by matching criteria because incoming record does not contain specified field");
         return CompletableFuture.completedFuture(payload);
       }
 
       RecordMatchingDto recordMatchingDto = buildRecordsMatchingRequest(matchDetail, value);
-      return retrieveMarcRecords(recordMatchingDto, sourceStorageRecordsClient, payload)
+      return retrieveMarcRecords(recordMatchingDto, payload.getTenant(), payload)
         .compose(localMatchedRecords -> {
           if (isMatchingOnCentralTenantRequired()) {
             return matchCentralTenantIfNeededAndCombineWithLocalMatchedRecords(recordMatchingDto, payload, localMatchedRecords);
@@ -112,55 +113,55 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
         })
         .compose(recordList -> processSucceededResult(recordList, payload))
         .onFailure(e -> LOG.warn("handle:: Failed to process event for MARC record matching, jobExecutionId: '{}'", payload.getJobExecutionId(), e))
-        .recover(throwable -> Future.failedFuture(mapToMatchException(throwable)))
         .toCompletionStage().toCompletableFuture();
     } catch (Exception e) {
-      LOG.warn("handle:: Error while processing event for MARC record matching, jobExecutionId: '{}'", payload.getJobExecutionId(), e);
+      LOG.warn("handle:: Error while processing event for MARC record matching, jobExecutionId: '{}'",
+        payload.getJobExecutionId(), e);
       return CompletableFuture.failedFuture(e);
     }
   }
 
-  private Future<Optional<Record>> retrieveMarcRecords(RecordMatchingDto recordMatchingDto, SourceStorageRecordsClient sourceStorageRecordsClient,
-                                                       DataImportEventPayload payload) {
-    return getMatchedRecordsIdentifiers(recordMatchingDto, payload, sourceStorageRecordsClient)
-      .compose(recordsIdentifiersCollection -> {
-        if (recordsIdentifiersCollection.getIdentifiers().size() > 1) {
-          return Future.failedFuture(FOUND_MULTIPLE_RECORDS_ERROR_MESSAGE);
-        } else if (recordsIdentifiersCollection.getIdentifiers().size() == 1) {
-          return getRecordById(recordsIdentifiersCollection.getIdentifiers().get(0), sourceStorageRecordsClient, payload);
-        }
-        return Future.succeededFuture(Optional.empty());
-      });
+  protected abstract String getMarcType();
+
+  protected abstract RecordMatchingDto.RecordType getMatchedRecordType();
+
+  protected abstract boolean isMatchingOnCentralTenantRequired();
+
+  private boolean isNotValidPayload(DataImportEventPayload payload) {
+    HashMap<String, String> context = payload.getContext();
+    return MapUtils.isEmpty(context)
+      || StringUtils.isEmpty(payload.getContext().get(getMarcType()))
+      || Objects.isNull(payload.getCurrentNode())
+      || Objects.isNull(payload.getEventsChain());
   }
 
-  private Future<RecordsIdentifiersCollection> getMatchedRecordsIdentifiers(RecordMatchingDto recordMatchingDto, DataImportEventPayload payload,
-                                                                            SourceStorageRecordsClient sourceStorageRecordsClient) {
-    return sourceStorageRecordsClient.postSourceStorageRecordsMatching(recordMatchingDto)
-      .compose(response -> {
-        if (response.statusCode() == SC_OK) {
-          return Future.succeededFuture(response.bodyAsJson(RecordsIdentifiersCollection.class));
-        }
-        String msg = String.format("Failed to request records identifiers by matching criteria, responseStatus: '%s', body: '%s', jobExecutionId: '%s', tenant: '%s'",
-          response.statusCode(), response.bodyAsString(), payload.getJobExecutionId(), payload.getTenant());
-        return Future.failedFuture(msg);
-      });
+  /**
+   * Retrieves a {@link MatchDetail} from the given {@link DataImportEventPayload}
+   *
+   * @param dataImportEventPayload event payload to retrieve from
+   * @return {@link MatchDetail}
+   */
+  private MatchDetail retrieveMatchDetail(DataImportEventPayload dataImportEventPayload) {
+    MatchProfile matchProfile;
+    ProfileSnapshotWrapper matchingProfileWrapper = dataImportEventPayload.getCurrentNode();
+    if (matchingProfileWrapper.getContent() instanceof Map profileAsMap) {
+      matchProfile = new JsonObject(profileAsMap).mapTo(MatchProfile.class);
+    } else {
+      matchProfile = (MatchProfile) matchingProfileWrapper.getContent();
+    }
+    return matchProfile.getMatchDetails().get(0);
   }
 
-  private Future<Optional<Record>> getRecordById(RecordIdentifiersDto recordIdentifiersDto, SourceStorageRecordsClient sourceStorageRecordsClient,
-                                                 DataImportEventPayload payload) {
-    String recordId = recordIdentifiersDto.getRecordId();
+  private boolean isValidMatchDetail(MatchDetail matchDetail) {
+    if (matchDetail.getExistingMatchExpression() != null
+      && matchDetail.getExistingMatchExpression().getDataValueType() == VALUE_FROM_RECORD) {
+      List<Field> fields = matchDetail.getExistingMatchExpression().getFields();
 
-    return sourceStorageRecordsClient.getSourceStorageRecordsById(recordId)
-      .compose(response -> {
-        if (response.statusCode() == SC_OK) {
-          return Future.succeededFuture(Optional.of(response.bodyAsJson(Record.class)));
-        } else if (response.statusCode() == SC_NOT_FOUND) {
-          return Future.succeededFuture(Optional.empty());
-        }
-        String msg = String.format("Failed to retrieve record by id: '%s', responseStatus: '%s', body: '%s', jobExecutionId: '%s', tenant: '%s'",
-          recordId, response.statusCode(), response.bodyAsString(), payload.getJobExecutionId(), payload.getTenant());
-        return Future.failedFuture(msg);
-      });
+      return fields != null && fields.size() == EXPECTED_MATCH_EXPRESSION_FIELDS_NUMBER
+        && matchDetail.getIncomingRecordType() == EntityType.fromValue(getMarcType())
+        && matchDetail.getExistingRecordType() == EntityType.fromValue(getMarcType());
+    }
+    return false;
   }
 
   private RecordMatchingDto buildRecordsMatchingRequest(MatchDetail matchDetail, Value<?> value) {
@@ -189,9 +190,54 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
       .withReturnTotalRecordsCount(false);
   }
 
-  protected abstract String getMarcType();
+  private Future<Optional<Record>> retrieveMarcRecords(RecordMatchingDto recordMatchingDto, String tenantId,
+                                                       DataImportEventPayload payload) {
+    SourceStorageRecordsClient sourceStorageRecordsClient =
+      new SourceStorageRecordsClient(payload.getOkapiUrl(), tenantId, payload.getToken(), httpClient);
 
-  protected abstract RecordMatchingDto.RecordType getMatchedRecordType();
+    return getMatchedRecordsIdentifiers(recordMatchingDto, payload, sourceStorageRecordsClient)
+      .compose(recordsIdentifiersCollection -> {
+        if (recordsIdentifiersCollection.getIdentifiers().size() > 1) {
+          return Future.failedFuture(FOUND_MULTIPLE_RECORDS_ERROR_MESSAGE);
+        } else if (recordsIdentifiersCollection.getIdentifiers().size() == 1) {
+          return getRecordById(recordsIdentifiersCollection.getIdentifiers().get(0), sourceStorageRecordsClient, payload);
+        }
+        LOG.info("retrieveMarcRecords:: {}, jobExecutionId: '{}', tenantId: '{}'",
+          RECORDS_NOT_FOUND_MESSAGE, payload.getJobExecutionId(), tenantId);
+        return Future.succeededFuture(Optional.empty());
+      });
+  }
+
+  private Future<RecordsIdentifiersCollection> getMatchedRecordsIdentifiers(RecordMatchingDto recordMatchingDto,
+                                                                            DataImportEventPayload payload,
+                                                                            SourceStorageRecordsClient sourceStorageRecordsClient) {
+    return sourceStorageRecordsClient.postSourceStorageRecordsMatching(recordMatchingDto)
+      .compose(response -> {
+        if (response.statusCode() == SC_OK) {
+          return Future.succeededFuture(response.bodyAsJson(RecordsIdentifiersCollection.class));
+        }
+        String msg = format("Failed to request records identifiers by matching criteria, responseStatus: '%s', body: '%s', jobExecutionId: '%s', tenant: '%s'",
+          response.statusCode(), response.bodyAsString(), payload.getJobExecutionId(), payload.getTenant());
+        return Future.failedFuture(msg);
+      });
+  }
+
+  private Future<Optional<Record>> getRecordById(RecordIdentifiersDto recordIdentifiersDto, SourceStorageRecordsClient sourceStorageRecordsClient,
+                                                 DataImportEventPayload payload) {
+    String recordId = recordIdentifiersDto.getRecordId();
+
+    return sourceStorageRecordsClient.getSourceStorageRecordsById(recordId)
+      .compose(response -> {
+        if (response.statusCode() == SC_OK) {
+          return Future.succeededFuture(Optional.of(response.bodyAsJson(Record.class)));
+        } else if (response.statusCode() == SC_NOT_FOUND) {
+          return Future.succeededFuture(Optional.empty());
+        }
+        String msg = format("Failed to retrieve record by id: '%s', responseStatus: '%s', body: '%s', jobExecutionId: '%s', tenant: '%s'",
+          recordId, response.statusCode(), response.bodyAsString(), payload.getJobExecutionId(), payload.getTenant());
+        return Future.failedFuture(msg);
+      });
+  }
 
   private Future<List<Record>> matchCentralTenantIfNeededAndCombineWithLocalMatchedRecords(RecordMatchingDto recordMatchingDto, DataImportEventPayload payload,
                                                                                            Optional<Record> localMatchedRecord) {
@@ -201,10 +247,8 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
         if (consortiumConfigurationOptional.isPresent() && !consortiumConfigurationOptional.get().getCentralTenantId().equals(payload.getTenant())) {
           LOG.debug("matchCentralTenantIfNeededAndCombineWithLocalMatchedRecords:: Matching on centralTenant with id: {}",
             consortiumConfigurationOptional.get().getCentralTenantId());
-          SourceStorageRecordsClient sourceStorageRecordsClient =
-            new SourceStorageRecordsClient(payload.getOkapiUrl(), consortiumConfigurationOptional.get().getCentralTenantId(), payload.getToken(), httpClient);
 
-          return retrieveMarcRecords(recordMatchingDto, sourceStorageRecordsClient, payload)
+          return retrieveMarcRecords(recordMatchingDto, consortiumConfigurationOptional.get().getCentralTenantId(), payload)
             .map(centralRecordOptional -> {
               centralRecordOptional.ifPresent(r -> payload.getContext().put(CENTRAL_TENANT_ID_KEY, consortiumConfigurationOptional.get().getCentralTenantId()));
               return Stream.concat(localMatchedRecord.stream(), centralRecordOptional.stream()).toList();
@@ -212,24 +256,6 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
         }
         return Future.succeededFuture(localMatchedRecord.stream().toList());
       });
-  }
-
-  private static Throwable mapToMatchException(Throwable throwable) {
-    return throwable instanceof MatchingException ? throwable : new MatchingException(throwable);
-  }
-
-  abstract boolean isMatchingOnCentralTenantRequired();
-
-  private boolean isValidMatchDetail(MatchDetail matchDetail) {
-    if (matchDetail.getExistingMatchExpression() != null
-      && matchDetail.getExistingMatchExpression().getDataValueType() == VALUE_FROM_RECORD) {
-      List<Field> fields = matchDetail.getExistingMatchExpression().getFields();
-
-      return fields != null && fields.size() == 4
-        && matchDetail.getIncomingRecordType() == EntityType.fromValue(getMarcType())
-        && matchDetail.getExistingRecordType() == EntityType.fromValue(getMarcType());
-    }
-    return false;
   }
 
   @Override
@@ -242,48 +268,39 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
     return false;
   }
 
-  /* Verifies whether the given {@link MatchProfile} is suitable for {@link EventHandler} */
   private boolean isEligibleMatchProfile(MatchProfile matchProfile) {
     return matchProfile.getIncomingRecordType() == EntityType.fromValue(getMarcType())
       && matchProfile.getExistingRecordType() == EntityType.fromValue(getMarcType());
   }
 
   /**
-   * @return the key under which a matched record is put into event payload context
-   */
-  protected String getMatchedMarcKey() {
-    return "MATCHED_" + getMarcType();
-  }
-
-  /* Retrieves a {@link MatchDetail} from the given {@link DataImportEventPayload} */
-  private MatchDetail retrieveMatchDetail(DataImportEventPayload dataImportEventPayload) {
-    MatchProfile matchProfile;
-    ProfileSnapshotWrapper matchingProfileWrapper = dataImportEventPayload.getCurrentNode();
-    if (matchingProfileWrapper.getContent() instanceof Map) {
-      matchProfile = new JsonObject((Map) matchingProfileWrapper.getContent()).mapTo(MatchProfile.class);
-    } else {
-      matchProfile = (MatchProfile) matchingProfileWrapper.getContent();
-    }
-    return matchProfile.getMatchDetails().get(0);
-  }
-
-  /**
-   * Prepares {@link DataImportEventPayload} for the further processing based on the number of retrieved records in {@link RecordCollection}
+   * Prepares {@link DataImportEventPayload} for the further processing
+   * based on the number of specified records in {@code records} list
+   *
+   * @param records records retrieved during matching processing
+   * @param payload event payload to prepare
+   * @return Future of {@link DataImportEventPayload} with result of matching
    */
   private Future<DataImportEventPayload> processSucceededResult(List<Record> records, DataImportEventPayload payload) {
     if (records.size() == 1) {
       payload.setEventType(matchedEventType.toString());
       payload.getContext().put(getMatchedMarcKey(), Json.encode(records.get(0)));
-      LOG.debug("processSucceededResult:: Matched 1 record for tenant with id {}", payload.getTenant());
+      LOG.debug("processSucceededResult:: Matched 1 record for jobExecutionId: '{}', tenantId: '{}'",
+        payload.getJobExecutionId(), payload.getTenant());
       return Future.succeededFuture(payload);
     }
     if (records.size() > 1) {
-      constructError(payload, FOUND_MULTIPLE_RECORDS_ERROR_MESSAGE);
-      LOG.warn("processSucceededResult:: Matched multiple record for tenant with id {}", payload.getTenant());
+      LOG.warn("processSucceededResult:: Matched multiple records, jobExecutionId: '{}', tenantId: '{}'",
+        payload.getJobExecutionId(), payload.getTenant());
       return Future.failedFuture(new MatchingException(FOUND_MULTIPLE_RECORDS_ERROR_MESSAGE));
     }
-    constructError(payload, RECORDS_NOT_FOUND_MESSAGE);
+      LOG.info("processSucceededResult:: {}, jobExecutionId: '{}', tenantId: '{}'",
+        RECORDS_NOT_FOUND_MESSAGE, payload.getJobExecutionId(), payload.getTenant());
     return Future.succeededFuture(payload);
+  }
+
+  private String getMatchedMarcKey() {
+    return format(MATCH_RESULT_KEY_PREFIX, getMarcType());
   }
 
   private void constructError(DataImportEventPayload payload, String errorMessage) {

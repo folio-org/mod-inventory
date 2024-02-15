@@ -36,7 +36,7 @@ public class MarcBibliographicMatchEventHandler extends AbstractMarcMatchEventHa
   }
 
   @Override
-  boolean isMatchingOnCentralTenantRequired() {
+  protected boolean isMatchingOnCentralTenantRequired() {
     return true;
   }
 

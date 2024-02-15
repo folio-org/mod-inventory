@@ -13,10 +13,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
-import org.folio.JobProfile;
-import org.folio.MappingProfile;
 import org.folio.MatchDetail;
 import org.folio.MatchProfile;
 import org.folio.ParsedRecord;
@@ -25,10 +22,7 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.consortium.entities.ConsortiumConfiguration;
 import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.okapi.common.XOkapiHeaders;
-import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Field;
-import org.folio.rest.jaxrs.model.MappingDetail;
-import org.folio.rest.jaxrs.model.MappingRule;
 import org.folio.rest.jaxrs.model.MatchExpression;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.RecordIdentifiersDto;
@@ -42,8 +36,6 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
@@ -61,13 +53,9 @@ import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_NOT_MATCHED;
 import static org.folio.MatchDetail.MatchCriterion.EXACTLY_MATCHES;
 import static org.folio.Record.RecordType.MARC_BIB;
 import static org.folio.inventory.dataimport.handlers.matching.AbstractMarcMatchEventHandler.CENTRAL_TENANT_ID_KEY;
-import static org.folio.rest.jaxrs.model.EntityType.ITEM;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_AUTHORITY;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.MatchExpression.DataValueType.VALUE_FROM_RECORD;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MATCH_PROFILE;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -97,11 +85,6 @@ public class MarcBibliographicMatchEventHandlerTest {
 
   private MarcBibliographicMatchEventHandler matchMarcBibEventHandler;
 
-  private final JobProfile jobProfile = new JobProfile()
-    .withId(UUID.randomUUID().toString())
-    .withName("Update MARC Bib")
-    .withDataType(JobProfile.DataType.MARC);
-
   private final MatchProfile matchProfile = new MatchProfile()
     .withIncomingRecordType(MARC_BIBLIOGRAPHIC)
     .withExistingRecordType(MARC_BIBLIOGRAPHIC)
@@ -123,45 +106,6 @@ public class MarcBibliographicMatchEventHandlerTest {
           new Field().withLabel("indicator1").withValue("f"),
           new Field().withLabel("indicator2").withValue("f"),
           new Field().withLabel("recordSubfield").withValue("s"))))));
-
-  private final ActionProfile actionProfile = new ActionProfile()
-    .withId(UUID.randomUUID().toString())
-    .withAction(ActionProfile.Action.UPDATE)
-    .withFolioRecord(ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC);
-
-  private final MappingProfile mappingProfile = new MappingProfile()
-    .withId(UUID.randomUUID().toString())
-    .withName("Prelim item from MARC")
-    .withIncomingRecordType(EntityType.MARC_BIBLIOGRAPHIC)
-    .withExistingRecordType(ITEM)
-    .withMappingDetails(new MappingDetail()
-      .withMappingFields(Arrays.asList(
-        new MappingRule().withPath("item.status.name").withValue("\"statusExpression\"").withEnabled("true"),
-        new MappingRule().withPath("item.permanentLoanType.id").withValue("\"permanentLoanTypeExpression\"").withEnabled("true"),
-        new MappingRule().withPath("item.materialType.id").withValue("\"materialTypeExpression\"").withEnabled("true"),
-        new MappingRule().withPath("item.barcode").withValue("\"statusExpression\"").withEnabled("true")
-      )));
-
-  private final ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
-    .withId(UUID.randomUUID().toString())
-    .withProfileId(jobProfile.getId())
-    .withContentType(JOB_PROFILE)
-    .withContent(JsonObject.mapFrom(jobProfile).getMap())
-    .withChildSnapshotWrappers(Collections.singletonList(
-      new ProfileSnapshotWrapper()
-        .withProfileId(matchProfile.getId())
-        .withContentType(MATCH_PROFILE)
-        .withContent(JsonObject.mapFrom(matchProfile).getMap())
-        .withChildSnapshotWrappers(Collections.singletonList(
-          new ProfileSnapshotWrapper()
-            .withProfileId(actionProfile.getId())
-            .withContentType(ACTION_PROFILE)
-            .withContent(JsonObject.mapFrom(actionProfile).getMap())
-            .withChildSnapshotWrappers(Collections.singletonList(
-              new ProfileSnapshotWrapper()
-                .withProfileId(mappingProfile.getId())
-                .withContentType(MAPPING_PROFILE)
-                .withContent(JsonObject.mapFrom(mappingProfile).getMap())))))));
 
   @Before
   public void setUp() {
@@ -506,13 +450,18 @@ public class MarcBibliographicMatchEventHandlerTest {
     Record record = new Record()
       .withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
 
+    ProfileSnapshotWrapper matchProfileWrapper = new ProfileSnapshotWrapper()
+      .withProfileId(matchProfile.getId())
+      .withContentType(MATCH_PROFILE)
+      .withContent(JsonObject.mapFrom(matchProfile).getMap());
+
     return new DataImportEventPayload()
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withOkapiUrl(mockServer.baseUrl())
       .withTenant(tenantId)
       .withToken(TOKEN)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withCurrentNode(matchProfileWrapper)
       .withContext(new HashMap<>() {{
         put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
       }});
