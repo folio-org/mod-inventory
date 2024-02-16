@@ -56,7 +56,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
   private static final String PAYLOAD_HAS_NO_DATA_MESSAGE = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
   private static final String FOUND_MULTIPLE_RECORDS_ERROR_MESSAGE = "Found multiple records matching specified conditions";
   private static final String RECORDS_NOT_FOUND_MESSAGE = "Could not find records matching specified conditions";
-  private static final String MATCH_DETAIL_IS_NOT_VALID_MSG_TEMPLATE = "Match detail is not valid, jobExecutionId: '%s', match detail: '%s'";
+  private static final String MATCH_DETAIL_IS_INVALID_MESSAGE = "Match detail is invalid";
   private static final String MATCH_RESULT_KEY_PREFIX = "MATCHED_%s";
   private static final String USER_ID_HEADER = "userId";
   private static final int EXPECTED_MATCH_EXPRESSION_FIELDS_NUMBER = 4;
@@ -93,8 +93,8 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
       MatchDetail matchDetail = retrieveMatchDetail(payload);
 
       if (!isValidMatchDetail(matchDetail)) {
-        constructError(payload, format(MATCH_DETAIL_IS_NOT_VALID_MSG_TEMPLATE, payload.getJobExecutionId(), matchDetail));
-        return CompletableFuture.completedFuture(payload);
+        LOG.warn("handle:: Match detail is invalid, jobExecutionId: '{}', match detail: '{}'", payload.getJobExecutionId(), matchDetail);
+        return CompletableFuture.failedFuture(new EventProcessingException(MATCH_DETAIL_IS_INVALID_MESSAGE));
       }
 
       Value<?> value = MarcValueReaderUtil.readValueFromRecord(recordAsString, matchDetail.getIncomingMatchExpression());
@@ -304,11 +304,6 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
 
   private String getMatchedMarcKey() {
     return format(MATCH_RESULT_KEY_PREFIX, getMarcType());
-  }
-
-  private void constructError(DataImportEventPayload payload, String errorMessage) {
-    LOG.warn(errorMessage);
-    payload.setEventType(notMatchedEventType.toString());
   }
 
 }

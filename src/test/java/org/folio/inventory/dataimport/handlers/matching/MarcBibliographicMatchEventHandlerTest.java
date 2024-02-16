@@ -440,25 +440,13 @@ public class MarcBibliographicMatchEventHandlerTest {
   @Test
   public void shouldReturnFailedFutureIfFailedToDeserializeMatchProfile(TestContext context) {
     Async async = context.async();
-    Record record = new Record()
-      .withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
-
     JsonObject invalidMatchProfileJson = new JsonObject()
       .put("invalidField", "val");
 
-    DataImportEventPayload eventPayload = new DataImportEventPayload()
-      .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
-      .withJobExecutionId(UUID.randomUUID().toString())
-      .withOkapiUrl(mockServer.baseUrl())
-      .withTenant(TENANT_ID)
-      .withToken(TOKEN)
-      .withCurrentNode(new ProfileSnapshotWrapper()
-        .withId(UUID.randomUUID().toString())
-        .withContentType(MATCH_PROFILE)
-        .withContent(invalidMatchProfileJson.getMap()))
-      .withContext(new HashMap<>() {{
-        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
-      }});
+    DataImportEventPayload eventPayload = createEventPayload(TENANT_ID);
+    eventPayload.withCurrentNode(new ProfileSnapshotWrapper()
+      .withContentType(MATCH_PROFILE)
+      .withContent(invalidMatchProfileJson.getMap()));
 
     CompletableFuture<DataImportEventPayload> future = matchMarcBibEventHandler.handle(eventPayload);
 
@@ -553,6 +541,31 @@ public class MarcBibliographicMatchEventHandlerTest {
       verify(mockedStorage).getInstanceCollection(argThat(context -> context.getTenantId().equals(CENTRAL_TENANT_ID)));
       async.complete();
     }));
+  }
+
+  @Test
+  public void shouldReturnFailedFutureIfMatchProfileContainsInvalidMatchDetail(TestContext context) {
+    Async async = context.async();
+    MatchProfile matchProfileWithInvalidMatchDetail = new MatchProfile()
+      .withIncomingRecordType(MARC_BIBLIOGRAPHIC)
+      .withExistingRecordType(MARC_BIBLIOGRAPHIC)
+      .withMatchDetails(List.of(new MatchDetail()
+        .withIncomingRecordType(MARC_BIBLIOGRAPHIC)
+        .withExistingRecordType(MARC_BIBLIOGRAPHIC)
+        .withMatchCriterion(EXACTLY_MATCHES)));
+
+    DataImportEventPayload eventPayload = createEventPayload(TENANT_ID);
+    eventPayload.withCurrentNode(new ProfileSnapshotWrapper()
+      .withContentType(MATCH_PROFILE)
+      .withContent(JsonObject.mapFrom(matchProfileWithInvalidMatchDetail).getMap()));
+
+    CompletableFuture<DataImportEventPayload> future = matchMarcBibEventHandler.handle(eventPayload);
+
+    future.whenComplete((res, throwable) -> {
+      context.assertNotNull(throwable);
+      context.assertEquals(DI_SRS_MARC_BIB_RECORD_NOT_MATCHED.value(), eventPayload.getEventType());
+      async.complete();
+    });
   }
 
   @Test
