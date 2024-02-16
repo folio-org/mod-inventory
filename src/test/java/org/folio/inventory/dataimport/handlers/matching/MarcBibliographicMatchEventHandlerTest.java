@@ -21,6 +21,7 @@ import org.folio.ParsedRecord;
 import org.folio.Record;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.consortium.entities.ConsortiumConfiguration;
@@ -40,7 +41,6 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -57,6 +57,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static org.apache.http.HttpStatus.SC_INTERNAL_SERVER_ERROR;
 import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_RECORD_PARSED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MATCHED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_NOT_MATCHED;
@@ -107,6 +108,10 @@ public class MarcBibliographicMatchEventHandlerTest {
   private HoldingsRecordCollection mockedHoldingsCollection;
   private AutoCloseable closeable;
   private final Vertx vertx = Vertx.vertx();
+  private final Record expectedMatchedRecord = new Record()
+    .withId(UUID.randomUUID().toString())
+    .withRecordType(MARC_BIB)
+    .withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
 
   private MarcBibliographicMatchEventHandler matchMarcBibEventHandler;
 
@@ -138,7 +143,7 @@ public class MarcBibliographicMatchEventHandlerTest {
     this.closeable = MockitoAnnotations.openMocks(this);
     Instance existingInstance = Instance.fromJson(new JsonObject().put("id", UUID.randomUUID().toString()));
 
-    when(consortiumService.getConsortiumConfiguration(ArgumentMatchers.any(Context.class)))
+    when(consortiumService.getConsortiumConfiguration(any(Context.class)))
       .thenReturn(Future.succeededFuture(Optional.of(new ConsortiumConfiguration(CENTRAL_TENANT_ID, UUID.randomUUID().toString()))));
     when(mockedStorage.getInstanceCollection(any())).thenReturn(mockedInstanceCollection);
     when(mockedStorage.getHoldingsRecordCollection(any(Context.class))).thenReturn(mockedHoldingsCollection);
@@ -161,13 +166,8 @@ public class MarcBibliographicMatchEventHandlerTest {
   @Test
   public void shouldMatchMarcBibAtNonConsortiumTenant(TestContext context) {
     Async async = context.async();
-    when(consortiumService.getConsortiumConfiguration(ArgumentMatchers.any(Context.class)))
+    when(consortiumService.getConsortiumConfiguration(any(Context.class)))
       .thenReturn(Future.succeededFuture(Optional.empty()));
-
-    Record expectedMatchedRecord = new Record()
-      .withId(UUID.randomUUID().toString())
-      .withRecordType(MARC_BIB)
-      .withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
 
     WireMock.stubFor(post(RECORDS_MATCHING_PATH).willReturn(WireMock.ok()
       .withBody(Json.encode(new RecordsIdentifiersCollection()
@@ -291,11 +291,6 @@ public class MarcBibliographicMatchEventHandlerTest {
   @Test
   public void shouldMatchAtLocalTenantAndNotMatchAtCentralTenant(TestContext context) {
     Async async = context.async();
-    Record expectedMatchedRecord = new Record()
-      .withId(UUID.randomUUID().toString())
-      .withRecordType(MARC_BIB)
-      .withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
-
     WireMock.stubFor(post(RECORDS_MATCHING_PATH)
       .withHeader(XOkapiHeaders.TENANT.toLowerCase(), equalTo(TENANT_ID))
       .willReturn(WireMock.ok().withBody(Json.encode(new RecordsIdentifiersCollection()
@@ -333,11 +328,6 @@ public class MarcBibliographicMatchEventHandlerTest {
   @Test
   public void shouldNotMatchMarcBibAtLocalTenantButMatchAtCentralTenant(TestContext context) {
     Async async = context.async();
-    Record expectedMatchedRecord = new Record()
-      .withId(UUID.randomUUID().toString())
-      .withRecordType(MARC_BIB)
-      .withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
-
     WireMock.stubFor(post(RECORDS_MATCHING_PATH)
       .withHeader(XOkapiHeaders.TENANT.toLowerCase(), equalTo(TENANT_ID))
       .willReturn(WireMock.ok().withBody(Json.encode(new RecordsIdentifiersCollection()
@@ -375,11 +365,6 @@ public class MarcBibliographicMatchEventHandlerTest {
   @Test
   public void shouldSearchRecordAtCentralTenantOnlyOnceIfCurrentTenantIsCentralTenant(TestContext context) {
     Async async = context.async();
-    Record expectedMatchedRecord = new Record()
-      .withId(UUID.randomUUID().toString())
-      .withRecordType(MARC_BIB)
-      .withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
-
     WireMock.stubFor(post(RECORDS_MATCHING_PATH).willReturn(WireMock.ok()
       .withBody(Json.encode(new RecordsIdentifiersCollection()
         .withIdentifiers(List.of(new RecordIdentifiersDto()
@@ -412,10 +397,6 @@ public class MarcBibliographicMatchEventHandlerTest {
   @Test
   public void shouldReturnFailedFutureIfMatchedRecordAtLocalTenantAndMatchedAtCentralTenant(TestContext context) {
     Async async = context.async();
-    Record expectedMatchedRecord = new Record()
-      .withId(UUID.randomUUID().toString())
-      .withRecordType(MARC_BIB);
-
     WireMock.stubFor(post(RECORDS_MATCHING_PATH)
       .willReturn(WireMock.ok().withBody(Json.encode(new RecordsIdentifiersCollection()
         .withIdentifiers(List.of(new RecordIdentifiersDto()
@@ -462,13 +443,8 @@ public class MarcBibliographicMatchEventHandlerTest {
     Async async = context.async();
     HoldingsRecord existingHoldingsRecord = new HoldingsRecord().withId(UUID.randomUUID().toString());
 
-    when(consortiumService.getConsortiumConfiguration(ArgumentMatchers.any(Context.class)))
+    when(consortiumService.getConsortiumConfiguration(any(Context.class)))
       .thenReturn(Future.succeededFuture(Optional.empty()));
-
-    Record expectedMatchedRecord = new Record()
-      .withId(UUID.randomUUID().toString())
-      .withRecordType(MARC_BIB)
-      .withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
 
     WireMock.stubFor(post(RECORDS_MATCHING_PATH).willReturn(WireMock.ok()
       .withBody(Json.encode(new RecordsIdentifiersCollection()
@@ -506,11 +482,6 @@ public class MarcBibliographicMatchEventHandlerTest {
   @Test
   public void shouldLoadOnlyInstanceFromCentralTenantIfMatchedRecordAtCentralTenant(TestContext testContext) {
     Async async = testContext.async();
-    Record expectedMatchedRecord = new Record()
-      .withId(UUID.randomUUID().toString())
-      .withRecordType(MARC_BIB)
-      .withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
-
     WireMock.stubFor(post(RECORDS_MATCHING_PATH)
       .withHeader(XOkapiHeaders.TENANT.toLowerCase(), equalTo(TENANT_ID))
       .willReturn(WireMock.ok().withBody(Json.encode(new RecordsIdentifiersCollection()
@@ -544,6 +515,22 @@ public class MarcBibliographicMatchEventHandlerTest {
   }
 
   @Test
+  public void shouldReturnFailedFutureIfPayloadHasNoMarcBibRecord(TestContext context) {
+    Async async = context.async();
+    DataImportEventPayload eventPayload = createEventPayload(TENANT_ID);
+    eventPayload.getContext().remove(MARC_BIBLIOGRAPHIC.value());
+    context.assertNull(eventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()));
+
+    CompletableFuture<DataImportEventPayload> future = matchMarcBibEventHandler.handle(eventPayload);
+
+    future.whenComplete((payload, throwable) -> {
+      context.assertNotNull(throwable);
+      context.assertEquals(DI_SRS_MARC_BIB_RECORD_NOT_MATCHED.value(), eventPayload.getEventType());
+      async.complete();
+    });
+  }
+
+  @Test
   public void shouldReturnFailedFutureIfMatchProfileContainsInvalidMatchDetail(TestContext context) {
     Async async = context.async();
     MatchProfile matchProfileWithInvalidMatchDetail = new MatchProfile()
@@ -564,6 +551,117 @@ public class MarcBibliographicMatchEventHandlerTest {
     future.whenComplete((res, throwable) -> {
       context.assertNotNull(throwable);
       context.assertEquals(DI_SRS_MARC_BIB_RECORD_NOT_MATCHED.value(), eventPayload.getEventType());
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldReturnFailedFutureIfFailedToGetMatchedRecordsIdentifiers(TestContext context) {
+    Async async = context.async();
+    DataImportEventPayload eventPayload = createEventPayload(TENANT_ID);
+    WireMock.stubFor(post(RECORDS_MATCHING_PATH).willReturn(WireMock.serverError()));
+
+    CompletableFuture<DataImportEventPayload> future = matchMarcBibEventHandler.handle(eventPayload);
+
+    future.whenComplete((payload, throwable) -> {
+      context.assertNotNull(throwable);
+      context.assertEquals(DI_SRS_MARC_BIB_RECORD_NOT_MATCHED.value(), eventPayload.getEventType());
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldReturnFailedFutureIfGotErrorWhileLoadingMatchedRecordById(TestContext context) {
+    Async async = context.async();
+    DataImportEventPayload eventPayload = createEventPayload(TENANT_ID);
+
+    when(consortiumService.getConsortiumConfiguration(any(Context.class)))
+      .thenReturn(Future.succeededFuture(Optional.empty()));
+
+    WireMock.stubFor(post(RECORDS_MATCHING_PATH).willReturn(WireMock.ok()
+      .withBody(Json.encode(new RecordsIdentifiersCollection()
+        .withIdentifiers(List.of(new RecordIdentifiersDto()
+          .withRecordId(UUID.randomUUID().toString())
+          .withExternalId(UUID.randomUUID().toString())))
+        .withTotalRecords(1)))));
+
+    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(SOURCE_STORAGE_RECORDS_PATH_REGEX), true))
+      .willReturn(WireMock.notFound()));
+
+    CompletableFuture<DataImportEventPayload> future = matchMarcBibEventHandler.handle(eventPayload);
+
+    future.whenComplete((payload, throwable) -> {
+      context.assertNotNull(throwable);
+      context.assertEquals(DI_SRS_MARC_BIB_RECORD_NOT_MATCHED.value(), eventPayload.getEventType());
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldReturnFailedFutureIfFailedToLoadHoldingsForMatchedRecord(TestContext context) throws UnsupportedEncodingException {
+    Async async = context.async();
+    DataImportEventPayload eventPayload = createEventPayload(TENANT_ID);
+
+    when(consortiumService.getConsortiumConfiguration(any(Context.class)))
+      .thenReturn(Future.succeededFuture(Optional.empty()));
+
+    WireMock.stubFor(post(RECORDS_MATCHING_PATH).willReturn(WireMock.ok()
+      .withBody(Json.encode(new RecordsIdentifiersCollection()
+        .withIdentifiers(List.of(new RecordIdentifiersDto()
+          .withRecordId(expectedMatchedRecord.getId())
+          .withExternalId(UUID.randomUUID().toString())))
+        .withTotalRecords(1)))));
+
+    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(SOURCE_STORAGE_RECORDS_PATH_REGEX), true))
+      .willReturn(WireMock.ok().withBody(Json.encodePrettily(expectedMatchedRecord))));
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(3);
+      failureHandler.accept(new Failure("Internal Server Error", SC_INTERNAL_SERVER_ERROR));
+      return null;
+    }).when(mockedHoldingsCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any());
+
+    CompletableFuture<DataImportEventPayload> future = matchMarcBibEventHandler.handle(eventPayload);
+
+    future.whenComplete((payload, throwable) -> {
+      context.assertNotNull(throwable);
+      context.assertEquals(DI_SRS_MARC_BIB_RECORD_NOT_MATCHED.value(), eventPayload.getEventType());
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldNotSetHoldingIfMultipleHoldingsWereFoundForMatchedRecord(TestContext context) throws UnsupportedEncodingException {
+    Async async = context.async();
+    DataImportEventPayload eventPayload = createEventPayload(TENANT_ID);
+
+    when(consortiumService.getConsortiumConfiguration(any(Context.class)))
+      .thenReturn(Future.succeededFuture(Optional.empty()));
+
+    WireMock.stubFor(post(RECORDS_MATCHING_PATH).willReturn(WireMock.ok()
+      .withBody(Json.encode(new RecordsIdentifiersCollection()
+        .withIdentifiers(List.of(new RecordIdentifiersDto()
+          .withRecordId(expectedMatchedRecord.getId())
+          .withExternalId(UUID.randomUUID().toString())))
+        .withTotalRecords(1)))));
+
+    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(SOURCE_STORAGE_RECORDS_PATH_REGEX), true))
+      .willReturn(WireMock.ok().withBody(Json.encodePrettily(expectedMatchedRecord))));
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<MultipleRecords<HoldingsRecord>>> successHandler = invocationOnMock.getArgument(2);
+      successHandler.accept(new Success<>(new MultipleRecords<>(List.of(new HoldingsRecord(), new HoldingsRecord()), 2)));
+      return null;
+    }).when(mockedHoldingsCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any());
+
+    CompletableFuture<DataImportEventPayload> future = matchMarcBibEventHandler.handle(eventPayload);
+
+    future.whenComplete((payload, throwable) -> {
+      context.assertNull(throwable);
+      context.assertEquals(DI_SRS_MARC_BIB_RECORD_MATCHED.value(), payload.getEventType());
+      context.assertNotNull(payload.getContext().get(MATCHED_MARC_BIB_KEY));
+      context.assertNotNull(payload.getContext().get(INSTANCE.value()));
+      context.assertNull(payload.getContext().get(HOLDINGS.value()));
       async.complete();
     });
   }

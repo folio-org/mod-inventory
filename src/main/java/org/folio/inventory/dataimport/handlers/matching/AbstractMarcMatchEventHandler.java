@@ -42,7 +42,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
-import static org.apache.http.HttpStatus.SC_NOT_FOUND;
 import static org.apache.http.HttpStatus.SC_OK;
 import static org.folio.processing.value.Value.ValueType.MISSING;
 import static org.folio.rest.jaxrs.model.MatchExpression.DataValueType.VALUE_FROM_RECORD;
@@ -128,7 +127,8 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
 
   protected abstract boolean isMatchingOnCentralTenantRequired();
 
-  protected Future<List<Record>> postProcessMatchingResult(List<Record> records, DataImportEventPayload eventPayload) {
+  protected Future<List<Record>> postProcessMatchingResult(List<Record> records,
+    @SuppressWarnings("squid:S1172") DataImportEventPayload eventPayload) {
     return Future.succeededFuture(records);
   }
 
@@ -228,13 +228,10 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
   private Future<Optional<Record>> getRecordById(RecordIdentifiersDto recordIdentifiersDto, SourceStorageRecordsClient sourceStorageRecordsClient,
                                                  DataImportEventPayload payload) {
     String recordId = recordIdentifiersDto.getRecordId();
-
     return sourceStorageRecordsClient.getSourceStorageRecordsById(recordId)
       .compose(response -> {
         if (response.statusCode() == SC_OK) {
           return Future.succeededFuture(Optional.of(response.bodyAsJson(Record.class)));
-        } else if (response.statusCode() == SC_NOT_FOUND) {
-          return Future.succeededFuture(Optional.empty());
         }
         String msg = format("Failed to retrieve record by id: '%s', responseStatus: '%s', body: '%s', jobExecutionId: '%s', tenant: '%s'",
           recordId, response.statusCode(), response.bodyAsString(), payload.getJobExecutionId(), payload.getTenant());
