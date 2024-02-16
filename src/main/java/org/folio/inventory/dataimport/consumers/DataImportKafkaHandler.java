@@ -193,6 +193,6 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     EventManager.registerEventHandler(new ReplaceInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, client, consortiumService));
     EventManager.registerEventHandler(new MarcBibModifiedPostProcessingEventHandler(new InstanceUpdateDelegate(storage), precedingSucceedingTitlesHelper, mappingMetadataCache));
     EventManager.registerEventHandler(new MarcBibMatchedPostProcessingEventHandler(storage));
-    EventManager.registerEventHandler(new MarcBibliographicMatchEventHandler(consortiumService, client));
+    EventManager.registerEventHandler(new MarcBibliographicMatchEventHandler(consortiumService, client, storage));
   }
 }

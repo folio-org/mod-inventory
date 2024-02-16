@@ -50,7 +50,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MATC
 
 public abstract class AbstractMarcMatchEventHandler implements EventHandler {
 
-  private static final Logger LOG = LogManager.getLogger(AbstractMarcMatchEventHandler.class);
+  protected static final Logger LOG = LogManager.getLogger();
 
   protected static final String CENTRAL_TENANT_ID_KEY = "CENTRAL_TENANT_ID";
   private static final String PAYLOAD_HAS_NO_DATA_MESSAGE = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
@@ -83,7 +83,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
       HashMap<String, String> context = payload.getContext();
 
       if (isNotValidPayload(payload)) {
-        LOG.warn(PAYLOAD_HAS_NO_DATA_MESSAGE);
+        LOG.warn("handle:: {}", PAYLOAD_HAS_NO_DATA_MESSAGE);
         return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MESSAGE));
       }
       payload.getEventsChain().add(payload.getEventType());
@@ -111,6 +111,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
           }
           return Future.succeededFuture(localMatchedRecords.stream().toList());
         })
+        .compose(recordList -> postProcessMatchingResult(recordList, payload))
         .compose(recordList -> processSucceededResult(recordList, payload))
         .onFailure(e -> LOG.warn("handle:: Failed to process event for MARC record matching, jobExecutionId: '{}'", payload.getJobExecutionId(), e))
         .toCompletionStage().toCompletableFuture();
@@ -126,6 +127,10 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
   protected abstract RecordMatchingDto.RecordType getMatchedRecordType();
 
   protected abstract boolean isMatchingOnCentralTenantRequired();
+
+  protected Future<List<Record>> postProcessMatchingResult(List<Record> records, DataImportEventPayload eventPayload) {
+    return Future.succeededFuture(records);
+  }
 
   private boolean isNotValidPayload(DataImportEventPayload payload) {
     HashMap<String, String> context = payload.getContext();
@@ -177,16 +182,14 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
       default -> Collections.emptyList();
     };
 
-    Filter filter = new Filter()
-      .withValues(values)
-      .withField(field)
-      .withIndicator1(ind1)
-      .withIndicator2(ind2)
-      .withSubfield(subfield);
-
     return new RecordMatchingDto()
       .withRecordType(getMatchedRecordType())
-      .withFilters(List.of(filter))
+      .withFilters(List.of(new Filter()
+        .withValues(values)
+        .withField(field)
+        .withIndicator1(ind1)
+        .withIndicator2(ind2)
+        .withSubfield(subfield)))
       .withReturnTotalRecordsCount(false);
   }
 
