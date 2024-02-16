@@ -31,7 +31,6 @@ import org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateMarcHoldingsEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.DeleteAuthorityEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
-import org.folio.inventory.dataimport.handlers.actions.MarcBibMatchedPostProcessingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.MarcBibModifiedPostProcessingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
 import org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler;
@@ -192,7 +191,6 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     EventManager.registerEventHandler(new UpdateHoldingEventHandler(storage, mappingMetadataCache));
     EventManager.registerEventHandler(new ReplaceInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, client, consortiumService));
     EventManager.registerEventHandler(new MarcBibModifiedPostProcessingEventHandler(new InstanceUpdateDelegate(storage), precedingSucceedingTitlesHelper, mappingMetadataCache));
-    EventManager.registerEventHandler(new MarcBibMatchedPostProcessingEventHandler(storage));
     EventManager.registerEventHandler(new MarcBibliographicMatchEventHandler(consortiumService, client, storage));
   }
 }
