@@ -14,10 +14,12 @@ public class InventoryKafkaTopicService {
       new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_MATCHED", instanceMatchedPartitions()),
       new InventoryKafkaTopic("DI_INVENTORY_HOLDING_MATCHED", holdingMatchedPartitions()),
       new InventoryKafkaTopic("DI_INVENTORY_ITEM_MATCHED", itemMatchedPartitions()),
+      new InventoryKafkaTopic("DI_SRS_MARC_BIB_RECORD_MATCHED", marcBibMatchedPartitions()),
       new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_UPDATED", instanceUpdatedPartitions()),
       new InventoryKafkaTopic("DI_INVENTORY_HOLDING_UPDATED", holdingUpdatedPartitions()),
       new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_NOT_MATCHED", instanceNotMatchedPartitions()),
       new InventoryKafkaTopic("DI_INVENTORY_HOLDING_NOT_MATCHED", holdingNotMatchedPartitions()),
+      new InventoryKafkaTopic("DI_SRS_MARC_BIB_RECORD_NOT_MATCHED", marcBibNotMatchedPartitions()),
       new InventoryKafkaTopic("DI_INVENTORY_ITEM_UPDATED", itemUpdatedPartitions()),
       new InventoryKafkaTopic("DI_INVENTORY_ITEM_NOT_MATCHED", itemNotMatchedPartitions()),
       new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_UPDATED", authorityUpdatedPartitions()),
@@ -51,6 +53,10 @@ public class InventoryKafkaTopicService {
     return Integer.valueOf(firstNonBlank(System.getenv("DI_INVENTORY_ITEM_MATCHED_PARTITIONS"), "1"));
   }
 
+  private Integer marcBibMatchedPartitions() {
+    return Integer.valueOf(firstNonBlank(System.getenv("DI_SRS_MARC_BIB_RECORD_MATCHED_PARTITIONS"), "1"));
+  }
+
   private Integer instanceUpdatedPartitions() {
     return Integer.valueOf(firstNonBlank(System.getenv("DI_INVENTORY_INSTANCE_UPDATED_PARTITIONS"), "1"));
   }
@@ -73,6 +79,10 @@ public class InventoryKafkaTopicService {
 
   private Integer holdingNotMatchedPartitions() {
     return Integer.valueOf(firstNonBlank(System.getenv("DI_INVENTORY_ITEM_NOT_MATCHED_PARTITIONS"), "1"));
+  }
+
+  private Integer marcBibNotMatchedPartitions() {
+    return Integer.valueOf(firstNonBlank(System.getenv("DI_SRS_MARC_BIB_RECORD_NOT_MATCHED_PARTITIONS"), "1"));
   }
 
   private Integer authorityUpdatedPartitions() {
