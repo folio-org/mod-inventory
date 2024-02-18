@@ -60,7 +60,8 @@ public class MarcBibliographicMatchEventHandler extends AbstractMarcMatchEventHa
     if (records.size() == 1) {
       Record matchedRecord = records.get(0);
       String instanceId = ParsedRecordUtil.getAdditionalSubfieldValue(matchedRecord.getParsedRecord(), AdditionalSubfields.I);
-      Context context = EventHandlingUtil.constructContext(getTenant(eventPayload), eventPayload.getToken(), eventPayload.getOkapiUrl());
+      String matchedRecordTenantId = getTenant(eventPayload);
+      Context context = EventHandlingUtil.constructContext(matchedRecordTenantId, eventPayload.getToken(), eventPayload.getOkapiUrl());
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
 
       if (isBlank(instanceId)) {
@@ -70,21 +71,31 @@ public class MarcBibliographicMatchEventHandler extends AbstractMarcMatchEventHa
       return Future.fromCompletionStage(instanceCollection.findById(instanceId))
         .compose(instance -> {
           eventPayload.getContext().put(INSTANCE.value(), Json.encode(instance));
-          return getHoldingsByInstanceId(instance.getId(), eventPayload, context);
+          return consortiumService.getConsortiumConfiguration(context);
         })
-        .compose(holdingsRecords -> {
-          if (holdingsRecords.size() > 1) {
-            LOG.info("postProcessMatchingResult:: Found multiple holdings records by instanceId: '{}' for matched MARC-BIB record, jobExecutionId: '{}'",
-              instanceId, eventPayload.getJobExecutionId());
-          } else if (holdingsRecords.size() == 1) {
-            LOG.info("postProcessMatchingResult:: Found holdings record with id: '{}' by instanceId: '{}' for matched MARC-BIB record, jobExecutionId: '{}'",
-              holdingsRecords.get(0).getId(), instanceId, eventPayload.getJobExecutionId());
-            eventPayload.getContext().put(HOLDINGS.value(), Json.encode(holdingsRecords.get(0)));
+        .compose(consortiumConfigurationOptional -> {
+          if (consortiumConfigurationOptional.isEmpty() || !consortiumConfigurationOptional.get().getCentralTenantId().equals(matchedRecordTenantId)) {
+            return loadHoldingsRecordByInstanceId(instanceId, eventPayload, context).map(records);
           }
           return Future.succeededFuture(records);
         });
     }
     return Future.succeededFuture(records);
+  }
+
+  private Future<Void> loadHoldingsRecordByInstanceId(String instanceId, DataImportEventPayload eventPayload, Context context) {
+    return getHoldingsByInstanceId(instanceId, eventPayload, context)
+      .compose(holdingsRecords -> {
+        if (holdingsRecords.size() > 1) {
+          LOG.info("postProcessMatchingResult:: Found multiple holdings records by instanceId: '{}' for matched MARC-BIB record, jobExecutionId: '{}'",
+            instanceId, eventPayload.getJobExecutionId());
+        } else if (holdingsRecords.size() == 1) {
+          LOG.info("postProcessMatchingResult:: Found holdings record with id: '{}' by instanceId: '{}' for matched MARC-BIB record, jobExecutionId: '{}'",
+            holdingsRecords.get(0).getId(), instanceId, eventPayload.getJobExecutionId());
+          eventPayload.getContext().put(HOLDINGS.value(), Json.encode(holdingsRecords.get(0)));
+        }
+        return Future.succeededFuture();
+      });
   }
 
   private Future<List<HoldingsRecord>> getHoldingsByInstanceId(String instanceId, DataImportEventPayload eventPayload, Context context) {
@@ -109,7 +120,6 @@ public class MarcBibliographicMatchEventHandler extends AbstractMarcMatchEventHa
       LOG.warn("getHoldingsByInstanceId:: {}", msg);
       promise.fail(msg);
     }
-
     return promise.future();
   }
 

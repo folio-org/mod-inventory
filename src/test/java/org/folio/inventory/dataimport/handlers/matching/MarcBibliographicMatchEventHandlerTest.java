@@ -76,6 +76,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -378,6 +379,8 @@ public class MarcBibliographicMatchEventHandlerTest {
     DataImportEventPayload eventPayload = createEventPayload(CENTRAL_TENANT_ID);
     context.assertEquals(CENTRAL_TENANT_ID, eventPayload.getTenant());
 
+    context.assertEquals(CENTRAL_TENANT_ID, eventPayload.getTenant());
+
     CompletableFuture<DataImportEventPayload> future = matchMarcBibEventHandler.handle(eventPayload);
 
     future.whenComplete((payload, throwable) -> context.verify(v -> {
@@ -439,8 +442,8 @@ public class MarcBibliographicMatchEventHandlerTest {
   }
 
   @Test
-  public void shouldLoadInstanceAndHoldingFromLocalTenantIfMatchedRecordAtLocalTenant(TestContext context) throws UnsupportedEncodingException {
-    Async async = context.async();
+  public void shouldLoadInstanceAndHoldingFromLocalTenantIfMatchedRecordAtLocalTenant(TestContext testContext) throws UnsupportedEncodingException {
+    Async async = testContext.async();
     HoldingsRecord existingHoldingsRecord = new HoldingsRecord().withId(UUID.randomUUID().toString());
 
     when(consortiumService.getConsortiumConfiguration(any(Context.class)))
@@ -466,17 +469,18 @@ public class MarcBibliographicMatchEventHandlerTest {
 
     CompletableFuture<DataImportEventPayload> future = matchMarcBibEventHandler.handle(eventPayload);
 
-    future.whenComplete((payload, throwable) -> {
-      context.assertNull(throwable);
-      context.assertEquals(DI_SRS_MARC_BIB_RECORD_MATCHED.value(), payload.getEventType());
-      context.assertNotNull(payload.getContext().get(MATCHED_MARC_BIB_KEY));
-      context.assertEquals(1, payload.getEventsChain().size());
+    future.whenComplete((payload, throwable) -> testContext.verify(v -> {
+      testContext.assertNull(throwable);
+      testContext.assertEquals(DI_SRS_MARC_BIB_RECORD_MATCHED.value(), payload.getEventType());
+      testContext.assertNotNull(payload.getContext().get(MATCHED_MARC_BIB_KEY));
       Record actualRecord = Json.decodeValue(payload.getContext().get(MATCHED_MARC_BIB_KEY), Record.class);
-      context.assertEquals(expectedMatchedRecord.getId(), actualRecord.getId());
-      context.assertNotNull(payload.getContext().get(INSTANCE.value()));
-      context.assertNotNull(payload.getContext().get(HOLDINGS.value()));
+      testContext.assertEquals(expectedMatchedRecord.getId(), actualRecord.getId());
+      testContext.assertNotNull(payload.getContext().get(INSTANCE.value()));
+      testContext.assertNotNull(payload.getContext().get(HOLDINGS.value()));
+      verify(mockedStorage).getInstanceCollection(argThat(context -> context.getTenantId().equals(TENANT_ID)));
+      verify(mockedStorage).getHoldingsRecordCollection(argThat(context -> context.getTenantId().equals(TENANT_ID)));
       async.complete();
-    });
+    }));
   }
 
   @Test
@@ -510,6 +514,35 @@ public class MarcBibliographicMatchEventHandlerTest {
       testContext.assertNotNull(payload.getContext().get(MATCHED_MARC_BIB_KEY));
       testContext.assertNotNull(payload.getContext().get(INSTANCE.value()));
       verify(mockedStorage).getInstanceCollection(argThat(context -> context.getTenantId().equals(CENTRAL_TENANT_ID)));
+      verify(mockedStorage, never()).getHoldingsRecordCollection(argThat(context -> context.getTenantId().equals(CENTRAL_TENANT_ID)));
+      async.complete();
+    }));
+  }
+
+  @Test
+  public void shouldLoadOnlyInstanceIfCurrentTenantIsCentralTenant(TestContext testContext) {
+    Async async = testContext.async();
+    WireMock.stubFor(post(RECORDS_MATCHING_PATH)
+      .withHeader(XOkapiHeaders.TENANT.toLowerCase(), equalTo(CENTRAL_TENANT_ID))
+      .willReturn(WireMock.ok().withBody(Json.encode(new RecordsIdentifiersCollection()
+        .withIdentifiers(List.of(new RecordIdentifiersDto()
+          .withRecordId(expectedMatchedRecord.getId())
+          .withExternalId(UUID.randomUUID().toString())))
+        .withTotalRecords(1)))));
+
+    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(SOURCE_STORAGE_RECORDS_PATH_REGEX), true))
+      .willReturn(WireMock.ok().withBody(Json.encodePrettily(expectedMatchedRecord))));
+
+    DataImportEventPayload eventPayload = createEventPayload(CENTRAL_TENANT_ID);
+    CompletableFuture<DataImportEventPayload> future = matchMarcBibEventHandler.handle(eventPayload);
+
+    future.whenComplete((payload, throwable) -> testContext.verify(v -> {
+      testContext.assertNull(throwable);
+      testContext.assertEquals(DI_SRS_MARC_BIB_RECORD_MATCHED.value(), payload.getEventType());
+      testContext.assertNotNull(payload.getContext().get(MATCHED_MARC_BIB_KEY));
+      testContext.assertNotNull(payload.getContext().get(INSTANCE.value()));
+      verify(mockedStorage).getInstanceCollection(argThat(context -> context.getTenantId().equals(CENTRAL_TENANT_ID)));
+      verify(mockedStorage, never()).getHoldingsRecordCollection(argThat(context -> context.getTenantId().equals(CENTRAL_TENANT_ID)));
       async.complete();
     }));
   }

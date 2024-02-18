@@ -60,7 +60,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
   private static final String USER_ID_HEADER = "userId";
   private static final int EXPECTED_MATCH_EXPRESSION_FIELDS_NUMBER = 4;
 
-  private final ConsortiumService consortiumService;
+  protected final ConsortiumService consortiumService;
   private final DataImportEventTypes matchedEventType;
   private final DataImportEventTypes notMatchedEventType;
   private final HttpClient httpClient;
