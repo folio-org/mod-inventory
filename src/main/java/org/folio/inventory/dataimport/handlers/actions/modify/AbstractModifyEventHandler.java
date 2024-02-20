@@ -2,8 +2,10 @@ package org.folio.inventory.dataimport.handlers.actions.modify;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile;
@@ -22,6 +24,7 @@ import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.processing.mapping.mapper.writer.marc.MarcRecordModifier;
+import org.folio.rest.client.SourceStorageRecordsClient;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.ExternalIdsHolder;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
@@ -45,7 +48,7 @@ import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventH
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 public abstract class AbstractModifyEventHandler implements EventHandler {
-  private static final Logger LOGGER = LogManager.getLogger();
+  private static final Logger LOGGER = LogManager.getLogger(AbstractModifyEventHandler.class);
   private static final String PAYLOAD_HAS_NO_DATA_MSG =
     "Failed to handle event payload, cause event payload context does not contain required data to modify MARC record";
   private static final String MAPPING_PARAMETERS_NOT_FOUND_MSG = "MappingParameters snapshot was not found by jobExecutionId '%s'";
@@ -53,14 +56,17 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
   private static final String CURRENT_RETRY_NUMBER = "CURRENT_RETRY_NUMBER";
   private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
+  private static final String FAILED_TO_UPDATE_RECORD_ERROR_MESSAGE = "Failed to update MARC record with id: %s during modify for tenant %s. ";
   private final MappingMetadataCache mappingMetadataCache;
   private final InstanceUpdateDelegate instanceUpdateDelegate;
   private final PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
+  private final HttpClient client;
 
-  protected AbstractModifyEventHandler(MappingMetadataCache mappingMetadataCache, InstanceUpdateDelegate instanceUpdateDelegate, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper) {
+  protected AbstractModifyEventHandler(MappingMetadataCache mappingMetadataCache, InstanceUpdateDelegate instanceUpdateDelegate, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper, HttpClient client) {
     this.mappingMetadataCache = mappingMetadataCache;
     this.instanceUpdateDelegate = instanceUpdateDelegate;
     this.precedingSucceedingTitlesHelper = precedingSucceedingTitlesHelper;
+    this.client = client;
   }
 
   @Override
@@ -81,8 +87,9 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
         .compose(mappingMetadataDto -> modifyRecord(payload, getMappingParameters(mappingMetadataDto)).map(mappingMetadataDto))
         .compose(mappingMetadataDto -> {
           if (!payloadContext.get(relatedEntityType().value()).isEmpty()) {
-            return updateRelatedEntity(payload, mappingMetadataDto)
-              .compose(v -> updateRecord(getRecord(payloadContext)));
+            Context targetInstanceContext = EventHandlingUtil.constructContext(getTenant(payload), payload.getToken(), payload.getOkapiUrl());
+            return updateRelatedEntity(payload, mappingMetadataDto, targetInstanceContext)
+              .compose(v -> updateRecord(getRecord(payload.getContext()), targetInstanceContext));
           }
           return Future.succeededFuture();
         })
@@ -132,25 +139,24 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
     return Future.succeededFuture();
   }
 
-  protected Future<Void> updateRelatedEntity(DataImportEventPayload payload, MappingMetadataDto mappingMetadataDto) {
-    CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
+  protected Future<Void> updateRelatedEntity(DataImportEventPayload payload, MappingMetadataDto mappingMetadataDto, Context context) {
+    Promise<Void> promise = Promise.promise();
     Map<String, String> payloadForInstanceUpdate = buildPayloadForInstanceUpdate(payload, mappingMetadataDto);
 
     Record record = getRecord(payloadForInstanceUpdate);
     String instanceId = ParsedRecordUtil.getAdditionalSubfieldValue(record.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.I);
     record.setExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId));
 
-    Context targetInstanceContext = EventHandlingUtil.constructContext(getTenant(payload), payload.getToken(), payload.getOkapiUrl());
     Promise<Instance> instanceUpdatePromise = Promise.promise();
 
-    return instanceUpdateDelegate.handle(payloadForInstanceUpdate, record, targetInstanceContext)
+    instanceUpdateDelegate.handle(payloadForInstanceUpdate, record, context)
       .onSuccess(instanceUpdatePromise::complete)
-      .compose(updatedInstance -> precedingSucceedingTitlesHelper.getExistingPrecedingSucceedingTitles(updatedInstance, targetInstanceContext))
+      .compose(updatedInstance -> precedingSucceedingTitlesHelper.getExistingPrecedingSucceedingTitles(updatedInstance, context))
       .map(precedingSucceedingTitles -> precedingSucceedingTitles.stream()
         .map(titleJson -> titleJson.getString("id"))
         .collect(Collectors.toSet()))
-      .compose(precedingSucceedingTitles -> precedingSucceedingTitlesHelper.deletePrecedingSucceedingTitles(precedingSucceedingTitles, targetInstanceContext))
-      .compose(ar -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(instanceUpdatePromise.future().result(), targetInstanceContext))
+      .compose(precedingSucceedingTitles -> precedingSucceedingTitlesHelper.deletePrecedingSucceedingTitles(precedingSucceedingTitles, context))
+      .compose(ar -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(instanceUpdatePromise.future().result(), context))
       .onSuccess(updateAr -> {
         LOGGER.warn("updateRelatedEntity:: Instance with id: '{}' successfully updated by jobExecutionId: '{}'", instanceId, payload.getJobExecutionId());
         payload.getContext().remove(CURRENT_RETRY_NUMBER);
@@ -160,17 +166,18 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
           resultedInstance.setVersion(String.valueOf(++currentVersion));
         }
         payload.getContext().put(INSTANCE.value(), Json.encode(resultedInstance));
-        future.complete(payload);
+        promise.complete();
       })
       .onFailure(cause -> {
         if (cause instanceof OptimisticLockingException) {
-          processOLError(payload, mappingMetadataDto, future, cause);
+          processOLError(payload, mappingMetadataDto, promise, cause, context);
         } else {
           payload.getContext().remove(CURRENT_RETRY_NUMBER);
           LOGGER.warn("updateRelatedEntity:: Error updating inventory instance by id: '{}' by jobExecutionId: '{}'", instanceId, payload.getJobExecutionId(), cause);
-          future.completeExceptionally(cause);
+          promise.fail(cause);
         }
       });
+    return promise.future();
   }
 
   private Record getRecord(Map<String, String> payloadForInstanceUpdate) {
@@ -203,28 +210,54 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
   }
 
   private void processOLError(DataImportEventPayload payload, MappingMetadataDto mappingMetadataDto,
-                              CompletableFuture<DataImportEventPayload> future, Throwable cause) {
+                              Promise promise, Throwable cause, Context context) {
     int currentRetryNumber = payload.getContext().get(CURRENT_RETRY_NUMBER) == null
       ? 0 : Integer.parseInt(payload.getContext().get(CURRENT_RETRY_NUMBER));
     if (currentRetryNumber < MAX_RETRIES_COUNT) {
       payload.getContext().put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
       LOGGER.warn("processOLError:: Error updating Instance - {}. Retry MarcBibModifiedPostProcessingEventHandler handler...", cause.getMessage());
-      updateRelatedEntity(payload, mappingMetadataDto).onComplete(res -> {
+      updateRelatedEntity(payload, mappingMetadataDto, context).onComplete(res -> {
         if (res.failed()) {
-          future.completeExceptionally(res.cause());
+          promise.fail(res.cause());
         } else {
-          future.complete(payload);
+          promise.complete();
         }
       });
     } else {
       payload.getContext().remove(CURRENT_RETRY_NUMBER);
       String errMessage = format("processOLError:: Current retry number %s exceeded given number %s for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber);
       LOGGER.error(errMessage);
-      future.completeExceptionally(new OptimisticLockingException(errMessage));
+      promise.fail(new OptimisticLockingException(errMessage));
     }
   }
 
-  private Future<Object> updateRecord(Record record) {
-    return Future.succeededFuture();
+  protected Future<Void> updateRecord(Record record, Context context) {
+    Promise<Void> promise = Promise.promise();
+    getSourceStorageRecordsClient(context).putSourceStorageRecordsById(record.getId(), record).onComplete(response -> {
+      if (response.succeeded()) {
+        int statusCode = response.result().statusCode();
+        if (statusCode == HttpStatus.SC_OK) {
+          LOGGER.debug("updateRecord:: MARC record with id {} was successfully updated during modify for tenant {}",
+            record.getId(), context.getTenantId());
+          promise.complete();
+        } else {
+          String updateRecordErrorMessage = String.format(FAILED_TO_UPDATE_RECORD_ERROR_MESSAGE + "Error message: %s. Status code: %s",
+            record.getId(), context.getTenantId(), response.result().statusMessage(), statusCode);
+          LOGGER.warn(updateRecordErrorMessage);
+          promise.fail(updateRecordErrorMessage);
+        }
+      } else {
+        String updateRecordErrorMessage = String.format(FAILED_TO_UPDATE_RECORD_ERROR_MESSAGE + "Error message: %s.",
+          record.getId(), context.getTenantId(), response.cause());
+        LOGGER.warn(updateRecordErrorMessage);
+        promise.fail(updateRecordErrorMessage);
+      }
+    });
+
+    return promise.future();
+  }
+
+  public SourceStorageRecordsClient getSourceStorageRecordsClient(Context context) {
+    return new SourceStorageRecordsClient(context.getOkapiLocation(), context.getTenantId(), context.getToken(), client);
   }
 }
