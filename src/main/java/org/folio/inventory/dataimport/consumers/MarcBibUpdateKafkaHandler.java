@@ -122,6 +122,9 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
     try {
       var kafkaRecord = createKafkaProducerRecord(linkUpdateReport, kafkaHeaders);
       producer.send(kafkaRecord)
+        .<Void>mapEmpty()
+        .eventually(v -> producer.flush())
+        .eventually(v -> producer.close())
         .onSuccess(res -> LOGGER.info("Event with type {}, jobId {} was sent to kafka", LINKS_STATS.topicName(), linkUpdateReport.getJobId()))
         .onFailure(err -> {
           var cause = err.getCause();
