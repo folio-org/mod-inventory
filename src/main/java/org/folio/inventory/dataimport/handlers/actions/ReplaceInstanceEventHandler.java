@@ -197,6 +197,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           .map(mappedInstance)
           .compose(instance -> {
             if (instanceToUpdate.getSource().equals(FOLIO.getValue())) {
+              executeFieldsManipulation(instance, targetRecord);
               return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance, instanceCollection);
             }
             if (instanceToUpdate.getSource().equals(MARC.getValue())) {
@@ -289,7 +290,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   private Future<Void> prepareRecordForMapping(DataImportEventPayload dataImportEventPayload,
                                                List<MarcFieldProtectionSetting> marcFieldProtectionSettings,
                                                Instance instance, MappingParameters mappingParameters) {
-    if (MARC_INSTANCE_SOURCE.equals(instance.getSource()) || CONSORTIUM_MARC.getValue().equals(instance.getSource()) || FOLIO.getValue().equals(instance.getSource())) {
+    if (MARC_INSTANCE_SOURCE.equals(instance.getSource()) || CONSORTIUM_MARC.getValue().equals(instance.getSource())) {
       return getRecordByInstanceId(dataImportEventPayload, instance.getId())
         .compose(existingRecord -> {
           Record incomingRecord = Json.decodeValue(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()), Record.class);
@@ -303,9 +304,18 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
             AdditionalFieldsUtil.updateLatestTransactionDate(targetRecord, mappingParameters);
             dataImportEventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(targetRecord));
-          } else dataImportEventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(incomingRecord));
+          } else {
+            dataImportEventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(incomingRecord));
+          }
           return Future.succeededFuture();
         });
+    } else if (instance.getSource().equals(FOLIO.getValue())) {
+      String marcBibAsJson = dataImportEventPayload.getContext().get(EntityType.MARC_BIBLIOGRAPHIC.value());
+      org.folio.rest.jaxrs.model.Record targetRecord = Json.decodeValue(marcBibAsJson, org.folio.rest.jaxrs.model.Record.class);
+
+      AdditionalFieldsUtil.updateLatestTransactionDate(targetRecord, mappingParameters);
+      AdditionalFieldsUtil.move001To035(targetRecord);
+      dataImportEventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(targetRecord));
     }
     return Future.succeededFuture();
   }
