@@ -86,7 +86,7 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
         .map(mapMappingMetaDataOrFail(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, payload.getJobExecutionId())))
         .compose(mappingMetadataDto -> modifyRecord(payload, getMappingParameters(mappingMetadataDto)).map(mappingMetadataDto))
         .compose(mappingMetadataDto -> {
-          if (!payloadContext.get(relatedEntityType().value()).isEmpty()) {
+          if (payloadContext.containsKey(relatedEntityType().value())) {
             Context targetInstanceContext = EventHandlingUtil.constructContext(getTenant(payload), payload.getToken(), payload.getOkapiUrl());
             return updateRelatedEntity(payload, mappingMetadataDto, targetInstanceContext)
               .compose(v -> updateRecord(getRecord(payload.getContext()), targetInstanceContext));
