@@ -12,7 +12,6 @@ import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
-import org.folio.inventory.storage.external.CqlQuery;
 import org.folio.inventory.storage.external.MultipleRecordsFetchClient;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.server.ClientErrorResponse;

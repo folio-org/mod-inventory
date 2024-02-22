@@ -307,7 +307,6 @@ public class Items extends AbstractInventoryResource {
     CollectionResourceClient materialTypesClient;
     CollectionResourceClient loanTypesClient;
     CollectionResourceClient locationsClient;
-    CollectionResourceClient boundWithPartsClient;
 
     try {
       OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
@@ -316,7 +315,6 @@ public class Items extends AbstractInventoryResource {
       materialTypesClient = createMaterialTypesClient(okapiClient, context);
       loanTypesClient = createLoanTypesClient(okapiClient, context);
       locationsClient = createLocationsClient(okapiClient, context);
-      boundWithPartsClient = createBoundWithPartsClient(okapiClient, context);
     }
     catch (MalformedURLException e) {
       invalidOkapiUrlResponse(routingContext, context);
