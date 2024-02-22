@@ -80,6 +80,7 @@ public class MarcBibModifyEventHandlerTest {
   private static final String RECORD_PATH = "src/test/resources/handlers/bib-record.json";
   private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
   private static final String PRECEDING_SUCCEEDING_TITLES_KEY = "precedingSucceedingTitles";
+  private static final String CURRENT_RETRY_NUMBER = "CURRENT_RETRY_NUMBER";
   private static final String OKAPI_URL = "http://localhost";
   private static final String TENANT_ID = "diku";
   private static final String CENTRAL_TENANT_ID = "centralTenantId";
@@ -210,6 +211,7 @@ public class MarcBibModifyEventHandlerTest {
 
     // then
     Optional<JsonObject> addedField = getFieldFromParsedRecord(actualRecord.getParsedRecord().getContent().toString(), "856");
+    Assert.assertFalse(dataImportEventPayload.getContext().containsKey(CURRENT_RETRY_NUMBER));
     Assert.assertTrue(addedField.isPresent());
     Assert.assertEquals(expectedAddedField, addedField.get().encode());
     Assert.assertEquals(existingInstance.getId(), instanceJson.getString("id"));
@@ -348,6 +350,7 @@ public class MarcBibModifyEventHandlerTest {
     // then
     Optional<JsonObject> addedField = getFieldFromParsedRecord(actualRecord.getParsedRecord().getContent().toString(), "856");
     Assert.assertTrue(addedField.isPresent());
+    Assert.assertFalse(dataImportEventPayload.getContext().containsKey(CURRENT_RETRY_NUMBER));
     Assert.assertEquals(expectedAddedField, addedField.get().encode());
     Assert.assertEquals(existingInstance.getId(), instanceJson.getString("id"));
     Assert.assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
@@ -364,29 +367,6 @@ public class MarcBibModifyEventHandlerTest {
     verify(mockedInstanceCollection, times(2)).update(any(), any(), any());
     verify(sourceStorageClient).putSourceStorageRecordsById(eq(record.getId()),
       argThat(r -> r.getParsedRecord().getContent().toString().equals(actualRecord.getParsedRecord().getContent().toString())));
-  }
-
-  @Test(expected = ExecutionException.class)
-  public void shouldNotUpdateInstanceIfOLErrorExist() throws InterruptedException, ExecutionException, TimeoutException {
-    HashMap<String, String> payloadContext = new HashMap<>();
-    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
-    payloadContext.put(INSTANCE.value(), Json.encode(existingInstance));
-
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value())
-      .withJobExecutionId(UUID.randomUUID().toString())
-      .withContext(payloadContext)
-      .withOkapiUrl(OKAPI_URL)
-      .withCurrentNode(profileSnapshotWrapper);
-
-    doAnswer(invocationOnMock -> {
-      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
-      failureHandler.accept(new Failure("Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", 409));
-      return null;
-    }).when(mockedInstanceCollection).update(any(), any(), any());
-
-    CompletableFuture<DataImportEventPayload> future = marcBibModifyEventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.SECONDS);
   }
 
   @Test
@@ -434,6 +414,91 @@ public class MarcBibModifyEventHandlerTest {
   }
 
   @Test(expected = ExecutionException.class)
+  public void shouldNotUpdateInstanceIfOLErrorExist() throws InterruptedException, ExecutionException, TimeoutException {
+    HashMap<String, String> payloadContext = new HashMap<>();
+    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    payloadContext.put(INSTANCE.value(), Json.encode(existingInstance));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withOkapiUrl(OKAPI_URL)
+      .withCurrentNode(profileSnapshotWrapper);
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure("Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", 409));
+      return null;
+    }).when(mockedInstanceCollection).update(any(), any(), any());
+
+    CompletableFuture<DataImportEventPayload> future = marcBibModifyEventHandler.handle(dataImportEventPayload);
+    future.get(5, TimeUnit.SECONDS);
+  }
+
+  @Test(expected = ExecutionException.class)
+  public void shouldNotUpdateInstanceIfErrorDuringInstanceUpdate() throws InterruptedException, ExecutionException, TimeoutException {
+    HashMap<String, String> payloadContext = new HashMap<>();
+    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    payloadContext.put(INSTANCE.value(), Json.encode(existingInstance));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withOkapiUrl(OKAPI_URL)
+      .withCurrentNode(profileSnapshotWrapper);
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure("Fail", 400));
+      return null;
+    }).when(mockedInstanceCollection).update(any(), any(), any());
+
+    CompletableFuture<DataImportEventPayload> future = marcBibModifyEventHandler.handle(dataImportEventPayload);
+    future.get(5, TimeUnit.SECONDS);
+  }
+
+  @Test(expected = ExecutionException.class)
+  public void shouldFailIfErrorDuringRecordUpdate() throws InterruptedException, ExecutionException, TimeoutException {
+    HashMap<String, String> payloadContext = new HashMap<>();
+    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    payloadContext.put(INSTANCE.value(), Json.encode(existingInstance));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withOkapiUrl(OKAPI_URL)
+      .withCurrentNode(profileSnapshotWrapper);
+
+    when(sourceStorageClient.putSourceStorageRecordsById(any(), any()))
+      .thenReturn(Future.failedFuture("Error"));
+
+    CompletableFuture<DataImportEventPayload> future = marcBibModifyEventHandler.handle(dataImportEventPayload);
+    future.get(5, TimeUnit.SECONDS);
+  }
+
+  @Test(expected = ExecutionException.class)
+  public void shouldFailIfRecordUpdateReturnsNot200StatusCode() throws InterruptedException, ExecutionException, TimeoutException {
+    HashMap<String, String> payloadContext = new HashMap<>();
+    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    payloadContext.put(INSTANCE.value(), Json.encode(existingInstance));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withOkapiUrl(OKAPI_URL)
+      .withCurrentNode(profileSnapshotWrapper);
+
+    when(putRecordHttpResponse.statusCode()).thenReturn(HttpStatus.SC_BAD_REQUEST);
+
+    CompletableFuture<DataImportEventPayload> future = marcBibModifyEventHandler.handle(dataImportEventPayload);
+    future.get(5, TimeUnit.SECONDS);
+  }
+
+  @Test(expected = ExecutionException.class)
   public void shouldReturnFailedFutureWhenHasNoMarcRecord()
     throws InterruptedException, ExecutionException, TimeoutException {
     // given
@@ -463,7 +528,7 @@ public class MarcBibModifyEventHandlerTest {
   }
 
   @Test
-  public void shouldReturnFalseWhenHandlerIsNotEligibleForProfile() {
+  public void shouldReturnFalseEligibleWhenActionProfileNotModify() {
     // given
     ActionProfile actionProfile = new ActionProfile()
       .withId(UUID.randomUUID().toString())
@@ -478,6 +543,20 @@ public class MarcBibModifyEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withCurrentNode(profileSnapshotWrapper);
+
+    // when
+    boolean isEligible = marcBibModifyEventHandler.isEligible(dataImportEventPayload);
+
+    //then
+    Assert.assertFalse(isEligible);
+  }
+
+  @Test
+  public void shouldReturnFalseEligibleWhenPayloadDoesNotContainProfileSnapshotWrapper() {
+    // given
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
+      .withCurrentNode(null);
 
     // when
     boolean isEligible = marcBibModifyEventHandler.isEligible(dataImportEventPayload);
