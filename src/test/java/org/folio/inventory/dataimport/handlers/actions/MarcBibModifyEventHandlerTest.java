@@ -70,6 +70,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -305,6 +306,62 @@ public class MarcBibModifyEventHandlerTest {
 
     verify(marcBibModifyEventHandler).getSourceStorageRecordsClient(argThat(context -> context.getTenantId().equals(CENTRAL_TENANT_ID)));
     verify(mockedInstanceCollection).update(any(), any(), any());
+    verify(sourceStorageClient).putSourceStorageRecordsById(eq(record.getId()),
+      argThat(r -> r.getParsedRecord().getContent().toString().equals(actualRecord.getParsedRecord().getContent().toString())));
+  }
+
+  @Test
+  public void shouldModifyRecordAndUpdateInstanceAfterOptimisticLockingProcessing() throws InterruptedException, ExecutionException, TimeoutException {
+    // given
+    HashMap<String, String> payloadContext = new HashMap<>();
+    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    payloadContext.put(INSTANCE.value(), Json.encode(existingInstance));
+    String expectedAddedField = "{\"856\":{\"subfields\":[{\"u\":\"http://libproxy.smith.edu?url=\"}],\"ind1\":\" \",\"ind2\":\" \"}}";
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withOkapiUrl(OKAPI_URL)
+      .withCurrentNode(profileSnapshotWrapper)
+      .withTenant(TENANT_ID);
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure("Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", 409));
+      return null;
+    }).doAnswer(invocationOnMock -> {
+      Instance instance = invocationOnMock.getArgument(0);
+      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(instance));
+      return null;
+    }).when(mockedInstanceCollection).update(any(), any(), any());
+
+    // when
+    CompletableFuture<DataImportEventPayload> future = marcBibModifyEventHandler.handle(dataImportEventPayload);
+
+    DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
+    JsonObject instanceJson = new JsonObject(eventPayload.getContext().get(INSTANCE.value()));
+    Instance updatedInstance = Instance.fromJson(instanceJson);
+    Record actualRecord = Json.decodeValue(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()), Record.class);
+
+    // then
+    Optional<JsonObject> addedField = getFieldFromParsedRecord(actualRecord.getParsedRecord().getContent().toString(), "856");
+    Assert.assertTrue(addedField.isPresent());
+    Assert.assertEquals(expectedAddedField, addedField.get().encode());
+    Assert.assertEquals(existingInstance.getId(), instanceJson.getString("id"));
+    Assert.assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
+    Assert.assertNotNull(updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value)).findFirst().get());
+    Assert.assertNotNull(updatedInstance.getContributors().stream().filter(c -> "Mazzeno, Laurence W., 1234566".equals(c.name)).findFirst().get());
+    Assert.assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0dd", updatedInstance.getStatisticalCodeIds().get(0));
+    Assert.assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0cf", updatedInstance.getNatureOfContentTermIds().get(0));
+    Assert.assertNotNull(updatedInstance.getSubjects());
+    Assert.assertEquals(1, updatedInstance.getSubjects().size());
+    assertThat(updatedInstance.getSubjects().get(0).getValue(), Matchers.containsString("additional subfield"));
+    Assert.assertNotNull(updatedInstance.getNotes());
+    Assert.assertEquals("Adding a note", updatedInstance.getNotes().get(0).note);
+
+    verify(mockedInstanceCollection, times(2)).update(any(), any(), any());
     verify(sourceStorageClient).putSourceStorageRecordsById(eq(record.getId()),
       argThat(r -> r.getParsedRecord().getContent().toString().equals(actualRecord.getParsedRecord().getContent().toString())));
   }
