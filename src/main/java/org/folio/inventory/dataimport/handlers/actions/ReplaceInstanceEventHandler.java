@@ -300,6 +300,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
           if (instance.getSource().equals(MARC.getValue())) {
             incomingRecord.setMatchedId(existingRecord.getMatchedId());
+            incomingRecord.setGeneration(null);
             String updatedIncomingRecord = Json.encode(incomingRecord);
             org.folio.rest.jaxrs.model.Record targetRecord = Json.decodeValue(updatedIncomingRecord, org.folio.rest.jaxrs.model.Record.class);
 
