@@ -448,8 +448,12 @@ public class Items extends AbstractInventoryResource {
             locationsClient.get(id, newFuture::complete);
           });
 
+        //CompletableFuture<Response> boundWithPartsFuture =
+        //  getBoundWithPartsForMultipleItemsFuture(wrappedItems, boundWithPartsClient);
+
         CompletableFuture<Response> boundWithPartsFuture =
-          getBoundWithPartsForMultipleItemsFuture(wrappedItems, boundWithPartsClient);
+          getBoundWithPartsForMultipleItemsFuture(wrappedItems, routingContext);
+
         allFutures.add(boundWithPartsFuture);
 
         CompletableFuture<Void> allDoneFuture = allOf(allFutures);
@@ -1008,6 +1012,10 @@ public class Items extends AbstractInventoryResource {
     return CqlQuery.exactMatchAny("id", ids);
   }
 
+  private CqlQuery cqlMatchAnyByItemIds(List<String> ids) {
+    return CqlQuery.exactMatchAny("itemId", ids);
+  }
+
   private MultipleRecordsFetchClient buildPartitionedFetchClient(
     String apiPath,
     String collectionPropertyName,
@@ -1078,27 +1086,27 @@ public class Items extends AbstractInventoryResource {
 
   private CompletableFuture<Response> getBoundWithPartsForMultipleItemsFuture(
     MultipleRecords<Item> wrappedItems,
-    CollectionResourceClient boundWithPartsClient)
+    RoutingContext routingContext)
   {
-    CompletableFuture<Response> future = new CompletableFuture<>();
-
     List<String> itemIds = wrappedItems.records.stream()
       .map(Item::getId)
       .collect(Collectors.toList());
 
-    String boundWithPartsByItemIdsQuery =
-      String.format("itemId==(%s)",
-        itemIds.stream()
-          .map(String::toString)
-          .collect(Collectors.joining(" or ")));
-
-    boundWithPartsClient.getMany(
-      boundWithPartsByItemIdsQuery,
-      itemIds.size(),
-      0,
-      future::complete);
-
-    return future;
+    MultipleRecordsFetchClient partitionedRequestsClient =
+      buildPartitionedFetchClient(
+        "/inventory-storage/bound-with-parts",
+        "boundWithParts",
+        routingContext);
+    return partitionedRequestsClient
+      .find(itemIds,this::cqlMatchAnyByItemIds)
+      .thenApply(parts -> {
+        JsonArray array = new JsonArray();
+        JsonObject result = new JsonObject().put("boundWithParts", array);
+        for (JsonObject o : parts) {
+          array.add(o);
+        }
+        return new Response(200,result.encodePrettily(), "application/json","/inventory-storage/bound-with-parts");
+      });
   }
 
 }

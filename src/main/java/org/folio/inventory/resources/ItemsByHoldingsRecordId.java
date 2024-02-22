@@ -12,6 +12,8 @@ import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
+import org.folio.inventory.storage.external.CqlQuery;
+import org.folio.inventory.storage.external.MultipleRecordsFetchClient;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.server.ClientErrorResponse;
 import org.folio.inventory.support.http.server.FailureResponseConsumer;
@@ -159,6 +161,31 @@ public class ItemsByHoldingsRecordId extends Items
     } catch (UnsupportedEncodingException e) {
       ServerErrorResponse.internalError(routingContext.response(), e.toString());
     }
+  }
+
+  private MultipleRecordsFetchClient buildPartitionedFetchClient(
+    String apiPath,
+    String collectionPropertyName,
+    RoutingContext routingContext) {
+    WebContext webContext = new WebContext(routingContext);
+
+    CollectionResourceClient baseClient = null;
+    try {
+      URL api = new URL(webContext.getOkapiLocation() + apiPath);
+      baseClient =
+        new CollectionResourceClient(
+          createHttpClient(routingContext, webContext), api);
+    } catch (MalformedURLException mue) {
+      log.error(
+        String.format(
+          "Could not create CollectionResourceClient due to malformed URL %s%s",
+          webContext.getOkapiLocation(), apiPath));
+    }
+    return MultipleRecordsFetchClient.builder()
+      .withCollectionPropertyName(collectionPropertyName)
+      .withExpectedStatus(200)
+      .withCollectionResourceClient(baseClient)
+      .build();
   }
 
   private CollectionResourceClient getCollectionResourceRepository(
