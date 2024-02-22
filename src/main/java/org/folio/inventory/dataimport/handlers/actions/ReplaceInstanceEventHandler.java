@@ -40,6 +40,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static java.util.Objects.nonNull;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.ActionProfile.Action.UPDATE;
@@ -300,7 +301,10 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
           if (instance.getSource().equals(MARC.getValue())) {
             incomingRecord.setMatchedId(existingRecord.getMatchedId());
-            incomingRecord.setGeneration(null);
+            if (nonNull(existingRecord.getGeneration())) {
+              int incrementedGeneration = existingRecord.getGeneration();
+              incomingRecord.setGeneration(++incrementedGeneration);
+            }
             String updatedIncomingRecord = Json.encode(incomingRecord);
             org.folio.rest.jaxrs.model.Record targetRecord = Json.decodeValue(updatedIncomingRecord, org.folio.rest.jaxrs.model.Record.class);
 
