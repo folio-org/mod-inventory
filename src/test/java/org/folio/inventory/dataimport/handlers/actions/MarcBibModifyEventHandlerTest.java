@@ -56,7 +56,7 @@ import java.util.function.Consumer;
 
 import static org.folio.ActionProfile.Action.MODIFY;
 import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_RECORD_PARSED;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED;
 import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
@@ -194,7 +194,7 @@ public class MarcBibModifyEventHandlerTest {
     String expectedAddedField = "{\"856\":{\"subfields\":[{\"u\":\"http://libproxy.smith.edu?url=\"}],\"ind1\":\" \",\"ind2\":\" \"}}";
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value())
+      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
       .withOkapiUrl(OKAPI_URL)
@@ -212,6 +212,8 @@ public class MarcBibModifyEventHandlerTest {
     // then
     Optional<JsonObject> addedField = getFieldFromParsedRecord(actualRecord.getParsedRecord().getContent().toString(), "856");
     Assert.assertFalse(dataImportEventPayload.getContext().containsKey(CURRENT_RETRY_NUMBER));
+    Assert.assertEquals(DI_SRS_MARC_BIB_RECORD_MODIFIED.value(), dataImportEventPayload.getEventType());
+    Assert.assertEquals(MAPPING_PROFILE, dataImportEventPayload.getCurrentNode().getContentType());
     Assert.assertTrue(addedField.isPresent());
     Assert.assertEquals(expectedAddedField, addedField.get().encode());
     Assert.assertEquals(existingInstance.getId(), instanceJson.getString("id"));
@@ -239,7 +241,7 @@ public class MarcBibModifyEventHandlerTest {
     String expectedAddedField = "{\"856\":{\"subfields\":[{\"u\":\"http://libproxy.smith.edu?url=\"}],\"ind1\":\" \",\"ind2\":\" \"}}";
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value())
+      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
       .withOkapiUrl(OKAPI_URL)
@@ -254,6 +256,9 @@ public class MarcBibModifyEventHandlerTest {
 
     // then
     Optional<JsonObject> addedField = getFieldFromParsedRecord(actualRecord.getParsedRecord().getContent().toString(), "856");
+    Assert.assertFalse(dataImportEventPayload.getContext().containsKey(CURRENT_RETRY_NUMBER));
+    Assert.assertEquals(DI_SRS_MARC_BIB_RECORD_MODIFIED.value(), dataImportEventPayload.getEventType());
+    Assert.assertEquals(MAPPING_PROFILE, dataImportEventPayload.getCurrentNode().getContentType());
     Assert.assertTrue(addedField.isPresent());
     Assert.assertEquals(expectedAddedField, addedField.get().encode());
     Assert.assertFalse(eventPayload.getContext().containsKey(INSTANCE.value()));
@@ -272,7 +277,7 @@ public class MarcBibModifyEventHandlerTest {
     String expectedAddedField = "{\"856\":{\"subfields\":[{\"u\":\"http://libproxy.smith.edu?url=\"}],\"ind1\":\" \",\"ind2\":\" \"}}";
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value())
+      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
       .withTenant(TENANT_ID)
@@ -294,6 +299,9 @@ public class MarcBibModifyEventHandlerTest {
     Assert.assertEquals(expectedAddedField, addedField.get().encode());
     Mockito.verify(mappingMetadataCache).get(eq(dataImportEventPayload.getJobExecutionId()), argThat(context -> context.getTenantId().equals(TENANT_ID)));
     Mockito.verify(mockedStorage).getInstanceCollection(argThat(context -> context.getTenantId().equals(CENTRAL_TENANT_ID)));
+    Assert.assertFalse(dataImportEventPayload.getContext().containsKey(CURRENT_RETRY_NUMBER));
+    Assert.assertEquals(DI_SRS_MARC_BIB_RECORD_MODIFIED.value(), dataImportEventPayload.getEventType());
+    Assert.assertEquals(MAPPING_PROFILE, dataImportEventPayload.getCurrentNode().getContentType());
     Assert.assertEquals(existingInstance.getId(), instanceJson.getString("id"));
     Assert.assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
     Assert.assertNotNull(updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value)).findFirst().get());
@@ -321,7 +329,7 @@ public class MarcBibModifyEventHandlerTest {
     String expectedAddedField = "{\"856\":{\"subfields\":[{\"u\":\"http://libproxy.smith.edu?url=\"}],\"ind1\":\" \",\"ind2\":\" \"}}";
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value())
+      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
       .withOkapiUrl(OKAPI_URL)
@@ -352,6 +360,9 @@ public class MarcBibModifyEventHandlerTest {
     Assert.assertTrue(addedField.isPresent());
     Assert.assertFalse(dataImportEventPayload.getContext().containsKey(CURRENT_RETRY_NUMBER));
     Assert.assertEquals(expectedAddedField, addedField.get().encode());
+    Assert.assertFalse(dataImportEventPayload.getContext().containsKey(CURRENT_RETRY_NUMBER));
+    Assert.assertEquals(DI_SRS_MARC_BIB_RECORD_MODIFIED.value(), dataImportEventPayload.getEventType());
+    Assert.assertEquals(MAPPING_PROFILE, dataImportEventPayload.getCurrentNode().getContentType());
     Assert.assertEquals(existingInstance.getId(), instanceJson.getString("id"));
     Assert.assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
     Assert.assertNotNull(updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value)).findFirst().get());
@@ -395,7 +406,7 @@ public class MarcBibModifyEventHandlerTest {
     payloadContext.put(INSTANCE.value(), Json.encode(existingInstance));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value())
+      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
       .withOkapiUrl(OKAPI_URL)
@@ -408,6 +419,9 @@ public class MarcBibModifyEventHandlerTest {
     DataImportEventPayload eventPayload = future.get();
     Assert.assertNotNull(eventPayload);
     Instance updatedInstance = Instance.fromJson(new JsonObject(eventPayload.getContext().get(INSTANCE.value())));
+    Assert.assertFalse(dataImportEventPayload.getContext().containsKey(CURRENT_RETRY_NUMBER));
+    Assert.assertEquals(DI_SRS_MARC_BIB_RECORD_MODIFIED.value(), dataImportEventPayload.getEventType());
+    Assert.assertEquals(MAPPING_PROFILE, dataImportEventPayload.getCurrentNode().getContentType());
     Assert.assertNotNull(existingInstance.getPrecedingTitles());
     Assert.assertEquals(existingInstance.getId(), updatedInstance.getId());
     Assert.assertTrue(updatedInstance.getPrecedingTitles().isEmpty());
@@ -420,7 +434,7 @@ public class MarcBibModifyEventHandlerTest {
     payloadContext.put(INSTANCE.value(), Json.encode(existingInstance));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value())
+      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
       .withOkapiUrl(OKAPI_URL)
@@ -443,7 +457,7 @@ public class MarcBibModifyEventHandlerTest {
     payloadContext.put(INSTANCE.value(), Json.encode(existingInstance));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value())
+      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
       .withOkapiUrl(OKAPI_URL)
@@ -466,7 +480,7 @@ public class MarcBibModifyEventHandlerTest {
     payloadContext.put(INSTANCE.value(), Json.encode(existingInstance));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value())
+      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
       .withOkapiUrl(OKAPI_URL)
@@ -486,7 +500,7 @@ public class MarcBibModifyEventHandlerTest {
     payloadContext.put(INSTANCE.value(), Json.encode(existingInstance));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value())
+      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
       .withOkapiUrl(OKAPI_URL)
@@ -503,7 +517,7 @@ public class MarcBibModifyEventHandlerTest {
     throws InterruptedException, ExecutionException, TimeoutException {
     // given
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value())
+      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED.value())
       .withContext(new HashMap<>())
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 

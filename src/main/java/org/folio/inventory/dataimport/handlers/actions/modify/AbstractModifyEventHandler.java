@@ -128,6 +128,7 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
 
   protected Future<Void> modifyRecord(DataImportEventPayload payload, MappingParameters mappingParameters) {
     try {
+      preparePayload(payload);
       MappingProfile mappingProfile = retrieveMappingProfile(payload);
       MarcRecordModifier marcRecordModifier = new MarcRecordModifier();
       marcRecordModifier.initialize(payload, mappingParameters, mappingProfile, modifiedEntityType());
@@ -158,7 +159,7 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
       .compose(precedingSucceedingTitles -> precedingSucceedingTitlesHelper.deletePrecedingSucceedingTitles(precedingSucceedingTitles, context))
       .compose(ar -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(instanceUpdatePromise.future().result(), context))
       .onSuccess(updateAr -> {
-        LOGGER.warn("updateRelatedEntity:: Instance with id: '{}' successfully updated by jobExecutionId: '{}'", instanceId, payload.getJobExecutionId());
+        LOGGER.debug("updateRelatedEntity:: Instance with id: '{}' successfully updated by jobExecutionId: '{}'", instanceId, payload.getJobExecutionId());
         payload.getContext().remove(CURRENT_RETRY_NUMBER);
         Instance resultedInstance = instanceUpdatePromise.future().result();
         if (resultedInstance.getVersion() != null) {
@@ -198,7 +199,7 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
   }
 
   private MappingProfile retrieveMappingProfile(DataImportEventPayload payload) {
-    ProfileSnapshotWrapper mappingProfileWrapper = payload.getCurrentNode().getChildSnapshotWrappers().get(0);
+    ProfileSnapshotWrapper mappingProfileWrapper = payload.getCurrentNode();
     return new JsonObject((Map) mappingProfileWrapper.getContent()).mapTo(MappingProfile.class);
   }
 
@@ -226,7 +227,7 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
     } else {
       payload.getContext().remove(CURRENT_RETRY_NUMBER);
       String errMessage = format("processOLError:: Current retry number %s exceeded given number %s for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber);
-      LOGGER.error(errMessage);
+      LOGGER.warn(errMessage);
       promise.fail(new OptimisticLockingException(errMessage));
     }
   }
@@ -259,5 +260,10 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
 
   public SourceStorageRecordsClient getSourceStorageRecordsClient(Context context) {
     return new SourceStorageRecordsClient(context.getOkapiLocation(), context.getTenantId(), context.getToken(), client);
+  }
+
+  private void preparePayload(DataImportEventPayload dataImportEventPayload) {
+    dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
+    dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
   }
 }
