@@ -9,6 +9,7 @@
 * Make configurable params for instance sharing [MODINV-950](https://issues.folio.org/browse/MODINV-950)
 * Create Kafka topics instead of relying on auto create in mod-inventory [MODINV-957](https://issues.folio.org/browse/MODINV-957)
 * Remove post-processing for Instance Update action [MODINV-922](https://issues.folio.org/browse/MODINV-922)
+* The import of file is completed with errors [MODINV-968](https://issues.folio.org/browse/MODINV-968)
 
 ## 20.1.0 2023-10-13
 * Update status when user attempts to update shared auth record from member tenant ([MODDATAIMP-926](https://issues.folio.org/browse/MODDATAIMP-926))
