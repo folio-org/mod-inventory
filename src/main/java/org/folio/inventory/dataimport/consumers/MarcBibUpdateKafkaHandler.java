@@ -17,12 +17,10 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
 import io.vertx.kafka.client.producer.KafkaProducer;
 import io.vertx.kafka.client.producer.KafkaProducerRecord;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.MappingMetadataDto;
@@ -54,7 +52,6 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
 
   private final InstanceUpdateDelegate instanceUpdateDelegate;
   private final MappingMetadataCache mappingMetadataCache;
-  private final KafkaProducer<String, String> producer;
   private final KafkaConfig kafkaConfig;
   private final Vertx vertx;
   private final int maxDistributionNumber;
@@ -67,8 +64,6 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
     this.instanceUpdateDelegate = instanceUpdateDelegate;
     this.maxDistributionNumber = maxDistributionNumber;
     this.mappingMetadataCache = mappingMetadataCache;
-
-    producer = createProducer(LINKS_STATS.topicName(), kafkaConfig);
   }
 
   @Override
@@ -121,6 +116,7 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
   private void sendEventToKafka(LinkUpdateReport linkUpdateReport, List<KafkaHeader> kafkaHeaders) {
     try {
       var kafkaRecord = createKafkaProducerRecord(linkUpdateReport, kafkaHeaders);
+      KafkaProducer<String, String> producer = createProducer(LINKS_STATS.topicName(), kafkaConfig);
       producer.send(kafkaRecord)
         .<Void>mapEmpty()
         .eventually(v -> producer.flush())
@@ -170,11 +166,5 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
       .withFailCause(errMessage)
       .withTenant(marcBibUpdate.getTenant())
       .withTs(marcBibUpdate.getTs());
-  }
-
-  public void shutdown() {
-    if (producer != null) {
-      producer.close();
-    }
   }
 }

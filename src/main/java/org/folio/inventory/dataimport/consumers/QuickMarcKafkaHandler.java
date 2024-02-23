@@ -65,7 +65,6 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
   private final int maxDistributionNumber;
   private final KafkaConfig kafkaConfig;
   private final Vertx vertx;
-  private final Map<QMEventTypes, KafkaProducer<String, String>> producerMap = new HashMap<>();
 
   public QuickMarcKafkaHandler(Vertx vertx, Storage storage, int maxDistributionNumber, KafkaConfig kafkaConfig,
                                PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper, HoldingsCollectionService holdingsCollectionService) {
@@ -76,10 +75,6 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
     this.holdingsUpdateDelegate = new HoldingsUpdateDelegate(storage, holdingsCollectionService);
     this.authorityUpdateDelegate = new AuthorityUpdateDelegate(storage);
     this.precedingSucceedingTitlesHelper = precedingSucceedingTitlesHelper;
-    createProducer(kafkaConfig, QM_INVENTORY_INSTANCE_UPDATED);
-    createProducer(kafkaConfig, QM_INVENTORY_HOLDINGS_UPDATED);
-    createProducer(kafkaConfig, QM_INVENTORY_AUTHORITY_UPDATED);
-    createProducer(kafkaConfig, QM_ERROR);
   }
 
   @Override
@@ -139,9 +134,8 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
     }
   }
 
-  private void createProducer(KafkaConfig kafkaConfig, QMEventTypes eventType) {
-    KafkaProducer<String, String> producer = new SimpleKafkaProducerManager(vertx, kafkaConfig).createShared(eventType.name());
-    producerMap.put(eventType, producer);
+  private KafkaProducer<String, String> createProducer(KafkaConfig kafkaConfig, QMEventTypes eventType) {
+    return new SimpleKafkaProducerManager(vertx, kafkaConfig).createShared(eventType.name());
   }
 
   @SuppressWarnings("unchecked")
@@ -157,7 +151,7 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
 
   private Future<Boolean> sendEvent(Object eventPayload, QMEventTypes eventType, OkapiConnectionParams params) {
     String key = String.valueOf(indexer.incrementAndGet() % maxDistributionNumber);
-    var producer = producerMap.get(eventType);
+    KafkaProducer<String, String> producer = createProducer(kafkaConfig, eventType);
     return sendEventWithPayload(Json.encode(eventPayload), eventType.name(), key, producer, params);
   }
 
@@ -204,13 +198,5 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
 
     producerRecord.addHeaders(kafkaHeadersFromMap(params.getHeaders()));
     return producerRecord;
-  }
-
-  public void shutdown() {
-    producerMap.values().forEach(producer -> {
-      if (producer != null) {
-        producer.close();
-      }
-    });
   }
 }
