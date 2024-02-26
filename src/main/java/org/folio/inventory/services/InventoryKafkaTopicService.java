@@ -23,7 +23,8 @@ public class InventoryKafkaTopicService {
       new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_UPDATED", authorityUpdatedPartitions()),
       new InventoryKafkaTopic("DI_INVENTORY_HOLDINGS_CREATED_READY_FOR_POST_PROCESSING", holdingCreatedReadyForPostProcessingPartitions()),
       new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING", authorityCreatedReadyForPostProcessingPartitions()),
-      new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING", authorityUpdatedReadyForPostProcessingPartitions())
+      new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING", authorityUpdatedReadyForPostProcessingPartitions()),
+      new InventoryKafkaTopic("DI_SRS_MARC_BIB_RECORD_MODIFIED", marcBibRecordModifiedPartitions())
     };
   }
 
@@ -92,5 +93,10 @@ public class InventoryKafkaTopicService {
   private Integer authorityUpdatedReadyForPostProcessingPartitions() {
     return Integer.valueOf(firstNonBlank(System.getenv(
       "DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING_PARTITIONS"), "1"));
+  }
+
+  private Integer marcBibRecordModifiedPartitions() {
+    return Integer.valueOf(firstNonBlank(System.getenv(
+      "DI_SRS_MARC_BIB_RECORD_MODIFIED_PARTITIONS"), "1"));
   }
 }
