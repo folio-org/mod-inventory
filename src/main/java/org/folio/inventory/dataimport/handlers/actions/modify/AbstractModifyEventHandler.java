@@ -211,7 +211,7 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
   }
 
   private void processOLError(DataImportEventPayload payload, MappingMetadataDto mappingMetadataDto,
-                              Promise promise, Throwable cause, Context context) {
+                              Promise<Void> promise, Throwable cause, Context context) {
     int currentRetryNumber = payload.getContext().get(CURRENT_RETRY_NUMBER) == null
       ? 0 : Integer.parseInt(payload.getContext().get(CURRENT_RETRY_NUMBER));
     if (currentRetryNumber < MAX_RETRIES_COUNT) {
