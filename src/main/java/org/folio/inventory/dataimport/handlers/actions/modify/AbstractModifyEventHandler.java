@@ -146,6 +146,12 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
 
     Record record = getRecord(payloadForInstanceUpdate);
     String instanceId = ParsedRecordUtil.getAdditionalSubfieldValue(record.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.I);
+    if (isBlank(instanceId)) {
+      LOGGER.warn("updateRelatedEntity:: Cannot update Instance during modify, 999ff$i is blank, tenant: {}, jobExecutionId: {}",
+        context.getTenantId(), payload.getJobExecutionId());
+      return Future.succeededFuture();
+    }
+
     record.setExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId));
 
     Promise<Instance> instanceUpdatePromise = Promise.promise();

@@ -32,6 +32,7 @@ import org.folio.rest.jaxrs.model.MappingDetail;
 import org.folio.rest.jaxrs.model.MarcField;
 import org.folio.rest.jaxrs.model.MarcMappingDetail;
 import org.folio.rest.jaxrs.model.MarcSubfield;
+import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
 import org.hamcrest.Matchers;
@@ -425,6 +426,43 @@ public class MarcBibModifyEventHandlerTest {
     Assert.assertNotNull(existingInstance.getPrecedingTitles());
     Assert.assertEquals(existingInstance.getId(), updatedInstance.getId());
     Assert.assertTrue(updatedInstance.getPrecedingTitles().isEmpty());
+  }
+
+  @Test
+  public void shouldNotUpdateInstanceIf999ff$iFieldIsBlanks() throws InterruptedException, ExecutionException, TimeoutException {
+    // given
+    HashMap<String, String> payloadContext = new HashMap<>();
+    String incomingParsedContent =
+      "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406512\"}]}";
+    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record.withParsedRecord(new ParsedRecord().withContent(incomingParsedContent))));
+    payloadContext.put(INSTANCE.value(), Json.encode(existingInstance));
+    String expectedAddedField = "{\"856\":{\"subfields\":[{\"u\":\"http://libproxy.smith.edu?url=\"}],\"ind1\":\" \",\"ind2\":\" \"}}";
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withOkapiUrl(OKAPI_URL)
+      .withCurrentNode(profileSnapshotWrapper)
+      .withTenant(TENANT_ID);
+
+    // when
+    CompletableFuture<DataImportEventPayload> future = marcBibModifyEventHandler.handle(dataImportEventPayload);
+
+    DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
+    JsonObject instanceJson = new JsonObject(eventPayload.getContext().get(INSTANCE.value()));
+    Record actualRecord = Json.decodeValue(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()), Record.class);
+
+    // then
+    Optional<JsonObject> addedField = getFieldFromParsedRecord(actualRecord.getParsedRecord().getContent().toString(), "856");
+    Assert.assertFalse(dataImportEventPayload.getContext().containsKey(CURRENT_RETRY_NUMBER));
+    Assert.assertEquals(DI_SRS_MARC_BIB_RECORD_MODIFIED.value(), dataImportEventPayload.getEventType());
+    Assert.assertEquals(MAPPING_PROFILE, dataImportEventPayload.getCurrentNode().getContentType());
+    Assert.assertTrue(addedField.isPresent());
+    Assert.assertEquals(expectedAddedField, addedField.get().encode());
+    Assert.assertEquals(existingInstance.getId(), instanceJson.getString("id"));
+
+    verify(mockedInstanceCollection, never()).update(any(), any(), any());
   }
 
   @Test(expected = ExecutionException.class)
