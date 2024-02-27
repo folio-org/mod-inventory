@@ -65,6 +65,7 @@ public class MarcBibliographicMatchEventHandler extends AbstractMarcMatchEventHa
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
 
       if (isBlank(instanceId)) {
+        LOG.info("Skipping instance loading for matched MARC-BIB record because the matched MARC-BIB does not contain instanceId");
         return Future.succeededFuture(records);
       }
 
