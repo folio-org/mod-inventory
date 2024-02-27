@@ -1,5 +1,15 @@
 package org.folio.inventory.consortium.consumers;
 
+import static java.lang.String.format;
+import static org.apache.commons.lang.StringUtils.EMPTY;
+import static org.folio.inventory.consortium.entities.SharingInstanceEventType.CONSORTIUM_INSTANCE_SHARING_COMPLETE;
+import static org.folio.inventory.consortium.entities.SharingStatus.COMPLETE;
+import static org.folio.inventory.consortium.handlers.InstanceSharingHandlerFactory.getInstanceSharingHandler;
+import static org.folio.inventory.consortium.handlers.InstanceSharingHandlerFactory.values;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -10,6 +20,11 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
 import io.vertx.kafka.client.producer.KafkaProducer;
 import io.vertx.kafka.client.producer.KafkaProducerRecord;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Stream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.consortium.entities.SharingInstance;
@@ -33,26 +48,11 @@ import org.folio.kafka.SimpleKafkaProducerManager;
 import org.folio.kafka.exception.DuplicateEventException;
 import org.folio.kafka.services.KafkaProducerRecordBuilder;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Stream;
-
-import static java.lang.String.format;
-import static org.apache.commons.lang.StringUtils.EMPTY;
-import static org.folio.inventory.consortium.entities.SharingInstanceEventType.CONSORTIUM_INSTANCE_SHARING_COMPLETE;
-import static org.folio.inventory.consortium.entities.SharingStatus.COMPLETE;
-import static org.folio.inventory.consortium.handlers.InstanceSharingHandlerFactory.getInstanceSharingHandler;
-import static org.folio.inventory.consortium.handlers.InstanceSharingHandlerFactory.values;
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
-
 public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<String, String> {
 
   private static final Logger LOGGER = LogManager.getLogger(ConsortiumInstanceSharingHandler.class);
   public static final String SOURCE = "source";
+  public static final SharingInstanceEventType eventType = CONSORTIUM_INSTANCE_SHARING_COMPLETE;
 
   public static final String ID = "id";
   private final Vertx vertx;
@@ -217,9 +217,6 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
   private void sendCompleteEventToKafka(SharingInstance sharingInstance, SharingStatus status, String errorMessage,
                                         Map<String, String> kafkaHeaders) {
-
-    SharingInstanceEventType evenType = CONSORTIUM_INSTANCE_SHARING_COMPLETE;
-
     try {
       String tenantId = kafkaHeaders.get(OKAPI_TENANT_HEADER);
       List<KafkaHeader> kafkaHeadersList = convertKafkaHeadersMap(kafkaHeaders);
@@ -228,24 +225,27 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
         " to tenant {}. Status: {}, Message: {}", sharingInstance.getInstanceIdentifier(), tenantId, status.getValue(), errorMessage);
 
       KafkaProducerRecord<String, String> kafkaRecord =
-        createProducerRecord(getTopicName(tenantId, evenType),
+        createProducerRecord(getTopicName(tenantId, eventType),
           sharingInstance,
           status,
           errorMessage,
           kafkaHeadersList);
+      KafkaProducer<String, String> producer = createProducer(tenantId, eventType.name());
 
-      var kafkaProducer = createProducer(tenantId, getTopicName(tenantId, evenType));
-      kafkaProducer.send(kafkaRecord)
+      producer.send(kafkaRecord)
+        .<Void>mapEmpty()
+        .eventually(v -> producer.flush())
+        .eventually(v -> producer.close())
         .onSuccess(res -> LOGGER.info("Event with type {}, was sent to kafka about sharing instance with InstanceId={}",
-          evenType.value(), sharingInstance.getInstanceIdentifier()))
+          eventType.value(), sharingInstance.getInstanceIdentifier()))
         .onFailure(err -> {
           var cause = err.getCause();
           LOGGER.info("Failed to sent event {} to kafka about sharing instance with InstanceId={}, cause: {}",
-            evenType.value(), sharingInstance.getInstanceIdentifier(), cause);
+            eventType.value(), sharingInstance.getInstanceIdentifier(), cause);
         });
     } catch (Exception e) {
       LOGGER.error("Failed to send an event for eventType {} about sharing instance with InstanceId={}, cause {}",
-        evenType.value(), sharingInstance.getInstanceIdentifier(), e);
+        eventType.value(), sharingInstance.getInstanceIdentifier(), e);
     }
   }
 
@@ -301,5 +301,4 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       KafkaHeader.header(OKAPI_TOKEN_HEADER, kafkaHeaders.get(OKAPI_TOKEN_HEADER)))
     );
   }
-
 }

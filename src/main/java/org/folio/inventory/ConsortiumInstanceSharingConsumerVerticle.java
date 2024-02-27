@@ -1,5 +1,13 @@
 package org.folio.inventory;
 
+import static java.lang.String.format;
+import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
+import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
+import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX_REQUEST_SIZE;
+import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_PORT;
+import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_REPLICATION_FACTOR;
+import static org.folio.inventory.dataimport.util.KafkaConfigConstants.OKAPI_URL;
+
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -21,14 +29,6 @@ import org.folio.kafka.KafkaConsumerWrapper;
 import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.kafka.SubscriptionDefinition;
 
-import static java.lang.String.format;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX_REQUEST_SIZE;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_PORT;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_REPLICATION_FACTOR;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.OKAPI_URL;
-
 public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle {
 
   private static final Logger LOGGER = LogManager.getLogger(ConsortiumInstanceSharingConsumerVerticle.class);
@@ -46,7 +46,8 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
     HttpClient httpClient = vertx.createHttpClient();
     Storage storage = Storage.basedUpon(config, httpClient);
     SharedInstanceEventIdStorageServiceImpl sharedInstanceEventIdStorageService = new SharedInstanceEventIdStorageServiceImpl(new EventIdStorageDaoImpl(new PostgresClientFactory(vertx)));
-    ConsortiumInstanceSharingHandler consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig, sharedInstanceEventIdStorageService);
+    ConsortiumInstanceSharingHandler consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx,
+      httpClient, storage, kafkaConfig, sharedInstanceEventIdStorageService);
 
     var kafkaConsumerFuture = createKafkaConsumerWrapper(kafkaConfig, consortiumInstanceSharingHandler);
     kafkaConsumerFuture.onFailure(startPromise::fail)
@@ -96,5 +97,4 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
   private int getLoadLimit() {
     return Integer.parseInt(System.getProperty("inventory.kafka.ConsortiumInstanceSharingConsumer.loadLimit", "5"));
   }
-
 }

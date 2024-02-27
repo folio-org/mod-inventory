@@ -43,7 +43,8 @@ public class MarcBibUpdateConsumerVerticle extends AbstractVerticle {
     var mappingMetadataExpirationTime = getCacheEnvVariable(config, METADATA_EXPIRATION_TIME);
     MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, client, Long.parseLong(mappingMetadataExpirationTime));
 
-    var marcBibUpdateKafkaHandler = new MarcBibUpdateKafkaHandler(vertx, getMaxDistributionNumber(), kafkaConfig, instanceUpdateDelegate, mappingMetadataCache);
+    MarcBibUpdateKafkaHandler marcBibUpdateKafkaHandler = new MarcBibUpdateKafkaHandler(vertx,
+      getMaxDistributionNumber(), kafkaConfig, instanceUpdateDelegate, mappingMetadataCache);
 
     marcBibUpdateConsumerWrapper = createConsumer(kafkaConfig, SRS_MARC_BIB_TOPIC_NAME);
     marcBibUpdateConsumerWrapper.start(marcBibUpdateKafkaHandler, constructModuleName())
