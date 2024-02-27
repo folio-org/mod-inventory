@@ -146,6 +146,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
    * @param dataImportEventPayload event payload to retrieve from
    * @return {@link MatchDetail}
    */
+  @SuppressWarnings("squid:S3740")
   private MatchDetail retrieveMatchDetail(DataImportEventPayload dataImportEventPayload) {
     MatchProfile matchProfile;
     ProfileSnapshotWrapper matchingProfileWrapper = dataImportEventPayload.getCurrentNode();
