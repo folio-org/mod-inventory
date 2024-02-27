@@ -1,6 +1,25 @@
 package org.folio.inventory.services;
 
 import static org.apache.commons.lang3.StringUtils.firstNonBlank;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_UPDATED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDINGS_CREATED_READY_FOR_POST_PROCESSING;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_MATCHED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_NOT_MATCHED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_UPDATED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_NOT_MATCHED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_CREATED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_MATCHED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_NOT_MATCHED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_UPDATED;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MATCHED;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_NOT_MATCHED;
 
 import org.folio.kafka.services.KafkaTopic;
 
@@ -8,23 +27,25 @@ public class InventoryKafkaTopicService {
 
   public KafkaTopic[] createTopicObjects() {
     return new InventoryKafkaTopic[] {
-      new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_CREATED", instanceCreatedPartitions()),
-      new InventoryKafkaTopic("DI_INVENTORY_HOLDING_CREATED", holdingCreatedPartitions()),
-      new InventoryKafkaTopic("DI_INVENTORY_ITEM_CREATED", itemCreatedPartitions()),
-      new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_MATCHED", instanceMatchedPartitions()),
-      new InventoryKafkaTopic("DI_INVENTORY_HOLDING_MATCHED", holdingMatchedPartitions()),
-      new InventoryKafkaTopic("DI_INVENTORY_ITEM_MATCHED", itemMatchedPartitions()),
-      new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_UPDATED", instanceUpdatedPartitions()),
-      new InventoryKafkaTopic("DI_INVENTORY_HOLDING_UPDATED", holdingUpdatedPartitions()),
-      new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_NOT_MATCHED", instanceNotMatchedPartitions()),
-      new InventoryKafkaTopic("DI_INVENTORY_HOLDING_NOT_MATCHED", holdingNotMatchedPartitions()),
-      new InventoryKafkaTopic("DI_INVENTORY_ITEM_UPDATED", itemUpdatedPartitions()),
-      new InventoryKafkaTopic("DI_INVENTORY_ITEM_NOT_MATCHED", itemNotMatchedPartitions()),
-      new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_UPDATED", authorityUpdatedPartitions()),
-      new InventoryKafkaTopic("DI_INVENTORY_HOLDINGS_CREATED_READY_FOR_POST_PROCESSING", holdingCreatedReadyForPostProcessingPartitions()),
-      new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING", authorityCreatedReadyForPostProcessingPartitions()),
-      new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING", authorityUpdatedReadyForPostProcessingPartitions()),
-      new InventoryKafkaTopic("DI_SRS_MARC_BIB_RECORD_MODIFIED", marcBibRecordModifiedPartitions())
+      new InventoryKafkaTopic(DI_INVENTORY_INSTANCE_CREATED.value(), instanceCreatedPartitions()),
+      new InventoryKafkaTopic(DI_INVENTORY_HOLDING_CREATED.value(), holdingCreatedPartitions()),
+      new InventoryKafkaTopic(DI_INVENTORY_ITEM_CREATED.value(), itemCreatedPartitions()),
+      new InventoryKafkaTopic(DI_INVENTORY_INSTANCE_MATCHED.value(), instanceMatchedPartitions()),
+      new InventoryKafkaTopic(DI_INVENTORY_HOLDING_MATCHED.value(), holdingMatchedPartitions()),
+      new InventoryKafkaTopic(DI_INVENTORY_ITEM_MATCHED.value(), itemMatchedPartitions()),
+      new InventoryKafkaTopic(DI_SRS_MARC_BIB_RECORD_MATCHED.value(), marcBibMatchedPartitions()),
+      new InventoryKafkaTopic(DI_INVENTORY_INSTANCE_UPDATED.value(), instanceUpdatedPartitions()),
+      new InventoryKafkaTopic(DI_INVENTORY_HOLDING_UPDATED.value(), holdingUpdatedPartitions()),
+      new InventoryKafkaTopic(DI_INVENTORY_INSTANCE_NOT_MATCHED.value(), instanceNotMatchedPartitions()),
+      new InventoryKafkaTopic(DI_INVENTORY_HOLDING_NOT_MATCHED.value(), holdingNotMatchedPartitions()),
+      new InventoryKafkaTopic(DI_SRS_MARC_BIB_RECORD_NOT_MATCHED.value(), marcBibNotMatchedPartitions()),
+      new InventoryKafkaTopic(DI_INVENTORY_ITEM_UPDATED.value(), itemUpdatedPartitions()),
+      new InventoryKafkaTopic(DI_INVENTORY_ITEM_NOT_MATCHED.value(), itemNotMatchedPartitions()),
+      new InventoryKafkaTopic(DI_INVENTORY_AUTHORITY_UPDATED.value(), authorityUpdatedPartitions()),
+      new InventoryKafkaTopic(DI_INVENTORY_HOLDINGS_CREATED_READY_FOR_POST_PROCESSING.value(), holdingCreatedReadyForPostProcessingPartitions()),
+      new InventoryKafkaTopic(DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING.value(), authorityCreatedReadyForPostProcessingPartitions()),
+      new InventoryKafkaTopic(DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING.value(), authorityUpdatedReadyForPostProcessingPartitions()),
+      new InventoryKafkaTopic(DI_SRS_MARC_BIB_RECORD_MODIFIED.value(), marcBibRecordModifiedPartitions())
     };
   }
 
@@ -52,6 +73,10 @@ public class InventoryKafkaTopicService {
     return Integer.valueOf(firstNonBlank(System.getenv("DI_INVENTORY_ITEM_MATCHED_PARTITIONS"), "1"));
   }
 
+  private Integer marcBibMatchedPartitions() {
+    return Integer.valueOf(firstNonBlank(System.getenv("DI_SRS_MARC_BIB_RECORD_MATCHED_PARTITIONS"), "1"));
+  }
+
   private Integer instanceUpdatedPartitions() {
     return Integer.valueOf(firstNonBlank(System.getenv("DI_INVENTORY_INSTANCE_UPDATED_PARTITIONS"), "1"));
   }
@@ -74,6 +99,10 @@ public class InventoryKafkaTopicService {
 
   private Integer holdingNotMatchedPartitions() {
     return Integer.valueOf(firstNonBlank(System.getenv("DI_INVENTORY_ITEM_NOT_MATCHED_PARTITIONS"), "1"));
+  }
+
+  private Integer marcBibNotMatchedPartitions() {
+    return Integer.valueOf(firstNonBlank(System.getenv("DI_SRS_MARC_BIB_RECORD_NOT_MATCHED_PARTITIONS"), "1"));
   }
 
   private Integer authorityUpdatedPartitions() {
