@@ -110,7 +110,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
           }
           return Future.succeededFuture(localMatchedRecords.stream().toList());
         })
-        .compose(recordList -> postProcessMatchingResult(recordList, payload))
+        .compose(recordList -> ensureRelatedEntities(recordList, payload).map(recordList))
         .compose(recordList -> processSucceededResult(recordList, payload))
         .onFailure(e -> LOG.warn("handle:: Failed to process event for MARC record matching, jobExecutionId: '{}'", payload.getJobExecutionId(), e))
         .toCompletionStage().toCompletableFuture();
@@ -127,9 +127,9 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
 
   protected abstract boolean isMatchingOnCentralTenantRequired();
 
-  protected Future<List<Record>> postProcessMatchingResult(List<Record> records,
-    @SuppressWarnings("squid:S1172") DataImportEventPayload eventPayload) {
-    return Future.succeededFuture(records);
+  @SuppressWarnings("squid:S1172")
+  protected Future<Void> ensureRelatedEntities(List<Record> records, DataImportEventPayload eventPayload) {
+    return Future.succeededFuture();
   }
 
   private boolean isNotValidPayload(DataImportEventPayload payload) {

@@ -56,7 +56,7 @@ public class MarcBibliographicMatchEventHandler extends AbstractMarcMatchEventHa
   }
 
   @Override
-  protected Future<List<Record>> postProcessMatchingResult(List<Record> records, DataImportEventPayload eventPayload) {
+  protected Future<Void> ensureRelatedEntities(List<Record> records, DataImportEventPayload eventPayload) {
     if (records.size() == 1) {
       Record matchedRecord = records.get(0);
       String instanceId = ParsedRecordUtil.getAdditionalSubfieldValue(matchedRecord.getParsedRecord(), AdditionalSubfields.I);
@@ -65,8 +65,8 @@ public class MarcBibliographicMatchEventHandler extends AbstractMarcMatchEventHa
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
 
       if (isBlank(instanceId)) {
-        LOG.info("postProcessMatchingResult:: Skipping instance loading for matched MARC-BIB record because the matched MARC-BIB does not contain instanceId");
-        return Future.succeededFuture(records);
+        LOG.info("ensureRelatedEntities:: Skipping instance loading for matched MARC-BIB record because the matched MARC-BIB does not contain instanceId");
+        return Future.succeededFuture();
       }
 
       return Future.fromCompletionStage(instanceCollection.findById(instanceId))
@@ -76,12 +76,12 @@ public class MarcBibliographicMatchEventHandler extends AbstractMarcMatchEventHa
         })
         .compose(consortiumConfigurationOptional -> {
           if (consortiumConfigurationOptional.isEmpty() || !consortiumConfigurationOptional.get().getCentralTenantId().equals(matchedRecordTenantId)) {
-            return loadHoldingsRecordByInstanceId(instanceId, eventPayload, context).map(records);
+            return loadHoldingsRecordByInstanceId(instanceId, eventPayload, context).mapEmpty();
           }
-          return Future.succeededFuture(records);
+          return Future.succeededFuture();
         });
     }
-    return Future.succeededFuture(records);
+    return Future.succeededFuture();
   }
 
   private Future<Void> loadHoldingsRecordByInstanceId(String instanceId, DataImportEventPayload eventPayload, Context context) {
