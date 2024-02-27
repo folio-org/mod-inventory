@@ -35,7 +35,6 @@ public class QuickMarcConsumerVerticle extends AbstractVerticle {
   private final int loadLimit = getLoadLimit();
   private final int maxDistributionNumber = getMaxDistributionNumber();
   private KafkaConsumerWrapper<String, String> consumer;
-  private QuickMarcKafkaHandler handler;
 
   @Override
   public void start(Promise<Void> startPromise) {
@@ -47,7 +46,8 @@ public class QuickMarcConsumerVerticle extends AbstractVerticle {
 
     var precedingSucceedingTitlesHelper = new PrecedingSucceedingTitlesHelper(WebClient.wrap(client));
     HoldingsCollectionService holdingsCollectionService = new HoldingsCollectionService();
-    handler = new QuickMarcKafkaHandler(vertx, storage, maxDistributionNumber, kafkaConfig, precedingSucceedingTitlesHelper, holdingsCollectionService);
+    QuickMarcKafkaHandler handler = new QuickMarcKafkaHandler(vertx, storage, maxDistributionNumber, kafkaConfig,
+      precedingSucceedingTitlesHelper, holdingsCollectionService);
 
     var kafkaConsumerFuture = createKafkaConsumer(kafkaConfig, QMEventTypes.QM_SRS_MARC_RECORD_UPDATED, handler);
 
@@ -74,10 +74,7 @@ public class QuickMarcConsumerVerticle extends AbstractVerticle {
 
   @Override
   public void stop(Promise<Void> stopPromise) {
-    consumer.stop().onComplete(ar -> {
-      handler.shutdown();
-      stopPromise.complete();
-    });
+    consumer.stop().onComplete(ar -> stopPromise.complete());
   }
 
   private Future<KafkaConsumerWrapper<String, String>> createKafkaConsumer(KafkaConfig kafkaConfig, QMEventTypes eventType,
