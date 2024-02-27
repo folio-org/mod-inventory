@@ -31,6 +31,7 @@ import org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateMarcHoldingsEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.DeleteAuthorityEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
+import org.folio.inventory.dataimport.handlers.actions.MarcBibMatchedPostProcessingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.MarcBibModifiedPostProcessingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
 import org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler;
@@ -38,6 +39,7 @@ import org.folio.inventory.dataimport.handlers.actions.UpdateAuthorityEventHandl
 import org.folio.inventory.dataimport.handlers.actions.UpdateHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.UpdateMarcHoldingsEventHandler;
+import org.folio.inventory.dataimport.handlers.actions.modify.MarcBibModifyEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MarcBibliographicMatchEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchAuthorityEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchHoldingEventHandler;
@@ -190,7 +192,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     EventManager.registerEventHandler(new UpdateItemEventHandler(storage, mappingMetadataCache));
     EventManager.registerEventHandler(new UpdateHoldingEventHandler(storage, mappingMetadataCache));
     EventManager.registerEventHandler(new ReplaceInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, client, consortiumService));
-    EventManager.registerEventHandler(new MarcBibModifiedPostProcessingEventHandler(new InstanceUpdateDelegate(storage), precedingSucceedingTitlesHelper, mappingMetadataCache));
+    EventManager.registerEventHandler(new MarcBibModifyEventHandler(mappingMetadataCache, new InstanceUpdateDelegate(storage), precedingSucceedingTitlesHelper, client));
     EventManager.registerEventHandler(new MarcBibliographicMatchEventHandler(consortiumService, client, storage));
   }
 }

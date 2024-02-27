@@ -18,6 +18,7 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_MATCHED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_NOT_MATCHED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_UPDATED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MATCHED;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_NOT_MATCHED;
 
 import org.folio.kafka.services.KafkaTopic;
@@ -43,7 +44,8 @@ public class InventoryKafkaTopicService {
       new InventoryKafkaTopic(DI_INVENTORY_AUTHORITY_UPDATED.value(), authorityUpdatedPartitions()),
       new InventoryKafkaTopic(DI_INVENTORY_HOLDINGS_CREATED_READY_FOR_POST_PROCESSING.value(), holdingCreatedReadyForPostProcessingPartitions()),
       new InventoryKafkaTopic(DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING.value(), authorityCreatedReadyForPostProcessingPartitions()),
-      new InventoryKafkaTopic(DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING.value(), authorityUpdatedReadyForPostProcessingPartitions())
+      new InventoryKafkaTopic(DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING.value(), authorityUpdatedReadyForPostProcessingPartitions()),
+      new InventoryKafkaTopic(DI_SRS_MARC_BIB_RECORD_MODIFIED.value(), marcBibRecordModifiedPartitions())
     };
   }
 
@@ -120,5 +122,10 @@ public class InventoryKafkaTopicService {
   private Integer authorityUpdatedReadyForPostProcessingPartitions() {
     return Integer.valueOf(firstNonBlank(System.getenv(
       "DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING_PARTITIONS"), "1"));
+  }
+
+  private Integer marcBibRecordModifiedPartitions() {
+    return Integer.valueOf(firstNonBlank(System.getenv(
+      "DI_SRS_MARC_BIB_RECORD_MODIFIED_PARTITIONS"), "1"));
   }
 }

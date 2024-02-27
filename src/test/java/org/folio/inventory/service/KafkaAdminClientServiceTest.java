@@ -67,7 +67,8 @@ public class KafkaAdminClientServiceTest {
         new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_UPDATED", 1),
         new InventoryKafkaTopic("DI_INVENTORY_HOLDINGS_CREATED_READY_FOR_POST_PROCESSING", 1),
         new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING", 1),
-        new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING", 1)
+        new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING", 1),
+        new InventoryKafkaTopic("DI_SRS_MARC_BIB_RECORD_MODIFIED_PARTITIONS", 1)
     };
 
 
@@ -170,6 +171,7 @@ public class KafkaAdminClientServiceTest {
       "folio.Default.foo-tenant.DI_INVENTORY_AUTHORITY_UPDATED",
       "folio.Default.foo-tenant.DI_INVENTORY_HOLDINGS_CREATED_READY_FOR_POST_PROCESSING",
       "folio.Default.foo-tenant.DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING",
-      "folio.Default.foo-tenant.DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING"
+      "folio.Default.foo-tenant.DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING",
+      "folio.Default.foo-tenant.DI_SRS_MARC_BIB_RECORD_MODIFIED_PARTITIONS"
   );
 }
