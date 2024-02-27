@@ -65,7 +65,7 @@ public class MarcBibliographicMatchEventHandler extends AbstractMarcMatchEventHa
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
 
       if (isBlank(instanceId)) {
-        LOG.info("Skipping instance loading for matched MARC-BIB record because the matched MARC-BIB does not contain instanceId");
+        LOG.info("postProcessMatchingResult:: Skipping instance loading for matched MARC-BIB record because the matched MARC-BIB does not contain instanceId");
         return Future.succeededFuture(records);
       }
 
@@ -88,10 +88,10 @@ public class MarcBibliographicMatchEventHandler extends AbstractMarcMatchEventHa
     return getHoldingsByInstanceId(instanceId, eventPayload, context)
       .compose(holdingsRecords -> {
         if (holdingsRecords.size() > 1) {
-          LOG.info("postProcessMatchingResult:: Found multiple holdings records by instanceId: '{}' for matched MARC-BIB record, jobExecutionId: '{}'",
+          LOG.info("loadHoldingsRecordByInstanceId:: Found multiple holdings records by instanceId: '{}' for matched MARC-BIB record, jobExecutionId: '{}'",
             instanceId, eventPayload.getJobExecutionId());
         } else if (holdingsRecords.size() == 1) {
-          LOG.info("postProcessMatchingResult:: Found holdings record with id: '{}' by instanceId: '{}' for matched MARC-BIB record, jobExecutionId: '{}'",
+          LOG.info("loadHoldingsRecordByInstanceId:: Found holdings record with id: '{}' by instanceId: '{}' for matched MARC-BIB record, jobExecutionId: '{}'",
             holdingsRecords.get(0).getId(), instanceId, eventPayload.getJobExecutionId());
           eventPayload.getContext().put(HOLDINGS.value(), Json.encode(holdingsRecords.get(0)));
         }
