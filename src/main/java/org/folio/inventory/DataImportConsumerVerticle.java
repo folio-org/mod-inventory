@@ -1,7 +1,5 @@
 package org.folio.inventory;
 
-import static java.lang.String.format;
-
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_MATCHED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_NOT_MATCHED;
@@ -20,7 +18,6 @@ import static org.folio.DataImportEventTypes.DI_SRS_MARC_AUTHORITY_RECORD_CREATE
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_AUTHORITY_RECORD_MODIFIED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_AUTHORITY_RECORD_NOT_MATCHED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MATCHED;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MATCHED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_NOT_MATCHED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_UPDATED;
@@ -56,10 +53,10 @@ import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaConsumerWrapper;
 import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.kafka.SubscriptionDefinition;
+import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.processing.events.EventManager;
 
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
@@ -90,7 +87,6 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
     DI_INCOMING_MARC_BIB_RECORD_PARSED,
     DI_SRS_MARC_BIB_RECORD_UPDATED,
     DI_SRS_MARC_BIB_RECORD_MATCHED,
-    DI_SRS_MARC_BIB_RECORD_MATCHED_READY_FOR_POST_PROCESSING,
     DI_SRS_MARC_BIB_RECORD_MODIFIED,
     DI_SRS_MARC_BIB_RECORD_NOT_MATCHED,
     DI_SRS_MARC_HOLDING_RECORD_CREATED,
@@ -101,7 +97,7 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
 
   private final int loadLimit = getLoadLimit();
   private final int maxDistributionNumber = getMaxDistributionNumber();
-  private List<KafkaConsumerWrapper<String, String>> consumerWrappers = new ArrayList<>();
+  private final List<KafkaConsumerWrapper<String, String>> consumerWrappers = new ArrayList<>();
 
   @Override
   public void start(Promise<Void> startPromise) {
@@ -114,7 +110,7 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
       .replicationFactor(Integer.parseInt(config.getString(KAFKA_REPLICATION_FACTOR)))
       .maxRequestSize(Integer.parseInt(config.getString(KAFKA_MAX_REQUEST_SIZE)))
       .build();
-    LOGGER.info(format("kafkaConfig: %s", kafkaConfig));
+    LOGGER.info("kafkaConfig: {}", kafkaConfig);
     EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, maxDistributionNumber);
 
     HttpClient client = vertx.createHttpClient();
@@ -130,25 +126,25 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
     DataImportKafkaHandler dataImportKafkaHandler = new DataImportKafkaHandler(
       vertx, storage, client, profileSnapshotCache, kafkaConfig, mappingMetadataCache, consortiumDataCache);
 
-    List<Future> futures = EVENT_TYPES.stream()
+    List<Future<KafkaConsumerWrapper<String, String>>> futures = EVENT_TYPES.stream()
       .map(eventType -> createKafkaConsumerWrapper(kafkaConfig, eventType, dataImportKafkaHandler))
       .collect(Collectors.toList());
 
-    CompositeFuture.all(futures)
+    GenericCompositeFuture.all(futures)
       .onFailure(startPromise::fail)
       .onSuccess(ar -> {
-        futures.forEach(future -> consumerWrappers.add((KafkaConsumerWrapper<String, String>) future.result()));
+        futures.forEach(future -> consumerWrappers.add(future.result()));
         startPromise.complete();
       });
   }
 
   @Override
   public void stop(Promise<Void> stopPromise) {
-    List<Future> stopFutures = consumerWrappers.stream()
+    List<Future<Void>> stopFutures = consumerWrappers.stream()
       .map(KafkaConsumerWrapper::stop)
       .collect(Collectors.toList());
 
-    CompositeFuture.join(stopFutures).onComplete(ar -> stopPromise.complete());
+    GenericCompositeFuture.join(stopFutures).onComplete(ar -> stopPromise.complete());
   }
 
   private Future<KafkaConsumerWrapper<String, String>> createKafkaConsumerWrapper(KafkaConfig kafkaConfig, DataImportEventTypes eventType,
