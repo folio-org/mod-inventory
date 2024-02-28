@@ -61,7 +61,6 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   private final KafkaConfig kafkaConfig;
   private final InstanceOperationsHelper instanceOperations;
   private final EventIdStorageService eventIdStorageService;
-  private final KafkaProducer<String, String> sharedProducer;
 
   public ConsortiumInstanceSharingHandler(Vertx vertx, HttpClient httpClient, Storage storage, KafkaConfig kafkaConfig, EventIdStorageService eventIdStorageService) {
     this.vertx = vertx;
@@ -70,7 +69,6 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     this.kafkaConfig = kafkaConfig;
     this.instanceOperations = new InstanceOperationsHelper();
     this.eventIdStorageService = eventIdStorageService;
-    this.sharedProducer = createSharedProducer(eventType.name());
   }
 
   @Override
@@ -232,8 +230,12 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
           status,
           errorMessage,
           kafkaHeadersList);
+      KafkaProducer<String, String> producer = createProducer(tenantId, eventType.name());
 
-      sharedProducer.send(kafkaRecord)
+      producer.send(kafkaRecord)
+        .<Void>mapEmpty()
+        .eventually(v -> producer.flush())
+        .eventually(v -> producer.close())
         .onSuccess(res -> LOGGER.info("Event with type {}, was sent to kafka about sharing instance with InstanceId={}",
           eventType.value(), sharingInstance.getInstanceIdentifier()))
         .onFailure(err -> {
@@ -274,9 +276,9 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       KafkaTopicNameHelper.getDefaultNameSpace(), tenantId, eventType.value());
   }
 
-  private KafkaProducer<String, String> createSharedProducer(String name) {
-    LOGGER.info("createSharedProducer :: topicName: {}", name);
-    return new SimpleKafkaProducerManager(vertx, kafkaConfig).createShared(name);
+  private KafkaProducer<String, String> createProducer(String tenantId, String topicName) {
+    LOGGER.info("createProducer :: tenantId: {}, topicName: {}", tenantId, topicName);
+    return new SimpleKafkaProducerManager(vertx, kafkaConfig).createShared(topicName);
   }
 
   private SharingInstance parseSharingInstance(String eventValue) {
@@ -298,11 +300,5 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       KafkaHeader.header(OKAPI_TENANT_HEADER, kafkaHeaders.get(OKAPI_TENANT_HEADER)),
       KafkaHeader.header(OKAPI_TOKEN_HEADER, kafkaHeaders.get(OKAPI_TOKEN_HEADER)))
     );
-  }
-
-  public void shutdown() {
-    if (sharedProducer != null) {
-      sharedProducer.close();
-    }
   }
 }

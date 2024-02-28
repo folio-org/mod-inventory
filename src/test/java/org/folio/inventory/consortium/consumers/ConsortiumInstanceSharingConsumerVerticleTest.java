@@ -69,7 +69,6 @@ public class ConsortiumInstanceSharingConsumerVerticleTest {
     Async async = context.async();
     vertx.close(ar -> {
       cluster.stop();
-      consortiumInstanceSharingHandler.shutdown();
       async.complete();
     });
   }
