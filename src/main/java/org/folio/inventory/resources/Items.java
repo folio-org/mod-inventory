@@ -78,6 +78,9 @@ public class Items extends AbstractInventoryResource {
   private static final String RELATIVE_ITEMS_PATH_ID = RELATIVE_ITEMS_PATH+"/:id";
   private static final String INSTANCE_ID_PROPERTY = "instanceId";
 
+  private static final String BOUND_WITH_PARTS_PATH = "/inventory-storage/bound-with-parts";
+  private static final String BOUND_WITH_PARTS_COLLECTION = "boundWithParts";
+
   private static final int STATUS_CREATED = 201;
   private static final int STATUS_SUCCESS = 200;
 
@@ -446,9 +449,6 @@ public class Items extends AbstractInventoryResource {
             locationsClient.get(id, newFuture::complete);
           });
 
-        //CompletableFuture<Response> boundWithPartsFuture =
-        //  getBoundWithPartsForMultipleItemsFuture(wrappedItems, boundWithPartsClient);
-
         CompletableFuture<Response> boundWithPartsFuture =
           getBoundWithPartsForMultipleItemsFuture(wrappedItems, routingContext);
 
@@ -563,7 +563,7 @@ public class Items extends AbstractInventoryResource {
     OkapiHttpClient client,
     WebContext webContext)
     throws MalformedURLException {
-    return createCollectionResourceClient(client, webContext, "/inventory-storage/bound-with-parts");
+    return createCollectionResourceClient(client, webContext, BOUND_WITH_PARTS_PATH);
   }
 
   private CollectionResourceClient createCollectionResourceClient(
@@ -889,7 +889,7 @@ public class Items extends AbstractInventoryResource {
       .thenCompose(
         partsResponse -> {
           JsonArray boundWithParts =
-            partsResponse.getJson().getJsonArray("boundWithParts" );
+            partsResponse.getJson().getJsonArray(BOUND_WITH_PARTS_COLLECTION );
           if ( boundWithParts.isEmpty() ) {
             item.withIsBoundWith( false );
             return CompletableFuture.completedFuture( null );
@@ -1063,7 +1063,7 @@ public class Items extends AbstractInventoryResource {
 
     Response response = boundWithPartsFuture.join();
     if (response != null && response.hasBody() && response.getStatusCode()==200) {
-      JsonArray boundWithParts = response.getJson().getJsonArray("boundWithParts");
+      JsonArray boundWithParts = response.getJson().getJsonArray(BOUND_WITH_PARTS_COLLECTION);
       if (boundWithParts != null && !boundWithParts.isEmpty()) {
         Set<String> boundWithItemIds = boundWithParts
           .stream()
@@ -1092,18 +1092,18 @@ public class Items extends AbstractInventoryResource {
 
     MultipleRecordsFetchClient partitionedRequestsClient =
       buildPartitionedFetchClient(
-        "/inventory-storage/bound-with-parts",
-        "boundWithParts",
+        BOUND_WITH_PARTS_PATH,
+        BOUND_WITH_PARTS_COLLECTION,
         routingContext);
     return partitionedRequestsClient
       .find(itemIds,this::cqlMatchAnyByItemIds)
       .thenApply(parts -> {
         JsonArray array = new JsonArray();
-        JsonObject result = new JsonObject().put("boundWithParts", array);
+        JsonObject result = new JsonObject().put(BOUND_WITH_PARTS_COLLECTION, array);
         for (JsonObject o : parts) {
           array.add(o);
         }
-        return new Response(200,result.encodePrettily(), "application/json","/inventory-storage/bound-with-parts");
+        return new Response(200,result.encodePrettily(), "application/json", BOUND_WITH_PARTS_PATH);
       });
   }
 

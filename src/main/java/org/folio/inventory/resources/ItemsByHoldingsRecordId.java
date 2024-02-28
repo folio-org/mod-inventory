@@ -38,6 +38,7 @@ public class ItemsByHoldingsRecordId extends Items {
   private static final String RELATIVE_ITEMS_FOR_HOLDINGS_PATH = "/inventory/items-by-holdings-id";
   // Supporting API
   private static final String BOUND_WITH_PARTS_STORAGE_PATH = "/inventory-storage/bound-with-parts";
+  private static final String RELATIONS_PARAMETER = "relations";
   private static final String RELATION_PARAM_ONLY_BOUND_WITHS = "onlyBoundWiths";
   private static final String RELATION_PARAM_ONLY_BOUND_WITHS_SKIP_DIRECTLY_LINKED_ITEM = "onlyBoundWithsSkipDirectlyLinkedItem";
 
@@ -124,7 +125,7 @@ public class ItemsByHoldingsRecordId extends Items {
     RoutingContext routingContext) {
 
     return buildPartitionedItemFetchClient(routingContext)
-      .find(boundWithItemIds, this::cqlMatchAnyByIds)
+      .find(boundWithItemIds, this::cqlMatchByListOfIds)
       .thenApply(listOfJsonObjects -> listOfItemJsonsToListOfItems(listOfJsonObjects,
         holdingsRecordId, webContext));
   }
@@ -183,7 +184,7 @@ public class ItemsByHoldingsRecordId extends Items {
 
   private String validateRequest(RoutingContext routingContext, WebContext context) {
     String queryByHoldingsRecordId = context.getStringParameter("query", null);
-    String relationsParam = context.getStringParameter("relations", null);
+    String relationsParam = context.getStringParameter(RELATIONS_PARAMETER, null);
 
     if (queryByHoldingsRecordId == null || !queryByHoldingsRecordId.contains("holdingsRecordId")) {
       ClientErrorResponse.badRequest(routingContext.response(),
@@ -212,7 +213,7 @@ public class ItemsByHoldingsRecordId extends Items {
   }
 
   private static boolean onlyBoundWithsRequested(WebContext webContext) {
-    String relationsParam = webContext.getStringParameter("relations", null);
+    String relationsParam = webContext.getStringParameter(RELATIONS_PARAMETER, null);
     return relationsParam != null &&
       (relationsParam.equals(RELATION_PARAM_ONLY_BOUND_WITHS) ||
         relationsParam.equals(
@@ -220,7 +221,7 @@ public class ItemsByHoldingsRecordId extends Items {
   }
 
   private static boolean skippingDirectlyLinkedItemRequested(WebContext webContext) {
-    String relationsParam = webContext.getStringParameter("relations", null);
+    String relationsParam = webContext.getStringParameter(RELATIONS_PARAMETER, null);
     return relationsParam != null && relationsParam.equals(
       RELATION_PARAM_ONLY_BOUND_WITHS_SKIP_DIRECTLY_LINKED_ITEM);
   }
@@ -283,7 +284,7 @@ public class ItemsByHoldingsRecordId extends Items {
       .build();
   }
 
-  private CqlQuery cqlMatchAnyByIds(List<String> ids) {
+  private CqlQuery cqlMatchByListOfIds(List<String> ids) {
     return CqlQuery.exactMatchAny("id", ids);
   }
 
