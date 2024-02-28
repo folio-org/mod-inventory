@@ -317,7 +317,7 @@
     <jsonschema2pojo_output_dir>${project.build.directory}/generated-sources/jsonschema2pojo</jsonschema2pojo_output_dir>
     <httpcomponents.version>4.5.13</httpcomponents.version>
     <lombok.version>1.18.30</lombok.version>
-    <postgres.version>42.5.1</postgres.version>
+    <postgres.version>42.7.2</postgres.version>
     <liquibase.version>4.9.1</liquibase.version>
     <kafkaclients.version>3.1.0</kafkaclients.version>
     <junit.version>4.13.2</junit.version>

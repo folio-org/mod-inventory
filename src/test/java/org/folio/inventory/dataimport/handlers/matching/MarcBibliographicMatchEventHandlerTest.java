@@ -603,6 +603,42 @@ public class MarcBibliographicMatchEventHandlerTest {
   }
 
   @Test
+  public void shouldNotLoadInstanceIfMatchedRecordHasNoInstanceId(TestContext testContext) {
+    Async async = testContext.async();
+    String parsedContentWithoutInstanceId = "{\"leader\": \"01589ccm a2200373   4500\", \"fields\": [{\"001\": \"12345\"}]}";
+    Record matchedRecordWithoutInstanceId = new Record()
+      .withId(UUID.randomUUID().toString())
+      .withRecordType(MARC_BIB)
+      .withParsedRecord(new ParsedRecord().withContent(parsedContentWithoutInstanceId));
+
+    when(consortiumService.getConsortiumConfiguration(any(Context.class)))
+      .thenReturn(Future.succeededFuture(Optional.empty()));
+
+    WireMock.stubFor(post(RECORDS_MATCHING_PATH).willReturn(WireMock.ok()
+      .withBody(Json.encode(new RecordsIdentifiersCollection()
+        .withIdentifiers(List.of(new RecordIdentifiersDto()
+          .withRecordId(expectedMatchedRecord.getId())
+          .withExternalId(UUID.randomUUID().toString())))
+        .withTotalRecords(1)))));
+
+    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(SOURCE_STORAGE_RECORDS_PATH_REGEX), true))
+      .willReturn(WireMock.ok().withBody(Json.encodePrettily(matchedRecordWithoutInstanceId))));
+
+    DataImportEventPayload eventPayload = createEventPayload(TENANT_ID);
+
+    CompletableFuture<DataImportEventPayload> future = matchMarcBibEventHandler.handle(eventPayload);
+
+    future.whenComplete((payload, throwable) -> testContext.verify(v -> {
+      testContext.assertNull(throwable);
+      testContext.assertEquals(DI_SRS_MARC_BIB_RECORD_MATCHED.value(), payload.getEventType());
+      testContext.assertNotNull(payload.getContext().get(MATCHED_MARC_BIB_KEY));
+      testContext.assertNull(payload.getContext().get(INSTANCE.value()));
+      verify(mockedInstanceCollection, never()).findById(anyString());
+      async.complete();
+    }));
+  }
+
+  @Test
   public void shouldReturnFailedFutureIfPayloadHasNoMarcBibRecord(TestContext context) {
     Async async = context.async();
     DataImportEventPayload eventPayload = createEventPayload(TENANT_ID);

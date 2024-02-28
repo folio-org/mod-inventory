@@ -56,7 +56,7 @@ public class MarcBibliographicMatchEventHandler extends AbstractMarcMatchEventHa
   }
 
   @Override
-  protected Future<List<Record>> postProcessMatchingResult(List<Record> records, DataImportEventPayload eventPayload) {
+  protected Future<Void> ensureRelatedEntities(List<Record> records, DataImportEventPayload eventPayload) {
     if (records.size() == 1) {
       Record matchedRecord = records.get(0);
       String instanceId = ParsedRecordUtil.getAdditionalSubfieldValue(matchedRecord.getParsedRecord(), AdditionalSubfields.I);
@@ -65,7 +65,8 @@ public class MarcBibliographicMatchEventHandler extends AbstractMarcMatchEventHa
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
 
       if (isBlank(instanceId)) {
-        return Future.succeededFuture(records);
+        LOG.info("ensureRelatedEntities:: Skipping instance loading for matched MARC-BIB record because the matched MARC-BIB does not contain instanceId");
+        return Future.succeededFuture();
       }
 
       return Future.fromCompletionStage(instanceCollection.findById(instanceId))
@@ -75,22 +76,22 @@ public class MarcBibliographicMatchEventHandler extends AbstractMarcMatchEventHa
         })
         .compose(consortiumConfigurationOptional -> {
           if (consortiumConfigurationOptional.isEmpty() || !consortiumConfigurationOptional.get().getCentralTenantId().equals(matchedRecordTenantId)) {
-            return loadHoldingsRecordByInstanceId(instanceId, eventPayload, context).map(records);
+            return loadHoldingsRecordByInstanceId(instanceId, eventPayload, context).mapEmpty();
           }
-          return Future.succeededFuture(records);
+          return Future.succeededFuture();
         });
     }
-    return Future.succeededFuture(records);
+    return Future.succeededFuture();
   }
 
   private Future<Void> loadHoldingsRecordByInstanceId(String instanceId, DataImportEventPayload eventPayload, Context context) {
     return getHoldingsByInstanceId(instanceId, eventPayload, context)
       .compose(holdingsRecords -> {
         if (holdingsRecords.size() > 1) {
-          LOG.info("postProcessMatchingResult:: Found multiple holdings records by instanceId: '{}' for matched MARC-BIB record, jobExecutionId: '{}'",
+          LOG.info("loadHoldingsRecordByInstanceId:: Found multiple holdings records by instanceId: '{}' for matched MARC-BIB record, jobExecutionId: '{}'",
             instanceId, eventPayload.getJobExecutionId());
         } else if (holdingsRecords.size() == 1) {
-          LOG.info("postProcessMatchingResult:: Found holdings record with id: '{}' by instanceId: '{}' for matched MARC-BIB record, jobExecutionId: '{}'",
+          LOG.info("loadHoldingsRecordByInstanceId:: Found holdings record with id: '{}' by instanceId: '{}' for matched MARC-BIB record, jobExecutionId: '{}'",
             holdingsRecords.get(0).getId(), instanceId, eventPayload.getJobExecutionId());
           eventPayload.getContext().put(HOLDINGS.value(), Json.encode(holdingsRecords.get(0)));
         }
