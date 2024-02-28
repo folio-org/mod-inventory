@@ -68,7 +68,6 @@ public class MarcBibUpdateConsumerVerticleTest {
     Async async = context.async();
     vertx.close(ar -> {
       cluster.stop();
-      marcBibUpdateKafkaHandler.shutdown();
       async.complete();
     });
   }
