@@ -184,8 +184,11 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   }
 
   public SourceStorageRecordsClient getSourceStorageRecordsClient(DataImportEventPayload payload) {
-    return new SourceStorageRecordsClient(payload.getOkapiUrl(), payload.getTenant(),
-      payload.getToken(), getHttpClient());
+    return getSourceStorageRecordsClient(payload, payload.getTenant());
+  }
+
+  public SourceStorageRecordsClient getSourceStorageRecordsClient(DataImportEventPayload payload, String tenantId) {
+    return new SourceStorageRecordsClient(payload.getOkapiUrl(), tenantId, payload.getToken(), getHttpClient());
   }
 
   private Record encodeParsedRecordContent(Record srcRecord) {

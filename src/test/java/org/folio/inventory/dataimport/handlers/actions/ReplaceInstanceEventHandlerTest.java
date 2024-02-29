@@ -103,6 +103,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
@@ -224,7 +225,7 @@ public class ReplaceInstanceEventHandlerTest {
       return null;
     }).when(instanceRecordCollection).update(any(), any(Consumer.class), any(Consumer.class));
 
-    doReturn(sourceStorageClient).when(replaceInstanceEventHandler).getSourceStorageRecordsClient(any());
+    doReturn(sourceStorageClient).when(replaceInstanceEventHandler).getSourceStorageRecordsClient(any(), any());
 
     doAnswer(invocationOnMock -> completedStage(createResponse(201, null)))
       .when(mockedClient).post(any(URL.class), any(JsonObject.class));
@@ -399,7 +400,7 @@ public class ReplaceInstanceEventHandlerTest {
     WireMock.stubFor(WireMock.post(new UrlPathPattern(new RegexPattern("/consortia/" + consortiumId + "/sharing/instances"), true))
       .willReturn(WireMock.ok().withBody(Json.encode(sharingInstance))));
 
-    doAnswer(invocationOnMock -> Future.succeededFuture(Optional.of(new ConsortiumConfiguration(consortiumId, consortiumId)))).when(consortiumServiceImpl).getConsortiumConfiguration(any());
+    doAnswer(invocationOnMock -> Future.succeededFuture(Optional.of(new ConsortiumConfiguration(consortiumTenant, consortiumId)))).when(consortiumServiceImpl).getConsortiumConfiguration(any());
 
     Reader fakeReader = Mockito.mock(Reader.class);
 
@@ -450,6 +451,7 @@ public class ReplaceInstanceEventHandlerTest {
     assertThat(createdInstance.getString("_version"), is(INSTANCE_VERSION_AS_STRING));
     verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
     verify(sourceStorageClient).getSourceStorageRecordsFormattedById(anyString(),eq(INSTANCE.value()));
+    verify(replaceInstanceEventHandler).getSourceStorageRecordsClient(any(), argThat(tenantId -> tenantId.equals(consortiumTenant)));
     verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
   }
 
