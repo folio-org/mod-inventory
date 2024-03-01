@@ -93,9 +93,9 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   }
 
   protected Future<Instance> saveRecordInSrsAndHandleResponse(DataImportEventPayload payload, Record srcRecord,
-                                                            Instance instance, InstanceCollection instanceCollection) {
+                                                            Instance instance, InstanceCollection instanceCollection, String tenantId) {
     Promise<Instance> promise = Promise.promise();
-    getSourceStorageRecordsClient(payload).postSourceStorageRecords(srcRecord)
+    getSourceStorageRecordsClient(payload, tenantId).postSourceStorageRecords(srcRecord)
       .onComplete(ar -> {
         var result = ar.result();
         if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_CREATED.toInt()) {
@@ -116,9 +116,9 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   }
 
   protected Future<Instance> putRecordInSrsAndHandleResponse(DataImportEventPayload payload, Record srcRecord,
-                                                             Instance instance, String matchedId) {
+                                                             Instance instance, String matchedId, String tenantId) {
     Promise<Instance> promise = Promise.promise();
-    getSourceStorageRecordsClient(payload).putSourceStorageRecordsGenerationById(matchedId ,srcRecord)
+    getSourceStorageRecordsClient(payload, tenantId).putSourceStorageRecordsGenerationById(matchedId ,srcRecord)
       .onComplete(ar -> {
         var result = ar.result();
         if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_OK.toInt()) {
@@ -181,10 +181,6 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
         promise.fail(failure.getReason());
       });
     promise.future();
-  }
-
-  public SourceStorageRecordsClient getSourceStorageRecordsClient(DataImportEventPayload payload) {
-    return getSourceStorageRecordsClient(payload, payload.getTenant());
   }
 
   public SourceStorageRecordsClient getSourceStorageRecordsClient(DataImportEventPayload payload, String tenantId) {

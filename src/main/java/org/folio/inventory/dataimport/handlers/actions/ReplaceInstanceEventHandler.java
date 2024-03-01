@@ -200,7 +200,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           .compose(instance -> {
             if (instanceToUpdate.getSource().equals(FOLIO.getValue())) {
               executeFieldsManipulation(instance, targetRecord);
-              return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance, instanceCollection);
+              return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance, instanceCollection, tenantId);
             }
             if (instanceToUpdate.getSource().equals(MARC.getValue())) {
               setExternalIds(targetRecord, instance);
@@ -209,7 +209,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
               JsonObject jsonInstance = new JsonObject(instance.getJsonForStorage().encode());
 
               setSuppressFormDiscovery(targetRecord, jsonInstance.getBoolean(DISCOVERY_SUPPRESS_KEY, false));
-              return putRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance, targetRecord.getMatchedId());
+              return putRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance, targetRecord.getMatchedId(), tenantId);
             }
             return Future.succeededFuture(instance);
           }).compose(ar -> getPrecedingSucceedingTitlesHelper().createPrecedingSucceedingTitles(mappedInstance, context).map(ar))

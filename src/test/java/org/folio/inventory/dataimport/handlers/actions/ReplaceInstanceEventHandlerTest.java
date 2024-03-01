@@ -89,6 +89,7 @@ import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEve
 import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.MARC_BIB_RECORD_CREATED;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
 import static org.folio.inventory.domain.instances.InstanceSource.FOLIO;
+import static org.folio.inventory.domain.instances.InstanceSource.MARC;
 import static org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle.TITLE_KEY;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
@@ -456,7 +457,7 @@ public class ReplaceInstanceEventHandlerTest {
   }
 
   @Test
-  public void shouldUpdateSharedInstanceOnCentralTenantIfPayloadContainsCentralTenantIdAndSharedInstance() throws InterruptedException, ExecutionException, TimeoutException {
+  public void shouldUpdateSharedFolioInstanceOnCentralTenantIfPayloadContainsCentralTenantIdAndSharedInstance() throws InterruptedException, ExecutionException, TimeoutException {
     String instanceTypeId = UUID.randomUUID().toString();
     String title = "titleValue";
 
@@ -519,7 +520,74 @@ public class ReplaceInstanceEventHandlerTest {
 
     ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
     verify(sourceStorageClient).postSourceStorageRecords(recordCaptor.capture());
+    verify(replaceInstanceEventHandler).getSourceStorageRecordsClient(any(), argThat(tenantId -> tenantId.equals(consortiumTenant)));
     assertNotNull(recordId, recordCaptor.getValue().getMatchedId());
+  }
+
+  @Test
+  public void shouldUpdateSharedMarcInstanceOnCentralTenantIfPayloadContainsCentralTenantIdAndSharedInstance() throws InterruptedException, ExecutionException, TimeoutException {
+    String instanceTypeId = UUID.randomUUID().toString();
+    String title = "titleValue";
+
+    Reader fakeReader = Mockito.mock(Reader.class);
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId), StringValue.of(title));
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new InstanceWriterFactory());
+
+    String recordId = UUID.randomUUID().toString();
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    record.setId(recordId);
+
+    HashMap<String, String> context = new HashMap<>();
+    context.put(CENTRAL_TENANT_ID_KEY, consortiumTenant);
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(INSTANCE.value(), new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("hrid", UUID.randomUUID().toString())
+      .put("source", FOLIO.toString())
+      .put("_version", INSTANCE_VERSION)
+      .encode());
+
+    mockInstance(MARC.getValue());
+
+    Buffer buffer = BufferImpl.buffer(String.format(RESPONSE_CONTENT, recordId, recordId));
+    HttpResponse<Buffer> respForCreated = buildHttpResponseWithBuffer(buffer, HttpStatus.SC_OK);
+
+    when(sourceStorageClient.putSourceStorageRecordsGenerationById(any(), any())).thenReturn(Future.succeededFuture(respForCreated));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withOkapiUrl(mockServer.baseUrl())
+      .withTenant(TENANT_ID)
+      .withToken(TOKEN)
+      .withContext(context)
+      .withJobExecutionId(UUID.randomUUID().toString());
+
+    assertEquals(consortiumTenant, dataImportEventPayload.getContext().get(CENTRAL_TENANT_ID_KEY));
+
+    CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload actualDataImportEventPayload = future.get(20, TimeUnit.SECONDS);
+
+    assertEquals(DI_INVENTORY_INSTANCE_UPDATED.value(), actualDataImportEventPayload.getEventType());
+    assertNotNull(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
+    assertTrue(Boolean.parseBoolean(actualDataImportEventPayload.getContext().get(CENTRAL_TENANT_INSTANCE_UPDATED_KEY)));
+    JsonObject updatedInstance = new JsonObject(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
+
+    assertEquals(title, updatedInstance.getString("title"));
+    assertEquals(MARC_INSTANCE_SOURCE, updatedInstance.getString("source"));
+    assertTrue(actualDataImportEventPayload.getContext().containsKey(MARC_BIB_RECORD_CREATED));
+
+    ArgumentCaptor<Context> contextCaptor = ArgumentCaptor.forClass(Context.class);
+    verify(storage).getInstanceCollection(contextCaptor.capture());
+    assertEquals(consortiumTenant, contextCaptor.getValue().getTenantId());
+
+    ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
+    verify(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), recordCaptor.capture());
+    verify(replaceInstanceEventHandler, times(2)).getSourceStorageRecordsClient(any(), argThat(tenantId -> tenantId.equals(consortiumTenant)));
   }
 
   @Test(expected = ExecutionException.class)
