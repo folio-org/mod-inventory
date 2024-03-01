@@ -1,3 +1,7 @@
+## 20.1.9 2024-03-01
+* Close Kafka Producers [MODINV-944](https://folio-org.atlassian.net/browse/MODINV-944)
+* Update data-import-processing-core to v4.1.4 [MODDICORE-394](https://folio-org.atlassian.net/browse/MODDICORE-394)
+
 ## 20.1.8 2024-02-09
 * Consortial: correct tenantId for DI_ERROR message is set [MODINV-952](https://issues.folio.org/browse/MODINV-952)
 * Make configurable params for instance sharing [MODINV-950](https://issues.folio.org/browse/MODINV-950)
