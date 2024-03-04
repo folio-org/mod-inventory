@@ -469,6 +469,74 @@ public class ReplaceInstanceEventHandlerTest {
     verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
   }
 
+  @Test(expected = ExecutionException.class)
+  public void shouldShouldFailIfErrorDuringCreatingOfSnapshotForConsortiumInstance() throws InterruptedException, ExecutionException, TimeoutException {
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+
+    mockInstance(CONSORTIUM_MARC.getValue());
+
+    JsonObject centralTenantIdResponse = new JsonObject()
+      .put("userTenants", new JsonArray().add(new JsonObject().put("centralTenantId", consortiumTenant)));
+
+    WireMock.stubFor(WireMock.get(new UrlPathPattern(new RegexPattern("/user-tenants"), true))
+      .willReturn(WireMock.ok().withBody(Json.encode(centralTenantIdResponse))));
+
+    JsonObject consortiumIdResponse = new JsonObject()
+      .put("consortia", new JsonArray().add(new JsonObject().put("id", consortiumId)));
+
+    WireMock.stubFor(WireMock.get(new UrlPathPattern(new RegexPattern("/consortia"), true))
+      .willReturn(WireMock.ok().withBody(Json.encode(consortiumIdResponse))));
+
+    SharingInstance sharingInstance = new SharingInstance();
+    sharingInstance.setId(UUID.randomUUID());
+    sharingInstance.setSourceTenantId(consortiumTenant);
+    sharingInstance.setInstanceIdentifier(instanceId);
+    sharingInstance.setTargetTenantId(localTenant);
+    sharingInstance.setStatus(SharingStatus.COMPLETE);
+
+    WireMock.stubFor(post(new UrlPathPattern(new RegexPattern("/consortia/" + consortiumId + "/sharing/instances"), true))
+      .willReturn(WireMock.ok().withBody(Json.encode(sharingInstance))));
+
+    doAnswer(invocationOnMock -> Future.succeededFuture(Optional.of(new ConsortiumConfiguration(consortiumTenant, consortiumId)))).when(consortiumServiceImpl).getConsortiumConfiguration(any());
+
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    String instanceTypeId = UUID.randomUUID().toString();
+    String title = "titleValue";
+
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId), StringValue.of(title));
+
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+
+    HttpResponse<Buffer> snapshotHttpResponse = buildHttpResponseWithBuffer(BufferImpl.buffer("{}"), HttpStatus.SC_INTERNAL_SERVER_ERROR);
+    when(sourceStorageSnapshotsClient.postSourceStorageSnapshots(any())).thenReturn(Future.succeededFuture(snapshotHttpResponse));
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new InstanceWriterFactory());
+
+    HashMap<String, String> context = new HashMap<>();
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT)).withSnapshotId(jobExecutionId);
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(INSTANCE.value(), new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("hrid", UUID.randomUUID().toString())
+      .put("source", CONSORTIUM_MARC.getValue())
+      .put("_version", INSTANCE_VERSION)
+      .encode());
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(mockServer.baseUrl())
+      .withToken(TOKEN)
+      .withJobExecutionId(UUID.randomUUID().toString());
+
+    CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload actualDataImportEventPayload = future.get(20, TimeUnit.SECONDS);
+  }
+
   @Test
   public void shouldUpdateSharedFolioInstanceOnCentralTenantIfPayloadContainsCentralTenantIdAndSharedInstance() throws InterruptedException, ExecutionException, TimeoutException {
     String instanceTypeId = UUID.randomUUID().toString();
