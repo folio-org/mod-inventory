@@ -44,6 +44,7 @@ import org.folio.processing.mapping.mapper.reader.record.marc.MarcBibReaderFacto
 import org.folio.processing.value.MissingValue;
 import org.folio.processing.value.StringValue;
 import org.folio.rest.client.SourceStorageRecordsClient;
+import org.folio.rest.client.SourceStorageSnapshotsClient;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.ExternalIdsHolder;
 import org.folio.rest.jaxrs.model.MappingDetail;
@@ -51,6 +52,7 @@ import org.folio.rest.jaxrs.model.MappingRule;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
+import org.folio.rest.jaxrs.model.Snapshot;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -77,6 +79,7 @@ import java.util.function.Consumer;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static java.util.concurrent.CompletableFuture.completedStage;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
@@ -134,6 +137,7 @@ public class ReplaceInstanceEventHandlerTest {
   private final String consortiumTenant = "consortiumTenant";
   private final UUID instanceId = UUID.randomUUID();
   private final String consortiumId = UUID.randomUUID().toString();
+  private final String jobExecutionId = UUID.randomUUID().toString();
 
   @Mock
   private Storage storage;
@@ -147,6 +151,9 @@ public class ReplaceInstanceEventHandlerTest {
   private MarcBibReaderFactory fakeReaderFactory = new MarcBibReaderFactory();
   @Mock
   private SourceStorageRecordsClient sourceStorageClient;
+
+  @Mock
+  private SourceStorageSnapshotsClient sourceStorageSnapshotsClient;
 
   @Rule
   public WireMockRule mockServer = new WireMockRule(
@@ -217,6 +224,9 @@ public class ReplaceInstanceEventHandlerTest {
     when(sourceStorageClient.getSourceStorageRecordsFormattedById(any(), any()))
       .thenReturn(Future.succeededFuture(recordHttpResponse));
 
+    HttpResponse<Buffer> snapshotHttpResponse = buildHttpResponseWithBuffer(BufferImpl.buffer(Json.encode(new Snapshot())), HttpStatus.SC_CREATED);
+    when(sourceStorageSnapshotsClient.postSourceStorageSnapshots(any())).thenReturn(Future.succeededFuture(snapshotHttpResponse));
+
     doAnswer(invocationOnMock -> {
       Instance instanceRecord = invocationOnMock.getArgument(0);
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
@@ -225,6 +235,7 @@ public class ReplaceInstanceEventHandlerTest {
     }).when(instanceRecordCollection).update(any(), any(Consumer.class), any(Consumer.class));
 
     doReturn(sourceStorageClient).when(replaceInstanceEventHandler).getSourceStorageRecordsClient(any(), any());
+    doReturn(sourceStorageSnapshotsClient).when(replaceInstanceEventHandler).getSourceStorageSnapshotsClient(any(), any());
 
     doAnswer(invocationOnMock -> completedStage(createResponse(201, null)))
       .when(mockedClient).post(any(URL.class), any(JsonObject.class));
@@ -397,7 +408,7 @@ public class ReplaceInstanceEventHandlerTest {
     sharingInstance.setTargetTenantId(localTenant);
     sharingInstance.setStatus(SharingStatus.COMPLETE);
 
-    WireMock.stubFor(WireMock.post(new UrlPathPattern(new RegexPattern("/consortia/" + consortiumId + "/sharing/instances"), true))
+    WireMock.stubFor(post(new UrlPathPattern(new RegexPattern("/consortia/" + consortiumId + "/sharing/instances"), true))
       .willReturn(WireMock.ok().withBody(Json.encode(sharingInstance))));
 
     doAnswer(invocationOnMock -> Future.succeededFuture(Optional.of(new ConsortiumConfiguration(consortiumTenant, consortiumId)))).when(consortiumServiceImpl).getConsortiumConfiguration(any());
@@ -415,7 +426,7 @@ public class ReplaceInstanceEventHandlerTest {
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
 
     HashMap<String, String> context = new HashMap<>();
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT)).withSnapshotId(jobExecutionId);
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
     context.put(INSTANCE.value(), new JsonObject()
       .put("id", UUID.randomUUID().toString())
@@ -451,6 +462,8 @@ public class ReplaceInstanceEventHandlerTest {
     assertThat(createdInstance.getString("_version"), is(INSTANCE_VERSION_AS_STRING));
     verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
     verify(sourceStorageClient).getSourceStorageRecordsFormattedById(anyString(),eq(INSTANCE.value()));
+    verify(replaceInstanceEventHandler).getSourceStorageSnapshotsClient(any(), argThat(tenantId -> tenantId.equals(consortiumTenant)));
+    verify(sourceStorageSnapshotsClient).postSourceStorageSnapshots(argThat(snapshot -> snapshot.getJobExecutionId().equals(record.getSnapshotId())));
     verify(replaceInstanceEventHandler).getSourceStorageRecordsClient(any(), argThat(tenantId -> tenantId.equals(consortiumTenant)));
     verify(sourceStorageClient).getSourceStorageRecordsFormattedById(anyString(), eq(INSTANCE.value()));
     verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
@@ -470,7 +483,7 @@ public class ReplaceInstanceEventHandlerTest {
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
 
     String recordId = UUID.randomUUID().toString();
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT)).withSnapshotId(jobExecutionId);
     record.setId(recordId);
 
     HashMap<String, String> context = new HashMap<>();
@@ -521,6 +534,8 @@ public class ReplaceInstanceEventHandlerTest {
     ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
     verify(sourceStorageClient).postSourceStorageRecords(recordCaptor.capture());
     verify(replaceInstanceEventHandler).getSourceStorageRecordsClient(any(), argThat(tenantId -> tenantId.equals(consortiumTenant)));
+    verify(replaceInstanceEventHandler).getSourceStorageSnapshotsClient(any(), argThat(tenantId -> tenantId.equals(consortiumTenant)));
+    verify(sourceStorageSnapshotsClient).postSourceStorageSnapshots(argThat(snapshot -> snapshot.getJobExecutionId().equals(record.getSnapshotId())));
     assertNotNull(recordId, recordCaptor.getValue().getMatchedId());
   }
 
@@ -538,7 +553,7 @@ public class ReplaceInstanceEventHandlerTest {
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
 
     String recordId = UUID.randomUUID().toString();
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT)).withSnapshotId(jobExecutionId);
     record.setId(recordId);
 
     HashMap<String, String> context = new HashMap<>();
@@ -588,6 +603,8 @@ public class ReplaceInstanceEventHandlerTest {
     ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
     verify(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), recordCaptor.capture());
     verify(replaceInstanceEventHandler, times(2)).getSourceStorageRecordsClient(any(), argThat(tenantId -> tenantId.equals(consortiumTenant)));
+    verify(replaceInstanceEventHandler).getSourceStorageSnapshotsClient(any(), argThat(tenantId -> tenantId.equals(consortiumTenant)));
+    verify(sourceStorageSnapshotsClient).postSourceStorageSnapshots(argThat(snapshot -> snapshot.getJobExecutionId().equals(record.getSnapshotId())));
   }
 
   @Test(expected = ExecutionException.class)

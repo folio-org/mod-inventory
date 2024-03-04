@@ -31,7 +31,9 @@ import org.folio.rest.client.SourceStorageRecordsClient;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.MarcFieldProtectionSetting;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.folio.rest.jaxrs.model.Snapshot;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -198,6 +200,12 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           .compose(titlesIds -> getPrecedingSucceedingTitlesHelper().deletePrecedingSucceedingTitles(titlesIds, context))
           .map(mappedInstance)
           .compose(instance -> {
+            if (dataImportEventPayload.getContext().containsKey(CENTRAL_TENANT_ID)) {
+              return copySnapshotToOtherTenant(targetRecord.getSnapshotId(), dataImportEventPayload, tenantId).map(instance);
+            }
+            return Future.succeededFuture(instance);
+          })
+          .compose(instance -> {
             if (instanceToUpdate.getSource().equals(FOLIO.getValue())) {
               executeFieldsManipulation(instance, targetRecord);
               return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance, instanceCollection, tenantId);
@@ -227,6 +235,15 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           future.completeExceptionally(ar.cause());
         }
       });
+  }
+
+  private Future<Snapshot> copySnapshotToOtherTenant(String snapshotId, DataImportEventPayload dataImportEventPayload, String tenantId) {
+    Snapshot snapshot = new Snapshot()
+      .withJobExecutionId(snapshotId)
+      .withStatus(Snapshot.Status.COMMITTED)
+      .withProcessingStartedDate(new Date());
+
+    return postSnapshotInSrsAndHandleResponse(dataImportEventPayload, snapshot, tenantId);
   }
 
   @Override

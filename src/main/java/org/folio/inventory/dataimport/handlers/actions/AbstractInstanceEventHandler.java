@@ -35,11 +35,13 @@ import org.folio.rest.client.SourceStorageRecordsClient;
 
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import org.folio.rest.client.SourceStorageSnapshotsClient;
 import org.folio.rest.jaxrs.model.AdditionalInfo;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.ExternalIdsHolder;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.Record;
+import org.folio.rest.jaxrs.model.Snapshot;
 
 public abstract class AbstractInstanceEventHandler implements EventHandler {
   protected static final Logger LOGGER = LogManager.getLogger(AbstractInstanceEventHandler.class);
@@ -137,6 +139,24 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     return promise.future();
   }
 
+  protected Future<Snapshot> postSnapshotInSrsAndHandleResponse(DataImportEventPayload payload, Snapshot snapshot, String tenantId) {
+    Promise<Snapshot> promise = Promise.promise();
+    getSourceStorageSnapshotsClient(payload, tenantId).postSourceStorageSnapshots(snapshot)
+      .onComplete(ar -> {
+        var result = ar.result();
+        if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_CREATED.toInt()) {
+          LOGGER.info("postSnapshotInSrsAndHandleResponse:: Posted snapshot with id: {} to tenant: {}", snapshot.getJobExecutionId(), tenantId);
+          promise.complete(result.bodyAsJson(Snapshot.class));
+        } else {
+          String msg = format("Failed to create snapshot in SRS, snapshot id: %s, tenant id: %s, status code: %s, snapshot: %s",
+            snapshot.getJobExecutionId(), tenantId, result != null ? result.statusCode() : "", result != null ? result.bodyAsString() : "");
+          LOGGER.warn(msg);
+          promise.fail(msg);
+        }
+      });
+    return promise.future();
+  }
+
   protected Future<Instance> executeFieldsManipulation(Instance instance, Record srcRecord) {
     AdditionalFieldsUtil.fill001FieldInMarcRecord(srcRecord, instance.getHrid());
     if (StringUtils.isBlank(srcRecord.getMatchedId())) {
@@ -185,6 +205,10 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
 
   public SourceStorageRecordsClient getSourceStorageRecordsClient(DataImportEventPayload payload, String tenantId) {
     return new SourceStorageRecordsClient(payload.getOkapiUrl(), tenantId, payload.getToken(), getHttpClient());
+  }
+
+  public SourceStorageSnapshotsClient getSourceStorageSnapshotsClient(DataImportEventPayload payload, String tenantId) {
+    return new SourceStorageSnapshotsClient(payload.getOkapiUrl(), tenantId, payload.getToken(), getHttpClient());
   }
 
   private Record encodeParsedRecordContent(Record srcRecord) {
