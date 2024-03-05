@@ -630,7 +630,7 @@ public class ReplaceInstanceEventHandlerTest {
     context.put(INSTANCE.value(), new JsonObject()
       .put("id", UUID.randomUUID().toString())
       .put("hrid", UUID.randomUUID().toString())
-      .put("source", FOLIO.toString())
+      .put("source", MARC.toString())
       .put("_version", INSTANCE_VERSION)
       .encode());
 
