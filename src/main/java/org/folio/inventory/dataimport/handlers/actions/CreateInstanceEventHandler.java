@@ -125,7 +125,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
               return addInstance(mappedInstance, instanceCollection)
                 .compose(createdInstance -> getPrecedingSucceedingTitlesHelper().createPrecedingSucceedingTitles(mappedInstance, context).map(createdInstance))
                 .compose(createdInstance -> executeFieldsManipulation(createdInstance, targetRecord))
-                .compose(createdInstance -> saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, createdInstance, instanceCollection));
+                .compose(createdInstance -> saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, createdInstance, instanceCollection, dataImportEventPayload.getTenant()));
             })
             .onSuccess(ar -> {
               dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(ar));

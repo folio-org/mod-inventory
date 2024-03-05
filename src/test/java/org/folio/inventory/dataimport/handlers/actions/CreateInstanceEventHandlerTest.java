@@ -95,6 +95,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.times;
@@ -190,7 +191,7 @@ public class CreateInstanceEventHandlerTest {
       new PrecedingSucceedingTitlesHelper(context -> mockedClient), new MappingMetadataCache(vertx,
       httpClient, 3600), instanceIdStorageService, orderHelperService, httpClient));
 
-    doReturn(sourceStorageClient).when(createInstanceEventHandler).getSourceStorageRecordsClient(any());
+    doReturn(sourceStorageClient).when(createInstanceEventHandler).getSourceStorageRecordsClient(any(), any());
     doAnswer(invocationOnMock -> {
       Instance instanceRecord = invocationOnMock.getArgument(0);
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
@@ -266,6 +267,7 @@ public class CreateInstanceEventHandlerTest {
     assertThat(createdInstance.getJsonArray("notes").getJsonObject(0).getString("instanceNoteTypeId"), notNullValue());
     assertThat(createdInstance.getJsonArray("notes").getJsonObject(1).getString("instanceNoteTypeId"), notNullValue());
     verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
+    verify(createInstanceEventHandler).getSourceStorageRecordsClient(any(), argThat(tenantId -> tenantId.equals(TENANT_ID)));
   }
 
   @Test
