@@ -73,7 +73,7 @@ public class UpdateItemEventHandler implements EventHandler {
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
   private static final Set<String> PROTECTED_STATUSES_FROM_UPDATE = new HashSet<>(Arrays.asList("Aged to lost", "Awaiting delivery", "Awaiting pickup", "Checked out", "Claimed returned", "Declared lost", "Paged", "Recently returned"));
-  private static final String CURRENT_RETRY_NUMBER = "CURRENT_RETRY_NUMBER";
+  static final String CURRENT_RETRY_NUMBER = "CURRENT_RETRY_NUMBER";
   private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
   private static final String CURRENT_EVENT_TYPE_PROPERTY = "CURRENT_EVENT_TYPE";
   private static final String CURRENT_NODE_PROPERTY = "CURRENT_NODE";
@@ -127,7 +127,7 @@ public class UpdateItemEventHandler implements EventHandler {
 
           List<String> errors = validateItem(mappedItemAsJson, requiredFields);
           if (!errors.isEmpty()) {
-            String msg = format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", errors,
+            String msg = format("Mapped Item is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", errors,
               jobExecutionId, recordId, chunkId);
             LOG.error(msg);
             return Future.failedFuture(msg);
@@ -284,12 +284,12 @@ public class UpdateItemEventHandler implements EventHandler {
   }
 
 
-  private void processOLError(Item instance, ItemCollection itemCollection, DataImportEventPayload eventPayload, Promise<Item> promise, Failure failure) {
+  private void processOLError(Item item, ItemCollection itemCollection, DataImportEventPayload eventPayload, Promise<Item> promise, Failure failure) {
     int currentRetryNumber = eventPayload.getContext().get(CURRENT_RETRY_NUMBER) == null ? 0 : Integer.parseInt(eventPayload.getContext().get(CURRENT_RETRY_NUMBER));
     if (currentRetryNumber < MAX_RETRIES_COUNT) {
       eventPayload.getContext().put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
       LOG.warn("OL error updating Item - {}, status code {}. Retry UpdateItemEventHandler handler...", failure.getReason(), failure.getStatusCode());
-      getActualItemAndReInvokeCurrentHandler(instance, itemCollection, promise, eventPayload);
+      getActualItemAndReInvokeCurrentHandler(item, itemCollection, promise, eventPayload);
     } else {
       eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
       String errMessage = format("Current retry number %s exceeded or equal given number %s for the Item update for jobExecutionId '%s'", MAX_RETRIES_COUNT, currentRetryNumber, eventPayload.getJobExecutionId());
@@ -320,6 +320,7 @@ public class UpdateItemEventHandler implements EventHandler {
           }
         });
       })
+      .thenAccept(v -> eventPayload.getContext().remove(CURRENT_RETRY_NUMBER))
       .exceptionally(e -> {
         eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
         LOG.error(format("Cannot get actual Item by id: %s", e.getCause()));

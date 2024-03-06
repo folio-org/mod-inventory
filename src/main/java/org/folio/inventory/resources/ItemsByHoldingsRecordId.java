@@ -211,6 +211,4 @@ public class ItemsByHoldingsRecordId extends Items
     log.debug("Paging resolved to limit: {}, offset: {}", enforcedPaging.limit, enforcedPaging.offset);
     return enforcedPaging;
   }
-
-
 }

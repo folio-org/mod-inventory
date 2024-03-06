@@ -1,3 +1,11 @@
+## 20.0.7 2023-08-14
+* Support multiple actions on the same Item record ([MODINV-842](https://issues.folio.org/browse/MODINV-842))
+
+## 20.0.6 2023-07-31
+* Update data-import-processing-core to v4.0.6 ([MODDICORE-333](https://issues.folio.org/browse/MODDICORE-333))
+* Support multiple actions on the same Holdings record ([MODINV-835](https://issues.folio.org/browse/MODINV-835))
+* Support server-side pagination in /items-by-holdings-id API ([MODINV-838](https://issues.folio.org/browse/MODINV-838))
+
 ## 20.0.5 2023-06-29
 * Partition large item query in items-by-holdings-id API, partition query of many item IDs to avoid 414-URI-too-long ([MODINV-829](https://issues.folio.org/browse/MODINV-829))
 
