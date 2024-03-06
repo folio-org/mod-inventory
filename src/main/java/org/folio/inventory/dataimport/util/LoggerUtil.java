@@ -8,8 +8,9 @@ import org.folio.rest.jaxrs.model.Record;
 import java.util.Map;
 
 public class LoggerUtil {
+  public static final String INCOMING_RECORD_ID = "INCOMING_RECORD_ID";
   public static void logParametersEventHandler(Logger LOGGER, DataImportEventPayload dataImportEventPayload) {
-    LOGGER.debug("handle:: parameters jobExecutionId: {} and eventType: {} ", dataImportEventPayload.getJobExecutionId(), dataImportEventPayload.getEventType());
+    LOGGER.debug("handle:: parameters jobExecutionId: {}, eventType: {} and incomingRecordId: {} ", dataImportEventPayload.getJobExecutionId(), dataImportEventPayload.getEventType(), dataImportEventPayload.getContext().get(INCOMING_RECORD_ID));
     LOGGER.trace("handle:: parameter dataImportEventPayload: {}", dataImportEventPayload);
   }
 
