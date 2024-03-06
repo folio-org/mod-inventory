@@ -10,6 +10,7 @@ import static org.folio.ActionProfile.FolioRecord.MARC_HOLDINGS;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDINGS_UPDATED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_UPDATED;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
+import static org.folio.inventory.dataimport.util.LoggerUtil.INCOMING_RECORD_ID;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.inventory.dataimport.util.ParsedRecordUtil.getControlFieldValue;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
@@ -104,7 +105,8 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
 
       var context = constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl());
       var jobExecutionId = payload.getJobExecutionId();
-      LOGGER.info("Update marc holding with jobExecutionId: {}", jobExecutionId);
+      LOGGER.info("Update marc holding with jobExecutionId: {}, incomingRecordId: {}",
+        jobExecutionId, payload.getContext().get(INCOMING_RECORD_ID));
 
       mappingMetadataCache.get(jobExecutionId, context)
         .map(mapMetadataOrFail())
