@@ -293,7 +293,8 @@ public class MarcBibliographicMatchEventHandlerTest {
     future.whenComplete((res, throwable) -> context.verify(v -> {
       context.assertNull(throwable);
       context.assertEquals(DI_SRS_MARC_BIB_RECORD_MATCHED.value(), eventPayload.getEventType());
-      WireMock.verify(expectedRequestsNumber, postRequestedFor(urlEqualTo(RECORDS_MATCHING_PATH)));
+      WireMock.verify(expectedRequestsNumber, postRequestedFor(urlEqualTo(RECORDS_MATCHING_PATH))
+        .withRequestBody(matchingJsonPath("$[?(@.returnTotalRecordsCount == true)]")));
       WireMock.verify(postRequestedFor(urlEqualTo(RECORDS_MATCHING_PATH))
         .withRequestBody(matchingJsonPath("$[?(@.offset == 0)]")));
       WireMock.verify(postRequestedFor(urlEqualTo(RECORDS_MATCHING_PATH))

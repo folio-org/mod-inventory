@@ -199,7 +199,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
         .withIndicator1(ind1)
         .withIndicator2(ind2)
         .withSubfield(subfield)))
-      .withReturnTotalRecordsCount(false);
+      .withReturnTotalRecordsCount(true);
   }
 
   private Future<Optional<Record>> retrieveMarcRecords(RecordMatchingDto recordMatchingDto, String tenantId,
