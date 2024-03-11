@@ -2,7 +2,6 @@ package org.folio.inventory.dataimport.handlers.matching.loaders;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
@@ -26,6 +25,8 @@ import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
 public class InstanceLoader extends AbstractLoader<Instance> {
 
   private static final String INSTANCES_IDS_KEY = "INSTANCES_IDS";
+  private static final String ID_FIELD = "id";
+
   private Storage storage;
   private AbstractPreloader preloader;
 
@@ -60,7 +61,7 @@ public class InstanceLoader extends AbstractLoader<Instance> {
         cqlSubMatch = getConditionByMultiMatchResult(eventPayload);
       } else if (isNotEmpty(eventPayload.getContext().get(INSTANCE.value()))) {
         JsonObject instanceAsJson = new JsonObject(eventPayload.getContext().get(INSTANCE.value()));
-        cqlSubMatch = format(" AND id == \"%s\"", instanceAsJson.getString("id"));
+        cqlSubMatch = format(" AND id == \"%s\"", instanceAsJson.getString(ID_FIELD));
       }
     }
     return cqlSubMatch;
@@ -72,12 +73,7 @@ public class InstanceLoader extends AbstractLoader<Instance> {
       ? AbstractLoader.MULTI_MATCH_IDS
       : INSTANCES_IDS_KEY;
 
-    String preparedIds = new JsonArray(eventPayload.getContext().remove(multipleValuesKey))
-      .stream()
-      .map(Object::toString)
-      .collect(Collectors.joining(" OR "));
-
-    return format(" AND id == (%s)", preparedIds);
+    return getConditionByMultipleValues(ID_FIELD, eventPayload, multipleValuesKey);
   }
 
   @Override

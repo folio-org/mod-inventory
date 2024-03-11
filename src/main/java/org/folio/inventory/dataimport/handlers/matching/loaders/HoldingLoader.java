@@ -25,6 +25,8 @@ import org.folio.rest.jaxrs.model.EntityType;
 public class HoldingLoader extends AbstractLoader<HoldingsRecord> {
 
   private static final String HOLDINGS_FIELD = "holdings";
+  private static final String INSTANCE_ID_FIELD = "instanceId";
+  private static final String INSTANCES_IDS_KEY = "INSTANCES_IDS";
 
   private Storage storage;
   private AbstractPreloader preloader;
@@ -57,6 +59,8 @@ public class HoldingLoader extends AbstractLoader<HoldingsRecord> {
     if (eventPayload.getContext() != null) {
       if (isNotEmpty(eventPayload.getContext().get(AbstractLoader.MULTI_MATCH_IDS))) {
         cqlSubMatch = getConditionByMultiMatchResult(eventPayload);
+      } else if (isNotEmpty(eventPayload.getContext().get(INSTANCES_IDS_KEY))) {
+        cqlSubMatch = getConditionByMultipleMarcBibMatchResult(eventPayload);
       } else if (isNotEmpty(eventPayload.getContext().get(EntityType.HOLDINGS.value()))) {
         JsonObject holdingAsJson = new JsonObject(eventPayload.getContext().get(EntityType.HOLDINGS.value()));
         if (holdingAsJson.getJsonObject(HOLDINGS_FIELD) != null) {
@@ -69,6 +73,10 @@ public class HoldingLoader extends AbstractLoader<HoldingsRecord> {
       }
     }
     return cqlSubMatch;
+  }
+
+  private String getConditionByMultipleMarcBibMatchResult(DataImportEventPayload eventPayload) {
+    return getConditionByMultipleValues(INSTANCE_ID_FIELD, eventPayload, INSTANCES_IDS_KEY);
   }
 
   @Override

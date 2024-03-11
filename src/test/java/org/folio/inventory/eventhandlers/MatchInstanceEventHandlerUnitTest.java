@@ -783,6 +783,7 @@ public class MatchInstanceEventHandlerUnitTest {
       testContext.assertEquals(1, processedPayload.getEventsChain().size());
       testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), processedPayload.getEventType());
       testContext.assertEquals(expectedInstance.getId(), new JsonObject(processedPayload.getContext().get(INSTANCE.value())).getString(ID_FIELD));
+      testContext.assertNull(processedPayload.getContext().get(INSTANCES_IDS_KEY));
       async.complete();
     });
   }

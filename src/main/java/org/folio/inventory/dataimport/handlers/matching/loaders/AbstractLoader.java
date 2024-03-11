@@ -115,12 +115,18 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
   }
 
   protected String getConditionByMultiMatchResult(DataImportEventPayload eventPayload) {
-    String preparedIds = new JsonArray(eventPayload.getContext().remove(MULTI_MATCH_IDS))
+    return getConditionByMultipleValues("id", eventPayload, MULTI_MATCH_IDS);
+  }
+
+  protected String getConditionByMultipleValues(String searchField,
+                                                DataImportEventPayload eventPayload,
+                                                String multipleValuesKey) {
+    String preparedIds = new JsonArray(eventPayload.getContext().remove(multipleValuesKey))
       .stream()
       .map(Object::toString)
       .collect(Collectors.joining(" OR "));
 
-    return format(" AND id == (%s)", preparedIds);
+    return format(" AND %s == (%s)", searchField, preparedIds);
   }
 
   protected abstract EntityType getEntityType();
