@@ -39,6 +39,7 @@ import org.folio.inventory.dataimport.handlers.actions.UpdateHoldingEventHandler
 import org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.UpdateMarcHoldingsEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.modify.MarcBibModifyEventHandler;
+import org.folio.inventory.dataimport.handlers.matching.CommonMatchProfileEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MarcBibliographicMatchEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchAuthorityEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchHoldingEventHandler;
@@ -78,6 +79,7 @@ import org.folio.processing.matching.reader.MatchValueReaderFactory;
 import org.folio.processing.matching.reader.StaticValueReaderImpl;
 import org.folio.rest.jaxrs.model.Event;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -176,9 +178,13 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     MatchingManager.registerMatcherFactory(new HoldingsItemMatcherFactory());
 
     PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper = new PrecedingSucceedingTitlesHelper(WebClient.wrap(client));
-    EventManager.registerEventHandler(new MatchInstanceEventHandler(mappingMetadataCache, consortiumService));
-    EventManager.registerEventHandler(new MatchItemEventHandler(mappingMetadataCache, consortiumService));
-    EventManager.registerEventHandler(new MatchHoldingEventHandler(mappingMetadataCache, consortiumService));
+    EventManager.registerEventHandler(new CommonMatchProfileEventHandler(List.of(
+      new MatchInstanceEventHandler(mappingMetadataCache, consortiumService),
+      new MatchHoldingEventHandler(mappingMetadataCache, consortiumService),
+      new MatchItemEventHandler(mappingMetadataCache, consortiumService),
+      new MarcBibliographicMatchEventHandler(consortiumService, client, storage)
+    )));
+
     EventManager.registerEventHandler(new MatchAuthorityEventHandler(mappingMetadataCache, consortiumService));
     EventManager.registerEventHandler(new CreateItemEventHandler(storage, mappingMetadataCache, new ItemIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))), orderHelperService));
     EventManager.registerEventHandler(new CreateHoldingEventHandler(storage, mappingMetadataCache, new HoldingsIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))), orderHelperService, consortiumService));
@@ -193,6 +199,5 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     EventManager.registerEventHandler(new ReplaceInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, client, consortiumService));
     EventManager.registerEventHandler(new MarcBibModifiedPostProcessingEventHandler(new InstanceUpdateDelegate(storage), precedingSucceedingTitlesHelper, mappingMetadataCache));
     EventManager.registerEventHandler(new MarcBibModifyEventHandler(mappingMetadataCache, new InstanceUpdateDelegate(storage), precedingSucceedingTitlesHelper, client));
-    EventManager.registerEventHandler(new MarcBibliographicMatchEventHandler(consortiumService, client, storage));
   }
 }
