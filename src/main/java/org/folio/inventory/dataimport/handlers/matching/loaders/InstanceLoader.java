@@ -1,8 +1,19 @@
 package org.folio.inventory.dataimport.handlers.matching.loaders;
 
+import static java.lang.String.format;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+
+import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
+
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.handlers.matching.preloaders.AbstractPreloader;
@@ -12,15 +23,6 @@ import org.folio.inventory.storage.Storage;
 import org.folio.processing.matching.loader.LoadResult;
 import org.folio.processing.matching.loader.query.LoadQuery;
 import org.folio.rest.jaxrs.model.EntityType;
-
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
-
-import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
 
 public class InstanceLoader extends AbstractLoader<Instance> {
 
@@ -57,7 +59,7 @@ public class InstanceLoader extends AbstractLoader<Instance> {
     String cqlSubMatch = EMPTY;
     if (eventPayload.getContext() != null) {
       if (isNotEmpty(eventPayload.getContext().get(AbstractLoader.MULTI_MATCH_IDS))
-      || isNotEmpty(eventPayload.getContext().get(INSTANCES_IDS_KEY))) {
+        || isNotEmpty(eventPayload.getContext().get(INSTANCES_IDS_KEY))) {
         cqlSubMatch = getConditionByMultiMatchResult(eventPayload);
       } else if (isNotEmpty(eventPayload.getContext().get(INSTANCE.value()))) {
         JsonObject instanceAsJson = new JsonObject(eventPayload.getContext().get(INSTANCE.value()));
