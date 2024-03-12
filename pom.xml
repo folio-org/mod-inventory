@@ -313,7 +313,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <vertx.version>4.3.3</vertx.version>
+    <vertx.version>4.5.4</vertx.version>
     <jsonschema2pojo_output_dir>${project.build.directory}/generated-sources/jsonschema2pojo</jsonschema2pojo_output_dir>
     <httpcomponents.version>4.5.14</httpcomponents.version>
     <lombok.version>1.18.30</lombok.version>
