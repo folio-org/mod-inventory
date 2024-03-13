@@ -53,6 +53,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
   protected static final Logger LOG = LogManager.getLogger();
 
   protected static final String CENTRAL_TENANT_ID_KEY = "CENTRAL_TENANT_ID";
+  protected static final String RECORDS_IDENTIFIERS_FETCH_LIMIT_PARAM = "inventory.di.records.identifiers.fetch.limit";
   private static final String PAYLOAD_HAS_NO_DATA_MESSAGE = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
   private static final String FOUND_MULTIPLE_RECORDS_ERROR_MESSAGE = "Found multiple records matching specified conditions";
   private static final String RECORDS_NOT_FOUND_MESSAGE = "Could not find records matching specified conditions";
@@ -60,7 +61,6 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
   private static final String MATCH_RESULT_KEY_PREFIX = "MATCHED_%s";
   private static final String USER_ID_HEADER = "userId";
   private static final int EXPECTED_MATCH_EXPRESSION_FIELDS_NUMBER = 4;
-  protected static final String RECORDS_IDENTIFIERS_FETCH_LIMIT_PARAM = "inventory.di.records.identifiers.fetch.limit";
   private static final String DEFAULT_RECORDS_IDENTIFIERS_LIMIT = "5000";
   private static final String INSTANCES_IDS_KEY = "INSTANCES_IDS";
 

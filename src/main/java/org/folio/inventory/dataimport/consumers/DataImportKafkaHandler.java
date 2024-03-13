@@ -39,7 +39,7 @@ import org.folio.inventory.dataimport.handlers.actions.UpdateHoldingEventHandler
 import org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.UpdateMarcHoldingsEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.modify.MarcBibModifyEventHandler;
-import org.folio.inventory.dataimport.handlers.matching.CommonMatchProfileEventHandler;
+import org.folio.inventory.dataimport.handlers.matching.CommonMatchEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MarcBibliographicMatchEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchAuthorityEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchHoldingEventHandler;
@@ -178,7 +178,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     MatchingManager.registerMatcherFactory(new HoldingsItemMatcherFactory());
 
     PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper = new PrecedingSucceedingTitlesHelper(WebClient.wrap(client));
-    EventManager.registerEventHandler(new CommonMatchProfileEventHandler(List.of(
+    EventManager.registerEventHandler(new CommonMatchEventHandler(List.of(
       new MatchInstanceEventHandler(mappingMetadataCache, consortiumService),
       new MatchHoldingEventHandler(mappingMetadataCache, consortiumService),
       new MatchItemEventHandler(mappingMetadataCache, consortiumService),

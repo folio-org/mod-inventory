@@ -44,7 +44,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @RunWith(JUnitParamsRunner.class)
-public class CommonMatchProfileEventHandlerTest {
+public class CommonMatchEventHandlerTest {
 
   private static final String TENANT_ID = "diku";
   private static final String TOKEN = "token";
@@ -65,7 +65,7 @@ public class CommonMatchProfileEventHandlerTest {
   @Before
   public void setUp() {
     this.closeable = MockitoAnnotations.openMocks(this);
-    eventHandler = new CommonMatchProfileEventHandler(
+    eventHandler = new CommonMatchEventHandler(
       List.of(matchMarcBibHandler, matchInstanceHandler, matchHoldingsHandler, matchItemHandler));
   }
 

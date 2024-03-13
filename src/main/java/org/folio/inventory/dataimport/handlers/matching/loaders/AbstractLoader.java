@@ -34,6 +34,7 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
   public static final String MULTI_MATCH_IDS = "MULTI_MATCH_IDS";
   private static final String ERROR_LOAD_MSG = "Failed to load records cause: %s, status code: %s";
   private static final int MULTI_MATCH_LOAD_LIMIT = 90;
+  private static final String ID_FIELD = "id";
 
   private final Vertx vertx;
 
@@ -115,7 +116,7 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
   }
 
   protected String getConditionByMultiMatchResult(DataImportEventPayload eventPayload) {
-    return getConditionByMultipleValues("id", eventPayload, MULTI_MATCH_IDS);
+    return getConditionByMultipleValues(ID_FIELD, eventPayload, MULTI_MATCH_IDS);
   }
 
   protected String getConditionByMultipleValues(String searchField,
