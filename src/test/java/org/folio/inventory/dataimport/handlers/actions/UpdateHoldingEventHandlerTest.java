@@ -834,8 +834,12 @@ public class UpdateHoldingEventHandlerTest {
 
     Assert.assertEquals(DI_INVENTORY_HOLDING_UPDATED.value(), actualDataImportEventPayload.getEventType());
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
+    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(ITEM.value()));
     JsonArray resultedHoldingsList = new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
     JsonObject resultedHoldings = resultedHoldingsList.getJsonObject(0);
+    JsonArray resultedItemsList = new JsonArray(actualDataImportEventPayload.getContext().get(ITEM.value()));
+    JsonObject resultedItem = resultedItemsList.getJsonObject(0);
+    Assert.assertEquals(existingItemJson.getString("id"), resultedItem.getString("id"));
     Assert.assertNotNull(resultedHoldings.getString("id"));
     Assert.assertEquals(instanceId, resultedHoldings.getString("instanceId"));
     Assert.assertEquals(permanentLocationId, resultedHoldings.getString("permanentLocationId"));
@@ -1104,7 +1108,7 @@ public class UpdateHoldingEventHandlerTest {
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();
     context.put(HOLDINGS.value(), Json.encode(holdingsList));
-    context.put(ITEM.value(), Json.encode(Lists.newArrayList(new JsonObject().put("item", existingItemJson))));
+    context.put(ITEM.value(), Json.encode(JsonArray.of(existingItemJson)));
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
