@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
@@ -32,8 +31,7 @@ public class InstanceLoader extends AbstractLoader<Instance> {
   private Storage storage;
   private AbstractPreloader preloader;
 
-  public InstanceLoader(Storage storage, Vertx vertx, AbstractPreloader preloader) {
-    super(vertx);
+  public InstanceLoader(Storage storage, AbstractPreloader preloader) {
     this.storage = storage;
     this.preloader = preloader;
   }

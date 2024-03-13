@@ -160,10 +160,10 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     HoldingsPreloader holdingsPreloader = new HoldingsPreloader(ordersPreloaderHelper);
     ItemPreloader itemPreloader = new ItemPreloader(ordersPreloaderHelper);
 
-    MatchValueLoaderFactory.register(new InstanceLoader(storage, vertx, instancePreloader));
-    MatchValueLoaderFactory.register(new ItemLoader(storage, vertx, itemPreloader));
-    MatchValueLoaderFactory.register(new HoldingLoader(storage, vertx, holdingsPreloader));
-    MatchValueLoaderFactory.register(new AuthorityLoader(storage, vertx));
+    MatchValueLoaderFactory.register(new InstanceLoader(storage, instancePreloader));
+    MatchValueLoaderFactory.register(new ItemLoader(storage, itemPreloader));
+    MatchValueLoaderFactory.register(new HoldingLoader(storage, holdingsPreloader));
+    MatchValueLoaderFactory.register(new AuthorityLoader(storage));
 
     MatchValueReaderFactory.register(new MarcValueReaderImpl());
     MatchValueReaderFactory.register(new StaticValueReaderImpl());

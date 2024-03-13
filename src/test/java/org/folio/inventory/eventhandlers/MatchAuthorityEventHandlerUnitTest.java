@@ -1,7 +1,6 @@
 package org.folio.inventory.eventhandlers;
 
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -86,7 +85,7 @@ public class MatchAuthorityEventHandlerUnitTest {
   @Mock
   private Storage storage;
   @InjectMocks
-  private final AuthorityLoader loader = new AuthorityLoader(storage, Vertx.vertx());
+  private final AuthorityLoader loader = new AuthorityLoader(storage);
   @Mock
   private AuthorityRecordCollection collection;
   @Mock

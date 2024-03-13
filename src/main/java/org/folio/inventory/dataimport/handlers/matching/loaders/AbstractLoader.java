@@ -1,6 +1,5 @@
 package org.folio.inventory.dataimport.handlers.matching.loaders;
 
-import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import org.apache.logging.log4j.LogManager;
@@ -36,12 +35,6 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
   private static final int MULTI_MATCH_LOAD_LIMIT = 90;
   private static final String ID_FIELD = "id";
 
-  private final Vertx vertx;
-
-  protected AbstractLoader(Vertx vertx) {
-    this.vertx = vertx;
-  }
-
   @Override
   public CompletableFuture<LoadResult> loadEntity(LoadQuery loadQuery, DataImportEventPayload eventPayload) {
     if (loadQuery == null) {
@@ -54,37 +47,35 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
     boolean canProcessMultiMatchResult = canProcessMultiMatchResult(eventPayload);
     PagingParameters pagingParameters = buildPagingParameters(canProcessMultiMatchResult);
 
-    vertx.runOnContext(v -> {
-      try {
-        String cql = loadQuery.getCql() + addCqlSubMatchCondition(eventPayload);
-        getSearchableCollection(context).findByCql(cql, pagingParameters,
-          success -> {
-            MultipleRecords<T> collection = success.getResult();
-            if (collection.totalRecords == 1) {
-              loadResult.setValue(mapEntityToJsonString(collection.records.get(0)));
-            } else if (collection.totalRecords > 1) {
-              if (canProcessMultiMatchResult) {
-                LOG.info("Found multiple records by CQL query: [{}]. Found records IDs: {}", cql, mapEntityListToIdsJsonString(collection.records));
-                loadResult.setEntityType(MULTI_MATCH_IDS);
-                loadResult.setValue(mapEntityListToIdsJsonString(collection.records));
-              } else {
-                String errorMessage = format("Found multiple records matching specified conditions. CQL query: [%s].%nFound records: %s", cql, Json.encodePrettily(collection.records));
-                LOG.error(errorMessage);
-                future.completeExceptionally(new MatchingException(errorMessage));
-                return;
-              }
+    try {
+      String cql = loadQuery.getCql() + addCqlSubMatchCondition(eventPayload);
+      getSearchableCollection(context).findByCql(cql, pagingParameters,
+        success -> {
+          MultipleRecords<T> collection = success.getResult();
+          if (collection.totalRecords == 1) {
+            loadResult.setValue(mapEntityToJsonString(collection.records.get(0)));
+          } else if (collection.totalRecords > 1) {
+            if (canProcessMultiMatchResult) {
+              LOG.info("Found multiple records by CQL query: [{}]. Found records IDs: {}", cql, mapEntityListToIdsJsonString(collection.records));
+              loadResult.setEntityType(MULTI_MATCH_IDS);
+              loadResult.setValue(mapEntityListToIdsJsonString(collection.records));
+            } else {
+              String errorMessage = format("Found multiple records matching specified conditions. CQL query: [%s].%nFound records: %s", cql, Json.encodePrettily(collection.records));
+              LOG.error(errorMessage);
+              future.completeExceptionally(new MatchingException(errorMessage));
+              return;
             }
-            future.complete(loadResult);
-          },
-          failure -> {
-            LOG.error(failure.getReason());
-            future.completeExceptionally(new MatchingException(format(ERROR_LOAD_MSG, failure.getReason(), failure.getStatusCode())));
-          });
-      } catch (Exception e) {
-        LOG.error("Failed to retrieve records", e);
-        future.completeExceptionally(e);
-      }
-    });
+          }
+          future.complete(loadResult);
+        },
+        failure -> {
+          LOG.error(failure.getReason());
+          future.completeExceptionally(new MatchingException(format(ERROR_LOAD_MSG, failure.getReason(), failure.getStatusCode())));
+        });
+    } catch (Exception e) {
+      LOG.error("Failed to retrieve records", e);
+      future.completeExceptionally(e);
+    }
 
     return future;
   }

@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
@@ -31,8 +30,7 @@ public class HoldingLoader extends AbstractLoader<HoldingsRecord> {
   private Storage storage;
   private AbstractPreloader preloader;
 
-  public HoldingLoader(Storage storage, Vertx vertx, AbstractPreloader preloader) {
-    super(vertx);
+  public HoldingLoader(Storage storage, AbstractPreloader preloader) {
     this.storage = storage;
     this.preloader = preloader;
   }

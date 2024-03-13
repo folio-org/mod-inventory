@@ -39,7 +39,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -114,7 +113,7 @@ public class MatchInstanceEventHandlerUnitTest {
   private AbstractPreloader preloader;
   private EventHandler eventHandler;
   @InjectMocks
-  private final InstanceLoader instanceLoader = new InstanceLoader(storage, Vertx.vertx(), preloader);
+  private final InstanceLoader instanceLoader = new InstanceLoader(storage, preloader);
 
   @Before
   public void setUp() {
