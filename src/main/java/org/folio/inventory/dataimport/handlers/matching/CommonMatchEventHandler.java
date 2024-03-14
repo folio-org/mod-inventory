@@ -21,6 +21,14 @@ import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MATCH_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ReactTo.MATCH;
 
+/**
+ * The implementation of the {@link EventHandler} that represents
+ * an entry point for initiating instance/holdings/item/MARC-BIB matching processing
+ * and is responsible for dispatching payload to the appropriate dedicated matching event handler.
+ * Basically, it is needed to avoid event sending containing multiple marc-bib search results
+ * and related overhead, and to proceed with its processing right after marc-bib matching
+ * during the next match profile processing.
+ */
 public class CommonMatchEventHandler implements EventHandler {
 
   private static final Logger LOG = LogManager.getLogger();
@@ -38,16 +46,22 @@ public class CommonMatchEventHandler implements EventHandler {
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload eventPayload) {
-    Optional<EventHandler> handlerOptional = findEligibleHandler(eventPayload);
+    try {
+      Optional<EventHandler> handlerOptional = findEligibleHandler(eventPayload);
 
-    if (handlerOptional.isPresent()) {
-      return handlerOptional.get().handle(eventPayload)
-        .thenCompose(this::invokeNextHandlerIfNeeded);
-    } else {
-      String msg = format("Event payload with current node '%s' is not supported, incomingRecordId: '%s', jobExecutionId: '%s'",
-        eventPayload.getCurrentNode().getContentType(), extractIncomingRecordId(eventPayload), eventPayload.getJobExecutionId());
-      LOG.warn("handle:: {}", msg);
-      return CompletableFuture.failedFuture(new EventProcessingException(msg));
+      if (handlerOptional.isPresent()) {
+        return handlerOptional.get().handle(eventPayload)
+          .thenCompose(this::invokeNextHandlerIfNeeded);
+      } else {
+        String msg = format("Event payload with current node '%s' is not supported, incomingRecordId: '%s', jobExecutionId: '%s'",
+          eventPayload.getCurrentNode().getContentType(), extractIncomingRecordId(eventPayload), eventPayload.getJobExecutionId());
+        LOG.warn("handle:: {}", msg);
+        return CompletableFuture.failedFuture(new EventProcessingException(msg));
+      }
+    } catch (Exception e) {
+      LOG.warn("handle:: Error while processing event: '{}' for match profile processing, incomingRecordId: '{}', jobExecutionId: '{}'",
+        eventPayload.getEventType(), extractIncomingRecordId(eventPayload), eventPayload.getJobExecutionId(), e);
+      return CompletableFuture.failedFuture(new EventProcessingException(e));
     }
   }
 
@@ -69,7 +83,7 @@ public class CommonMatchEventHandler implements EventHandler {
       eventPayload.setCurrentNode(nextProfileOptional.get());
       Optional<EventHandler> optionalEventHandler = findEligibleHandler(eventPayload);
       if (optionalEventHandler.isPresent()) {
-        LOG.debug("Invoking '{}' event handler, incomingRecordId: '{}', jobExecutionId: '{}'",
+        LOG.debug("invokeNextHandlerIfNeeded:: Invoking '{}' event handler, incomingRecordId: '{}', jobExecutionId: '{}'",
           optionalEventHandler.get().getClass().getSimpleName(), extractIncomingRecordId(eventPayload), eventPayload.getJobExecutionId());
         return optionalEventHandler.get().handle(eventPayload)
           .thenCompose(this::invokeNextHandlerIfNeeded);
