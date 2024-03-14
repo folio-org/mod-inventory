@@ -11,6 +11,8 @@
 * Remove post-processing for Instance Update action [MODINV-922](https://issues.folio.org/browse/MODINV-922)
 * The import of file is completed with errors [MODINV-968](https://issues.folio.org/browse/MODINV-968)
 * Move Marc-Bib matching event handler to inventory [MODINV-935](https://issues.folio.org/browse/MODINV-935)
+* The duplicate record is created after updating action [MODINV-969](https://issues.folio.org/browse/MODINV-969)
+* Upgrade vertx to 4.5.4 [MODDICORE-398](https://folio-org.atlassian.net/browse/MODDICORE-398)
 * Adjust Match event handlers to take into account multiple search results from previous match [MODINV-936](https://issues.folio.org/browse/MODINV-936)
 
 ## 20.1.0 2023-10-13

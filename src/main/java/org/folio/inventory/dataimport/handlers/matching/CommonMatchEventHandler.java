@@ -24,7 +24,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ReactTo.MATCH;
 /**
  * The implementation of the {@link EventHandler} that represents
  * an entry point for initiating instance/holdings/item/MARC-BIB matching processing
- * and is responsible for dispatching payload to the appropriate dedicated matching event handler.
+ * and is responsible for dispatching event payload to the appropriate dedicated matching event handler.
  * Basically, it is needed to avoid event sending containing multiple marc-bib search results
  * and related overhead, and to proceed with its processing right after marc-bib matching
  * during the next match profile processing.

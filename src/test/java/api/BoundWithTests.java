@@ -15,6 +15,7 @@ import org.junit.Test;
 
 import java.net.MalformedURLException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -100,6 +101,34 @@ public class BoundWithTests extends ApiTests
     Response item2byId = itemsClient.getById( item2a.getId() );
     assertThat("Item 2 fetched by ID is NOT a bound-with", item2byId.getJson().getBoolean( "isBoundWith" ), is(false));
 
+  }
+
+  @Test
+  public void willSetBoundWithFlagsOnManyItemsContainingTheSameTitle () throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException
+  {
+    IndividualResource instance1 = instancesStorageClient.create( InstanceSamples.smallAngryPlanet( UUID.randomUUID() ) );
+    IndividualResource holdings1a = holdingsStorageClient.create(new HoldingRequestBuilder()
+      .forInstance(instance1.getId()).permanentlyInMainLibrary().withCallNumber( "HOLDINGS 1A" ));
+    IndividualResource instance2 = instancesStorageClient.create( InstanceSamples.girlOnTheTrain( UUID.randomUUID() ) );
+    IndividualResource holdings2a = holdingsStorageClient.create(new HoldingRequestBuilder()
+      .forInstance( instance2.getId()).permanentlyInMainLibrary().withCallNumber( "HOLDINGS 2A" ) );
+
+    for (int i=0; i<200; i++) {
+      IndividualResource item = itemsClient.create(new ItemRequestBuilder()
+        .forHolding( holdings1a.getId() ).withBarcode( "ITEM1 " + i ));
+      boundWithPartsStorageClient.create(
+        makeObjectBoundWithPart( item.getJson().getString("id"), holdings1a.getJson().getString( "id" ) ));
+    }
+    for (int i=0; i<100; i++) {
+      IndividualResource item = itemsClient.create(new ItemRequestBuilder()
+        .forHolding( holdings2a.getId() ).withBarcode( "ITEM2 " + i ));
+      boundWithPartsStorageClient.create(
+        makeObjectBoundWithPart( item.getJson().getString("id"), holdings1a.getJson().getString( "id" ) ));
+    }
+
+    for (JsonObject item : itemsClient.getMany("",1000)) {
+      assertThat("Every item haa bound-with flag ", item.getBoolean( "isBoundWith" ), is(true) );
+    }
   }
 
   @Test
@@ -222,7 +251,7 @@ public class BoundWithTests extends ApiTests
   }
 
   @Test
-  public void canRetrieveManyItemsThroughItemsByHoldingsId() throws InterruptedException, TimeoutException, ExecutionException
+  public void canRetrieveManySingleTitleItemsThroughItemsByHoldingsId() throws InterruptedException, TimeoutException, ExecutionException
   {
     IndividualResource instance1 = instancesStorageClient.create( InstanceSamples.smallAngryPlanet( UUID.randomUUID() ).put("title", "Instance 1") );
     IndividualResource holdings1 = holdingsStorageClient.create(new HoldingRequestBuilder()
@@ -234,11 +263,67 @@ public class BoundWithTests extends ApiTests
     }
     Response itemsResponse = okapiClient.get(ApiTestSuite.apiRoot()+
         "/inventory/items-by-holdings-id?query=holdingsRecordId=="
-        +holdings1.getJson().getString( "id" )+"&offset=0&limit=1200")
+        +holdings1.getJson().getString( "id" )+"&offset=0&limit=700")
       .toCompletableFuture().get(5, SECONDS);
-    assertThat("1100 items found for 'holdings1': ", itemsResponse.getJson().getInteger( "totalRecords" ), is(1100));
-    assertThat("1100 items found for 'holdings1': ", itemsResponse.getJson().getJsonArray("items").size(), is(1100));
+    assertThat("page of 700 items returned for 'holdings1': ", itemsResponse.getJson().getJsonArray("items").size(), is(700));
+    assertThat("a total of 1100 items reported for 'holdings1': ", itemsResponse.getJson().getInteger( "totalRecords" ), is(1100));
   }
+
+  @Test
+  public void canRetrieveManyBoundWithsAndRegularItemsThroughItemsByHoldingsId() throws InterruptedException, TimeoutException, ExecutionException, MalformedURLException
+  {
+    IndividualResource instance1 = instancesStorageClient.create( InstanceSamples.smallAngryPlanet( UUID.randomUUID() ) );
+    IndividualResource holdings1a = holdingsStorageClient.create(new HoldingRequestBuilder()
+      .forInstance(instance1.getId()).permanentlyInMainLibrary().withCallNumber( "HOLDINGS 1A" ));
+
+    for (int j=400; j<800; j++) {
+      itemsClient.create(new ItemRequestBuilder()
+        .forHolding( holdings1a.getId() )
+        .withBarcode( "ITEM1 " + j ));
+    }
+
+    List<JsonObject> items =itemsStorageClient.getMany("", 1000);
+    assertThat("There are 400 items in storage ", items.size(), is(400));
+
+    for (int i=0; i<400; i++) {
+      IndividualResource item = itemsClient.create(new ItemRequestBuilder()
+        .forHolding( holdings1a.getId() ).withBarcode( "ITEM1 " + i ));
+      boundWithPartsStorageClient.create(
+        makeObjectBoundWithPart( item.getJson().getString("id"), holdings1a.getJson().getString( "id" ) ));
+    }
+
+    List<JsonObject> items2 =itemsStorageClient.getMany("", 1000);
+    assertThat("There are 800 items in storage ", items2.size(), is(800));
+
+    Response itemsByHoldingsIdResponse = okapiClient.get(ApiTestSuite.apiRoot()+
+        "/inventory/items-by-holdings-id?query=holdingsRecordId=="
+        +holdings1a.getJson().getString( "id" ))
+      .toCompletableFuture().get(5, SECONDS);
+
+    assertThat("Can retrieve many items by holdings record id", itemsByHoldingsIdResponse.getStatusCode(), is(200));
+    assertThat("default limit of 200 is applied", itemsByHoldingsIdResponse.getJson().getJsonArray("items").size(), is(200));
+    assertThat("total records is 800", itemsByHoldingsIdResponse.getJson().getInteger("totalRecords"), is(800));
+
+    Response itemsByHoldingsIdResponseWithLimit = okapiClient.get(ApiTestSuite.apiRoot()+
+        "/inventory/items-by-holdings-id?query=holdingsRecordId=="
+        +holdings1a.getJson().getString( "id" ) + "&limit=600")
+      .toCompletableFuture().get(5, SECONDS);
+
+    assertThat("Can retrieve many items by holdings record id with limit", itemsByHoldingsIdResponseWithLimit.getStatusCode(), is(200));
+    assertThat("requested limit of 600 is applied", itemsByHoldingsIdResponseWithLimit.getJson().getJsonArray("items").size(), is(600));
+    assertThat("total records is 800 with limit applied", itemsByHoldingsIdResponseWithLimit.getJson().getInteger("totalRecords"), is(800));
+
+    Response itemsByHoldingsIdResponseOnlyBoundWiths = okapiClient.get(ApiTestSuite.apiRoot()+
+        "/inventory/items-by-holdings-id?query=holdingsRecordId=="
+        +holdings1a.getJson().getString( "id" ) + "&limit=600&relations=onlyBoundWiths")
+      .toCompletableFuture().get(5, SECONDS);
+
+    assertThat("Can retrieve many items by holdings record id with relations=onlyBoundWiths", itemsByHoldingsIdResponseOnlyBoundWiths.getStatusCode(), is(200));
+    assertThat("response has 400 items with 'onlyBoundWiths'", itemsByHoldingsIdResponseOnlyBoundWiths.getJson().getJsonArray("items").size(), is(400));
+    assertThat("total records is 400 with 'onlyBoundWiths'", itemsByHoldingsIdResponseOnlyBoundWiths.getJson().getInteger("totalRecords"), is(400));
+
+  }
+
 
   @Test
   public void canFetchBoundWithItemWithManyParts() throws InterruptedException, TimeoutException, ExecutionException
