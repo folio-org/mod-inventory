@@ -436,9 +436,12 @@ public class AdditionalFieldsUtilTest {
 
     var parsedHrId = AdditionalFieldsUtil.getValue(record, TAG_001, ' ');
     var parsedId = AdditionalFieldsUtil.getValue(record, TAG_999, 'i');
+    var missingField = AdditionalFieldsUtil.getValue(record, TAG_005, ' ');
 
     assertTrue(parsedHrId.isPresent());
     assertTrue(parsedId.isPresent());
+    assertTrue(missingField.isEmpty());
+
     assertEquals(hrId, parsedHrId.get());
     assertEquals(id, parsedId.get());
   }
