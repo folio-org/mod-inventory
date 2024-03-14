@@ -412,6 +412,7 @@ public class AdditionalFieldsUtilTest {
 
   @Test
   public void shouldReturnFields() {
+    // given
     var id = UUID.randomUUID().toString();
     var hrId = "in001";
     var parsedContent = """
@@ -428,16 +429,14 @@ public class AdditionalFieldsUtilTest {
           ]
       }
       """.formatted(hrId, id);
-    Record record = new Record().withId(UUID.randomUUID().toString())
-      .withParsedRecord(new ParsedRecord().withContent(parsedContent))
-      .withGeneration(0)
-      .withState(Record.State.ACTUAL)
-      .withExternalIdsHolder(new ExternalIdsHolder().withInstanceId("001").withInstanceHrid("in001"));
+    var record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedContent));
 
+    // when
     var parsedHrId = AdditionalFieldsUtil.getValue(record, TAG_001, ' ');
     var parsedId = AdditionalFieldsUtil.getValue(record, TAG_999, 'i');
     var missingField = AdditionalFieldsUtil.getValue(record, TAG_005, ' ');
 
+    // then
     assertTrue(parsedHrId.isPresent());
     assertTrue(parsedId.isPresent());
     assertTrue(missingField.isEmpty());

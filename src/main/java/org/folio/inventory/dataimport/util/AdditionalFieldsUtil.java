@@ -292,16 +292,11 @@ public final class AdditionalFieldsUtil {
   }
 
   public static Optional<String> getValue(Record srcRecord, String tag, char subfield) {
-    try {
       return Optional.ofNullable(computeMarcRecord(srcRecord))
         .stream()
         .flatMap(marcRecord -> marcRecord.getVariableFields(tag).stream())
         .flatMap(field -> getFieldValue(field, subfield).stream())
         .findFirst();
-    } catch (Exception e) {
-      LOGGER.warn("getValue:: Failed to read a field {} from record {}", tag, srcRecord.getId(), e);
-    }
-    return Optional.empty();
   }
 
   private static Optional<String> getFieldValue(VariableField field, char subfield) {
