@@ -94,7 +94,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       Record targetRecord = Json.decodeValue(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()), Record.class);
 
-      if (AdditionalFieldsUtil.getValue(targetRecord, TAG_999, SUBFIELD_I).isPresent()) {
+      if (!Boolean.parseBoolean(payloadContext.get("acceptInstanceId")) && AdditionalFieldsUtil.getValue(targetRecord, TAG_999, SUBFIELD_I).isPresent()) {
         LOGGER.error(INSTANCE_CREATION_999_ERROR_MESSAGE);
         return CompletableFuture.failedFuture(new EventProcessingException(INSTANCE_CREATION_999_ERROR_MESSAGE));
       }
