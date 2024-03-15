@@ -96,7 +96,6 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
       if (AdditionalFieldsUtil.getValue(targetRecord, TAG_999, SUBFIELD_I).isPresent()) {
         LOGGER.error(INSTANCE_CREATION_999_ERROR_MESSAGE);
-        future.completeExceptionally(new EventProcessingException(INSTANCE_CREATION_999_ERROR_MESSAGE));
         return CompletableFuture.failedFuture(new EventProcessingException(INSTANCE_CREATION_999_ERROR_MESSAGE));
       }
 
