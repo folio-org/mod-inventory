@@ -84,7 +84,7 @@ public class CommonMatchEventHandler implements EventHandler {
 
       if (optionalEventHandler.isPresent()) {
         LOG.debug("invokeNextHandlerIfNeeded:: Invoking '{}' event handler, incomingRecordId: '{}', jobExecutionId: '{}'",
-          optionalEventHandler.get().getClass().getSimpleName(), extractIncomingRecordId(eventPayload), eventPayload.getJobExecutionId()); //NOSONAR
+          () -> optionalEventHandler.get().getClass().getSimpleName(), () -> extractIncomingRecordId(eventPayload), eventPayload::getJobExecutionId);
         return optionalEventHandler.get().handle(eventPayload)
           .thenCompose(resultPayload -> {
             resultPayload.getContext().remove(INSTANCES_IDS_KEY);
