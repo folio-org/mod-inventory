@@ -73,7 +73,7 @@ public class CommonMatchEventHandler implements EventHandler {
   }
 
   private CompletableFuture<DataImportEventPayload> invokeNextHandlerIfNeeded(DataImportEventPayload eventPayload) {
-    if (!isMultipleMatchResult(eventPayload)) {
+    if (!containsMultipleMatchResult(eventPayload)) {
       return CompletableFuture.completedFuture(eventPayload);
     }
 
@@ -84,7 +84,7 @@ public class CommonMatchEventHandler implements EventHandler {
       Optional<EventHandler> optionalEventHandler = findEligibleHandler(eventPayload);
       if (optionalEventHandler.isPresent()) {
         LOG.debug("invokeNextHandlerIfNeeded:: Invoking '{}' event handler, incomingRecordId: '{}', jobExecutionId: '{}'",
-          optionalEventHandler.get().getClass().getSimpleName(), extractIncomingRecordId(eventPayload), eventPayload.getJobExecutionId());
+          optionalEventHandler.get().getClass().getSimpleName(), extractIncomingRecordId(eventPayload), eventPayload.getJobExecutionId()); //NOSONAR
         return optionalEventHandler.get().handle(eventPayload)
           .thenCompose(this::invokeNextHandlerIfNeeded);
       }
@@ -106,7 +106,7 @@ public class CommonMatchEventHandler implements EventHandler {
       .findFirst();
   }
 
-  private boolean isMultipleMatchResult(DataImportEventPayload eventPayload) {
+  private boolean containsMultipleMatchResult(DataImportEventPayload eventPayload) {
     return !eventPayload.getEventType().endsWith(NOT_MATCHED_RESULT_EVENT_SUFFIX)
       && eventPayload.getContext().containsKey(INSTANCES_IDS_KEY);
   }

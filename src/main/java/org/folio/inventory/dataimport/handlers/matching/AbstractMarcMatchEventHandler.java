@@ -106,7 +106,8 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
 
       Value<?> value = MarcValueReaderUtil.readValueFromRecord(recordAsString, matchDetail.getIncomingMatchExpression());
       if (value.getType() == MISSING) {
-        LOG.info("handle:: Could not find records by matching criteria because incoming record does not contain specified field");
+        LOG.info("handle:: Could not find records by matching criteria because incoming record does not contain specified field, jobExecutionId: '{}'",
+          payload.getJobExecutionId());
         return CompletableFuture.completedFuture(payload);
       }
 
