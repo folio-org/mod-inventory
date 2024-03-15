@@ -253,15 +253,16 @@ public class CommonMatchEventHandlerTest {
     when(matchMarcBibHandler.handle(eventPayload))
       .thenReturn(CompletableFuture.completedFuture(marcBibMatchingResultPayload));
     when(matchInstanceHandler.handle(marcBibMatchingResultPayload))
-      .thenReturn(CompletableFuture.completedFuture(eventPayload));
+      .thenReturn(CompletableFuture.completedFuture(marcBibMatchingResultPayload));
     when(matchMarcBibHandler.isEligible(argThat(payload -> payload.getCurrentNode().equals(marcBibMatchProfileWrapper))))
       .thenReturn(true);
     when(matchInstanceHandler.isEligible(argThat(payload -> payload.getCurrentNode().equals(instanceMatchProfileWrapper))))
       .thenReturn(true);
 
-    eventHandler.handle(eventPayload).get(5, TimeUnit.SECONDS);
+    DataImportEventPayload payload = eventHandler.handle(eventPayload).get(5, TimeUnit.SECONDS);
 
     verify(matchInstanceHandler).handle(marcBibMatchingResultPayload);
+    assertFalse(payload.getContext().containsKey(INSTANCES_IDS_KEY));
   }
 
   @Test
@@ -313,15 +314,16 @@ public class CommonMatchEventHandlerTest {
     when(matchMarcBibHandler.handle(eventPayload))
       .thenReturn(CompletableFuture.completedFuture(marcBibMatchingResultPayload));
     when(matchHoldingsHandler.handle(marcBibMatchingResultPayload))
-      .thenReturn(CompletableFuture.completedFuture(eventPayload));
+      .thenReturn(CompletableFuture.completedFuture(marcBibMatchingResultPayload));
     when(matchMarcBibHandler.isEligible(argThat(payload -> payload.getCurrentNode().equals(marcBibMatchProfileWrapper))))
       .thenReturn(true);
     when(matchHoldingsHandler.isEligible(argThat(payload -> payload.getCurrentNode().equals(holdingsMatchProfileWrapper))))
       .thenReturn(true);
 
-    eventHandler.handle(eventPayload).get(5, TimeUnit.SECONDS);
+    DataImportEventPayload payload = eventHandler.handle(eventPayload).get(5, TimeUnit.SECONDS);
 
     verify(matchHoldingsHandler).handle(marcBibMatchingResultPayload);
+    assertFalse(payload.getContext().containsKey(INSTANCES_IDS_KEY));
   }
 
   @Test

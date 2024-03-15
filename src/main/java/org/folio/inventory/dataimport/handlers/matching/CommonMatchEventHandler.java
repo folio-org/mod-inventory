@@ -73,20 +73,23 @@ public class CommonMatchEventHandler implements EventHandler {
   }
 
   private CompletableFuture<DataImportEventPayload> invokeNextHandlerIfNeeded(DataImportEventPayload eventPayload) {
-    if (!containsMultipleMatchResult(eventPayload)) {
+    if (!containsMarcMultipleMatchResult(eventPayload)) {
       return CompletableFuture.completedFuture(eventPayload);
     }
 
     Optional<ProfileSnapshotWrapper> nextProfileOptional = extractNextProfile(eventPayload);
-
     if (nextProfileOptional.isPresent() && nextProfileOptional.get().getContentType() == MATCH_PROFILE) {
       eventPayload.setCurrentNode(nextProfileOptional.get());
       Optional<EventHandler> optionalEventHandler = findEligibleHandler(eventPayload);
+
       if (optionalEventHandler.isPresent()) {
         LOG.debug("invokeNextHandlerIfNeeded:: Invoking '{}' event handler, incomingRecordId: '{}', jobExecutionId: '{}'",
           optionalEventHandler.get().getClass().getSimpleName(), extractIncomingRecordId(eventPayload), eventPayload.getJobExecutionId()); //NOSONAR
         return optionalEventHandler.get().handle(eventPayload)
-          .thenCompose(this::invokeNextHandlerIfNeeded);
+          .thenCompose(resultPayload -> {
+            resultPayload.getContext().remove(INSTANCES_IDS_KEY);
+            return invokeNextHandlerIfNeeded(resultPayload);
+          });
       }
 
       String msg = format("No suitable handler found to handle multiple match result, eventType: '%s'", eventPayload.getEventType());
@@ -106,7 +109,7 @@ public class CommonMatchEventHandler implements EventHandler {
       .findFirst();
   }
 
-  private boolean containsMultipleMatchResult(DataImportEventPayload eventPayload) {
+  private boolean containsMarcMultipleMatchResult(DataImportEventPayload eventPayload) {
     return !eventPayload.getEventType().endsWith(NOT_MATCHED_RESULT_EVENT_SUFFIX)
       && eventPayload.getContext().containsKey(INSTANCES_IDS_KEY);
   }
