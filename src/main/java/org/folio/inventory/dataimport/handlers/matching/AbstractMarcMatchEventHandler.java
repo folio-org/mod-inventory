@@ -62,7 +62,6 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
   private static final String USER_ID_HEADER = "userId";
   private static final int EXPECTED_MATCH_EXPRESSION_FIELDS_NUMBER = 4;
   private static final String DEFAULT_RECORDS_IDENTIFIERS_LIMIT = "5000";
-  private static final String INSTANCES_IDS_KEY = "INSTANCES_IDS";
 
   protected final ConsortiumService consortiumService;
   private final DataImportEventTypes matchedEventType;
@@ -135,6 +134,8 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
   protected abstract RecordMatchingDto.RecordType getMatchedRecordType();
 
   protected abstract boolean isMatchingOnCentralTenantRequired();
+
+  protected abstract String getMultiMatchResultKey();
 
   @SuppressWarnings("squid:S1172")
   protected Future<Void> ensureRelatedEntities(List<Record> records, DataImportEventPayload eventPayload) {
@@ -211,7 +212,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
     return getAllMatchedRecordsIdentifiers(recordMatchingDto, payload, sourceStorageRecordsClient)
       .compose(recordsIdentifiersCollection -> {
         if (recordsIdentifiersCollection.getIdentifiers().size() > 1) {
-          populatePayloadWithInstancesIdentifiers(recordsIdentifiersCollection, payload);
+          populatePayloadWithExternalIdentifiers(recordsIdentifiersCollection, payload);
           return Future.succeededFuture(Optional.empty());
         } else if (recordsIdentifiersCollection.getIdentifiers().size() == 1) {
           return getRecordById(recordsIdentifiersCollection.getIdentifiers().get(0), sourceStorageRecordsClient, payload);
@@ -280,14 +281,14 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
       });
   }
 
-  private void populatePayloadWithInstancesIdentifiers(RecordsIdentifiersCollection recordsIdentifiersCollection,
-                                                       DataImportEventPayload payload) {
-    List<String> instancesIds = recordsIdentifiersCollection.getIdentifiers()
+  private void populatePayloadWithExternalIdentifiers(RecordsIdentifiersCollection recordsIdentifiersCollection,
+                                                      DataImportEventPayload payload) {
+    List<String> externalEntityIds = recordsIdentifiersCollection.getIdentifiers()
       .stream()
       .map(RecordIdentifiersDto::getExternalId)
       .toList();
 
-    payload.getContext().put(INSTANCES_IDS_KEY, Json.encode(instancesIds));
+    payload.getContext().put(getMultiMatchResultKey(), Json.encode(externalEntityIds));
   }
 
   private Future<List<Record>> matchCentralTenantIfNeededAndCombineWithLocalMatchedRecords(RecordMatchingDto recordMatchingDto, DataImportEventPayload payload,
@@ -345,7 +346,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
         payload.getJobExecutionId(), payload.getTenant());
       return Future.failedFuture(new MatchingException(FOUND_MULTIPLE_RECORDS_ERROR_MESSAGE));
     }
-    if (payload.getContext().containsKey(INSTANCES_IDS_KEY)) {
+    if (payload.getContext().containsKey(getMultiMatchResultKey())) {
       LOG.info("processSucceededResult:: Multiple records were found which match criteria, jobExecutionId: '{}', tenantId: '{}'",
         payload.getJobExecutionId(), payload.getTenant());
       payload.setEventType(matchedEventType.toString());
