@@ -281,6 +281,16 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
       });
   }
 
+  /**
+   * Populates payload with identifiers of external entities associated to the records
+   * that meet criteria from match profile.
+   * For example for MARC-BIB records it would be identifiers of the associated instances.
+   * These external identifiers represent multiple match result returned by this handler
+   * and can be used and deleted during further matching processing by other match handlers.
+   *
+   * @param recordsIdentifiersCollection identifiers collection to extract external identifiers
+   * @param payload                      event payload to populate
+   */
   private void populatePayloadWithExternalIdentifiers(RecordsIdentifiersCollection recordsIdentifiersCollection,
                                                       DataImportEventPayload payload) {
     List<String> externalEntityIds = recordsIdentifiersCollection.getIdentifiers()
