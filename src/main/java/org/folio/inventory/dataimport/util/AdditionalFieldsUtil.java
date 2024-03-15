@@ -62,6 +62,7 @@ public final class AdditionalFieldsUtil {
   private static final char TAG_035_IND = ' ';
   private static final String ANY_STRING = "*";
   private static final char INDICATOR = 'f';
+  public static final char SUBFIELD_I = 'i';
   private static final String HR_ID_FIELD = "hrid";
   private static final CacheLoader<String, org.marc4j.marc.Record> parsedRecordContentCacheLoader;
   private static final LoadingCache<String, org.marc4j.marc.Record> parsedRecordContentCache;
@@ -288,6 +289,24 @@ public final class AdditionalFieldsUtil {
       return null;
     }
     return null;
+  }
+
+  public static Optional<String> getValue(Record srcRecord, String tag, char subfield) {
+      return Optional.ofNullable(computeMarcRecord(srcRecord))
+        .stream()
+        .flatMap(marcRecord -> marcRecord.getVariableFields(tag).stream())
+        .flatMap(field -> getFieldValue(field, subfield).stream())
+        .findFirst();
+  }
+
+  private static Optional<String> getFieldValue(VariableField field, char subfield) {
+    if (field instanceof DataField dataField) {
+      return dataField.getSubfields(subfield).stream().findFirst().map(Subfield::getData);
+    } else if (field instanceof ControlField controlField) {
+      return Optional.ofNullable(controlField.getData());
+    } else {
+      return Optional.empty();
+    }
   }
 
   private static MarcReader buildMarcReader(Record srcRecord) {

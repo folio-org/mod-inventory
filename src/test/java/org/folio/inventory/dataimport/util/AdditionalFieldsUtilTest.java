@@ -27,18 +27,9 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.IntStream;
 
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addDataFieldToMarcRecord;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addControlledFieldToMarcRecord;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addFieldToMarcRecord;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.dateTime005Formatter;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.isFieldExist;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.getCacheStats;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.getValueFromControlledField;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_005;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.removeField;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.*;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.*;
 
 @RunWith(BlockJUnit4ClassRunner.class)
 public class AdditionalFieldsUtilTest {
@@ -417,6 +408,41 @@ public class AdditionalFieldsUtilTest {
     String actualDate = AdditionalFieldsUtil.getValueFromControlledField(record, TAG_005);
     assertNotNull(actualDate);
     assertEquals(expectedDate.substring(0, 10), actualDate.substring(0, 10));
+  }
+
+  @Test
+  public void shouldReturnFields() {
+    // given
+    var id = UUID.randomUUID().toString();
+    var hrId = "in001";
+    var parsedContent = """
+      {
+          "fields": [
+              {"001": "%s"},
+              {"999": {
+                  "ind1": "f",
+                  "ind2": "f",
+                  "subfields": [
+                      {"i": "%s"}
+                  ]
+              }}
+          ]
+      }
+      """.formatted(hrId, id);
+    var record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedContent));
+
+    // when
+    var parsedHrId = AdditionalFieldsUtil.getValue(record, TAG_001, ' ');
+    var parsedId = AdditionalFieldsUtil.getValue(record, TAG_999, 'i');
+    var missingField = AdditionalFieldsUtil.getValue(record, TAG_005, ' ');
+
+    // then
+    assertTrue(parsedHrId.isPresent());
+    assertTrue(parsedId.isPresent());
+    assertTrue(missingField.isEmpty());
+
+    assertEquals(hrId, parsedHrId.get());
+    assertEquals(id, parsedId.get());
   }
 
   @Test
