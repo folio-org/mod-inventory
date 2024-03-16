@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
@@ -26,11 +25,13 @@ import org.folio.rest.jaxrs.model.EntityType;
 
 public class InstanceLoader extends AbstractLoader<Instance> {
 
+  private static final String INSTANCES_IDS_KEY = "INSTANCES_IDS";
+  private static final String ID_FIELD = "id";
+
   private Storage storage;
   private AbstractPreloader preloader;
 
-  public InstanceLoader(Storage storage, Vertx vertx, AbstractPreloader preloader) {
-    super(vertx);
+  public InstanceLoader(Storage storage, AbstractPreloader preloader) {
     this.storage = storage;
     this.preloader = preloader;
   }
@@ -55,14 +56,24 @@ public class InstanceLoader extends AbstractLoader<Instance> {
   protected String addCqlSubMatchCondition(DataImportEventPayload eventPayload) {
     String cqlSubMatch = EMPTY;
     if (eventPayload.getContext() != null) {
-      if (isNotEmpty(eventPayload.getContext().get(AbstractLoader.MULTI_MATCH_IDS))) {
+      if (isNotEmpty(eventPayload.getContext().get(AbstractLoader.MULTI_MATCH_IDS))
+        || isNotEmpty(eventPayload.getContext().get(INSTANCES_IDS_KEY))) {
         cqlSubMatch = getConditionByMultiMatchResult(eventPayload);
       } else if (isNotEmpty(eventPayload.getContext().get(INSTANCE.value()))) {
         JsonObject instanceAsJson = new JsonObject(eventPayload.getContext().get(INSTANCE.value()));
-        cqlSubMatch = format(" AND id == \"%s\"", instanceAsJson.getString("id"));
+        cqlSubMatch = format(" AND id == \"%s\"", instanceAsJson.getString(ID_FIELD));
       }
     }
     return cqlSubMatch;
+  }
+
+  @Override
+  protected String getConditionByMultiMatchResult(DataImportEventPayload eventPayload) {
+    String multipleValuesKey = eventPayload.getContext().containsKey(AbstractLoader.MULTI_MATCH_IDS)
+      ? AbstractLoader.MULTI_MATCH_IDS
+      : INSTANCES_IDS_KEY;
+
+    return getConditionByMultipleValues(ID_FIELD, eventPayload, multipleValuesKey);
   }
 
   @Override

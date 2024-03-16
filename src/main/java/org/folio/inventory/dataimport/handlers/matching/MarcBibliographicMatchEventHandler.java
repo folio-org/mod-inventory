@@ -33,6 +33,7 @@ import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlin
 public class MarcBibliographicMatchEventHandler extends AbstractMarcMatchEventHandler {
 
   private static final String HOLDINGS_LOADING_ERROR_MSG = "Failed to load holdings by instanceId: '%s' for matched MARC-BIB, jobExecutionId: '%s'";
+  private static final String INSTANCES_IDS_KEY = "INSTANCES_IDS";
   private final Storage storage;
 
   public MarcBibliographicMatchEventHandler(ConsortiumService consortiumService, HttpClient httpClient, Storage storage) {
@@ -53,6 +54,11 @@ public class MarcBibliographicMatchEventHandler extends AbstractMarcMatchEventHa
   @Override
   protected boolean isMatchingOnCentralTenantRequired() {
     return true;
+  }
+
+  @Override
+  protected String getMultiMatchResultKey() {
+    return INSTANCES_IDS_KEY;
   }
 
   @Override
