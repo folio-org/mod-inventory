@@ -15,6 +15,7 @@
 * Upgrade vertx to 4.5.4 [MODDICORE-398](https://folio-org.atlassian.net/browse/MODDICORE-398)
 * Add 999 validation for instance creation [MODDATAIMP-1001](https://folio-org.atlassian.net/browse/MODDATAIMP-1001)
 * Adjust Match event handlers to take into account multiple search results from previous match [MODINV-936](https://issues.folio.org/browse/MODINV-936)
+* SPIKE: Remove duplicated action DI_INVENTORY_INSTANCE_CREATED from Kafka event [MODINV-782](https://folio-org.atlassian.net/browse/MODINV-782)
 
 ## 20.1.0 2023-10-13
 * Update status when user attempts to update shared auth record from member tenant ([MODDATAIMP-926](https://issues.folio.org/browse/MODDATAIMP-926))
