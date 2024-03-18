@@ -141,9 +141,14 @@ public class UpdateHoldingEventHandler implements EventHandler {
             updatedHoldingsRecordFutures.add(updatePromise.future());
             holdingsRecordCollection.update(holding,
               success -> {
-                LOGGER.info(format("handle:: Successfully updated holdings with id: %s", holding.getId()));
-                updatedHoldingsRecord.add(holding);
-                constructDataImportEventPayload(updatePromise, dataImportEventPayload, list, context, errors);
+                try {
+                  LOGGER.info(format("handle:: Successfully updated holdings with id: %s", holding.getId()));
+                  updatedHoldingsRecord.add(holding);
+                  constructDataImportEventPayload(updatePromise, dataImportEventPayload, list, context, errors);
+                } catch (Exception e) {
+                  LOGGER.warn("handle:: Error updating inventory Holdings by jobExecutionId: '{}'", jobExecutionId, e);
+                  future.completeExceptionally(e);
+                }
               },
               failure -> {
                 if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
