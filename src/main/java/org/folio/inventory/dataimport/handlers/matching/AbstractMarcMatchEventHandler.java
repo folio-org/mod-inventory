@@ -15,6 +15,7 @@ import org.folio.MatchProfile;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
+import org.folio.kafka.SimpleConfigurationReader;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.exceptions.MatchingException;
@@ -52,6 +53,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
   protected static final Logger LOG = LogManager.getLogger();
 
   protected static final String CENTRAL_TENANT_ID_KEY = "CENTRAL_TENANT_ID";
+  protected static final String RECORDS_IDENTIFIERS_FETCH_LIMIT_PARAM = "inventory.di.records.identifiers.fetch.limit";
   private static final String PAYLOAD_HAS_NO_DATA_MESSAGE = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
   private static final String FOUND_MULTIPLE_RECORDS_ERROR_MESSAGE = "Found multiple records matching specified conditions";
   private static final String RECORDS_NOT_FOUND_MESSAGE = "Could not find records matching specified conditions";
@@ -59,11 +61,13 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
   private static final String MATCH_RESULT_KEY_PREFIX = "MATCHED_%s";
   private static final String USER_ID_HEADER = "userId";
   private static final int EXPECTED_MATCH_EXPRESSION_FIELDS_NUMBER = 4;
+  private static final String DEFAULT_RECORDS_IDENTIFIERS_LIMIT = "5000";
 
   protected final ConsortiumService consortiumService;
   private final DataImportEventTypes matchedEventType;
   private final DataImportEventTypes notMatchedEventType;
   private final HttpClient httpClient;
+  private final int recordsIdentifiersLimit;
 
   protected AbstractMarcMatchEventHandler(ConsortiumService consortiumService,
                                           DataImportEventTypes matchedEventType,
@@ -73,6 +77,9 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
     this.matchedEventType = matchedEventType;
     this.notMatchedEventType = notMatchedEventType;
     this.httpClient = httpClient;
+
+    this.recordsIdentifiersLimit = Integer.parseInt(SimpleConfigurationReader.getValue(
+      RECORDS_IDENTIFIERS_FETCH_LIMIT_PARAM, DEFAULT_RECORDS_IDENTIFIERS_LIMIT));
   }
 
   @Override
@@ -98,7 +105,8 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
 
       Value<?> value = MarcValueReaderUtil.readValueFromRecord(recordAsString, matchDetail.getIncomingMatchExpression());
       if (value.getType() == MISSING) {
-        LOG.info("handle:: Could not find records by matching criteria because incoming record does not contain specified field");
+        LOG.info("handle:: Could not find records by matching criteria because incoming record does not contain specified field, jobExecutionId: '{}'",
+          payload.getJobExecutionId());
         return CompletableFuture.completedFuture(payload);
       }
 
@@ -126,6 +134,8 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
   protected abstract RecordMatchingDto.RecordType getMatchedRecordType();
 
   protected abstract boolean isMatchingOnCentralTenantRequired();
+
+  protected abstract String getMultiMatchResultKey();
 
   @SuppressWarnings("squid:S1172")
   protected Future<Void> ensureRelatedEntities(List<Record> records, DataImportEventPayload eventPayload) {
@@ -191,7 +201,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
         .withIndicator1(ind1)
         .withIndicator2(ind2)
         .withSubfield(subfield)))
-      .withReturnTotalRecordsCount(false);
+      .withReturnTotalRecordsCount(true);
   }
 
   private Future<Optional<Record>> retrieveMarcRecords(RecordMatchingDto recordMatchingDto, String tenantId,
@@ -199,10 +209,11 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
     SourceStorageRecordsClient sourceStorageRecordsClient =
       new SourceStorageRecordsClient(payload.getOkapiUrl(), tenantId, payload.getToken(), httpClient);
 
-    return getMatchedRecordsIdentifiers(recordMatchingDto, payload, sourceStorageRecordsClient)
+    return getAllMatchedRecordsIdentifiers(recordMatchingDto, payload, sourceStorageRecordsClient)
       .compose(recordsIdentifiersCollection -> {
         if (recordsIdentifiersCollection.getIdentifiers().size() > 1) {
-          return Future.failedFuture(FOUND_MULTIPLE_RECORDS_ERROR_MESSAGE);
+          populatePayloadWithExternalIdentifiers(recordsIdentifiersCollection, payload);
+          return Future.succeededFuture(Optional.empty());
         } else if (recordsIdentifiersCollection.getIdentifiers().size() == 1) {
           return getRecordById(recordsIdentifiersCollection.getIdentifiers().get(0), sourceStorageRecordsClient, payload);
         }
@@ -210,6 +221,36 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
           RECORDS_NOT_FOUND_MESSAGE, payload.getJobExecutionId(), tenantId);
         return Future.succeededFuture(Optional.empty());
       });
+  }
+
+  private Future<RecordsIdentifiersCollection> getAllMatchedRecordsIdentifiers(RecordMatchingDto recordMatchingDto,
+                                                                               DataImportEventPayload payload,
+                                                                               SourceStorageRecordsClient sourceStorageRecordsClient) {
+    return getMatchedRecordsIdentifiers(recordMatchingDto, payload, sourceStorageRecordsClient)
+      .compose(recordsIdentifiersCollection -> {
+        if (recordsIdentifiersCollection.getIdentifiers().size() < recordsIdentifiersCollection.getTotalRecords()) {
+          return getRemainingRecordsIdentifiers(recordMatchingDto, payload, sourceStorageRecordsClient, recordsIdentifiersCollection);
+        }
+        return Future.succeededFuture(recordsIdentifiersCollection);
+      });
+  }
+
+  private Future<RecordsIdentifiersCollection> getRemainingRecordsIdentifiers(RecordMatchingDto recordMatchingDto,
+                                                                              DataImportEventPayload payload,
+                                                                              SourceStorageRecordsClient sourceStorageRecordsClient,
+                                                                              RecordsIdentifiersCollection recordsIdentifiersCollection) {
+    RecordMatchingDto matchingRequest = JsonObject.mapFrom(recordMatchingDto).mapTo(RecordMatchingDto.class);
+    Future<RecordsIdentifiersCollection> future = Future.succeededFuture();
+
+    for (int offset = recordsIdentifiersLimit; offset < recordsIdentifiersCollection.getTotalRecords(); offset += recordsIdentifiersLimit) {
+      matchingRequest.setOffset(offset);
+      future = future.compose(v -> getMatchedRecordsIdentifiers(matchingRequest, payload, sourceStorageRecordsClient)
+        .map(identifiersCollection -> {
+          recordsIdentifiersCollection.getIdentifiers().addAll(identifiersCollection.getIdentifiers());
+          return recordsIdentifiersCollection;
+        }));
+    }
+    return future;
   }
 
   private Future<RecordsIdentifiersCollection> getMatchedRecordsIdentifiers(RecordMatchingDto recordMatchingDto,
@@ -238,6 +279,26 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
           recordId, response.statusCode(), response.bodyAsString(), payload.getJobExecutionId(), payload.getTenant());
         return Future.failedFuture(msg);
       });
+  }
+
+  /**
+   * Populates payload with identifiers of external entities associated to the records
+   * that meet criteria from match profile.
+   * For example for MARC-BIB records it would be identifiers of the associated instances.
+   * These external identifiers represent multiple match result returned by this handler
+   * and can be used and deleted during further matching processing by other match handlers.
+   *
+   * @param recordsIdentifiersCollection identifiers collection to extract external identifiers
+   * @param payload                      event payload to populate
+   */
+  private void populatePayloadWithExternalIdentifiers(RecordsIdentifiersCollection recordsIdentifiersCollection,
+                                                      DataImportEventPayload payload) {
+    List<String> externalEntityIds = recordsIdentifiersCollection.getIdentifiers()
+      .stream()
+      .map(RecordIdentifiersDto::getExternalId)
+      .toList();
+
+    payload.getContext().put(getMultiMatchResultKey(), Json.encode(externalEntityIds));
   }
 
   private Future<List<Record>> matchCentralTenantIfNeededAndCombineWithLocalMatchedRecords(RecordMatchingDto recordMatchingDto, DataImportEventPayload payload,
@@ -295,8 +356,14 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
         payload.getJobExecutionId(), payload.getTenant());
       return Future.failedFuture(new MatchingException(FOUND_MULTIPLE_RECORDS_ERROR_MESSAGE));
     }
-      LOG.info("processSucceededResult:: {}, jobExecutionId: '{}', tenantId: '{}'",
-        RECORDS_NOT_FOUND_MESSAGE, payload.getJobExecutionId(), payload.getTenant());
+    if (payload.getContext().containsKey(getMultiMatchResultKey())) {
+      LOG.info("processSucceededResult:: Multiple records were found which match criteria, jobExecutionId: '{}', tenantId: '{}'",
+        payload.getJobExecutionId(), payload.getTenant());
+      payload.setEventType(matchedEventType.toString());
+      return Future.succeededFuture(payload);
+    }
+    LOG.info("processSucceededResult:: {}, jobExecutionId: '{}', tenantId: '{}'",
+      RECORDS_NOT_FOUND_MESSAGE, payload.getJobExecutionId(), payload.getTenant());
     return Future.succeededFuture(payload);
   }
 

@@ -37,7 +37,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -91,6 +90,7 @@ public class MatchHoldingEventHandlerUnitTest {
 
   private static final String MAPPING_PARAMS = "MAPPING_PARAMS";
   private static final String RELATIONS = "MATCHING_PARAMETERS_RELATIONS";
+  private static final String INSTANCES_IDS_KEY = "INSTANCES_IDS";
   private static final String MATCHING_RELATIONS = "{\"item.statisticalCodeIds[]\":\"statisticalCode\",\"instance.classifications[].classificationTypeId\":\"classificationTypes\",\"instance.electronicAccess[].relationshipId\":\"electronicAccessRelationships\",\"item.permanentLoanTypeId\":\"loantypes\",\"holdingsrecord.temporaryLocationId\":\"locations\",\"holdingsrecord.statisticalCodeIds[]\":\"statisticalCode\",\"instance.statusId\":\"instanceStatuses\",\"instance.natureOfContentTermIds\":\"natureOfContentTerms\",\"item.notes[].itemNoteTypeId\":\"itemNoteTypes\",\"holdingsrecord.permanentLocationId\":\"locations\",\"instance.alternativeTitles[].alternativeTitleTypeId\":\"alternativeTitleTypes\",\"holdingsrecord.illPolicyId\":\"illPolicies\",\"item.electronicAccess[].relationshipId\":\"electronicAccessRelationships\",\"instance.identifiers[].identifierTypeId\":\"identifierTypes\",\"holdingsrecord.holdingsTypeId\":\"holdingsTypes\",\"item.permanentLocationId\":\"locations\",\"instance.modeOfIssuanceId\":\"issuanceModes\",\"item.itemLevelCallNumberTypeId\":\"callNumberTypes\",\"instance.notes[].instanceNoteTypeId\":\"instanceNoteTypes\",\"instance.instanceFormatIds\":\"instanceFormats\",\"holdingsrecord.callNumberTypeId\":\"callNumberTypes\",\"holdingsrecord.electronicAccess[].relationshipId\":\"electronicAccessRelationships\",\"instance.instanceTypeId\":\"instanceTypes\",\"instance.statisticalCodeIds[]\":\"statisticalCode\",\"instancerelationship.instanceRelationshipTypeId\":\"instanceRelationshipTypes\",\"item.temporaryLoanTypeId\":\"loantypes\",\"item.temporaryLocationId\":\"locations\",\"item.materialTypeId\":\"materialTypes\",\"holdingsrecord.notes[].holdingsNoteTypeId\":\"holdingsNoteTypes\",\"instance.contributors[].contributorNameTypeId\":\"contributorNameTypes\",\"item.itemDamagedStatusId\":\"itemDamageStatuses\",\"instance.contributors[].contributorTypeId\":\"contributorTypes\"}";
   private static final String LOCATIONS_PARAMS = "{\"initialized\":true,\"locations\":[{\"id\":\"53cf956f-c1df-410b-8bea-27f712cca7c0\",\"name\":\"Annex\",\"code\":\"KU/CC/DI/A\",\"isActive\":true,\"institutionId\":\"40ee00ca-a518-4b49-be01-0638d0a4ac57\",\"campusId\":\"62cf76b7-cca5-4d33-9217-edf42ce1a848\",\"libraryId\":\"5d78803e-ca04-4b4a-aeae-2c63b924518b\",\"primaryServicePoint\":\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\",\"servicePointIds\":[\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\"],\"servicePoints\":[],\"metadata\":{\"createdDate\":1592219257690,\"updatedDate\":1592219257690}},{\"id\":\"b241764c-1466-4e1d-a028-1a3684a5da87\",\"name\":\"Popular Reading Collection\",\"code\":\"KU/CC/DI/P\",\"isActive\":true,\"institutionId\":\"40ee00ca-a518-4b49-be01-0638d0a4ac57\",\"campusId\":\"62cf76b7-cca5-4d33-9217-edf42ce1a848\",\"libraryId\":\"5d78803e-ca04-4b4a-aeae-2c63b924518b\",\"primaryServicePoint\":\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\",\"servicePointIds\":[\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\"],\"servicePoints\":[],\"metadata\":{\"createdDate\":1592219257711,\"updatedDate\":1592219257711}}]}";
 
@@ -105,7 +105,7 @@ public class MatchHoldingEventHandlerUnitTest {
   @Mock
   private AbstractPreloader preloader;
   @InjectMocks
-  private HoldingLoader holdingLoader = new HoldingLoader(storage, Vertx.vertx(), preloader);
+  private HoldingLoader holdingLoader = new HoldingLoader(storage, preloader);
 
   @Before
   public void setUp() {
@@ -443,6 +443,42 @@ public class MatchHoldingEventHandlerUnitTest {
         hasItems(matchedHoldings.get(0).getId(), matchedHoldings.get(1).getId()));
       async.complete();
     }));
+  }
+
+  @Test
+  public void shouldMatchWithSubConditionBasedOnMarcBibMultipleMatchResult(TestContext testContext)
+    throws UnsupportedEncodingException {
+    Async async = testContext.async();
+    List<String> marcBibMultiMatchResult = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
+    HoldingsRecord expectedHolding = createHolding();
+
+    doAnswer(invocation -> {
+      Consumer<Success<MultipleRecords<HoldingsRecord>>> successHandler = invocation.getArgument(2);
+      Success<MultipleRecords<HoldingsRecord>> result =
+        new Success<>(new MultipleRecords<>(singletonList(expectedHolding), 1));
+      successHandler.accept(result);
+      return null;
+    }).when(holdingCollection)
+      .findByCql(eq(format("hrid == \"%s\" AND instanceId == (%s OR %s)", HOLDING_HRID, marcBibMultiMatchResult.get(0), marcBibMultiMatchResult.get(1))),
+        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache, null);
+    HashMap<String, String> context = new HashMap<>();
+    context.put(INSTANCES_IDS_KEY, Json.encode(marcBibMultiMatchResult));
+    context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
+    context.put(RELATIONS, MATCHING_RELATIONS);
+    DataImportEventPayload eventPayload = createEventPayload().withContext(context);
+
+    eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) -> {
+      testContext.assertNull(throwable);
+      testContext.assertEquals(1, processedPayload.getEventsChain().size());
+      testContext.assertEquals(processedPayload.getEventsChain(), singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value()));
+      testContext.assertEquals(DI_INVENTORY_HOLDING_MATCHED.value(), processedPayload.getEventType());
+      testContext.assertNull(processedPayload.getContext().get(INSTANCES_IDS_KEY));
+      testContext.assertEquals(expectedHolding.getId(),
+        Json.decodeValue(new JsonArray(processedPayload.getContext().get(HOLDINGS.value())).getJsonObject(0).encode(), HoldingsRecord.class).getId());
+      async.complete();
+    });
   }
 
   private DataImportEventPayload createEventPayload() {

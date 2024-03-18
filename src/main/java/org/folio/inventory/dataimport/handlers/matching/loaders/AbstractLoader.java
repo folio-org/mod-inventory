@@ -1,6 +1,5 @@
 package org.folio.inventory.dataimport.handlers.matching.loaders;
 
-import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import org.apache.logging.log4j.LogManager;
@@ -34,12 +33,7 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
   public static final String MULTI_MATCH_IDS = "MULTI_MATCH_IDS";
   private static final String ERROR_LOAD_MSG = "Failed to load records cause: %s, status code: %s";
   private static final int MULTI_MATCH_LOAD_LIMIT = 90;
-
-  private final Vertx vertx;
-
-  protected AbstractLoader(Vertx vertx) {
-    this.vertx = vertx;
-  }
+  private static final String ID_FIELD = "id";
 
   @Override
   public CompletableFuture<LoadResult> loadEntity(LoadQuery loadQuery, DataImportEventPayload eventPayload) {
@@ -53,37 +47,35 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
     boolean canProcessMultiMatchResult = canProcessMultiMatchResult(eventPayload);
     PagingParameters pagingParameters = buildPagingParameters(canProcessMultiMatchResult);
 
-    vertx.runOnContext(v -> {
-      try {
-        String cql = loadQuery.getCql() + addCqlSubMatchCondition(eventPayload);
-        getSearchableCollection(context).findByCql(cql, pagingParameters,
-          success -> {
-            MultipleRecords<T> collection = success.getResult();
-            if (collection.totalRecords == 1) {
-              loadResult.setValue(mapEntityToJsonString(collection.records.get(0)));
-            } else if (collection.totalRecords > 1) {
-              if (canProcessMultiMatchResult) {
-                LOG.info("Found multiple records by CQL query: [{}]. Found records IDs: {}", cql, mapEntityListToIdsJsonString(collection.records));
-                loadResult.setEntityType(MULTI_MATCH_IDS);
-                loadResult.setValue(mapEntityListToIdsJsonString(collection.records));
-              } else {
-                String errorMessage = format("Found multiple records matching specified conditions. CQL query: [%s].%nFound records: %s", cql, Json.encodePrettily(collection.records));
-                LOG.error(errorMessage);
-                future.completeExceptionally(new MatchingException(errorMessage));
-                return;
-              }
+    try {
+      String cql = loadQuery.getCql() + addCqlSubMatchCondition(eventPayload);
+      getSearchableCollection(context).findByCql(cql, pagingParameters,
+        success -> {
+          MultipleRecords<T> collection = success.getResult();
+          if (collection.totalRecords == 1) {
+            loadResult.setValue(mapEntityToJsonString(collection.records.get(0)));
+          } else if (collection.totalRecords > 1) {
+            if (canProcessMultiMatchResult) {
+              LOG.info("Found multiple records by CQL query: [{}]. Found records IDs: {}", cql, mapEntityListToIdsJsonString(collection.records));
+              loadResult.setEntityType(MULTI_MATCH_IDS);
+              loadResult.setValue(mapEntityListToIdsJsonString(collection.records));
+            } else {
+              String errorMessage = format("Found multiple records matching specified conditions. CQL query: [%s].%nFound records: %s", cql, Json.encodePrettily(collection.records));
+              LOG.error(errorMessage);
+              future.completeExceptionally(new MatchingException(errorMessage));
+              return;
             }
-            future.complete(loadResult);
-          },
-          failure -> {
-            LOG.error(failure.getReason());
-            future.completeExceptionally(new MatchingException(format(ERROR_LOAD_MSG, failure.getReason(), failure.getStatusCode())));
-          });
-      } catch (Exception e) {
-        LOG.error("Failed to retrieve records", e);
-        future.completeExceptionally(e);
-      }
-    });
+          }
+          future.complete(loadResult);
+        },
+        failure -> {
+          LOG.error(failure.getReason());
+          future.completeExceptionally(new MatchingException(format(ERROR_LOAD_MSG, failure.getReason(), failure.getStatusCode())));
+        });
+    } catch (Exception e) {
+      LOG.error("Failed to retrieve records", e);
+      future.completeExceptionally(e);
+    }
 
     return future;
   }
@@ -115,12 +107,18 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
   }
 
   protected String getConditionByMultiMatchResult(DataImportEventPayload eventPayload) {
-    String preparedIds = new JsonArray(eventPayload.getContext().remove(MULTI_MATCH_IDS))
+    return getConditionByMultipleValues(ID_FIELD, eventPayload, MULTI_MATCH_IDS);
+  }
+
+  protected String getConditionByMultipleValues(String searchField,
+                                                DataImportEventPayload eventPayload,
+                                                String multipleValuesKey) {
+    String preparedIds = new JsonArray(eventPayload.getContext().remove(multipleValuesKey))
       .stream()
       .map(Object::toString)
       .collect(Collectors.joining(" OR "));
 
-    return format(" AND id == (%s)", preparedIds);
+    return format(" AND %s == (%s)", searchField, preparedIds);
   }
 
   protected abstract EntityType getEntityType();
