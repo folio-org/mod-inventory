@@ -64,7 +64,10 @@ public class OrderHelperServiceImpl implements OrderHelperService {
       .collect(Collectors.toList());
 
     if (!actionProfiles.isEmpty() && checkIfOrderActionProfileExists(actionProfiles) && checkIfCurrentProfileIsTheLastOne(eventPayload, actionProfiles)) {
-      eventPayload.getEventsChain().add(targetEventType.value());
+      if (!eventPayload.getEventsChain().contains(targetEventType.value())) {
+        eventPayload.getEventsChain().add(targetEventType.value());
+      }
+
       eventPayload.getContext().put(POST_PROCESSING_INDICATOR, Boolean.TRUE.toString());
       eventPayload.setEventType(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value());
     }
