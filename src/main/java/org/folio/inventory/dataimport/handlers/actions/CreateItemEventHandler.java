@@ -383,7 +383,7 @@ public class CreateItemEventHandler implements EventHandler {
     return promise.future();
   }
 
-  private JsonObject getItemFromJson(JsonObject itemAsJson) {
+  public static JsonObject getItemFromJson(JsonObject itemAsJson) {
     if (itemAsJson.getJsonObject(ITEM_PATH_FIELD) != null) {
       return itemAsJson.getJsonObject(ITEM_PATH_FIELD);
     }

@@ -57,6 +57,7 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.ActionProfile.Action.UPDATE;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_UPDATED;
+import static org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler.getItemFromJson;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.inventory.domain.items.Item.STATUS_KEY;
 import static org.folio.inventory.support.ItemUtil.ID;
@@ -281,8 +282,7 @@ public class UpdateItemEventHandler implements EventHandler {
 
     JsonArray itemsJsonArray = new JsonArray(dataImportEventPayload.getContext().get(ITEM.value()));
     for (int i = 0; i < itemsJsonArray.size(); i++) {
-      JsonObject itemAsJson = itemsJsonArray.getJsonObject(i);
-      itemAsJson = itemAsJson.getJsonObject(ITEM_PATH_FIELD) != null ? itemAsJson.getJsonObject(ITEM_PATH_FIELD) : itemAsJson;
+      JsonObject itemAsJson = getItemFromJson(itemsJsonArray.getJsonObject(i));
       itemOldStatuses.put(itemAsJson.getString(ID_PATH_FIELD), itemAsJson.getJsonObject(STATUS_KEY).getString("name"));
     }
     dataImportEventPayload.getContext().put(ITEM.value(), itemsJsonArray.encode());
@@ -323,8 +323,7 @@ public class UpdateItemEventHandler implements EventHandler {
 
     JsonArray itemsJsonArray = new JsonArray(dataImportEventPayload.getContext().get(ITEM.value()));
     for (int i = 0; i < itemsJsonArray.size(); i++) {
-      JsonObject itemAsJson = itemsJsonArray.getJsonObject(i);
-      itemAsJson = itemAsJson.getJsonObject(ITEM_PATH_FIELD) != null ? itemAsJson.getJsonObject(ITEM_PATH_FIELD) : itemAsJson;
+      JsonObject itemAsJson = getItemFromJson(itemsJsonArray.getJsonObject(i));
       itemsJsonArray.set(i, new JsonObject().put(ITEM_PATH_FIELD, getItemAsJsonWithProperFields(itemAsJson)));
     }
     dataImportEventPayload.getContext().put(ITEM.value(), itemsJsonArray.encode());
