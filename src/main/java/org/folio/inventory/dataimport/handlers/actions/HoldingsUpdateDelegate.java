@@ -46,6 +46,7 @@ public class HoldingsUpdateDelegate {
   }
 
   public Future<HoldingsRecord> handle(Map<String, String> eventPayload, Record marcRecord, Context context) {
+    System.out.println("tsaghik HoldingsUpdateDelegate.handle");
     logParametersUpdateDelegate(LOGGER, eventPayload, marcRecord, context);
     try {
       JsonObject mappingRules = new JsonObject(eventPayload.get(MAPPING_RULES_KEY));

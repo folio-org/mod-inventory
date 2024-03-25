@@ -43,6 +43,7 @@ public class HoldingsCollectionService {
   }
 
   public Future<String> findInstanceIdByHrid(InstanceCollection instanceCollection, String instanceHrid) {
+    System.out.println("tsaghik HoldingsCollectionService.findInstanceIdByHrid");
     Promise<String> promise = Promise.promise();
     try {
       instanceCollection.findByCql(format("hrid==%s", instanceHrid), PagingParameters.defaults(),

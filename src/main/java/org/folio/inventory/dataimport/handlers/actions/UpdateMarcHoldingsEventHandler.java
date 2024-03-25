@@ -93,6 +93,7 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload payload) {
+    System.out.println(" tsaghik UpdateMarcHoldingsEventHandler.handle");
     logParametersEventHandler(LOGGER, payload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {

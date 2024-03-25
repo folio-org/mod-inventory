@@ -81,6 +81,7 @@ public class CreateHoldingEventHandler implements EventHandler {
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
+    System.out.println("tsaghik CreateHoldingEventHandler.handle");
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
       dataImportEventPayload.setEventType(DI_INVENTORY_HOLDING_CREATED.value());

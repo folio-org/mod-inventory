@@ -87,6 +87,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
+    System.out.println("tsaghik UpdateHoldingEventHandler.handle");
     logParametersEventHandler(LOGGER, dataImportEventPayload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
