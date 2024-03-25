@@ -91,12 +91,17 @@ public class MarcHoldingsRecordHridSetKafkaHandler implements AsyncRecordHandler
         Context context = constructContext(headersMap.get(OKAPI_TENANT_HEADER), headersMap.get(OKAPI_TOKEN_HEADER),
           headersMap.get(OKAPI_URL_HEADER));
         Record marcRecord = Json.decodeValue(eventPayload.get(MARC_KEY), Record.class);
-
+      System.out.println("tsaghik1: "  + marcRecord.getParsedRecord().getContent().toString());
         mappingMetadataCache.get(jobExecutionId, context)
           .map(metadataOptional -> metadataOptional.orElseThrow(() ->
             new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId))))
           .onSuccess(mappingMetadataDto -> ensureEventPayloadWithMappingMetadata(eventPayload, mappingMetadataDto))
-          .compose(v -> holdingsRecordUpdateDelegate.handle(eventPayload, marcRecord, context))
+          .compose(v -> {
+
+            var up = holdingsRecordUpdateDelegate.handle(eventPayload, marcRecord, context);
+            System.out.println("tsaghik2: "  + marcRecord.getParsedRecord().getContent().toString());
+            return up;
+          })
           .onComplete(ar -> {
             if (ar.succeeded()) {
               eventPayload.remove(CURRENT_RETRY_NUMBER);

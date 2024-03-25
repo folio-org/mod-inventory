@@ -119,21 +119,27 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
             .map(v -> processMappingResult(dataImportEventPayload, holdingsId))
             .compose(holdingJson -> findInstanceIdByHrid(dataImportEventPayload, holdingJson, context)
               .map(instanceId -> {
+                System.out.println("tsaghik instanceId::" + instanceId);
                 holdingJson.put(INSTANCE_ID_FIELD, instanceId);
                 return holdingJson;
               }))
             .compose(holdingJson -> findSourceId(context)
               .map(sourceId -> {
+                System.out.println("tsaghik sourceId::" + sourceId);
                 holdingJson.put(SOURCE_ID_FIELD, sourceId);
                 return holdingJson;
               }))
             .compose(holdingJson -> {
+              System.out.println("tsaghik holdingJson1::" + holdingJson);
               dataImportEventPayload.getContext().put(HOLDINGS.value(), holdingJson.encode());
               var holdingsRecords = storage.getHoldingsRecordCollection(context);
+              System.out.println("tsaghik holdingsRecords::" + holdingsRecords);
               HoldingsRecord holding = Json.decodeValue(payloadContext.get(HOLDINGS.value()), HoldingsRecord.class);
+              System.out.println("tsaghik holding::" + holding);
               return addHoldings(holding, holdingsRecords);
             })
             .onSuccess(createdHoldings -> {
+              System.out.println("tsaghik createdHoldings::" + createdHoldings);
               LOGGER.info("Created Holding record by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
                 recordId, chunkId);
               dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encodePrettily(createdHoldings));
@@ -168,7 +174,7 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
     checkIfPermanentLocationIdExists(holdingAsJson);
 
     LOGGER.debug("Creating holdings with id: {}", holdingsId);
-
+    System.out.println("tsaghik holdingsJson::" + holdingAsJson);
     return holdingAsJson;
   }
 
