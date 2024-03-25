@@ -72,6 +72,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
+    System.out.println("tsaghik CreateInstanceEventHandler");
     logParametersEventHandler(LOGGER, dataImportEventPayload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
@@ -93,7 +94,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       Record targetRecord = Json.decodeValue(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()), Record.class);
-
+      System.out.println("tsaghik CreateInstanceEventHandler targetRecord: " + targetRecord);
       if (!Boolean.parseBoolean(payloadContext.get("acceptInstanceId")) && AdditionalFieldsUtil.getValue(targetRecord, TAG_999, SUBFIELD_I).isPresent()) {
         LOGGER.error(INSTANCE_CREATION_999_ERROR_MESSAGE);
         return CompletableFuture.failedFuture(new EventProcessingException(INSTANCE_CREATION_999_ERROR_MESSAGE));
@@ -125,7 +126,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
                 LOGGER.warn(msg);
                 return Future.failedFuture(msg);
               }
-
+              System.out.println("tsaghik after  targetRecord: " + targetRecord);
               Instance mappedInstance = Instance.fromJson(instanceAsJson);
               return addInstance(mappedInstance, instanceCollection)
                 .compose(createdInstance -> getPrecedingSucceedingTitlesHelper().createPrecedingSucceedingTitles(mappedInstance, context).map(createdInstance))
