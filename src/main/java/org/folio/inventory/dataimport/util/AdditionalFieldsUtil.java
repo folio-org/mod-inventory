@@ -700,7 +700,7 @@ public final class AdditionalFieldsUtil {
   private static List<String> getSourceFields(String source) {
     List<String> sourceFields = new ArrayList<>();
     List<String> remainingFields = new ArrayList<>();
-    boolean has001 = false;
+    var has001 = false;
     try {
       var sourceJson = objectMapper.readTree(source);
       var fieldsNode = sourceJson.get(FIELDS);
