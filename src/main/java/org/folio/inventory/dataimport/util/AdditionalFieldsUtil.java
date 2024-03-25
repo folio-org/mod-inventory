@@ -1,5 +1,9 @@
 package org.folio.inventory.dataimport.util;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.commons.lang3.tuple.Pair;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -37,8 +41,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ForkJoinPool;
 
 import static java.lang.String.format;
@@ -66,6 +69,8 @@ public final class AdditionalFieldsUtil {
   private static final String HR_ID_FIELD = "hrid";
   private static final CacheLoader<String, org.marc4j.marc.Record> parsedRecordContentCacheLoader;
   private static final LoadingCache<String, org.marc4j.marc.Record> parsedRecordContentCache;
+  private static final ObjectMapper objectMapper = new ObjectMapper();
+  public static final String FIELDS = "fields";
 
   static {
     // this function is executed when creating a new item to be saved in the cache.
@@ -640,5 +645,77 @@ public final class AdditionalFieldsUtil {
       AdditionalFieldsUtil.remove035WithActualHrId(recordInstancePair.getKey(), hrid);
     }
     AdditionalFieldsUtil.removeField(recordInstancePair.getKey(), TAG_003);
+  }
+
+  /**
+   * Reorders MARC record fields
+   *
+   * @param sourceContent source parsed record
+   * @param targetContent target parsed record
+   * @return MARC txt
+   */
+  public static String reorderMarcRecordFields(String sourceContent, String targetContent) {
+    try {
+      var parsedContent = objectMapper.readTree(targetContent);
+      var fieldsArrayNode = (ArrayNode) parsedContent.path(FIELDS);
+
+      Map<String, Queue<JsonNode>> jsonNodesByTag = groupNodesByTag(fieldsArrayNode);
+
+      List<String> sourceFields = getSourceFields(sourceContent);
+
+      var rearrangedArray = objectMapper.createArrayNode();
+      for (String tag : sourceFields) {
+        Queue<JsonNode> nodes = jsonNodesByTag.get(tag);
+        if (nodes != null && !nodes.isEmpty()) {
+          rearrangedArray.addAll(nodes);
+          jsonNodesByTag.remove(tag);
+        }
+      }
+
+      jsonNodesByTag.values().forEach(rearrangedArray::addAll);
+
+      ((ObjectNode)parsedContent).set(FIELDS, rearrangedArray);
+
+      return parsedContent.toString();
+    } catch (Exception e) {
+      LOGGER.error("An error occurred while reordering Marc record fields: {}", e.getMessage(), e);
+      return targetContent;
+    }
+  }
+
+  private static Map<String, Queue<JsonNode>> groupNodesByTag(ArrayNode fieldsArrayNode) {
+    Map<String, Queue<JsonNode>> jsonNodesByTag = new LinkedHashMap<>();
+    for (JsonNode node : fieldsArrayNode) {
+      String tag = getTagFromNode(node);
+      jsonNodesByTag.putIfAbsent(tag, new LinkedList<>());
+      jsonNodesByTag.get(tag).add(node);
+    }
+    return jsonNodesByTag;
+  }
+
+  private static String getTagFromNode(JsonNode node) {
+    return node.fieldNames().next();
+  }
+
+  private static List<String> getSourceFields(String source) {
+    List<String> sourceFields = new ArrayList<>();
+    List<String> remainingFields = new ArrayList<>();
+    try {
+      var sourceJson = objectMapper.readTree(source);
+      var fieldsNode = sourceJson.get(FIELDS);
+
+      for (JsonNode fieldNode : fieldsNode) {
+        String tag = fieldNode.fieldNames().next();
+        if (tag.equals("001") || tag.equals("005")) {
+          sourceFields.add(tag);
+        } else {
+          remainingFields.add(tag);
+        }
+      }
+      sourceFields.addAll(remainingFields);
+    } catch (Exception e) {
+      LOGGER.error("An error occurred while parsing source JSON: {}", e.getMessage(), e);
+    }
+    return sourceFields;
   }
 }
