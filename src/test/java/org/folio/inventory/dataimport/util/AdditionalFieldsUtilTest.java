@@ -3,6 +3,7 @@ package org.folio.inventory.dataimport.util;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.folio.inventory.TestUtil;
@@ -17,7 +18,9 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.BlockJUnit4ClassRunner;
+import org.marc4j.MarcException;
 
+import java.io.File;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -35,6 +38,9 @@ import static org.junit.Assert.*;
 public class AdditionalFieldsUtilTest {
 
   private static final String PARSED_MARC_RECORD_PATH = "src/test/resources/marc/parsedMarcRecord.json";
+  private static final String PARSED_RECORD = "src/test/resources/marc/parsedRecord.json";
+  private static final String REORDERED_PARSED_RECORD = "src/test/resources/marc/reorderedParsedRecord.json";
+  private static final String REORDERING_RESULT_RECORD = "src/test/resources/marc/reorderingResultRecord.json";
 
   @Test
   public void shouldAddInstanceIdSubfield() throws IOException {
@@ -632,5 +638,25 @@ public class AdditionalFieldsUtilTest {
     AdditionalFieldsUtil.remove035FieldWhenRecordContainsHrId(record);
     // then
     Assert.assertEquals(expectedParsedContent, parsedRecord.getContent());
+  }
+
+  @Test
+  public void shouldReorderMarcRecordFields() throws IOException, MarcException {
+    var reorderedRecordContent = readFileFromPath(PARSED_RECORD);
+    var sourceRecordContent = readFileFromPath(REORDERED_PARSED_RECORD);
+    var reorderingResultRecord = readFileFromPath(REORDERING_RESULT_RECORD);
+
+    var resultContent = AdditionalFieldsUtil.reorderMarcRecordFields(sourceRecordContent, reorderedRecordContent);
+
+    assertNotNull(resultContent);
+    assertEquals(formatContent(resultContent), formatContent(reorderingResultRecord));
+  }
+
+  private static String readFileFromPath(String path) throws IOException {
+    return new String(FileUtils.readFileToByteArray(new File(path)));
+  }
+
+  private String formatContent(String content) {
+    return content.replaceAll("\\s", "");
   }
 }
