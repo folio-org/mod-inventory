@@ -1,3 +1,6 @@
+## 20.1.10 2024-03-27
+* [MODINV-987](https://folio-org.atlassian.net/browse/MODINV-987) Allow to retrieve ITEM universally during HOLDINGS update
+
 ## 20.1.9 2024-03-01
 * Close Kafka Producers [MODINV-944](https://folio-org.atlassian.net/browse/MODINV-944)
 * Update data-import-processing-core to v4.1.4 [MODDICORE-394](https://folio-org.atlassian.net/browse/MODDICORE-394)
