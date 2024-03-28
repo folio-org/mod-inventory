@@ -30,6 +30,7 @@ import org.folio.processing.mapping.mapper.writer.marc.MarcRecordModifier;
 import org.folio.rest.client.SourceStorageRecordsClient;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.MarcFieldProtectionSetting;
+import org.folio.rest.jaxrs.model.Metadata;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Snapshot;
 
@@ -78,6 +79,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   public static final String INSTANCE_ID_TYPE = "INSTANCE";
   public static final String CENTRAL_TENANT_INSTANCE_UPDATED_FLAG = "CENTRAL_TENANT_INSTANCE_UPDATED";
   public static final String CENTRAL_TENANT_ID = "CENTRAL_TENANT_ID";
+  private static final String USER_ID = "userId";
   private final ConsortiumService consortiumService;
   public static final String MARC_BIB_RECORD_CREATED = "MARC_BIB_RECORD_CREATED";
 
@@ -311,6 +313,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   private Future<Void> prepareRecordForMapping(DataImportEventPayload dataImportEventPayload,
                                                List<MarcFieldProtectionSetting> marcFieldProtectionSettings,
                                                Instance instance, MappingParameters mappingParameters, String tenantId) {
+    String userId = (String) dataImportEventPayload.getAdditionalProperties().get(USER_ID);
     if (MARC_INSTANCE_SOURCE.equals(instance.getSource()) || CONSORTIUM_MARC.getValue().equals(instance.getSource())) {
       return getRecordByInstanceId(dataImportEventPayload, instance.getId(), tenantId)
         .compose(existingRecord -> {
@@ -327,6 +330,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
             String updatedIncomingRecord = Json.encode(incomingRecord);
             org.folio.rest.jaxrs.model.Record targetRecord = Json.decodeValue(updatedIncomingRecord, org.folio.rest.jaxrs.model.Record.class);
 
+            setUpdatedBy(targetRecord, userId);
             AdditionalFieldsUtil.updateLatestTransactionDate(targetRecord, mappingParameters);
             dataImportEventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(targetRecord));
           } else {
@@ -338,6 +342,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       String marcBibAsJson = dataImportEventPayload.getContext().get(EntityType.MARC_BIBLIOGRAPHIC.value());
       org.folio.rest.jaxrs.model.Record targetRecord = Json.decodeValue(marcBibAsJson, org.folio.rest.jaxrs.model.Record.class);
 
+      setUpdatedBy(targetRecord, userId);
       AdditionalFieldsUtil.updateLatestTransactionDate(targetRecord, mappingParameters);
       AdditionalFieldsUtil.move001To035(targetRecord);
       dataImportEventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(targetRecord));
@@ -411,6 +416,14 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         promise.fail(format("Cannot get actual Instance by id: %s, cause: %s", instance.getId(), e.getMessage()));
         return null;
       });
+  }
+
+  private void setUpdatedBy(org.folio.rest.jaxrs.model.Record changedRecord, String userId) {
+    if (changedRecord.getMetadata() != null) {
+      changedRecord.getMetadata().setUpdatedByUserId(userId);
+    } else {
+      changedRecord.withMetadata(new Metadata().withUpdatedByUserId(userId));
+    }
   }
 
   private void prepareSucceededResultPayload(DataImportEventPayload dataImportEventPayload, JsonObject updatedInstanceJson, Instance instanceToUpdate) {
