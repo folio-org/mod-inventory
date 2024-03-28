@@ -38,6 +38,8 @@
 * Consortial: Local HRID gets added as 035 when instance is shared [MODINV-918](https://folio-org.atlassian.net/browse/MODINV-918)
 * Consortial: non-MARC data not saved when local source = MARC instance is promoted [MODINV-960](https://folio-org.atlassian.net/browse/MODINV-960)
 * Keep order of MARC fields while Creating/Deriving/Editing MARC records [MODSOURMAN-1137](https://folio-org.atlassian.net/browse/MODSOURMAN-1137)
+* "PMSystem" displayed as source in "quickmarc" view when record was created by "Non-matches" action of job profile [MODSOURCE-608](https://folio-org.atlassian.net/browse/MODSOURCE-608)
+
 
 ## 20.1.0 2023-10-13
 * Update status when user attempts to update shared auth record from member tenant ([MODDATAIMP-926](https://issues.folio.org/browse/MODDATAIMP-926))

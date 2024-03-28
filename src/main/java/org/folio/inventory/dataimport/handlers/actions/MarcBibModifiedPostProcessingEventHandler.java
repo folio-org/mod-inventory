@@ -20,6 +20,7 @@ import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.ExternalIdsHolder;
 import org.folio.MappingMetadataDto;
+import org.folio.rest.jaxrs.model.Metadata;
 import org.folio.rest.jaxrs.model.Record;
 
 import java.util.HashMap;
@@ -82,6 +83,8 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
       Context localTenantContext = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       Context targetInstanceContext = EventHandlingUtil.constructContext(getTenant(dataImportEventPayload), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       Promise<Instance> instanceUpdatePromise = Promise.promise();
+      String userId = dataImportEventPayload.getAdditionalProperties().get("userId").toString();
+      setUpdatedBy(record, userId);
 
       mappingMetadataCache.get(dataImportEventPayload.getJobExecutionId(), localTenantContext)
         .map(parametersOptional -> parametersOptional.orElseThrow(() ->
@@ -142,6 +145,14 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
       String errMessage = format("Current retry number %s exceeded given number %s for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber);
       LOGGER.error(errMessage);
       future.completeExceptionally(new OptimisticLockingException(errMessage));
+    }
+  }
+
+  private void setUpdatedBy(org.folio.rest.jaxrs.model.Record changedRecord, String userId) {
+    if (changedRecord.getMetadata() != null) {
+      changedRecord.getMetadata().setUpdatedByUserId(userId);
+    } else {
+      changedRecord.withMetadata(new Metadata().withUpdatedByUserId(userId));
     }
   }
 
