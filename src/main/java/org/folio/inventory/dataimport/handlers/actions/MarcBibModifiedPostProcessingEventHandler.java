@@ -5,6 +5,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
@@ -12,6 +13,7 @@ import org.folio.MappingProfile;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
+import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
@@ -47,6 +49,7 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
   private static final String CURRENT_RETRY_NUMBER = "CURRENT_RETRY_NUMBER";
+  private static final String USER_ID_HEADER = "userId";
   private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
 
   private final InstanceUpdateDelegate instanceUpdateDelegate;
@@ -83,8 +86,10 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
       Context localTenantContext = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       Context targetInstanceContext = EventHandlingUtil.constructContext(getTenant(dataImportEventPayload), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       Promise<Instance> instanceUpdatePromise = Promise.promise();
-      String userId = dataImportEventPayload.getAdditionalProperties().get("userId").toString();
-      setUpdatedBy(record, userId);
+      String userId = dataImportEventPayload.getAdditionalProperties().get(USER_ID_HEADER).toString();
+
+      if (StringUtils.isNotBlank(userId))
+        AdditionalFieldsUtil.setUpdatedBy(record, userId);
 
       mappingMetadataCache.get(dataImportEventPayload.getJobExecutionId(), localTenantContext)
         .map(parametersOptional -> parametersOptional.orElseThrow(() ->
@@ -145,14 +150,6 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
       String errMessage = format("Current retry number %s exceeded given number %s for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber);
       LOGGER.error(errMessage);
       future.completeExceptionally(new OptimisticLockingException(errMessage));
-    }
-  }
-
-  private void setUpdatedBy(org.folio.rest.jaxrs.model.Record changedRecord, String userId) {
-    if (changedRecord.getMetadata() != null) {
-      changedRecord.getMetadata().setUpdatedByUserId(userId);
-    } else {
-      changedRecord.withMetadata(new Metadata().withUpdatedByUserId(userId));
     }
   }
 

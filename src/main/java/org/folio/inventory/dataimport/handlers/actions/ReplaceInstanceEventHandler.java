@@ -330,7 +330,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
             String updatedIncomingRecord = Json.encode(incomingRecord);
             org.folio.rest.jaxrs.model.Record targetRecord = Json.decodeValue(updatedIncomingRecord, org.folio.rest.jaxrs.model.Record.class);
 
-            setUpdatedBy(targetRecord, userId);
+            AdditionalFieldsUtil.setUpdatedBy(targetRecord, userId);
             AdditionalFieldsUtil.updateLatestTransactionDate(targetRecord, mappingParameters);
             dataImportEventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(targetRecord));
           } else {
@@ -342,7 +342,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       String marcBibAsJson = dataImportEventPayload.getContext().get(EntityType.MARC_BIBLIOGRAPHIC.value());
       org.folio.rest.jaxrs.model.Record targetRecord = Json.decodeValue(marcBibAsJson, org.folio.rest.jaxrs.model.Record.class);
 
-      setUpdatedBy(targetRecord, userId);
+      AdditionalFieldsUtil.setUpdatedBy(targetRecord, userId);
       AdditionalFieldsUtil.updateLatestTransactionDate(targetRecord, mappingParameters);
       AdditionalFieldsUtil.move001To035(targetRecord);
       dataImportEventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(targetRecord));
@@ -416,14 +416,6 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         promise.fail(format("Cannot get actual Instance by id: %s, cause: %s", instance.getId(), e.getMessage()));
         return null;
       });
-  }
-
-  private void setUpdatedBy(org.folio.rest.jaxrs.model.Record changedRecord, String userId) {
-    if (changedRecord.getMetadata() != null) {
-      changedRecord.getMetadata().setUpdatedByUserId(userId);
-    } else {
-      changedRecord.withMetadata(new Metadata().withUpdatedByUserId(userId));
-    }
   }
 
   private void prepareSucceededResultPayload(DataImportEventPayload dataImportEventPayload, JsonObject updatedInstanceJson, Instance instanceToUpdate) {
