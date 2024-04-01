@@ -21,6 +21,7 @@ import org.folio.inventory.domain.instances.Instance;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.MarcFieldProtectionSetting;
+import org.folio.rest.jaxrs.model.Metadata;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.Record;
 import org.marc4j.MarcJsonReader;
@@ -736,5 +737,13 @@ public final class AdditionalFieldsUtil {
       LOGGER.error("An error occurred while parsing source JSON: {}", e.getMessage(), e);
     }
     return sourceFields;
+  }
+
+  public static void setUpdatedBy(org.folio.rest.jaxrs.model.Record changedRecord, String userId) {
+    if (changedRecord.getMetadata() != null) {
+      changedRecord.getMetadata().setUpdatedByUserId(userId);
+    } else {
+      changedRecord.withMetadata(new Metadata().withUpdatedByUserId(userId));
+    }
   }
 }
