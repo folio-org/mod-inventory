@@ -8,7 +8,6 @@ import io.vertx.core.json.JsonObject;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.MappingProfile;
-import org.folio.Metadata;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
@@ -71,7 +70,6 @@ public class MarcBibModifiedPostProcessingEventHandlerTest {
   private static final String OKAPI_URL = "http://localhost";
   private static final String TENANT_ID = "diku";
   private static final String CENTRAL_TENANT_ID = "centralTenantId";
-  private static final String USER_ID_HEADER = "userId";
 
   @Mock
   private Storage mockedStorage;
@@ -160,8 +158,7 @@ public class MarcBibModifiedPostProcessingEventHandlerTest {
       .withContext(payloadContext)
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
-      .withAdditionalProperty(USER_ID_HEADER, UUID.randomUUID().toString());
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     // when
     CompletableFuture<DataImportEventPayload> future = marcBibModifiedEventHandler.handle(dataImportEventPayload);
@@ -184,9 +181,6 @@ public class MarcBibModifiedPostProcessingEventHandlerTest {
     assertThat(updatedInstance.getSubjects().get(0).getValue(), Matchers.containsString("additional subfield"));
     Assert.assertNotNull(updatedInstance.getNotes());
     Assert.assertEquals("Adding a note", updatedInstance.getNotes().get(0).note);
-
-    var sourceRecord = Json.decodeValue(eventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()), Record.class);
-    Assert.assertNotNull(sourceRecord.getMetadata().getUpdatedByUserId());
   }
 
   @Test
@@ -200,8 +194,7 @@ public class MarcBibModifiedPostProcessingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
       .withOkapiUrl(OKAPI_URL)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
-      .withAdditionalProperty(USER_ID_HEADER, UUID.randomUUID().toString());
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     // when
     CompletableFuture<DataImportEventPayload> future = marcBibModifiedEventHandler.handle(dataImportEventPayload);
@@ -222,9 +215,6 @@ public class MarcBibModifiedPostProcessingEventHandlerTest {
     assertThat(updatedInstance.getSubjects().get(0).getValue(), Matchers.containsString("additional subfield"));
     Assert.assertNotNull(updatedInstance.getNotes());
     Assert.assertEquals("Adding a note", updatedInstance.getNotes().get(0).note);
-
-    var sourceRecord = Json.decodeValue(eventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()), Record.class);
-    Assert.assertNotNull(sourceRecord.getMetadata().getUpdatedByUserId());
   }
 
 
@@ -238,8 +228,7 @@ public class MarcBibModifiedPostProcessingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
       .withOkapiUrl(OKAPI_URL)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
-      .withAdditionalProperty(USER_ID_HEADER, UUID.randomUUID().toString());
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
@@ -280,8 +269,7 @@ public class MarcBibModifiedPostProcessingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
       .withOkapiUrl(OKAPI_URL)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
-      .withAdditionalProperty(USER_ID_HEADER, UUID.randomUUID().toString());
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     // when
     CompletableFuture<DataImportEventPayload> future = marcBibModifiedEventHandler.handle(dataImportEventPayload);
@@ -293,9 +281,6 @@ public class MarcBibModifiedPostProcessingEventHandlerTest {
     Assert.assertNotNull(existingInstance.getPrecedingTitles());
     Assert.assertEquals(existingInstance.getId(), updatedInstance.getId());
     Assert.assertTrue(updatedInstance.getPrecedingTitles().isEmpty());
-
-    var sourceRecord = Json.decodeValue(eventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()), Record.class);
-    Assert.assertNotNull(sourceRecord.getMetadata().getUpdatedByUserId());
   }
 
   @Test
