@@ -1,5 +1,6 @@
 ## 20.3.0-SNAPSHOT 2024-xx-xx
 * "PMSystem" displayed as source in "quickmarc" view when record was created by "Non-matches" action of job profile [MODSOURCE-608](https://folio-org.atlassian.net/browse/MODSOURCE-608)
+* The result table is not displayed in the file details log [MODINV-1003](https://folio-org.atlassian.net/browse/MODINV-1003)
 
 ## 20.2.0 2023-03-20
 * Inventory cannot process Holdings with virtual fields ([MODINV-941](https://issues.folio.org/browse/MODINV-941))
