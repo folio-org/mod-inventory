@@ -83,6 +83,7 @@ public final class AdditionalFieldsUtil {
   private static final String OCLC = "(OCoLC)";
   private static final ObjectMapper objectMapper = new ObjectMapper();
   public static final String FIELDS = "fields";
+  private static final String OCLC_PATTERN = "\\(OCoLC\\)(tfe|ocm|ocn)?0*(\\d+)";
 
   static {
     // this function is executed when creating a new item to be saved in the cache.
@@ -281,10 +282,9 @@ public final class AdditionalFieldsUtil {
     }
   }
 
-  public static Set<String> formatOclc(List<Subfield> subFields) {
+  private static Set<String> formatOclc(List<Subfield> subFields) {
     Set<String> processedSet = new LinkedHashSet<>();
-
-    Pattern pattern = Pattern.compile("\\(OCoLC\\)(tfe|ocm|ocn)?0*(\\d+)");
+    Pattern pattern = Pattern.compile(OCLC_PATTERN);
 
     for (Subfield subfield : subFields) {
       Matcher matcher = pattern.matcher(subfield.getData());
@@ -341,7 +341,7 @@ public final class AdditionalFieldsUtil {
     }
   }
 
-  public static List<Subfield> get035SubfieldValues(Record srcRecord, String tag, char subfield) {
+  private static List<Subfield> get035SubfieldValues(Record srcRecord, String tag, char subfield) {
     return Optional.ofNullable(computeMarcRecord(srcRecord))
       .stream()
       .flatMap(marcRecord -> marcRecord.getVariableFields(tag).stream())
