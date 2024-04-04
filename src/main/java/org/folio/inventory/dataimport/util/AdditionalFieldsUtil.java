@@ -341,7 +341,7 @@ public final class AdditionalFieldsUtil {
     }
   }
 
-  private static List<Subfield> get035SubfieldValues(Record srcRecord, String tag, char subfield) {
+  public static List<Subfield> get035SubfieldValues(Record srcRecord, String tag, char subfield) {
     return Optional.ofNullable(computeMarcRecord(srcRecord))
       .stream()
       .flatMap(marcRecord -> marcRecord.getVariableFields(tag).stream())
