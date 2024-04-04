@@ -738,12 +738,4 @@ public final class AdditionalFieldsUtil {
     }
     return sourceFields;
   }
-
-  public static void setUpdatedBy(org.folio.rest.jaxrs.model.Record changedRecord, String userId) {
-    if (changedRecord.getMetadata() != null) {
-      changedRecord.getMetadata().setUpdatedByUserId(userId);
-    } else {
-      changedRecord.withMetadata(new Metadata().withUpdatedByUserId(userId));
-    }
-  }
 }
