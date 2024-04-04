@@ -351,7 +351,7 @@ public class AdditionalFieldsUtilTest {
     public String parsedContent;
 
     @Parameterized.Parameter(1)
-    public String expectedOclcField;
+    public List<String> expectedOclcFields;
 
     @Parameterized.Parameters(name = "{index}: parsedContent={0}, expectedOclcField={1}")
     public static Collection<Object[]> data() {
@@ -361,20 +361,27 @@ public class AdditionalFieldsUtilTest {
            "{\"a\":\"(OCoLC)000064758\"}," +
            "{\"a\":\"(OCoLC)ocn00064758\"} ],\"ind1\":\" \",\"ind2\":\" \"}}," +
            "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}",
-         "(OCoLC)64758"},
+         List.of("(OCoLC)64758", "(ybp7406411)in001")},
         {"{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
            "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}," +
            "{\"a\":\"(OCoLC)tfe00064758\"} ],\"ind1\":\" \",\"ind2\":\" \"}}," +
            "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}",
-         "(OCoLC)tfe64758"
-        },
+         List.of("(OCoLC)tfe64758", "(ybp7406411)in001")},
         {"{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
            "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}," +
            "{\"a\":\"(OCoLC)00064758\"}," +
            "{\"a\":\"(OCoLC)ocm00064758\"}," +
            "{\"z\":\"(OCoLC)00024758\"} ],\"ind1\":\" \",\"ind2\":\" \"}}," +
            "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}",
-         "(OCoLC)64758"
+         List.of("(OCoLC)64758", "(OCoLC)24758", "(ybp7406411)in001")
+        },
+        {"{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
+           "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)00064758\"} ],\"ind1\":\" \",\"ind2\":\" \"}}," +
+           "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)ocn000064758\"} ],\"ind1\":\" \",\"ind2\":\" \"}}," +
+           "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)ocm0000064758\"}, {\"z\":\"(OCoLC)11114758\"} ],\"ind1\":\" \"," +
+           "\"ind2\":\" \"}}," +
+           "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}",
+         List.of("(OCoLC)64758", "(OCoLC)24758")
         }
       });
     }
@@ -395,9 +402,8 @@ public class AdditionalFieldsUtilTest {
         .toList();
 
       // then
-      if (!oclcSubfields.isEmpty()) {
-        Assert.assertTrue(oclcSubfields.contains(expectedOclcField));
-      }
+      Assert.assertTrue(oclcSubfields.contains(expectedOclcFields.get(0)));
+      Assert.assertEquals(oclcSubfields.size(), expectedOclcFields.size());
     }
   }
 

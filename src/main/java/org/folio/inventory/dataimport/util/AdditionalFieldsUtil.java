@@ -275,8 +275,6 @@ public final class AdditionalFieldsUtil {
   public static void normalize035(Record srsRecord) {
     List<Subfield> subfields = get035SubfieldValues(srsRecord, TAG_035, TAG_035_SUB);
     if (!subfields.isEmpty()) {
-      removeField(srsRecord, TAG_035);
-
       Set<String> normalized035Subfields = formatOclc(subfields);
 
       updateOclcSubfield(srsRecord, normalized035Subfields);
@@ -317,6 +315,7 @@ public final class AdditionalFieldsUtil {
         MarcFactory factory = MarcFactory.newInstance();
         org.marc4j.marc.Record marcRecord = computeMarcRecord(recordForUpdate);
         if (marcRecord != null) {
+          removeFieldByName(marcRecord, TAG_035);
 
           DataField dataField = factory.newDataField(TAG_035, TAG_035_IND, TAG_035_IND);
 
@@ -571,6 +570,13 @@ public final class AdditionalFieldsUtil {
       isFieldFound = true;
     }
     return isFieldFound;
+  }
+
+  private static void removeFieldByName(org.marc4j.marc.Record marcRecord, String fieldName) {
+    List<VariableField> variableFields = marcRecord.getVariableFields(fieldName);
+    if (!variableFields.isEmpty()) {
+      variableFields.forEach(marcRecord::removeVariableField);
+    }
   }
 
   /**
