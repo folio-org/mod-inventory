@@ -1,8 +1,38 @@
 package org.folio.inventory.dataimport.util;
 
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_001;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_005;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_035;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_035_SUB;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addControlledFieldToMarcRecord;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addDataFieldToMarcRecord;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addFieldToMarcRecord;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.dateTime005Formatter;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.get035SubfieldValues;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.getCacheStats;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.getValueFromControlledField;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.isFieldExist;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.removeField;
+import static org.hamcrest.Matchers.lessThanOrEqualTo;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import java.io.File;
+import java.io.IOException;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.IntStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -18,31 +48,9 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.BlockJUnit4ClassRunner;
+import org.junit.runners.Parameterized;
 import org.marc4j.MarcException;
-
-import java.io.File;
-import java.io.IOException;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.stream.IntStream;
-
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_001;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_005;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addControlledFieldToMarcRecord;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addDataFieldToMarcRecord;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addFieldToMarcRecord;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.dateTime005Formatter;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.getCacheStats;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.getValueFromControlledField;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.isFieldExist;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.removeField;
-import static org.hamcrest.Matchers.lessThanOrEqualTo;
-import static org.junit.Assert.*;
+import org.marc4j.marc.Subfield;
 
 @RunWith(BlockJUnit4ClassRunner.class)
 public class AdditionalFieldsUtilTest {
@@ -334,6 +342,63 @@ public class AdditionalFieldsUtilTest {
     AdditionalFieldsUtil.move001To035(record);
     // then
     Assert.assertEquals(expectedParsedContent, parsedRecord.getContent());
+  }
+
+  @RunWith(Parameterized.class)
+  public static class OclcFieldNormalizationTest {
+
+    @Parameterized.Parameter(0)
+    public String parsedContent;
+
+    @Parameterized.Parameter(1)
+    public String expectedOclcField;
+
+    @Parameterized.Parameters(name = "{index}: parsedContent={0}, expectedOclcField={1}")
+    public static Collection<Object[]> data() {
+      return Arrays.asList(new Object[][]{
+        {"{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
+           "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}," +
+           "{\"a\":\"(OCoLC)000064758\"}," +
+           "{\"a\":\"(OCoLC)ocn00064758\"} ],\"ind1\":\" \",\"ind2\":\" \"}}," +
+           "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}",
+         "(OCoLC)64758"},
+        {"{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
+           "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}," +
+           "{\"a\":\"(OCoLC)tfe00064758\"} ],\"ind1\":\" \",\"ind2\":\" \"}}," +
+           "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}",
+         "(OCoLC)tfe64758"
+        },
+        {"{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
+           "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}," +
+           "{\"a\":\"(OCoLC)00064758\"}," +
+           "{\"a\":\"(OCoLC)ocm00064758\"}," +
+           "{\"z\":\"(OCoLC)00024758\"} ],\"ind1\":\" \",\"ind2\":\" \"}}," +
+           "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}",
+         "(OCoLC)64758"
+        }
+      });
+    }
+
+    @Test
+    public void shouldNormalizeField035OCoLC() {
+      // given
+      ParsedRecord parsedRecord = new ParsedRecord().withContent(parsedContent);
+
+      Record record = new Record().withId(UUID.randomUUID().toString())
+        .withParsedRecord(parsedRecord)
+        .withGeneration(0)
+        .withState(Record.State.ACTUAL)
+        .withExternalIdsHolder(new ExternalIdsHolder().withInstanceId("001").withInstanceHrid("in001"));
+      // when
+      AdditionalFieldsUtil.normalize035(record);
+      var oclcSubfields = get035SubfieldValues(record, TAG_035, TAG_035_SUB).stream().map(Subfield::getData)
+        .toList();
+
+      // then
+      if (!oclcSubfields.isEmpty()) {
+        Assert.assertTrue(oclcSubfields.contains(expectedOclcField));
+      }
+    }
   }
 
   @Test

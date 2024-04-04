@@ -1,4 +1,5 @@
 ## 20.3.0-SNAPSHOT 2024-xx-xx
+* Update Data Import logic to normalize OCLC 035 values [MODINV-949](https://folio-org.atlassian.net/browse/MODINV-949)
 * "PMSystem" displayed as source in "quickmarc" view when record was created by "Non-matches" action of job profile [MODSOURCE-608](https://folio-org.atlassian.net/browse/MODSOURCE-608)
 
 ## 20.2.0 2023-03-20
