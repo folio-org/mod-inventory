@@ -59,27 +59,6 @@ import org.marc4j.marc.MarcFactory;
 import org.marc4j.marc.Subfield;
 import org.marc4j.marc.VariableField;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Queue;
-import java.util.Map;
-import java.util.ArrayList;
-import java.util.concurrent.ForkJoinPool;
-
-import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.apache.commons.lang3.StringUtils.isNotBlank;
-import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-
 /**
  * Util to work with additional fields
  */
