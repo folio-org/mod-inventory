@@ -29,7 +29,6 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -95,7 +94,7 @@ public class ItemsByHoldingsRecordId extends Items {
         webContext, routingContext))
       .thenCompose(listOfItems -> maybeAppendSingleTitleItems(listOfItems, holdingsRecordId,
         webContext, routingContext))
-      .thenAccept(combinedListOfItems -> sortAndRespond(combinedListOfItems,
+      .thenAccept(combinedListOfItems -> respondWithPagedManyItems(combinedListOfItems,
         webContext, routingContext));
   }
 
@@ -177,12 +176,9 @@ public class ItemsByHoldingsRecordId extends Items {
     return futureListOfItems;
   }
 
-  private void sortAndRespond(List<Item> itemList, WebContext webContext, RoutingContext routingContext) {
+  private void respondWithPagedManyItems(List<Item> itemList, WebContext webContext, RoutingContext routingContext) {
     PagingParameters pagingParameters = getPagingParameters(webContext);
-    List<Item> sortedList = itemList.stream().sorted(
-      Comparator.comparing(i -> i.getBarcode() == null ? "~" : i.getBarcode()))
-      .toList();
-    MultipleRecords<Item> items = new MultipleRecords<>(getPage(sortedList,
+    MultipleRecords<Item> items = new MultipleRecords<>(getPage(itemList,
       pagingParameters.offset, pagingParameters.limit), itemList.size());
     respondWithManyItems(routingContext, webContext, items);
   }
