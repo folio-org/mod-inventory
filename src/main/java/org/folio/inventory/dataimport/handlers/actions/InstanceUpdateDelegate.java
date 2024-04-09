@@ -8,6 +8,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
+import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
@@ -43,7 +44,7 @@ public class InstanceUpdateDelegate {
     try {
       JsonObject mappingRules = new JsonObject(eventPayload.get(MAPPING_RULES_KEY));
       MappingParameters mappingParameters = new JsonObject(eventPayload.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
-
+      AdditionalFieldsUtil.normalize035(marcRecord);
       JsonObject parsedRecord = retrieveParsedContent(marcRecord.getParsedRecord());
       String instanceId = marcRecord.getExternalIdsHolder().getInstanceId();
       LOGGER.info("Instance update with instanceId: {}", instanceId);
