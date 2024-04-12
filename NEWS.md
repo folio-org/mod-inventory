@@ -1,7 +1,8 @@
-## 20.3.0-SNAPSHOT 2024-xx-xx
-* The sorting for Items on Instance details page is not worked [MODINV-1001](https://folio-org.atlassian.net/browse/MODINV-1001)
-* "PMSystem" displayed as source in "quickmarc" view when record was created by "Non-matches" action of job profile [MODSOURCE-608](https://folio-org.atlassian.net/browse/MODSOURCE-608)
-* The result table is not displayed in the file details log [MODINV-1003](https://folio-org.atlassian.net/browse/MODINV-1003)
+## 20.2.1 2024-04-12
+* [MODINV-1001](https://folio-org.atlassian.net/browse/MODINV-1001) Fix sorting for Items on Instance details page
+* [MODINV-999](https://folio-org.atlassian.net/browse/MODINV-999)"PMSystem" displayed as source in "quickmarc" view when record was created by "Non-matches" action of job profile 
+* [MODINV-1003](https://folio-org.atlassian.net/browse/MODINV-1003) The result table is not displayed in the file details log 
+* [MODINV-997](https://folio-org.atlassian.net/browse/MODINV-997) Keep order of MARC fields while Creating/Deriving/Editing MARC records 
 
 ## 20.2.0 2023-03-20
 * Inventory cannot process Holdings with virtual fields ([MODINV-941](https://issues.folio.org/browse/MODINV-941))
@@ -42,7 +43,6 @@
 * Add subscription on DI_SRS_MARC_BIB_RECORD_UPDATED event about marc-bib update [MODSOURMAN-1106](https://folio-org.atlassian.net/browse/MODSOURMAN-1106)
 * Consortial: Local HRID gets added as 035 when instance is shared [MODINV-918](https://folio-org.atlassian.net/browse/MODINV-918)
 * Consortial: non-MARC data not saved when local source = MARC instance is promoted [MODINV-960](https://folio-org.atlassian.net/browse/MODINV-960)
-* Keep order of MARC fields while Creating/Deriving/Editing MARC records [MODSOURMAN-1137](https://folio-org.atlassian.net/browse/MODSOURMAN-1137)
 
 ## 20.1.0 2023-10-13
 * Update status when user attempts to update shared auth record from member tenant ([MODDATAIMP-926](https://issues.folio.org/browse/MODDATAIMP-926))
