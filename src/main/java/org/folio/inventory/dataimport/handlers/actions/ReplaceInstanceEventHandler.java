@@ -215,6 +215,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
             if (instanceToUpdate.getSource().equals(MARC.getValue())) {
               setExternalIds(targetRecord, instance);
               AdditionalFieldsUtil.remove035FieldWhenRecordContainsHrId(targetRecord);
+              AdditionalFieldsUtil.normalize035(targetRecord);
 
               JsonObject jsonInstance = new JsonObject(instance.getJsonForStorage().encode());
 
