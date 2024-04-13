@@ -111,6 +111,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
                 MappingParameters mappingParameters = Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class);
                 AdditionalFieldsUtil.updateLatestTransactionDate(targetRecord, mappingParameters);
                 AdditionalFieldsUtil.move001To035(targetRecord);
+                AdditionalFieldsUtil.normalize035(targetRecord);
                 payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(targetRecord));
                 return prepareAndExecuteMapping(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()), mappingParameters);
               })
