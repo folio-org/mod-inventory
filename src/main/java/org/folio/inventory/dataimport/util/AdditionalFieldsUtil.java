@@ -79,10 +79,11 @@ public final class AdditionalFieldsUtil {
   private static final String HR_ID_FIELD = "hrid";
   private static final CacheLoader<String, org.marc4j.marc.Record> parsedRecordContentCacheLoader;
   private static final LoadingCache<String, org.marc4j.marc.Record> parsedRecordContentCache;
-  private static final String OCLC = "(OCoLC)";
+  private static final String OCLC = "OCoLC";
   private static final ObjectMapper objectMapper = new ObjectMapper();
   public static final String FIELDS = "fields";
   private static final String OCLC_PATTERN = "\\(OCoLC\\)(tfe|ocm|ocn)?0*(\\d+)";
+  private static final String OCoLC = String.format("(%s)", OCLC);
 
   static {
     // this function is executed when creating a new item to be saved in the cache.
@@ -273,7 +274,7 @@ public final class AdditionalFieldsUtil {
   }
 
   public static void normalize035(Record srsRecord) {
-    List<Subfield> subfields = get035SubfieldValues(srsRecord, TAG_035, TAG_035_SUB);
+    List<Subfield> subfields = get035SubfieldOclcValues(srsRecord, TAG_035, TAG_035_SUB);
     if (!subfields.isEmpty()) {
       Set<String> normalized035Subfields = formatOclc(subfields);
 
@@ -292,11 +293,11 @@ public final class AdditionalFieldsUtil {
         String numericPart = matcher.group(2);
 
         if ("ocm".equals(prefix) || "ocn".equals(prefix)) {
-          processedSet.add(subfield.getCode() + "&" + OCLC + numericPart);
+          processedSet.add(subfield.getCode() + "&" + OCoLC + numericPart);
         } else if (prefix != null) {
-          processedSet.add(subfield.getCode() + "&" + OCLC + prefix + numericPart);
+          processedSet.add(subfield.getCode() + "&" + OCoLC + prefix + numericPart);
         } else {
-          processedSet.add(subfield.getCode() + "&" + OCLC + numericPart);
+          processedSet.add(subfield.getCode() + "&" + OCoLC + numericPart);
         }
       } else {
         processedSet.add(subfield.getCode() + "&" + subfield.getData());
@@ -314,7 +315,7 @@ public final class AdditionalFieldsUtil {
         MarcFactory factory = MarcFactory.newInstance();
         org.marc4j.marc.Record marcRecord = computeMarcRecord(recordForUpdate);
         if (marcRecord != null) {
-          removeFieldByName(marcRecord, TAG_035);
+          removeOclcField(marcRecord, TAG_035);
 
           DataField dataField = factory.newDataField(TAG_035, TAG_035_IND, TAG_035_IND);
 
@@ -340,19 +341,19 @@ public final class AdditionalFieldsUtil {
     }
   }
 
-  public static List<Subfield> get035SubfieldValues(Record srcRecord, String tag, char subfield) {
+  public static List<Subfield> get035SubfieldOclcValues(Record srcRecord, String tag, char subfield) {
     return Optional.ofNullable(computeMarcRecord(srcRecord))
       .stream()
       .flatMap(marcRecord -> marcRecord.getVariableFields(tag).stream())
-      .flatMap(field -> get035Subfields(field, subfield).stream())
+      .flatMap(field -> get035oclcSubfields(field, subfield).stream())
       .toList();
   }
 
-  private static List<Subfield> get035Subfields(VariableField field, char subfield) {
+  private static List<Subfield> get035oclcSubfields(VariableField field, char subfield) {
     if (field instanceof DataField dataField) {
 
       Optional<Subfield> oclcSubfield = dataField.getSubfields(subfield).stream()
-        .filter(sf -> sf.find("OCoLC"))
+        .filter(sf -> sf.find(OCLC))
         .findFirst();
 
       if (oclcSubfield.isPresent()) {
@@ -571,10 +572,12 @@ public final class AdditionalFieldsUtil {
     return isFieldFound;
   }
 
-  private static void removeFieldByName(org.marc4j.marc.Record marcRecord, String fieldName) {
+  private static void removeOclcField(org.marc4j.marc.Record marcRecord, String fieldName) {
     List<VariableField> variableFields = marcRecord.getVariableFields(fieldName);
     if (!variableFields.isEmpty()) {
-      variableFields.forEach(marcRecord::removeVariableField);
+      variableFields.stream()
+        .filter(variableField -> variableField.find(OCLC))
+        .forEach(marcRecord::removeVariableField);
     }
   }
 
