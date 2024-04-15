@@ -9,8 +9,9 @@ import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addContro
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addDataFieldToMarcRecord;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addFieldToMarcRecord;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.dateTime005Formatter;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.get035SubfieldValues;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.get035OclcSubfieldValues;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.getCacheStats;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.getValue;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.getValueFromControlledField;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.isFieldExist;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.removeField;
@@ -398,7 +399,7 @@ public class AdditionalFieldsUtilTest {
         .withExternalIdsHolder(new ExternalIdsHolder().withInstanceId("001").withInstanceHrid("in001"));
       // when
       AdditionalFieldsUtil.normalize035(record);
-      var oclcSubfields = get035SubfieldValues(record, TAG_035, TAG_035_SUB).stream().map(Subfield::getData)
+      var oclcSubfields = get035OclcSubfieldValues(record, TAG_035, TAG_035_SUB).stream().map(Subfield::getData)
         .toList();
 
       // then
@@ -407,14 +408,41 @@ public class AdditionalFieldsUtilTest {
     }
   }
 
+
+  @Test
+  public void shouldReturnSubfieldIfOclc() {
+    // given
+    String parsedContent = "{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
+      "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+      "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)ocn00064758\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+      "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)ocm000064758\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+      "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    String expectedParsedContent = "{\"leader\":\"00128nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
+      "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+      "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)64758\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+      "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+
+    ParsedRecord parsedRecord = new ParsedRecord().withContent(parsedContent);
+
+    Record record = new Record().withId(UUID.randomUUID().toString())
+      .withParsedRecord(parsedRecord)
+      .withGeneration(0)
+      .withState(Record.State.ACTUAL)
+      .withExternalIdsHolder(new ExternalIdsHolder().withInstanceId("001").withInstanceHrid("in001"));
+    // when
+    AdditionalFieldsUtil.normalize035(record);
+    // then
+    Assert.assertEquals(expectedParsedContent, parsedRecord.getContent());
+  }
+
   @Test
   public void shouldReturnSubfieldIfOclcExist() {
     // given
     String parsedContent = "{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
       "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}," +
-      "{\"a\":\"(OCoLC)ocn00064758\"} ],\"ind1\":\" \",\"ind2\":\" \"}}," +
+      "{\"a\":\"(OCoLC)64758\"} ],\"ind1\":\" \",\"ind2\":\" \"}}," +
       "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
-    var expectedSubfields =  List.of("(ybp7406411)in001", "(OCoLC)ocn00064758");
+    var expectedSubfields =  List.of("(ybp7406411)in001", "(OCoLC)64758");
 
     ParsedRecord parsedRecord = new ParsedRecord().withContent(parsedContent);
 
@@ -425,7 +453,7 @@ public class AdditionalFieldsUtilTest {
       .withExternalIdsHolder(new ExternalIdsHolder().withInstanceId("001").withInstanceHrid("in001"));
 
     // when
-    var subfields = get035SubfieldValues(record, TAG_035, TAG_035_SUB).stream().map(Subfield::getData).toList();
+    var subfields = get035OclcSubfieldValues(record, TAG_035, TAG_035_SUB).stream().map(Subfield::getData).toList();
     // then
     Assert.assertEquals(expectedSubfields.size(), subfields.size());
     Assert.assertEquals(expectedSubfields.get(0), subfields.get(0));
@@ -446,7 +474,7 @@ public class AdditionalFieldsUtilTest {
       .withExternalIdsHolder(new ExternalIdsHolder().withInstanceId("001").withInstanceHrid("in001"));
 
     // when
-    var subfields = get035SubfieldValues(record, TAG_035, TAG_035_SUB).stream().map(Subfield::getData).toList();
+    var subfields = get035OclcSubfieldValues(record, TAG_035, TAG_035_SUB).stream().map(Subfield::getData).toList();
     // then
     Assert.assertEquals(0, subfields.size());
   }
@@ -563,9 +591,9 @@ public class AdditionalFieldsUtilTest {
     var record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedContent));
 
     // when
-    var parsedHrId = AdditionalFieldsUtil.getValue(record, TAG_001, ' ');
-    var parsedId = AdditionalFieldsUtil.getValue(record, TAG_999, 'i');
-    var missingField = AdditionalFieldsUtil.getValue(record, TAG_005, ' ');
+    var parsedHrId = getValue(record, TAG_001, ' ');
+    var parsedId = getValue(record, TAG_999, 'i');
+    var missingField = getValue(record, TAG_005, ' ');
 
     // then
     assertTrue(parsedHrId.isPresent());
