@@ -9,7 +9,7 @@ import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addContro
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addDataFieldToMarcRecord;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addFieldToMarcRecord;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.dateTime005Formatter;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.get035OclcSubfieldValues;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.get035SubfieldOclcValues;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.getCacheStats;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.getValue;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.getValueFromControlledField;
@@ -399,7 +399,7 @@ public class AdditionalFieldsUtilTest {
         .withExternalIdsHolder(new ExternalIdsHolder().withInstanceId("001").withInstanceHrid("in001"));
       // when
       AdditionalFieldsUtil.normalize035(record);
-      var oclcSubfields = get035OclcSubfieldValues(record, TAG_035, TAG_035_SUB).stream().map(Subfield::getData)
+      var oclcSubfields = get035SubfieldOclcValues(record, TAG_035, TAG_035_SUB).stream().map(Subfield::getData)
         .toList();
 
       // then
@@ -453,7 +453,7 @@ public class AdditionalFieldsUtilTest {
       .withExternalIdsHolder(new ExternalIdsHolder().withInstanceId("001").withInstanceHrid("in001"));
 
     // when
-    var subfields = get035OclcSubfieldValues(record, TAG_035, TAG_035_SUB).stream().map(Subfield::getData).toList();
+    var subfields = get035SubfieldOclcValues(record, TAG_035, TAG_035_SUB).stream().map(Subfield::getData).toList();
     // then
     Assert.assertEquals(expectedSubfields.size(), subfields.size());
     Assert.assertEquals(expectedSubfields.get(0), subfields.get(0));
@@ -474,7 +474,7 @@ public class AdditionalFieldsUtilTest {
       .withExternalIdsHolder(new ExternalIdsHolder().withInstanceId("001").withInstanceHrid("in001"));
 
     // when
-    var subfields = get035OclcSubfieldValues(record, TAG_035, TAG_035_SUB).stream().map(Subfield::getData).toList();
+    var subfields = get035SubfieldOclcValues(record, TAG_035, TAG_035_SUB).stream().map(Subfield::getData).toList();
     // then
     Assert.assertEquals(0, subfields.size());
   }
