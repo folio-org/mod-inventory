@@ -274,7 +274,7 @@ public final class AdditionalFieldsUtil {
   }
 
   public static void normalize035(Record srsRecord) {
-    List<Subfield> subfields = get035OclcSubfieldValues(srsRecord, TAG_035, TAG_035_SUB);
+    List<Subfield> subfields = get035SubfieldOclcValues(srsRecord, TAG_035, TAG_035_SUB);
     if (!subfields.isEmpty()) {
       Set<String> normalized035Subfields = formatOclc(subfields);
 
@@ -341,15 +341,15 @@ public final class AdditionalFieldsUtil {
     }
   }
 
-  public static List<Subfield> get035OclcSubfieldValues(Record srcRecord, String tag, char subfield) {
+  public static List<Subfield> get035SubfieldOclcValues(Record srcRecord, String tag, char subfield) {
     return Optional.ofNullable(computeMarcRecord(srcRecord))
       .stream()
       .flatMap(marcRecord -> marcRecord.getVariableFields(tag).stream())
-      .flatMap(field -> get035OclcSubfields(field, subfield).stream())
+      .flatMap(field -> get035oclcSubfields(field, subfield).stream())
       .toList();
   }
 
-  private static List<Subfield> get035OclcSubfields(VariableField field, char subfield) {
+  private static List<Subfield> get035oclcSubfields(VariableField field, char subfield) {
     if (field instanceof DataField dataField) {
 
       Optional<Subfield> oclcSubfield = dataField.getSubfields(subfield).stream()
