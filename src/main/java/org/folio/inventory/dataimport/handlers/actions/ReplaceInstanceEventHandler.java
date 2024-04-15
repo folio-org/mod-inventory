@@ -327,6 +327,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
             org.folio.rest.jaxrs.model.Record targetRecord = Json.decodeValue(updatedIncomingRecord, org.folio.rest.jaxrs.model.Record.class);
 
             AdditionalFieldsUtil.updateLatestTransactionDate(targetRecord, mappingParameters);
+            AdditionalFieldsUtil.normalize035(targetRecord);
             dataImportEventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(targetRecord));
           } else {
             dataImportEventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(incomingRecord));
