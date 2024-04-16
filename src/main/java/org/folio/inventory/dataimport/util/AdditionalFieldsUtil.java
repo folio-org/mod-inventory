@@ -301,8 +301,11 @@ public final class AdditionalFieldsUtil {
         } else {
           // For other cases, strip leading zeros only from the numeric part
           numericAndTrailing = numericAndTrailing.replaceFirst("^0+", "");
+          if (prefix != null) {
+            prefix = prefix.replaceAll("\\d+", ""); // Safely remove digits from the prefix if not null
+          }
           // Add back any other prefix that might have been included like "tfe"
-          processedSet.add(code + "&(" + oclcTag + ")" + prefix.replaceAll("\\d+", "") + numericAndTrailing);
+          processedSet.add(code + "&(" + oclcTag + ")" + (prefix != null ? prefix : "") + numericAndTrailing);
         }
       } else {
         // If it does not match, add the data as is
