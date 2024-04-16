@@ -81,9 +81,9 @@ public final class AdditionalFieldsUtil {
   private static final LoadingCache<String, org.marc4j.marc.Record> parsedRecordContentCache;
   private static final String OCLC = "OCoLC";
   private static final ObjectMapper objectMapper = new ObjectMapper();
-  public static final String FIELDS = "fields";
-  private static final String OCLC_PATTERN = "\\(OCoLC\\)((ocm|ocn)0*|tfe0*|0*)(\\d+\\w*)";
-  private static final String OCoLC = String.format("(%s)", OCLC);
+  public static final String FIELDS = "fields"; // "\\(OCoLC\\)((ocm|ocn)0*|tfe0*|0*)(\\d+\\w*)";
+  private static final String OCLC_PATTERN = "\\(OCoLC\\)((ocm|ocn)0*|(\\w*)0*)?(\\d+)(\\w*)?";
+  private static final String OCLC_PREFIX = String.format("(%s)", OCLC);
 
   static {
     // this function is executed when creating a new item to be saved in the cache.
@@ -287,23 +287,39 @@ public final class AdditionalFieldsUtil {
     Pattern pattern = Pattern.compile(OCLC_PATTERN);
 
     for (Subfield subfield : subFields) {
-      Matcher matcher = pattern.matcher(subfield.getData());
-      if (matcher.find()) {
-        String prefix = matcher.group(1);
-        String numericPart = matcher.group(3);
+      String data = subfield.getData();
+      var code = subfield.getCode();
+      String originalData = data;
 
-        // Normalizing prefixes and leading zeros
-        if (prefix.startsWith("ocm") || prefix.startsWith("ocn")) {
-          // Drop 'ocm' or 'ocn' and any leading zeros, preserve only numeric and following characters
-          processedSet.add(subfield.getCode() + "&" + OCoLC + numericPart);
-        } else {
-          // For other prefixes like 'tfe' or no prefix but leading zeros, normalize leading zeros
-          processedSet.add(subfield.getCode() + "&" + OCoLC + prefix.replaceAll("^0*", "") + numericPart);
+      if (data.startsWith(OCLC_PREFIX)) {
+        data = data.substring(OCLC_PREFIX.length());  // Remove the "(OCoLC)" part
+
+        // Determine where numeric part starts, assuming it starts immediately after any alphabetic prefix
+        int startIndex = 0;
+        while (startIndex < data.length() && !Character.isDigit(data.charAt(startIndex))) {
+          startIndex++;
         }
+
+        String prefix = data.substring(0, startIndex);
+        String numericPart = data.substring(startIndex);
+
+        // Remove known prefixes "ocm" or "ocn" if they are followed directly by digits
+        if (prefix.equals("ocm") || prefix.equals("ocn")) {
+          prefix = "";  // Remove the prefix entirely
+        }
+
+        // Remove leading zeros from the numeric part
+        numericPart = numericPart.replaceFirst("^0+", "");
+
+        // Combine everything back together, if prefix was "ocm" or "ocn" it has been removed
+        data = prefix + numericPart;
+
+        processedSet.add(code + "&" + OCLC_PREFIX + data);
       } else {
-        // If no pattern matches, add the data as is
-        processedSet.add(subfield.getCode() + "&" + subfield.getData());
+        // Add the original data as is
+        processedSet.add(code + "&" + originalData);
       }
+
     }
     return processedSet;
   }
