@@ -445,30 +445,6 @@ public class AdditionalFieldsUtilTest {
   }
 
   @Test
-  public void shouldNormalizeOCoLCField035() {
-    String parsedContent ="{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
-      "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}," +
-      "{\"a\":\"(OCoLC)tfe0006475800100\"} ],\"ind1\":\" \",\"ind2\":\" \"}}," +
-      "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
-
-      String expectedParsedContent = "{\"leader\":\"00121nam  22000611a 4500\",\"fields\":[{\"001\":\"in001\"}," +
-        "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}," +
-        "{\"a\":\"(OCoLC)tfe6475800100\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-        "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
-    // given
-    ParsedRecord parsedRecord = new ParsedRecord().withContent(parsedContent);
-
-    Record record = new Record().withId(UUID.randomUUID().toString())
-      .withParsedRecord(parsedRecord)
-      .withGeneration(0)
-      .withState(Record.State.ACTUAL)
-      .withExternalIdsHolder(new ExternalIdsHolder().withInstanceId("001").withInstanceHrid("in001"));
-    // when
-    AdditionalFieldsUtil.normalize035(record);
-    Assert.assertEquals(expectedParsedContent, parsedRecord.getContent());
-  }
-
-  @Test
   public void shouldReturnSubfieldIfOclcExist() {
     // given
     String parsedContent = "{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +

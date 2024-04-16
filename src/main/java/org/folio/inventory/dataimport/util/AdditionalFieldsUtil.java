@@ -81,9 +81,8 @@ public final class AdditionalFieldsUtil {
   private static final LoadingCache<String, org.marc4j.marc.Record> parsedRecordContentCache;
   private static final String OCLC = "OCoLC";
   private static final ObjectMapper objectMapper = new ObjectMapper();
-  public static final String FIELDS = "fields"; // "\\(OCoLC\\)((ocm|ocn)0*|tfe0*|0*)(\\d+\\w*)";
-  private static final String OCLC_PATTERN = "\\(OCoLC\\)((ocm|ocn)0*|(\\w*)0*)?(\\d+)(\\w*)?";
-  private static final String OCLC_PREFIX = String.format("(%s)", OCLC);
+  public static final String FIELDS = "fields";
+  private static final String OCLC_PATTERN = "\\((" + OCLC + ")\\)((ocm|ocn)?0*|([a-zA-Z]+)0*)(\\d+\\w*)";
 
   static {
     // this function is executed when creating a new item to be saved in the cache.
@@ -289,37 +288,26 @@ public final class AdditionalFieldsUtil {
     for (Subfield subfield : subFields) {
       String data = subfield.getData();
       var code = subfield.getCode();
-      String originalData = data;
+      Matcher matcher = pattern.matcher(data);
 
-      if (data.startsWith(OCLC_PREFIX)) {
-        data = data.substring(OCLC_PREFIX.length());  // Remove the "(OCoLC)" part
+      if (matcher.find()) {
+        String oclcTag = matcher.group(1); // "OCoLC"
+        String numericAndTrailing = matcher.group(5); // Numeric part and any characters that follow
+        String prefix = matcher.group(2); // Entire prefix including letters and potentially leading zeros
 
-        // Determine where numeric part starts, assuming it starts immediately after any alphabetic prefix
-        int startIndex = 0;
-        while (startIndex < data.length() && !Character.isDigit(data.charAt(startIndex))) {
-          startIndex++;
+        if (prefix != null && (prefix.startsWith("ocm") || prefix.startsWith("ocn"))) {
+          // If "ocm" or "ocn", strip entirely from the prefix
+          processedSet.add(code + "&(" + oclcTag + ")" + numericAndTrailing);
+        } else {
+          // For other cases, strip leading zeros only from the numeric part
+          numericAndTrailing = numericAndTrailing.replaceFirst("^0+", "");
+          // Add back any other prefix that might have been included like "tfe"
+          processedSet.add(code + "&(" + oclcTag + ")" + prefix.replaceAll("\\d+", "") + numericAndTrailing);
         }
-
-        String prefix = data.substring(0, startIndex);
-        String numericPart = data.substring(startIndex);
-
-        // Remove known prefixes "ocm" or "ocn" if they are followed directly by digits
-        if (prefix.equals("ocm") || prefix.equals("ocn")) {
-          prefix = "";  // Remove the prefix entirely
-        }
-
-        // Remove leading zeros from the numeric part
-        numericPart = numericPart.replaceFirst("^0+", "");
-
-        // Combine everything back together, if prefix was "ocm" or "ocn" it has been removed
-        data = prefix + numericPart;
-
-        processedSet.add(code + "&" + OCLC_PREFIX + data);
       } else {
-        // Add the original data as is
-        processedSet.add(code + "&" + originalData);
+        // If it does not match, add the data as is
+        processedSet.add(code + "&" + data);
       }
-
     }
     return processedSet;
   }
