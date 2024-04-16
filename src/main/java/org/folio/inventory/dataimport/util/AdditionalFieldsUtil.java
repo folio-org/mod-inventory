@@ -82,7 +82,7 @@ public final class AdditionalFieldsUtil {
   private static final String OCLC = "OCoLC";
   private static final ObjectMapper objectMapper = new ObjectMapper();
   public static final String FIELDS = "fields";
-  private static final String OCLC_PATTERN = "\\(OCoLC\\)(tfe|ocm|ocn)?0*(\\d+)";
+  private static final String OCLC_PATTERN = "\\(OCoLC\\)((ocm|ocn)0*|tfe0*|0*)(\\d+\\w*)";
   private static final String OCoLC = String.format("(%s)", OCLC);
 
   static {
@@ -290,16 +290,18 @@ public final class AdditionalFieldsUtil {
       Matcher matcher = pattern.matcher(subfield.getData());
       if (matcher.find()) {
         String prefix = matcher.group(1);
-        String numericPart = matcher.group(2);
+        String numericPart = matcher.group(3);
 
-        if ("ocm".equals(prefix) || "ocn".equals(prefix)) {
+        // Normalizing prefixes and leading zeros
+        if (prefix.startsWith("ocm") || prefix.startsWith("ocn")) {
+          // Drop 'ocm' or 'ocn' and any leading zeros, preserve only numeric and following characters
           processedSet.add(subfield.getCode() + "&" + OCoLC + numericPart);
-        } else if (prefix != null) {
-          processedSet.add(subfield.getCode() + "&" + OCoLC + prefix + numericPart);
         } else {
-          processedSet.add(subfield.getCode() + "&" + OCoLC + numericPart);
+          // For other prefixes like 'tfe' or no prefix but leading zeros, normalize leading zeros
+          processedSet.add(subfield.getCode() + "&" + OCoLC + prefix.replaceAll("^0*", "") + numericPart);
         }
       } else {
+        // If no pattern matches, add the data as is
         processedSet.add(subfield.getCode() + "&" + subfield.getData());
       }
     }
