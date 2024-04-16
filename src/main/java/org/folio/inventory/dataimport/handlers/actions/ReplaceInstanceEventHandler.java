@@ -192,7 +192,6 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         }
         String marcBibAsJson = payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value());
         org.folio.rest.jaxrs.model.Record targetRecord = Json.decodeValue(marcBibAsJson, org.folio.rest.jaxrs.model.Record.class);
-
         Instance mappedInstance = Instance.fromJson(instanceAsJson);
         return updateInstanceAndRetryIfOlExists(mappedInstance, instanceCollection, dataImportEventPayload)
           .compose(updatedInstance -> getPrecedingSucceedingTitlesHelper().getExistingPrecedingSucceedingTitles(mappedInstance, context))
@@ -328,6 +327,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
             org.folio.rest.jaxrs.model.Record targetRecord = Json.decodeValue(updatedIncomingRecord, org.folio.rest.jaxrs.model.Record.class);
 
             AdditionalFieldsUtil.updateLatestTransactionDate(targetRecord, mappingParameters);
+            AdditionalFieldsUtil.normalize035(targetRecord);
             dataImportEventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(targetRecord));
           } else {
             dataImportEventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(incomingRecord));
@@ -340,6 +340,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
       AdditionalFieldsUtil.updateLatestTransactionDate(targetRecord, mappingParameters);
       AdditionalFieldsUtil.move001To035(targetRecord);
+      AdditionalFieldsUtil.normalize035(targetRecord);
       dataImportEventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(targetRecord));
     }
     return Future.succeededFuture();
